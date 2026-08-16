@@ -30,3 +30,39 @@ describe('stripComments', () => {
     expect(out).not.toContain('gone');
   });
 });
+
+describe('literals are not comments', () => {
+  it('leaves a wildcard property key alone', () => {
+    // `'theme_override_colors/*'` opened a block comment that ran to the next
+    // real `*/`, blanking up to 9,982 characters of real source.
+    const src = "const KEYS = ['theme_override_colors/*'];\nconst x = 1;\n/** doc */\nconst y = 2;";
+    expect(stripComments(src)).toBe(
+      "const KEYS = ['theme_override_colors/*'];\nconst x = 1;\n          \nconst y = 2;"
+    );
+  });
+
+  it('leaves a `//` inside a string literal alone', () => {
+    expect(stripComments('const sep = "//";\nconst n = 1;')).toBe('const sep = "//";\nconst n = 1;');
+  });
+
+  it('leaves a regex literal ending in an escaped slash alone', () => {
+    const src = 'const RE = /^item_(-?\\d+)\\//;\nconst after = 2;';
+    expect(stripComments(src)).toBe(src);
+  });
+
+  it('still blanks a real comment beside all three', () => {
+    const src = "const a = 'x/*y'; // note\nconst b = /a\\//; /* block */";
+    const out = stripComments(src);
+    expect(out).toContain("const a = 'x/*y';");
+    expect(out).not.toContain('note');
+    expect(out).not.toContain('block');
+    expect(out).toHaveLength(src.length);
+  });
+
+  it('preserves offsets and newlines exactly', () => {
+    const src = 'a\n/* one\ntwo */\nb';
+    const out = stripComments(src);
+    expect(out).toHaveLength(src.length);
+    expect(out.split('\n')).toHaveLength(src.split('\n').length);
+  });
+});

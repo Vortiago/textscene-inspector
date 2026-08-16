@@ -11,6 +11,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { stripComments } from '@textscene/dev-kit';
 import { scrapePairs, type EmittedPair } from './emitsScrape.js';
 
 /**
@@ -100,11 +101,27 @@ export interface ArmBuilder {
   templates: string[];
 }
 
+/**
+ * A builder that templates a rule name this scrape cannot pin to a call site.
+ *
+ * Twelve of the tree's thirteen are in here, and none of them was reported
+ * before: the nine physics factories interpolate a LOCAL derived from their
+ * parameter (`const prefix = area + dimSuffix(dim)`), and three navigation ones
+ * hoist the whole name first. Neither shape can be resolved by reading the
+ * signature, so the templates travel out instead and the caller checks them the
+ * only way left — against the declared names, interpolations wildcarded.
+ */
+export interface UnpinnedBuilder {
+  builder: string;
+  /** Every `ruleName` template in its body, whole. */
+  templates: string[];
+}
+
 export interface ArmBuilders {
   /** Builder name -> how to turn one call's argument into the names it emits. */
   builders: Map<string, ArmBuilder>;
-  /** Builders interpolating a parameter this scrape could not pin to a position. */
-  unresolvable: string[];
+  /** Builders whose templated names this scrape could not pin to a position. */
+  unresolvable: UnpinnedBuilder[];
 }
 
 /**
@@ -176,19 +193,6 @@ export function topLevelParts(body: string): string[] {
 }
 
 /**
- * Comments blanked to spaces, preserving every offset.
- *
- * A docblock between the parens made `balancedGroup` run to end-of-file and
- * `parameterList` return prose words: an apostrophe in "min's" opened a string
- * that never closed. Blanking rather than deleting keeps `fn.index` valid.
- */
-function blankComments(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:\\])\/\/[^\n]*/g, (m, lead: string) => lead + ' '.repeat(m.length - lead.length));
-}
-
-/**
  * The parameter names of a signature, IN ORDER.
  *
  * Ordered, because the guard above resolves a call site by argument POSITION.
@@ -207,9 +211,9 @@ export function parameterList(signature: string): Array<string | null> {
 
 export function armBuilders(files: string[]): ArmBuilders {
   const builders = new Map<string, ArmBuilder>();
-  const unresolvable: string[] = [];
+  const unresolvable: UnpinnedBuilder[] = [];
   for (const file of files) {
-    const src = blankComments(readFileSync(file, 'utf8'));
+    const src = stripComments(readFileSync(file, 'utf8'));
     for (const fn of src.matchAll(/export function (\w+)\s*\(/g)) {
       const builder = fn[1]!;
       const start = fn.index!;
@@ -219,10 +223,17 @@ export function armBuilders(files: string[]): ArmBuilders {
       // template is this function's business. The WHOLE template is kept, so a
       // prefix in the middle (`valid-${p}-resources`) substitutes correctly
       // rather than being concatenated onto the end.
-      const templates = [...body.matchAll(/ruleName:\s*`([^`]*)`/g)].map((m) => m[1]!);
-      // Before the signature is touched: 1,109 exported functions in the tree,
-      // ten of which template a rule name. Scraping every one of the other
-      // 1,099 for parameters it will never use is the bulk of this walk.
+      // BOTH spellings. `ruleName: `…`` is the common one; three navigation
+      // factories hoist the name first (`const ruleName = `…``), and scanning
+      // only the property form left them invisible — no template, no entry, no
+      // report. Measured: 13 exported functions template a rule name, not 10.
+      const templates = [
+        ...body.matchAll(/ruleName:\s*`([^`]*)`/g),
+        ...body.matchAll(/\bconst\s+\w*[rR]uleName\w*\s*=\s*`([^`]*)`/g),
+      ].map((m) => m[1]!);
+      // Before the signature is touched: ~1,114 exported functions in the tree,
+      // thirteen of which template a rule name. Scraping every one of the other
+      // ~1,101 for parameters it will never use is the bulk of this walk.
       if (!templates.length) continue;
       const params = parameterList(balancedGroup(src, start + fn[0].length - 1));
       const interpolated = params
@@ -231,11 +242,18 @@ export function armBuilders(files: string[]): ArmBuilders {
           (entry): entry is { param: string; index: number } =>
             entry.param !== null && templates.some((t) => t.includes(`\${${entry.param}}`))
         );
-      if (!interpolated.length) continue;
-      // Two parameters interpolated by different templates is a shape this
-      // scrape cannot pin to one position, and a name nothing pins to a rule.
-      if (interpolated.length > 1) {
-        unresolvable.push(builder);
+      // REPORTED, not skipped. A builder that templates a rule name and
+      // interpolates NO parameter is one this scrape cannot pin to a call
+      // site — the nine physics factories interpolate a local
+      // (`const prefix = \`area${dimSuffix(dim)}\``) rather than their `dim`
+      // parameter. The `continue` used to run before the branch below, so
+      // `unresolvable` was empty for the reason that mattered least: nothing
+      // ever reached it. Twelve of thirteen builders were dropped in silence.
+      //
+      // Two parameters interpolated by different templates is the other shape
+      // it cannot pin, and a name nothing pins to a rule.
+      if (interpolated.length !== 1) {
+        unresolvable.push({ builder, templates });
         continue;
       }
       const { param, index } = interpolated[0]!;

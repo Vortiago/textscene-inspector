@@ -131,6 +131,39 @@ describe('armBuilders', () => {
     );
     const { builders, unresolvable } = armBuilders([file]);
     expect(builders.size).toBe(0);
-    expect(unresolvable).toEqual(['make']);
+    expect(unresolvable).toEqual([{ builder: 'make', templates: ['${a}-one', '${b}-two'] }]);
+  });
+
+  it('reports a builder that interpolates a LOCAL rather than a parameter', () => {
+    // The nine physics factories' shape. Nothing pins the argument position, so
+    // this used to `continue` before the reporting branch and vanish.
+    const file = fileWith(
+      'export function make(dim: string) {\n' +
+        '  const prefix = `area${suffix(dim)}`;\n' +
+        '  return { ruleName: `${prefix}-needs-collision-shape` };\n' +
+        '}\n'
+    );
+    const { builders, unresolvable } = armBuilders([file]);
+    expect(builders.size).toBe(0);
+    expect(unresolvable).toEqual([
+      { builder: 'make', templates: ['${prefix}-needs-collision-shape'] },
+    ]);
+  });
+
+  it('sees a rule name hoisted into a local, not only the property form', () => {
+    // Three navigation factories write it this way, and a `ruleName:` scan
+    // found no template at all — so they were dropped one step earlier still.
+    const file = fileWith(
+      'export function make(suffix: string) {\n' +
+        '  const ruleName = `navigationagent${suffix}-parent-not-node`;\n' +
+        '  return { ruleName };\n' +
+        '}\n'
+    );
+    const { builders } = armBuilders([file]);
+    expect(builders.get('make')).toEqual({
+      index: 0,
+      param: 'suffix',
+      templates: ['navigationagent${suffix}-parent-not-node'],
+    });
   });
 });

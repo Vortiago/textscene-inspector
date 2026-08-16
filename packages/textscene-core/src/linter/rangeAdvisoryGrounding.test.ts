@@ -25,6 +25,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { stripComments as sharedStripComments } from '@textscene/dev-kit';
 import { join } from 'node:path';
 import { rangeAdvisories, type RangeAdvisoryTable } from './rangeAdvisory.js';
 import type { TscnNode } from '../parser/types.js';
@@ -43,13 +44,7 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
  * non-space character opens a comment, so a `//` inside a string literal never
  * truncates a line and hides a real citation.
  */
-function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
-    .join('\n');
-}
+const stripComments = sharedStripComments;
 
 /** Every `cite: '…'` literal in the sources, with the file it came from. */
 function citeLiterals(): { file: string; cite: string }[] {

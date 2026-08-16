@@ -30,9 +30,10 @@
  * most by `reload_chain()` / `reload_goal()`. No `ERR_FAIL*`, no clamp, no mask, no
  * truncation, no `is_finite` guard, and the file's only `PROPERTY_HINT_RANGE` is on
  * `interpolation`, which never serialises. So no bound is grounded in either tier
- * (ADR-0032) and every validator here is `formatOnly`. A floor of 0 on
- * `min_distance` or `max_iterations` would look natural and reject values Godot
- * assigns unaltered.
+ * (ADR-0032) and no validator here declares one. A floor of 0 on `min_distance`
+ * or `max_iterations` would look natural and reject values Godot assigns
+ * unaltered. `max_iterations` is an INT slot, so it is not `formatOnly`: it
+ * refuses a literal the tokenizer reads and the write cannot carry.
  *
  * Nothing carries a `radians_as_degrees` hint, so no degree-to-radian conversion
  * applies, and the class has no bone INDEX property at all — `root_bone` and

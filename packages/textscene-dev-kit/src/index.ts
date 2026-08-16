@@ -6,3 +6,4 @@ export {
   NODE_BUILTIN_RE,
 } from './importClosure';
 export type { ImportClosure, WalkImportClosureOptions } from './importClosure';
+export { commentSpans, stripComments } from './commentSpans';

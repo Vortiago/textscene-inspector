@@ -21,6 +21,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 import { ruleRegistry } from './RuleRegistry.js';
 import {
   allSourceFiles,
@@ -142,7 +143,10 @@ describe('rule emits meta-guard', () => {
         .map((n) => byRuleName.get(n))
         .filter((r) => r !== undefined);
       if (!owners.length) continue;
-      const src = readFileSync(file, 'utf8');
+      // Blanked, like the DEFINITION scan: this half read raw source, so a
+      // docblock inside a builder's call parens opened a string `scanTopLevel`
+      // never closed, and `callRe` matched a call named inside a comment.
+      const src = stripComments(readFileSync(file, 'utf8'));
       for (const call of src.matchAll(callRe)) {
         const builder = builders.get(call[1]!)!;
         const args = topLevelParts(balancedGroup(src, call.index! + call[0].length - 1));
@@ -163,7 +167,24 @@ describe('rule emits meta-guard', () => {
     }
     expect([...builders.keys()].filter((b) => !called.has(b)).sort()).toEqual([]);
     expect(unresolvedCallSites.sort()).toEqual([]);
-    expect(unresolvable.sort()).toEqual([]);
+    // A builder this scrape cannot pin to a call site is NOT thereby exempt.
+    // The list used to be empty because the loop `continue`d before anything
+    // could reach it, so twelve of the tree's thirteen rule-name builders were
+    // dropped in silence and this assertion proved nothing. They cannot be
+    // pinned — their names come from a local, or from a helper call — so the
+    // question becomes the one that is still answerable: is every template
+    // they carry covered by a declared `emits` entry?
+    const declaredNames = ruleRegistry.getRules().flatMap((r) => (r.meta.emits ?? []).map((e) => e.ruleName));
+    const uncovered = unresolvable
+      .flatMap(({ builder, templates }) =>
+        templates
+          .map((t) => t.replace(/\$\{[^}]+\}/g, '*'))
+          .filter((pattern) => !declaredNames.some((name) => pairMatches(pattern, name)))
+          .map((pattern) => `${builder}: ${pattern}`)
+      )
+      .sort();
+    expect(unresolvable.length).toBeGreaterThan(0);
+    expect([...new Set(uncovered)]).toEqual([]);
     expect([...new Set(missing)].sort()).toEqual([]);
   });
 

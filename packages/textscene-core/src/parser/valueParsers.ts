@@ -39,8 +39,9 @@
 
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
-import { FLOAT_PATTERN_SOURCE, finiteTupleRegex } from '../godot/number.js';
+import { finiteTupleRegex, parseGodotFloat } from '../godot/number.js';
 import { storedInt } from '../godot/int.js';
+
 import { nodePathLiteral } from '../godot/index.js';
 
 /**
@@ -51,22 +52,16 @@ import { nodePathLiteral } from '../godot/index.js';
  * text does. `v.float` accepts it on the linter side.
  */
 function finiteScalar(value: string): number | null {
-  const num = SCALAR_RE.test(value.trim()) ? parseFloat(value.trim()) : NaN;
-  return Number.isFinite(num) ? num : null;
+  const num = parseGodotFloat(value);
+  return num !== null && Number.isFinite(num) ? num : null;
 }
 
-/**
- * The same, truncated toward zero for an INT slot.
- *
- * Not `storedInt`: that takes a capture the finite grammar already matched, so
- * it runs a bare `parseFloat` and would read `1abc` as 1.
- */
+/** The same, truncated toward zero for an INT slot. */
 function finiteIntScalar(value: string): number | null {
   const num = finiteScalar(value);
   return num === null ? null : Math.trunc(num);
 }
 
-const SCALAR_RE = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
 
 export interface Rect2Value {
   x: number;

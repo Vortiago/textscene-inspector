@@ -92,16 +92,16 @@ describe('SkeletonIK3D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('SkeletonIK3D')).not.toContain('active');
   });
 
-  it('leaves every validator classified, so the sweep reads this slice as audited', () => {
-    // The positive form of "there are no bounds here". An int slot carries the
-    // narrowing citation instead of `formatOnly`; either way none is unclassified.
-    const unclassified = validatorRegistry
+  it('declares no BOUND at all, on a class whose setters refuse nothing', () => {
+    // The positive claim, and the one `boundGrounding` cannot make: it only
+    // asks whether a bound is cited. Here the point is that there is no bound
+    // to cite — every setter (skeleton_ik_3d.cpp:399-476) is a bare field
+    // assignment. An invented floor such as `v.float('min_distance', { min: 0,
+    // enforced: '…' })` passes a classification sweep and fails this.
+    const bounded = validatorRegistry
       .getOwnKeys('SkeletonIK3D')
-      .filter((property) => {
-        const validator = validatorRegistry.findValidator('SkeletonIK3D', property);
-        return validator?.formatOnly !== true && validator?.grounding === undefined;
-      });
-    expect(unclassified).toEqual([]);
+      .filter((property) => validatorRegistry.findValidator('SkeletonIK3D', property)?.bounds);
+    expect(bounded).toEqual([]);
   });
 });
 

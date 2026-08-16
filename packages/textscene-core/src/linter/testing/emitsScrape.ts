@@ -15,6 +15,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 
 export interface EmittedPair {
   readonly name: string;
@@ -89,7 +90,7 @@ export function scrapePairs(file: string): EmittedPair[] {
   // immediately before a backtick opens a capture that runs to the next
   // backtick anywhere in the file — which is how a sentence in types.ts became
   // an "undeclared ruleName".
-  const src = stripEmits(readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
+  const src = stripEmits(stripComments(readFileSync(file, 'utf8')));
 
   // A rule may hoist its name (`const ruleName = \`valid-x${dim}-resources\``)
   // and then use the shorthand in the diagnostic. Resolve those bindings so the

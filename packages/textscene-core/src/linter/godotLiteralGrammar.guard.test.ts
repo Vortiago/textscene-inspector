@@ -27,6 +27,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 import { relative } from 'node:path';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
@@ -85,9 +86,7 @@ const REGEXP_CTOR = /new RegExp\(\s*(['"`])((?:[^\\]|\\.)*?)\1/g;
  * composite read as a hand-rolled grammar. Line comments require whitespace
  * before the `//` so an escaped `\/\/` inside a real pattern survives.
  */
-function withoutComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|\s)\/\/.*$/gm, '$1');
-}
+const withoutComments = stripComments;
 
 /**
  * `${…}` interpolations blanked. A composite name passed INTO a canonical
@@ -154,6 +153,18 @@ const RAW_NUMBER_PARSE = /\b(?:parseInt|parseFloat|Number)\(/;
  */
 const isDiagnosticReader = (rel: string): boolean =>
   rel.startsWith('linter/') || /(?:^|\/)linter[^/]*\.tsx?$/.test(rel);
+
+/**
+ * A file that rebuilds the shared scalar grammar into its own `RegExp`.
+ *
+ * The one shape that puts a SECOND reader of the same grammar in the tree, and
+ * the one this guard could not see while its population was `linter/` only:
+ * `parser/valueParsers.ts` did `new RegExp('^' + FLOAT_PATTERN_SOURCE + '$')`
+ * and read the match with a bare `parseFloat` — behaviourally `parseGodotFloat`
+ * filtered to finite, one exemption further from the shared one. Composites go
+ * through `finiteTupleRegex`; a scalar goes through `parseGodotFloat`.
+ */
+const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
 const RAW_SCALAR_PARSE = /\b(?:parseInt|parseFloat)\(/;
 
 /**
@@ -214,6 +225,19 @@ describe('Godot composite literal grammar', () => {
 
     const offenders = importers
       .filter(({ src }) => RAW_NUMBER_PARSE.test(src))
+      .map(({ rel }) => rel)
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  it('never rebuilds the scalar grammar outside godot/, at any depth', () => {
+    // The reach the `linter/`-scoped assertion below does NOT have. A raw
+    // `parseFloat` on an already-matched capture is correct and common in the
+    // decoders; rebuilding the GRAMMAR to feed one is what creates a second
+    // reader that can drift from `parseGodotFloat`.
+    expect(files.length).toBeGreaterThan(1000);
+    const offenders = files
+      .filter(({ rel, bare }) => !rel.startsWith('godot/') && REBUILDS_SCALAR_GRAMMAR.test(bare))
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
