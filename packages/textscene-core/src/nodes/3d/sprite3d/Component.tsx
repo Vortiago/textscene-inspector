@@ -45,6 +45,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   AlphaCutMode,
@@ -132,10 +133,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
   const depthWrite = transparent ? alphaCutDepthWrite : true;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
-  // Baked at first compile and re-derived by nothing: `opaque`
-  // (`WebGLPrograms.js:262`, here just `transparent` — blending and
-  // alphaToCoverage keep three's defaults) and the side flags.
-  const materialProgramKey = `${transparent ? '-' : 'o'}${side}`;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -220,6 +217,18 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
+  const program = materialProgramInputs({
+    props: {
+      map: displayedTexture,
+      color,
+      opacity,
+      transparent,
+      alphaTest,
+      depthWrite,
+      side,
+    },
+  });
+
   return (
     <>
       <mesh
@@ -232,16 +241,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
       >
         <primitive object={geometry} attach="geometry" />
-        <meshBasicMaterial
-          key={materialProgramKey}
-          map={displayedTexture}
-          color={color}
-          opacity={opacity}
-          transparent={transparent}
-          alphaTest={alphaTest}
-          depthWrite={depthWrite}
-          side={side}
-        />
+        <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
       {subtree}
     </>

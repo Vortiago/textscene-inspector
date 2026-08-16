@@ -18,6 +18,7 @@ import {
 } from './godotDefaultMaterial';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialBlendProps } from '../../resources/materials/standardmaterial3d/build';
+import { materialProgramInputs } from '../materialProgramInputs';
 
 /**
  * Every texture prop below must arrive ALREADY BOUND — put through
@@ -84,16 +85,18 @@ export function StandardMaterialSlot({
   attach,
 }: StandardMaterialSlotProps) {
   if (!scalars) {
-    return (
-      <meshStandardMaterial
-        attach={attach}
-        color={GODOT_DEFAULT_ALBEDO}
-        metalness={GODOT_DEFAULT_METALLIC}
-        roughness={GODOT_DEFAULT_ROUGHNESS}
-        side={THREE.FrontSide}
-        shadowSide={shadowSide ?? null}
-      />
-    );
+    // Literal-only, so the key is constant and this fallback never remounts.
+    const fallback = materialProgramInputs({
+      props: {
+        attach,
+        color: GODOT_DEFAULT_ALBEDO,
+        metalness: GODOT_DEFAULT_METALLIC,
+        roughness: GODOT_DEFAULT_ROUGHNESS,
+        side: THREE.FrontSide,
+        shadowSide: shadowSide ?? null,
+      },
+    });
+    return <meshStandardMaterial key={fallback.key} {...fallback.props} />;
   }
   // normalScale is a THREE.Vector2; we materialize one matching the
   // parsed scalar so the meshStandardMaterial slot picks it up on render.
@@ -107,32 +110,6 @@ export function StandardMaterialSlot({
   // a CustomBlending material on three's default factors, which is a different
   // operation entirely.
   const blendProps = materialBlendProps(scalars);
-  // The material's shader needs to be recompiled whenever the set of
-  // active texture maps changes — three.js bakes `USE_MAP` / `USE_NORMALMAP`
-  // / etc. into shader defines at first compile. Keying the material on which
-  // slots are populated forces R3F to construct a fresh material when textures
-  // arrive asynchronously via `useResource`, picking up the right defines.
-  const slotKey =
-    `${albedoMap ? 'a' : '-'}` +
-    `${normalMap ? 'n' : '-'}` +
-    `${roughnessMap ? 'r' : '-'}` +
-    `${metalnessMap ? 'm' : '-'}` +
-    `${emissiveMap ? 'e' : '-'}` +
-    `${aoMap ? 'o' : '-'}` +
-    // displacementMap MUST be keyed too: three.js bakes USE_DISPLACEMENTMAP at
-    // compile time, so a coat/height texture arriving async needs a fresh
-    // material or the vertices never move (the map is set but the shader ignores it).
-    `${displacementMap ? 'd' : '-'}` +
-    // 'f' for flowmap
-    `${anisotropyMap ? 'f' : '-'}`;
-  // Baked at the same first compile and re-derived by nothing: `opaque`
-  // (`WebGLPrograms.js:262`, minus the alphaToCoverage term this slot never sets),
-  // vertexColors, the side flags. alphaTest is out — `Material.js:494-502` bumps
-  // `version` on the zero crossing itself.
-  const stateKey =
-    `${scalars.transparent === false && scalars.blending === THREE.NormalBlending ? 'o' : '-'}` +
-    `${scalars.useVertexColors ? 'v' : '-'}` +
-    `${effectiveSide}`;
 
   // Godot SHADING_MODE_UNSHADED (0): albedo is output directly, unaffected by
   // lights/shadows. three.js MeshBasicMaterial is the unlit equivalent — no PBR
@@ -143,23 +120,23 @@ export function StandardMaterialSlot({
   // its own fragment code computed, so an unshaded material with emission enabled
   // is unlit in Godot too however bright the colour.
   if (scalars.shadingMode === 'unshaded') {
-    return (
-      // Only albedo of the eight slots reaches a MeshBasicMaterial.
-      <meshBasicMaterial
-        key={`basic-${albedoMap ? 'a' : '-'}-${stateKey}`}
-        attach={attach}
-        color={scalars.color}
-        vertexColors={scalars.useVertexColors}
-        map={albedoMap ?? null}
-        transparent={scalars.transparent}
-        opacity={scalars.opacity}
-        alphaTest={scalars.alphaTest}
-        depthWrite={scalars.depthWrite}
-        depthTest={scalars.depthTest}
-        {...blendProps}
-        side={effectiveSide}
-      />
-    );
+    // Only albedo of the eight slots reaches a MeshBasicMaterial.
+    const basic = materialProgramInputs({
+      props: {
+        attach,
+        color: scalars.color,
+        vertexColors: scalars.useVertexColors,
+        map: albedoMap ?? null,
+        transparent: scalars.transparent,
+        opacity: scalars.opacity,
+        alphaTest: scalars.alphaTest,
+        depthWrite: scalars.depthWrite,
+        depthTest: scalars.depthTest,
+        ...blendProps,
+        side: effectiveSide,
+      },
+    });
+    return <meshBasicMaterial key={basic.key} {...basic.props} />;
   }
   // Shared PBR props for the shaded path. MeshPhysicalMaterial is a strict
   // superset of MeshStandardMaterial, so the same props drive either; we only
@@ -222,32 +199,26 @@ export function StandardMaterialSlot({
       1 + rimTint * (scalars.color[1] - 1),
       1 + rimTint * (scalars.color[2] - 1)
     );
-    // Baked as `> 0` booleans (`WebGLPrograms.js:140-145`); one can cross zero
-    // while another holds the upgrade, so the element-type switch misses it.
-    const featureKey =
-      `${scalars.clearcoat > 0 ? 'c' : '-'}` +
-      `${scalars.rim > 0 ? 's' : '-'}` +
-      `${scalars.anisotropy > 0 ? 'y' : '-'}` +
-      `${scalars.transmission > 0 ? 't' : '-'}`;
-    return (
-      <meshPhysicalMaterial
-        key={`physical-${slotKey}-${stateKey}-${featureKey}`}
-        {...pbrProps}
-        clearcoat={scalars.clearcoat}
-        clearcoatRoughness={scalars.clearcoatRoughness}
-        sheen={scalars.rim}
-        sheenColor={sheenColor}
+    const physical = materialProgramInputs({
+      props: {
+        ...pbrProps,
+        clearcoat: scalars.clearcoat,
+        clearcoatRoughness: scalars.clearcoatRoughness,
+        sheen: scalars.rim,
+        sheenColor,
         // A low sheenRoughness concentrates the sheen toward grazing angles, so
         // the effect reads as an edge rim rather than a broad fabric glow that
         // would wash a dark-albedo sphere out to bright grey.
-        sheenRoughness={0.1}
-        anisotropy={scalars.anisotropy}
-        anisotropyRotation={scalars.anisotropyRotation}
-        anisotropyMap={anisotropyMap ?? null}
-        transmission={scalars.transmission}
-        thickness={scalars.refractionThickness}
-      />
-    );
+        sheenRoughness: 0.1,
+        anisotropy: scalars.anisotropy,
+        anisotropyRotation: scalars.anisotropyRotation,
+        anisotropyMap: anisotropyMap ?? null,
+        transmission: scalars.transmission,
+        thickness: scalars.refractionThickness,
+      },
+    });
+    return <meshPhysicalMaterial key={physical.key} {...physical.props} />;
   }
-  return <meshStandardMaterial key={`${slotKey}-${stateKey}`} {...pbrProps} />;
+  const standard = materialProgramInputs({ props: pbrProps });
+  return <meshStandardMaterial key={standard.key} {...standard.props} />;
 }

@@ -28,6 +28,12 @@ import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+
+/** Literal-only, so the key is constant and a placeholder cell never remounts. */
+const PLACEHOLDER_CELL_MATERIAL = materialProgramInputs({
+  props: { color: 0x4488cc, wireframe: true },
+});
 
 /**
  * Shared fallback material for tiles whose ArrayMesh declares no material (or
@@ -182,7 +188,7 @@ function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize
   return (
     <mesh position={position}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
-      <meshBasicMaterial color={0x4488cc} wireframe />
+      <meshBasicMaterial key={PLACEHOLDER_CELL_MATERIAL.key} {...PLACEHOLDER_CELL_MATERIAL.props} />
     </mesh>
   );
 }

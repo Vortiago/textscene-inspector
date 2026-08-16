@@ -20,6 +20,7 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from './godotDefaultMaterial';
+import { materialProgramInputs } from '../materialProgramInputs';
 
 interface ExternalMaterialSlotProps {
   /** `res://` path to the `.tres`, or null for "no external material". */
@@ -34,14 +35,16 @@ export function ExternalMaterialSlot({ path, attach, shadowSide }: ExternalMater
   if (path && result.value) {
     return <primitive object={result.value} attach={attach} />;
   }
-  return (
-    <meshStandardMaterial
-      attach={attach}
-      color={GODOT_DEFAULT_ALBEDO}
-      metalness={GODOT_DEFAULT_METALLIC}
-      roughness={GODOT_DEFAULT_ROUGHNESS}
-      side={THREE.FrontSide}
-      shadowSide={shadowSide ?? null}
-    />
-  );
+  // Literal-only, so the key is constant and the default surface never remounts.
+  const fallback = materialProgramInputs({
+    props: {
+      attach,
+      color: GODOT_DEFAULT_ALBEDO,
+      metalness: GODOT_DEFAULT_METALLIC,
+      roughness: GODOT_DEFAULT_ROUGHNESS,
+      side: THREE.FrontSide,
+      shadowSide: shadowSide ?? null,
+    },
+  });
+  return <meshStandardMaterial key={fallback.key} {...fallback.props} />;
 }

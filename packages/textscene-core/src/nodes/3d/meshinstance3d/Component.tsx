@@ -52,6 +52,7 @@ import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/buil
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import {
   GODOT_DEFAULT_ALBEDO,
   GODOT_DEFAULT_METALLIC,
@@ -78,6 +79,15 @@ import { triplanarPlaneScale } from './triplanarScale';
 // Its ORDER is load-bearing here — hooks must be called unconditionally in a
 // stable order.
 const TEXTURE_PROPERTIES = TEXTURE_SLOTS;
+
+/** Literal-only, so each key is constant and none of these ever remounts. */
+const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
+const SHADOWS_ONLY_MATERIAL = materialProgramInputs({
+  props: { attach: 'material', colorWrite: false, depthWrite: false },
+});
+const UNRESOLVED_MESH_MATERIAL = materialProgramInputs({
+  props: { color: 0xff00ff, wireframe: true },
+});
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
@@ -367,9 +377,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
   const repackedFlowmap = useMemo(() => {
     // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap; skip the repack and the slotKey churn when the
-    // strength is 0 — the map would never be read on the standard-material
-    // fallback.
+    // samples anisotropyMap; skip the repack when the strength is 0 — the map
+    // would never be read on the standard-material fallback.
     if (anisotropyStrength <= 0 || !anisotropyFlowmap) return undefined;
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [anisotropyStrength, anisotropyFlowmap]);
@@ -539,7 +548,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {geometryElement}
-        <meshStandardMaterial color="magenta" />
+        <meshStandardMaterial key={PLACEHOLDER_MATERIAL.key} {...PLACEHOLDER_MATERIAL.props} />
       </MeshShell>
     );
   }
@@ -667,7 +676,7 @@ function MeshShell({
           `colorWrite`, so the shadow comes through untouched. Mounting after
           `children` makes this the material R3F attaches last. */}
       {shadowsOnly && (
-        <meshBasicMaterial attach="material" colorWrite={false} depthWrite={false} />
+        <meshBasicMaterial key={SHADOWS_ONLY_MATERIAL.key} {...SHADOWS_ONLY_MATERIAL.props} />
       )}
       {subtree}
     </mesh>
@@ -697,15 +706,17 @@ function SecondarySurfaceMaterial({
   shadowSide,
 }: SecondarySurfaceMaterialProps) {
   if (!subResource) {
-    return (
-      <meshStandardMaterial
-        attach={attach}
-        color={GODOT_DEFAULT_ALBEDO}
-        metalness={GODOT_DEFAULT_METALLIC}
-        roughness={GODOT_DEFAULT_ROUGHNESS}
-        shadowSide={shadowSide ?? null}
-      />
-    );
+    // Literal-only, so the key is constant and the empty slot never remounts.
+    const fallback = materialProgramInputs({
+      props: {
+        attach,
+        color: GODOT_DEFAULT_ALBEDO,
+        metalness: GODOT_DEFAULT_METALLIC,
+        roughness: GODOT_DEFAULT_ROUGHNESS,
+        shadowSide: shadowSide ?? null,
+      },
+    });
+    return <meshStandardMaterial key={fallback.key} {...fallback.props} />;
   }
   const scalars = parseStandardMaterial3DScalars(
     subResource.data as Record<string, string>
@@ -715,29 +726,23 @@ function SecondarySurfaceMaterial({
   // exactly the case where `emission_operator = MULTIPLY` collapses to no emission
   // at all — Godot's absent sampler reads black.
   const emission = resolveEmission(scalars, scalars.emissionOperator, false);
-  // Baked at first compile and re-derived by nothing: `opaque`
-  // (`WebGLPrograms.js:262`) and the side flags — this slot passes nothing else
-  // the program bakes.
-  const programKey =
-    `${scalars.transparent === false && scalars.blending === THREE.NormalBlending ? 'o' : '-'}` +
-    `${scalars.side}`;
-  return (
-    <meshStandardMaterial
-      key={programKey}
-      attach={attach}
-      color={scalars.color}
-      metalness={scalars.metalness}
-      roughness={scalars.roughness}
-      transparent={scalars.transparent}
-      opacity={scalars.opacity}
-      {...materialBlendProps(scalars)}
-      depthTest={scalars.depthTest}
-      side={scalars.side}
-      shadowSide={shadowSide ?? null}
-      emissive={emission.emissive}
-      emissiveIntensity={emission.emissiveIntensity}
-    />
-  );
+  const program = materialProgramInputs({
+    props: {
+      attach,
+      color: scalars.color,
+      metalness: scalars.metalness,
+      roughness: scalars.roughness,
+      transparent: scalars.transparent,
+      opacity: scalars.opacity,
+      ...materialBlendProps(scalars),
+      depthTest: scalars.depthTest,
+      side: scalars.side,
+      shadowSide: shadowSide ?? null,
+      emissive: emission.emissive,
+      emissiveIntensity: emission.emissiveIntensity,
+    },
+  });
+  return <meshStandardMaterial key={program.key} {...program.props} />;
 }
 
 /**
@@ -812,7 +817,7 @@ function resolveProceduralTextures(
 const UNRESOLVED_MESH = (
   <>
     <boxGeometry args={[1, 1, 1]} />
-    <meshBasicMaterial color={0xff00ff} wireframe />
+    <meshBasicMaterial key={UNRESOLVED_MESH_MATERIAL.key} {...UNRESOLVED_MESH_MATERIAL.props} />
   </>
 );
 

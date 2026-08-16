@@ -40,7 +40,13 @@ async function rebuilds(
   return materialOf() !== first;
 }
 
-/** The eight slots this component fans out to, and the prop each arrives on. */
+/**
+ * Seven of the eight slots this component fans out to. `anisotropyMap` is the
+ * eighth and is asserted separately: three gates it on `HAS_ANISOTROPY`
+ * (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial` declares
+ * `anisotropy` at all (`MeshPhysicalMaterial.js:353`), so on this branch it is
+ * provably not a program input.
+ */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
   'albedoMap',
   'normalMap',
@@ -49,7 +55,6 @@ const TEXTURE_SLOTS: Array<keyof Maps> = [
   'emissiveMap',
   'aoMap',
   'displacementMap',
-  'anisotropyMap',
 ];
 
 const ALPHA = { transparency: '1' };
@@ -87,6 +92,15 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
     expect(await rebuilds(base, { ...base, ...feature })).toBe(true);
   });
 
+  it('the anisotropy flowmap arriving on an already-anisotropic material', async () => {
+    // The real hazard `HAS_ANISOTROPYMAP` (`:147`) describes: the physical
+    // branch is already up, `anisotropy > 0`, and the flowmap resolves late.
+    const anisotropic = { anisotropy_enabled: 'true', anisotropy: '0.5' };
+    expect(await rebuilds(anisotropic, anisotropic, {}, { anisotropyMap: new THREE.Texture() }))
+      .toBe(true);
+  });
+
+
   it('unshaded (MeshBasicMaterial) keys the same composite', async () => {
     const unshaded = { shading_mode: '0' };
     expect(await rebuilds(unshaded, { ...unshaded, ...ALPHA })).toBe(true);
@@ -115,6 +129,14 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     // `Material.js:494-502` — the accessor makes alphaTest self-healing, so it
     // is deliberately absent from the key.
     expect(await rebuilds({}, { transparency: '2', alpha_scissor_threshold: '0.3' })).toBe(false);
+  });
+
+  it('the anisotropy flowmap while anisotropy is still zero', async () => {
+    // Not an omission: `MeshStandardMaterial` has no `anisotropy`
+    // (`MeshPhysicalMaterial.js:353`), so `HAS_ANISOTROPY` is false and the slot
+    // (`WebGLPrograms.js:147`) cannot be a program input here. Crossing zero
+    // switches the ELEMENT type, which remounts on its own.
+    expect(await rebuilds({}, {}, {}, { anisotropyMap: new THREE.Texture() })).toBe(false);
   });
 
   it('a texture slot swapping IDENTITY is presence-unchanged', async () => {

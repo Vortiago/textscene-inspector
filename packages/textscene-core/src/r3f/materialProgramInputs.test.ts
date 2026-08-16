@@ -26,9 +26,12 @@ import {
 } from './materialProgramInputs';
 
 /**
- * The 2D canvas, and only it — same roots the single-pass guard walks, for the
- * same reason: a 3D material's slots are keyed by `StandardMaterialSlot`, and
- * this guard must not be able to reach them even to report.
+ * The 2D canvas, and only it — same roots the single-pass guard walks. NOT
+ * because 3D is covered elsewhere: that premise held for the `map` dimension
+ * alone and was false for every other one this scan does not look at. What keeps
+ * 3D out is that this scan reads `map=` on a hand-written TAG, which no 3D
+ * material is any more; the structural rule that every material comes from the
+ * factory is what covers them, and it owns both dimensions at once.
  */
 const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base/node2d', './controls', './components'].map(
   (dir) => join(import.meta.dirname, dir)
@@ -186,6 +189,15 @@ describe('materialProgramInputs', () => {
       ['combine', { combine: THREE.MixOperation }],
       ['dithering', { dithering: true }],
       ['the material fog flag', { fog: true }],
+      // The physical features, each a `> 0` boolean at `:140-145` and a layer
+      // bit of its own (`:509`, `:511`, `:527`, `:533`, `:577`, `:579`).
+      ['clearcoat', { clearcoat: 0.5 }],
+      ['sheen', { sheen: 0.5 }],
+      ['anisotropy', { anisotropy: 0.5 }],
+      ['transmission', { transmission: 0.5 }],
+      ['iridescence', { iridescence: 0.5 }],
+      ['dispersion', { dispersion: 0.5 }],
+      ['flatShading', { flatShading: true }],
     ];
 
     for (const [name, changed] of cases)
@@ -197,6 +209,30 @@ describe('materialProgramInputs', () => {
       // `doubleSided` and `flipSided` are two independent layers (`:569`, `:570`).
       expect(keyOf({ side: THREE.BackSide })).not.toBe(keyOf({ side: THREE.FrontSide }));
       expect(keyOf({ side: THREE.BackSide })).not.toBe(keyOf({ side: THREE.DoubleSide }));
+    });
+
+    it('reads a physical feature as a threshold, not a magnitude', () => {
+      // `:141` is `material.clearcoat > 0`, so a slider moving inside the band
+      // is a uniform — rebuilding for it would throw away the program per edit.
+      expect(keyOf({ clearcoat: 0.5 })).toBe(keyOf({ clearcoat: 0.9 }));
+      expect(keyOf({ clearcoat: 0 })).toBe(keyOf({}));
+    });
+
+    it('keys flatShading only while the material is not wireframe', () => {
+      // `:317` — `material.wireframe === false && material.flatShading === true`.
+      expect(keyOf({ flatShading: true, wireframe: true })).toBe(keyOf({ wireframe: true }));
+    });
+
+    it('keys anisotropyMap only once anisotropy has crossed zero', () => {
+      // `:147` gates the slot on `HAS_ANISOTROPY`, and only
+      // `MeshPhysicalMaterial` declares `anisotropy` at all
+      // (`MeshPhysicalMaterial.js:353`) — so on any other material the flowmap
+      // is provably not a program input.
+      const flowmap = texture(THREE.NoColorSpace);
+      expect(keyOf({ anisotropyMap: flowmap })).toBe(keyOf({}));
+      expect(keyOf({ anisotropy: 0.5, anisotropyMap: flowmap })).not.toBe(
+        keyOf({ anisotropy: 0.5 })
+      );
     });
   });
 
@@ -374,7 +410,19 @@ describe('Canvas-item material program conformance', () => {
     expect(scannedSources().length).toBeGreaterThanOrEqual(80);
   });
 
-  it('cannot reach a 3D material', () => {
+  it('no longer has a reason to exclude 3D, and stays 2D only because it is the weaker check', () => {
+    // This USED to read "cannot reach a 3D material", on the ground that a 3D
+    // material's slots were keyed by `StandardMaterialSlot`. They were — for
+    // `map` and the seven slots beside it, and for nothing else. `transparent`,
+    // `side`, `vertexColors` and the physical `> 0` thresholds are program
+    // inputs too (`WebGLPrograms.js:262`, `:369-370`, `:308`, `:140-145`), and
+    // every one of them came off a re-parsable property with no key on it.
+    //
+    // So the exclusion is documentary now, not protective: 3D and 2D go through
+    // the same factory, and what covers either is that a material is BUILT from
+    // it — a stronger statement than "a tag that binds `map=` also writes a
+    // key", which is all this scan can say. Widening the roots would only make
+    // it pass vacuously, since no material writes `map=` on a tag any more.
     expect(
       scannedSources()
         .map(({ file }) => file)

@@ -61,11 +61,23 @@
  *   - `alphaToCoverage` (`:213`, layer `:589`), which is BOTH a term of `opaque`
  *     and a parameter in its own right
  *   - per-texture-slot PRESENCE, which reaches the key as each slot's `…MapUv`
- *     term (`:444-466`) and the shader's `USE_…` define
+ *     term (`:444-466`) and the shader's `USE_…` define. `anisotropyMap` is the
+ *     one slot bound here that three GATES on its feature (`:147`), so its
+ *     presence term carries the gate.
  *   - `defines` — KEYS and VALUES both (`:415-420`)
  *   - `vertexColors` (`:308`), `side` as the `doubleSided`/`flipSided` pair
  *     (`:369-370`), `premultipliedAlpha` (`:367`), `combine` (`:268`),
  *     `dithering` (`:357`), the material's own `fog` flag (`:314`)
+ *   - the physical features as `> 0` thresholds (`:140-145`) — `clearcoat`,
+ *     `sheen`, `anisotropy`, `transmission`, `iridescence`, `dispersion`, one
+ *     layer bit each — so a slider moving inside the band stays a uniform while
+ *     a crossing rebuilds, which the element-type switch alone misses when a
+ *     second feature holds the upgrade.
+ *   - `flatShading` (`:317`) as its first arm only, `wireframe === false &&
+ *     flatShading === true`. The second arm turns on `geometry.attributes.normal`
+ *     and the material's `isMesh*Material` brand, neither of them a prop —
+ *     out of reach here for the same reason `vertexAlphas` is, except for its
+ *     `HAS_NORMALMAP === false` term, which slot presence already covers.
  *   - the composed `customProgramCacheKey()` return (`:382`, pushed at `:432`)
  *
  * Deliberately NOT keyed:
@@ -74,8 +86,9 @@
  *     `version` itself on the `> 0` crossing, so it re-derives without us.
  *   - `blending` alone: its only reference in `WebGLPrograms` is inside
  *     `opaque`, so on an already-transparent material it is per-draw GL state.
- *   - `wireframe` alone: it reaches a program only through the `bumpMap`
- *     (`:132`) and `flatShading` (`:317`) composites.
+ *   - `wireframe` alone: it reaches a program only through the `flatShading`
+ *     (`:317`) composite, which keys it, and the `bumpMap` one (`:132`), whose
+ *     slot nothing here binds — Godot has no bump slot to map onto it.
  *   - `clippingPlanes`: `numClippingPlanes` is a parameter (`:354`), but
  *     `WebGLRenderer.js:2456-2458` compares the plane count every draw.
  *   - `envMap`, `vertexAlphas`, `vertexTangents`, scene `fog`, tone mapping: all
@@ -163,7 +176,7 @@ export interface MaterialProgram<P> {
   readonly props: P;
 }
 
-/** Every `!! material.<slot>` presence term in `WebGLPrograms` a material here can bind. */
+/** Every UNGATED `!! material.<slot>` presence term a material here can bind. */
 const TEXTURE_SLOTS = [
   'map',
   'alphaMap',
@@ -178,6 +191,22 @@ const TEXTURE_SLOTS = [
   'normalMap',
   'roughnessMap',
   'specularMap',
+] as const;
+
+/**
+ * A slot three reads only while its feature is on (`:147`), so the gate is part
+ * of the presence term. Ungated slots stay in `TEXTURE_SLOTS`.
+ */
+const GATED_TEXTURE_SLOTS = { anisotropyMap: 'anisotropy' } as const;
+
+/** The `> 0` feature booleans (`:140-145`), each its own layer bit. */
+const PHYSICAL_FEATURES = [
+  'clearcoat',
+  'sheen',
+  'anisotropy',
+  'transmission',
+  'iridescence',
+  'dispersion',
 ] as const;
 
 export function materialProgramInputs<
@@ -249,7 +278,17 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
         .map((name) => `${name}=${defines[name]}`)
         .join('+')
     : '';
-  const slots = TEXTURE_SLOTS.filter((slot) => props[slot]).join('+');
+  const active = (name: string): boolean => Number(props[name] ?? 0) > 0;
+  const slots = [
+    ...TEXTURE_SLOTS.filter((slot) => props[slot]),
+    ...Object.entries(GATED_TEXTURE_SLOTS)
+      .filter(([slot, gate]) => props[slot] && active(gate))
+      .map(([slot]) => slot),
+  ].join('+');
+  const features = PHYSICAL_FEATURES.filter(active).join('+');
+  // `:317`, first arm only: the second is geometry-derived, out of reach here
+  // for the same reason `vertexAlphas` is.
+  const flatShading = props.flatShading === true && props.wireframe !== true;
 
   return [
     `opaque:${flag(opaque)}`,
@@ -260,6 +299,8 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
     `combine:${token(props.combine)}`,
     `dither:${flag(props.dithering === true)}`,
     `fog:${token(props.fog)}`,
+    `flat:${flag(flatShading)}`,
+    `feat:${features}`,
     `slots:${slots}`,
     `defines:${declared}`,
     `inject:${cacheKey}`,

@@ -26,9 +26,14 @@ import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard, BILLBOARD_ENABLED } from '../../../r3f/hooks/useBillboard';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 
 /** Editor-only gizmo colour — yellow to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
+
+/** Literal-only, so the key is constant and the speaker gizmo never remounts. */
+const GIZMO_MATERIAL = materialProgramInputs({ props: { color: GIZMO_COLOR, wireframe: true } });
+
 /** Body of the speaker cone (small wireframe-friendly silhouette). */
 const SPEAKER_BODY_RADIUS = 0.12;
 const SPEAKER_BODY_HEIGHT = 0.18;
@@ -92,13 +97,13 @@ function SpeakerGizmo() {
         <coneGeometry
           args={[SPEAKER_BODY_RADIUS, SPEAKER_BODY_HEIGHT, 16, 1, true]}
         />
-        <meshBasicMaterial color={GIZMO_COLOR} wireframe />
+        <meshBasicMaterial key={GIZMO_MATERIAL.key} {...GIZMO_MATERIAL.props} />
       </mesh>
       <mesh position={[0, 0, -SPEAKER_BODY_HEIGHT / 2]}>
         <cylinderGeometry
           args={[SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_RADIUS, SPEAKER_FRONT_THICKNESS, 24]}
         />
-        <meshBasicMaterial color={GIZMO_COLOR} wireframe />
+        <meshBasicMaterial key={GIZMO_MATERIAL.key} {...GIZMO_MATERIAL.props} />
       </mesh>
     </group>
   );

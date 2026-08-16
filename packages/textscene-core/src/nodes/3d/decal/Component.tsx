@@ -50,6 +50,7 @@ import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import { decalDistanceFade, type DecalGeometricFade } from './decalFade';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
@@ -58,6 +59,11 @@ import {
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
+
+/** Literal-only, so the key is constant and the gizmo never remounts. */
+const BOX_EDGES_MATERIAL = materialProgramInputs({
+  props: { color: BOX_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
+});
 
 /**
  * Scratch vectors for the distance-fade frame callback, so it allocates
@@ -258,7 +264,7 @@ export function Decal({ node, children }: NodeComponentProps) {
         <group scale={[size.x, size.y, size.z]}>
           <lineSegments userData={{ cullMask: properties.cull_mask }}>
             <primitive object={boxEdges} attach="geometry" />
-            <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
+            <lineBasicMaterial key={BOX_EDGES_MATERIAL.key} {...BOX_EDGES_MATERIAL.props} />
           </lineSegments>
         </group>
       )}
