@@ -29,7 +29,7 @@ export function parseCamera3D(
     current: properties.current === 'true',
     // class_camera3d.html: default 1048575 — the 20 editor-visible layers of
     // the 32 the mask actually holds.
-    cull_mask: intOr(properties.cull_mask, 1048575, 'cull_mask'),
+    cull_mask: intOr(properties.cull_mask, 1048575, 'cull_mask', 'uint32'),
     doppler_tracking: intOr(properties.doppler_tracking, 0, 'doppler_tracking'),
   };
 }

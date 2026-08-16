@@ -135,7 +135,7 @@ describe('the classification guard bites', () => {
     // owes a citation like any other bound.
     expect(v.float('width').formatOnly).toBe(true);
     expect(v.int('count').formatOnly).toBeUndefined();
-    expect(v.int('count').intSlot).toEqual({ cite: 'variant.h:360-377' });
+    expect(v.int('count').intSlot).toEqual({ cite: 'variant.h:360-377', width: 'int32' });
     expect(
       v.float('fov', { min: 1, max: 179, enforced: 'camera_3d.cpp:725' }).formatOnly
     ).toBeUndefined();

@@ -286,11 +286,11 @@ describe('Node2D Linter', () => {
       expectClean(scene(node('Node2D', { z_index: 0 })));
     });
 
-    it('should detect invalid z_index format - float', () => {
+    it('warns that a float z_index is truncated', () => {
       expectDiagnostic(scene(node('Node2D', { z_index: 10.5 })), {
         ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['z_index', 'integer'],
+        severity: 'warning',
+        contains: ['z_index', 'integer slot', 'stores 10'],
       });
     });
 

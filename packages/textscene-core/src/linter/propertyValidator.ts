@@ -7,6 +7,7 @@
  * it, so the import path a slice already uses is unchanged.
  */
 
+import type { IntWidth } from '../godot/index.js';
 import type { ParseError } from './types.js';
 
 /**
@@ -75,7 +76,7 @@ export type PropertyValidator = ((
    * property. Folding the two let a bounded int combinator inherit a citation
    * that vouched for a type conversion rather than for its range.
    */
-  intSlot?: { cite: string };
+  intSlot?: { cite: string; width: IntWidth };
 
   /**
    * The severity each BOUNDED end reports, for the ends that have a bound.

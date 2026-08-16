@@ -509,3 +509,21 @@ describe('Sprite2D Linter', () => {
     });
   });
 });
+
+describe('a grid count the setter refuses', () => {
+  it('does not report a frame against a grid Godot never accepted', () => {
+    // `set_hframes` ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:344), so Godot
+    // keeps hframes at 1 and frame 0 is legal. Reading the authored 0 gave
+    // maxFrame 0 and printed "Maximum frame is -1" for every frame index.
+    const diagnostics = lint(scene(node('Sprite2D', { hframes: 0, frame: 0 })));
+
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite2d-frame-range')).toEqual([]);
+  });
+
+  it('still measures a frame against the grid Godot does accept', () => {
+    expectDiagnostic(scene(node('Sprite2D', { hframes: 0, frame: 3 })), {
+      ruleName: 'sprite2d-frame-range',
+      contains: ['Maximum frame is 0'],
+    });
+  });
+});

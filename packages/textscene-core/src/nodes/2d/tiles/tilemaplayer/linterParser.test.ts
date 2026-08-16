@@ -203,3 +203,24 @@ tile_set = NotARef(1)
     });
   });
 });
+
+describe('tile_map_data element storage', () => {
+  const validator = validatorRegistry.findValidator('TileMapLayer', 'tile_map_data')!;
+
+  it('reports an element no integer slot can hold', () => {
+    // The seventh hand-rolled packed-int validator, and the only one not on
+    // `badIntElement`: it checked the FLOAT grammar, so a legal literal the
+    // slot cannot carry passed while the decoder silently dropped the layer.
+    expect(validator('tile_map_data', 'PackedByteArray(1e20, 0, 0)', 1)).not.toBeNull();
+    expect(validator('tile_map_data', 'PackedByteArray(inf, 0, 0)', 1)).not.toBeNull();
+  });
+
+  it('is tagged as the int slot it reads, so the sweep sees it', () => {
+    expect(validator.intSlot).toBeDefined();
+  });
+
+  it('still accepts the bodies Godot writes', () => {
+    expect(validator('tile_map_data', 'PackedByteArray(0, 0, 9, 0)', 1)).toBeNull();
+    expect(validator('tile_map_data', 'PackedByteArray("AAAJAAsAAgABAAAABQA=")', 1)).toBeNull();
+  });
+});

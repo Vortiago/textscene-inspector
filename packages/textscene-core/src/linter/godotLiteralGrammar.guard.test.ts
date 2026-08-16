@@ -15,8 +15,8 @@
  * And a widened regex is only half a read. `parseInt` on a matched capture
  * stops at the first character it cannot use: `2e1` comes back as 2 and `inf`
  * as NaN, so a bound compares against a number the file does not contain. The
- * capture must go through `intComponent` / `tupleComponent`, which are derived
- * from the same table as the grammar that matched it.
+ * capture must go through `storedInt` / `matchedFloat` (`godot/`), which read
+ * exactly what the grammar that matched it admits.
  *
  * Source text rather than behaviour, deliberately: a second copy is wrong only
  * for the values the two copies disagree about, and nothing observes that until

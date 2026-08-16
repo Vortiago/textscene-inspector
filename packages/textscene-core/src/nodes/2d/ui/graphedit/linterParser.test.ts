@@ -194,7 +194,7 @@ describe('GraphEdit.panning_scheme', () => {
     // Variant's FLOAT -> int conversion is a C cast, `return T(_data._float);`
     // (core/variant/variant.h:369-370), so `0.5` loads as SCROLL_ZOOMS rather
     // than failing. Rejecting it would refuse a file the engine reads.
-    expect(check('panning_scheme', '0.5')).toBeNull();
+    expect(check('panning_scheme', '0.5')?.severity).toBe('warning');
   });
 
   it('rejects a non-numeric token', () => {

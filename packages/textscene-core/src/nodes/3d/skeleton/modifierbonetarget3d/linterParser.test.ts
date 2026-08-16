@@ -101,8 +101,8 @@ describe('ModifierBoneTarget3D strict validators', () => {
       expect(error?.code).toBe('INVALID_BONE_VALUE');
     });
 
-    it('rejects a decimal, which Godot would truncate rather than store', () => {
-      expect(check('bone', '2.5')?.code).toBe('INVALID_BONE_FORMAT');
+    it('warns that a decimal is truncated rather than stored', () => {
+      expect(check('bone', '2.5')?.code).toBe('INVALID_BONE_VALUE');
     });
 
     it('rejects a value that is not a number', () => {

@@ -169,8 +169,8 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('setting_count', '-1')?.severity).toBe('error');
     });
 
-    it('rejects a fractional count', () => {
-      expect(check('setting_count', '1.5')?.severity).toBe('error');
+    it('warns that a fractional count is truncated', () => {
+      expect(check('setting_count', '1.5')?.severity).toBe('warning');
     });
   });
 
@@ -220,8 +220,8 @@ describe('SpringBoneSimulator3D strict validators', () => {
       }
     });
 
-    it('rejects a fractional bone index', () => {
-      expect(check('settings/0/root_bone', '0.5')?.severity).toBe('error');
+    it('warns that a fractional bone index is truncated', () => {
+      expect(check('settings/0/root_bone', '0.5')?.severity).toBe('warning');
     });
   });
 
@@ -336,7 +336,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('still checks their format', () => {
-      expect(check('settings/0/joints/0/bone', '1.5')?.severity).toBe('error');
+      expect(check('settings/0/joints/0/bone', '1.5')?.severity).toBe('warning');
       expect(check('settings/0/joints/0/bone_name', 'Bone3')?.severity).toBe('error');
     });
   });

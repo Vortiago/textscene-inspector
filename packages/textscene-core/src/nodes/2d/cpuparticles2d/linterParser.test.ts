@@ -218,10 +218,10 @@ describe('CPUParticles2D strict validators', () => {
       expect(check('seed', '4294967296')?.code).toBe('INVALID_SEED_VALUE');
     });
 
-    it('rejects a fractional value (FORMAT branch, always an error)', () => {
+    it('warns that a fractional value is truncated', () => {
       const error = check('seed', '4.5');
-      expect(error?.code).toBe('INVALID_SEED_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_SEED_VALUE');
+      expect(error?.severity).toBe('warning');
     });
   });
 

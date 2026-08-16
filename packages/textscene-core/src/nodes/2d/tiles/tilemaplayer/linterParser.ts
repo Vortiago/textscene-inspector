@@ -4,7 +4,8 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { propertyError, shape, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { firstNonNumericElement } from '../../../../linter/validators/v/packedArrays.js';
+import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
+import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 
 /**
  * tile_map_layer.h:341-345, DebugVisibilityMode. BIND_ENUM_CONSTANT count is 3
@@ -63,17 +64,19 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
     }
     return null;
   }
-  const offender = firstNonNumericElement(body);
-  if (offender !== null) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_map_data' contains a non-numeric value: "${offender}"`,
-      'INVALID_TILE_MAP_DATA_FORMAT'
-    );
-  }
-  return null;
-}, 'PackedByteArray(…) bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');
+  // `badIntElement`, like the other six packed-int slots: the elements are
+  // BYTES, so the FLOAT grammar this used accepted `1e20` — a literal Godot
+  // reads and no integer slot holds — and the decoder then dropped the layer
+  // with nothing said about which element did it.
+  return badIntElement('tile_map_data', key, line, body, {
+    format: 'INVALID_TILE_MAP_DATA_FORMAT',
+    value: 'INVALID_TILE_MAP_DATA_VALUE',
+  });
+}, 'PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');
+
+// The tag the sweep reads: this is an INT slot, and an element it cannot hold
+// is a refusal of a real value rather than a format complaint.
+markIntSlot(tileMapDataValidator);
 
 validatorRegistry.registerAll('TileMapLayer', {
   tile_set: v.resourceReference('tile_set'),

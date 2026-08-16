@@ -10,10 +10,23 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
 
-/** An absent `hframes`/`vframes` is Godot's default of 1; an unusable one is `null`. */
+/**
+ * The grid count Godot ACTUALLY holds, or `null` for a literal no rule can use.
+ *
+ * An absent key is Godot's default of 1. So is any value below it: `set_hframes`
+ * and `set_vframes` both open with `ERR_FAIL_COND_MSG(p_amount < 1)`
+ * (sprite_3d.cpp:905, :924), so the write is refused and the default stands. Reading
+ * the authored 0 instead gave a grid of zero frames and reported every frame
+ * index — index 0 included — as out of range of a maximum of -1.
+ *
+ * The authored value is not lost: `linterParser.ts` reports the refused write
+ * itself, which is where that diagnostic belongs.
+ */
 function gridCount(raw: string | undefined): number | null {
-  return ruleInt(raw, 1);
+  const count = ruleInt(raw, 1);
+  return count === null ? null : Math.max(1, count);
 }
 
 /**
@@ -69,6 +82,41 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
           nodeType: node.type,
           ruleName: 'sprite3d-frame-range',
         });
+      }
+    }
+  }
+
+  // `set_frame_coords` ERR_FAIL_INDEXes each component against the grid
+  // (sprite_3d.cpp:894-895) — the same guard the 2D twin reports on, and cited
+  // by this slice's `frame_coords` validator, whose `min` half was the only one
+  // being checked.
+  if (rawProps.frame_coords !== undefined) {
+    const coordsMatch = VECTOR2I_REGEX.exec(rawProps.frame_coords);
+    if (coordsMatch) {
+      const coordX = ruleInt(coordsMatch[1]);
+      const coordY = ruleInt(coordsMatch[2]);
+      const hframes = gridCount(rawProps.hframes);
+      const vframes = gridCount(rawProps.vframes);
+
+      if (coordX !== null && coordY !== null && hframes !== null && vframes !== null) {
+        if (coordX >= hframes) {
+          diagnostics.push({
+            severity: 'error',
+            message: `frame_coords.x (${coordX}) is out of range. Maximum is ${hframes - 1} (hframes=${hframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'sprite3d-frame-coords-range',
+          });
+        }
+        if (coordY >= vframes) {
+          diagnostics.push({
+            severity: 'error',
+            message: `frame_coords.y (${coordY}) is out of range. Maximum is ${vframes - 1} (vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'sprite3d-frame-coords-range',
+          });
+        }
       }
     }
   }
@@ -131,6 +179,11 @@ const sprite3DValidationRule: LintRule = {
         ruleName: 'sprite3d-frame-range',
         severity: 'error',
         grounding: { kind: 'engine', at: 'sprite_3d.cpp:878' },
+      },
+      {
+        ruleName: 'sprite3d-frame-coords-range',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:894' },
       },
       {
         ruleName: 'sprite3d-region-configuration',

@@ -40,7 +40,10 @@ function stencilFlags(): PropertyValidator {
     if (unlisted?.severity === 'error') return unlisted;
     // `listed` errors on anything unreadable OR unstorable, so a usable number
     // is the only thing that reaches here.
-    const bits = parseGodotInt(value);
+    // Same width as `listed`, which is `hintedBitField`: read at int32 while it
+    // read at int64, a value past 32 bits came back NaN here and the wrapper
+    // returned early, dropping the warning `listed` had produced.
+    const bits = parseGodotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
     if ((bits & STENCIL_FLAG_READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
       return propertyError(

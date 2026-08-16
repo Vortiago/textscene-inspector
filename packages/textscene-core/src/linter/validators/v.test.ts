@@ -98,10 +98,12 @@ describe('v.int', () => {
     expect(err!.code).toBe('INVALID_HFRAMES_FORMAT');
   });
 
-  // A float literal in an INT slot is legal and truncates toward zero.
-  it('truncates a float literal toward zero', () => {
-    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)).toBeNull();
-    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)).not.toBeNull();
+  // A float literal in an INT slot loads and truncates toward zero, so the
+  // stored value is not the written one — the truncation warning. It is judged
+  // AFTER the bounds, so `0.9` under a floor of 1 keeps its range error.
+  it('warns that a float literal is truncated toward zero', () => {
+    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)?.severity).toBe('warning');
+    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)?.severity).toBe('error');
   });
 });
 
@@ -144,12 +146,16 @@ describe('the int combinators agree on what Godot can read', () => {
     expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
   });
 
-  // Where they DO differ, deliberately: `strictInt` guards a discrete index and
-  // refuses a fractional literal outright, while `v.int` truncates it the way
-  // the INT conversion does.
-  it('still differ on a fractional literal, which is the point of strictInt', () => {
-    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.5', 1)).toBeNull();
-    expect(v.strictInt('frame', { min: 0, max: 10 })('frame', '5.5', 1)).not.toBeNull();
+  // And on a fractional literal too, now that one engine behaviour has one
+  // verdict: `strictInt` used to call it a FORMAT error on 56 slots while
+  // `v.int` was silent on 169, so the same `.cpp` line judged Sprite2D and
+  // Sprite3D differently.
+  it('agree on a fractional literal, which the INT conversion truncates', () => {
+    for (const validator of [v.int('frame', { min: 0, max: 10 }), v.strictInt('frame', { min: 0, max: 10 })]) {
+      const diagnostic = validator('frame', '5.5', 1);
+      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');
+    }
   });
 });
 

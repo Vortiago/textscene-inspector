@@ -12,9 +12,21 @@ import { checkResourceExists, heldResource } from '../../../linter/resourceCheck
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
 
-/** An absent `hframes`/`vframes` is Godot's default of 1; an unusable one is `null`. */
+/**
+ * The grid count Godot ACTUALLY holds, or `null` for a literal no rule can use.
+ *
+ * An absent key is Godot's default of 1. So is any value below it: `set_hframes`
+ * and `set_vframes` both open with `ERR_FAIL_COND_MSG(p_amount < 1)`
+ * (sprite_2d.cpp:323, :344), so the write is refused and the default stands. Reading
+ * the authored 0 instead gave a grid of zero frames and reported every frame
+ * index — index 0 included — as out of range of a maximum of -1.
+ *
+ * The authored value is not lost: `linterParser.ts` reports the refused write
+ * itself, which is where that diagnostic belongs.
+ */
 function gridCount(raw: string | undefined): number | null {
-  return ruleInt(raw, 1);
+  const count = ruleInt(raw, 1);
+  return count === null ? null : Math.max(1, count);
 }
 
 /**

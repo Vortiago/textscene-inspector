@@ -198,8 +198,8 @@ describe('LimitAngularVelocityModifier3D chain_count', () => {
     expect(check('chain_count', '-1')?.severity).toBe('error');
   });
 
-  it('rejects a fractional count as malformed', () => {
-    expect(check('chain_count', '2.5')?.severity).toBe('error');
+  it('warns that a fractional count is truncated', () => {
+    expect(check('chain_count', '2.5')?.severity).toBe('warning');
   });
 });
 
@@ -239,9 +239,9 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
   );
 
   it.each(['chains/0/root_bone', 'chains/0/end_bone'])(
-    'rejects a fractional bone index for %s',
+    'warns that a fractional bone index is truncated for %s',
     (key) => {
-      expect(check(key, '1.5')?.severity).toBe('error');
+      expect(check(key, '1.5')?.severity).toBe('warning');
     }
   );
 

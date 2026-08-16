@@ -121,6 +121,10 @@ pixel_size = 0.01
       {
         prop: 'frame_coords',
         valid: ['Vector2i(1, 2)'],
+        // A grid that HOLDS the cell: `set_frame_coords` ERR_FAIL_INDEXes both
+        // components (sprite_3d.cpp:894-895), so on the default 1x1 grid
+        // `Vector2i(1, 2)` is a write Godot refuses, not a valid example.
+        with: { hframes: 4, vframes: 4 },
         invalid: [{ value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] }],
       },
       {
@@ -378,5 +382,31 @@ pixel_size = 0.01
         )
       );
     });
+  });
+});
+
+describe('frame_coords against the authored grid', () => {
+  it('reports a column past hframes, as the 2D twin does', () => {
+    // `set_frame_coords` ERR_FAIL_INDEXes both components against the grid
+    // (sprite_3d.cpp:894-895) — the same guard `sprite2d-frame-coords-range`
+    // reports on, cited by this slice's own validator and never checked.
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(4, 0)' })),
+      { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['Maximum is 3'] }
+    );
+  });
+
+  it('reports a row past vframes', () => {
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(0, 2)' })),
+      { ruleName: 'sprite3d-frame-coords-range', contains: ['Maximum is 1'] }
+    );
+  });
+
+  it('accepts a cell inside the grid', () => {
+    const diagnostics = lint(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(3, 1)' }))
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
   });
 });

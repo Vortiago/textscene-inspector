@@ -43,7 +43,7 @@ export function parseAudioStreamPlayer3D(
       DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP,
     ]),
     panning_strength: floatOr(properties.panning_strength, 1),
-    area_mask: intOr(properties.area_mask, 1),
+    area_mask: intOr(properties.area_mask, 1, 'AudioStreamPlayer3D.area_mask', 'uint32'),
     emission_angle_enabled: boolOr(properties.emission_angle_enabled, false),
     emission_angle_degrees: floatOr(properties.emission_angle_degrees, 45),
     emission_angle_filter_attenuation_db: floatOr(properties.emission_angle_filter_attenuation_db, -12),

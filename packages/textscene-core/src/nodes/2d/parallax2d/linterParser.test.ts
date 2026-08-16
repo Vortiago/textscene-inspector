@@ -198,10 +198,10 @@ describe('Parallax2D strict validators', () => {
       expect(check('repeat_times', '4')).toBeNull();
     });
 
-    it('rejects a non-integer value', () => {
+    it('warns that a non-integer value is truncated', () => {
       const error = check('repeat_times', '5.5');
-      expect(error?.code).toBe('INVALID_REPEAT_TIMES_FORMAT');
-      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_REPEAT_TIMES_VALUE');
+      expect(error?.severity).toBe('warning');
     });
 
     it('errors below the floor — set_repeat_times clamps up to 1 (parallax_2d.cpp:181)', () => {

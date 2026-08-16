@@ -1,6 +1,7 @@
 /**
  * The population `boundGrounding.test.ts` sweeps: every key that resolves to a
- * validator, and which of those declare neither `formatOnly` nor `grounding`.
+ * validator, and which of those declare none of `formatOnly`, `grounding` or
+ * `intSlot`.
  *
  * Shared so the sweep and the tests that prove the sweep BITES read the same
  * key list — a guard whose fixture and whose subject drift apart stops
@@ -49,7 +50,7 @@ export function classifiableKeys(): { nodeType: string; key: string }[] {
 }
 
 /**
- * Every registered validator that declares neither `formatOnly` nor `grounding`,
+ * Every registered validator that declares none of the three classification tags,
  * counting a wildcard dispatcher's leaves as separate validators.
  *
  * Without the recursion a dispatcher's own tag would vouch for every bound
@@ -72,14 +73,32 @@ export function unclassifiedKeys(): string[] {
  */
 export function sweepValidators(
   keep: (validator: PropertyValidator) => boolean,
+  roots: readonly Root[] = registryRoots()
+): string[] {
+  return collectValidators(keep, roots)
+    .map(({ label }) => label)
+    .sort();
+}
+
+/**
+ * The same walk, keeping the validator beside its label.
+ *
+ * A sweep that only needs to NAME what it found takes `sweepValidators`; one
+ * that has to CALL what it found — the non-finite int probe does — needs the
+ * object. Sharing the walk is the point: the int sweep built its own population
+ * from `getOwnKeys` and never descended `leaves`, so every slot behind a
+ * wildcard dispatcher was outside it.
+ */
+export function collectValidators(
+  keep: (validator: PropertyValidator) => boolean,
   /**
    * What to walk. Defaults to the live registry; a test passes scratch
    * validators so the walk itself can be proven to reach leaves and to dedupe,
    * without the guard's bite resting on whatever the registry happens to hold.
    */
   roots: readonly Root[] = registryRoots()
-): string[] {
-  const out: string[] = [];
+): Root[] {
+  const out: Root[] = [];
   // A leaf instance can be shared between dispatchers, so a plain recursion
   // reports it once per parent.
   const seen = new Set<PropertyValidator>();
@@ -87,12 +106,12 @@ export function sweepValidators(
   const visit = (validator: PropertyValidator, label: string): void => {
     if (seen.has(validator)) return;
     seen.add(validator);
-    if (keep(validator)) out.push(label);
+    if (keep(validator)) out.push({ label, validator });
     validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
   };
 
   for (const { label, validator } of roots) visit(validator, label);
-  return out.sort();
+  return out;
 }
 
 /** A validator and the label a sweep reports it under. */

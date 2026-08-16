@@ -9,7 +9,7 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { INT32_MAX, parseGodotInt, toUint32 } from '../../godot/index.js';
+import { INT32_MAX, parseGodotFloat, parseGodotInt, type IntWidth } from '../../godot/index.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`) — the conversion every int slot's write
@@ -46,28 +46,28 @@ export function unrepresentableInt(
 }
 
 /**
- * An int32 reading re-read as unsigned, where the slot's own ceiling says it is.
+ * The width a slot reads at, from its own declared ceiling.
  *
- * `parseGodotInt` gives the int32 reading, which is what almost every setter
- * takes. A `uint32_t` one is told apart by its own declared maximum: a ceiling
- * above int32 is unreachable unless the slot is unsigned, so the width is
- * derived rather than asked of 50-odd call sites. Measured on 4.6.3, the two
- * genuinely disagree — `MeshInstance3D.layers = 4294967295` stores 4294967295
- * (uint32) where `Node2D.light_mask = 4294967295` stores -1 (int32) — so
- * reading every slot as int32 would refuse a `seed` of UINT32_MAX that Godot's
- * own PROPERTY_HINT_RANGE names as the ceiling.
+ * A maximum above int32 is unreachable unless the slot is unsigned, so the
+ * width is derived rather than asked of 50-odd call sites. Measured on 4.6.3
+ * the two genuinely disagree: `MeshInstance3D.layers = 4294967295` stores
+ * 4294967295 (uint32) where `Node2D.light_mask = 4294967295` stores -1 (int32).
  */
-export function narrowToSlot(stored: number, max?: number | null): number {
-  // NaN passes through: it is the unstorable signal, and `toUint32(NaN)` is 0,
-  // which reads as a legal value and silences the refusal.
-  if (Number.isNaN(stored)) return NaN;
-  return (max ?? 0) > INT32_MAX ? toUint32(stored) : stored;
+export function slotWidth(max?: number | null): IntWidth {
+  return (max ?? 0) > INT32_MAX ? 'uint32' : 'int32';
 }
 
-/** {@link narrowToSlot} over a literal that has not been read yet. */
+/**
+ * A literal as the integer this slot stores.
+ *
+ * The width goes IN, rather than being applied to the result: `_to_int`'s FLOAT
+ * branch is undefined outside the target type's range, so which values are
+ * refusable is a fact about the slot. Narrowing afterwards asked int32's
+ * question of every slot and then re-read the answer as unsigned, which refused
+ * `seed = 4294967295.0` at the ceiling its own `PROPERTY_HINT_RANGE` declares.
+ */
 export function storedInSlot(value: string, max?: number | null): number | null {
-  const stored = parseGodotInt(value);
-  return stored === null || Number.isNaN(stored) ? stored : narrowToSlot(stored, max);
+  return parseGodotInt(value, slotWidth(max));
 }
 
 /**
@@ -82,14 +82,59 @@ export function storedInSlot(value: string, max?: number | null): number | null 
  * `layerBitmask` overwrites the tag with `32-bit layer mask (layers 1-32)`,
  * matching neither `integer` nor `bit mask`.
  *
+ * `width` is the slot's C++ type, and the sweep needs it: `4294967296` is
+ * unstorable in an int32 slot and stored exactly in an int64 one, so a single
+ * list of refusable literals would be wrong for one of the two.
+ *
  * It deliberately does NOT set `grounding`. That tag answers a different
  * question — where a BOUND's authority comes from — and filling it here let a
  * bounded int combinator with no citation satisfy `boundGrounding`'s ratchet
  * for free. `validatorClassification` accepts `intSlot` as classification only
  * for a validator carrying no bounds.
  */
-export function markIntSlot<T extends PropertyValidator>(validator: T): T {
+export function markIntSlot<T extends PropertyValidator>(
+  validator: T,
+  width: IntWidth = 'int32'
+): T {
   delete validator.formatOnly;
-  validator.intSlot = { cite: INT_SLOT_CITE };
+  validator.intSlot = { cite: INT_SLOT_CITE, width };
   return validator;
+}
+
+/**
+ * The warning for a fractional literal in an INT slot, or `null` for a whole one.
+ *
+ * Godot loads `hframes = 5.5` and stores 5 — measured on 4.6.3, silently. The
+ * value the engine holds is not the value the file states, which is worth
+ * saying; but the alteration happens in the Variant conversion
+ * (`variant.h:369-370`) on the way INTO the setter, and `set_hframes` only ever
+ * sees the 5. ADR-0032 reserves the error tier for the setter's own behaviour,
+ * so this is its own row: the third tier, for a binding-layer conversion.
+ *
+ * A `_VALUE` code, never `_FORMAT`: the tokenizer reads `5.5` perfectly well
+ * (`variant_parser.cpp:443-448` types it FLOAT), and three combinators used to
+ * report it as a format failure — telling a reader the file is unparseable
+ * when the engine opens it without complaint.
+ *
+ * Checked LAST, after every bound: a value that is both fractional and out of
+ * range has a genuine error to report, and that outranks this.
+ */
+export function truncatedInt(
+  propertyName: string,
+  key: string,
+  value: string,
+  line: number,
+  errorCodeValue: string,
+  stored: number | null
+): ParseError | null {
+  if (stored === null || Number.isNaN(stored)) return null;
+  const asFloat = parseGodotFloat(value);
+  if (asFloat === null || Number.isInteger(asFloat)) return null;
+  return propertyError(
+    key,
+    line,
+    `Property '${propertyName}' is an integer slot, so Godot drops the fractional part of "${value}" and stores ${stored}.`,
+    errorCodeValue,
+    'warning'
+  );
 }

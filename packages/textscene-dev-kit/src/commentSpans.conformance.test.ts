@@ -133,5 +133,9 @@ describe('commentSpans against the TypeScript parser', () => {
     }
 
     expect({ blanked, missed }).toEqual({ blanked: [], missed: [] });
-  });
+    // Parsing ~2,000 files takes ~4s alone and ~8s sharing cores with the rest
+    // of the root suite, so the 5s default made this fail as a TIMEOUT in
+    // `pnpm validate` while passing standalone. The budget is generous rather
+    // than tight: a slow machine failing this says nothing about the lexer.
+  }, 120_000);
 });

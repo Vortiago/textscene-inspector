@@ -40,7 +40,7 @@
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
 import { finiteTupleRegex, matchedFloat, parseGodotFloat } from '../godot/number.js';
-import { storedInt } from '../godot/int.js';
+import { storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
 
 import { nodePathLiteral } from '../godot/index.js';
 
@@ -56,10 +56,19 @@ function finiteScalar(value: string): number | null {
   return num !== null && Number.isFinite(num) ? num : null;
 }
 
-/** The same, truncated toward zero for an INT slot. */
-function finiteIntScalar(value: string): number | null {
+/**
+ * The same, as the integer the slot STORES.
+ *
+ * Narrowed, because the previewer and the linter must read one number out of
+ * one literal. Unnarrowed, `z_index = 4294967295` drew at z = 4.29e8 — behind
+ * the camera, so the node vanished — while the linter read the -1 Godot holds,
+ * found it in range, and reported nothing.
+ */
+function finiteIntScalar(value: string, width: IntWidth): number | null {
   const num = finiteScalar(value);
-  return num === null ? null : Math.trunc(num);
+  if (num === null) return null;
+  const stored = storedFromFloat(num, value, width);
+  return Number.isNaN(stored) ? null : stored;
 }
 
 
@@ -108,11 +117,24 @@ export function floatOr(value: string | undefined, fallback: number, context = '
   return parsed;
 }
 
-export function intOr(value: string | undefined, fallback: number, context = 'value'): number {
+/**
+ * `width` is the SETTER's argument type, and it is `'int32'` for almost every
+ * Godot property. Pass `'uint32'` only where the engine does: measured,
+ * `Camera3D`/`Decal::set_cull_mask` and `AudioStreamPlayer2D/3D::set_area_mask`
+ * take `uint32_t`, while `CanvasItem::set_light_mask` and
+ * `CanvasLayer::set_layer` take `int`. Reading an unsigned slot as signed would
+ * show `4294967295` as `-1` in the inspector, which is not what Godot holds.
+ */
+export function intOr(
+  value: string | undefined,
+  fallback: number,
+  context = 'value',
+  width: IntWidth = 'int32'
+): number {
   if (value === undefined) return fallback;
   // `parseInt` stopped at the `e`, so `hframes = 2e1` drew a 2-column grid
   // while the linter judged the frame index against Godot's 20.
-  const parsed = finiteIntScalar(value);
+  const parsed = finiteIntScalar(value, width);
   if (parsed === null) {
     warn(`${context}: invalid int "${value}", using ${fallback}`);
     return fallback;
@@ -194,7 +216,8 @@ export function enumOr<T extends number>(
   context = 'value'
 ): T {
   if (value === undefined) return fallback;
-  const parsed = finiteIntScalar(value) as T | null;
+  // An enum constant is an `int` in every BIND_ENUM_CONSTANT.
+  const parsed = finiteIntScalar(value, 'int32') as T | null;
   if (parsed === null || !allowed.includes(parsed)) {
     warn(`${context}: invalid enum "${value}", using ${fallback}`);
     return fallback;
@@ -284,7 +307,7 @@ export function parseOptionalVector2i(
  */
 export function parseOptionalInt(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
-  return finiteIntScalar(value) ?? undefined;
+  return finiteIntScalar(value, 'int32') ?? undefined;
 }
 
 /**

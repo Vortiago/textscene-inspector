@@ -40,6 +40,7 @@ A diagnostic may exist in exactly one of three tiers, decided by the engine sour
 | --- | --- | --- |
 | **error** | The setter refuses or alters the value: an `ERR_FAIL*`, or a clamp/mask that silently changes what was written. | error |
 | **warning** | The value lies outside what the property's own UI-control hint permits: `PROPERTY_HINT_RANGE`, `PROPERTY_HINT_LAYERS_*` or `PROPERTY_HINT_FLAGS` in its `ADD_PROPERTY`. | warning |
+| **conversion** | The Variant binding narrows the literal on the way IN, so the setter never sees what was written: `_to_int` truncating `5.5` to 5 (`variant.h:369-370`). | warning |
 | **nothing** | `PROPERTY_HINT_NONE`, no hint, both hint ends open, or a bound that exists only in the class-reference prose. | no rule |
 
 Three rules govern reading the hint:
@@ -51,6 +52,17 @@ Three rules govern reading the hint:
   narrative advice is not, and never grounds a diagnostic on its own.
 - **A hint is not enforcement.** It yields a warning, never an error. Only the
   setter's own behaviour can justify an error.
+- **A binding-layer conversion is not the setter's behaviour either.** `_to_int`
+  runs BEFORE the setter, which receives the already-narrowed int: `set_hframes`
+  only ever sees the 5 that `hframes = 5.5` became. Measured on 4.6.3, that file
+  loads and stores 5 with no engine complaint. The stored value still differs
+  from the written one, so it is worth reporting — as a warning, because the
+  error row is reserved for what the setter itself does. This applies to EVERY
+  int slot, so it belongs to the shared `truncatedInt` rather than to any
+  property: three combinators used to call it a FORMAT error on 56 of 225 slots
+  while the rest were silent, and the same `.cpp` line judged `Sprite2D.hframes`
+  and `Sprite3D.hframes` differently. It is checked after every bound, so a
+  value that is both fractional and out of range reports the error.
 - **A bit mask is two tiers, not one.** Where a setter stores `p_flags & MASK`, a
   bit outside the mask is DROPPED, which is the error row's "silently changes what
   was written"; a bit inside the mask but absent from the `PROPERTY_HINT_FLAGS`
@@ -96,12 +108,22 @@ rule sat in a registry method's docblock where no slice author was looking.
 A convention decays; the guards below hold. Each closes one way a diagnostic can
 reject a value with nothing behind it.
 
-**Every validator declares which kind it is.** A `PropertyValidator` carries either
-`formatOnly` (it rejects only input Godot's own parser could not read, so no
-citation is possible or needed) or `grounding` (it rejects a real value, and says
-which `file:line` says so). The `v` DSL sets one or the other by construction: each
-combinator is either a `shape(…)` or takes a `Grounding`. A hand-rolled validator
-carries neither until its author chooses, and `boundGrounding.test.ts` fails on it.
+**Every validator declares which kind it is.** A `PropertyValidator` carries one of
+three tags: `formatOnly` (it rejects only input Godot's own parser could not read,
+so no citation is possible or needed), `grounding` (it rejects a real value, and
+says which `file:line` says so), or `intSlot` (it reads an INT slot, where the
+authority is the conversion itself and the citation is therefore always
+`variant.h:360-377`). The `v` DSL sets one by construction: each combinator is
+either a `shape(…)` or takes a `Grounding`, and `markIntSlot` adds the third. A
+hand-rolled validator carries none until its author chooses, and
+`boundGrounding.test.ts` fails on it.
+
+`intSlot` is a classification only for a validator with no bounds of its own —
+otherwise a bounded combinator would inherit a citation that vouches for a type
+conversion rather than for its range. It also records the slot's `width`, because
+the refusable set depends on it: `4294967296` is unstorable in an int32 slot and
+stored exactly in an int64 one, so `BitField<T>` properties read at `'int64'` and
+everything else at `'int32'` or `'uint32'` as the setter's signature dictates.
 
 That distinction is what the first version of this ADR missed. `bounded` was set by
 `ground()`, so the un-audited count only ever saw validators already inside the DSL.

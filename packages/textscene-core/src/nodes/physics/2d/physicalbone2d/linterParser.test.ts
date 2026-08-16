@@ -67,9 +67,9 @@ describe('PhysicalBone2D strict validators', () => {
       expect(check('bone2d_index', '1000')).toBeNull();
     });
 
-    it('rejects a non-integer format', () => {
+    it('warns that a non-integer is truncated', () => {
       const error = check('bone2d_index', '2.5');
-      expect(error?.code).toBe('INVALID_BONE2D_INDEX_FORMAT');
+      expect(error?.code).toBe('INVALID_BONE2D_INDEX_VALUE');
     });
 
     it('rejects the unassigned sentinel -1 as an error (set_bone2d_index refuses)', () => {

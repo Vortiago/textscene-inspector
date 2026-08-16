@@ -106,7 +106,7 @@ real parser instead of the decode/build split. Conformance:
   sets this" sizes the blast radius of a change and never justifies skipping one.
 - Every diagnostic is grounded in the engine source, in one of three tiers (ADR-0032).
   **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask
-  that drops bits, a truncation). **warning** = outside what the property's own
+  that drops bits). **warning** = outside what the property's own
   UI-control hint permits, `PROPERTY_HINT_RANGE` / `LAYERS_*` / `FLAGS` alike, where
   `,or_greater` opens the max end and `,or_less` opens the min end and an open end
   never warns. **nothing** = `PROPERTY_HINT_NONE`, both ends open, or a bound that
@@ -116,6 +116,11 @@ real parser instead of the decode/build split. Conformance:
   A `p_flags & MASK` setter is BOTH tiers and needs `maskedBitField`, not a min/max:
   a bit outside the mask is dropped (error), a bit inside it but missing from the
   `FLAGS` hint is kept yet unreachable from the inspector (warning).
+  A fractional literal in an INT slot is a fourth case and also a warning: `_to_int`
+  truncates it BEFORE the setter runs, so `set_hframes` never sees the `5.5` — the
+  stored value differs from the written one, but not by the setter's doing. It is
+  the shared `truncatedInt`, applied to every int slot after its bounds; no slice
+  declares it.
   `inf`/`-inf`/`inf_neg`/`nan` are LEGAL float literals that Godot writes and reloads
   (`variant_parser.cpp:150-155`), so every float validator accepts them. Only a setter
   opening with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so with
@@ -135,11 +140,14 @@ real parser instead of the decode/build split. Conformance:
   this. Read the getter signature for every array or dictionary property, or ship a
   validator that rejects what Godot itself wrote.
 - That grounding is declared, not inferred. Every validator carries `formatOnly` (it
-  rejects only what Godot's parser could not read either, so no citation exists) or
-  `grounding` (it rejects a real value, and names the `file:line`); the `v` DSL sets
-  one or the other, a hand-rolled validator must say which, and `boundGrounding` fails
-  on one that says neither. Every `RangeArm` carries a required `cite`, checked by
-  `rangeAdvisoryGrounding`. Both guards exist because a sweep that only sees the DSL
+  rejects only what Godot's parser could not read either, so no citation exists),
+  `grounding` (it rejects a real value, and names the `file:line`), or `intSlot` (it
+  reads an INT slot, so `_to_int` itself is the authority and the citation is always
+  `variant.h:360-377`; it also records the slot's `width`, since `4294967296` is
+  unstorable in an int32 slot and exact in an int64 one). The `v` DSL sets one, a
+  hand-rolled validator must say which, and `boundGrounding` fails on one that says
+  none — `intSlot` counts only for a validator carrying no bounds of its own.
+  Every `RangeArm` carries a required `cite`, checked by `rangeAdvisoryGrounding`. Both guards exist because a sweep that only sees the DSL
   reads zero while a hand-rolled validator rejects legal scenes beside it.
 - Advisory linter conditions are WARNINGS, not errors — an error rule on a condition an
   existing positive fixture carries breaks fixtureLint.

@@ -1,15 +1,17 @@
 /**
  * Integer combinators, including the enum one.
  *
- * Three of them differ only in how strict the PARSE is, and the difference is
- * deliberate per property: `int` goes through the shared numeric validator,
- * `lenientInt` follows `parseInt`'s tolerance for a trailing decimal, and
- * `strictInt` refuses `5.5` outright.
+ * They no longer differ on how strict the PARSE is. One engine behaviour gets
+ * one verdict: `_to_int` truncates a fractional literal, and every int slot
+ * says so with the same warning, after its own bounds. `strictInt` earns its
+ * name on a different axis — it judges the NARROWED int, which is what a
+ * setter's `ERR_FAIL_INDEX` receives — and `lenientInt` is just a bound-free
+ * `int`.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { markIntSlot, narrowToSlot, unrepresentableInt } from '../intSlot.js';
+import { markIntSlot, slotWidth, truncatedInt, unrepresentableInt } from '../intSlot.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
@@ -45,16 +47,17 @@ function storedStrictInt(
   max: number | undefined
 ): { stored: number } | { error: ParseError } {
   const parsed = parseGodotFloat(value);
-  // Whole-valued OR non-finite. `inf` and `nan` are identifiers the tokenizer
-  // resolves for a bare slot (variant_parser.cpp:701-707), so the file loads;
-  // `Number.isInteger` is false for both and would report a format error on a
-  // literal `v.int` accepts, which is a split no engine line supports.
-  if (parsed === null || !(Number.isInteger(parsed) || !Number.isFinite(parsed))) {
+  // Text outside the grammar is the only FORMAT failure here. A fractional
+  // literal used to be one too, which reported a file Godot opens as
+  // unparseable — and did so on only 56 of 225 int slots, so the same engine
+  // line gave opposite verdicts on Sprite2D and Sprite3D. It is now the
+  // truncation WARNING every int slot shares, applied after the bounds below.
+  if (parsed === null) {
     return {
       error: propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, codes.format),
     };
   }
-  const stored = narrowToSlot(storedFromFloat(parsed, value), max);
+  const stored = storedFromFloat(parsed, value, slotWidth(max));
   const unfit = unrepresentableInt(name, key, value, line, codes.value, stored);
   return unfit ? { error: unfit } : { stored };
 }
@@ -134,10 +137,8 @@ export const integerCombinators = {
   },
 
   /**
-   * Lenient integer — a float literal in the slot is accepted and truncated
-   * ("10.5" → 10), which is what Godot does on assignment to a `Variant::INT`.
-   * Used for properties like Camera2D's `limit_*`. The "must be an integer"
-   * wording follows the per-node test wording.
+   * Unbounded integer. Identical in behaviour to a bound-free `int`; kept as a
+   * separate name only where a slice reads better for it.
    */
   lenientInt(name: string): PropertyValidator {
     const formatErr = formatCode(name);
@@ -147,17 +148,23 @@ export const integerCombinators = {
       if (num === null) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
-      return unrepresentableInt(name, key, value, line, valueCode(name), num);
+      return (
+        unrepresentableInt(name, key, value, line, valueCode(name), num) ??
+        truncatedInt(name, key, value, line, valueCode(name), num)
+      );
     },
       'integer'
     ));
   },
 
   /**
-   * Strict integer — rejects floats that round to an integer (uses
-   * `Number.isInteger(parseFloat(value))` to disambiguate "5.5" from "5").
-   * Use this when the property is a discrete index/count, not a number
-   * that happens to be whole-valued.
+   * Integer judged as the STORED int32 rather than the raw double, which is
+   * what a setter's own `ERR_FAIL_INDEX` sees.
+   *
+   * No longer "strict" about a fractional literal: that is the truncation
+   * warning every int slot shares. The name is kept because the read is
+   * genuinely different from `int`'s — it narrows before the bound check, so
+   * `frame = 4294967295` is judged as the -1 the guard receives.
    */
   strictInt(name: string, opts: IntOpts = {}): PropertyValidator {
     const formatErr = formatCode(name);
@@ -189,14 +196,13 @@ export const integerCombinators = {
           endSeverity(opts, belowMin ? 'min' : 'max')
         );
       }
-      return null;
+      return truncatedInt(name, key, value, line, valueErr, stored);
     }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }));
   },
 
   /**
-   * Strict non-negative integer: same format check as `strictInt`, plus
-   * `value >= 0`. Used for frame indices and similar count-style
-   * properties where `"5.5"` is a format error and `-1` is a value error.
+   * {@link strictInt} plus `value >= 0`, for frame indices and similar counts
+   * where `-1` is a value error.
    */
   strictNonNegativeInt(name: string, opts: Grounding = {}): PropertyValidator {
     const formatErr = formatCode(name);
@@ -213,7 +219,7 @@ export const integerCombinators = {
           if (stored < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${stored})`, valueErr, severity);
           }
-          return null;
+          return truncatedInt(name, key, value, line, valueErr, stored);
         },
         'integer >= 0'
       ),

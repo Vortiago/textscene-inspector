@@ -22,30 +22,33 @@ export interface GridMapCell {
   rot: number;
 }
 
+/** Elements per cell: the two IndexKey halves and the packed cell int. */
+const INTS_PER_CELL = 3;
+
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
-  // `ruleInt` rather than `Number`: `Number('inf')` is NaN, and `inf` is
-  // a literal Godot writes into an INT array and narrows on load, so a silent
-  // NaN dropped the cell instead of placing it where Godot places it.
-  // `toUint32` below turns a NaN into 0, the origin cell, which is the same
-  // place Godot's own narrowing puts it on x86.
+  // `ruleInt` rather than `Number`: `Number('inf')` is NaN, while `inf` is a
+  // literal Godot writes into an INT array, and the two must stay
+  // distinguishable.
   const ints = packedInt32
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => {
-      const num = ruleInt(s);
-      if (num === null) {
-        warn(`[GridMap] cell data element "${s}" is not a value Godot can read`);
-        return NaN;
-      }
-      return num;
-    });
+    .map((s) => ruleInt(s));
 
   const cells: GridMapCell[] = [];
-  for (let i = 0; i + 2 < ints.length; i += 3) {
-    const keyLo = toUint32(ints[i]!);
-    const keyHi = toUint32(ints[i + 1]!);
-    const cell = toUint32(ints[i + 2]!);
+  for (let i = 0; i + 2 < ints.length; i += INTS_PER_CELL) {
+    const record = ints.slice(i, i + INTS_PER_CELL);
+    // The whole RECORD is skipped, not the element. `toUint32(NaN)` is 0, so
+    // substituting for one unstorable element drew a phantom cell at the
+    // origin; the stream is fixed-stride, so dropping the cell it belongs to
+    // costs that cell and no other.
+    if (record.some((n) => n === null)) {
+      warn(`[GridMap] cell data element "${record.join(', ')}" is not a cell Godot can place`);
+      continue;
+    }
+    const keyLo = toUint32(record[0]!);
+    const keyHi = toUint32(record[1]!);
+    const cell = toUint32(record[2]!);
     cells.push({
       x: toInt16(keyLo & 0xffff),
       y: toInt16((keyLo >>> 16) & 0xffff),

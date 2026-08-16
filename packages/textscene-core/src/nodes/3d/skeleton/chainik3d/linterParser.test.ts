@@ -138,8 +138,8 @@ describe('ChainIK3D bone index leaves', () => {
     expect(check(key, '-2')?.severity).toBe('error');
   });
 
-  it('rejects a non-integer bone index', () => {
-    expect(check('settings/0/root_bone', '1.5')?.severity).toBe('error');
+  it('warns that a non-integer bone index is truncated', () => {
+    expect(check('settings/0/root_bone', '1.5')?.severity).toBe('warning');
   });
 });
 

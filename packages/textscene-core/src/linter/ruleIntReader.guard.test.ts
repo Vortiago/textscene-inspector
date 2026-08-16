@@ -19,27 +19,41 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 
-/** The validator layer OWNS the three-outcome reader; everything else is a rule. */
-function isRuleLayer(rel: string): boolean {
-  if (rel.startsWith('linter/validators/')) return false;
-  if (rel.startsWith('godot/')) return false;
-  // A slice's own hand-rolled VALIDATOR is the same layer as the DSL: it turns
-  // the unstorable signal into a diagnostic rather than comparing it.
-  if (rel.endsWith('linterParser.ts')) return false;
-  // Decoders answer "can the previewer draw this", not "what did Godot load",
-  // and take their own documented fallback for a value they cannot use.
-  if (rel.startsWith('parser/') || rel.startsWith('resources/')) return false;
-  return true;
+/**
+ * A rule is a file that PRODUCES a diagnostic, which it cannot do without
+ * naming `Diagnostic` or `ParseError`.
+ *
+ * Derived from the source rather than from the path. The predicate was a list
+ * of exempt directories on the stated principle that "decoders take their own
+ * documented fallback" — true, but `nodes/2d/tiles/shared/tileData.ts` is a
+ * decoder living in a slice, so it fell into the rule layer the moment it
+ * needed to tell an unreadable element from an unstorable one. A path list
+ * re-decides that question every time a file moves; what a file returns does
+ * not move with it.
+ *
+ * The validator layer is excluded even though it does produce diagnostics: it
+ * OWNS the three-outcome reader, and turning the unstorable signal into a
+ * diagnostic is precisely its job.
+ */
+const PRODUCES_DIAGNOSTIC = /\b(?:Diagnostic|ParseError)\b/;
+
+function ownsTheReader(rel: string): boolean {
+  return (
+    rel.startsWith('linter/validators/') || rel.startsWith('godot/') || rel.endsWith('linterParser.ts')
+  );
 }
 
 describe('rule-layer integer reads', () => {
   const files = allSourceFiles()
-    .map((file) => ({ file, rel: file.slice(srcRoot.length + 1) }))
-    .filter(({ rel }) => isRuleLayer(rel));
+    .map((file) => ({ file, rel: file.slice(srcRoot.length + 1), src: readFileSync(file, 'utf8') }))
+    .filter(({ rel, src }) => !ownsTheReader(rel) && PRODUCES_DIAGNOSTIC.test(src));
 
   it('finds the rule files, so an empty sweep cannot pass this', () => {
-    expect(files.length).toBeGreaterThan(500);
+    expect(files.length).toBeGreaterThan(100);
     expect(files.some(({ rel }) => rel.endsWith('nodes/2d/sprite2d/linter.ts'))).toBe(true);
+    // And leaves the decoders out: they answer "can the previewer draw this",
+    // and need the unreadable/unstorable split to choose their fallback.
+    expect(files.some(({ rel }) => rel.endsWith('tiles/shared/tileData.ts'))).toBe(false);
   });
 
   it('never calls a reader that can hand back NaN', () => {
@@ -51,10 +65,8 @@ describe('rule-layer integer reads', () => {
     // Comment-stripped, like its sibling guards: prose naming the reader is not
     // a call to it.
     const offenders = files
-      .filter(({ file }) =>
-        /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(
-          stripComments(readFileSync(file, 'utf8'))
-        )
+      .filter(({ src }) =>
+        /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(stripComments(src))
       )
       .map(({ rel }) => rel)
       .sort();

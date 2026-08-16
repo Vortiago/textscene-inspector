@@ -208,8 +208,10 @@ describe('LightmapGI strict validators', () => {
       expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 16 } });
     });
 
-    it('accepts a fractional value — Variant::_to_int (variant.h:369-370) truncates, it never refuses', () => {
-      expect(check('bounces', '5.9')).toBeNull();
+    it('warns that a fractional value is truncated, never refusing it', () => {
+      // `Variant::_to_int` (variant.h:369-370) converts rather than refusing,
+      // so the file loads — with 5 where it says 5.9.
+      expect(check('bounces', '5.9')?.severity).toBe('warning');
     });
   });
 
@@ -338,8 +340,8 @@ describe('LightmapGI strict validators', () => {
       expect(error?.severity).toBe('warning');
     });
 
-    it('accepts a fractional value — the INT cast truncates rather than refusing', () => {
-      expect(check('denoiser_range', '15.9')).toBeNull();
+    it('warns that a fractional value is truncated, never refusing it', () => {
+      expect(check('denoiser_range', '15.9')?.severity).toBe('warning');
     });
   });
 
@@ -413,8 +415,8 @@ describe('LightmapGI strict validators', () => {
       expect(error?.severity).toBe('error');
     });
 
-    it('accepts a fractional value within range — the INT cast truncates rather than refusing', () => {
-      expect(check('max_texture_size', '8192.7')).toBeNull();
+    it('warns that a fractional value in range is truncated, never refusing it', () => {
+      expect(check('max_texture_size', '8192.7')?.severity).toBe('warning');
     });
   });
 

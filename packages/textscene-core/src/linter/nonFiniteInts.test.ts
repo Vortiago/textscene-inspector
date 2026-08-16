@@ -14,19 +14,30 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
+import { collectValidators } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** The four spellings Godot's tokenizer resolves (`variant_parser.cpp:701-707`). */
 const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'] as const;
 
 /**
- * A literal Godot reads and no 32-bit slot holds: past the unsigned ceiling for
- * an INT token, past int32 for a FLOAT one (`variant.h:367-370`).
+ * A literal Godot reads and NO integer slot holds, at any width: `1e20` is past
+ * int64 as well, and the FLOAT branch is undefined there (`variant.h:369-370`).
  */
-const UNSTORABLE = ['4294967296', '1e20'] as const;
+const UNSTORABLE = ['1e20'] as const;
 
-/** Everything an int slot must refuse. */
+/** Everything an int slot must refuse, whatever its width. */
 const REFUSED = [...NON_FINITE, ...UNSTORABLE];
+
+/**
+ * Past every 32-bit spelling, and therefore refusable only by a 32-bit slot.
+ *
+ * A `BitField<T>` is int64 and stores this exactly, so demanding a refusal of
+ * every slot would force the bit fields to report on a value the engine keeps —
+ * which is why the population below is split on the tag's `width` rather than
+ * asserted uniformly.
+ */
+const PAST_32_BIT = '4294967296';
 
 const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;
 const PACKED_INT_ARRAY = /PackedInt32Array/;
@@ -48,14 +59,28 @@ function probe(accepts: string, spelling: string): string {
   if (NESTED_INT_ARRAY.test(accepts))
     return `[PackedInt32Array(${spelling}, 0, 0)]`;
   if (PACKED_INT_ARRAY.test(accepts)) return `PackedInt32Array(${spelling}, 0, 0)`;
+  if (accepts.startsWith('PackedByteArray')) return `PackedByteArray(${spelling}, 0, 0)`;
   return spelling;
 }
 
-const intSlots = validatorRegistry.getRegisteredNodeTypes().flatMap((type) =>
-  validatorRegistry
-    .getOwnKeys(type)
-    .map((key) => ({ type, key, validator: validatorRegistry.findValidator(type, key)! }))
-    .filter(({ validator }) => validator?.intSlot !== undefined)
+/**
+ * Every tagged int slot the registry RESOLVES, dispatchers descended.
+ *
+ * `getOwnKeys` + `findValidator` was a one-level walk, so a slot reached
+ * through a wildcard dispatcher (`settings/#/*`, `layer_#/tile_data`) was
+ * outside the sweep entirely — the same silent-population defect the tag was
+ * introduced to close, one level down. `collectValidators` is the walk the
+ * classification guard already uses, and it dedupes a leaf shared by two
+ * dispatchers.
+ */
+const intSlots = collectValidators((validator) => validator.intSlot !== undefined).map(
+  ({ label, validator }) => ({
+    at: label,
+    // The dispatcher's own key: a leaf reads `name` from its closure and uses
+    // `key` only to address the diagnostic, so any key it routes for will do.
+    key: label.slice(label.indexOf('.') + 1).replace(/\[\d+\]$/, ''),
+    validator,
+  })
 );
 
 describe('a literal an INT slot cannot hold', () => {
@@ -92,7 +117,7 @@ describe('a literal an INT slot cannot hold', () => {
     // The three kinds the previous population missed, each named by the review
     // that found it: a layer mask (its `accepts` says "32-bit layer mask", not
     // "bit mask"), a packed-int array, and a packed stream inside a Dictionary.
-    const covered = new Set(intSlots.map(({ type, key }) => `${type}.${key}`));
+    const covered = new Set(intSlots.map(({ at }) => at));
     for (const slot of [
       'CanvasItem.light_mask',
       'VisualInstance3D.layers',
@@ -115,9 +140,9 @@ describe('a literal an INT slot cannot hold', () => {
     // has a floor of 3 — so the question is only whether the format branch
     // fired, which is what an `_FORMAT` code says.
     const unreadable = intSlots
-      .map(({ type, key, validator }) => {
+      .map(({ at, key, validator }) => {
         const control = probe(validator.accepts ?? '', '1');
-        return { at: `${type}.${key}`, probe: control, code: validator(key, control, 1)?.code ?? '' };
+        return { at, probe: control, code: validator(key, control, 1)?.code ?? '' };
       })
       .filter(({ code }) => code.endsWith('_FORMAT'))
       .map(({ at, probe: text }) => `${at} cannot read ${text}`)
@@ -128,9 +153,9 @@ describe('a literal an INT slot cannot hold', () => {
   // Every (slot, spelling) pair, judged ONCE. The three assertions below read
   // different fields of the same answer; running the sweep per assertion meant
   // ~3x 540 x 6 validator calls for one question asked three ways.
-  const judged = intSlots.flatMap(({ type, key, validator }) =>
+  const judged = intSlots.flatMap(({ at, key, validator }) =>
     REFUSED.map((spelling) => ({
-      at: `${type}.${key}`,
+      at,
       spelling,
       diagnostic: validator(key, probe(validator.accepts!, spelling), 1),
     }))
@@ -142,6 +167,35 @@ describe('a literal an INT slot cannot hold', () => {
       .map((j) => j.at)
       .sort();
     expect(silent).toEqual([]);
+  });
+
+  it('is reported by every 32-bit slot, past the widest 32-bit spelling', () => {
+    const narrow = intSlots.filter(({ validator }) => validator.intSlot!.width !== 'int64');
+    // Anti-vacuity: tagging every slot int64 would empty this and leave it green.
+    expect(narrow.length).toBeGreaterThan(500);
+
+    const silent = narrow
+      .filter(
+        ({ key, validator }) => validator(key, probe(validator.accepts!, PAST_32_BIT), 1) === null
+      )
+      .map(({ at }) => at)
+      .sort();
+    expect(silent).toEqual([]);
+  });
+
+  it('is not called unstorable by an int64 slot, which holds it exactly', () => {
+    const wide = intSlots.filter(({ validator }) => validator.intSlot!.width === 'int64');
+    expect(wide.length).toBeGreaterThan(0);
+
+    const refused = wide
+      .filter(({ key, validator }) =>
+        validator(key, probe(validator.accepts!, PAST_32_BIT), 1)?.message.includes(
+          'cannot be stored in an integer slot'
+        )
+      )
+      .map(({ at }) => at)
+      .sort();
+    expect(refused).toEqual([]);
   });
 
   it('reports it as an ERROR, never as a hint-tier warning', () => {

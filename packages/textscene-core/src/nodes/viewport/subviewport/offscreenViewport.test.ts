@@ -4,6 +4,7 @@
  * `ImageData`. Kept free of R3F so the rules are asserted directly rather than
  * inferred from a mounted tree.
  */
+import { allocatableExtent } from './Component';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 
@@ -525,5 +526,24 @@ describe('DEFAULT_CLEAR_COLOR', () => {
     expect(Math.round(out.r * 255)).toBe(77);
     expect(Math.round(out.g * 255)).toBe(77);
     expect(Math.round(out.b * 255)).toBe(77);
+  });
+});
+
+describe('allocatableExtent', () => {
+  it('floors at 2, where Godot floors', () => {
+    // `viewport.cpp:1120` — `p_size.maxi(2)`.
+    expect(allocatableExtent(0)).toBe(2);
+    expect(allocatableExtent(-1294967296)).toBe(2);
+  });
+
+  it('caps a size the engine accepts but no texture can hold', () => {
+    // Godot has no ceiling — the driver refuses. Here the number would reach
+    // `new Uint8Array(width * height * 4)` outside any try.
+    expect(allocatableExtent(2000000000)).toBe(16384);
+  });
+
+  it('leaves an ordinary size alone', () => {
+    expect(allocatableExtent(512)).toBe(512);
+    expect(allocatableExtent(1080.4)).toBe(1080);
   });
 });

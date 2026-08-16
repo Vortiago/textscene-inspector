@@ -171,9 +171,12 @@ describe('LookAtModifier3D strict validators', () => {
       expect(error?.severity).toBe('error');
     });
 
-    it.each(['bone', 'origin_bone'])('rejects a fractional index on %s', (property) => {
-      expect(check(property, '3.5')?.message).toContain('must be an integer');
-    });
+    it.each(['bone', 'origin_bone'])(
+      'warns that a fractional index on %s is truncated',
+      (property) => {
+        expect(check(property, '3.5')?.message).toContain('integer slot');
+      }
+    );
 
     it.each(['bone', 'origin_bone'])('leaves the upper end open on %s', (property) => {
       // The real ceiling is the live `get_bone_count()`, which no per-property

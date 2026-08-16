@@ -104,8 +104,8 @@ describe('setting_count', () => {
     expect(check('setting_count', '-1')?.severity).toBe('error');
   });
 
-  it('errors on a non-integer count', () => {
-    expect(check('setting_count', '1.5')?.severity).toBe('error');
+  it('warns that a non-integer count is truncated', () => {
+    expect(check('setting_count', '1.5')?.severity).toBe('warning');
   });
 });
 
@@ -169,8 +169,8 @@ describe('the bone identity leaves', () => {
     expect(check('settings/0/end_bone', '-5')?.severity).toBe('error');
   });
 
-  it('errors on a fractional bone index rather than truncating it', () => {
-    expect(check('settings/0/root_bone', '3.5')?.severity).toBe('error');
+  it('warns that a fractional bone index is truncated', () => {
+    expect(check('settings/0/root_bone', '3.5')?.severity).toBe('warning');
   });
 });
 
@@ -284,8 +284,8 @@ describe('joint_count', () => {
     expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');
   });
 
-  it('errors on a fractional count', () => {
-    expect(check('settings/0/joint_count', '2.5')?.severity).toBe('error');
+  it('warns that a fractional count is truncated', () => {
+    expect(check('settings/0/joint_count', '2.5')?.severity).toBe('warning');
   });
 });
 

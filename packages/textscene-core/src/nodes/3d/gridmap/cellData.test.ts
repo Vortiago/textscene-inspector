@@ -52,3 +52,20 @@ describe('ORTHO_BASES', () => {
     }
   });
 });
+
+describe('an element no int32 slot can hold', () => {
+  it('drops the cell rather than drawing one at the origin', () => {
+    // `toUint32(NaN)` is 0, so substituting NaN for an unstorable element put a
+    // phantom cell at (0,0,0) — the substitution `floatElements` removed.
+    expect(decodeGridMapCells('inf, 0, 1')).toEqual([]);
+  });
+
+  it('keeps the cells around it', () => {
+    // Fixed stride: the skip unit is the whole 3-int record, so a bad element
+    // costs its own cell and no other.
+    const cells = decodeGridMapCells('inf, 0, 1, 1, 0, 0');
+
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toMatchObject({ x: 1, y: 0, z: 0 });
+  });
+});

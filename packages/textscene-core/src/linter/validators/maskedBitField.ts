@@ -85,7 +85,10 @@ export function maskedBitField(
     // and `= 2e1` are files it loads, and a format error on either reported on
     // a scene the engine opens. The interpolated `${num}` below is now the
     // STORED int, which is what every message here should have said.
-    const num = parseGodotInt(value);
+    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
+    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
+    // engine keeps intact drew an error saying the engine does not hold it.
+    const num = parseGodotInt(value, 'int64');
     if (num === null) {
       return propertyError(
         key,
@@ -104,9 +107,12 @@ export function maskedBitField(
     // that point `num & ~mask` is exact, and it is the check that catches the
     // in-range non-subsets a max bound would wave through.
     if (num < 0 || num > mask || (num & ~mask) !== 0) {
-      // Godot's field is int64_t, so naming the stored value is only honest
-      // where JS's 32-bit `&` agrees with it.
-      const stored = num >= 0 && num <= 0xffffffff ? ` (Godot stores ${num & mask})` : '';
+      // `&` coerces through ToInt32, which is modulo 2^32 — exactly what
+      // masking the low bits does — so this names the stored value for a
+      // negative spelling and a wide one alike. `parseGodotInt` has already
+      // refused anything past 2^53, where the double stops being the integer
+      // the file spells.
+      const stored = ` (Godot stores ${num & mask})`;
       return propertyError(
         key,
         line,
@@ -130,7 +136,7 @@ export function maskedBitField(
   // `hintedBits` cites its ADD_PROPERTY in the comment at the call site.
   validator.grounding = { kind: 'enforced', cite: opts.enforced };
   // An INT slot: a bit field refuses a literal the tokenizer reads.
-  return markIntSlot(validator);
+  return markIntSlot(validator, 'int64');
 }
 
 
@@ -166,7 +172,10 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
   const validator = accepts((key, value, line) => {
     // Same reasoning as `maskedBitField` above: an INT slot takes any number
     // token, so the gate is a parse and not `String::is_valid_int()`.
-    const num = parseGodotInt(value);
+    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
+    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
+    // engine keeps intact drew an error saying the engine does not hold it.
+    const num = parseGodotInt(value, 'int64');
     if (num === null) {
       return propertyError(
         key,
@@ -196,5 +205,5 @@ export function hintedBitField(name: string, opts: HintedBitFieldOptions): Prope
 
   validator.grounding = { kind: 'hinted', cite: opts.hinted };
   // An INT slot: a bit field refuses a literal the tokenizer reads.
-  return markIntSlot(validator);
+  return markIntSlot(validator, 'int64');
 }

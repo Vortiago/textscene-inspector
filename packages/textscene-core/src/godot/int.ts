@@ -13,9 +13,17 @@
  *   {@link asStoredInt}.
  *
  * Which width applies is a per-SLOT fact — the setter's argument type or a
- * container's element type — never a parse fact. Godot serialises a negative
- * enum in its unsigned form (`clip_children = -1` is written `4294967295`), so
- * a reader that skips the narrowing sees a value the engine never holds.
+ * container's element type — never a parse fact, so it goes IN as
+ * {@link IntWidth} rather than being applied to a result. Godot serialises a
+ * negative enum in its unsigned form (`clip_children = -1` is written
+ * `4294967295`), so a reader that skips the narrowing sees a value the engine
+ * never holds.
+ *
+ * Every reader here narrows, including the ones the RENDER path uses. The
+ * previewer and the linter must agree on what one literal means: while
+ * `storedInt` did not narrow, `z_index = 4294967295` drew at z = 4.29e8 —
+ * behind the camera — and the linter, reading the -1 Godot holds, found it in
+ * range and said nothing at all.
  */
 
 import { parseGodotFloat } from './number.js';
@@ -39,6 +47,67 @@ const INT32_MIN = -2147483648;
 /** The widest value an `int32_t` slot holds; above it only a `uint32_t` can. */
 export const INT32_MAX = 2147483647;
 const UINT32_MAX = 4294967295;
+/**
+ * int64's own range is [-2^63, 2^63), but no double spells it: 2^63 - 1 is not
+ * representable, and past 2^53 the number we hold is no longer the integer the
+ * file states. The reader's limit is the tighter of the two, so it IS the bound
+ * — and `storedFromFloat` refuses past it for every width anyway.
+ */
+const INT64_MIN = Number.MIN_SAFE_INTEGER;
+const INT64_MAX = Number.MAX_SAFE_INTEGER;
+
+/**
+ * The C++ type on the far side of the write, which is a per-SLOT fact: the
+ * setter's argument type, or a container's element type.
+ *
+ * It decides BOTH halves of the conversion, which is why it cannot be applied
+ * afterwards. Narrowing an already-refused value is too late (the refusal has
+ * happened), and refusing before the width is known asks the wrong question —
+ * `uint32_t(4294967295.0)` is perfectly defined, and reading every slot as
+ * int32 rejected the exact ceiling `PROPERTY_HINT_RANGE` declares for it.
+ */
+export type IntWidth = 'int32' | 'uint32' | 'int64';
+
+/**
+ * What a slot of each width HOLDS: the C++ type's own range.
+ *
+ * A FLOAT literal converts into this and no further — outside it the C++
+ * conversion is undefined, which is why `uint32_t(4294967295.0)` is fine and
+ * `uint32_t(-1.0)` is not.
+ */
+const REPRESENTABLE: Record<IntWidth, readonly [number, number]> = {
+  int32: [INT32_MIN, INT32_MAX],
+  uint32: [0, UINT32_MAX],
+  int64: [INT64_MIN, INT64_MAX],
+};
+
+/**
+ * What a slot of each width ROUND-TRIPS: both spellings of every bit pattern
+ * it holds.
+ *
+ * Godot serialises the same 32 bits as either signedness depending on the
+ * getter — measured, `Node2D.visibility_layer = -1` is written back as
+ * `4294967295` — so an INT literal in the opposite spelling is the file being
+ * read as written, not a value being altered. One step further out it IS an
+ * alteration: nothing writes `4294967296`, and the engine holding 0 for it is
+ * exactly the error tier ADR-0032 describes.
+ *
+ * Symmetric in MEANING rather than in magnitude. The band looks lopsided
+ * because two's complement is: `[-2^31, 2^32)` is every 32-bit pattern spelled
+ * both ways, and `-3000000000` is outside it in the same sense `4294967296` is.
+ */
+const ROUND_TRIPS: Record<IntWidth, readonly [number, number]> = {
+  int32: [INT32_MIN, UINT32_MAX],
+  uint32: [INT32_MIN, UINT32_MAX],
+  int64: [INT64_MIN, INT64_MAX],
+};
+
+/** `T(int64)`, the integral conversion — defined for every input, in both directions. */
+function wrapToWidth(value: number, width: IntWidth): number {
+  if (width === 'int32') return toInt32(value);
+  if (width === 'uint32') return toUint32(value);
+  return value;
+}
 
 /**
  * The tokenizer types a literal FLOAT on a `.` or an exponent
@@ -72,9 +141,10 @@ function asStoredInt(num: number): number {
 }
 
 /**
- * A TSCN literal as the int32 a Godot property slot STORES — three outcomes:
+ * A TSCN literal as the integer a Godot property slot STORES — three outcomes:
  * `null` when the tokenizer cannot read the text, `NaN` when it reads but the
- * slot cannot hold it, and otherwise the number the engine holds.
+ * conversion into this slot is undefined, and otherwise the number the engine
+ * holds.
  *
  * Not `parseInt`. Two distinct accidents come from `parseInt` stopping at the
  * first character it cannot use, and both cleared bounds silently:
@@ -96,8 +166,8 @@ function asStoredInt(num: number): number {
  * `4294967295` — so narrowing is reading the file the way it was written, not
  * second-guessing it.
  *
- * The storable band differs by literal type, because `_to_int` converts the two
- * on different branches. Measured on 4.6.3 (x86_64), `Node2D.light_mask`:
+ * The two literal types behave differently, because `_to_int` converts them on
+ * different branches. Measured on 4.6.3 (x86_64), `Node2D.light_mask`:
  *
  * ```
  * 3000000000    (INT)    -> -1294967296   int64 -> int32, wraps
@@ -106,12 +176,19 @@ function asStoredInt(num: number): number {
  * 4.294967295e9 (FLOAT)  -> -2147483648   UB again
  * ```
  *
- * So an INT literal is storable across the whole 32-bit band — `[-2^31, 2^32)`,
- * the union of the signed and unsigned spellings Godot writes — while a FLOAT
- * one is defined only within int32. Outside its band the value is `NaN`: bits
- * the file states that the engine does not hold.
+ * An INT literal ALWAYS converts: `T(int64)` is an integral conversion, so it
+ * wraps in both directions, and `String::to_int` saturates at INT64_MAX rather
+ * than refusing (`ustring.cpp:2650-2658`). The one thing that stops us is a
+ * reader limit rather than an engine one — a JS double past 2^53 is no longer
+ * the int64 the file states, so its low 32 bits are not ours to name.
+ *
+ * A FLOAT literal converts only inside the SLOT's own band; outside it the C++
+ * conversion is undefined. That band is the reason `width` exists: reading
+ * every slot as int32 refused `seed = 4294967295.0` at the very ceiling its
+ * `PROPERTY_HINT_RANGE` declares, while accepting `-1.0` there, which is the
+ * genuinely undefined one.
  */
-export function parseGodotInt(value: string): number | null {
+export function parseGodotInt(value: string, width: IntWidth = 'int32'): number | null {
   // No grammar pre-test: `parseGodotFloat` returns non-null only for a
   // non-finite spelling — every one of which matches TSCN_FLOAT_RE, since the
   // pattern is built from those keys — or for text that passed TSCN_FLOAT_RE
@@ -121,24 +198,33 @@ export function parseGodotInt(value: string): number | null {
   // `parseGodotFloat` trims; `FLOAT_TYPED` looks for `.`/`e`, neither of which
   // is whitespace, so the raw text answers it just as well.
   const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value);
+  return asFloat === null ? null : storedFromFloat(asFloat, value, width);
 }
 
 /**
- * The int32 a slot stores, from a float the caller has ALREADY read.
+ * The integer a slot stores, from a float the caller has ALREADY read.
  *
  * The combinators that must first decide whether a literal is whole-valued
  * hold the parsed float already; re-reading the raw text for the narrowing
  * doubled the cost of every `v.strictInt` call.
  *
- * `literal` is only consulted past int32, which is where the two `_to_int`
- * branches diverge — so the common in-band element never runs the test.
+ * `literal` decides which `_to_int` branch the engine takes, and the two answer
+ * differently only outside the width's band — so the common in-band element
+ * never runs the test.
  */
-export function storedFromFloat(asFloat: number, literal: string): number {
+export function storedFromFloat(
+  asFloat: number,
+  literal: string,
+  width: IntWidth = 'int32'
+): number {
   const stored = asStoredInt(asFloat);
-  if (Number.isNaN(stored) || stored < INT32_MIN) return NaN;
-  if (stored > INT32_MAX && (stored > UINT32_MAX || FLOAT_TYPED.test(literal))) return NaN;
-  return toInt32(stored);
+  if (Number.isNaN(stored)) return NaN;
+  // A FLOAT literal reaches only what the type represents; an INT one also
+  // reaches the opposite spelling of the same bits, which is a form Godot's own
+  // serialiser writes.
+  const [low, high] = FLOAT_TYPED.test(literal) ? REPRESENTABLE[width] : ROUND_TRIPS[width];
+  if (stored < low || stored > high || !Number.isSafeInteger(stored)) return NaN;
+  return wrapToWidth(stored, width);
 }
 
 /**
@@ -158,22 +244,32 @@ export function storedFromFloat(asFloat: number, literal: string): number {
  * path — and reaching into `linter/validators/` for it pulled the diagnostic
  * machinery after them, which is the coupling `src/godot/` exists to avoid.
  */
-export function ruleInt(raw: string | undefined, whenAbsent: number | null = null): number | null {
+export function ruleInt(
+  raw: string | undefined,
+  whenAbsent: number | null = null,
+  width: IntWidth = 'int32'
+): number | null {
   if (raw === undefined) return whenAbsent;
-  const parsed = parseGodotInt(raw);
+  const parsed = parseGodotInt(raw, width);
   return parsed === null || Number.isNaN(parsed) ? null : parsed;
 }
 
 /**
  * One matched component of an `i`-suffixed composite, as the integer Godot
- * stores — or `null` when it cannot be stored as one.
+ * stores — or `null` when no int32 can hold it.
  *
- * Takes a capture the finite grammar ALREADY matched, so it reads with a bare
+ * NARROWED, like every other reader here. `Vector2i`/`Vector3i`/`Vector4i`/
+ * `Rect2i` components are all `int32_t` (`vector2i.h:56-57`), and skipping the
+ * narrowing put the renderer and the linter on different numbers for the same
+ * text: the linter read `z_index = 4294967295` as -1 and said nothing, while
+ * the previewer placed the node at z = 4.29e8, behind the camera.
+ *
+ * Takes a capture the finite grammar ALREADY matched, so the READ is a bare
  * `parseFloat`; text straight from a file goes through {@link parseGodotInt}.
- * `null` for a non-finite component, so the decoder takes its documented
- * warn-then-fall-back path rather than handing `Infinity` to a render path.
  */
 export function storedInt(text: string | undefined): number | null {
   const num = parseFloat(text ?? '');
-  return Number.isFinite(num) ? Math.trunc(num) : null;
+  if (!Number.isFinite(num)) return null;
+  const stored = storedFromFloat(num, text ?? '');
+  return Number.isNaN(stored) ? null : stored;
 }

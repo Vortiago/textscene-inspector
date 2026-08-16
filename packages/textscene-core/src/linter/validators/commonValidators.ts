@@ -3,7 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { storedInSlot, unrepresentableInt } from './intSlot.js';
+import { storedInSlot, truncatedInt, unrepresentableInt } from './intSlot.js';
 import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
 
 /**
@@ -91,7 +91,7 @@ export function createEnumValidator(
         num < min ? valueSeverity : maxSeverity
       );
     }
-    return null;
+    return truncatedInt(propertyName, key, value, line, errorCodeValue, num);
   };
   return validator;
 }
@@ -258,7 +258,10 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, maxSeverity);
     }
 
-    return null;
+    // Last, so a value that is BOTH fractional and out of range reports the
+    // error rather than this warning. A FLOAT slot stores `5.5` verbatim and
+    // has nothing to say.
+    return parseAsInt ? truncatedInt(propertyName, key, value, line, errorCodeValue, num) : null;
   };
   return validator;
 }
@@ -286,6 +289,6 @@ export function createPositiveIntegerValidator(
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
       return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
-    return null;
+    return truncatedInt(propertyName, key, value, line, errorCodeValue, num);
   };
 }

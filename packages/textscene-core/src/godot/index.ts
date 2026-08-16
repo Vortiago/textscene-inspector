@@ -48,6 +48,7 @@ export {
 } from './number.js';
 export {
   INT32_MAX,
+  type IntWidth,
   parseGodotInt,
   ruleInt,
   storedFromFloat,

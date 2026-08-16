@@ -11,7 +11,7 @@
 
 import { warn } from '../../../../logger';
 import { packedArrayLiteral } from '../../../../godot/index.js';
-import { ruleInt } from '../../../../godot/int.js';
+import { parseGodotInt } from '../../../../godot/int.js';
 
 export interface Vec2i {
   x: number;
@@ -34,6 +34,8 @@ const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
 const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
 
 const CELL_BYTES = 12;
+/** Legacy `layer_N/tile_data` packs one cell per three int32s. */
+const INTS_PER_LEGACY_CELL = 3;
 const HEADER_BYTES = 2;
 const FORMAT_VERSION = 0;
 
@@ -58,35 +60,65 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
 }
 
 /**
- * The elements of a packed INT body, or `null` when one is text Godot's own
- * tokenizer cannot read.
+ * The elements of a packed INT body, `null` per element for one no int32 slot
+ * can hold, and `null` overall for text Godot's own tokenizer cannot read.
  *
  * Two failure modes, two answers. Text outside the grammar (`nope`, `0x10`) is
- * a file Godot refuses, so the decode gives up. A NON-FINITE element is a file
- * Godot loads and narrows at parse, so the cell lands at the origin and the
- * decode continues — the phase-1 validator reports the alteration separately.
- *
- * Truncation is matched for the in-range finite case only. `(int32_t)1e10` is
- * undefined behaviour in C++ and platform-specific in practice, so no attempt
- * is made to reproduce it.
+ * a file Godot refuses to load, so the decode gives up. A legal-but-unstorable
+ * element (`inf`, `1e20`) is a file Godot DOES load, narrowing the element to
+ * an architecture-specific sentinel — so only the cell it belongs to is
+ * unknowable, and {@link dropUnstorableRecords} drops that cell alone.
  */
-function readInt32Elements(body: string, context: string): number[] | null {
+function readInt32Elements(body: string, context: string): (number | null)[] | null {
   // An empty body is an empty array, not an unreadable one: `''.split(',')`
   // yields `['']`, which matches no grammar and would report a legal empty
   // layer as corrupt tile data.
   if (body.trim() === '') return [];
-  const out: number[] = [];
+  const out: (number | null)[] = [];
   for (const part of body.split(',')) {
-    // `ruleInt` is null for text the tokenizer refuses AND for a literal no
-    // 32-bit slot holds. Godot narrows the second to an architecture-specific
-    // sentinel, so there is no cell position to draw either way.
-    const num = ruleInt(part);
+    const num = parseGodotInt(part);
     if (num === null) {
       warn(`${context} has entries Godot cannot read — ignoring tile data`);
       return null;
     }
-    out.push(num);
+    out.push(Number.isNaN(num) ? null : num);
   }
+  return out;
+}
+
+/**
+ * Every fixed-stride record that has no unstorable element in it.
+ *
+ * Both serializations pack cells at a fixed stride, so an element the engine
+ * cannot hold costs exactly the cell it belongs to. Voiding the whole stream
+ * instead rendered zero cells for a file Godot opens, and substituting zero
+ * drew a cell at the origin — the two failures this sits between.
+ *
+ * A trailing partial record is passed through untouched, so the caller's own
+ * truncation check still sees it.
+ */
+function dropUnstorableRecords(
+  elements: (number | null)[],
+  stride: number,
+  headerLength: number,
+  context: string
+): number[] | null {
+  const header = elements.slice(0, headerLength);
+  if (header.some((n) => n === null)) {
+    warn(`${context} header is not a value Godot can hold — ignoring tile data`);
+    return null;
+  }
+  const out = header as number[];
+  let i = headerLength;
+  for (; i + stride <= elements.length; i += stride) {
+    const record = elements.slice(i, i + stride);
+    if (record.some((n) => n === null)) {
+      warn(`${context} has a cell Godot cannot place — dropping that cell`);
+      continue;
+    }
+    out.push(...(record as number[]));
+  }
+  for (; i < elements.length; i++) out.push(elements[i] ?? 0);
   return out;
 }
 
@@ -105,9 +137,11 @@ export function decodeLegacyTileData(value: string, format: number): PlacedCell[
   const m = PACKED_INT32_ARRAY_RE.exec(value);
   if (!m) return null;
 
-  const ints = readInt32Elements(m[1]!, '[TileMap] tile_data');
+  const read = readInt32Elements(m[1]!, '[TileMap] tile_data');
+  if (read === null) return null;
+  const ints = dropUnstorableRecords(read, INTS_PER_LEGACY_CELL, 0, '[TileMap] tile_data');
   if (ints === null) return null;
-  if (ints.length % 3 !== 0) {
+  if (ints.length % INTS_PER_LEGACY_CELL !== 0) {
     warn(`[TileMap] tile_data length ${ints.length} is not a whole number of cells — ignoring tile data`);
     return null;
   }
@@ -138,7 +172,13 @@ function decodeBytes(body: string): Uint8Array | null {
       return null;
     }
   }
-  const ints = readInt32Elements(body, '[TileMapLayer] tile_map_data');
-  if (ints === null) return null;
-  return new Uint8Array(ints);
+  const read = readInt32Elements(body, '[TileMapLayer] tile_map_data');
+  if (read === null) return null;
+  const ints = dropUnstorableRecords(
+    read,
+    CELL_BYTES,
+    HEADER_BYTES,
+    '[TileMapLayer] tile_map_data'
+  );
+  return ints === null ? null : new Uint8Array(ints);
 }

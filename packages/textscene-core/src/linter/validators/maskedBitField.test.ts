@@ -81,10 +81,10 @@ describe('maskedBitField', () => {
   });
 
   describe('edge cases', () => {
-    it('rejects a negative value without claiming a 32-bit stored result', () => {
+    it('rejects a negative value, naming the bits the mask keeps of it', () => {
       const error = run('-1');
       expect(error?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
-      expect(error?.message).not.toContain('Godot stores');
+      expect(error?.message).toContain('Godot stores 224');
     });
 
     it('rejects a value past 32 bits without wrapping into a false pass', () => {
@@ -168,13 +168,24 @@ describe('hintedBitField', () => {
     expect(run('two')?.severity).toBe('error');
   });
 
-  it('does not wrap on a value past 32 bits', () => {
-    // Godot stores 1 for 2^32 + 1, so the file states a value the engine does
-    // not hold — the int-slot refusal, which outranks the hint's warning.
-    expect(run('4294967297')?.severity).toBe('error');
+  it('keeps a value past 32 bits, because the field is int64', () => {
+    // `BitField<T>` is int64 and this setter bare-assigns, so 2^32 + 1 is
+    // stored intact. Reading the slot as int32 made it unrepresentable and
+    // raised an error over what is a hint-tier warning.
+    expect(run('4294967297')?.severity).toBe('warning');
   });
 
   it('carries the hinted grounding, so boundGrounding counts it as audited', () => {
     expect(validator.grounding).toEqual({ kind: 'hinted', cite: 'label.cpp:1437' });
+  });
+});
+
+describe('a masked bit field names what the engine keeps', () => {
+  it('reports the stored bits for the negative spelling too', () => {
+    // `-1` and `4294967295` are the same 32 bits, and Godot's `p_flags & MASK`
+    // treats them identically. Withholding the clause on one of the two made
+    // the message depend on the spelling rather than on the value.
+    expect(run('-1')?.message).toContain('Godot stores 224');
+    expect(run('4294967295')?.message).toContain('Godot stores 224');
   });
 });

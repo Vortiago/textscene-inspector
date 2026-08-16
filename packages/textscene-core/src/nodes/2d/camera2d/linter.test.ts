@@ -93,9 +93,11 @@ describe('Camera2D Linter', () => {
         invalid: [{ value: 'invalid', contains: ['limit_left', 'integer'] }],
       },
       {
-        // parseInt parses "10.5" as 10, so a fractional limit passes format validation.
+        // A fractional limit LOADS — the INT conversion truncates it — but the
+        // stored value is not the written one, so it draws the truncation
+        // warning and is not a clean example.
         prop: 'limit_top',
-        valid: [-500, 10.5],
+        valid: [-500, 10],
       },
       {
         prop: 'limit_right',
@@ -117,7 +119,7 @@ describe('Camera2D Linter', () => {
         // `position_smoothing_speed = MAX(0, p_speed)` — 0 is a legal value
         // (it disables smoothing), only negative is out of range.
         prop: 'position_smoothing_speed',
-        valid: [10.5, 0],
+        valid: [10, 0],
         invalid: [
           { value: '-5.0', contains: ['position_smoothing_speed', 'non-negative'] },
           { value: 'fast', contains: ['position_smoothing_speed', 'must be a number'] },
@@ -132,7 +134,7 @@ describe('Camera2D Linter', () => {
         // camera_2d.cpp:715: set_rotation_smoothing_speed does the same
         // `MAX(0, p_speed)` clamp — 0 is legal, only negative is out of range.
         prop: 'rotation_smoothing_speed',
-        valid: [10.5, 0],
+        valid: [10, 0],
         invalid: [{ value: '-5.0', contains: ['rotation_smoothing_speed', 'non-negative'] }],
       },
       {

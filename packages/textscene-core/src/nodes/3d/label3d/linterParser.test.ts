@@ -106,7 +106,7 @@ describe('Label3D Linter', () => {
         // a redundant set, so the floor warns and `or_greater` leaves the top
         // open. A float literal loads: Godot coerces it into the INT property.
         prop: 'font_size',
-        valid: [16, 1, 256, 9000, 12.5],
+        valid: [16, 1, 256, 9000],
         invalid: [
           { value: 'invalid', contains: ['must be a number'] },
           { value: 0, severity: 'warning', contains: ['font_size'] },

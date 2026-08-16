@@ -78,8 +78,8 @@ describe('BoneConstraint3D settings leaves', () => {
       expect(check('settings/0/apply_bone', '9999')).toBeNull();
     });
 
-    it('rejects a non-integer', () => {
-      expect(check('settings/0/apply_bone', '2.5')?.severity).toBe('error');
+    it('warns that a non-integer is truncated', () => {
+      expect(check('settings/0/apply_bone', '2.5')?.severity).toBe('warning');
     });
   });
 
