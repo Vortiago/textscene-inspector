@@ -10,11 +10,12 @@
  * itself (`NativeControlComponentProps.tint`), so a conforming painter cannot
  * name either — and must not resolve a tint of its own to get at them.
  *
- * This is a SOURCE check because the type-level `Omit` has no force at
- * runtime: `painterView` is a zero-allocation cast, so a solver helper
- * handed `props` (`buttonIconColor`, `resolveCheckBoxDrawState`,
- * `labelTextTheme`) still receives the whole object, `modulate` included. The
- * laundering scan below is what reaches those.
+ * `painterView` narrows for real — a cached shallow copy with both keys
+ * rest-destructured out — so a solver helper handed `props` (`buttonIconColor`,
+ * `resolveCheckBoxDrawState`, `labelTextTheme`) can no longer see either. This
+ * is still a SOURCE check because the BAG keeps both, and
+ * `solveNode.node.properties` is reachable from any file under `nodes/2d/ui`:
+ * the scans below are what close that way around.
  *
  * The gate FORBIDS patterns, it does not require `painterView` to be
  * present: eight painters read no properties at all.
@@ -175,7 +176,7 @@ describe('Control painter view conformance', () => {
     const offenders = report(UI_SOURCES, launderedModulateLines);
     expect(
       offenders,
-      `the type-level Omit has no force at runtime — these reads would double-apply: ${offenders.join(', ')}`
+      `the raw bag keeps both fields — these reads would double-apply: ${offenders.join(', ')}`
     ).toEqual([]);
   });
 

@@ -95,20 +95,27 @@ node's own `modulate`, so a painter carrying the exact defect passed all of them
 `Omit<T, 'modulate' | 'selfModulate'>`, and the walker resolves the own-pixel tint
 itself — `self_modulate` folded onto the inherited value it already holds, handed
 down as the required `tint` prop, the shape `CanvasItem2D` has always had for the
-Node2D family — so neither field has a spelling a painter can reach. The narrowing is STRUCTURAL rather than an import boundary — a separate
-painter-facing module re-exporting a stripped copy of each property type — because a
-painter's properties *are* the parser's output object and `label/Component.tsx`
-memoizes on its identity: a boundary that copied the bag would thrash that memo every
-render, and one that re-exported the same object would narrow nothing. `painterView`
-is therefore a zero-allocation cast.
+Node2D family — so neither field has a spelling a painter can reach. The narrowing is
+STRUCTURAL rather than an import boundary — a separate painter-facing module
+re-exporting a stripped copy of each property type — and it is REAL at runtime: the
+returned object is a shallow copy of the bag with the two keys rest-destructured out,
+so a helper handed the whole object cannot find either even by name.
 
-A cast is type-level only, so a solver helper handed the whole `props` object
-(`buttonIconColor`, `resolveCheckBoxDrawState`, `labelTextTheme`) still receives
-`modulate` at runtime. `painterViewConformance.test.ts` closes that with three source
-scans: no painter reaches `.node.properties`, no painter calls the wide tint hooks
-(`useCanvasItemTint`), and no source under `nodes/2d/ui/**` outside
-`parser.ts`/`linterParser.ts`/`types.ts` — nor a painter living outside that tree,
-such as the shared `PanelChrome` — names `modulate` in code at all. The first
+The copy is allocated once per property bag and held in a module-level `WeakMap` keyed
+on the bag, so repeated calls return the same object and a painter memoizing on props
+identity (`label/Component.tsx`, `checkbox/Component.tsx`) does not thrash across the
+renders of one solve generation. `WeakMap` rather than a cache with a lifetime of its
+own: a re-parse's discarded bags take their views with them.
+
+The bag itself is untouched — the walker and every solver read `modulate`/
+`self_modulate` there through `controlProps` — so `solveNode.node.properties` remains
+reachable from any file that has the `SolveNode`, painters included, and a solver
+helper reached through it (`buttonIconColor`, `resolveCheckBoxDrawState`,
+`labelTextTheme`) is back to the whole object. `painterViewConformance.test.ts` closes
+that door with three source scans: no painter reaches `.node.properties`, no painter
+calls the wide tint hooks (`useCanvasItemTint`), and no source under `nodes/2d/ui/**`
+outside `parser.ts`/`linterParser.ts`/`types.ts` — nor a painter living outside that
+tree, such as the shared `PanelChrome` — names `modulate` in code at all. The first
 two take a `painter-view-exempt:` opt-out with a stated reason (`CanvasLayer` is a
 `Node`, not a Control, and keeps its own cast); the laundering scan takes none.
 

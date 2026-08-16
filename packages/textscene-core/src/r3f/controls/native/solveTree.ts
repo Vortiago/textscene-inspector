@@ -104,10 +104,23 @@ export function controlProps(n: SolveNode): ControlProperties {
  */
 export type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
 
+/**
+ * One view per property bag, so repeated calls return the SAME object —
+ * painters memoize on props identity. Weak so a re-parse's discarded bags go
+ * with it.
+ */
+const PAINTER_VIEWS = new WeakMap<object, object>();
+
 /** This node's properties as its own type, in the painter view. */
 export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
-  // The SAME object, never a copy: painters memoize on props identity.
-  return n.node.properties as unknown as PainterView<T>;
+  const bag = n.node.properties;
+  const cached = PAINTER_VIEWS.get(bag);
+  if (cached) return cached as PainterView<T>;
+  // Rest-destructured, not assigned `undefined`: a helper handed the whole
+  // object must not find the key at all. Shallow — nested values stay shared.
+  const { modulate: _modulate, selfModulate: _selfModulate, ...view } = bag as ControlProperties;
+  PAINTER_VIEWS.set(bag, view);
+  return view as unknown as PainterView<T>;
 }
 
 /**
