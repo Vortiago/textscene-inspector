@@ -30,10 +30,10 @@
  * rects are always exact regardless, computed by the registered solver with
  * full `combined_minimum_size` access.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -53,10 +53,8 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 /** `hsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it. */
 const ICON_SIZE = { x: 8, y: 48 };
 
-export function HSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
-
-  const tint = useControlOwnTint(solveNode);
 
   // `_resort` hides every dragger outright below two valid children
   // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`

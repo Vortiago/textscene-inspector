@@ -14,8 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
@@ -168,15 +167,40 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(uColor.z).toBeCloseTo(expected.b, 5);
   });
 
-  it('multiplies the ambient inherited tint by self_modulate onto every run (0.5 * 0.5 = 0.25)', async () => {
-    const node = solveNode('RTL', { text: 'A', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } });
+  it("multiplies the walker-composed tint by each RUN's own bbcode colour, in sRGB", async () => {
+    // Neither factor is white here, which is the point: a painter that dropped
+    // either one still matches the two single-factor tests above.
     const renderer = await ReactThreeTestRenderer.create(
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <RichTextLabel {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
-      </Modulate2DContext.Provider>
+      <RichTextLabel
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode('RTL', { text: '[color=#e0a030]x[/color]', bbcodeEnabled: true })}
+        rect={{ x: 0, y: 0, w: 200, h: 200 }}
+        renderOrder={0}
+      />
     );
     const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
-    // own(sRGB) = inherited(.5,.5,.5,1) * self_modulate(.5,.5,.5,.5) * default_color(1,1,1,1) = (.25,.25,.25,.5)
+    const expected = expectedLinear((0.5 * 0xe0) / 255, (0.5 * 0xa0) / 255, (0.5 * 0x30) / 255);
+    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
+    expect(uColor.x).toBeCloseTo(expected.r, 5);
+    expect(uColor.y).toBeCloseTo(expected.g, 5);
+    expect(uColor.z).toBeCloseTo(expected.b, 5);
+  });
+
+  it('multiplies the walker-composed tint onto every run', async () => {
+    const node = solveNode('RTL', { text: 'A' });
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        // The walker's own product: ambient(.5,.5,.5,1) x self_modulate(.5,.5,.5,.5).
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 0.5 })}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 200, h: 200 }}
+        renderOrder={0}
+      />
+    );
+    const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
+    // run(sRGB) = tint(.25,.25,.25,.5) * default_color(1,1,1,1) = (.25,.25,.25,.5)
     const expected = expectedLinear(0.25, 0.25, 0.25);
     const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
     expect(uColor.x).toBeCloseTo(expected.r, 6);

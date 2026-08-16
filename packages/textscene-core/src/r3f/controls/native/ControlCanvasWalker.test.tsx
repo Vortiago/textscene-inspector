@@ -8,7 +8,7 @@
  * this is a happy-dom-free but still non-visual test.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -23,6 +23,7 @@ import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { CanvasLayerIndexProvider, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
+import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 
 /** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
@@ -495,6 +496,84 @@ describe('<ControlCanvasWalker>', () => {
         .find((g) => g.name.startsWith('zprop:'))!.name;
 
       expect(name).toBe('zprop:prop=9,ambient=5');
+    });
+  });
+
+  describe('own-pixel tint handed to the painter', () => {
+    // Reports the tint it was GIVEN alongside the ambient it could have read,
+    // in its group's name — the `zprop:` convention above. A painter resolving
+    // its own tint is the arrangement this prop replaces.
+    const TintProbe: NativeControlComponent = ({ tint }) => (
+      <group name={`tint:own=${tint.own.r},alpha=${tint.own.a},ambient=${useParentModulate().r}`} />
+    );
+
+    function tintReading(renderer: { scene: { findAllByType: (t: string) => { instance: { name: string } }[] } }): string {
+      return renderer.scene
+        .findAllByType('Group')
+        .map((g) => g.instance)
+        .find((g) => g.name.startsWith('tint:'))!.name;
+    }
+
+    async function renderProbe(properties: Record<string, unknown>, ambient?: { r: number; g: number; b: number; a: number }) {
+      controlComponentRegistry.register({ typeName: 'TintProbe', Component: TintProbe });
+      const root = solveNode('Root', 'TintProbe', { anchorsPreset: 15, ...properties });
+      const walker = (
+        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+      return ReactThreeTestRenderer.create(
+        ambient ? <Modulate2DContext.Provider value={ambient}>{walker}</Modulate2DContext.Provider> : walker
+      );
+    }
+
+    it('defaults to opaque white when neither tint property is authored', async () => {
+      expect(tintReading(await renderProbe({}))).toBe('tint:own=1,alpha=1,ambient=1');
+    });
+
+    it("multiplies the ambient by self_modulate — 0.25, never the ambient folded twice at 0.125", async () => {
+      // The 0.5 is AMBIENT, not this node's `modulate`: authoring it as
+      // `modulate` would read 0.25 under a walker that folds the ambient twice
+      // as well, and pin nothing.
+      const name = await renderProbe({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }, {
+        r: 0.5,
+        g: 0.5,
+        b: 0.5,
+        a: 0.5,
+      }).then(tintReading);
+      expect(name).toBe('tint:own=0.25,alpha=0.25,ambient=0.5');
+    });
+
+    it("carries this node's OWN modulate into its own pixels, once — Godot's `_cull_canvas_item` chain", async () => {
+      // `renderer_canvas_cull.cpp` folds `ci->modulate` into the inherited
+      // value and draws the item at that × `ci->self_modulate`, so a node's own
+      // `modulate` tints its own chrome as well as its descendants'.
+      const name = await renderProbe(
+        {
+          modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+          selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+        },
+        { r: 0.5, g: 0.5, b: 0.5, a: 0.5 }
+      ).then(tintReading);
+      expect(name).toBe('tint:own=0.125,alpha=0.125,ambient=0.25');
+    });
+
+    it('converts the composed sRGB product to linear exactly once', async () => {
+      controlComponentRegistry.register({
+        typeName: 'LinearProbe',
+        Component: ({ tint }) => <group name={`linear:${tint.color.r},${tint.opacity}`} />,
+      });
+      const root = solveNode('Root', 'LinearProbe', {
+        anchorsPreset: 15,
+        selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+      });
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+      const name = renderer.scene
+        .findAllByType('Group')
+        .map((g) => g.instance)
+        .find((g) => g.name.startsWith('linear:'))!.name;
+      const expected = new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace);
+      expect(name).toBe(`linear:${expected.r},0.5`);
     });
   });
 

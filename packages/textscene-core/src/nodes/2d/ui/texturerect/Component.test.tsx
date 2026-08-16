@@ -15,14 +15,14 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { parseTextureRect } from './parser';
 import { TextureRect } from './Component';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -51,7 +51,7 @@ function fakeTexture(): THREE.Texture {
 }
 
 interface RenderOptions {
-  modulateContext?: { r: number; g: number; b: number; a: number };
+  tint?: NativeControlComponentProps['tint'];
 }
 
 async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, options: RenderOptions = {}) {
@@ -62,13 +62,13 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
   const tree = (
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
-        {options.modulateContext ? (
-          <Modulate2DContext.Provider value={options.modulateContext}>
-            <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} renderOrder={0} />
-          </Modulate2DContext.Provider>
-        ) : (
-          <TextureRect {...painterEnv()} solveNode={solveNode(node)} rect={rect} renderOrder={0} />
-        )}
+        <TextureRect
+          {...painterEnv()}
+          {...(options.tint ? { tint: options.tint } : {})}
+          solveNode={solveNode(node)}
+          rect={rect}
+          renderOrder={0}
+        />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -182,20 +182,15 @@ describe('<TextureRect> (isolated painter contract)', () => {
   });
 
   it(
-    'self_modulate multiplies onto own pixels; the walker-provided context (ancestor × own modulate) ' +
-      'is used AS-IS and never re-multiplied by this node\'s own modulate (double-application guard)',
+    'draws the walker-composed tint AS-IS — TextureRect has no base colour of its own to fold in',
     async () => {
-      // If this painter re-ran `modulate` itself, using a modulate-authoring
-      // node here would square the ambient value; it authors NONE, so the
-      // guard is really that supplying an ambient context alone (no modulate
-      // on this node) still lands on a SINGLE application of self_modulate.
       const renderer = await renderIsolated(
-        { self_modulate: 'Color(1, 0.5, 1, 1)' },
+        {},
         { x: 0, y: 0, w: 10, h: 10 },
-        { modulateContext: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }
+        // The walker's own product: inherited(.5,.5,.5,.5) x self_modulate(1,.5,1,1).
+        { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
       );
       const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      // own(sRGB) = inherited(0.5,0.5,0.5,0.5) * self_modulate(1,0.5,1,1) * (no own colour) = (0.5,0.25,0.5,0.5)
       const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
       expect(material.color.r).toBeCloseTo(expected.r);
       expect(material.color.g).toBeCloseTo(expected.g);

@@ -6,8 +6,8 @@
  * `StyleBoxEmpty` (`nativeSolver.ts`'s own doc). This painter draws the
  * vendored theme icons (`native/themeIcons.ts`'s `CHECK_BOX_ICONS`).
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. The icon's own theme colour is
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. The icon's own theme colour is
  * ALWAYS opaque white (`checkbox_checked_color`/
  * `checkbox_unchecked_color` both `Color(1,1,1)`, `default_theme.cpp:312-313`)
  * — the disabled dimming is baked into the disabled SVGs' own fill-opacity,
@@ -25,7 +25,6 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -53,11 +52,10 @@ import {
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
 
-export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<CheckBoxProperties>(solveNode);
   const state = resolveCheckBoxDrawState(props);
 
-  const tint = useControlOwnTint(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
   // --- Icon: always drawn, checked/unchecked (or radio_*) per state --------

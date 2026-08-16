@@ -7,7 +7,6 @@
  * width, 8px along the split axis) instead of `hsplitter`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -27,10 +26,8 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 /** `vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 48px across the split axis, 8px along it. */
 const ICON_SIZE = { x: 48, y: 8 };
 
-export function VSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
-
-  const tint = useControlOwnTint(solveNode);
 
   // Decided BEFORE the icon hook, not after: hook order is fixed, so an early
   // return cannot skip the load. `autohide` defaults true, which makes the

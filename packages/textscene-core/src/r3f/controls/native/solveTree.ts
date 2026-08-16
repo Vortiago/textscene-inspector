@@ -99,8 +99,8 @@ export function controlProps(n: SolveNode): ControlProperties {
  * Both fields genuinely exist on a Control — this is not a narrowing of the
  * node's data, only of what a PAINTER may see. `ControlCanvasWalker` folds
  * `modulate` into the ambient `Modulate2DContext` around the painter and
- * `useControlOwnTint` reads `self_modulate` off the node itself, so a painter
- * re-reading either would double-apply it.
+ * `self_modulate` into the `tint` it hands the painter, so a painter re-reading
+ * either would double-apply it.
  */
 export type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
 

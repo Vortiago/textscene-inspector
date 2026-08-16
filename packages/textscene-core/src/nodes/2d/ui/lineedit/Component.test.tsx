@@ -15,13 +15,12 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { ControlClipProvider } from '../../../../r3f/controls/native/controlClipping';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { LineEditProperties } from './types';
 import { LineEdit } from './Component';
 import { lineEditMinimumSize } from './nativeSolver';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -281,22 +280,22 @@ describe('<LineEdit> — alignment', () => {
 
 describe('<LineEdit> — tint composition', () => {
   it(
-    'composes the ambient inherited tint and self_modulate into ONE product, reaching chrome AND text alike',
+    'applies the walker-composed tint as ONE product, reaching chrome AND text alike',
     async () => {
       const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
       const renderer = await ReactThreeTestRenderer.create(
-        <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <LineEdit
-            {...painterEnv()}
-            solveNode={solveNode({ text: 'Hi', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { normal: flat })}
-            rect={RECT}
-            renderOrder={0}
-          />
-        </Modulate2DContext.Provider>
+        <LineEdit
+          {...painterEnv()}
+          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+          solveNode={solveNode({ text: 'Hi' }, { normal: flat })}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
+      // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
       expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;

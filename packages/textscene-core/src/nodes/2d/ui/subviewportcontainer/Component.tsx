@@ -45,17 +45,14 @@
  * 0.5, 0.5, 1)` on top of that same `self_modulate` (204 × 0.5 × 0.5 exactly)
  * — a plain multiply in the same sRGB-authored space the content colour
  * lives in, confirming this painter should fold tint exactly the way every
- * other native painter does: `useControlOwnTint` — `self_modulate` only, the
- * walker owns `modulate`. Computed
- * ONCE for the whole container (Godot's `self_modulate` is one CanvasItem
- * property, shared by every child viewport's `draw_texture_rect` call in the
- * same `NOTIFICATION_DRAW`), then handed to every `ViewportSurfaceNative`.
+ * other native painter does: the walker's `tint` prop. One value for the whole
+ * container (Godot's `self_modulate` is one CanvasItem property, shared by
+ * every child viewport's `draw_texture_rect` call in the same
+ * `NOTIFICATION_DRAW`), handed on to every `ViewportSurfaceNative`.
  */
 import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import type * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint.js';
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
@@ -88,9 +85,8 @@ interface ViewportSurfaceNativeProps {
   measureText: NativeControlComponentProps['measureText'];
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
-  /** This container's own resolved tint (`self_modulate` folded onto the ambient), shared by every nested viewport's composited quad. */
-  tintColor: THREE.Color;
-  tintOpacity: number;
+  /** The container's own painter tint, shared by every nested viewport's composited quad. */
+  tint: NativeControlComponentProps['tint'];
 }
 
 /**
@@ -112,8 +108,7 @@ function ViewportSurfaceNative({
   measureText,
   externalResources,
   internalResources,
-  tintColor,
-  tintOpacity,
+  tint,
 }: ViewportSurfaceNativeProps) {
   const props = viewport.properties as SubViewportProperties;
   const authoredSize = props.size ?? { x: 512, y: 512 };
@@ -205,6 +200,9 @@ function ViewportSurfaceNative({
             // this surface — so the fallback's own slot IS its subtree's last.
             subtreeChromeRenderOrder={renderOrder}
             theme={theme}
+            // Threaded for the contract; the outline is a diagnostic and
+            // deliberately draws in its own colour, untinted.
+            tint={tint}
             // A SubViewport is never the root window, so it keeps
             // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
             // (`scene/main/viewport.h`) whatever the project setting says.
@@ -217,8 +215,8 @@ function ViewportSurfaceNative({
           <ControlQuad
             width={renderedWidth}
             height={renderedHeight}
-            color={tintColor}
-            opacity={tintOpacity}
+            color={tint.color}
+            opacity={tint.opacity}
             map={texture}
             renderOrder={renderOrder}
           />
@@ -243,6 +241,7 @@ function ViewportSurfaceNative({
 
 export function SubViewportContainer({
   solveNode,
+  tint,
   rect,
   renderOrder,
   effectiveZ,
@@ -253,10 +252,6 @@ export function SubViewportContainer({
   const stretch = props.stretch ?? false;
   const shrink = Math.max(1, props.stretch_shrink ?? 1);
   const { externalResources, internalResources } = useSceneResources();
-
-  // `self_modulate` never propagates to children, so it is resolved once,
-  // here, and shared by every nested viewport's composited quad below.
-  const tint = useControlOwnTint(solveNode);
 
   // Raw live children (unlike `solveNode.children`, the Control-only solve
   // forest — `buildSolveTree` skips a viewport boundary entirely), so a
@@ -274,8 +269,7 @@ export function SubViewportContainer({
           stretch={stretch}
           shrink={shrink}
           effectiveZ={effectiveZ}
-          tintColor={tint.color}
-          tintOpacity={tint.opacity}
+          tint={tint}
           // Each successive viewport draws ON TOP of the last (Godot's own
           // tree-order stacking) — a fraction below the next paint index's
           // integer slot, matching the small-offset convention

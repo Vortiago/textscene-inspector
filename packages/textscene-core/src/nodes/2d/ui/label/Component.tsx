@@ -12,10 +12,10 @@
  * top — `<TextRun>` anchors the line at its baseline from there itself,
  * `buildGlyphQuadArrays`'s own doc).
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. The resolved text COLOUR is
- * the `ownMultiplier`: composed in sRGB, converted to linear once, matching
- * `TextRun`'s own contract (its `tint` prop is sRGB, converted internally).
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. The resolved text COLOUR multiplies into `tint.own`
+ * while both are still sRGB, matching `TextRun`'s own contract (its `tint`
+ * prop is sRGB, converted internally) — one conversion, at the end.
  *
  * DRAW ORDER. Two halves, and getting only the first right is what once made
  * every Label's glyphs disappear behind the backdrop they were drawn over:
@@ -41,7 +41,7 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
@@ -78,12 +78,11 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
   );
 }
 
-export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const textTheme = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
-  const tint = useControlOwnTint(solveNode, textTheme.color);
-  const tintColor = { r: tint.own.r, g: tint.own.g, b: tint.own.b, a: tint.own.a };
+  const tintColor = multiplyModulate(tint.own, textTheme.color);
   const clippingPlanes = useControlClipPlanes();
 
   const text = props.text ?? '';

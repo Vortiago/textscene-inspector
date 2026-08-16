@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSplitContainer } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(
@@ -127,5 +127,25 @@ describe('<HSplitContainer>', () => {
       <HSplitContainer {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 400, h: 60 }} renderOrder={0} />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it('draws the grabber icon through the walker-composed tint', async () => {
+    // The icon carries no theme colour of its own (`SplitContainer` draws it
+    // with the canvas item's own modulate alone), so the linear tint IS its
+    // material colour.
+    const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
+    const renderer = await ReactThreeTestRenderer.create(
+      <HSplitContainer
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 })}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 300, h: 120 }}
+        renderOrder={0}
+      />
+    );
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshBasicMaterial;
+    expect(material.color.r).toBeCloseTo(new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace).r, 6);
+    expect(material.opacity).toBeCloseTo(0.5, 6);
   });
 });

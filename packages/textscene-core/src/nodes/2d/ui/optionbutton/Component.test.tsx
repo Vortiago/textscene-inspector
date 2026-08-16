@@ -10,9 +10,8 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { OptionButton } from './Component';
@@ -148,19 +147,18 @@ describe('<OptionButton> (isolated painter contract)', () => {
   });
 
   it(
-    'composes the ambient inherited tint and self_modulate into ONE product, reaching chrome, arrow AND text alike',
+    'applies the walker-composed tint as ONE product, reaching chrome, arrow AND text alike',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
-        <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-          <OptionButton
-            {...painterEnv()}
-            solveNode={solveNode({ items: ITEMS, selected: 1, selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
-            rect={RECT}
-            renderOrder={0}
-          />
-        </Modulate2DContext.Provider>
+        <OptionButton
+          {...painterEnv()}
+          // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+          tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+          solveNode={solveNode({ items: ITEMS, selected: 1 })}
+          rect={RECT}
+          renderOrder={0}
+        />
       );
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
       expect(chromeColor.getX(0)).toBeCloseTo(0.1 * 0.25, 4);

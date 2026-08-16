@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VSlider } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -79,5 +79,39 @@ describe('<VSlider>', () => {
     for (const mesh of renderer.scene.findAllByType('Mesh')) {
       expect(mesh.instance.renderOrder).toBe(9);
     }
+  });
+
+  it('draws every part through the walker-composed tint', async () => {
+    const untinted = await ReactThreeTestRenderer.create(
+      <VSlider {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+    );
+    const tinted = await ReactThreeTestRenderer.create(
+      <VSlider
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode({})}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // The StyleBox parts compose in sRGB, so halving the tint halves the
+    // vertex attribute the fragment shader decodes.
+    const trackChannel = (r: typeof untinted) =>
+      (((r.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry)
+        .attributes.color as THREE.BufferAttribute).getX(0);
+    expect(trackChannel(untinted)).toBeGreaterThan(0);
+    expect(trackChannel(tinted)).toBeCloseTo(trackChannel(untinted) * 0.5, 6);
+
+    // The grabber icon has no theme colour of its own, so it takes the
+    // already-linear tint directly.
+    const grabberChannel = (r: typeof untinted) => {
+      const meshes = r.scene.findAllByType('Mesh');
+      return ((meshes[meshes.length - 1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color.r;
+    };
+    expect(grabberChannel(untinted)).toBeCloseTo(1, 6);
+    expect(grabberChannel(tinted)).toBeCloseTo(
+      new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace).r,
+      6
+    );
   });
 });

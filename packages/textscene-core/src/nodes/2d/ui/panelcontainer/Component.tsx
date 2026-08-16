@@ -23,6 +23,6 @@
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 
-export function PanelContainer({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
-  return <PanelChrome solveNode={solveNode} rect={rect} theme={theme} renderOrder={renderOrder} />;
+export function PanelContainer({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+  return <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />;
 }

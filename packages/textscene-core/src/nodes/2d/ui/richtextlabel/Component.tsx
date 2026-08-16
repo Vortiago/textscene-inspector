@@ -49,20 +49,15 @@
  * sizes are different heights), which `<TextRun>` anchors at that line's
  * baseline itself (`buildGlyphQuadArrays`'s own doc).
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. Called ONCE, with NO `ownMultiplier` (each run's resolved
- * colour differs, so there is no single "the" text colour to fold in at that
- * call); each run's OWN placement multiplies `tint.own` (still in sRGB, via
- * the plain `multiplyModulate` — not a hook, since the number of runs varies
- * per render and hooks cannot be called a variable number of times) by its
- * own resolved colour, then hands the sRGB result to
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. Each run's OWN placement multiplies `tint.own` (still
+ * in sRGB) by its own resolved colour, then hands the sRGB result to
  * `<TextRun>`, which converts to linear internally — one conversion, same as
  * every other native text painter.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -86,11 +81,10 @@ import {
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 
-export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
   const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
-  const tint = useControlOwnTint(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
   const runs = useMemo(

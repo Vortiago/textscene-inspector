@@ -6,8 +6,9 @@
  * `Modulate2DContext` it wraps the painter in, so a painter that applies it
  * again SQUARES it — invisible at the default opaque white, wrong at anything
  * else. `painterView` (`solveTree.ts`) hands a painter the node's properties
- * MINUS `modulate`/`selfModulate`, and `useControlOwnTint` (`controlTint.ts`)
- * reads `self_modulate` itself, so a conforming painter cannot name either.
+ * MINUS `modulate`/`selfModulate`, and the walker resolves the own-pixel tint
+ * itself (`NativeControlComponentProps.tint`), so a conforming painter cannot
+ * name either — and must not resolve a tint of its own to get at them.
  *
  * This is a SOURCE check because the type-level `Omit` has no force at
  * runtime: `painterView` is a zero-allocation cast, so a solver helper
@@ -122,9 +123,15 @@ function rawPropertyLines(source: string): number[] {
   return offendingLines(source, /\.node\.properties|\bcontrolProps\b/, true);
 }
 
-/** Reaching the wide tint hooks, whose `modulate` argument a painter must never fill. */
+/**
+ * Resolving a tint at all. A painter is HANDED its own-pixel tint
+ * (`NativeControlComponentProps.tint`); every hook that would compute one
+ * instead sits above it in the chain, `useControlOwnTint` included — it takes
+ * the walker's inherited value, which a painter can only reach by re-reading
+ * the provider it renders inside.
+ */
 function wideTintLines(source: string): number[] {
-  return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b/, true);
+  return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/, true);
 }
 
 /**
@@ -156,11 +163,11 @@ describe('Control painter view conformance', () => {
     ).toEqual([]);
   });
 
-  it('calls no wide tint hook from a painter — `useControlOwnTint` is the only one', () => {
+  it('resolves no tint inside a painter — the walker hands one down', () => {
     const offenders = report(PAINTERS, wideTintLines);
     expect(
       offenders,
-      `these painters could pass a \`modulate\` the walker already folded in: ${offenders.join(', ')}`
+      `these painters re-enter the walker's own modulate chain — take \`tint\` from props: ${offenders.join(', ')}`
     ).toEqual([]);
   });
 
@@ -182,10 +189,13 @@ describe('Control painter view conformance', () => {
     expect(rawPropertyLines('// painter-view-exempt: not a Control\nconst p = n.node.properties as X;')).toEqual([]);
   });
 
-  it('would catch a painter calling a wide tint hook — the check is not vacuous', () => {
+  it('would catch a painter resolving a tint — the check is not vacuous', () => {
     expect(wideTintLines('  const tint = useCanvasItemTint({ modulate: WHITE, self_modulate: s });')).toEqual([1]);
     expect(wideTintLines('  const tint = useControlTint(a, b);')).toEqual([1]);
-    expect(wideTintLines('  const tint = useControlOwnTint(solveNode);')).toEqual([]);
+    // The hook the walker still calls: reintroducing it in a painter is the
+    // arrangement `tint` replaced, not a variant of it.
+    expect(wideTintLines('  const tint = useControlOwnTint(inherited, solveNode);')).toEqual([1]);
+    expect(wideTintLines('  const { tint } = props;')).toEqual([]);
     // The MODULE stays importable — `richtextlabel` needs `multiplyModulate`.
     expect(wideTintLines("import { multiplyModulate } from '../../canvasItemModulate';")).toEqual([]);
     expect(wideTintLines(' * `useCanvasItemTint` in a comment is not a call')).toEqual([]);

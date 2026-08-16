@@ -17,10 +17,22 @@
  */
 
 import { nativeTheme } from '../nativeTheme';
+import { WHITE_MODULATE, type RGBA } from '../../../canvasItemModulate';
+import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
+import type { ControlOwnTint } from '../controlTint';
 import type { Rect2 } from '../rect';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
+
+/**
+ * A composed own-pixel tint at an arbitrary sRGB value — what the walker hands
+ * a painter, without a walk. `own` is already `modulate × self_modulate`, so a
+ * test states the PRODUCT rather than the factors that made it.
+ */
+export function painterTint(own: RGBA = WHITE_MODULATE): ControlOwnTint {
+  return { own, color: godotColorToLinear(own), opacity: own.a };
+}
 
 /**
  * The environment half of a painter's props — theme, measurer, child rects,
@@ -39,6 +51,11 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  * `useCanvasItemLighting` explicitly, since that parameter's own fallback
  * reads the ambient context, which is the PARENT's z.
  *
+ * `tint` defaults to opaque white — a scene authoring neither `modulate` nor
+ * `self_modulate` anywhere above the node. A painter asserting composition
+ * passes `painterTint(own)` with the product it wants; the FOLD that produced
+ * it is the walker's, and is asserted there.
+ *
  * `snapToPixels` defaults to `true`: Godot's own
  * `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`),
  * which every viewport keeps unless it is the root window and the project
@@ -53,6 +70,7 @@ export function painterEnv(): Pick<
   | 'effectiveZ'
   | 'snapToPixels'
   | 'meta'
+  | 'tint'
 > {
   return {
     theme: nativeTheme(1),
@@ -62,5 +80,6 @@ export function painterEnv(): Pick<
     effectiveZ: 0,
     snapToPixels: true,
     meta: undefined,
+    tint: painterTint(),
   };
 }

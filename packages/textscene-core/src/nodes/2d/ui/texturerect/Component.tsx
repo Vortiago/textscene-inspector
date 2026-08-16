@@ -8,10 +8,9 @@
  * from `index.r3f.ts` via `controlSolverRegistry.registerMinimumSize`; this
  * component only draws.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. No `ownMultiplier`: unlike
- * ColorRect, TextureRect has no `color` property of its own to fold in before
- * the one sRGB→linear conversion.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. Used as-is: unlike ColorRect, TextureRect has no
+ * `color` property of its own to fold in before the one sRGB→linear conversion.
  *
  * The free-Control rotate/scale-about-`pivot_offset` transform is the
  * walker's job (`ControlCanvasWalker.tsx`, gated on
@@ -23,7 +22,6 @@ import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
@@ -48,9 +46,8 @@ interface ImageLike {
   height?: number;
 }
 
-export function TextureRect({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
+export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureRectProperties>(solveNode);
-  const tint = useControlOwnTint(solveNode);
 
   const { externalResources, internalResources } = useSceneResources();
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline

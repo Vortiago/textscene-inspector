@@ -14,9 +14,8 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { Label } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -58,19 +57,23 @@ describe('<Label> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it('multiplies the resolved text colour by self_modulate and the inherited ancestor tint, converted to linear exactly once', async () => {
+  it('multiplies the resolved text colour by the walker-composed tint, converted to linear exactly once', async () => {
     const node = solveNode('L', {
       text: 'A',
-      selfModulate: { r: 1, g: 0.5, b: 1, a: 1 },
       themeOverrideColors: { font_color: { r: 0.8, g: 0.4, b: 0.2, a: 0.5 } },
     });
     const renderer = await ReactThreeTestRenderer.create(
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <Label {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 200, h: 200 }} renderOrder={0} />
-      </Modulate2DContext.Provider>
+      <Label
+        {...painterEnv()}
+        // The product the walker hands down: inherited(.5,.5,.5,.5) × self_modulate(1,.5,1,1).
+        tint={painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 })}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 200, h: 200 }}
+        renderOrder={0}
+      />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    // own(sRGB) = inherited(.5,.5,.5,.5) * self_modulate(1,.5,1,1) * font_color(.8,.4,.2,.5) = (.4,.1,.1,.25)
+    // own(sRGB) = tint(.5,.25,.5,.5) * font_color(.8,.4,.2,.5) = (.4,.1,.1,.25)
     const expected = expectedLinear(0.4, 0.1, 0.1);
     const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
     expect(uColor.x).toBeCloseTo(expected.r, 6);

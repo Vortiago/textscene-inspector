@@ -14,7 +14,8 @@
  * `<group>`), not this painter's — mirroring `ColorRect`, this
  * component does not re-check it.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`.
  * Unlike `ColorRect` (one `color` property), a StyleBox carries TWO base
  * colours (`bgColor`, `borderColor`) needing the SAME composed tint — so
  * `PanelChrome` (this painter's actual implementation) hands `tint.own` (raw
@@ -24,6 +25,6 @@
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 
-export function Panel({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
-  return <PanelChrome solveNode={solveNode} rect={rect} theme={theme} renderOrder={renderOrder} />;
+export function Panel({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+  return <PanelChrome solveNode={solveNode} tint={tint} rect={rect} theme={theme} renderOrder={renderOrder} />;
 }

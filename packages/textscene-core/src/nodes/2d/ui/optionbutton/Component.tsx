@@ -5,7 +5,8 @@
  * chevron arrow icon at its right edge, drawn from the vendored theme icons
  * (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS`).
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`.
  * The StyleBox hands `tint.own` straight to `<StyleBoxQuad>`'s `color` prop
  * (two base colours, composed internally); the arrow's own theme colour is
  * ALWAYS opaque white (`modulate_arrow`
@@ -24,7 +25,6 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -50,13 +50,11 @@ import {
 } from './nativeSolver';
 import type { OptionButtonProperties } from './types';
 
-export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<OptionButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state);
-
-  const tint = useControlOwnTint(solveNode);
 
   const clippingPlanes = useControlClipPlanes();
 

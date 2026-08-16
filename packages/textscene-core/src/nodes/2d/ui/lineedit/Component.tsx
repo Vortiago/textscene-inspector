@@ -7,8 +7,8 @@
  * gates the caret on `caret_force_displayed` or on the node both editing AND
  * holding focus, and a static preview has neither.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. `tint.own` (raw sRGB) is handed
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. `tint.own` (raw sRGB) is handed
  * to `<StyleBoxQuad>`'s `color` prop for the chrome and multiplied into the
  * font colour before its own single sRGB→linear conversion — `Button`'s
  * established ordering.
@@ -34,7 +34,6 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
@@ -55,14 +54,12 @@ import type { LineEditProperties } from './types';
 
 const HORIZONTAL_ALIGNMENT_LEFT = 0;
 
-export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LineEditProperties>(solveNode);
   const editable = props.editable ?? true;
 
   const styleState = resolveLineEditStyleState(editable);
   const baseStyleBox = pickLineEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, styleState);
-
-  const tint = useControlOwnTint(solveNode);
 
   // --- Text: which string, which theme colour, shaped -----------------------
   const { text, isPlaceholder } = lineEditDisplayText(props);

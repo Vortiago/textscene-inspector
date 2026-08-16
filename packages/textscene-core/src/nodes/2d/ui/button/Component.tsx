@@ -7,8 +7,8 @@
  * from this node's OWN parsed props (`disabled`) — no hover/pressed/focus:
  * a static viewer, not an interactive control.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
- * `modulate`. `tint.own` (raw sRGB) goes
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. `tint.own` (raw sRGB) goes
  * straight to `<StyleBoxQuad>`'s `color` prop for the chrome, and is
  * multiplied per-item into the font and icon colours BEFORE each item's own
  * single sRGB→linear conversion — `PanelChrome.tsx`'s established ordering.
@@ -38,7 +38,6 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
@@ -73,13 +72,11 @@ interface IconImageLike {
   height?: number;
 }
 
-export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state);
-
-  const tint = useControlOwnTint(solveNode);
 
   const clippingPlanes = useControlClipPlanes();
 

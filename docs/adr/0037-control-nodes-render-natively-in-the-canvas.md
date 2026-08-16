@@ -92,9 +92,10 @@ tests named for it only ever set an ambient context plus `self_modulate`, never 
 node's own `modulate`, so a painter carrying the exact defect passed all of them.
 
 `painterView<T>(solveNode)` (`solveTree.ts`) now hands a painter
-`Omit<T, 'modulate' | 'selfModulate'>`, and `useControlOwnTint` (`controlTint.ts`)
-reads `self_modulate` off the node itself, so neither field has a spelling a painter
-can reach. The narrowing is STRUCTURAL rather than an import boundary — a separate
+`Omit<T, 'modulate' | 'selfModulate'>`, and the walker resolves the own-pixel tint
+itself — `self_modulate` folded onto the inherited value it already holds, handed
+down as the required `tint` prop, the shape `CanvasItem2D` has always had for the
+Node2D family — so neither field has a spelling a painter can reach. The narrowing is STRUCTURAL rather than an import boundary — a separate
 painter-facing module re-exporting a stripped copy of each property type — because a
 painter's properties *are* the parser's output object and `label/Component.tsx`
 memoizes on its identity: a boundary that copied the bag would thrash that memo every

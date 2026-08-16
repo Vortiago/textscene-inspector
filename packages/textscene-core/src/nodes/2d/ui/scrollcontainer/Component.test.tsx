@@ -22,10 +22,9 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // This painter reads `gui/common/snap_controls_to_pixels` off the project
@@ -323,18 +322,17 @@ describe('<ScrollContainer> — tint', () => {
     }
   });
 
-  it('composes the ambient inherited tint onto the track fill exactly once, alongside self_modulate', async () => {
-    // own(sRGB) = ambient(0.5) * self_modulate(0.5) * track's own base (0.1,
-    // default-theme style_normal_color) = 0.025.
+  it('applies the walker-composed tint to the track fill exactly once', async () => {
+    // The walker's own product (ambient 0.5 x self_modulate 0.5 = 0.25) x the
+    // track's own base (0.1, default-theme style_normal_color) = 0.025.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <ScrollContainer {...painterEnv()}
-          solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
-          rect={{ x: 0, y: 0, w: 300, h: 200 }}
-          renderOrder={0}
-        />
-      </Modulate2DContext.Provider>
+      <ScrollContainer {...painterEnv()}
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={scrollNode({}, [content])}
+        rect={{ x: 0, y: 0, w: 300, h: 200 }}
+        renderOrder={0}
+      />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >

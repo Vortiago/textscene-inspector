@@ -1,14 +1,17 @@
 /**
  * `controlTint.ts` adapts a Control's `modulate`/`self_modulate`
  * (`ControlColor`, plain 0..1 channels) onto the existing 2D CanvasItem tint
- * chain (`useCanvasItemTint`/`Modulate2DContext`), the same one Sprite2D and
- * every other CanvasItem already uses — composing in sRGB and converting to
- * linear ONCE, per that module's own rule. These tests pin the adaptation and
- * the SPLIT (the walker's hook sees only `modulate`, a painter's only
- * `self_modulate`), not the underlying chain's math (already covered by
- * `canvasItemModulate.test.ts`).
+ * chain (`Modulate2DContext`'s arithmetic), the same one Sprite2D and every
+ * other CanvasItem already uses — composing in sRGB and converting to linear
+ * ONCE, per that module's own rule. These tests pin the adaptation and the
+ * SPLIT (one hook sees only `modulate`, the other only `self_modulate`), not
+ * the underlying chain's math (already covered by `canvasItemModulate.test.ts`).
+ *
+ * Both hooks are the walker's; that they compose correctly IN it is
+ * `ControlCanvasWalker.test.tsx`'s own tint suite.
  */
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -44,31 +47,40 @@ describe('useInheritedModulate', () => {
 });
 
 describe('useControlOwnTint', () => {
+  const OPAQUE_WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
   it('defaults to opaque white when self_modulate is unset', () => {
-    const { result } = renderHook(() => useControlOwnTint(control({})));
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, control({})));
     expect(result.current.own).toEqual({ r: 1, g: 1, b: 1, a: 1 });
     expect(result.current.opacity).toBe(1);
   });
 
-  it('multiplies the ambient inherited tint by self_modulate — never squaring the node’s own modulate', () => {
+  it('multiplies the inherited value it is GIVEN by self_modulate — never squaring the node’s own modulate', () => {
     const node = control({
       modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
       selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
     });
-    const { result } = renderHook(() => useControlOwnTint(node), {
-      wrapper: ambient({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }),
-    });
-    // ambient(0.5) × self_modulate(0.5) = 0.25 — the node's own `modulate`,
-    // already folded into the ambient by the walker, is NOT read here.
+    // The argument stands for `useInheritedModulate`'s result, which already
+    // carries this node's `modulate`; reading it a second time would give 0.125.
+    const { result } = renderHook(() =>
+      useControlOwnTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, node)
+    );
     expect(result.current.own.r).toBeCloseTo(0.25, 5);
     expect(result.current.opacity).toBeCloseTo(0.25, 5);
   });
 
-  it('folds ownMultiplier in for a single-colour widget, in sRGB, before the one linear conversion', () => {
+  it('ignores the ambient context entirely — the walker states the inherited value', () => {
     const node = control({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } });
-    const { result } = renderHook(() =>
-      useControlOwnTint(node, { r: 0.5, g: 0.5, b: 0.5, a: 1 })
-    );
-    expect(result.current.own.r).toBeCloseTo(0.25, 5);
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node), {
+      wrapper: ambient({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
+    });
+    expect(result.current.own.r).toBeCloseTo(0.5, 5);
+  });
+
+  it('converts the sRGB product to linear exactly once', () => {
+    const node = control({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } });
+    const { result } = renderHook(() => useControlOwnTint(OPAQUE_WHITE, node));
+    const expected = new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace);
+    expect(result.current.color.r).toBeCloseTo(expected.r, 6);
   });
 });

@@ -8,7 +8,6 @@
  * draws.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -26,12 +25,10 @@ import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { VSliderProperties } from './types';
 
 
-export function VSlider({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function VSlider({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<VSliderProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
-
-  const tint = useControlOwnTint(solveNode);
 
   const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
   const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;

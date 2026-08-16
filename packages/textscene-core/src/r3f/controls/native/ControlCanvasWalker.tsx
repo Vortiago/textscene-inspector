@@ -45,7 +45,7 @@ import { createSolveContext, solveControlTree, type SolvedControl } from './cont
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext } from '../../canvasItemModulate';
-import { useInheritedModulate } from './controlTint';
+import { useControlOwnTint, useInheritedModulate } from './controlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { canvasRenderOrder } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
@@ -152,6 +152,11 @@ function ControlNodeGroup({
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
   const inheritedModulate = useInheritedModulate(props.modulate);
+  // The painter's own pixels continue the SAME chain one `self_modulate`
+  // further. Resolved here, not in the painter: the fold above is the walker's,
+  // and a painter reading it back from the provider is sixteen re-entries into
+  // one composition (`NativeControlComponentProps.tint`).
+  const tint = useControlOwnTint(inheritedModulate, solveNode);
   const isVisible = !hiddenNodePaths.has(solveNode.path) && props.visible !== false;
 
   // Structurally guaranteed present (the solve walks this exact tree); the
@@ -271,6 +276,7 @@ function ControlNodeGroup({
       solveNode={solveNode}
       rect={rect}
       renderOrder={renderOrder}
+      tint={tint}
       subtreeChromeRenderOrder={subtreeChromeRenderOrder}
       effectiveZ={effectiveZ}
       theme={theme}
@@ -287,6 +293,7 @@ function ControlNodeGroup({
         solveNode={solveNode}
         rect={rect}
         renderOrder={renderOrder}
+        tint={tint}
         subtreeChromeRenderOrder={subtreeChromeRenderOrder}
         effectiveZ={effectiveZ}
         theme={theme}

@@ -17,10 +17,9 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import type { ControlProperties } from '../control/types';
 import { PanelContainer } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -94,32 +93,32 @@ describe('<PanelContainer> (isolated painter contract)', () => {
     const flat = styleBox({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
       <PanelContainer {...painterEnv()}
-        solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode({}, { panel: flat })}
         rect={RECT}
         renderOrder={0}
       />
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // 0.8 (bgColor) * 0.5 (self_modulate) = 0.4, composed in sRGB and left there.
+    // 0.8 (bgColor) * 0.5 (tint) = 0.4, composed in sRGB and left there.
     expect(color.getX(0)).toBeCloseTo(0.4, 4);
   });
 
-  it('composes the ambient inherited tint onto the panel fill exactly once, alongside self_modulate', async () => {
-    // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
+  it('applies the walker-composed tint to the panel fill exactly once', async () => {
     const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
-        <PanelContainer {...painterEnv()}
-          solveNode={solveNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, { panel: flat })}
-          rect={RECT}
-          renderOrder={0}
-        />
-      </Modulate2DContext.Provider>
+      <PanelContainer {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({}, { panel: flat })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // 0.5 (ambient) * 0.5 (self_modulate) = 0.25, in sRGB.
+    // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
     expect(color.getX(0)).toBeCloseTo(0.25, 4);
   });
 });

@@ -11,6 +11,7 @@ import type { NativeTheme } from './native/nativeTheme';
 import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from './native/rect';
 import type { SolveNode } from './native/solveTree';
+import type { ControlOwnTint } from './native/controlTint';
 
 /**
  * Props a Control painter receives from `ControlCanvasWalker`. A painter
@@ -35,6 +36,25 @@ export interface NativeControlComponentProps {
    * the solver that sized it can never see different theme metrics.
    */
   theme: NativeTheme;
+  /**
+   * This Control's OWN-pixel tint: the ambient inherited modulate — which
+   * already carries this node's own `modulate` — × its `self_modulate`,
+   * composed in sRGB with the single linear conversion applied to `color`.
+   *
+   * Supplied rather than resolved per painter, for the same reason as `theme`
+   * above and by the same shape the Node2D family already has: `CanvasItem2D`
+   * hands its `body` render-prop the resolved tint, which is why that family
+   * cannot get this wrong at all. Resolving it per painter means re-entering
+   * the walker's own modulate chain from inside the provider it publishes —
+   * one composition, once per painter, each free to drift.
+   *
+   * REQUIRED. Optional would let a painter fall back to opaque white and drop
+   * the scene's tint on its own chrome: invisible in every scene that authors
+   * neither property, wrong in the ones that do, with no type error and no
+   * failing test. `painterEnv` (`native/testing/painterProps.ts`) is where a
+   * test that does not care about tint gets one.
+   */
+  tint: ControlOwnTint;
   /**
    * Whether Controls in THIS viewport snap their drawn transform to whole
    * pixels — the walker's own resolved value, not the project setting.

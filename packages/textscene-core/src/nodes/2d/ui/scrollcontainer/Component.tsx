@@ -43,7 +43,7 @@
  * its enclosing bar is visible, so this painter never needs interactive
  * state to decide whether to draw one.
  *
- * TINT. Mirrors `PanelChrome.tsx` exactly: `tint.own` (`self_modulate` only)
+ * TINT. Mirrors `PanelChrome.tsx` exactly: the walker's `tint.own`
  * is handed to each track/grabber `<StyleBoxQuad>`'s own `color` prop, which
  * composes it onto the StyleBox's two base colours, in sRGB, before its
  * single linear conversion.
@@ -78,7 +78,6 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -190,6 +189,7 @@ function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapTo
 
 export function ScrollContainer({
   solveNode,
+  tint,
   rect,
   subtreeChromeRenderOrder,
   theme,
@@ -215,7 +215,6 @@ export function ScrollContainer({
     [cachedLayout, solveNode, solveCtx, rect]
   );
 
-  const tint = useControlOwnTint(solveNode);
   // The bars are separate CanvasItems, so the walker's snap of THIS node's own
   // group does not reach them — each is snapped on its own account (see
   // `ScrollBarChrome`'s PIXEL SNAP doc) using the walker's OWN resolved value,

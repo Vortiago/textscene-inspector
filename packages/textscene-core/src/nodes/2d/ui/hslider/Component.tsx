@@ -9,7 +9,8 @@
  * which is this component at `vertical = true`); this component only resolves
  * theme/state and draws.
  *
- * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`.
  * A StyleBox carries two base colours (`PanelChrome.tsx`'s rule), so `tint.own`
  * (raw sRGB) is handed straight to each `<StyleBoxQuad>`'s own `color` prop,
  * which composes it internally before its single sRGB→linear conversion; the
@@ -21,7 +22,6 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -38,12 +38,10 @@ import {
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
 
-export function HSlider({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<HSliderProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
-
-  const tint = useControlOwnTint(solveNode);
 
   const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
   const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;

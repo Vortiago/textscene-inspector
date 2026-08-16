@@ -17,9 +17,8 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { Modulate2DContext } from '../../../../r3f/canvasItemModulate';
 import { ColorRect } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -68,21 +67,22 @@ describe('<ColorRect> (isolated painter contract)', () => {
     expect(material.opacity).toBe(1);
   });
 
-  it('multiplies the parsed color by self_modulate and the ambient inherited tint, converted to linear exactly once', async () => {
-    const node = solveNode('Root', 'ColorRect', {
-      color: 'Color(0.8, 0.4, 0.2, 0.5)',
-      selfModulate: { r: 1, g: 0.5, b: 1, a: 1 },
-    });
+  it('multiplies the parsed color by the walker-composed tint, converted to linear exactly once', async () => {
+    const node = solveNode('Root', 'ColorRect', { color: 'Color(0.8, 0.4, 0.2, 0.5)' });
     const renderer = await ReactThreeTestRenderer.create(
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
-        <ColorRect {...painterEnv()} solveNode={node} rect={{ x: 0, y: 0, w: 10, h: 10 }} renderOrder={0} />
-      </Modulate2DContext.Provider>
+      <ColorRect
+        {...painterEnv()}
+        // The product the walker hands down: inherited(.5,.5,.5,.5) × self_modulate(1,.5,1,1).
+        tint={painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 })}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 10, h: 10 }}
+        renderOrder={0}
+      />
     );
     const mesh = renderer.scene.findByType('Mesh');
     const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
 
-    // own(sRGB) = inherited(0.5,0.5,0.5,0.5) * self_modulate(1,0.5,1,1) * color(0.8,0.4,0.2,0.5)
-    //           = (0.4, 0.1, 0.1, 0.25)
+    // own(sRGB) = tint(0.5,0.25,0.5,0.5) * color(0.8,0.4,0.2,0.5) = (0.4, 0.1, 0.1, 0.25)
     const expected = expectedLinear(0.4, 0.1, 0.1);
     expect(material.color.r).toBeCloseTo(expected.r);
     expect(material.color.g).toBeCloseTo(expected.g);
@@ -136,10 +136,9 @@ describe('<ColorRect> registered through <ControlCanvasWalker> (end-to-end walke
     controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect });
     controlSolverRegistry.clear();
     // BOTH authored on the SAME node, which is what the isolated painter
-    // tests above cannot express: the walker folds `modulate` into the ambient
-    // `Modulate2DContext` it wraps the painter in, and the painter adds only
-    // `self_modulate`. A painter that read `modulate` off the node again would
-    // square it to 0.125.
+    // tests above cannot express: the walker folds them in sequence and the
+    // painter multiplies only its own `color` onto the result. A painter that
+    // read `modulate` off the node again would square it to 0.125.
     const root = solveNode('Root', 'ColorRect', {
       color: 'Color(1, 1, 1, 1)',
       modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
