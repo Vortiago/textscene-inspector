@@ -114,6 +114,27 @@ describe('resolveAnimations — keyframe values (B4)', () => {
     expect(anim.tracks[1]!.keys[0]!.value).toBe(1.5708);
   });
 
+  it('decodes the `i`-suffixed vectors, which share a prefix with their float twins', () => {
+    // `'Vector2i(...)'.startsWith('Vector2')` is TRUE, so the integer literal
+    // reached `parseVector2`, missed its float grammar and THREW — taking the
+    // whole scene down rather than one keyframe. `SubViewport.size` is declared
+    // `Variant::VECTOR2I` (viewport.cpp:5579), so this is what Godot writes.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("SubViewport:size")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector2i(256, 128)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("GridMap:cell")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3i(1, -2, 3)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys[0]!.value).toEqual([256, 128]);
+    expect(anim.tracks[1]!.keys[0]!.value).toEqual([1, -2, 3]);
+  });
+
   it('decodes Color keyframe values to RGBA quadruples (modulate fade — ADR-0017)', () => {
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),

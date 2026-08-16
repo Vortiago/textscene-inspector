@@ -56,6 +56,22 @@ export { UNCATALOGUED as UNCATALOGUED_BASE_TYPES };
  * nodes Godot did not suffix, `GridMap`, `Decal`, `ReflectionProbe`, `VoxelGI`
  * and the OpenXR family among them.
  */
+/**
+ * Whether Godot's ClassDB knows this class name at all.
+ *
+ * `NODE_BASE_TYPES` carries one entry per hop of every catalogued node's
+ * ancestry, so membership on either side of it IS catalog membership. `Node`
+ * is the terminal and has no entry of its own, hence the explicit arm.
+ *
+ * The distinction matters because `descendsFrom` returns false for two
+ * unrelated reasons — "known class, genuinely not a subclass" and "class this
+ * build has never heard of" — and a rule that conflates them announces a
+ * hierarchy verdict about a GDExtension it cannot see.
+ */
+export function isCatalogedType(nodeType: string): boolean {
+  return nodeType === 'Node' || nodeType in NODE_BASE_TYPES;
+}
+
 export function descendsFrom(nodeType: string, ancestor: string): boolean {
   const seen = new Set<string>();
   let current: string | undefined = nodeType;

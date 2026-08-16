@@ -10,7 +10,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
-import { descendsFrom } from './nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from './nodeBaseTypes.js';
 import type { TscnScene } from '../parser/types.js';
 
 /**
@@ -95,6 +95,14 @@ export function parentTypeVerdict(
   if (step.kind !== 'known') return step;
   const { parent } = step;
   if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
+  // A class outside Godot's catalog is a GDExtension or a build this linter
+  // does not have. Godot's own check is a runtime `cast_to` against a ClassDB
+  // with every extension registered (collision_shape_3d.cpp:125-128), so
+  // ancestry is undecidable from the file alone — and `descendsFrom` says
+  // false for "not a subclass" and "never heard of it" alike. The Mirror's
+  // Jolt `JBody3D` collected ten "is not a CollisionObject3D" warnings on
+  // scenes that are perfectly correct.
+  if (!isCatalogedType(parent.type)) return { kind: 'unknowable' };
   return { kind: 'mismatch', parent };
 }
 

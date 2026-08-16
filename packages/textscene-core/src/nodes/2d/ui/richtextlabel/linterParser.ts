@@ -195,15 +195,15 @@ validatorRegistry.registerAll('RichTextLabel', {
     VISIBLE_CHARACTERS_BEHAVIOR,
     { hinted: 'rich_text_label.cpp:7789' }
   ),
-  // rich_text_label.cpp:7790: PROPERTY_HINT_RANGE "0,1,0.001". set_visible_ratio
-  // (rich_text_label.cpp:7401-7459) CLAMPS: `p_ratio >= 1.0` stores 1.0
-  // (rich_text_label.cpp:7406-7408) and `p_ratio < 0.0` stores 0.0
-  // (rich_text_label.cpp:7409-7411): the setter alters what was written, so
-  // this is an error, not a warning.
+  // rich_text_label.cpp:7790: PROPERTY_HINT_RANGE "0,1,0.001". Same shape as
+  // Label's (see its linterParser): the clamp sits behind
+  // `if (visible_ratio != p_ratio)` (rich_text_label.cpp:7402), so a preceding
+  // `visible_characters` leaves it unreached and the value is stored as
+  // written. Hint-tier, since the setter does not always alter it.
   visible_ratio: v.float('visible_ratio', {
     min: 0,
     max: 1,
-    enforced: 'rich_text_label.cpp:7406-7411',
+    hinted: 'rich_text_label.cpp:7790',
   }),
 
   // BiDi (ADD_GROUP "BiDi", "", rich_text_label.cpp:7792-7796).

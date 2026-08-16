@@ -25,14 +25,17 @@ const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="StubRoot" type="Node3D"]
 `;
 
-// Line 3 (1-indexed) is missing a type=/index=/instance= attribute — a
-// deterministic strict-parser error regardless of registered node rules.
+// Line 3 (1-indexed) is missing a `name=` attribute — a deterministic
+// strict-parser ERROR regardless of registered node rules. Not a typeless
+// heading: that one is legal (Godot assumes it was instantiated,
+// resource_format_text.cpp:218-221) and only warns, so it cannot drive an
+// error-severity gutter dot.
 const BAD_LINE_TSCN = `[gd_scene load_steps=1 format=3]
 
-[node name="Root"]
+[node type="Node3D"]
 `;
 const BAD_LINE = 3;
-const EXPECTED_MESSAGE = 'Node heading must have "type=", "index=", or "instance=" attribute';
+const EXPECTED_MESSAGE = 'Node heading must have "name=" attribute';
 
 const CLEAN_TSCN = `[gd_scene load_steps=1 format=3]
 

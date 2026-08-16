@@ -14,9 +14,8 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseVector2, parseVector3 } from '../../../parser/vectors';
-import { parseGodotFloat } from '../../../godot/number.js';
-import { parseColor } from '../../../utils/colorParser';
+import { finiteTupleRegex, parseGodotFloat } from '../../../godot/number.js';
+import { storedInt } from '../../../godot/int.js';
 import { warn } from '../../../logger';
 import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
@@ -342,21 +341,51 @@ function splitKeyframeParts(body: string): string[] {
   return parts.map((p) => p.trim()).filter((p) => p.length > 0);
 }
 
+const keyInt = (text: string | undefined): number => storedInt(text) ?? 0;
+const keyFloat = (text: string | undefined): number => parseGodotFloat(text ?? '') ?? 0;
+
+/**
+ * The composite literals a keyframe can hold, each matched WHOLE.
+ *
+ * A prefix test cannot tell these apart: `'Vector2i(…)'.startsWith('Vector2')`
+ * is true, so an integer literal reached `parseVector2`, missed its float
+ * grammar and THREW — discarding the whole scene rather than one keyframe. A
+ * keyframe stores an arbitrary Variant and plenty of animated properties are
+ * declared with an `i`-suffixed one: `SubViewport.size` is `Variant::VECTOR2I`
+ * (viewport.cpp:5579).
+ *
+ * Anchored regexes rather than prefixes, so no two entries can match the same
+ * text and order carries no meaning.
+ */
+const COMPOSITE_KEYS: ReadonlyArray<{
+  re: RegExp;
+  read: (m: RegExpExecArray) => number[];
+}> = [
+  { re: finiteTupleRegex('Vector2i', 2), read: (m) => [keyInt(m[1]), keyInt(m[2])] },
+  {
+    re: finiteTupleRegex('Vector3i', 3),
+    read: (m) => [keyInt(m[1]), keyInt(m[2]), keyInt(m[3])],
+  },
+  { re: finiteTupleRegex('Vector2', 2), read: (m) => [keyFloat(m[1]), keyFloat(m[2])] },
+  {
+    re: finiteTupleRegex('Vector3', 3),
+    read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3])],
+  },
+  {
+    re: finiteTupleRegex('Color', 4),
+    read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3]), keyFloat(m[4])],
+  },
+];
+
 function decodeValue(raw: string): GodotKeyframeValue {
   if (raw === 'true') return true;
   if (raw === 'false') return false;
-  if (raw.startsWith('Vector3')) {
-    const v = parseVector3(raw);
-    return [v.x, v.y, v.z];
+  for (const { re, read } of COMPOSITE_KEYS) {
+    const match = re.exec(raw);
+    if (match) return read(match);
   }
-  if (raw.startsWith('Vector2')) {
-    const v = parseVector2(raw);
-    return [v.x, v.y];
-  }
-  if (raw.startsWith('Color')) {
-    const c = parseColor(raw);
-    return [c.r, c.g, c.b, c.a];
-  }
+  // A composite this does not know reads as NaN, which `clipBuilder` already
+  // treats as no keyframe rather than as a value.
   return parseFloat(raw);
 }
 

@@ -380,7 +380,7 @@ describe('RichTextLabel strict validators', () => {
     });
   });
 
-  describe('visible_ratio (float 0-1, enforced clamp)', () => {
+  describe('visible_ratio (float 0-1, hinted)', () => {
     // set_visible_ratio (rich_text_label.cpp:7401-7459) clamps: >= 1.0 stores
     // 1.0 (line 7406-7408), < 0.0 stores 0.0 (line 7409-7411): the setter
     // alters what was written, so out of range is an error.
@@ -392,16 +392,16 @@ describe('RichTextLabel strict validators', () => {
       expect(check('visible_ratio', '1')).toBeNull();
     });
 
-    it('errors above 1: set_visible_ratio clamps to 1.0 rather than storing what was written', () => {
+    it('warns above 1: the clamp is guarded, so a preceding visible_characters leaves 3.0 stored', () => {
       const result = check('visible_ratio', '1.5');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result?.severity).toBe('warning');
     });
 
-    it('errors below 0: set_visible_ratio clamps to 0.0', () => {
+    it('warns below 0: the same guard, and the hint is what bounds the inspector', () => {
       const result = check('visible_ratio', '-0.5');
       expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expect(result?.severity).toBe('warning');
     });
   });
 

@@ -74,9 +74,10 @@ describe('Linter', () => {
     });
 
     it('should preserve error severity', () => {
+      // `[node type=…]` with no `name=`: a typeless heading is legal and warns.
       const content = `[gd_scene load_steps=1 format=3]
 
-[node name="Root"]
+[node type="Node2D"]
 `;
 
       const diagnostics = linter.lint(content);

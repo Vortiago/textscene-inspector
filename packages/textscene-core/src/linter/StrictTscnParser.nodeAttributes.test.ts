@@ -41,7 +41,10 @@ describe('StrictTscnParser', () => {
       const result = parser.parse(content);
 
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.severity).toBe('error');
+      // A warning, not an error: Godot's parser reads the absence as
+      // "assume this was instantiated" (resource_format_text.cpp:218-221) and
+      // only warns at load if nothing does (packed_scene.cpp:309-311).
+      expect(result.errors[0]!.severity).toBe('warning');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(3);
       expect(result.errors[0]!.message).toContain('type=');

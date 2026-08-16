@@ -34,9 +34,12 @@ describe('Linter', () => {
     });
 
     it('should detect parse errors in Phase 1', () => {
+      // `[node type=…]` with no `name=`, not a typeless heading: a heading
+      // stating none of type/index/instance is LEGAL (Godot assumes it was
+      // instantiated, resource_format_text.cpp:218-221) and now warns.
       const content = `[gd_scene load_steps=1 format=3]
 
-[node name="Root"]
+[node type="Node2D"]
 `;
 
       const diagnostics = linter.lint(content);
@@ -99,6 +102,9 @@ describe('Linter', () => {
 
       ruleRegistry.register(testRule);
 
+      // `[node type=…]` with no `name=`, not a typeless heading: a heading
+      // stating none of type/index/instance is LEGAL (Godot assumes it was
+      // instantiated, resource_format_text.cpp:218-221) and now warns.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]
@@ -108,13 +114,13 @@ describe('Linter', () => {
 
       const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
-      expect(parseError!.severity).toBe('error');
+      expect(parseError!.severity).toBe('warning');
 
       const ruleViolation = diagnostics.find(d => d.ruleName === 'test-combined-rule');
       expect(ruleViolation).toBeDefined();
       expect(ruleViolation!.severity).toBe('warning');
       expect(ruleViolation!.nodeName).toBe('Root');
-      // The rejected heading gave the node no type, and it still reached phase 2.
+      // The typeless heading gave the node no type, and it still reached phase 2.
       expect(ruleViolation!.nodeType).toBe('');
     });
   });
@@ -133,10 +139,17 @@ invalidproperty
 
       const diagnostics = linter.lint(content);
 
-      // Should have multiple parse errors (at least 3). Semantic rules now run
-      // alongside them rather than being suppressed by the first error, so the
-      // set is no longer errors-only.
-      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
+      // Semantic rules run alongside parse errors rather than being suppressed
+      // by the first one, so the set is not errors-only. The typeless `Root`
+      // heading contributes a WARNING, not an error: Godot's parser reads the
+      // absence as "assume this was instantiated"
+      // (resource_format_text.cpp:218-221).
+      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(2);
+      expect(
+        diagnostics.filter(
+          (d) => d.severity === 'warning' && d.message.includes('states no "type="')
+        )
+      ).toHaveLength(1);
     });
 
     it('should integrate StrictTscnParser and RuleRegistry correctly', () => {

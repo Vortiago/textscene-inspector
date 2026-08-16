@@ -220,15 +220,24 @@ validatorRegistry.registerAll('Label', {
     VISIBLE_CHARACTERS_BEHAVIOR,
     { hinted: 'label.cpp:1451' }
   ),
-  // label.cpp:1452 — PROPERTY_HINT_RANGE "0,1,0.001". set_visible_ratio
-  // (label.cpp:1305-1324) CLAMPS: `p_ratio >= 1.0` stores 1.0 (label.cpp:1307-1309),
-  // `p_ratio < 0.0` stores 0.0 (label.cpp:1310-1312) — both ends silently alter
-  // what was written, the "alters the value" branch of ADR-0032, so both are
-  // enforced errors rather than hinted warnings.
+  // label.cpp:1452 — PROPERTY_HINT_RANGE "0,1,0.001". The clamp at
+  // label.cpp:1307-1312 is guarded by `if (visible_ratio != p_ratio)`
+  // (label.cpp:1305), and properties apply in FILE ORDER
+  // (packed_scene.cpp:492) — so a preceding `visible_characters` that already
+  // set the ratio makes the guard false and the clamp never runs. Measured on
+  // 4.6.3, both outcomes are real:
+  //
+  //   text = "0" / visible_characters = 3 / visible_ratio = 3.0 -> stores 3.0,
+  //     and Godot RE-SERIALISES `visible_ratio = 3.0`
+  //   visible_ratio = 3.0 alone                                 -> clamped to 1.0
+  //
+  // So the setter does not always alter it, and gdUnit4's status bar ships the
+  // first shape in a scene Godot's own editor wrote. The hint still bounds the
+  // inspector, which is ADR-0032's warning.
   visible_ratio: v.float('visible_ratio', {
     min: 0,
     max: 1,
-    enforced: { min: 'label.cpp:1310', max: 'label.cpp:1307' },
+    hinted: 'label.cpp:1452',
   }),
 
   // -- BiDi (ADD_GROUP "BiDi", "", label.cpp:1454-1458) -----------------------

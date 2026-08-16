@@ -291,7 +291,7 @@ describe('Label strict validators', () => {
       expect(error?.severity).toBe('warning');
     });
 
-    it('errors below 0 — ERR_FAIL_COND(p_lines < 0) refuses the write (label.cpp:1346)', () => {
+    it('errors below 0 — set_lines_skipped refuses a negative outright', () => {
       const error = check('lines_skipped', '-1');
       expect(error).not.toBeNull();
       expect(error?.severity).toBe('error');
@@ -364,16 +364,16 @@ describe('Label strict validators', () => {
       expect(check('visible_ratio', '0.5')).toBeNull();
     });
 
-    it('errors above 1 — set_visible_ratio (label.cpp:1305-1324) clamps p_ratio >= 1.0 to 1.0 (label.cpp:1307-1309)', () => {
+    it('warns above 1: the clamp is guarded, so a preceding visible_characters leaves 3.0 stored', () => {
       const error = check('visible_ratio', '1.5');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
     });
 
-    it('errors below 0 — the same setter clamps p_ratio < 0.0 to 0.0 (label.cpp:1310-1312)', () => {
+    it('warns below 0: the same guard, and the hint is what bounds the inspector', () => {
       const error = check('visible_ratio', '-0.1');
       expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
     });
   });
 

@@ -82,15 +82,30 @@ export class StrictTscnParser {
             code: 'MISSING_NODE_NAME',
           });
         }
-        // Nodes must have one of: type= (new nodes), index= (instanced scene child mods), or instance= (PackedScene instantiation)
+        // A heading with none of `type=` / `index=` / `instance=` is LEGAL:
+        // Godot's parser takes the absence as a claim rather than as a defect —
+        // `else { type = SceneState::TYPE_INSTANTIATED; //no type? assume this
+        // was instantiated }` (resource_format_text.cpp:218-221). So this is
+        // not a grammar error, and calling it one rejected both canonical
+        // valid shapes: a property override on a child of an `instance=`
+        // sub-scene, and an inherited scene.
+        //
+        // It stays a WARNING because the claim can still be false, and Godot
+        // says so itself at load — `"… was modified from inside an instance,
+        // but it has vanished."` (packed_scene.cpp:309-311) — when nothing
+        // instantiates the node the heading is standing in for. Godot's writer
+        // emits `index=` for the real cases, so a bare heading is usually the
+        // residue of a sub-scene that failed to resolve.
         if (
           !heading.attributes.type &&
           !heading.attributes.index &&
           !heading.attributes.instance
         ) {
           errors.push({
-            severity: 'error',
-            message: 'Node heading must have "type=", "index=", or "instance=" attribute',
+            severity: 'warning',
+            message:
+              'Node heading states no "type=", "index=" or "instance=", so Godot treats it as ' +
+              'a node from an instanced scene. If nothing instantiates it, the node vanishes at load.',
             line,
             column: 1,
             code: 'MISSING_NODE_IDENTIFIER',
@@ -108,9 +123,31 @@ export class StrictTscnParser {
         if (!validator) return;
 
         const error = validator(key, value, line);
-        if (error) {
-          errors.push(error);
+        if (!error) return;
+
+        // `null` is a legal Variant literal anywhere a value is expected
+        // (variant_parser.cpp:699), so a per-type "must be a number" / "must be
+        // a boolean" reads as a parse failure and says the wrong thing. The
+        // validator is still the authority on WHETHER this slot takes it — a
+        // resource slot does, and returns no error above — but where it does
+        // not, the accurate claim is what the engine does instead. NIL converts
+        // strictly only to OBJECT (variant.cpp:543-544), so every other slot
+        // takes the type's zero. Measured on 4.6.3, `Control`:
+        // `texture_filter = null` stores 0 and `visible = null` stores FALSE
+        // against a default of true.
+        if (value.trim() === 'null') {
+          errors.push({
+            severity: error.severity,
+            message:
+              `Property '${key}' is null, which this slot cannot hold: Godot stores the type's ` +
+              `zero value rather than the property's default.`,
+            line,
+            column: 1,
+            code: error.code,
+          });
+          return;
         }
+        errors.push(error);
       },
     };
 

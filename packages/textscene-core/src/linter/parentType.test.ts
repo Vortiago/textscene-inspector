@@ -39,6 +39,43 @@ describe('the two doors to a parent', () => {
     expect(knownParent(scene, byName(scene.nodes, 'Leaf')).kind).toBe('unknowable');
   });
 
+  it('declines a parent whose stated type ClassDB does not know', () => {
+    // Godot's own check is a runtime `cast_to` against a ClassDB with every
+    // GDExtension registered (collision_shape_3d.cpp:125-128). A `.tscn` names
+    // only the class, so for a class outside the catalog ancestry is
+    // undecidable — and `descendsFrom` returning false read as a confident
+    // "is NOT a CollisionObject3D" about `JBody3D`, a Jolt extension class.
+    const scene = new TscnParser().parse(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" type="JBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]
+`
+    );
+    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Shape'), 'CollisionObject3D').kind).toBe(
+      'unknowable'
+    );
+  });
+
+  it('still decides against a parent the catalog DOES know', () => {
+    const scene = new TscnParser().parse(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" type="Node3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]
+`
+    );
+    expect(parentTypeVerdict(scene, byName(scene.nodes, 'Shape'), 'CollisionObject3D').kind).toBe(
+      'mismatch'
+    );
+  });
+
   it('parentIdentity hands the same node back, because identity is knowable', () => {
     // A NodePath `..` is `get_parent()` and never reads the class, so declining
     // here stopped a walk over a node the file names perfectly well.
