@@ -13,7 +13,7 @@ export function parseNode3D(
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;
-  const index = heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined;
+  const index = heading.attributes.index ? Number(heading.attributes.index) : undefined;
   const transform = parseOptionalTransform(properties.transform, name);
   const visible = properties.visible === undefined ? undefined : properties.visible !== 'false';
 

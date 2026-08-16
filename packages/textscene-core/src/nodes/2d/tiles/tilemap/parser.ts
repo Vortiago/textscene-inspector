@@ -26,7 +26,7 @@ export function parseTileMap(
   for (const [key, value] of Object.entries(properties)) {
     const m = LAYER_KEY_RE.exec(key);
     if (!m) continue;
-    const index = parseInt(m[1]!, 10);
+    const index = Number(m[1]);
     let layer = layerProps.get(index);
     if (!layer) {
       layer = {};

@@ -8,6 +8,7 @@ import { BillboardMode, HorizontalAlignment } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr } from '../../../parser/valueParsers';
+import { ruleInt } from '../../../godot/int.js';
 
 export function parseLabel3D(
   heading: ParsedHeading,
@@ -39,8 +40,8 @@ function parseHorizontalAlignment(value: string | undefined): HorizontalAlignmen
 }
 
 function parseBillboardMode(value: string | undefined): BillboardMode {
-  if (value === undefined) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
-  const num = parseInt(value, 10);
+  const num = ruleInt(value);
+  if (num === null) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
 
   if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
   if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;

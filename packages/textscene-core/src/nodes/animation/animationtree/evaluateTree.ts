@@ -12,6 +12,7 @@
  */
 
 import { stripStringName, type AnimNode } from './treeResources';
+import { parseGodotFloat } from '../../../godot/number.js';
 
 export interface ClipWeight {
   clip: string;
@@ -108,8 +109,7 @@ function numberParam(
 ): number {
   const raw = params[key];
   if (raw === undefined) return fallback;
-  const n = parseFloat(raw);
-  return Number.isNaN(n) ? fallback : n;
+  return parseGodotFloat(raw) ?? fallback;
 }
 
 function stringParam(params: Record<string, string>, key: string): string | null {

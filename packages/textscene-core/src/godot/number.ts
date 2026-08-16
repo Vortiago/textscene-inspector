@@ -165,3 +165,21 @@ export function parseGodotFloat(value: string): number | null {
   const num = parseFloat(trimmed);
   return Number.isNaN(num) ? null : num;
 }
+
+/**
+ * One component of a composite that the FINITE grammar already matched.
+ *
+ * The float twin of `storedInt`. A capture from `finiteTupleRegex` has been
+ * vetted by the grammar, so the read itself is a bare `parseFloat` and cannot
+ * fail — the value of naming it is that `parseFloat` on UNVETTED Variant text is
+ * a defect (it stops at the first unusable character, so `75abc` reads as 75),
+ * and the two are indistinguishable at a call site. With both spellings named,
+ * `godotLiteralGrammar.guard.test.ts` can ban the raw call outright instead of
+ * carrying a roster of the places it happens to be safe.
+ *
+ * Non-finite input is the caller's mistake, not this function's: use
+ * {@link parseGodotFloat} for anything a finite grammar has not already matched.
+ */
+export function matchedFloat(capture: string): number {
+  return parseFloat(capture);
+}

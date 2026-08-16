@@ -6,7 +6,7 @@
  * types. Anything here that a second domain would want belongs there instead.
  */
 
-import { finiteTupleRegex } from '../godot/number.js';
+import { finiteTupleRegex, matchedFloat } from '../godot/number.js';
 
 export interface Vector2 {
   x: number;
@@ -38,8 +38,8 @@ export function parseVector2(value: string): Vector2 {
   }
 
   return {
-    x: parseFloat(match[1]),
-    y: parseFloat(match[2]),
+    x: matchedFloat(match[1]),
+    y: matchedFloat(match[2]),
   };
 }
 
@@ -51,8 +51,8 @@ export function parseVector3(value: string): Vector3 {
   }
 
   return {
-    x: parseFloat(match[1]),
-    y: parseFloat(match[2]),
-    z: parseFloat(match[3]),
+    x: matchedFloat(match[1]),
+    y: matchedFloat(match[2]),
+    z: matchedFloat(match[3]),
   };
 }

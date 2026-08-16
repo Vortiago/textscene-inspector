@@ -179,3 +179,16 @@ sources/0 = SubResource("TileSetAtlasSource_a")
     expect(tileSetFromTres(material)).toBeNull();
   });
 });
+
+describe('a TileSet enum Godot reads differently from `parseInt`', () => {
+  it('reads the layout the exponent spelling names', () => {
+    // `parseInt` stops at the `e`, so `1e1` decoded to 1 (STACKED_OFFSET)
+    // where Godot's tokenizer types the token FLOAT and stores 10.
+    const model = tileSetFromTres(
+      parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!,
+      []
+    );
+
+    expect(model?.layout).toBe(10);
+  });
+});

@@ -5,7 +5,7 @@
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 import { isEqualApprox } from '../godot/math.js';
-import { finiteTupleRegex } from '../godot/number.js';
+import { finiteTupleRegex, matchedFloat } from '../godot/number.js';
 
 const TRANSFORM3D_RE = finiteTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';
@@ -33,7 +33,7 @@ export function parseTransform3D(transformString: string): Transform3D {
 
   const [bx_x, bx_y, bx_z, by_x, by_y, by_z, bz_x, bz_y, bz_z, o_x, o_y, o_z] = match
     .slice(1)
-    .map((v) => parseFloat(v)) as [
+    .map((v) => matchedFloat(v)) as [
     number, number, number, number, number, number, number, number, number, number, number, number,
   ];
 

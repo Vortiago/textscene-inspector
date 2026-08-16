@@ -11,7 +11,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { finiteTupleRegex } from '../../../godot/number.js';
+import { finiteTupleRegex, matchedFloat } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 
@@ -50,7 +50,7 @@ export function parseNode2D(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined,
+    index: heading.attributes.index ? Number(heading.attributes.index) : undefined,
     visible,
     position,
     rotation,
@@ -83,12 +83,12 @@ export function decomposeTransform2D(
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
     return null;
   }
-  const xx = parseFloat(m[1]!);
-  const xy = parseFloat(m[2]!);
-  const yx = parseFloat(m[3]!);
-  const yy = parseFloat(m[4]!);
-  const ox = parseFloat(m[5]!);
-  const oy = parseFloat(m[6]!);
+  const xx = matchedFloat(m[1]!);
+  const xy = matchedFloat(m[2]!);
+  const yx = matchedFloat(m[3]!);
+  const yy = matchedFloat(m[4]!);
+  const ox = matchedFloat(m[5]!);
+  const oy = matchedFloat(m[6]!);
 
   const rotation = Math.atan2(xy, xx);
   const det = xx * yy - xy * yx;

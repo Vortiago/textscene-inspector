@@ -7,6 +7,7 @@ import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { ruleInt } from '../../../godot/int.js';
 
 export function parseCamera3D(
   heading: ParsedHeading,
@@ -34,16 +35,16 @@ export function parseCamera3D(
 }
 
 function parseProjectionMode(value: string | undefined): ProjectionMode {
-  if (value === undefined) return ProjectionMode.PROJECTION_PERSPECTIVE;
-  const num = parseInt(value, 10);
+  const num = ruleInt(value);
+  if (num === null) return ProjectionMode.PROJECTION_PERSPECTIVE;
   if (num === 1) return ProjectionMode.PROJECTION_ORTHOGONAL;
   if (num === 2) return ProjectionMode.PROJECTION_FRUSTUM;
   return ProjectionMode.PROJECTION_PERSPECTIVE;
 }
 
 function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
-  if (value === undefined) return KeepAspectMode.KEEP_HEIGHT;
-  const num = parseInt(value, 10);
+  const num = ruleInt(value);
+  if (num === null) return KeepAspectMode.KEEP_HEIGHT;
   if (num === 0) return KeepAspectMode.KEEP_WIDTH;
   if (num === 2) return KeepAspectMode.KEEP_ASPECT_DISABLED;
   return KeepAspectMode.KEEP_HEIGHT;

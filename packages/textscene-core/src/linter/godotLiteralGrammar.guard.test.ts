@@ -133,25 +133,33 @@ const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\bmakeFloatTupleRegex\b/;
 const RAW_NUMBER_PARSE = /\b(?:parseInt|parseFloat|Number)\(/;
 
 /**
- * Where a Variant VALUE is read to decide a diagnostic: all of `src/linter/`,
- * plus every `linter*.ts` beside a slice.
+ * Reading a Variant number with the LANGUAGE's parser instead of Godot's.
  *
- * Wider than the builder-derived population above, and banning less. A rule
- * reads a scalar straight out of `node.properties`, with no tuple regex
- * anywhere, so importing the builder is not the property that finds it — and a
- * scalar read is exactly where `parseInt` costs the most: it stops at the first
- * unusable character, so `tab_count = 2e1` came back as 2 and the error-tier
- * `tabbar-current-tab-out-of-range` fired on a file Godot loads with twenty
- * tabs.
+ * Tree-wide, and with no allowlist. Scoped to `src/linter/` this asked only
+ * whether a DIAGNOSTIC read a value wrongly, which is half the question: the
+ * previewer reads the same text through its own decoders, and thirteen of them
+ * were doing it with `parseInt`/`parseFloat` — `item_count = 2e1` built two
+ * items where Godot builds twenty, `tile_layout = 1e1` decoded to a different
+ * enum member than Godot stores, and a `Curve`'s `_limits` read `1abc` as 1 and
+ * scaled every sample by it. A linter that is right while the render path beside
+ * it is wrong is the divergence this whole guard family exists to close.
  *
- * `Number(` is deliberately NOT banned here. It has a second, correct use in
- * this population that the narrower one does not: scraping the index out of a
- * property KEY (`tab_7/title`), whose grammar is `String::is_valid_int` and
- * whose capture is already `-?\d+`. Routing those through a Variant reader
- * would be a worse abstraction, not a stricter one.
+ * The two legitimate readers are NAMED rather than exempted, which is what lets
+ * the ban be absolute: `matchedFloat` and `storedInt` (`godot/`) take a capture
+ * a finite grammar has already vetted, and everything else goes through
+ * `parseGodotFloat`/`parseGodotInt`. A roster of safe call sites would have to
+ * be re-derived on every refactor; a named reader cannot be renamed out of.
+ *
+ * `Number(` stays legal: scraping the index out of a property KEY (`tab_7/title`)
+ * has grammar `String::is_valid_int` and a capture already matched to `-?\d+`,
+ * and routing that through a Variant reader would be a worse abstraction, not a
+ * stricter one.
+ *
+ * A non-decimal radix is not number parsing at all — `parseInt(seq, 16)` decodes
+ * a `\uXXXX` character escape — so the ban is on the decimal spellings only.
  */
-const isDiagnosticReader = (rel: string): boolean =>
-  rel.startsWith('linter/') || /(?:^|\/)linter[^/]*\.tsx?$/.test(rel);
+const RAW_VARIANT_PARSE =
+  /\bparseFloat\(|\bparseInt\((?![^()]*(?:\([^()]*\)[^()]*)*,\s*(?:2|8|16)\s*\))/;
 
 /**
  * A file that rebuilds the shared scalar grammar into its own `RegExp`.
@@ -164,7 +172,6 @@ const isDiagnosticReader = (rel: string): boolean =>
  * through `finiteTupleRegex`; a scalar goes through `parseGodotFloat`.
  */
 const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
-const RAW_SCALAR_PARSE = /\b(?:parseInt|parseFloat)\(/;
 
 /**
  * Whoever reads a PACKED array, derived the same way: the file composes one of
@@ -242,17 +249,15 @@ describe('Godot composite literal grammar', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('reads a Variant scalar through the shared reader, in every rule', () => {
-    // No allowlist. `parseGodotFloat` — whose last step is the `parseFloat`
-    // this bans — lives in `godot/number.ts`, outside this population, so the
-    // one file that legitimately spells it is not a file this asks about.
-    const population = files.filter(({ rel }) => isDiagnosticReader(rel));
-    // Anti-vacuity: the population is a path predicate, so a change to how
-    // `label` spells a path would empty it and leave this green forever.
-    expect(population.length).toBeGreaterThan(200);
+  it('reads a Variant number through the shared reader, everywhere', () => {
+    // `godot/` is the population's complement, not an exemption: the shared
+    // readers are the four functions that legitimately spell the raw call, and
+    // they all live there. Nothing outside it needs one.
+    const population = files.filter(({ rel }) => !rel.startsWith('godot/'));
+    expect(population.length).toBeGreaterThan(1000);
 
     const offenders = population
-      .filter(({ bare }) => RAW_SCALAR_PARSE.test(bare))
+      .filter(({ bare }) => RAW_VARIANT_PARSE.test(bare))
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);

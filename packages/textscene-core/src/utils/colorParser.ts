@@ -3,6 +3,7 @@
  */
 
 import { COLOR_RE } from '../parser/vectors';
+import { matchedFloat } from '../godot/number.js';
 
 export interface Color {
   r: number;
@@ -29,10 +30,10 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
   }
 
   return {
-    r: parseFloat(match[1]),
-    g: parseFloat(match[2]),
-    b: parseFloat(match[3]),
-    a: parseFloat(match[4]),
+    r: matchedFloat(match[1]),
+    g: matchedFloat(match[2]),
+    b: matchedFloat(match[3]),
+    a: matchedFloat(match[4]),
   };
 }
 

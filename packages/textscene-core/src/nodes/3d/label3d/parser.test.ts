@@ -154,3 +154,13 @@ describe('Label3D Parser', () => {
     });
   });
 });
+
+describe('a billboard value the tokenizer cannot read', () => {
+  it('keeps the default rather than reading a prefix of it', () => {
+    // `parseInt('2abc', 10)` is 2, so a token Godot cannot load selected the
+    // Y-fixed billboard and the label faced the wrong way.
+    const props = parseLabel3D(heading('Label3D', { name: 'Text' }), { billboard: '2abc' });
+
+    expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
+  });
+});

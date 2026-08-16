@@ -47,7 +47,7 @@ export function meshLibraryFromTres(
   for (const [key, rawValue] of Object.entries(tres.properties)) {
     const match = ITEM_KEY_RE.exec(key);
     if (!match) continue;
-    const id = parseInt(match[1]!, 10);
+    const id = Number(match[1]);
     const field = match[2]!;
     const item = ensure(id);
 

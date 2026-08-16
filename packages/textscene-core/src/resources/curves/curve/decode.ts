@@ -23,7 +23,9 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import { finiteTupleRegex } from '../../../godot/number.js';
+import { finiteTupleRegex, matchedFloat, parseGodotFloat } from '../../../godot/number.js';
+import { ruleInt } from '../../../godot/int.js';
+import { splitTopLevel } from '../../../godot/string.js';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
 const ELEMS_PER_POINT = 5;
@@ -46,8 +48,8 @@ export function decodeCurve(data: Record<string, string>): Curve {
   // `point_count` is written after `_data`, and Godot's setter resizes the point
   // list to it. Honouring it keeps a hand-edited file from sampling points the
   // resource claims not to have.
-  const declared = data.point_count === undefined ? null : parseInt(data.point_count, 10);
-  if (declared !== null && Number.isFinite(declared) && declared < curve.points.length) {
+  const declared = ruleInt(data.point_count);
+  if (declared !== null && declared < curve.points.length) {
     curve.points = curve.points.slice(0, Math.max(0, declared));
   }
 
@@ -101,37 +103,25 @@ function parsePoints(value: string | undefined): CurvePoint[] {
 function parseFloatArray(value: string | undefined): number[] | null {
   const entries = splitArrayLiteral(value);
   if (!entries) return null;
-  const numbers = entries.map((e) => parseFloat(e));
-  return numbers.some((n) => Number.isNaN(n)) ? null : numbers;
+  // `parseGodotFloat`, not `parseFloat`: the latter reads `5abc` as 5, and the
+  // curve was then scaled by a maximum the file does not contain.
+  const numbers = entries.map((e) => parseGodotFloat(e));
+  return numbers.some((n) => n === null) ? null : (numbers as number[]);
 }
 
 /**
  * Split a Godot `[…]` array literal into its top-level entries, so a nested
  * `Vector2(0, 0)` survives as one entry instead of becoming two. Returns null
  * when the value is absent or is not bracketed.
+ *
+ * The split itself is `splitTopLevel`: the local copy tracked bracket depth but
+ * not quotes, so a quoted entry holding a comma split into two.
  */
 function splitArrayLiteral(value: string | undefined): string[] | null {
   if (value === undefined) return null;
   const trimmed = value.trim();
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return null;
-
-  const body = trimmed.slice(1, -1).trim();
-  if (body === '') return [];
-
-  const entries: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i];
-    if (ch === '(' || ch === '[') depth++;
-    else if (ch === ')' || ch === ']') depth--;
-    else if (ch === ',' && depth === 0) {
-      entries.push(body.slice(start, i).trim());
-      start = i + 1;
-    }
-  }
-  entries.push(body.slice(start).trim());
-  return entries;
+  return splitTopLevel(trimmed.slice(1, -1));
 }
 
 /**
@@ -149,16 +139,13 @@ const VECTOR2_RE = finiteTupleRegex('Vector2', 2);
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);
   if (!match) return null;
-  return { x: parseFloat(match[1]!), y: parseFloat(match[2]!) };
+  return { x: matchedFloat(match[1]!), y: matchedFloat(match[2]!) };
 }
 
 function numberOr(entry: string, fallback: number): number {
-  const parsed = parseFloat(entry);
-  return Number.isNaN(parsed) ? fallback : parsed;
+  return parseGodotFloat(entry) ?? fallback;
 }
 
 function tangentMode(entry: string): CurveTangentMode {
-  return parseInt(entry, 10) === CurveTangentMode.Linear
-    ? CurveTangentMode.Linear
-    : CurveTangentMode.Free;
+  return ruleInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
 }

@@ -16,7 +16,7 @@
  */
 
 import { warn } from '../../logger';
-import { finiteTupleRegex, storedInt } from '../../godot/index.js';
+import { finiteTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
@@ -47,7 +47,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   for (const [key, value] of Object.entries(data.properties)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
-    const sourceId = parseInt(sourceMatch[1]!, 10);
+    const sourceId = Number(sourceMatch[1]);
 
     const ref = typeof value === 'string' ? parseResourceReference(value) : null;
     const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
@@ -85,8 +85,8 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
 
 function intEnumOr(value: unknown, fallback: number, label: string): number {
   if (value === undefined || value === null) return fallback;
-  const n = typeof value === 'string' ? parseInt(value.trim(), 10) : NaN;
-  if (Number.isNaN(n)) {
+  const n = typeof value === 'string' ? ruleInt(value) : null;
+  if (n === null) {
     warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
     return fallback;
   }
@@ -148,7 +148,7 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
   const tiles = new Map<string, AtlasTileModel>();
 
   const tileAt = (x: string, y: string): AtlasTileModel => {
-    const key = `${parseInt(x, 10)}:${parseInt(y, 10)}`;
+    const key = `${Number(x)}:${Number(y)}`;
     let tile = tiles.get(key);
     if (!tile) {
       tile = { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map() };
@@ -177,7 +177,7 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
 
     const alt = /^(\d+)(?:\/(.+))?$/.exec(rest);
     if (!alt) continue;
-    const altId = parseInt(alt[1]!, 10);
+    const altId = Number(alt[1]);
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
     if (prop === 'flip_h') alternative.flipH = value === 'true';

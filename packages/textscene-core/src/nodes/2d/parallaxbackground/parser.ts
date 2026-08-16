@@ -49,7 +49,7 @@ export function parseParallaxBackground(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined,
+    index: heading.attributes.index ? Number(heading.attributes.index) : undefined,
     visible: properties.visible === undefined ? undefined : properties.visible !== 'false',
     layer: intOr(properties.layer, PARALLAX_BACKGROUND_LAYER, context),
     offset,

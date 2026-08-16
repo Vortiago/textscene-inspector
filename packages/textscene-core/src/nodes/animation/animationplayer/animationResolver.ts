@@ -385,8 +385,9 @@ function decodeValue(raw: string): GodotKeyframeValue {
     if (match) return read(match);
   }
   // A composite this does not know reads as NaN, which `clipBuilder` already
-  // treats as no keyframe rather than as a value.
-  return parseFloat(raw);
+  // treats as no keyframe rather than as a value. Text the tokenizer refuses
+  // reads as NaN too, rather than as the prefix `parseFloat` stopped at.
+  return parseGodotFloat(raw) ?? NaN;
 }
 
 function findById(
@@ -405,7 +406,6 @@ function asString(value: unknown): string | undefined {
 
 function numberOr(value: unknown, fallback: number): number {
   if (typeof value !== 'string') return fallback;
-  const n = parseFloat(value);
-  return Number.isNaN(n) ? fallback : n;
+  return parseGodotFloat(value) ?? fallback;
 }
 

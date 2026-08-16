@@ -39,7 +39,7 @@
 
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
-import { finiteTupleRegex, parseGodotFloat } from '../godot/number.js';
+import { finiteTupleRegex, matchedFloat, parseGodotFloat } from '../godot/number.js';
 import { storedInt } from '../godot/int.js';
 
 import { nodePathLiteral } from '../godot/index.js';
@@ -89,10 +89,10 @@ export function parseOptionalRect2(
     return undefined;
   }
   return {
-    x: parseFloat(m[1]!),
-    y: parseFloat(m[2]!),
-    width: parseFloat(m[3]!),
-    height: parseFloat(m[4]!),
+    x: matchedFloat(m[1]!),
+    y: matchedFloat(m[2]!),
+    width: matchedFloat(m[3]!),
+    height: matchedFloat(m[4]!),
   };
 }
 

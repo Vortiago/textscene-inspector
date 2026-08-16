@@ -109,3 +109,23 @@ describe('Camera3D Parser', () => {
     });
   });
 });
+
+describe('a projection value the tokenizer cannot read', () => {
+  it('keeps the default rather than reading a prefix of it', () => {
+    // `parseInt('1abc', 10)` is 1, so a token Godot cannot load selected the
+    // orthogonal projection and the previewer drew a different camera.
+    const props = parseCamera3D(heading('Camera3D', { name: 'Camera' }), {
+      projection: '1abc',
+    });
+
+    expect(props.projection).toBe(ProjectionMode.PROJECTION_PERSPECTIVE);
+  });
+
+  it('reads the keep-aspect mode the same way', () => {
+    const props = parseCamera3D(heading('Camera3D', { name: 'Camera' }), {
+      keep_aspect: '0abc',
+    });
+
+    expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
+  });
+});

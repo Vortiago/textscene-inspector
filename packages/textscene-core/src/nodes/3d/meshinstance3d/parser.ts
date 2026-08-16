@@ -23,7 +23,7 @@ export function parseMeshInstance3D(
   for (const [key, value] of Object.entries(properties)) {
     const indexedMatch = key.match(/^surface_material_override\/(\d+)$/);
     if (indexedMatch && indexedMatch[1]) {
-      const surfaceIndex = parseInt(indexedMatch[1], 10);
+      const surfaceIndex = Number(indexedMatch[1]);
       surfaceMaterialOverrides.set(surfaceIndex, value);
     }
   }

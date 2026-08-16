@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { curveFromResource, decodeCurve, resolveCurve } from './decode';
-import { CurveTangentMode } from './types';
+import { CurveTangentMode, EMPTY_CURVE } from './types';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 
@@ -145,5 +145,35 @@ describe('curveFromResource', () => {
       minDomain: 0,
       maxDomain: 1,
     });
+  });
+});
+
+describe('a Variant number Godot reads differently from `parseInt`', () => {
+  // `parseInt`/`parseFloat` stop at the first character they cannot use, so an
+  // entry Godot refuses outright came back as a plausible number and every
+  // sample of the curve was scaled by it.
+  it('rejects a `_limits` entry the tokenizer cannot read, rather than truncating it', () => {
+    const curve = decodeCurve({ ...CANDLE_SPARKLE, _limits: '[0.0, 5abc, 0.0, 1.0]' });
+
+    // `parseFloat` read `5abc` as 5 and scaled every sample by a maximum the
+    // file does not contain. Godot cannot read the token, so the literal is
+    // unreadable and the documented fall-back applies.
+    expect(curve.maxValue).toBe(EMPTY_CURVE.maxValue);
+  });
+
+  it('reads an exponent-typed `point_count` as the integer Godot stores', () => {
+    // `2e1` is 20 to Godot's tokenizer and 2 to `parseInt`, and the smaller
+    // number silently sliced the point list down to two.
+    const curve = decodeCurve({ ...CANDLE_SPARKLE, point_count: '2e1' });
+
+    expect(curve.points).toHaveLength(3);
+  });
+
+  it('does not read a tangent mode out of text the tokenizer refuses', () => {
+    // `parseInt` read `1abc` as 1 and reported Linear for a token Godot cannot
+    // load at all.
+    const curve = decodeCurve({ ...CANDLE_SPARKLE, _data: '[Vector2(0, 0), 0.0, 0.0, 1abc, 0]' });
+
+    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Free);
   });
 });

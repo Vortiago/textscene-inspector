@@ -387,3 +387,16 @@ libraries = {
     expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [0, 2, 0]]);
   });
 });
+
+describe('resolveAnimations — a scalar the tokenizer cannot read', () => {
+  it('falls back rather than reading a prefix of it', () => {
+    // `parseFloat('5abc')` is 5, so a token Godot refuses to load produced a
+    // five-second clip and every keyframe time was scaled against it.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
+      res('A', 'Animation', { length: '5abc', step: '2abc' }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim).toMatchObject({ length: 1.0, step: 0.1 });
+  });
+});

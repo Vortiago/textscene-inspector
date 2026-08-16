@@ -57,7 +57,7 @@ export function parseControl(
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
   if (heading.attributes.instance) result.instance = heading.attributes.instance;
   if (heading.attributes.index) {
-    const idx = parseInt(heading.attributes.index, 10);
+    const idx = Number(heading.attributes.index);
     if (!Number.isNaN(idx)) result.index = idx;
   }
   if (properties.visible !== undefined) result.visible = properties.visible !== 'false';
