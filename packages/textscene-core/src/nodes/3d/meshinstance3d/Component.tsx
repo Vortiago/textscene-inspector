@@ -53,6 +53,7 @@ import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlo
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import {
   GODOT_DEFAULT_ALBEDO,
   GODOT_DEFAULT_METALLIC,
@@ -85,9 +86,7 @@ const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' }
 const SHADOWS_ONLY_MATERIAL = materialProgramInputs({
   props: { attach: 'material', colorWrite: false, depthWrite: false },
 });
-const UNRESOLVED_MESH_MATERIAL = materialProgramInputs({
-  props: { color: 0xff00ff, wireframe: true },
-});
+const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;

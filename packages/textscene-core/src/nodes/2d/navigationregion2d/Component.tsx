@@ -19,9 +19,16 @@ import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
   vector2ToPositions,
+  NAV_EDGES_MATERIAL,
   NAV_OVERLAY_COLOR,
 } from '../../../r3f/navigationOverlay';
 import type { NavigationRegion2DProperties } from './types';
+
+/** Literal-only, so the key is constant and the overlay never remounts. */
+const NAV_FACES_MATERIAL = materialProgramInputs({
+  props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.35, depthWrite: false },
+  merge: [canvasItemFacing()],
+});
 
 export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion2DProperties;
@@ -57,27 +64,17 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
     };
   }, [overlay]);
 
-  // Literal-only, so both keys are constant and neither overlay ever remounts;
-  // the key is what makes a later program input key itself.
-  const faces = materialProgramInputs({
-    props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.35, depthWrite: false },
-    merge: [canvasItemFacing()],
-  });
-  const edges = materialProgramInputs({
-    props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
-  });
-
   return (
     <Node2D node={node}>
       {showNavigation && overlay && (
         <>
           <mesh renderOrder={1}>
             <primitive object={overlay.faces} attach="geometry" />
-            <meshBasicMaterial key={faces.key} {...faces.props} />
+            <meshBasicMaterial key={NAV_FACES_MATERIAL.key} {...NAV_FACES_MATERIAL.props} />
           </mesh>
           <lineSegments renderOrder={2}>
             <primitive object={overlay.edges} attach="geometry" />
-            <lineBasicMaterial key={edges.key} {...edges.props} />
+            <lineBasicMaterial key={NAV_EDGES_MATERIAL.key} {...NAV_EDGES_MATERIAL.props} />
           </lineSegments>
         </>
       )}

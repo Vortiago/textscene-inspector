@@ -61,9 +61,9 @@
  *   - `alphaToCoverage` (`:213`, layer `:589`), which is BOTH a term of `opaque`
  *     and a parameter in its own right
  *   - per-texture-slot PRESENCE, which reaches the key as each slot's `…MapUv`
- *     term (`:444-466`) and the shader's `USE_…` define. `anisotropyMap` is the
- *     one slot bound here that three GATES on its feature (`:147`), so its
- *     presence term carries the gate.
+ *     term (`:444-466`) and the shader's `USE_…` define. Ten of the slots three
+ *     reads are GATED on a feature being on (`:147-169`), so their presence
+ *     terms carry the gate — `TEXTURE_SLOT_GATES` is the pairing.
  *   - `defines` — KEYS and VALUES both (`:415-420`)
  *   - `vertexColors` (`:308`), `side` as the `doubleSided`/`flipSided` pair
  *     (`:369-370`), `premultipliedAlpha` (`:367`), `combine` (`:268`),
@@ -88,7 +88,7 @@
  *     `opaque`, so on an already-transparent material it is per-draw GL state.
  *   - `wireframe` alone: it reaches a program only through the `flatShading`
  *     (`:317`) composite, which keys it, and the `bumpMap` one (`:132`), whose
- *     slot nothing here binds — Godot has no bump slot to map onto it.
+ *     slot is in `NOT_BOUND_TEXTURE_SLOTS` and carries the reason there.
  *   - `clippingPlanes`: `numClippingPlanes` is a parameter (`:354`), but
  *     `WebGLRenderer.js:2456-2458` compares the plane count every draw.
  *   - `envMap`, `vertexAlphas`, `vertexTangents`, scene `fog`, tone mapping: all
@@ -99,8 +99,14 @@
  *     transfer is linear, and no `THREE.VideoTexture` exists in this codebase.
  *
  * A parameter the caller never passes stays at its material-type default for
- * that tag's whole life, so an absent value is one token and needs no default
- * modelled here.
+ * that tag's whole life, so an absent value needs no default modelled here and
+ * emits NO token at all: every term is labelled and `|`-separated, so an
+ * omission reads as "at its absent value" and no other term can impersonate it
+ * — for as long as no term's VALUE carries a `|` itself, which only a `defines`
+ * value or a `cacheKey` could, and both are module literals here. A bag
+ * carrying no program input at all therefore keys to the empty string, which is
+ * a perfectly good key: a key separates a material from its own past self, not
+ * from its siblings.
  */
 import * as THREE from 'three';
 
@@ -149,8 +155,12 @@ export interface MaterialProgramBag {
   injection?: ProgramInjection;
 }
 
-/** What the factory adds when anything was injected, and omits when nothing was. */
-interface InjectedProps {
+/**
+ * What the factory adds when anything was injected, and omits when nothing was.
+ * Exported because it names part of the return type, which a module holding a
+ * `MaterialProgram` in an exported constant cannot otherwise write down.
+ */
+export interface InjectedProps {
   onBeforeCompile?: (shader: ProgramShader) => void;
   customProgramCacheKey?: () => string;
 }
@@ -176,29 +186,6 @@ export interface MaterialProgram<P> {
   readonly props: P;
 }
 
-/** Every UNGATED `!! material.<slot>` presence term a material here can bind. */
-const TEXTURE_SLOTS = [
-  'map',
-  'alphaMap',
-  'aoMap',
-  'bumpMap',
-  'displacementMap',
-  'emissiveMap',
-  'gradientMap',
-  'lightMap',
-  'matcap',
-  'metalnessMap',
-  'normalMap',
-  'roughnessMap',
-  'specularMap',
-] as const;
-
-/**
- * A slot three reads only while its feature is on (`:147`), so the gate is part
- * of the presence term. Ungated slots stay in `TEXTURE_SLOTS`.
- */
-const GATED_TEXTURE_SLOTS = { anisotropyMap: 'anisotropy' } as const;
-
 /** The `> 0` feature booleans (`:140-145`), each its own layer bit. */
 const PHYSICAL_FEATURES = [
   'clearcoat',
@@ -208,6 +195,60 @@ const PHYSICAL_FEATURES = [
   'iridescence',
   'dispersion',
 ] as const;
+
+type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];
+
+/**
+ * Every `!! material.<slot>` presence term, paired with the feature three ALSO
+ * requires before it reads the slot at all — `null` where presence is the whole
+ * term. Ten slots are gated (`:147-169`), and the gate belongs in the table
+ * rather than in a second collection so a slot cannot be added without one
+ * being decided.
+ *
+ * A slot nothing binds today still belongs here as long as its TERM SHAPE is
+ * right: the table describes what three would bake, not what this codebase
+ * happens to have wired. `NOT_BOUND_TEXTURE_SLOTS` is the other half — the
+ * slots deliberately not modelled at all.
+ */
+export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
+  map: null,
+  alphaMap: null,
+  aoMap: null,
+  displacementMap: null,
+  emissiveMap: null,
+  gradientMap: null,
+  lightMap: null,
+  matcap: null,
+  metalnessMap: null,
+  normalMap: null,
+  roughnessMap: null,
+  specularMap: null,
+  specularColorMap: null,
+  specularIntensityMap: null,
+  anisotropyMap: 'anisotropy',
+  clearcoatMap: 'clearcoat',
+  clearcoatNormalMap: 'clearcoat',
+  clearcoatRoughnessMap: 'clearcoat',
+  iridescenceMap: 'iridescence',
+  iridescenceThicknessMap: 'iridescence',
+  sheenColorMap: 'sheen',
+  sheenRoughnessMap: 'sheen',
+  transmissionMap: 'transmission',
+  thicknessMap: 'transmission',
+};
+
+/** Iterated per call, so the entry list is built once rather than per key. */
+const TEXTURE_SLOT_ENTRIES = Object.entries(TEXTURE_SLOT_GATES);
+
+/**
+ * A `getParameters` texture slot this codebase declines to model, and why. The
+ * upgrade guard requires every such field to be here or in the table above, so
+ * a slot cannot go missing by omission.
+ */
+export const NOT_BOUND_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
+  bumpMap:
+    'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',
+};
 
 export function materialProgramInputs<
   P extends object,
@@ -220,15 +261,24 @@ export function materialProgramInputs<
   const injections: ProgramInjection[] = [];
   const merged: Record<string, unknown> = {};
 
-  for (const bag of [input.props, ...(input.merge ?? [])]) {
+  // Copied wholesale and stripped ONCE below, rather than rest-destructured per
+  // bag: a rest spread rebuilds every key of every part to remove one that most
+  // parts do not carry.
+  Object.assign(merged, input.props);
+  if (input.props.injection) injections.push(input.props.injection);
+  for (const bag of input.merge ?? []) {
     if (!bag) continue;
-    const { injection, ...rest } = bag as MaterialProgramBag & Record<string, unknown>;
+    const { injection } = bag as MaterialProgramBag;
     if (injection) injections.push(injection);
-    Object.assign(merged, rest);
+    Object.assign(merged, bag);
   }
 
-  const cacheKey = injections.map((one) => one.cacheKey).join('+');
+  let cacheKey = '';
   if (injections.length > 0) {
+    for (const one of injections) cacheKey += cacheKey === '' ? one.cacheKey : `+${one.cacheKey}`;
+    // `undefined` rather than `delete`: `applyProps` skips an undefined value
+    // (`:24-27`), and deleting deoptimises the object it is handed.
+    merged.injection = undefined;
     merged.customProgramCacheKey = cacheKeyThunk(cacheKey);
     // One injection passes straight through, so `useCanvasItemLighting`'s memo
     // still reaches the material; composing two cannot avoid a fresh closure.
@@ -266,48 +316,54 @@ function cacheKeyThunk(cacheKey: string): () => string {
 
 /** Composed strings only — a patch's function identity never enters the key. */
 function programKey(props: Record<string, unknown>, cacheKey: string): string {
-  const transparent = props.transparent === true;
+  let key = '';
+  /** Every term is LABELLED, so omitting one says "at its absent value" unambiguously. */
+  const add = (term: string): void => {
+    key = key === '' ? term : `${key}|${term}`;
+  };
+  const active = (name: string): boolean => Number(props[name] ?? 0) > 0;
+
   const alphaToCoverage = props.alphaToCoverage === true;
   const blending = props.blending ?? THREE.NormalBlending;
-  const opaque = !transparent && blending === THREE.NormalBlending && !alphaToCoverage;
-
-  const defines = props.defines as Record<string, string> | undefined;
-  const declared = defines
-    ? Object.keys(defines)
-        .sort()
-        .map((name) => `${name}=${defines[name]}`)
-        .join('+')
-    : '';
-  const active = (name: string): boolean => Number(props[name] ?? 0) > 0;
-  const slots = [
-    ...TEXTURE_SLOTS.filter((slot) => props[slot]),
-    ...Object.entries(GATED_TEXTURE_SLOTS)
-      .filter(([slot, gate]) => props[slot] && active(gate))
-      .map(([slot]) => slot),
-  ].join('+');
-  const features = PHYSICAL_FEATURES.filter(active).join('+');
+  // The `opaque` composite (`:262`), emitted as its negation so the default
+  // — nothing supplied, hence opaque — costs no token.
+  if (props.transparent === true || blending !== THREE.NormalBlending || alphaToCoverage)
+    add('blended');
+  if (alphaToCoverage) add('a2c');
+  // `side` has ONE default across every material type, so it is normalised;
+  // `combine` and `fog` do not, and an absent one is not an explicit default.
+  const side = props.side ?? THREE.FrontSide;
+  if (side !== THREE.FrontSide) add(`side:${String(side)}`);
+  if (props.vertexColors === true) add('vcol');
+  if (props.premultipliedAlpha === true) add('premul');
+  if (props.combine !== undefined) add(`combine:${String(props.combine)}`);
+  if (props.dithering === true) add('dither');
+  if (props.fog !== undefined) add(`fog:${String(props.fog)}`);
   // `:317`, first arm only: the second is geometry-derived, out of reach here
   // for the same reason `vertexAlphas` is.
-  const flatShading = props.flatShading === true && props.wireframe !== true;
+  if (props.flatShading === true && props.wireframe !== true) add('flat');
 
-  return [
-    `opaque:${flag(opaque)}`,
-    `a2c:${flag(alphaToCoverage)}`,
-    `side:${props.side ?? THREE.FrontSide}`,
-    `vcol:${flag(props.vertexColors === true)}`,
-    `premul:${flag(props.premultipliedAlpha === true)}`,
-    `combine:${token(props.combine)}`,
-    `dither:${flag(props.dithering === true)}`,
-    `fog:${token(props.fog)}`,
-    `flat:${flag(flatShading)}`,
-    `feat:${features}`,
-    `slots:${slots}`,
-    `defines:${declared}`,
-    `inject:${cacheKey}`,
-  ].join('|');
+  let features = '';
+  for (const feature of PHYSICAL_FEATURES)
+    if (active(feature)) features += features === '' ? feature : `+${feature}`;
+  if (features !== '') add(`feat:${features}`);
+
+  let slots = '';
+  for (const [slot, gate] of TEXTURE_SLOT_ENTRIES) {
+    if (!props[slot]) continue;
+    if (gate !== null && !active(gate)) continue;
+    slots += slots === '' ? slot : `+${slot}`;
+  }
+  if (slots !== '') add(`slots:${slots}`);
+
+  const defines = props.defines as Record<string, string> | undefined;
+  if (defines !== undefined && defines !== null) {
+    let declared = '';
+    for (const name of Object.keys(defines).sort())
+      declared += `${declared === '' ? '' : '+'}${name}=${defines[name]}`;
+    if (declared !== '') add(`defines:${declared}`);
+  }
+
+  if (cacheKey !== '') add(`inject:${cacheKey}`);
+  return key;
 }
-
-const flag = (on: boolean): string => (on ? '1' : '0');
-
-/** `-` for a value the caller never passes: constant, at the material type's own default. */
-const token = (value: unknown): string => (value === undefined ? '-' : String(value));

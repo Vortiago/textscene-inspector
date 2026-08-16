@@ -142,23 +142,34 @@ function ParticleField({
   // The field is drawn from the first frame, on a 1x1 quad, while the particle
   // texture is still loading — so this material is compiled mapless unless a
   // fresh one replaces it (`materialProgramInputs.ts`).
-  const program = materialProgramInputs({
-    props: {
-      map: texture,
-      color,
-      opacity,
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      defines: decodeDefines,
-    },
-    // One mesh, N particles, each with its OWN vertex colour and alpha and each
-    // quad wound by the determinant of its own particle transform
-    // (`particleGeometry.ts`). Splitting that array by facing would composite
-    // overlapping particles out of emission order the moment a transform
-    // mirrors — `canvasItemFacing()` draws it once, in index order.
-    merge: [canvasItemFacing(), blend, lighting],
-  });
+  //
+  // Called from the drawing arm rather than derived above the branch: the group
+  // has to mount before a geometry can exist (`useEmissionTransform` samples its
+  // world matrix), so there is no early return to hang the merge off.
+  const particleMesh = (geom: THREE.BufferGeometry) => {
+    const program = materialProgramInputs({
+      props: {
+        map: texture,
+        color,
+        opacity,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        defines: decodeDefines,
+      },
+      // One mesh, N particles, each with its OWN vertex colour and alpha and each
+      // quad wound by the determinant of its own particle transform
+      // (`particleGeometry.ts`). Splitting that array by facing would composite
+      // overlapping particles out of emission order the moment a transform
+      // mirrors — `canvasItemFacing()` draws it once, in index order.
+      merge: [canvasItemFacing(), blend, lighting],
+    });
+    return (
+      <mesh geometry={geom}>
+        <meshBasicMaterial key={program.key} {...program.props} />
+      </mesh>
+    );
+  };
 
   return (
     <CanvasItemGroup ref={setContainer} name={`${name}_Particles`}>
@@ -168,9 +179,7 @@ function ParticleField({
         // bury the scene rather than explain it.
         <MissingResourcePlaceholder shape="plane" name={name} />
       ) : geometry ? (
-        <mesh geometry={geometry}>
-          <meshBasicMaterial key={program.key} {...program.props} />
-        </mesh>
+        particleMesh(geometry)
       ) : null}
     </CanvasItemGroup>
   );

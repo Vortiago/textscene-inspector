@@ -19,11 +19,7 @@ import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
 import { warn } from '../../../../logger';
-import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
-
-/** `color` is a uniform, not a program input, so every gizmo shares one key. */
-const wireProgram = (color: THREE.Color) =>
-  materialProgramInputs({ props: { color, wireframe: true } });
+import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
 
 interface CollisionGizmoProps {
   shape: TscnInternalResource;
@@ -33,7 +29,7 @@ interface CollisionGizmoProps {
 
 export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data as Record<string, string>;
-  const wire = wireProgram(color);
+  const wire = wireGizmoProgram(color);
   switch (shape.type) {
     case 'BoxShape3D': {
       const { size } = decodeBoxShape3D(data);
@@ -94,7 +90,7 @@ function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Co
     geom.computeVertexNormals();
     return geom;
   }, [data]);
-  const wire = wireProgram(color);
+  const wire = wireGizmoProgram(color);
   if (data.length < 9) return null;
   return (
     <mesh geometry={geometry}>
@@ -129,7 +125,7 @@ function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.
     };
   }, [points]);
 
-  const wire = wireProgram(color);
+  const wire = wireGizmoProgram(color);
   if (!geometry) return null;
   return (
     <mesh geometry={geometry}>

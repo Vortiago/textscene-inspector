@@ -12,9 +12,21 @@
 
 import * as THREE from 'three';
 import { fanTriangulate } from '../resources/shapes/packedArray';
+import { materialProgramInputs } from './materialProgramInputs';
 
 /** Godot's default navigation debug face color (translucent green/teal). */
 export const NAV_OVERLAY_COLOR = 0x33d17f;
+
+/**
+ * The edge-line material both regions draw, byte-identical between them.
+ * Literal-only, so the key is constant and an overlay never remounts.
+ *
+ * The FACES material stays with each node type, which draws it at a different
+ * opacity — 0.35 in 2D, 0.38 in 3D.
+ */
+export const NAV_EDGES_MATERIAL = materialProgramInputs({
+  props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
+});
 
 /** Filled overlay: fan-triangulated polygons over the navmesh faces. */
 export function buildNavFaceGeometry(positions: Float32Array, polygons: number[][]): THREE.BufferGeometry {

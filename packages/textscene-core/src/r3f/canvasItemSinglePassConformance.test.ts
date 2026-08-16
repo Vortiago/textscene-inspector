@@ -23,10 +23,19 @@
  * behavioural half at the bottom of this file, which asks the factories
  * themselves.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import {
+  hasExemptionWithin,
+  isCommentLine,
+  isProductionSource,
+  repoPath,
+  reportOffenders,
+  walkSources,
+  type SourceFile,
+} from './testing/sourceScan';
 import { createMsdfMaterial } from './controls/native/text/msdfMaterial';
 import { createCanvasTextMaterial } from './controls/native/text/canvasTextPainter';
 import { createLightQuadMaterial, createShadowColorQuadMaterial } from './lighting2d/lightQuad';
@@ -64,18 +73,9 @@ const SOURCE_FILES = ['./TileSourceMesh.tsx'].map((file) => join(import.meta.dir
 /** Opt-out marker for a material that provably wants the two-pass split. */
 const SPLIT_MARKER = 'facing-split-intended:';
 
-function scannedSources(): { file: string; source: string }[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path);
-      else if (/\.tsx?$/.test(entry.name) && !entry.name.includes('.test.')) found.push(path);
-    }
-  };
-  for (const root of SOURCE_ROOTS) walk(root);
-  found.push(...SOURCE_FILES);
-  return found.map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+function scannedSources(): SourceFile[] {
+  const found = walkSources(SOURCE_ROOTS, isProductionSource);
+  return [...found, ...SOURCE_FILES.map((file) => ({ file, source: readFileSync(file, 'utf8') }))];
 }
 
 /**
@@ -87,21 +87,25 @@ function scannedSources(): { file: string; source: string }[] {
  * there is no surrounding construct to read. That also makes the check
  * insensitive to formatting, which the tag scan is not.
  *
+ * The line is read RAW rather than through `offendingLines()`, which strips a
+ * trailing `//` before matching: `side = THREE.DoubleSide; // …` is a use, and
+ * a comment after it launders nothing here.
+ *
  * Skipped: lines inside a comment (a doc comment that NAMES the constant is not
  * a use of it, and several of these modules explain their facing in prose), and
  * a tag whose preamble carries `facing-split-intended:` with a reason — looked
- * for across the whole comment block above, since a reason worth writing down
- * rarely fits on one line.
+ * for in the ten lines above rather than in the comment block touching it,
+ * since a reason lands above a `return (`, or inside a braced JSX comment, as
+ * often as not.
  */
 export function unroutedDoubleSideLines(source: string): number[] {
   const lines = source.split('\n');
   const offenders: number[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!.trim();
-    if (line.startsWith('*') || line.startsWith('//') || line.startsWith('/*')) continue;
-    if (!/\bTHREE\.DoubleSide\b/.test(line)) continue;
-    if (lines.slice(Math.max(0, i - 10), i).join('\n').includes(SPLIT_MARKER)) continue;
+    if (isCommentLine(lines[i]!)) continue;
+    if (!/\bTHREE\.DoubleSide\b/.test(lines[i]!)) continue;
+    if (hasExemptionWithin(lines, i, SPLIT_MARKER)) continue;
     offenders.push(i + 1);
   }
   return offenders;
@@ -109,9 +113,7 @@ export function unroutedDoubleSideLines(source: string): number[] {
 
 describe('Canvas-item single-pass conformance', () => {
   it('routes every 2D canvas material through canvasItemFacing()', () => {
-    const offenders = scannedSources().flatMap(({ file, source }) =>
-      unroutedDoubleSideLines(source).map((line) => `${file.split('/src/')[1]}:${line}`)
-    );
+    const offenders = reportOffenders(scannedSources(), unroutedDoubleSideLines);
 
     expect(
       offenders,
@@ -147,7 +149,7 @@ describe('Canvas-item single-pass conformance', () => {
   });
 
   it('cannot reach a 3D material', () => {
-    const scanned = scannedSources().map(({ file }) => file);
+    const scanned = scannedSources().map(({ file }) => repoPath(file));
     expect(
       scanned.filter((file) => /\/nodes\/(3d|base\/node3d)\/|\/r3f\/(materials|csg|environment|sky)\//.test(file))
     ).toEqual([]);

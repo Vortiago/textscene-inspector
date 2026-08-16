@@ -18,12 +18,13 @@ import { decodeNavigationMesh } from '../../../resources/navigation/navigationme
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
+  NAV_EDGES_MATERIAL,
   NAV_OVERLAY_COLOR,
 } from '../../../r3f/navigationOverlay';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { NavigationRegion3DProperties } from './types';
 
-/** Literal-only, so both keys are constant and neither overlay ever remounts. */
+/** Literal-only, so the key is constant and the overlay never remounts. */
 const NAV_FACES_MATERIAL = materialProgramInputs({
   props: {
     color: NAV_OVERLAY_COLOR,
@@ -32,9 +33,6 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
     side: THREE.DoubleSide,
     depthWrite: false,
   },
-});
-const NAV_EDGES_MATERIAL = materialProgramInputs({
-  props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
 });
 
 export function NavigationRegion3D({ node, children }: NodeComponentProps) {

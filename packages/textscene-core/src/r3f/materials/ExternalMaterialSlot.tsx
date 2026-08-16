@@ -35,7 +35,9 @@ export function ExternalMaterialSlot({ path, attach, shadowSide }: ExternalMater
   if (path && result.value) {
     return <primitive object={result.value} attach={attach} />;
   }
-  // Literal-only, so the key is constant and the default surface never remounts.
+  // Not literal-only — `attach` and `shadowSide` come off props — but neither is
+  // a program input, and every one that IS here is a module constant, so the key
+  // is constant and this fallback never remounts.
   const fallback = materialProgramInputs({
     props: {
       attach,

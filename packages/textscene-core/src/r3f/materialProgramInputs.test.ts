@@ -1,56 +1,24 @@
 /**
- * `materialProgramInputs()` — the key and the merged props, and the drift guard
- * that keeps a canvas material with a `map` from being written without a key.
+ * `materialProgramInputs()` — the key and the merged props it derives from the
+ * same bag.
  *
  * The failure it prevents is silent and total: a material compiled before its
  * texture resolved samples NOTHING for the rest of its life (`USE_MAP` is baked
  * at that first compile), so a textured polygon paints its flat fill colour over
  * the whole shape and a particle field paints untextured quads. Nothing in the
  * material's own state looks wrong afterwards — `map` reads back as the texture
- * — which is why this is checked at the source rather than by inspection.
- *
- * A SOURCE check for `canvasItemSinglePassConformance.test.ts`'s reason: a
- * render harness only covers the painters it can drive with a probe, and every
- * painter has source. The behavioural half — that a late texture actually
- * reaches the shader — is asserted where the sequence can be driven end to end,
- * in `nodes/2d/polygon2d/Component.texture.test.tsx`.
+ * — which is why the SOURCE rule that every material is built here is a gate of
+ * its own (`materialFactoryConformance.test.ts`). The behavioural half — that a
+ * late texture actually reaches the shader — is asserted where the sequence can
+ * be driven end to end, in `nodes/2d/polygon2d/Component.texture.test.tsx`.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  isCommentLine,
-  isProductionSource,
-  reportOffenders,
-  walkSources,
-  type SourceFile,
-} from './testing/sourceScan';
 import {
   materialProgramInputs,
   type MaterialProgramBag,
   type ProgramInjection,
 } from './materialProgramInputs';
-
-/**
- * The 2D canvas, and only it — same roots the single-pass guard walks. NOT
- * because 3D is covered elsewhere: that premise held for the `map` dimension
- * alone and was false for every other one this scan does not look at. What keeps
- * 3D out is that this scan reads `map=` on a hand-written TAG, which no 3D
- * material is any more; the structural rule that every material comes from the
- * factory is what covers them, and it owns both dimensions at once.
- */
-const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base/node2d', './controls', './components'].map(
-  (dir) => join(import.meta.dirname, dir)
-);
-
-/** Canvas painters that sit loose in `r3f/` rather than under a root. */
-const SOURCE_FILES = ['./TileSourceMesh.tsx'].map((file) => join(import.meta.dirname, file));
-
-function scannedSources(): SourceFile[] {
-  const found = walkSources(SOURCE_ROOTS, (name) => name.endsWith('.tsx') && isProductionSource(name));
-  return [...found, ...SOURCE_FILES.map((file) => ({ file, source: readFileSync(file, 'utf8') }))];
-}
 
 /** A key from the factory — the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
@@ -58,45 +26,6 @@ function keyOf<P extends object, M extends readonly object[] = []>(
   ...merge: { [Part in keyof M]: M[Part] & MaterialProgramBag }
 ): string {
   return materialProgramInputs<P, M>({ props, merge }).key;
-}
-
-/**
- * Lines opening a material tag that binds a `map` without keying the material
- * on it.
- *
- * The whole opening TAG is the unit: these materials carry a dozen props over
- * as many lines, so `map` and the key are never on the line the tag starts on.
- * The tag is taken to end at the first line that CLOSES it (`>` or `/>` at the
- * end), which no prop line here reaches.
- *
- * A tag with no `map` at all is not an offence: its program has no texture in
- * it, and a key would claim a dependency it does not have.
- *
- * A tag that takes its props from the factory binds `map:` inside an object
- * literal rather than `map=` on the tag, so it is out of this scan's reach —
- * which is deliberate for now: the structural rule that every canvas material
- * comes from the factory is a stronger check than this one and replaces it.
- * Until then this still catches a hand-written tag, which is the way the
- * omission arrived the first time.
- */
-export function unkeyedMappedMaterialLines(source: string): number[] {
-  const lines = source.split('\n');
-  const offenders: number[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    if (isCommentLine(lines[i]!)) continue;
-    if (!/<mesh(Basic|Standard)Material(?![A-Za-z0-9])/.test(lines[i]!)) continue;
-
-    let tag = '';
-    for (let j = i; j < lines.length; j++) {
-      tag += `${lines[j]}\n`;
-      if (/\/?>\s*$/.test(lines[j]!.trim())) break;
-    }
-    if (!/\bmap=/.test(tag)) continue;
-    // `key={program.key}` (the factory's output) or an inline call of it.
-    if (!/\bkey=\{(?:[A-Za-z0-9_$]+\.key\b|materialProgramInputs\()/.test(tag)) offenders.push(i + 1);
-  }
-  return offenders;
 }
 
 describe('materialProgramInputs', () => {
@@ -357,71 +286,5 @@ describe('materialProgramInputs', () => {
       // @ts-expect-error a shared recipe has no unpaired route in either.
       materialProgramInputs({ props: {}, merge: [{ onBeforeCompile: () => {} }] });
     });
-  });
-});
-
-describe('Canvas-item material program conformance', () => {
-  it('keys every 2D canvas material that binds a map on its program inputs', () => {
-    const offenders = reportOffenders(scannedSources(), unkeyedMappedMaterialLines);
-
-    expect(
-      offenders,
-      `these materials would sample nothing if their texture resolved after they mounted — build the tag with materialProgramInputs(): ${offenders.join(', ')}`
-    ).toEqual([]);
-  });
-
-  it('would have caught the omission it was written for — the check is not vacuous', () => {
-    // Polygon2D's fill as it stood while the textured polygon rendered solid
-    // white: the map bound, the defines passed, and the material compiled once,
-    // mapless, a render before either arrived.
-    const preFix = [
-      '      <meshBasicMaterial',
-      '        color={fill}',
-      '        map={texture}',
-      '        transparent',
-      '        {...canvasItemFacing()}',
-      '        defines={decodeDefines}',
-      '      />',
-    ].join('\n');
-    expect(unkeyedMappedMaterialLines(preFix)).toEqual([1]);
-
-    const fixed = preFix.replace(
-      '        defines={decodeDefines}',
-      '        key={program.key}\n        defines={decodeDefines}'
-    );
-    expect(unkeyedMappedMaterialLines(fixed)).toEqual([]);
-
-    // A material that binds no map has no texture in its program.
-    expect(unkeyedMappedMaterialLines('<meshBasicMaterial color={fill} transparent />')).toEqual([]);
-    // A single-line tag, and a prop merely NAMED map.
-    expect(unkeyedMappedMaterialLines('<meshBasicMaterial map={tex} />')).toEqual([1]);
-    expect(unkeyedMappedMaterialLines('<meshBasicMaterial mapped={tex} />')).toEqual([]);
-    expect(unkeyedMappedMaterialLines(' * `<meshBasicMaterial map=…>` in a comment is not a use')).toEqual([]);
-    // A key that is not the factory's is not a program key.
-    expect(unkeyedMappedMaterialLines('<meshBasicMaterial key={node.name} map={tex} />')).toEqual([1]);
-  });
-
-  it('reads the whole 2D render tree, so a new painter cannot escape unnoticed', () => {
-    expect(scannedSources().length).toBeGreaterThanOrEqual(80);
-  });
-
-  it('no longer has a reason to exclude 3D, and stays 2D only because it is the weaker check', () => {
-    // This USED to read "cannot reach a 3D material", on the ground that a 3D
-    // material's slots were keyed by `StandardMaterialSlot`. They were — for
-    // `map` and the seven slots beside it, and for nothing else. `transparent`,
-    // `side`, `vertexColors` and the physical `> 0` thresholds are program
-    // inputs too (`WebGLPrograms.js:262`, `:369-370`, `:308`, `:140-145`), and
-    // every one of them came off a re-parsable property with no key on it.
-    //
-    // So the exclusion is documentary now, not protective: 3D and 2D go through
-    // the same factory, and what covers either is that a material is BUILT from
-    // it — a stronger statement than "a tag that binds `map=` also writes a
-    // key", which is all this scan can say. Widening the roots would only make
-    // it pass vacuously, since no material writes `map=` on a tag any more.
-    expect(
-      scannedSources()
-        .map(({ file }) => file)
-        .filter((file) => /\/nodes\/(3d|base\/node3d)\/|\/r3f\/(materials|csg|environment|sky)\//.test(file))
-    ).toEqual([]);
   });
 });

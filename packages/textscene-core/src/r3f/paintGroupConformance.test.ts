@@ -21,9 +21,11 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  hasExemptionWithin,
   isCommentLine,
   isProductionSource,
   reportOffenders,
+  tagEnd,
   walkSources,
   type SourceFile,
 } from './testing/sourceScan';
@@ -59,6 +61,11 @@ const SAFE_MARKER = 'paint-order-safe:';
  * sits below the `<group`. A line-at-a-time check reports every such group as
  * an offender and is useless as a result.
  *
+ * The tag ends at its OWN `>`, read through the shared `tagEnd()`: a prop value
+ * may hold one (`visible={a > b}`), and stopping at the first `>` on any line
+ * truncates the tag before the `renderOrder` below it — reporting a correctly
+ * keyed group as dropping its pixels to the back of the canvas.
+ *
  * Skipped: `<CanvasItemGroup>` and any other element whose name merely starts
  * with `group`; tags inside a comment; and tags whose preamble carries
  * `paint-order-safe:` with a reason — looked for anywhere in the ten lines
@@ -75,16 +82,18 @@ function bareGroupLines(source: string): number[] {
 
   for (let i = 0; i < lines.length; i++) {
     if (isCommentLine(lines[i]!)) continue;
-    if (!/<group(?![A-Za-z0-9])/.test(lines[i]!)) continue;
-    if (lines.slice(Math.max(0, i - 10), i).join('\n').includes(SAFE_MARKER)) continue;
+    const start = lines[i]!.search(/<group(?![A-Za-z0-9])/);
+    if (start < 0) continue;
+    if (hasExemptionWithin(lines, i, SAFE_MARKER)) continue;
 
-    // The opening tag runs to the first `>` at or after this line.
-    let tag = '';
-    for (let j = i; j < lines.length; j++) {
-      tag += lines[j];
-      if (lines[j]!.includes('>')) break;
+    let text = '';
+    let end = -1;
+    for (let j = i; j < lines.length && end < 0; j++) {
+      text += (j > i ? '\n' : '') + lines[j];
+      end = tagEnd(text, start);
     }
-    if (!/\brenderOrder\b/.test(tag)) offenders.push(i + 1);
+    if (end < 0) continue;
+    if (!/\brenderOrder\b/.test(text.slice(start, end))) offenders.push(i + 1);
   }
   return offenders;
 }
@@ -106,6 +115,12 @@ describe('Canvas-item paint-group conformance', () => {
     expect(bareGroupLines('  <groupThing />')).toEqual([]);
     // A multi-line group that DOES carry the key is not an offender.
     expect(bareGroupLines('  <group\n    renderOrder={7}\n  >')).toEqual([]);
+    // A prop value holding a `>` does not close the tag early, which a reader
+    // stopping at the first `>` on any line read as a group with no key at all.
+    expect(
+      bareGroupLines('  <group\n    visible={a > b}\n    renderOrder={1}\n  >')
+    ).toEqual([]);
+    expect(bareGroupLines('  <group\n    visible={a > b}\n  >')).toEqual([1]);
     expect(bareGroupLines('  <CanvasItemGroup position={[1, 2, 3]}>')).toEqual([]);
     expect(bareGroupLines(' * a `<group>` in a comment is not a use')).toEqual([]);
     expect(bareGroupLines('/** a `<group>` in a one-line doc comment is not a use */')).toEqual([]);

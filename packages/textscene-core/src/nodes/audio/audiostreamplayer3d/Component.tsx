@@ -26,13 +26,13 @@ import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard, BILLBOARD_ENABLED } from '../../../r3f/hooks/useBillboard';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Editor-only gizmo colour — yellow to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
 
 /** Literal-only, so the key is constant and the speaker gizmo never remounts. */
-const GIZMO_MATERIAL = materialProgramInputs({ props: { color: GIZMO_COLOR, wireframe: true } });
+const GIZMO_MATERIAL = wireGizmoProgram(GIZMO_COLOR);
 
 /** Body of the speaker cone (small wireframe-friendly silhouette). */
 const SPEAKER_BODY_RADIUS = 0.12;

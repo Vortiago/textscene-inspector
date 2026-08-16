@@ -86,27 +86,30 @@ concatenates. `key`, `onBeforeCompile` and `customProgramCacheKey` are typed
 
 ### What is deliberately not keyed
 
-Each of these is a program input, or reads as one, and would otherwise look like
-an omission. The module header carries the exhaustive account with a line cite
-per entry; the decision is that the list exists and is stated:
+Some of what `getParameters` reads is a program input that still needs no key,
+and each such entry would otherwise look like an omission. The decision is that
+the list exists, is exhaustive, and states a reason per entry — but it lives with
+the owner (`materialProgramInputs.ts`'s header), which carries a `WebGLPrograms`
+line cite per entry and is where a three upgrade is read against. Restating it
+here would make a version bump a multi-place edit with this file the only copy
+nothing checks.
 
-- `alphaTest` bumps `version` itself on the `> 0` crossing
-  (`Material.js:494-502`), so it re-derives without us.
-- `blending` alone is not an independent parameter — its one reference in
-  `WebGLPrograms` is inside the `opaque` composite (`:262`), which IS keyed. On
-  an already-transparent material it is per-draw GL state.
-- `wireframe` alone reaches a program only through the `flatShading` composite
-  (`:317`), which keys it, and a `bumpMap` one whose slot nothing here binds.
-- `numClippingPlanes` is a parameter (`:354`), but `WebGLRenderer.js:2456-2458`
-  compares the plane count every draw.
-- `envMap`, `vertexAlphas`, `vertexTangents`, scene fog and tone mapping are all
-  on `setProgram`'s own re-check chain.
-- `decodeVideoTexture` (`:364`) is the one that had to be reasoned about rather
-  than looked up. It depends on a texture's IDENTITY, not on presence, so keying
-  it would read every texture SWAP as a new program — a sprite advancing a frame
-  would throw away a compiled program per frame. It is left out because it cannot
-  fire: every canvas map is retagged to a transfer three reads as linear, and no
-  video texture exists here.
+Two points about that list are decisions rather than lookups, so they belong
+here:
+
+- `decodeVideoTexture` (`:364`) had to be REASONED about. It depends on a
+  texture's IDENTITY, not on its presence, so keying it would read every texture
+  SWAP as a new program — a sprite advancing a frame would throw away a compiled
+  program per frame. It is left out because it cannot fire: every canvas map is
+  retagged to a transfer three reads as linear, and no video texture exists here.
+  If either of those stops holding, the entry is a hazard rather than an
+  omission, and no diff will say so.
+- The subtraction stops at `Material.js` and does not follow subclass accessors,
+  though `MeshPhysicalMaterial` has six more `> 0` version bumps. Whether a field
+  self-heals depends on which CLASS the props land on, and `getParameters` reads
+  the physical thresholds off whatever material it is handed — so a key derived
+  from a bag, which has to hold for whichever tag receives it, cannot subtract
+  them. Keying the physical features is correct rather than merely harmless.
 
 ### Scope, and the one exemption
 
@@ -164,13 +167,28 @@ than pixels.
 
 **`material.needsUpdate = true` instead of a React remount.** Cheaper — three
 re-derives the parameters and recompiles in place, where a remount throws the
-material away. Rejected because nothing bumps it for us (R3F's `applyProps`
-assigns and stops), so each material would need a ref and an effect enumerating
-the same input list that decides the key: a second place to forget one, in every
-component, kept in sync with the first by nothing. The remount derives from the
-merged bag at the one site that already holds it, and the cost is bounded by the
-key depending only on what the program depends on — a texture swapped for another
-texture compiles to the same program and must not remount.
+material away. It is no longer expensive to WIRE, either: with one owner, the
+effect's dependency would be the single `program.key` this decision already
+produces, not a per-component enumeration of the input list. Two other reasons
+reject it, and they do not go away:
+
+- **The element type already switches.** `StandardMaterialSlot` renders
+  `<meshBasicMaterial>`, `<meshStandardMaterial>` or `<meshPhysicalMaterial>`
+  off the same scalars — the unshaded flag and the physical thresholds. React
+  remounts across a type change whatever the key says, so an in-place recompile
+  would cover some of the transitions and not others, and the ones it missed
+  would be the least visible.
+- **A prop that stops applying cannot be cleared.** R3F's `applyProps` skips an
+  `undefined` value outright, and `useCanvasDecodeDefines` returns `undefined`
+  when nothing needs decoding — so a material whose texture stops needing the
+  decode keeps the old `defines` object on it. An in-place recompile would then
+  recompile from a stale define, which is worse than not recompiling: the
+  program would be freshly built and still wrong.
+
+The remount derives from the merged bag at the one site that already holds it,
+and the cost is bounded by the key depending only on what the program depends on
+— a texture swapped for another texture compiles to the same program and must
+not remount.
 
 ## Consequences
 
@@ -186,3 +204,9 @@ texture compiles to the same program and must not remount.
 - A slider moving inside a physical feature's band stays a uniform while a
   crossing of zero rebuilds — the element-type switch alone misses that whenever
   a second feature is already holding the material on the physical branch.
+- A remount throws the material OBJECT away, and one thing wanted it kept: the
+  lighting injection owns uniform objects for a canvas item's whole life, which
+  an in-place recompile would have preserved for free. It survives the remount
+  because the injection is memoised outside the material and re-attached to the
+  new one, but that is an arrangement the caller has to keep, not a property of
+  the decision.

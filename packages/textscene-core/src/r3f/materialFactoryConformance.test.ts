@@ -45,7 +45,7 @@ import {
   offendingLines,
   repoPath,
   repoRoot,
-  reportOffenders,
+  tagEnd,
   walkSources,
 } from './testing/sourceScan';
 
@@ -92,26 +92,19 @@ function materialTags(source: string): { line: number; tag: string }[] {
   return tags;
 }
 
-/** Index just past the tag's own `>`, tracking `{…}` so a prop value cannot close it. Or -1. */
-function tagEnd(text: string, start: number): number {
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    const char = text[i];
-    if (char === '{') depth++;
-    else if (char === '}') depth--;
-    else if (char === '>' && depth === 0) return i + 1;
-  }
-  return -1;
-}
-
-/** Material elements that do not take their key and their props from ONE factory result. */
-export function rawMaterialTagLines(source: string): number[] {
-  return materialTags(source)
+/** The subset of already-read tags that does not take both halves from ONE factory result. */
+function offendingTagLines(tags: readonly { line: number; tag: string }[]): number[] {
+  return tags
     .filter(({ tag }) => {
       const factory = FACTORY_TAG.exec(tag);
       return !factory || factory[1] !== factory[2];
     })
     .map(({ line }) => line);
+}
+
+/** Material elements that do not take their key and their props from ONE factory result. */
+export function rawMaterialTagLines(source: string): number[] {
+  return offendingTagLines(materialTags(source));
 }
 
 /** `new THREE.SomethingMaterial(` — the imperative door. */
@@ -155,6 +148,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the uncompiled-shader fallback, literal-only',
 };
 
+/** One walk of the repo per shape — both assertions over each read it. */
+const TAGS = SOURCES.map(({ file, source }) => ({ file, tags: materialTags(source) }));
 const CONSTRUCTOR_SITES = SOURCES.map(({ file, source }) => ({
   file,
   lines: materialConstructorLines(source),
@@ -162,7 +157,9 @@ const CONSTRUCTOR_SITES = SOURCES.map(({ file, source }) => ({
 
 describe('Material factory conformance', () => {
   it('writes no material element outside the factory spelling', () => {
-    const offenders = reportOffenders(SOURCES, rawMaterialTagLines);
+    const offenders = TAGS.flatMap(({ file, tags }) =>
+      offendingTagLines(tags).map((line) => `${repoPath(file)}:${line}`)
+    );
 
     expect(
       offenders,
@@ -227,8 +224,7 @@ describe('Material factory conformance', () => {
     }
     expect(SOURCES.length).toBeGreaterThanOrEqual(1000);
     // The tag regex — if it stopped matching, "no offenders" would be silence.
-    const tags = SOURCES.flatMap(({ source }) => materialTags(source));
-    expect(tags.length).toBeGreaterThanOrEqual(30);
+    expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
     // And the constructor regex, the same way.
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
   });

@@ -28,12 +28,10 @@ import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
-const PLACEHOLDER_CELL_MATERIAL = materialProgramInputs({
-  props: { color: 0x4488cc, wireframe: true },
-});
+const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /**
  * Shared fallback material for tiles whose ArrayMesh declares no material (or

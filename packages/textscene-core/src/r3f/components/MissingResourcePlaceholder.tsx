@@ -29,6 +29,7 @@
 import { CanvasItemGroup } from './CanvasItemGroup';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
+import { wireGizmoProgram } from './wireGizmoProgram';
 
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
@@ -46,6 +47,15 @@ interface Props {
 
 const BOX_SIZE: [number, number, number] = [0.5, 0.5, 0.5];
 
+// Both literal-only, so both keys are constant — the marker never remounts, and
+// a program input added later keys itself. Module scope because the component
+// draws ONE of them and derived both.
+const BOX_MATERIAL = wireGizmoProgram('magenta');
+const PLANE_MATERIAL = materialProgramInputs({
+  props: { color: 'magenta', transparent: true, opacity: 0.6 },
+  merge: [canvasItemFacing()],
+});
+
 export function MissingResourcePlaceholder({
   shape,
   name,
@@ -53,25 +63,17 @@ export function MissingResourcePlaceholder({
   rotation,
   scale,
 }: Props) {
-  // Both literal-only, so both keys are constant — the marker never remounts,
-  // and a program input added later keys itself.
-  const box = materialProgramInputs({ props: { color: 'magenta', wireframe: true } });
-  const plane = materialProgramInputs({
-    props: { color: 'magenta', transparent: true, opacity: 0.6 },
-    merge: [canvasItemFacing()],
-  });
-
   return (
     <CanvasItemGroup name={name} position={position} rotation={rotation} scale={scale}>
       {shape === 'box' ? (
         <mesh>
           <boxGeometry args={BOX_SIZE} />
-          <meshBasicMaterial key={box.key} {...box.props} />
+          <meshBasicMaterial key={BOX_MATERIAL.key} {...BOX_MATERIAL.props} />
         </mesh>
       ) : (
         <mesh>
           <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial key={plane.key} {...plane.props} />
+          <meshBasicMaterial key={PLANE_MATERIAL.key} {...PLANE_MATERIAL.props} />
         </mesh>
       )}
     </CanvasItemGroup>

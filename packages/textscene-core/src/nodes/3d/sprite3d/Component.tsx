@@ -132,7 +132,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // depthWrite. Without this an opaque `transparent=false` sprite kept the
   // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
   const depthWrite = transparent ? alphaCutDepthWrite : true;
-  const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -225,7 +224,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       transparent,
       alphaTest,
       depthWrite,
-      side,
+      side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
     },
   });
 

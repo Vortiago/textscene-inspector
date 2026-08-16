@@ -39,6 +39,7 @@
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { NOT_BOUND_TEXTURE_SLOTS, TEXTURE_SLOT_GATES } from './materialProgramInputs';
 
 const resolve = createRequire(import.meta.url).resolve;
 
@@ -129,41 +130,62 @@ function drift(expected: readonly string[], actual: readonly string[]): string {
   return `three added [${added.join(', ')}] and removed [${removed.join(', ')}]`;
 }
 
+/**
+ * The three pinned lists, each with the floor that proves its parse matched
+ * something. A floor catches "the parse found nothing", the diff catches drift
+ * — two jobs, and the hint is what a failure has to say to be actionable.
+ */
+const PINNED_LISTS = [
+  {
+    name: 'bakes the recorded material fields into a program',
+    read: bakedMaterialFields,
+    expected: BAKED_MATERIAL_FIELDS,
+    floor: 40,
+    hint: 'an ADDED field is a new program input materialProgramInputs() may have to key',
+  },
+  {
+    name: 're-checks the recorded parameters on its own every draw',
+    read: recheckedParameters,
+    expected: RECHECKED_PARAMETERS,
+    floor: 15,
+    hint: 'a REMOVED re-check turns a field materialProgramInputs.ts documents as safe into a hazard',
+  },
+  {
+    name: 'bumps `version` from the recorded accessors',
+    read: versionBumpingAccessors,
+    expected: VERSION_BUMPING_ACCESSORS,
+    floor: 2,
+    hint: 'a REMOVED accessor stops re-deriving a field for us',
+  },
+] as const;
+
 describe('material program hazards, against three itself', () => {
   it('resolves three from source, not from the bundled dist', () => {
     expect(resolve('three/src/renderers/webgl/WebGLPrograms.js')).toMatch(/three\/src\/renderers\/webgl\/WebGLPrograms\.js$/);
   });
 
-  it('bakes the recorded material fields into a program', () => {
-    const actual = bakedMaterialFields();
-    expect(
-      actual,
-      `${drift(BAKED_MATERIAL_FIELDS, actual)} — an ADDED field is a new program input materialProgramInputs() may have to key`
-    ).toEqual(BAKED_MATERIAL_FIELDS);
+  it.each(PINNED_LISTS)('$name', ({ read, expected, floor, hint }) => {
+    const actual = read();
+    expect(actual.length).toBeGreaterThanOrEqual(floor);
+    expect(actual, `${drift(expected, actual)} — ${hint}`).toEqual(expected);
   });
 
-  it('re-checks the recorded parameters on its own every draw', () => {
-    const actual = recheckedParameters();
-    expect(
-      actual,
-      `${drift(RECHECKED_PARAMETERS, actual)} — a REMOVED re-check turns a field materialProgramInputs.ts documents as safe into a hazard`
-    ).toEqual(RECHECKED_PARAMETERS);
-  });
+  it('gives every texture slot three bakes an owner in the factory', () => {
+    // The join the factory's tables had no way to fail on: a slot three reads
+    // and `materialProgramInputs.ts` neither keys nor declines is a key that
+    // silently misses a program input the first time anything binds it.
+    const slots = bakedMaterialFields().filter(
+      (field) => /Map$/.test(field) && !RECHECKED_PARAMETERS.includes(field)
+    );
+    const unowned = slots.filter(
+      (slot) => TEXTURE_SLOT_GATES[slot] === undefined && NOT_BOUND_TEXTURE_SLOTS[slot] === undefined
+    );
 
-  it('bumps `version` from the recorded accessors', () => {
-    const actual = versionBumpingAccessors();
+    expect(slots.length).toBeGreaterThanOrEqual(20);
     expect(
-      actual,
-      `${drift(VERSION_BUMPING_ACCESSORS, actual)} — a REMOVED accessor stops re-deriving a field for us`
-    ).toEqual(VERSION_BUMPING_ACCESSORS);
-  });
-
-  it('parses something from each of the three, so a broken parse cannot pass as agreement', () => {
-    // Floors well under today's counts: the floor catches "the parse matched
-    // nothing", the diffs above catch drift. Two jobs, two assertions.
-    expect(bakedMaterialFields().length).toBeGreaterThanOrEqual(40);
-    expect(recheckedParameters().length).toBeGreaterThanOrEqual(15);
-    expect(versionBumpingAccessors().length).toBeGreaterThanOrEqual(2);
+      unowned,
+      `three bakes these slots and the factory neither keys nor declines them — add each to TEXTURE_SLOT_GATES with the feature it is gated on, or to NOT_BOUND_TEXTURE_SLOTS with the reason: ${unowned.join(', ')}`
+    ).toEqual([]);
   });
 
   it('fails loudly when an anchor moves, rather than matching the rest of the file', () => {

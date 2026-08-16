@@ -2,11 +2,10 @@
  * Reading source as TEXT, for the drift guards that assert over spelling rather
  * than over behaviour.
  *
- * Three of those guards grew the same comment skip independently
- * (`paintGroupConformance`, `painterViewConformance`, `materialProgramInputs`),
- * and a fourth was about to. They are all defending the same thing — a match
- * inside a doc comment is prose, not a use, and a scan that cannot tell the two
- * apart is either noisy or silenced — so the guard lives once.
+ * The guards grew the same pieces independently — a comment skip, an exemption
+ * lookup, a `{…}`-aware tag reader. They are all defending the same thing: a
+ * match inside a doc comment is prose, not a use, and a scan that cannot tell
+ * the two apart is either noisy or silenced. So each piece lives once.
  *
  * Test-only: the `testing/` directories under `src` are excluded from the
  * build, like `parser/testing` and `resources/testing`.
@@ -42,11 +41,47 @@ export function isCommentLine(line: string): boolean {
  * Walks the block rather than a fixed window, so a reason worth writing down is
  * never truncated into silence.
  */
-export function hasExemptionAbove(lines: string[], index: number, marker: string): boolean {
+function hasExemptionAbove(lines: string[], index: number, marker: string): boolean {
   for (let i = index - 1; i >= 0 && isCommentLine(lines[i]!); i--) {
     if (lines[i]!.includes(marker)) return true;
   }
   return false;
+}
+
+/**
+ * Whether any of the `window` lines above `index` carries `marker`.
+ *
+ * Both spellings exist because a JSX exemption cannot be read by the block
+ * walk: a braced JSX comment's continuation lines start with plain prose, which
+ * `isCommentLine` reads as CODE, and the marker as often as not sits above an
+ * intervening `return (`. The walk would miss every one of those, so a scan
+ * over JSX takes the window and one over plain statements takes the walk.
+ */
+export function hasExemptionWithin(
+  lines: string[],
+  index: number,
+  marker: string,
+  window = 10
+): boolean {
+  return lines
+    .slice(Math.max(0, index - window), index)
+    .join('\n')
+    .includes(marker);
+}
+
+/**
+ * Index just past a JSX tag's own `>`, tracking `{…}` so a prop value holding a
+ * `>` cannot close it. `start` indexes into `text`; -1 when the tag is unclosed.
+ */
+export function tagEnd(text: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (char === '{') depth++;
+    else if (char === '}') depth--;
+    else if (char === '>' && depth === 0) return i + 1;
+  }
+  return -1;
 }
 
 /**

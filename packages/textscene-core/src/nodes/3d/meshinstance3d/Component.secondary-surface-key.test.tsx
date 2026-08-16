@@ -52,16 +52,12 @@ async function rebuilds(
 const ALPHA = { transparency: '1' };
 
 describe('secondary-surface material rebuilds when a baked program parameter moves', () => {
-  it('transparency 0 → 1 crosses the `opaque` composite', async () => {
-    expect(await rebuilds({}, ALPHA)).toBe(true);
-  });
-
-  it('blend_mode MIX → ADD moves the same composite', async () => {
-    expect(await rebuilds({}, { blend_mode: '1' })).toBe(true);
-  });
-
-  it('cull_mode BACK → DISABLED moves doubleSided/flipSided', async () => {
-    expect(await rebuilds({}, { cull_mode: '2' })).toBe(true);
+  it.each([
+    ['transparency 0 → 1 crosses the `opaque` composite', ALPHA],
+    ['blend_mode MIX → ADD moves the same composite', { blend_mode: '1' }],
+    ['cull_mode BACK → DISABLED moves doubleSided/flipSided', { cull_mode: '2' }],
+  ])('%s', async (_case, after) => {
+    expect(await rebuilds({}, after)).toBe(true);
   });
 });
 
