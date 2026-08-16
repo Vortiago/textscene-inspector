@@ -52,6 +52,7 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 | `valid-sprite3d-resources` | `sprite3d-requires-texture` | warning |
 |  | `valid-sprite3d-resources` | error |
 |  | `sprite3d-frame-range` | error |
+|  | `sprite3d-frame-coords-range` | error |
 |  | `sprite3d-region-configuration` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
