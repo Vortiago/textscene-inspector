@@ -65,4 +65,31 @@ describe('literals are not comments', () => {
     expect(out).toHaveLength(src.length);
     expect(out.split('\n')).toHaveLength(src.split('\n').length);
   });
+
+  it('reads a regex after a keyword as a regex, not a division', () => {
+    // `return` is not an operator character, so the regex branch never fired
+    // and the `\/\/` body opened a line comment that ate the rest of the line.
+    const src = 'function f(s) {\n  return /https?:\\/\\//.test(s);\n}';
+    expect(stripComments(src)).toBe(src);
+  });
+
+  it('descends into a template interpolation, so backtick parity survives it', () => {
+    // Treating `${…}` as opaque flips parity when the interpolation holds a
+    // nested template: the closing backtick reads as an opening one and every
+    // later comment in the file is inside a string that never ends.
+    const src = 'const a = `x${`y`}z`;\n// note\nconst b = 1;';
+    const out = stripComments(src);
+    expect(out).toContain('const a = `x${`y`}z`;');
+    expect(out).not.toContain('note');
+  });
+
+  it('does not start a regex scan at a JSX close tag', () => {
+    // `<` opens a regex in JS, but in a `.tsx` file `</div>` is a close tag,
+    // and scanning from it swallowed every later comment.
+    const src = 'const el = <div>Done</div>;\n// note\nconst b = 1;';
+    const out = stripComments(src);
+    expect(out).toContain('const el = <div>Done</div>;');
+    expect(out).not.toContain('note');
+    expect(out).toHaveLength(src.length);
+  });
 });

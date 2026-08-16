@@ -2,23 +2,38 @@
  * Shared comment lexing for the dev-kit and core guards: ONE place decides what
  * counts as a comment.
  *
- * A SCANNER, not a regex pair. The regex version read `/*` and `//` wherever
- * they appeared, including inside a string or a regex literal, and this
- * codebase is full of both: wildcard property keys are spelled
+ * A SCANNER, not a regex pair, because this codebase is full of text that
+ * merely looks like a comment: wildcard property keys are spelled
  * `'theme_override_colors/*'`, `'popup/item_#/*'`, `'settings/#/*'`, and
- * several slices hold patterns like `/^item_(-?\d+)\//`. Each of those opened a
- * comment that ran to the next real close-comment or end of line. Measured over the
- * 1,986 core source files: five files lost real source that way, the worst
- * swallowing 9,982 characters at `linter/propertyGrammarParityAllowlist/
- * baseTypes.ts:83`, and the naive `//` half damaged eleven more.
+ * several slices hold patterns like `/^item_(-?\d+)\//`. To a regex each of
+ * those opens a comment that runs to the next close or end of line.
  *
- * Nothing depended on the blanked-away source at the time, which is exactly why
- * it survived: the guards reading this all assert an empty list, and blanked
- * source is silently absent rather than wrong.
+ * Its failures are silent in both directions — blanked source is absent from a
+ * scan rather than wrong, and a missed comment lets commented-out code answer
+ * one — so correctness is not left to review:
+ * `commentSpans.conformance.test.ts` asserts this agrees with the TypeScript
+ * parser on every tracked file.
  */
 
-/** Where a regex literal may begin: after an operator or an opener, never after a value. */
-const REGEX_ALLOWED_AFTER = /[(,=:[!&|?{};+\-*%^~<>]$/;
+/**
+ * Where a regex literal may begin: after an operator or an opener, never after
+ * a value.
+ *
+ * `>` stays in the set for `x => /re/.test(x)`. `<` is deliberately absent: no
+ * expression usefully compares against a regex, while `</div>` ends every JSX
+ * element, and reading that slash as a regex opener scans away the rest of the
+ * `.tsx` file.
+ */
+const REGEX_ALLOWED_AFTER = /[(,=:[!&|?{};+\-*%^~>]$/;
+
+/**
+ * A regex may also open after a KEYWORD, where the preceding character is a
+ * letter and the operator test above cannot see it — `return /re/.test(s)` is
+ * the common one, and reading its slash as division let the `\/\/` in a URL
+ * pattern open a comment that blanked the rest of the line.
+ */
+const REGEX_ALLOWED_AFTER_KEYWORD =
+  /\b(?:return|typeof|instanceof|in|of|new|delete|void|throw|case|do|else|yield|await)$/;
 
 /** Module level: this is tested once per source CHARACTER. */
 const WHITESPACE = /\s/;
@@ -32,17 +47,27 @@ export function commentSpans(
   let i = 0;
   /** The last non-whitespace character outside a literal, for the regex test. */
   let prev = '';
+  /** Its index, so the keyword test can read back over the whole identifier. */
+  let prevEnd = 0;
 
-  const skipString = (quote: string): void => {
+  /**
+   * Open template literals, innermost last, each holding the `{` depth reached
+   * inside its current `${ … }`.
+   *
+   * ONE loop scans code and interpolations alike. A second copy of the lexer
+   * for interpolation bodies is what let `.replace(/"/g, '\\"')` inside one
+   * open a string that never closed: every construct the outer loop knows
+   * about — regex literals above all — has to be known inside `${ … }` too,
+   * and a stack keeps that true by construction rather than by maintenance.
+   */
+  const templates: { braces: number }[] = [];
+
+  const skipQuoted = (quote: string): void => {
     i++;
     while (i < source.length) {
       const c = source[i]!;
       if (c === '\\') i += 2;
       else if (c === quote) return void i++;
-      // A template can hold `${ … }` with arbitrary code, comments included.
-      // Not descended into: a comment inside an interpolation is vanishingly
-      // rare, and treating the whole template as opaque is the safe direction —
-      // it under-reports comments rather than blanking real source.
       else i++;
     }
   };
@@ -50,10 +75,44 @@ export function commentSpans(
   while (i < source.length) {
     const c = source[i]!;
     const next = source[i + 1];
+    const template = templates.at(-1);
 
-    if (c === '"' || c === "'" || c === '`') {
-      skipString(c);
+    // Inside a template's TEXT: only its close, an escape, and `${` matter.
+    if (template !== undefined && template.braces === 0) {
+      if (c === '\\') i += 2;
+      else if (c === '`') {
+        templates.pop();
+        prev = '`';
+        prevEnd = ++i;
+      } else if (c === '$' && next === '{') {
+        template.braces = 1;
+        i += 2;
+        // A regex may open immediately after `${`.
+        prev = '{';
+        prevEnd = i;
+      } else i++;
+      continue;
+    }
+
+    if (c === '`') {
+      templates.push({ braces: 0 });
+      i++;
+      continue;
+    }
+
+    // `}` closing the innermost `${ … }` returns to that template's text.
+    if (template !== undefined && (c === '{' || c === '}')) {
+      template.braces += c === '{' ? 1 : -1;
+      i++;
       prev = c;
+      prevEnd = i;
+      continue;
+    }
+
+    if (c === '"' || c === "'") {
+      skipQuoted(c);
+      prev = c;
+      prevEnd = i;
       continue;
     }
 
@@ -75,7 +134,12 @@ export function commentSpans(
 
     // A regex literal, whose body may hold `//` or `/*`. Told from a division
     // by what precedes it, the standard lexical test.
-    if (c === '/' && REGEX_ALLOWED_AFTER.test(prev)) {
+    if (
+      c === '/' &&
+      (prev === '' ||
+        REGEX_ALLOWED_AFTER.test(prev) ||
+        REGEX_ALLOWED_AFTER_KEYWORD.test(source.slice(Math.max(0, prevEnd - 10), prevEnd)))
+    ) {
       let j = i + 1;
       let inClass = false;
       while (j < source.length) {
@@ -96,10 +160,14 @@ export function commentSpans(
       }
       i = j;
       prev = '/';
+      prevEnd = i;
       continue;
     }
 
-    if (!WHITESPACE.test(c)) prev = c;
+    if (!WHITESPACE.test(c)) {
+      prev = c;
+      prevEnd = i + 1;
+    }
     i++;
   }
   return spans;
