@@ -82,6 +82,35 @@ derived from Godot's own source, some read back from a throwaway Godot project's
 that draw nothing, which pixel-probing cannot) — the rect solve for the vboxcontainer
 fixture predicted every child rect to 0 px this way.
 
+### The painter view: a narrowed type, not an import boundary
+
+A painter must never re-apply its own node's `modulate`. `ControlCanvasWalker` folds
+it into the ambient `Modulate2DContext` it wraps the painter in, so applying it again
+squares it — invisible at Godot's opaque-white default, a four-fold error at 0.5. The
+rule was restated in prose in a dozen painter headers and enforced by nothing: the
+tests named for it only ever set an ambient context plus `self_modulate`, never the
+node's own `modulate`, so a painter carrying the exact defect passed all of them.
+
+`painterView<T>(solveNode)` (`solveTree.ts`) now hands a painter
+`Omit<T, 'modulate' | 'selfModulate'>`, and `useControlOwnTint` (`controlTint.ts`)
+reads `self_modulate` off the node itself, so neither field has a spelling a painter
+can reach. The narrowing is STRUCTURAL rather than an import boundary — a separate
+painter-facing module re-exporting a stripped copy of each property type — because a
+painter's properties *are* the parser's output object and `label/Component.tsx`
+memoizes on its identity: a boundary that copied the bag would thrash that memo every
+render, and one that re-exported the same object would narrow nothing. `painterView`
+is therefore a zero-allocation cast.
+
+A cast is type-level only, so a solver helper handed the whole `props` object
+(`buttonIconColor`, `resolveCheckBoxDrawState`, `labelTextTheme`) still receives
+`modulate` at runtime. `painterViewConformance.test.ts` closes that with three source
+scans: no painter reaches `.node.properties`, no painter calls the wide tint hooks
+(`useCanvasItemTint`), and no source under `nodes/2d/ui/**` outside
+`parser.ts`/`linterParser.ts`/`types.ts` — nor a painter living outside that tree,
+such as the shared `PanelChrome` — names `modulate` in code at all. The first
+two take a `painter-view-exempt:` opt-out with a stated reason (`CanvasLayer` is a
+`Node`, not a Control, and keeps its own cast); the laundering scan takes none.
+
 ### `renderOrder`, not a fractional z offset, for draw order
 
 **Superseded in part by ADR-0036** — read that for the rule in force. What stands:

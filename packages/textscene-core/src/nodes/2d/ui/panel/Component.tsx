@@ -14,24 +14,12 @@
  * `<group>`), not this painter's — mirroring `ColorRect`, this
  * component does not re-check it.
  *
- * `ControlCanvasWalker` already composes this node's OWN `modulate` into the
- * `Modulate2DContext` value it provides around this painter (`tint.inherited`
- * = ancestor tint × this node's `modulate`), so `useParentModulate()` here
- * already carries that product — calling `useControlTint`/`useCanvasItemTint`
- * with this node's `modulate` again would multiply it a SECOND time. What the
- * walker does NOT (and must not) do is apply `self_modulate`, which only ever
- * tints a node's OWN pixels and must never reach `Modulate2DContext` for
- * children to inherit. This painter therefore calls `useCanvasItemTint`
- * directly with `modulate: WHITE_MODULATE` (a no-op — the ambient value
- * already has this node's `modulate` folded in) and `self_modulate` from this
- * node's own properties, exactly like `ColorRect`.
- *
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
  * Unlike `ColorRect` (one `color` property), a StyleBox carries TWO base
- * colours (`bgColor`, `borderColor`) that both need the SAME composed tint —
- * so `PanelChrome` (this painter's actual implementation) reads `own` product
- * (ancestor × own modulate × self_modulate, still raw sRGB) and hands it to
- * `<StyleBoxQuad>`'s own `color` prop, which multiplies it into both colours
- * internally, before its one sRGB→linear conversion.
+ * colours (`bgColor`, `borderColor`) needing the SAME composed tint — so
+ * `PanelChrome` (this painter's actual implementation) hands `tint.own` (raw
+ * sRGB) to `<StyleBoxQuad>`'s `color` prop, which multiplies it into both
+ * internally before its one sRGB→linear conversion.
  */
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

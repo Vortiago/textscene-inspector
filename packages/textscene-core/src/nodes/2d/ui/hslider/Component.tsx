@@ -9,9 +9,7 @@
  * which is this component at `vertical = true`); this component only resolves
  * theme/state and draws.
  *
- * Tint follows the house rule: the walker has already folded this node's OWN
- * `modulate` into the ambient `Modulate2DContext`, so this calls
- * `useCanvasItemTint` with `modulate: WHITE_MODULATE` and only `self_modulate`.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
  * A StyleBox carries two base colours (`PanelChrome.tsx`'s rule), so `tint.own`
  * (raw sRGB) is handed straight to each `<StyleBoxQuad>`'s own `color` prop,
  * which composes it internally before its single sRGB→linear conversion; the
@@ -23,9 +21,9 @@
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
-import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -41,12 +39,11 @@ import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
 
 export function HSlider({ solveNode, rect, theme, renderOrder }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as HSliderProperties;
+  const props = painterView<HSliderProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
   const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;

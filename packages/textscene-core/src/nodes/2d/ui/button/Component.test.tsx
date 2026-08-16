@@ -178,8 +178,7 @@ describe('<Button> (isolated painter contract)', () => {
   );
 
   it(
-    'composes self_modulate onto chrome AND text, in the SAME product, without re-applying this node\'s own modulate ' +
-      '(the ambient Modulate2DContext already carries it — squaring it would be invisible at modulate 1, wrong otherwise)',
+    'composes the ambient inherited tint and self_modulate into ONE product, reaching chrome AND text alike',
     async () => {
       const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
       const renderer = await ReactThreeTestRenderer.create(
@@ -191,8 +190,7 @@ describe('<Button> (isolated painter contract)', () => {
           />
         </Modulate2DContext.Provider>
       );
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25, NOT 0.125 (which
-      // re-applying `modulate` a second time would square it to).
+      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
       // 0.5 (ambient) * 0.5 (self_modulate) = 0.25, in sRGB.

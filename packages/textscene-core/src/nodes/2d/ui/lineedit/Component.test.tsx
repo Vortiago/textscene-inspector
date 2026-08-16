@@ -281,8 +281,7 @@ describe('<LineEdit> — alignment', () => {
 
 describe('<LineEdit> — tint composition', () => {
   it(
-    'composes self_modulate onto chrome AND text, in the SAME product, without re-applying this node\'s own ' +
-      'modulate (the ambient Modulate2DContext already carries it)',
+    'composes the ambient inherited tint and self_modulate into ONE product, reaching chrome AND text alike',
     async () => {
       const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
       const renderer = await ReactThreeTestRenderer.create(
@@ -297,7 +296,7 @@ describe('<LineEdit> — tint composition', () => {
       );
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25, NOT 0.125 (squared).
+      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
       expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;

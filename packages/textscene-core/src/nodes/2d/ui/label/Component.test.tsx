@@ -58,7 +58,7 @@ describe('<Label> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it('multiplies the resolved text colour by self_modulate and the inherited ancestor tint, converted to linear exactly once (never re-applying this node’s own modulate)', async () => {
+  it('multiplies the resolved text colour by self_modulate and the inherited ancestor tint, converted to linear exactly once', async () => {
     const node = solveNode('L', {
       text: 'A',
       selfModulate: { r: 1, g: 0.5, b: 1, a: 1 },

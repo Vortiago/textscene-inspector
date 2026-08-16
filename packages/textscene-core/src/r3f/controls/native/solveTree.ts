@@ -94,6 +94,23 @@ export function controlProps(n: SolveNode): ControlProperties {
 }
 
 /**
+ * A Control's properties MINUS the two the walker has already consumed.
+ *
+ * Both fields genuinely exist on a Control — this is not a narrowing of the
+ * node's data, only of what a PAINTER may see. `ControlCanvasWalker` folds
+ * `modulate` into the ambient `Modulate2DContext` around the painter and
+ * `useControlOwnTint` reads `self_modulate` off the node itself, so a painter
+ * re-reading either would double-apply it.
+ */
+export type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
+
+/** This node's properties as its own type, in the painter view. */
+export function painterView<T extends ControlProperties>(n: SolveNode): PainterView<T> {
+  // The SAME object, never a copy: painters memoize on props identity.
+  return n.node.properties as unknown as PainterView<T>;
+}
+
+/**
  * This node's raw property keys, in real file order — `undefined` when that
  * order is unknown or unreliable (a hand-built literal with no `rawProperties`
  * at all, or a merged instance root whose raw merge mixes two files' orders,

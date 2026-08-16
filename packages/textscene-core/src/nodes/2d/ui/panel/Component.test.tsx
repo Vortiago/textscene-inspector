@@ -105,12 +105,8 @@ describe('<Panel> (isolated painter contract)', () => {
     expect(color.getX(0)).toBeCloseTo(0.4, 4);
   });
 
-  it('does NOT reapply the ambient modulate a second time (only self_modulate composes on top of it)', async () => {
-    // If this painter re-ran useControlTint/useCanvasItemTint with this
-    // node's OWN `modulate`, the ambient value below (already the product a
-    // real ControlCanvasWalker would provide, ancestor × own modulate) would
-    // get squared. own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25 —
-    // NOT 0.125 (which squaring the 0.5 a second time would produce).
+  it('composes the ambient inherited tint onto the panel fill exactly once, alongside self_modulate', async () => {
+    // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
     const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>

@@ -43,12 +43,10 @@
  * its enclosing bar is visible, so this painter never needs interactive
  * state to decide whether to draw one.
  *
- * TINT. Mirrors `PanelChrome.tsx` exactly: the walker already folds this
- * node's OWN `modulate` into the ambient `Modulate2DContext` its descendants
- * (and this painter) read, so re-applying it here would square it — only
- * `self_modulate` reaches `tint.own`, handed to each track/grabber
- * `<StyleBoxQuad>`'s own `color` prop, which composes it onto the StyleBox's
- * two base colours, in sRGB, before its single linear conversion.
+ * TINT. Mirrors `PanelChrome.tsx` exactly: `tint.own` (`self_modulate` only)
+ * is handed to each track/grabber `<StyleBoxQuad>`'s own `color` prop, which
+ * composes it onto the StyleBox's two base colours, in sRGB, before its
+ * single linear conversion.
  *
  * DRAW ORDER. Both bars use `subtreeChromeRenderOrder`
  * (`ControlComponentRegistry.ts`'s `NativeControlComponentProps`), NOT this
@@ -80,6 +78,7 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -88,9 +87,8 @@ import {
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { ControlProperties } from '../control/types';
 import {
   scrollContainerScrollBars,
   isScrollContainerLayout,
@@ -199,7 +197,6 @@ export function ScrollContainer({
   children,
   meta,
 }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as ControlProperties;
   const cachedLayout = isScrollContainerLayout(meta) ? meta : null;
   // FALLBACK ONLY (`cachedLayout` absent, `layout` below): a FRESH
   // SolveContext, built from the exact same theme/measurer the real solve
@@ -218,8 +215,7 @@ export function ScrollContainer({
     [cachedLayout, solveNode, solveCtx, rect]
   );
 
-  const selfModulate = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
   // The bars are separate CanvasItems, so the walker's snap of THIS node's own
   // group does not reach them — each is snapped on its own account (see
   // `ScrollBarChrome`'s PIXEL SNAP doc) using the walker's OWN resolved value,

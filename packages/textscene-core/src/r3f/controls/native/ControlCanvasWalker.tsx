@@ -37,15 +37,15 @@
  * `canvaslayer/Component.tsx`'s reset to 0), never the other way around.
  */
 import { useMemo } from 'react';
-import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rect2 } from './rect';
-import type { SolveNode } from './solveTree';
+import { controlProps, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { Modulate2DContext, useControlTint } from './useControlTint';
+import { Modulate2DContext } from '../../canvasItemModulate';
+import { useInheritedModulate } from './controlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { canvasRenderOrder } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
@@ -150,8 +150,8 @@ function ControlNodeGroup({
   measureText,
   snapToPixels,
 }: ControlNodeGroupProps) {
-  const props = solveNode.node.properties as ControlProperties;
-  const tint = useControlTint(props.modulate, props.selfModulate);
+  const props = controlProps(solveNode);
+  const inheritedModulate = useInheritedModulate(props.modulate);
   const isVisible = !hiddenNodePaths.has(solveNode.path) && props.visible !== false;
 
   // Structurally guaranteed present (the solve walks this exact tree); the
@@ -311,7 +311,7 @@ function ControlNodeGroup({
       renderOrder={renderOrder}
     >
       <CanvasItemKeyProvider value={renderOrder}>
-        <Modulate2DContext.Provider value={tint.inherited}>
+        <Modulate2DContext.Provider value={inheritedModulate}>
           {hasOwnTransform ? (
             <CanvasItemGroup
               position={[pivotX, -pivotY, 0]}

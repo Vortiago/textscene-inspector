@@ -148,7 +148,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
   });
 
   it(
-    'composes self_modulate onto chrome, arrow AND text, in the SAME product, without re-applying this node\'s own modulate',
+    'composes the ambient inherited tint and self_modulate into ONE product, reaching chrome, arrow AND text alike',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
@@ -160,7 +160,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
           />
         </Modulate2DContext.Provider>
       );
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25, NOT 0.125.
+      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
       const chromeColor = (findChromeMesh(renderer.scene)!.geometry as THREE.BufferGeometry).attributes
         .color as THREE.BufferAttribute;
       expect(chromeColor.getX(0)).toBeCloseTo(0.1 * 0.25, 4);

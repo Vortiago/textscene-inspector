@@ -49,23 +49,22 @@
  * sizes are different heights), which `<TextRun>` anchors at that line's
  * baseline itself (`buildGlyphQuadArrays`'s own doc).
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the `Modulate2DContext` value it provides AROUND this painter, so
- * `useCanvasItemTint` is called ONCE, with `modulate: WHITE_MODULATE`
- * (already folded in) and this node's own `self_modulate` — but with NO
- * `ownMultiplier` (each run's resolved colour differs, so there is no single
- * "the" text colour to fold in at that call). `tint.own` is therefore
- * `inherited * self_modulate`, sRGB; each run's OWN placement multiplies that
- * (still in sRGB, via the plain `multiplyModulate` — not a hook, since the
- * number of runs varies per render and hooks cannot be called a variable
- * number of times) by its own resolved colour, then hands the sRGB result to
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. Called ONCE, with NO `ownMultiplier` (each run's resolved
+ * colour differs, so there is no single "the" text colour to fold in at that
+ * call); each run's OWN placement multiplies `tint.own` (still in sRGB, via
+ * the plain `multiplyModulate` — not a hook, since the number of runs varies
+ * per render and hooks cannot be called a variable number of times) by its
+ * own resolved colour, then hands the sRGB result to
  * `<TextRun>`, which converts to linear internally — one conversion, same as
  * every other native text painter.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { multiplyModulate, useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -88,11 +87,10 @@ import {
 import type { RichTextLabelProperties } from './types';
 
 export function RichTextLabel({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as RichTextLabelProperties;
+  const props = painterView<RichTextLabelProperties>(solveNode);
   const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
   const runs = useMemo(

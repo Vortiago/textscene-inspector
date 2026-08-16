@@ -7,12 +7,12 @@
  * width, 8px along the split axis) instead of `hsplitter`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
@@ -28,10 +28,9 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 const ICON_SIZE = { x: 48, y: 8 };
 
 export function VSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as SplitContainerProperties;
+  const props = painterView<SplitContainerProperties>(solveNode);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   // Decided BEFORE the icon hook, not after: hook order is fixed, so an early
   // return cannot skip the load. `autohide` defaults true, which makes the

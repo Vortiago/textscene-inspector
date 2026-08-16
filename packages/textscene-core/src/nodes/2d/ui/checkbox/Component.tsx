@@ -6,12 +6,9 @@
  * `StyleBoxEmpty` (`nativeSolver.ts`'s own doc). This painter draws the
  * vendored theme icons (`native/themeIcons.ts`'s `CHECK_BOX_ICONS`).
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the ambient `Modulate2DContext` it provides AROUND this painter, so this
- * calls `useCanvasItemTint` with `modulate: WHITE_MODULATE` (a no-op) and
- * `self_modulate` from this node's own properties — the same rule
- * `Button`/`HSplitContainer` follow. The icon's OWN modulate is
- * ALWAYS opaque white in the default theme (`checkbox_checked_color`/
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. The icon's own theme colour is
+ * ALWAYS opaque white (`checkbox_checked_color`/
  * `checkbox_unchecked_color` both `Color(1,1,1)`, `default_theme.cpp:312-313`)
  * — the disabled dimming is baked into the disabled SVGs' own fill-opacity,
  * not a separate runtime multiply — so the icon quad's colour/opacity are
@@ -28,7 +25,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -56,11 +54,10 @@ import {
 import type { CheckBoxProperties } from './types';
 
 export function CheckBox({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as CheckBoxProperties;
+  const props = painterView<CheckBoxProperties>(solveNode);
   const state = resolveCheckBoxDrawState(props);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
   // --- Icon: always drawn, checked/unchecked (or radio_*) per state --------

@@ -30,18 +30,15 @@
  * rects are always exact regardless, computed by the registered solver with
  * full `combined_minimum_size` access.
  *
- * Tint follows `ColorRect`/`TextureRect`'s rule: `modulate` is
- * already folded into the ambient `Modulate2DContext` by the walker, so this
- * calls `useCanvasItemTint` with `modulate: WHITE_MODULATE` and only this
- * node's own `self_modulate`.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
@@ -57,10 +54,9 @@ import type { SplitContainerProperties } from '../shared/splitContainer';
 const ICON_SIZE = { x: 8, y: 48 };
 
 export function HSplitContainer({ solveNode, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as SplitContainerProperties;
+  const props = painterView<SplitContainerProperties>(solveNode);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   // `_resort` hides every dragger outright below two valid children
   // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`

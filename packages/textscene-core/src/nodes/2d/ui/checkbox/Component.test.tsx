@@ -146,7 +146,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
   });
 
   it(
-    'composes self_modulate onto the icon AND text, in the SAME product, without re-applying this node\'s own modulate',
+    'composes the ambient inherited tint and self_modulate into ONE product, reaching the icon AND text alike',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>
@@ -158,7 +158,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
           />
         </Modulate2DContext.Provider>
       );
-      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25, NOT 0.125.
+      // own(sRGB) = ambient(0.5) * self_modulate(0.5) = 0.25.
       const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
       expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 

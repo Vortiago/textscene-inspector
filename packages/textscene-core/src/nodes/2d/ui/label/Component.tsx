@@ -12,13 +12,10 @@
  * top — `<TextRun>` anchors the line at its baseline from there itself,
  * `buildGlyphQuadArrays`'s own doc).
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the `Modulate2DContext` value it provides AROUND this painter, so
- * `useCanvasItemTint` is called with `modulate: WHITE_MODULATE` (already
- * folded in), `self_modulate` from this node's own properties, and the
- * resolved text COLOUR as `ownMultiplier` — composed in sRGB, converted to
- * linear once, matching `TextRun`'s own contract (its `tint` prop is sRGB,
- * converted internally).
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. The resolved text COLOUR is
+ * the `ownMultiplier`: composed in sRGB, converted to linear once, matching
+ * `TextRun`'s own contract (its `tint` prop is sRGB, converted internally).
  *
  * DRAW ORDER. Two halves, and getting only the first right is what once made
  * every Label's glyphs disappear behind the backdrop they were drawn over:
@@ -44,7 +41,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
   AutowrapMode,
@@ -81,14 +79,10 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 }
 
 export function Label({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as LabelProperties;
+  const props = painterView<LabelProperties>(solveNode);
   const textTheme = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint(
-    { modulate: WHITE_MODULATE, self_modulate: selfModulate },
-    textTheme.color
-  );
+  const tint = useControlOwnTint(solveNode, textTheme.color);
   const tintColor = { r: tint.own.r, g: tint.own.g, b: tint.own.b, a: tint.own.a };
   const clippingPlanes = useControlClipPlanes();
 

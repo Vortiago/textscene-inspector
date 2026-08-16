@@ -7,14 +7,11 @@
  * gates the caret on `caret_force_displayed` or on the node both editing AND
  * holding focus, and a static preview has neither.
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the `Modulate2DContext` value it provides AROUND this painter, so re-running
- * `modulate` here would multiply it a SECOND time. This painter therefore
- * calls `useCanvasItemTint` with `modulate: WHITE_MODULATE` (a no-op) and
- * `self_modulate` from this node's own properties; the resulting `tint.own`
- * (raw sRGB) is handed to `<StyleBoxQuad>`'s own `color` prop for the chrome
- * and multiplied into the font colour before its own single sRGB→linear
- * conversion — mirroring `Button`'s established ordering.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. `tint.own` (raw sRGB) is handed
+ * to `<StyleBoxQuad>`'s `color` prop for the chrome and multiplied into the
+ * font colour before its own single sRGB→linear conversion — `Button`'s
+ * established ordering.
  *
  * CLIPPING. `Control::clip_contents` is never modelled generically in this
  * codebase (`ScrollContainer`, packet P16, is the one type that opts a
@@ -37,7 +34,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -58,14 +56,13 @@ import type { LineEditProperties } from './types';
 const HORIZONTAL_ALIGNMENT_LEFT = 0;
 
 export function LineEdit({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as LineEditProperties;
+  const props = painterView<LineEditProperties>(solveNode);
   const editable = props.editable ?? true;
 
   const styleState = resolveLineEditStyleState(editable);
   const baseStyleBox = pickLineEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, styleState);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   // --- Text: which string, which theme colour, shaped -----------------------
   const { text, isPlaceholder } = lineEditDisplayText(props);

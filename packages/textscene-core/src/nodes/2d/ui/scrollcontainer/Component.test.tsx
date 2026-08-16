@@ -323,11 +323,9 @@ describe('<ScrollContainer> — tint', () => {
     }
   });
 
-  it('composes self_modulate with the ambient ONCE, not squared (mirrors PanelContainer)', async () => {
+  it('composes the ambient inherited tint onto the track fill exactly once, alongside self_modulate', async () => {
     // own(sRGB) = ambient(0.5) * self_modulate(0.5) * track's own base (0.1,
-    // default-theme style_normal_color) = 0.025 — NOT 0.0125, which squaring
-    // the ambient a second time (own re-applying modulate on top of what the
-    // walker already folded in) would produce.
+    // default-theme style_normal_color) = 0.025.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>

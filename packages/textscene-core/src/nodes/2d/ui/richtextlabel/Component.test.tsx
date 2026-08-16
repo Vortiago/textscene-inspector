@@ -168,7 +168,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(uColor.z).toBeCloseTo(expected.b, 5);
   });
 
-  it('multiplies inherited modulate by self_modulate (0.5 * 0.5 = 0.25, not 0.125 — never re-applying this node\'s own modulate)', async () => {
+  it('multiplies the ambient inherited tint by self_modulate onto every run (0.5 * 0.5 = 0.25)', async () => {
     const node = solveNode('RTL', { text: 'A', selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } });
     const renderer = await ReactThreeTestRenderer.create(
       <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}>

@@ -7,18 +7,11 @@
  * from this node's OWN parsed props (`disabled`) — no hover/pressed/focus:
  * a static viewer, not an interactive control.
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the `Modulate2DContext` value it provides AROUND this painter (ancestor ×
- * this node's `modulate`), so re-running `modulate` here would multiply it a
- * SECOND time — the same bug `ColorRect`/`PanelChrome` avoid. This
- * painter therefore calls `useCanvasItemTint` with `modulate: WHITE_MODULATE`
- * (a no-op — the ambient value already carries it) and `self_modulate` from
- * this node's own properties (own-pixels only, never propagated to
- * children). The resulting `tint.own` (raw sRGB) is handed straight to
- * `<StyleBoxQuad>`'s own `color` prop for the chrome, and multiplied,
- * per-item, into the font colour and icon modulate BEFORE each item's own
- * single sRGB→linear conversion — mirroring `PanelChrome.tsx`'s established
- * ordering for its own StyleBox.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. `tint.own` (raw sRGB) goes
+ * straight to `<StyleBoxQuad>`'s `color` prop for the chrome, and is
+ * multiplied per-item into the font and icon colours BEFORE each item's own
+ * single sRGB→linear conversion — `PanelChrome.tsx`'s established ordering.
  *
  * `renderOrder` is forwarded to EVERY mesh this painter emits: `StyleBoxQuad`,
  * `ControlQuad` (the icon) and `<TextRun>` all take it directly as a prop.
@@ -45,7 +38,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -80,13 +74,12 @@ interface IconImageLike {
 }
 
 export function Button({ solveNode, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as ButtonProperties;
+  const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   const clippingPlanes = useControlClipPlanes();
 

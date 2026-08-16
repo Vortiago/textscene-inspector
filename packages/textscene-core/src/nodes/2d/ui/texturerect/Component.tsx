@@ -8,16 +8,10 @@
  * from `index.r3f.ts` via `controlSolverRegistry.registerMinimumSize`; this
  * component only draws.
  *
- * Tint: `ControlCanvasWalker` already folds this node's OWN `modulate` into
- * the `Modulate2DContext` value it provides AROUND this painter (ancestor ×
- * this node's `modulate`), so re-running `modulate` here would multiply it a
- * second time — the exact bug `ColorRect` (`colorrect/Component.tsx`)
- * documents and avoids. This painter therefore calls `useCanvasItemTint`
- * directly with `modulate: WHITE_MODULATE` (already folded in via context),
- * `self_modulate` from this node's own properties (own-pixels only, never
- * propagated), and `ownMultiplier` left at its `WHITE_MODULATE` default —
- * unlike ColorRect, TextureRect has no `color` property of its own to fold
- * in as a further tint before the one sRGB→linear conversion.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns
+ * `modulate`. No `ownMultiplier`: unlike
+ * ColorRect, TextureRect has no `color` property of its own to fold in before
+ * the one sRGB→linear conversion.
  *
  * The free-Control rotate/scale-about-`pivot_offset` transform is the
  * walker's job (`ControlCanvasWalker.tsx`, gated on
@@ -29,9 +23,10 @@ import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
@@ -54,9 +49,8 @@ interface ImageLike {
 }
 
 export function TextureRect({ solveNode, rect, renderOrder }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as TextureRectProperties;
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const props = painterView<TextureRectProperties>(solveNode);
+  const tint = useControlOwnTint(solveNode);
 
   const { externalResources, internalResources } = useSceneResources();
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline

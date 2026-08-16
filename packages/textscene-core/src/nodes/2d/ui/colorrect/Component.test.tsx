@@ -68,7 +68,7 @@ describe('<ColorRect> (isolated painter contract)', () => {
     expect(material.opacity).toBe(1);
   });
 
-  it('multiplies the parsed color by self_modulate and the inherited ancestor tint, converted to linear exactly once', async () => {
+  it('multiplies the parsed color by self_modulate and the ambient inherited tint, converted to linear exactly once', async () => {
     const node = solveNode('Root', 'ColorRect', {
       color: 'Color(0.8, 0.4, 0.2, 0.5)',
       selfModulate: { r: 1, g: 0.5, b: 1, a: 1 },
@@ -128,6 +128,33 @@ describe('<ColorRect> registered through <ControlCanvasWalker> (end-to-end walke
     const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(64);
     expect(geometry.parameters.height).toBe(32);
+
+    controlComponentRegistry.clear();
+  });
+
+  it('folds the node’s OWN modulate in exactly once — ambient × self_modulate = 0.25, never 0.125', async () => {
+    controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect });
+    controlSolverRegistry.clear();
+    // BOTH authored on the SAME node, which is what the isolated painter
+    // tests above cannot express: the walker folds `modulate` into the ambient
+    // `Modulate2DContext` it wraps the painter in, and the painter adds only
+    // `self_modulate`. A painter that read `modulate` off the node again would
+    // square it to 0.125.
+    const root = solveNode('Root', 'ColorRect', {
+      color: 'Color(1, 1, 1, 1)',
+      modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+      selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+      anchorsPreset: 15,
+    });
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const mesh = renderer.scene.findByType('Mesh');
+    const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.color.r).toBeCloseTo(expectedLinear(0.25, 0.25, 0.25).r, 5);
+    expect(material.opacity).toBeCloseTo(0.25, 5);
 
     controlComponentRegistry.clear();
   });

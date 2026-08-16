@@ -15,18 +15,14 @@
  * plus `tint.own` — the ordering is `<StyleBoxQuad>`'s contract to keep, not
  * every consumer's to re-derive.
  *
- * Note what is deliberately NOT applied: this node's own `modulate`. The walker
- * has already folded it into the ambient modulate context, so re-applying it
- * would square it. Only `self_modulate` — which tints a node's own pixels and
- * must never reach children — is applied here.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
  */
 
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
 import { StyleBoxQuad } from './StyleBoxQuad';
+import { useControlOwnTint } from './controlTint';
 import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from './rect';
-import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 
 export interface PanelChromeProps {
   solveNode: SolveNode;
@@ -37,11 +33,9 @@ export interface PanelChromeProps {
 }
 
 export function PanelChrome({ solveNode, rect, theme, renderOrder }: PanelChromeProps) {
-  const props = solveNode.node.properties as ControlProperties;
   const baseStyleBox = solveNode.styleBoxes.panel ?? theme.widgets.panel;
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   return <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />;
 }

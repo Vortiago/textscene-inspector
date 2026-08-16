@@ -17,10 +17,8 @@
  * Visibility (`visible === false`) is also the walker's job (it hides this
  * node's whole `<group>`); this painter does not re-check it.
  *
- * Tint composition mirrors `<Panel>` exactly — see that module's doc
- * for why `self_modulate` (not `modulate`, already folded into the ambient
- * `Modulate2DContext` by the walker) is the one thing this painter applies,
- * to BOTH of the StyleBox's base colours.
+ * Tint composition mirrors `<Panel>` exactly — `self_modulate` onto BOTH of
+ * the StyleBox's base colours.
  */
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

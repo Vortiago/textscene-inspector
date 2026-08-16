@@ -5,12 +5,10 @@
  * chevron arrow icon at its right edge, drawn from the vendored theme icons
  * (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS`).
  *
- * Tint follows `Button`'s rule: `modulate` is already folded into the
- * ambient `Modulate2DContext` by the walker, so this calls `useCanvasItemTint`
- * with `modulate: WHITE_MODULATE` and only this node's own `self_modulate`.
+ * Tint: `useControlOwnTint` — `self_modulate` only; the walker owns `modulate`.
  * The StyleBox hands `tint.own` straight to `<StyleBoxQuad>`'s `color` prop
- * (two base colours, composed internally); the arrow's own
- * modulate is ALWAYS opaque white in the default theme (`modulate_arrow`
+ * (two base colours, composed internally); the arrow's own theme colour is
+ * ALWAYS opaque white (`modulate_arrow`
  * defaults `false`, `default_theme.cpp:251` — `NOTIFICATION_DRAW` then never
  * enters the font-colour switch at all, leaving `clr = Color(1, 1, 1)`
  * unconditionally), so the arrow quad's colour/opacity are `tint.color`/
@@ -26,7 +24,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -52,13 +51,12 @@ import {
 import type { OptionButtonProperties } from './types';
 
 export function OptionButton({ solveNode, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as OptionButtonProperties;
+  const props = painterView<OptionButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
   const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state);
 
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   const clippingPlanes = useControlClipPlanes();
 

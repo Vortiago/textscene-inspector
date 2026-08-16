@@ -45,11 +45,8 @@
  * 0.5, 0.5, 1)` on top of that same `self_modulate` (204 × 0.5 × 0.5 exactly)
  * — a plain multiply in the same sRGB-authored space the content colour
  * lives in, confirming this painter should fold tint exactly the way every
- * other native painter does: `useCanvasItemTint({ modulate: WHITE_MODULATE,
- * self_modulate })`, `modulate` pinned to white because `ControlCanvasWalker`
- * already folded this node's OWN `modulate` into the ambient
- * `Modulate2DContext` this component renders inside (see `TextureRect`'s
- * identical comment for why re-applying it here would double it). Computed
+ * other native painter does: `useControlOwnTint` — `self_modulate` only, the
+ * walker owns `modulate`. Computed
  * ONCE for the whole container (Godot's `self_modulate` is one CanvasItem
  * property, shared by every child viewport's `draw_texture_rect` call in the
  * same `NOTIFICATION_DRAW`), then handed to every `ViewportSurfaceNative`.
@@ -58,14 +55,14 @@ import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
+import { useControlOwnTint } from '../../../../r3f/controls/native/controlTint.js';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
 import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';
-import { useCanvasItemTint, WHITE_MODULATE, type RGBA } from '../../../../r3f/canvasItemModulate.js';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext.js';
 import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
@@ -252,18 +249,14 @@ export function SubViewportContainer({
   theme,
   measureText,
 }: NativeControlComponentProps) {
-  const props = solveNode.node.properties as SubViewportContainerProperties;
+  const props = painterView<SubViewportContainerProperties>(solveNode);
   const stretch = props.stretch ?? false;
   const shrink = Math.max(1, props.stretch_shrink ?? 1);
   const { externalResources, internalResources } = useSceneResources();
 
-  // This node's own `modulate` is already folded into the ambient
-  // `Modulate2DContext` this component renders inside (`ControlCanvasWalker`),
-  // so `modulate` here stays white — see the module doc's TINT section.
   // `self_modulate` never propagates to children, so it is resolved once,
   // here, and shared by every nested viewport's composited quad below.
-  const selfModulate: RGBA = props.selfModulate ?? WHITE_MODULATE;
-  const tint = useCanvasItemTint({ modulate: WHITE_MODULATE, self_modulate: selfModulate });
+  const tint = useControlOwnTint(solveNode);
 
   // Raw live children (unlike `solveNode.children`, the Control-only solve
   // forest — `buildSolveTree` skips a viewport boundary entirely), so a
