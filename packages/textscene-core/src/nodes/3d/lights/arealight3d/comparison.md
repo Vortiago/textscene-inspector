@@ -52,7 +52,7 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | --- | --- | --- |
 | `area_normalize_energy` | true or false |  |
 | `area_range` | float > 0 | error at or below 0 |
-| `area_size` | Vector2(x, y) |  |
+| `area_size` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

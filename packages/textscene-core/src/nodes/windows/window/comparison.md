@@ -80,7 +80,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) | warning |
 | `content_scale_factor` | float 0.5-8 | error at or below 0, warning below 0.5, warning above 8 |
 | `content_scale_mode` | enum 0-2 (DISABLED/CANVAS_ITEMS/VIEWPORT) | warning |
-| `content_scale_size` | Vector2i(x, y), both >= 0 | error below |
+| `content_scale_size` | Vector2i(x, y), both >= 0, or the Vector2 spelling Godot converts | error below |
 | `content_scale_stretch` | enum 0-1 (FRACTIONAL/INTEGER) | warning |
 | `current_screen` | integer >= 0 | warning below |
 | `exclude_from_capture` | true or false |  |
@@ -89,19 +89,19 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `force_native` | true or false |  |
 | `initial_position` | enum 0-5 (ABSOLUTE/CENTER_PRIMARY_SCREEN/CENTER_MAIN_WINDOW_SCREEN/CENTER_OTHER_SCREEN/CENTER_SCREEN_WITH_MOUSE_FOCUS/CENTER_SCREEN_WITH_KEYBOARD_FOCUS) | warning |
 | `keep_title_visible` | true or false |  |
-| `max_size` | Vector2i(x, y), both >= 0 | error below |
+| `max_size` | Vector2i(x, y), both >= 0, or the Vector2 spelling Godot converts | error below |
 | `maximize_disabled` | true or false |  |
-| `min_size` | Vector2i(x, y), both >= 0 | error below |
+| `min_size` | Vector2i(x, y), both >= 0, or the Vector2 spelling Godot converts | error below |
 | `minimize_disabled` | true or false |  |
 | `mode` | enum 0-4 (WINDOWED/MINIMIZED/MAXIMIZED/FULLSCREEN/EXCLUSIVE_FULLSCREEN) | warning |
 | `mouse_passthrough` | true or false |  |
 | `mouse_passthrough_polygon` | PackedVector2Array(x, y, …) |  |
-| `nonclient_area` | Rect2i(x, y, w, h) |  |
+| `nonclient_area` | Rect2i(x, y, w, h), or the Rect2 spelling Godot converts |  |
 | `popup_window` | true or false |  |
 | `popup_wm_hint` | true or false |  |
-| `position` | Vector2i(x, y) |  |
+| `position` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
 | `sharp_corners` | true or false |  |
-| `size` | Vector2i(x, y), both >= 0 | error below |
+| `size` | Vector2i(x, y), both >= 0, or the Vector2 spelling Godot converts | error below |
 | `theme` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_colors/*` | Color(r, g, b, a) |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |

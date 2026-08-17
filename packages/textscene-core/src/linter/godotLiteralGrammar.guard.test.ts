@@ -31,7 +31,7 @@ import { stripComments } from '@textscene/dev-kit';
 import { relative } from 'node:path';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
-import { finiteTupleRegex } from '../godot/number.js';
+import { slotTupleRegex, variantTupleRegex } from '../godot/number.js';
 
 /** A file's `src/`-relative path, the form every list below is written in. */
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
@@ -116,7 +116,7 @@ function handRolledComposite(source: string): string | null {
  * class, invisible to the guard. Importing the builder is the property that
  * actually matters, and it cannot be renamed out of.
  *
- * The renderer's `finiteTupleRegex` consumers are deliberately NOT here: their
+ * The renderer's `slotTupleRegex` consumers are deliberately NOT here: their
  * grammar is finite, so a matched capture always reads back through `parseFloat`
  * and there is nothing to get wrong. `godot/number.ts` mentions the linter
  * builder only in a docblock, which is why this matches an `import` and not the
@@ -169,7 +169,7 @@ const RAW_VARIANT_PARSE =
  * `parser/valueParsers.ts` did `new RegExp('^' + FLOAT_PATTERN_SOURCE + '$')`
  * and read the match with a bare `parseFloat` — behaviourally `parseGodotFloat`
  * filtered to finite, one exemption further from the shared one. Composites go
- * through `finiteTupleRegex`; a scalar goes through `parseGodotFloat`.
+ * through `slotTupleRegex`; a scalar goes through `parseGodotFloat`.
  */
 const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
 
@@ -278,8 +278,8 @@ describe('Godot composite literal grammar', () => {
 
   /**
    * The two builders differ ONLY in component grammar — the linter's admits
-   * `inf`/`nan`, the renderer's does not — and never in the whitespace around
-   * the constructor. The type name and the `(` are separate tokens:
+   * `inf`/`nan`, the renderer's does not — and never in the type NAME they
+   * accept, nor in the whitespace around the constructor. The type name and the `(` are separate tokens:
    * `_parse_construct` takes `TK_PARENTHESIS_OPEN` from its own `get_token`
    * call (variant_parser.cpp:553-557), and `get_token` discards every character
    * <= 32 before a token (:416-418), so `Vector2 (1, 2)` is a file Godot loads.
@@ -291,12 +291,43 @@ describe('Godot composite literal grammar', () => {
   it.each(ARITIES)('%s: both builders take the same padding', (name, arity) => {
     const zeros = Array.from({ length: arity }, () => '0').join(', ');
     const linter = makeFloatTupleRegex(name, arity);
-    const renderer = finiteTupleRegex(name, arity);
+    const renderer = slotTupleRegex(name, arity);
     for (const literal of [`${name}(${zeros})`, `${name} (${zeros})`, `${name}\t(${zeros})`]) {
       expect({ literal, linter: linter.test(literal) }).toEqual({
         literal,
         linter: renderer.test(literal),
       });
     }
+  });
+
+  /**
+   * And the same TYPE NAMES, which is the axis the padding probe cannot see.
+   *
+   * Both builders read `compositeSpellings`, so a slot accepts every spelling
+   * `can_convert_strict` converts into it. Probing only the canonical name left
+   * either side free to narrow with this guard green — and the renderer side
+   * had no coverage at all, so dropping the table there would silently return
+   * every decoder to falling back on a scene Godot opens.
+   */
+  it.each(ARITIES)('%s: both builders take the same convertible spellings', (name, arity) => {
+    const zeros = Array.from({ length: arity }, () => '0').join(', ');
+    const linter = makeFloatTupleRegex(name, arity);
+    const renderer = slotTupleRegex(name, arity);
+    for (const spelling of COMPOSITES) {
+      const literal = `${spelling}(${zeros})`;
+      expect({ literal, linter: linter.test(literal) }).toEqual({
+        literal,
+        linter: renderer.test(literal),
+      });
+    }
+  });
+
+  it('the variant builder refuses the spellings the slot builder converts', () => {
+    // `variantTupleRegex` is for a value that is NOT a property write — an
+    // animation keyframe is a Variant of the type the file spells. Nothing
+    // asserted that it actually refuses the converted spelling.
+    expect(slotTupleRegex('Vector3i', 3).test('Vector3(1, 2, 3)')).toBe(true);
+    expect(variantTupleRegex('Vector3i', 3).test('Vector3(1, 2, 3)')).toBe(false);
+    expect(variantTupleRegex('Vector3i', 3).test('Vector3i(1, 2, 3)')).toBe(true);
   });
 });

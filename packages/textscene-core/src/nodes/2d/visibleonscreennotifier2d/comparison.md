@@ -37,7 +37,7 @@ Strict parsing format-checks these `VisibleOnScreenNotifier2D` properties, plus 
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `rect` | Rect2(x, y, w, h) |  |
+| `rect` | Rect2(x, y, w, h), or the Rect2i spelling Godot converts |  |
 | `show_rect` | true or false |  |
 
 | Rule | Reports | Severity |

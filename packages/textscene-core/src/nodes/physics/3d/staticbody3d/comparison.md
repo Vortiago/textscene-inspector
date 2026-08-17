@@ -33,8 +33,8 @@ Strict parsing format-checks these `StaticBody3D` properties, plus 6 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `constant_angular_velocity` | Vector3(x, y, z) |  |
-| `constant_linear_velocity` | Vector3(x, y, z) |  |
+| `constant_angular_velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `constant_linear_velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `physics_material_override` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |

@@ -46,7 +46,7 @@ Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inher
 | --- | --- | --- |
 | `fill_mode` | enum 0-8 (FILL_LEFT_TO_RIGHT/FILL_RIGHT_TO_LEFT/FILL_TOP_TO_BOTTOM/FILL_BOTTOM_TO_TOP/FILL_CLOCKWISE/FILL_COUNTER_CLOCKWISE/FILL_BILINEAR_LEFT_AND_RIGHT/FILL_BILINEAR_TOP_AND_BOTTOM/FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE) | error |
 | `nine_patch_stretch` | true or false |  |
-| `radial_center_offset` | Vector2(x, y) |  |
+| `radial_center_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `radial_fill_degrees` | float 0-360 | error |
 | `radial_initial_angle` | float 0-360 | error |
 | `stretch_margin_bottom` | integer 0-16384 | warning |
@@ -55,7 +55,7 @@ Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inher
 | `stretch_margin_top` | integer 0-16384 | warning |
 | `texture_over` | null, SubResource("id") or ExtResource("id") |  |
 | `texture_progress` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_progress_offset` | Vector2(x, y) |  |
+| `texture_progress_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `texture_under` | null, SubResource("id") or ExtResource("id") |  |
 | `tint_over` | Color(r, g, b, a) |  |
 | `tint_progress` | Color(r, g, b, a) |  |

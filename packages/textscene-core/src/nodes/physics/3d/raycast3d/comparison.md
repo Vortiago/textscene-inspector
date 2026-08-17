@@ -47,7 +47,7 @@ Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited fro
 | `exclude_parent` | true or false |  |
 | `hit_back_faces` | true or false |  |
 | `hit_from_inside` | true or false |  |
-| `target_position` | Vector3(x, y, z) |  |
+| `target_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

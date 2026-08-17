@@ -5,6 +5,7 @@ import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt } from './commonValidators.js';
+import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -70,7 +71,7 @@ export function createVector2iValidator(
   return (key, value, line) => {
     const match = VECTOR2I_REGEX.exec(value);
     if (!match) {
-      return propertyError(key, line, `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`, errorCodeFormat);
+      return propertyError(key, line, `Property '${propertyName}' must be Vector2i(x, y) — or the Vector2 spelling Godot converts into it — got: "${value}"`, errorCodeFormat);
     }
 
     // A non-finite component READS but does not FIT. `_parse_construct<int32_t>`
@@ -82,8 +83,13 @@ export function createVector2iValidator(
     // it applies to every Vector2i, bounded or not.
     // Truncated toward zero, the way the int32 conversion does, so `0.9` is
     // bounded as the 0 Godot stores rather than as the 0.9 it was written.
-    const x = ruleInt(match[1]);
-    const y = ruleInt(match[2]);
+    // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+    // the `double -> int32` branch whatever the token looks like. Measured:
+    // `Vector2(4294967295, 64)` stores the UB sentinel where the `Vector2i`
+    // spelling of the same digits wraps to -1.
+    const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
+    const x = ruleInt(match[1], null, 'int32', converted);
+    const y = ruleInt(match[2], null, 'int32', converted);
     if (x === null || y === null) {
       return propertyError(
         key,

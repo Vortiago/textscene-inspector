@@ -66,7 +66,7 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `anchor_top` | float |  |
 | `anchors_preset` | integer -1-15 | error |
 | `clip_contents` | true or false |  |
-| `custom_minimum_size` | Vector2(x, y) |  |
+| `custom_minimum_size` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `focus_behavior_recursive` | enum 0-2 (INHERITED/DISABLED/ENABLED) | error |
 | `focus_mode` | enum 0-3 (NONE/CLICK/ALL/ACCESSIBILITY) | error |
 | `focus_neighbor_bottom` | NodePath("path/to/node") |  |
@@ -88,10 +88,10 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `offset_left` | float |  |
 | `offset_right` | float |  |
 | `offset_top` | float |  |
-| `pivot_offset` | Vector2(x, y) |  |
-| `pivot_offset_ratio` | Vector2(x, y) |  |
+| `pivot_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `pivot_offset_ratio` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `rotation` | float |  |
-| `scale` | Vector2(x, y) |  |
+| `scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `shortcut_context` | null or NodePath("path/to/node") |  |
 | `size_flags_horizontal` | integer |  |
 | `size_flags_stretch_ratio` | float >= 0 | warning below |

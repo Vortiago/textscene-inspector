@@ -42,7 +42,7 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 | `environment` | null, SubResource("id") or ExtResource("id") |  |
 | `far` | float >= 0.01 | warning below |
 | `fov` | float 1-179 | error |
-| `frustum_offset` | Vector2(x, y) |  |
+| `frustum_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `h_offset` | float |  |
 | `keep_aspect` | enum 0-1 (KEEP_WIDTH/KEEP_HEIGHT) | warning |
 | `near` | float >= 0.001 | warning below |

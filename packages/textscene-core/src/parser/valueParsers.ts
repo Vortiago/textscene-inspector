@@ -39,8 +39,9 @@
 
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
-import { finiteTupleRegex, matchedFloat, parseGodotFloat } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat, parseGodotFloat } from '../godot/number.js';
 import { storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
+import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
 
 import { nodePathLiteral } from '../godot/index.js';
 
@@ -79,7 +80,7 @@ export interface Rect2Value {
   height: number;
 }
 
-const RECT2_PATTERN = finiteTupleRegex('Rect2', 4);
+const RECT2_PATTERN = slotTupleRegex('Rect2', 4);
 
 /**
  * `Rect2(x, y, w, h)` → a rect; undefined when absent (silently) or present
@@ -250,7 +251,7 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
  * loads as `(20, 20)`, and the narrower grammar warned-and-fell-back to the
  * default instead — a viewport drawn at the wrong size on a valid scene.
  */
-const VECTOR2I_PATTERN = finiteTupleRegex('Vector2i', 2);
+const VECTOR2I_PATTERN = slotTupleRegex('Vector2i', 2);
 
 /**
  * Parse a `Vector2i(x, y)` property, falling back when absent and
@@ -264,8 +265,13 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
     warn(`${context}: invalid Vector2i "${value}", using fallback`);
     return fallback;
   }
-  const x = storedInt(match[1]);
-  const y = storedInt(match[2]);
+  // A `Vector2(...)` written into a Vector2i slot holds two DOUBLES, so both
+  // components convert through `double -> int32` however the token was spelled.
+  // Measured on 4.6.3: `Vector2(4294967295, 64)` stores `(-2147483648, 64)` —
+  // the UB sentinel — where `Vector2i(4294967295, 64)` wraps to `(-1, 64)`.
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
+  const x = storedInt(match[1], converted);
+  const y = storedInt(match[2], converted);
   if (x === null || y === null) {
     warn(`${context}: Vector2i "${value}" has a component Godot cannot store, using fallback`);
     return fallback;

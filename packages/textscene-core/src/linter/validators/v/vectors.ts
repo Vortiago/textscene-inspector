@@ -53,12 +53,15 @@ export const vectorCombinators = {
         );
       }
       return truncatedComponent(name, key, line, match.slice(1, 5), valueCode(name));
-    }, 'Rect2i(x, y, w, h)'));
+    }, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts'));
   },
 
   /** `Vector2(x, y)` format. */
   vector2(name: string): PropertyValidator {
-    return shape(createVector2Validator(name, formatCode(name)), 'Vector2(x, y)');
+    return shape(
+      createVector2Validator(name, formatCode(name)),
+      'Vector2(x, y), or the Vector2i spelling Godot converts'
+    );
   },
 
   /**
@@ -75,7 +78,9 @@ export const vectorCombinators = {
     return markIntSlot(ground(
       accepts(
         createVector2iValidator(name, min, formatCode(name), valueCode(name), endSeverity(opts, 'min')),
-        min === undefined ? 'Vector2i(x, y)' : `Vector2i(x, y), both >= ${min}`
+        min === undefined
+          ? 'Vector2i(x, y), or the Vector2 spelling Godot converts'
+          : `Vector2i(x, y), both >= ${min}, or the Vector2 spelling Godot converts`
       ),
       opts,
       { min }
@@ -84,7 +89,10 @@ export const vectorCombinators = {
 
   /** `Vector3(x, y, z)` format. */
   vector3(name: string): PropertyValidator {
-    return shape(createVector3Validator(name, formatCode(name)), 'Vector3(x, y, z)');
+    return shape(
+      createVector3Validator(name, formatCode(name)),
+      'Vector3(x, y, z), or the Vector3i spelling Godot converts'
+    );
   },
 
   /**
@@ -148,7 +156,10 @@ export const vectorCombinators = {
 
   /** `Rect2(x, y, w, h)` format. */
   rect2(name: string): PropertyValidator {
-    return shape(createRect2Validator(name, formatCode(name)), 'Rect2(x, y, w, h)');
+    return shape(
+      createRect2Validator(name, formatCode(name)),
+      'Rect2(x, y, w, h), or the Rect2i spelling Godot converts'
+    );
   },
 
   /** `Transform3D(...12 floats)` format. */

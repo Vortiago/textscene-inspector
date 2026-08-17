@@ -412,3 +412,42 @@ ${extra}`);
     expect(viewportContentKind(resolved)).toBe('empty');
   });
 });
+
+describe('an instance override spelled with an i-suffixed composite', () => {
+  it('reads Vector2i as 2D, which is what Godot writes for a pixel count', () => {
+    // `Vector2i`/`Rect2i` are the NATIVE spelling of `frame_coords`,
+    // `region_rect` and `size`. Listing only `Vector2`/`Rect2` made these match
+    // neither discriminator, so `sawUntypedInstance` stayed true and the scene
+    // fell through to the 3D publisher — which then raced the DOM rasterizer
+    // for the same ViewportTextureRegistry key.
+    const scene = new TscnParser().parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://sprite.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Sprite" parent="Viewport" instance=ExtResource("1")]
+frame_coords = Vector2i(2, 1)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('2d');
+  });
+
+  it('reads Vector3i as 3D', () => {
+    const scene = new TscnParser().parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://grid.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Grid" parent="Viewport" instance=ExtResource("1")]
+cell_size = Vector3i(2, 2, 2)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('3d');
+  });
+});

@@ -41,7 +41,7 @@ Strict parsing format-checks these `RayCast2D` properties, plus 12 inherited fro
 | `enabled` | true or false |  |
 | `exclude_parent` | true or false |  |
 | `hit_from_inside` | true or false |  |
-| `target_position` | Vector2(x, y) |  |
+| `target_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

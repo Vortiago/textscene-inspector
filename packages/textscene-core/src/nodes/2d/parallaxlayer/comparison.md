@@ -60,9 +60,9 @@ Strict parsing format-checks these `ParallaxLayer` properties, plus 12 inherited
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `motion_mirroring` | Vector2(x, y) |  |
-| `motion_offset` | Vector2(x, y) |  |
-| `motion_scale` | Vector2(x, y) |  |
+| `motion_mirroring` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `motion_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `motion_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

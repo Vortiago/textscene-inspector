@@ -46,7 +46,7 @@ Strict parsing format-checks these `OpenXRCompositionLayerQuad` properties, plus
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `quad_size` | Vector2(x, y) |  |
+| `quad_size` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -15,8 +15,9 @@
  * A pre-4.x compatibility alias, `bbcode_text`, is handled by RichTextLabel's own
  * `_set` override (rich_text_label.cpp:7562-7568, `#ifndef DISABLE_DEPRECATED`)
  * forwarding to `set_text`. It carries no `ADD_PROPERTY` and never appears in
- * `doc/classes/RichTextLabel.xml`, so it registers no validator here (see the
- * task report for why this is a parser gap worth flagging rather than a linter one).
+ * `doc/classes/RichTextLabel.xml`, so it registers no validator here — the
+ * shared table in `godot/deprecated.ts` resolves it to `text` in the property
+ * bag instead, so every rule and the renderer see the one field.
  */
 
 import '../control/linterParser.js';

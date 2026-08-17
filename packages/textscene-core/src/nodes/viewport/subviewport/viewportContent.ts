@@ -19,8 +19,23 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/index.js';
 
-const TWO_D_COMPOSITE = compositeCallPrefix('Vector2', 'Transform2D', 'Rect2');
-const THREE_D_COMPOSITE = compositeCallPrefix('Vector3', 'Transform3D', 'Basis', 'Quaternion', 'AABB');
+/**
+ * The `i`-suffixed spellings are listed, not derived: this asks whether a value
+ * is 2D or 3D, and `Vector2i` is as 2D as `Vector2`. They are also what Godot
+ * NATIVELY writes for every pixel-count property — `frame_coords`,
+ * `region_rect`, `size` — so leaving them out made an instance override spelled
+ * `frame_coords = Vector2i(2, 1)` match neither list, which fell through to the
+ * 3D publisher and sampled an empty target.
+ */
+const TWO_D_COMPOSITE = compositeCallPrefix('Vector2', 'Vector2i', 'Transform2D', 'Rect2', 'Rect2i');
+const THREE_D_COMPOSITE = compositeCallPrefix(
+  'Vector3',
+  'Vector3i',
+  'Transform3D',
+  'Basis',
+  'Quaternion',
+  'AABB'
+);
 
 /**
  * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and

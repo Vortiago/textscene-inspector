@@ -94,7 +94,11 @@ describe('a literal an INT slot cannot hold', () => {
     // the sweep above in silence — the same failure the `accepts` regex had,
     // renamed. As a cross-check on the DECLARATION its misses are loud instead:
     // prose that reads integer-ish while the tag is absent fails here.
-    const INT_PROSE = /integer|^enum |bit mask|layer mask|Vector[234]i|Rect2i|PackedInt32Array|int array/;
+    // Anchored on the composite names: `accepts` LEADS with the slot's own
+    // declared type, and now also names the sibling spelling Godot converts
+    // into it — so an unanchored `Vector2i` matched every FLOAT Vector2 slot
+    // and reported 111 of them as untagged int slots.
+    const INT_PROSE = /integer|^enum |bit mask|layer mask|^Vector[234]i|^Rect2i|PackedInt32Array|int array/;
     const untagged = validatorRegistry
       .getRegisteredNodeTypes()
       .flatMap((type) =>

@@ -44,7 +44,7 @@ Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `magnet` | Vector3(x, y, z) |  |
+| `magnet` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `max_iterations` | integer |  |
 | `min_distance` | float |  |
 | `override_tip_basis` | true or false |  |

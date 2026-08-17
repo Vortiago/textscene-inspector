@@ -45,7 +45,7 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 | `margin` | float 0-100 | warning |
 | `max_results` | integer |  |
 | `shape` | null, SubResource("id") or ExtResource("id") |  |
-| `target_position` | Vector2(x, y) |  |
+| `target_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -62,25 +62,43 @@ export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`
  * takes any number token and converts it, so `Vector2i(2e1, 0)` is a file Godot
  * loads as `(20, 0)`. Read their captures through `storedInt` in `./int.js`.
  */
-export function finiteTupleRegex(
-  typeName: string,
-  arity: number,
-  opts: { exact?: boolean } = {}
-): RegExp {
+function tupleRegex(typeName: string, arity: number, convertible: boolean): RegExp {
   const component = `(${FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join(String.raw`\s*,\s*`);
-  // `compositeSpellings` by default: a property SLOT also takes the spellings
-  // `can_convert_strict` converts into its type, and the renderer has to read
-  // them or it falls back to a default for a file the linter accepts.
-  //
-  // `exact` is for a value that is NOT a property write. An animation keyframe
-  // is stored as a Variant of whatever type the file spells, so no conversion
-  // applies — and a reader that dispatches int-vs-float by which regex matches
-  // first needs `Vector3i` to mean `Vector3i`. Without this, a `Vector3`
-  // rotation key matched the widened `Vector3i` arm and was truncated to whole
-  // degrees.
-  const name = opts.exact === true ? typeName : compositeSpellings(typeName);
+  const name = convertible ? compositeSpellings(typeName) : typeName;
   return new RegExp(String.raw`^${name}\s*\(\s*${body}\s*\)$`);
+}
+
+/**
+ * The grammar for a composite written into a PROPERTY SLOT of `typeName`.
+ *
+ * Accepts every spelling `can_convert_strict` converts into that type, because
+ * the write goes through `VariantCaster<T>::cast` (`binder_common.h:223`):
+ * `SubViewport.size = Vector2(1920, 1080)` is a file Godot opens. A decoder
+ * that matched only the canonical name fell back to a default and drew a
+ * 512x512 viewport.
+ */
+export function slotTupleRegex(typeName: string, arity: number): RegExp {
+  return tupleRegex(typeName, arity, true);
+}
+
+/**
+ * The grammar for a composite in a VARIANT position — a value stored as
+ * whatever type the file spells, with no property slot to convert into.
+ *
+ * An animation keyframe is the case: `AnimationPlayer` keeps the Variant, so
+ * `Vector3i` means `Vector3i`. Reading one with the slot grammar let the
+ * widened `Vector3i` arm match a `Vector3` rotation key and truncate it to
+ * whole degrees.
+ *
+ * Named rather than defaulted, and there is no default at all: the two answer
+ * differently for eight type names, the difference is invisible at a call site
+ * spelled `slotTupleRegex(name, arity)`, and making conversion the silent
+ * default changed the meaning of nine existing regex constants at once. The
+ * one caller it broke was found by symptom, not by a guard.
+ */
+export function variantTupleRegex(typeName: string, arity: number): RegExp {
+  return tupleRegex(typeName, arity, false);
 }
 
 /**
@@ -186,7 +204,7 @@ export function parseGodotFloat(value: string): number | null {
 /**
  * One component of a composite that the FINITE grammar already matched.
  *
- * The float twin of `storedInt`. A capture from `finiteTupleRegex` has been
+ * The float twin of `storedInt`. A capture from `slotTupleRegex` has been
  * vetted by the grammar, so the read itself is a bare `parseFloat` and cannot
  * fail — the value of naming it is that `parseFloat` on UNVETTED Variant text is
  * a defect (it stops at the first unusable character, so `75abc` reads as 75),

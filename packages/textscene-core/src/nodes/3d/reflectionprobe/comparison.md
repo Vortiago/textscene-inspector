@@ -55,9 +55,9 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 | `interior` | true or false |  |
 | `max_distance` | float 0-262144 | error below 0, error above 262144 |
 | `mesh_lod_threshold` | float 0-1024 | warning |
-| `origin_offset` | Vector3(x, y, z) |  |
+| `origin_offset` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `reflection_mask` | 32-bit layer mask (layers 1-32) |  |
-| `size` | Vector3(x, y, z) |  |
+| `size` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `update_mode` | enum 0-1 (UPDATE_ONCE/UPDATE_ALWAYS) | warning |
 
 | Rule | Reports | Severity |

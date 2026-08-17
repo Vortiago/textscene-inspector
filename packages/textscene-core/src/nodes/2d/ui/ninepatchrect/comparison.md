@@ -43,7 +43,7 @@ Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited
 | `patch_margin_left` | integer 0-16384 | warning |
 | `patch_margin_right` | integer 0-16384 | warning |
 | `patch_margin_top` | integer 0-16384 | warning |
-| `region_rect` | Rect2(x, y, w, h) |  |
+| `region_rect` | Rect2(x, y, w, h), or the Rect2i spelling Godot converts |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |

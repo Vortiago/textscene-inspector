@@ -37,13 +37,13 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `global_position` | Vector2(x, y) |  |
+| `global_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `global_rotation` | float |  |
 | `global_rotation_degrees` | float |  |
-| `global_scale` | Vector2(x, y) |  |
+| `global_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `global_skew` | float |  |
 | `global_transform` | Transform2D(6 floats) |  |
-| `position` | Vector2(x, y) |  |
+| `position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `rotation` | float |  |
 | `rotation_degrees` | float |  |
 | `scale` | Vector2(x, y), no (near-)zero component |  |

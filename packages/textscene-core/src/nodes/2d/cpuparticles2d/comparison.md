@@ -122,12 +122,12 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `damping_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `damping_max` | float >= 0 | warning below |
 | `damping_min` | float >= 0 | warning below |
-| `direction` | Vector2(x, y) |  |
+| `direction` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `draw_order` | enum 0-1 (INDEX/LIFETIME) | warning |
 | `emission_colors` | PackedColorArray(r, g, b, a, …) |  |
 | `emission_normals` | PackedVector2Array(x, y, …) |  |
 | `emission_points` | PackedVector2Array(x, y, …) |  |
-| `emission_rect_extents` | Vector2(x, y) |  |
+| `emission_rect_extents` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `emission_ring_inner_radius` | float |  |
 | `emission_ring_radius` | float |  |
 | `emission_shape` | enum 0-6 (POINT/SPHERE/SPHERE_SURFACE/RECTANGLE/POINTS/DIRECTED_POINTS/RING) | error |
@@ -136,7 +136,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `explosiveness` | float 0-1 | warning |
 | `fixed_fps` | integer 0-1000 | warning |
 | `fract_delta` | true or false |  |
-| `gravity` | Vector2(x, y) |  |
+| `gravity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `hue_variation_max` | float -1-1 | warning |
 | `hue_variation_min` | float -1-1 | warning |

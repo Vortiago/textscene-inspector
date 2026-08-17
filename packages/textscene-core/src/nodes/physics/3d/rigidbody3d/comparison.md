@@ -38,12 +38,12 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | --- | --- | --- |
 | `angular_damp` | float >= 0 | error below |
 | `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
-| `angular_velocity` | Vector3(x, y, z) |  |
+| `angular_velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `can_sleep` | true or false |  |
-| `center_of_mass` | Vector3(x, y, z) |  |
+| `center_of_mass` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) | warning |
-| `constant_force` | Vector3(x, y, z) |  |
-| `constant_torque` | Vector3(x, y, z) |  |
+| `constant_force` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `constant_torque` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `contact_monitor` | true or false |  |
 | `continuous_cd` | true or false |  |
 | `custom_integrator` | true or false |  |
@@ -53,7 +53,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `inertia` | Vector3(x, y, z), each float >= 0 | error below |
 | `linear_damp` | float >= 0 | error below |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
-| `linear_velocity` | Vector3(x, y, z) |  |
+| `linear_velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `lock_rotation` | true or false |  |
 | `mass` | float >= 0.001 | error at or below 0, warning below 0.001 |
 | `max_contacts_reported` | integer >= 0, < 4096 | error below 0, error at or above 4096 |

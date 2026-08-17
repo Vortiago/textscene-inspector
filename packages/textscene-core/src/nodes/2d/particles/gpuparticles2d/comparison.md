@@ -76,7 +76,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `trail_section_subdivisions` | integer 1-1024 | error |
 | `trail_sections` | integer 2-128 | error |
 | `use_fixed_seed` | true or false |  |
-| `visibility_rect` | Rect2(x, y, w, h) |  |
+| `visibility_rect` | Rect2(x, y, w, h), or the Rect2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

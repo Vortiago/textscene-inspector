@@ -188,7 +188,12 @@ function asStoredInt(num: number): number {
  * `PROPERTY_HINT_RANGE` declares, while accepting `-1.0` there, which is the
  * genuinely undefined one.
  */
-export function parseGodotInt(value: string, width: IntWidth = 'int32'): number | null {
+export function parseGodotInt(
+  value: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): number | null {
   // No grammar pre-test: `parseGodotFloat` returns non-null only for a
   // non-finite spelling — every one of which matches TSCN_FLOAT_RE, since the
   // pattern is built from those keys — or for text that passed TSCN_FLOAT_RE
@@ -198,7 +203,7 @@ export function parseGodotInt(value: string, width: IntWidth = 'int32'): number 
   // `parseGodotFloat` trims; `FLOAT_TYPED` looks for `.`/`e`, neither of which
   // is whitespace, so the raw text answers it just as well.
   const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value, width);
+  return asFloat === null ? null : storedFromFloat(asFloat, value, width, alwaysFloatBranch);
 }
 
 /**
@@ -215,14 +220,27 @@ export function parseGodotInt(value: string, width: IntWidth = 'int32'): number 
 export function storedFromFloat(
   asFloat: number,
   literal: string,
-  width: IntWidth = 'int32'
+  width: IntWidth = 'int32',
+  /**
+   * Force the double branch whatever the token looks like.
+   *
+   * For a component of a FLOAT-typed composite being converted into an
+   * `i`-suffixed slot: `Vector2` holds two doubles, so `Vector2(4294967295, 64)`
+   * written to a `Vector2i` property converts BOTH components through
+   * `double -> int32`, however the token was spelled. Measured on 4.6.3 —
+   * `ItemList.fixed_icon_size = Vector2(4294967295, 64)` stores
+   * `(-2147483648, 64)`, the UB sentinel, where the `Vector2i(...)` spelling of
+   * the same digits stores `(-1, 64)` by wrapping.
+   */
+  alwaysFloatBranch = false
 ): number {
   const stored = asStoredInt(asFloat);
   if (Number.isNaN(stored)) return NaN;
   // A FLOAT literal reaches only what the type represents; an INT one also
   // reaches the opposite spelling of the same bits, which is a form Godot's own
   // serialiser writes.
-  const [low, high] = FLOAT_TYPED.test(literal) ? REPRESENTABLE[width] : ROUND_TRIPS[width];
+  const floatBranch = alwaysFloatBranch || FLOAT_TYPED.test(literal);
+  const [low, high] = floatBranch ? REPRESENTABLE[width] : ROUND_TRIPS[width];
   if (stored < low || stored > high || !Number.isSafeInteger(stored)) return NaN;
   return wrapToWidth(stored, width);
 }
@@ -247,10 +265,12 @@ export function storedFromFloat(
 export function ruleInt(
   raw: string | undefined,
   whenAbsent: number | null = null,
-  width: IntWidth = 'int32'
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
 ): number | null {
   if (raw === undefined) return whenAbsent;
-  const parsed = parseGodotInt(raw, width);
+  const parsed = parseGodotInt(raw, width, alwaysFloatBranch);
   return parsed === null || Number.isNaN(parsed) ? null : parsed;
 }
 
@@ -267,9 +287,13 @@ export function ruleInt(
  * Takes a capture the finite grammar ALREADY matched, so the READ is a bare
  * `parseFloat`; text straight from a file goes through {@link parseGodotInt}.
  */
-export function storedInt(text: string | undefined): number | null {
+export function storedInt(
+  text: string | undefined,
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
+): number | null {
   const num = parseFloat(text ?? '');
   if (!Number.isFinite(num)) return null;
-  const stored = storedFromFloat(num, text ?? '');
+  const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
 }

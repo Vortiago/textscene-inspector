@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { compositeSpellings, isConvertedSpelling } from './variantConversion.js';
-import { finiteTupleRegex } from './number.js';
+import { slotTupleRegex } from './number.js';
 
 describe('compositeSpellings', () => {
   it('puts the declared type first, so a canonical value matches first', () => {
@@ -28,8 +28,8 @@ describe('compositeSpellings', () => {
     // read in vectors.ts, valueParsers.ts, vectorValidators.ts and v/vectors.ts
     // by one at the same time.
     expect(compositeSpellings('Vector3i').startsWith('(?:')).toBe(true);
-    expect(finiteTupleRegex('Vector2i', 2).exec('Vector2i(7, 8)')?.[1]).toBe('7');
-    expect(finiteTupleRegex('Vector2i', 2).exec('Vector2(7, 8)')?.[1]).toBe('7');
+    expect(slotTupleRegex('Vector2i', 2).exec('Vector2i(7, 8)')?.[1]).toBe('7');
+    expect(slotTupleRegex('Vector2i', 2).exec('Vector2(7, 8)')?.[1]).toBe('7');
   });
 
   it('is symmetric — a pair converts both ways', () => {

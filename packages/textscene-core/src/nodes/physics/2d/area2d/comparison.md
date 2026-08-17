@@ -46,9 +46,9 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `audio_bus_name` | quoted string or &"name" |  |
 | `audio_bus_override` | true or false |  |
 | `gravity` | float |  |
-| `gravity_direction` | Vector2(x, y) |  |
+| `gravity_direction` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `gravity_point` | true or false |  |
-| `gravity_point_center` | Vector2(x, y) |  |
+| `gravity_point_center` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `gravity_point_unit_distance` | float >= 0 | warning below |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `linear_damp` | float >= 0 | warning below |

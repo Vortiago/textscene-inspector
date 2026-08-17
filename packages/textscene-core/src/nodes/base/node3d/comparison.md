@@ -39,17 +39,17 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 | --- | --- | --- |
 | `basis` | Basis(9 floats) |  |
 | `global_basis` | Basis(9 floats) |  |
-| `global_position` | Vector3(x, y, z) |  |
-| `global_rotation` | Vector3(x, y, z) |  |
-| `global_rotation_degrees` | Vector3(x, y, z) |  |
+| `global_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `global_rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `global_rotation_degrees` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `global_transform` | Transform3D(12 floats) |  |
-| `position` | Vector3(x, y, z) |  |
+| `position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `quaternion` | Quaternion(x, y, z, w) |  |
-| `rotation` | Vector3(x, y, z) |  |
-| `rotation_degrees` | Vector3(x, y, z) |  |
+| `rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `rotation_degrees` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `rotation_edit_mode` | enum 0-2 (Euler/Quaternion/Basis) | warning |
 | `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) | error |
-| `scale` | Vector3(x, y, z) |  |
+| `scale` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `top_level` | true or false |  |
 | `transform` | Transform3D(12 floats) |  |
 | `visibility_parent` | NodePath("path/to/node") |  |

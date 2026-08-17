@@ -96,11 +96,11 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `simplify_epsilon` | float >= 0 | error below |
 | `simplify_path` | true or false |  |
 | `target_desired_distance` | float >= 0.1 | warning below |
-| `target_position` | Vector3(x, y, z) |  |
+| `target_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `time_horizon_agents` | float >= 0 | error below |
 | `time_horizon_obstacles` | float >= 0 | error below |
 | `use_3d_avoidance` | true or false |  |
-| `velocity` | Vector3(x, y, z) |  |
+| `velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

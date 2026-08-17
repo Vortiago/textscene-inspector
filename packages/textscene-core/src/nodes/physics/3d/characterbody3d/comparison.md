@@ -45,8 +45,8 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) |  |
 | `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
-| `up_direction` | Vector3(x, y, z) |  |
-| `velocity` | Vector3(x, y, z) |  |
+| `up_direction` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `wall_min_slide_angle` | radians, 0° to 180° | warning |
 
 | Rule | Reports | Severity |

@@ -37,10 +37,10 @@ Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inheri
 | --- | --- | --- |
 | `bidirectional` | true or false |  |
 | `enabled` | true or false |  |
-| `end_position` | Vector2(x, y) |  |
+| `end_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
-| `start_position` | Vector2(x, y) |  |
+| `start_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `travel_cost` | float >= 0 | error below |
 
 | Rule | Reports | Severity |

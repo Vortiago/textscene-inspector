@@ -64,7 +64,7 @@ Strict parsing format-checks these `ItemList` properties, plus 53 inherited from
 | `auto_height` | true or false |  |
 | `auto_width` | true or false |  |
 | `fixed_column_width` | integer >= 0 | error below |
-| `fixed_icon_size` | Vector2i(x, y) |  |
+| `fixed_icon_size` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
 | `icon_mode` | enum 0-1 (ICON_MODE_TOP/ICON_MODE_LEFT) | error |
 | `icon_scale` | float |  |
 | `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) |  |

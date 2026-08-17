@@ -34,9 +34,9 @@ Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited f
 | `follow_viewport_enabled` | true or false |  |
 | `follow_viewport_scale` | float |  |
 | `layer` | integer -2147483648-2147483647 | warning |
-| `offset` | Vector2(x, y) |  |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `rotation` | float |  |
-| `scale` | Vector2(x, y) |  |
+| `scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `transform` | Transform2D(6 floats) |  |
 | `visible` | true or false |  |
 

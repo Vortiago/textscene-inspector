@@ -48,7 +48,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | `flip_v` | true or false |  |
 | `frame` | integer >= 0 | error below |
 | `frame_progress` | float |  |
-| `offset` | Vector2(x, y) |  |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `playing` | true or false |  |
 | `speed_scale` | float |  |
 | `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |

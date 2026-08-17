@@ -72,12 +72,12 @@ Strict parsing format-checks these `ParallaxBackground` properties, plus 8 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `scroll_base_offset` | Vector2(x, y) |  |
-| `scroll_base_scale` | Vector2(x, y) |  |
+| `scroll_base_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_base_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `scroll_ignore_camera_zoom` | true or false |  |
-| `scroll_limit_begin` | Vector2(x, y) |  |
-| `scroll_limit_end` | Vector2(x, y) |  |
-| `scroll_offset` | Vector2(x, y) |  |
+| `scroll_limit_begin` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_limit_end` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

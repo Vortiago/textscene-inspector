@@ -25,7 +25,7 @@ import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
  * character <= 32 before a token (:416-418). `Vector2 (1, 2)` is therefore a
  * file Godot loads, and refusing it reported a format error on a hand-edited
  * scene the engine opens — which is the file a linter exists for. The finite
- * sibling `finiteTupleRegex` spells the same thing; the two must stay identical
+ * sibling `slotTupleRegex` spells the same thing; the two must stay identical
  * outside the component grammar, which `godotLiteralGrammar.guard.test.ts` now
  * asserts behaviourally.
  */

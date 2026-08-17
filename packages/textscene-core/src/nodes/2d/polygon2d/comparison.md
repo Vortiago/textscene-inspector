@@ -58,14 +58,14 @@ Strict parsing format-checks these `Polygon2D` properties, plus 12 inherited fro
 | `internal_vertex_count` | integer 0-1000 | warning |
 | `invert_border` | float 0.1-16384 | warning |
 | `invert_enabled` | true or false |  |
-| `offset` | Vector2(x, y) |  |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `polygon` | PackedVector2Array(x, y, …) |  |
 | `polygons` | Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists |  |
 | `skeleton` | NodePath("path/to/node") |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
-| `texture_offset` | Vector2(x, y) |  |
+| `texture_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `texture_rotation` | float |  |
-| `texture_scale` | Vector2(x, y) |  |
+| `texture_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `uv` | PackedVector2Array(x, y, …) |  |
 | `vertex_colors` | PackedColorArray(r, g, b, a, …) |  |
 

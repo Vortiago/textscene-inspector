@@ -64,10 +64,10 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `grid_pattern` | enum 0-1 (GRID_PATTERN_LINES/GRID_PATTERN_DOTS) | warning |
 | `minimap_enabled` | true or false |  |
 | `minimap_opacity` | float |  |
-| `minimap_size` | Vector2(x, y) |  |
+| `minimap_size` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `panning_scheme` | enum 0-1 (SCROLL_ZOOMS/SCROLL_PANS) | warning |
 | `right_disconnects` | true or false |  |
-| `scroll_offset` | Vector2(x, y) |  |
+| `scroll_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `show_arrange_button` | true or false |  |
 | `show_grid` | true or false |  |
 | `show_grid_buttons` | true or false |  |

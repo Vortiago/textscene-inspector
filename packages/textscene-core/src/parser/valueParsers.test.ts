@@ -205,9 +205,7 @@ describe('vec2iOr / parseOptionalVector2i', () => {
   it('warns-then-falls-back on a present-but-malformed value (error path)', () => {
     expect(vec2iOr('Vector2i(nope)', { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
     expect(vec2iOr('Vector2i(1, 2) trailing', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
-    // NOT here: `can_convert_strict` (variant.cpp:536-830) permits VECTOR2 in
-    // a VECTOR2I slot, so `Vector2(1, 2)` is a file Godot loads as (1, 2) — and
-    // falling back to a default drew a different scene from the one on disk.
+    // `Vector2(...)` is NOT here: it converts. See the test below.
     expect(warnSpy).toHaveBeenCalled();
   });
 });
@@ -305,5 +303,41 @@ describe('parseOptionalRect2', () => {
       expect(parseOptionalRect2(bad, 'Rect')).toBeUndefined();
     }
     expect(warnSpy).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('vec2iOr takes the spellings can_convert_strict converts', () => {
+  // The renderer half of the conversion widening. Nothing asserted it, so
+  // dropping `compositeSpellings` from `slotTupleRegex` would revert this —
+  // and every reader in tileset, curve and vectors with it — while the suite
+  // stayed green.
+  it('reads a Vector2 into a Vector2i slot rather than falling back', () => {
+    expect(vec2iOr('Vector2(1920, 1080)', { x: 512, y: 512 })).toEqual({ x: 1920, y: 1080 });
+  });
+
+  it('truncates a fractional component, as the int32 conversion does', () => {
+    expect(vec2iOr('Vector2(1.9, 2.9)', { x: 0, y: 0 })).toEqual({ x: 1, y: 2 });
+  });
+
+  it('still refuses a type that does NOT convert', () => {
+    expect(vec2iOr('Color(1, 1, 1, 1)', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+  });
+});
+
+describe('the conversion branch follows the composite type, not the token', () => {
+  // MEASURED on 4.6.3: `ItemList.fixed_icon_size = Vector2(4294967295, 64)`
+  // stores `(-2147483648, 64)` — the UB double->int32 sentinel, because a
+  // Vector2 holds doubles — while `Vector2i(4294967295, 64)` stores
+  // `(-1, 64)` by wrapping an int64. The token is identical in both.
+  it('refuses a converted component the double branch cannot hold', () => {
+    expect(vec2iOr('Vector2(4294967295, 64)', { x: -1, y: -1 })).toEqual({ x: -1, y: -1 });
+  });
+
+  it('still wraps the same digits in the canonical spelling', () => {
+    expect(vec2iOr('Vector2i(4294967295, 64)', { x: -9, y: -9 })).toEqual({ x: -1, y: 64 });
+  });
+
+  it('leaves an ordinary converted value alone', () => {
+    expect(vec2iOr('Vector2(100, 64)', { x: -9, y: -9 })).toEqual({ x: 100, y: 64 });
   });
 });

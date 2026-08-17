@@ -225,8 +225,8 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | --- | --- | --- |
 | `render_target_clear_mode` | enum 0-2 (ALWAYS/NEVER/ONCE) | warning |
 | `render_target_update_mode` | enum 0-4 (DISABLED/ONCE/WHEN_VISIBLE/WHEN_PARENT_VISIBLE/ALWAYS) | warning |
-| `size` | Vector2i(x, y), both >= 2 | error below |
-| `size_2d_override` | Vector2i(x, y) |  |
+| `size` | Vector2i(x, y), both >= 2, or the Vector2 spelling Godot converts | error below |
+| `size_2d_override` | Vector2i(x, y), or the Vector2 spelling Godot converts |  |
 | `size_2d_override_stretch` | true or false |  |
 
 | Rule | Reports | Severity |
@@ -239,7 +239,9 @@ Strict and lenient parsing diverge only on out-of-range enums: the lenient
 parser warns and falls back to Godot's default (`render_target_update_mode` → 2,
 `render_target_clear_mode` → 0, `msaa_3d` → 0,
 `canvas_item_default_texture_filter` → 1), while the strict parser reports an
-error. A malformed `size` falls back to `Vector2i(512, 512)`. A `size` component
+error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`;
+the `Vector2(...)` spelling is not one of those, since `can_convert_strict`
+converts it and the previewer reads it as written. A `size` component
 below 2 is a strict error rather than an advisory, because `Viewport::_set_size`
 raises it (`viewport.cpp:1120`, `p_size.maxi(2)`): the value in the file is not
 the value the engine runs.

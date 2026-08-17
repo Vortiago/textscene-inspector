@@ -44,9 +44,9 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `angular_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
 | `angular_velocity` | float |  |
 | `can_sleep` | true or false |  |
-| `center_of_mass` | Vector2(x, y) |  |
+| `center_of_mass` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `center_of_mass_mode` | enum 0-1 (AUTO/CUSTOM) | warning |
-| `constant_force` | Vector2(x, y) |  |
+| `constant_force` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `constant_torque` | float |  |
 | `contact_monitor` | true or false |  |
 | `continuous_cd` | enum 0-2 (DISABLED/CAST_RAY/CAST_SHAPE) | warning |
@@ -57,7 +57,7 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `inertia` | float >= 0 | error below |
 | `linear_damp` | float >= -1 | error below |
 | `linear_damp_mode` | enum 0-1 (COMBINE/REPLACE) | warning |
-| `linear_velocity` | Vector2(x, y) |  |
+| `linear_velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `lock_rotation` | true or false |  |
 | `mass` | float >= 0.001 | error at or below 0, warning below 0.001 |
 | `max_contacts_reported` | integer >= 0, < 4096 | error below 0, error at or above 4096 |

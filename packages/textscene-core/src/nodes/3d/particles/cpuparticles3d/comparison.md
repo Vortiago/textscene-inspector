@@ -69,13 +69,13 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `damping_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `damping_max` | float >= 0 | warning below |
 | `damping_min` | float >= 0 | warning below |
-| `direction` | Vector3(x, y, z) |  |
+| `direction` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `draw_order` | enum 0-2 (INDEX/LIFETIME/VIEW_DEPTH) | error |
-| `emission_box_extents` | Vector3(x, y, z) |  |
+| `emission_box_extents` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `emission_colors` | PackedColorArray(r, g, b, a, …) |  |
 | `emission_normals` | PackedVector3Array(x, y, z, …) |  |
 | `emission_points` | PackedVector3Array(x, y, z, …) |  |
-| `emission_ring_axis` | Vector3(x, y, z) |  |
+| `emission_ring_axis` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `emission_ring_cone_angle` | float 0-90 | warning |
 | `emission_ring_height` | float >= 0 | warning below |
 | `emission_ring_inner_radius` | float >= 0 | warning below |
@@ -87,7 +87,7 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `fixed_fps` | integer 0-1000 | warning |
 | `flatness` | float 0-1 | warning |
 | `fract_delta` | true or false |  |
-| `gravity` | Vector3(x, y, z) |  |
+| `gravity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `hue_variation_curve` | null, SubResource("id") or ExtResource("id") |  |
 | `hue_variation_max` | float -1-1 | warning |
 | `hue_variation_min` | float -1-1 | warning |

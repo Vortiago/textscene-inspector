@@ -157,7 +157,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `sdfgi_y_scale` | enum 0-2 (Y_SCALE_50_PERCENT/Y_SCALE_75_PERCENT/Y_SCALE_100_PERCENT) | warning |
 | `sky` | null, SubResource("id") or ExtResource("id") |  |
 | `sky_custom_fov` | float 0-180 | warning |
-| `sky_rotation` | Vector3(x, y, z) |  |
+| `sky_rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `ssao_ao_channel_affect` | float 0-1 | warning |
 | `ssao_detail` | float 0-5 | warning |
 | `ssao_enabled` | true or false |  |

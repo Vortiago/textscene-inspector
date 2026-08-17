@@ -17,7 +17,7 @@
  * is likewise out: those are not tuple grammars and share no builder.
  *
  * One table for BOTH grammar builders. The linter's `makeFloatTupleRegex` and
- * the renderer's `finiteTupleRegex` differ only in whether a component may be
+ * the renderer's `slotTupleRegex` differ only in whether a component may be
  * non-finite; if they disagreed on the type NAME as well, the previewer would
  * fall back to a default for a spelling the linter accepts — which is the
  * divergence the whole grammar-guard family exists to prevent. Measured before
@@ -57,4 +57,9 @@ export function compositeSpellings(typeName: string): string {
 /** Whether `spelling` is a convertible alternative to `typeName`, not the name itself. */
 export function isConvertedSpelling(typeName: string, spelling: string): boolean {
   return CONVERTIBLE_SPELLINGS.get(typeName)?.includes(spelling) ?? false;
+}
+
+/** The constructor name a composite literal opens with, or `''` when it opens with none. */
+export function compositeTypeName(literal: string): string {
+  return /^\s*([A-Za-z0-9_]+)\s*\(/.exec(literal)?.[1] ?? '';
 }

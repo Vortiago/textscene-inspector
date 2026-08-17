@@ -34,7 +34,7 @@ Strict parsing format-checks these `BackBufferCopy` properties, plus 12 inherite
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `copy_mode` | enum 0-2 (Disabled/Rect/Viewport) | warning |
-| `rect` | Rect2(x, y, w, h) |  |
+| `rect` | Rect2(x, y, w, h), or the Rect2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

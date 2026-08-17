@@ -47,7 +47,7 @@ Strict parsing format-checks these `ShapeCast3D` properties, plus 17 inherited f
 | `margin` | float 0-100 | warning |
 | `max_results` | integer |  |
 | `shape` | null, SubResource("id") or ExtResource("id") |  |
-| `target_position` | Vector3(x, y, z) |  |
+| `target_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

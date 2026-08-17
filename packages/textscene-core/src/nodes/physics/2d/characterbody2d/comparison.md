@@ -48,8 +48,8 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) |  |
 | `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
-| `up_direction` | Vector2(x, y) |  |
-| `velocity` | Vector2(x, y) |  |
+| `up_direction` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `wall_min_slide_angle` | radians, 0° to 180° | warning |
 
 | Rule | Reports | Severity |

@@ -37,16 +37,16 @@ Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited fr
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `autoscroll` | Vector2(x, y) |  |
+| `autoscroll` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `follow_viewport` | true or false |  |
 | `ignore_camera_scroll` | true or false |  |
-| `limit_begin` | Vector2(x, y) |  |
-| `limit_end` | Vector2(x, y) |  |
+| `limit_begin` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `limit_end` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `repeat_size` | Vector2(x, y), each >= 0 |  |
 | `repeat_times` | integer >= 1 | error below |
-| `screen_offset` | Vector2(x, y) |  |
-| `scroll_offset` | Vector2(x, y) |  |
-| `scroll_scale` | Vector2(x, y) |  |
+| `screen_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `scroll_scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

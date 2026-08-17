@@ -59,7 +59,7 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 | `limit_right` | integer |  |
 | `limit_smoothed` | true or false |  |
 | `limit_top` | integer |  |
-| `offset` | Vector2(x, y) |  |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `position_smoothing_enabled` | true or false |  |
 | `position_smoothing_speed` | float >= 0 | error below |
 | `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |

@@ -400,3 +400,28 @@ describe('resolveAnimations — a scalar the tokenizer cannot read', () => {
     expect(anim).toMatchObject({ length: 1.0, step: 0.1 });
   });
 });
+
+describe('a fractional composite keyframe', () => {
+  it('keeps its fractional components, because a keyframe is not a slot write', () => {
+    // `{ exact: true }` on COMPOSITE_KEYS. Without it the widened `Vector3i`
+    // arm matches `Vector3(...)` first and every component is truncated —
+    // `[0, 1.5, 0]` silently became `[0, 1, 0]` with the whole suite green.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Pivot:rotation")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"transitions": PackedFloat32Array(1, 1),\n' +
+          '"update": 0,\n"values": [Vector3(0, 0, 0), Vector3(0, 1.5, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+
+    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([
+      [0, 0, 0],
+      [0, 1.5, 0],
+    ]);
+  });
+});

@@ -14,7 +14,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { finiteTupleRegex, parseGodotFloat } from '../../../godot/number.js';
+import { variantTupleRegex, parseGodotFloat } from '../../../godot/number.js';
 import { storedInt } from '../../../godot/int.js';
 import { warn } from '../../../logger';
 import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
@@ -366,18 +366,18 @@ const COMPOSITE_KEYS: ReadonlyArray<{
   re: RegExp;
   read: (m: RegExpExecArray) => number[];
 }> = [
-  { re: finiteTupleRegex('Vector2i', 2, { exact: true }), read: (m) => [keyInt(m[1]), keyInt(m[2])] },
+  { re: variantTupleRegex('Vector2i', 2), read: (m) => [keyInt(m[1]), keyInt(m[2])] },
   {
-    re: finiteTupleRegex('Vector3i', 3, { exact: true }),
+    re: variantTupleRegex('Vector3i', 3),
     read: (m) => [keyInt(m[1]), keyInt(m[2]), keyInt(m[3])],
   },
-  { re: finiteTupleRegex('Vector2', 2, { exact: true }), read: (m) => [keyFloat(m[1]), keyFloat(m[2])] },
+  { re: variantTupleRegex('Vector2', 2), read: (m) => [keyFloat(m[1]), keyFloat(m[2])] },
   {
-    re: finiteTupleRegex('Vector3', 3, { exact: true }),
+    re: variantTupleRegex('Vector3', 3),
     read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3])],
   },
   {
-    re: finiteTupleRegex('Color', 4, { exact: true }),
+    re: variantTupleRegex('Color', 4),
     read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3]), keyFloat(m[4])],
   },
 ];

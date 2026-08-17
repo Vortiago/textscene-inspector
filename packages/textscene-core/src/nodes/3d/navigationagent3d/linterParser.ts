@@ -30,8 +30,9 @@
  * `set_path_height_offset`). A `.tscn` carrying one of these legacy keys still
  * loads today, routed through whichever modern property's bound this file
  * already states — but the legacy key ITSELF reaches no validator here, same
- * as the 2D twin's identical shim (navigation_agent_2d.cpp:198-224) leaves
- * its own three legacy names unregistered.
+ * as the 2D twin's identical shim (navigation_agent_2d.cpp:198-224). All three
+ * are in the shared table in `godot/deprecated.ts`, which resolves them in the
+ * property bag so the rules and the renderer read the modern field.
  */
 
 import '../../node/linterParser.js';

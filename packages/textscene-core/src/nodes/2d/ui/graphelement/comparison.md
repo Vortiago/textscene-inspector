@@ -39,7 +39,7 @@ Strict parsing format-checks these `GraphElement` properties, plus 53 inherited 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `draggable` | true or false |  |
-| `position_offset` | Vector2(x, y) |  |
+| `position_offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `resizable` | true or false |  |
 | `scaling_menus` | true or false |  |
 | `selectable` | true or false |  |

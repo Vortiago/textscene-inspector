@@ -39,9 +39,9 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `audio_bus_name` | quoted string or &"name" |  |
 | `audio_bus_override` | true or false |  |
 | `gravity` | float |  |
-| `gravity_direction` | Vector3(x, y, z) |  |
+| `gravity_direction` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `gravity_point` | true or false |  |
-| `gravity_point_center` | Vector3(x, y, z) |  |
+| `gravity_point_center` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `gravity_point_unit_distance` | float >= 0 | warning below |
 | `gravity_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `linear_damp` | float >= 0 | warning below |

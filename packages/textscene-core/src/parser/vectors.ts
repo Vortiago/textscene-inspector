@@ -6,7 +6,7 @@
  * types. Anything here that a second domain would want belongs there instead.
  */
 
-import { finiteTupleRegex, matchedFloat } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat } from '../godot/number.js';
 
 export interface Vector2 {
   x: number;
@@ -19,8 +19,8 @@ export interface Vector3 {
   z: number;
 }
 
-const VECTOR2_RE = finiteTupleRegex('Vector2', 2);
-const VECTOR3_RE = finiteTupleRegex('Vector3', 3);
+const VECTOR2_RE = slotTupleRegex('Vector2', 2);
+const VECTOR3_RE = slotTupleRegex('Vector3', 3);
 
 /**
  * `Color(r, g, b, a)` — the SAME float grammar as the vectors above. Compiled ONCE and shared by
@@ -28,7 +28,7 @@ const VECTOR3_RE = finiteTupleRegex('Vector3', 3);
  * the channel grammar and never rebuild this regex per parse/lint call. No `g` flag, so `.test()`
  * and `.match()` on the shared instance are stateless.
  */
-export const COLOR_RE = finiteTupleRegex('Color', 4);
+export const COLOR_RE = slotTupleRegex('Color', 4);
 
 export function parseVector2(value: string): Vector2 {
   const match = value.match(VECTOR2_RE);

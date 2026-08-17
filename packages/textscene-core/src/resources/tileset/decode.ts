@@ -16,7 +16,7 @@
  */
 
 import { warn } from '../../logger';
-import { finiteTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
+import { slotTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
@@ -190,7 +190,7 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
   return tiles;
 }
 
-const VECTOR2I_RE = finiteTupleRegex('Vector2i', 2);
+const VECTOR2I_RE = slotTupleRegex('Vector2i', 2);
 
 function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
   if (value === undefined || value === null) return fallback;

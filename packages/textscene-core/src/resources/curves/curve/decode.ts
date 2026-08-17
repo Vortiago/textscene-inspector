@@ -23,7 +23,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import { finiteTupleRegex, matchedFloat, parseGodotFloat } from '../../../godot/number.js';
+import { slotTupleRegex, matchedFloat, parseGodotFloat } from '../../../godot/number.js';
 import { ruleInt } from '../../../godot/int.js';
 import { splitTopLevel } from '../../../godot/string.js';
 
@@ -134,7 +134,7 @@ function splitArrayLiteral(value: string | undefined): string[] | null {
  * `Vector2(inf, 0)` was worse than a wrong point: `parsePoints` drops the whole
  * curve on a null, so one non-finite component discarded EVERY point.
  */
-const VECTOR2_RE = finiteTupleRegex('Vector2', 2);
+const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);

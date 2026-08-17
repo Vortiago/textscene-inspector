@@ -43,7 +43,7 @@ export {
   FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_RE,
-  finiteTupleRegex,
+  slotTupleRegex,
   parseGodotFloat,
 } from './number.js';
 export {

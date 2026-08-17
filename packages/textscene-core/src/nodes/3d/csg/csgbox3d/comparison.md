@@ -41,7 +41,7 @@ Strict parsing format-checks these `CSGBox3D` properties, plus 18 inherited from
 | `flip_faces` | true or false |  |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
-| `size` | Vector3(x, y, z) |  |
+| `size` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

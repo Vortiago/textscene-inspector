@@ -44,7 +44,7 @@ Strict parsing format-checks these `NavigationObstacle3D` properties, plus 17 in
 | `height` | float 0-100 | error below, warning above |
 | `radius` | float 0-100 | error below, warning above |
 | `use_3d_avoidance` | true or false |  |
-| `velocity` | Vector3(x, y, z) |  |
+| `velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `vertices` | PackedVector3Array(x, y, z, …) |  |
 
 | Rule | Reports | Severity |
