@@ -39,7 +39,9 @@ runResourcePropertyValidation('PlaneMesh', [
   {
     prop: 'lightmap_size_hint',
     valid: ['Vector2i(64, 64)'],
-    invalid: [{ value: 'Vector2(64, 64)', contains: ['lightmap_size_hint'], severity: 'error' }],
+    // `Vector2` converts into this Vector2i slot (variant.cpp:536-830); a
+    // type that does not convert is the error.
+    invalid: [{ value: 'Color(1, 1, 1, 1)', contains: ['lightmap_size_hint'], severity: 'error' }],
   },
 ]);
 

@@ -354,6 +354,11 @@ const keyFloat = (text: string | undefined): number => parseGodotFloat(text ?? '
  * declared with an `i`-suffixed one: `SubViewport.size` is `Variant::VECTOR2I`
  * (viewport.cpp:5579).
  *
+ * `exact` on every entry: a keyframe is a Variant stored as the type the file
+ * spells, not a value written into a typed slot, so `can_convert_strict` does
+ * not apply. Without it the widened `Vector3i` arm matched a `Vector3` rotation
+ * key and truncated it to whole degrees.
+ *
  * Anchored regexes rather than prefixes, so no two entries can match the same
  * text and order carries no meaning.
  */
@@ -361,18 +366,18 @@ const COMPOSITE_KEYS: ReadonlyArray<{
   re: RegExp;
   read: (m: RegExpExecArray) => number[];
 }> = [
-  { re: finiteTupleRegex('Vector2i', 2), read: (m) => [keyInt(m[1]), keyInt(m[2])] },
+  { re: finiteTupleRegex('Vector2i', 2, { exact: true }), read: (m) => [keyInt(m[1]), keyInt(m[2])] },
   {
-    re: finiteTupleRegex('Vector3i', 3),
+    re: finiteTupleRegex('Vector3i', 3, { exact: true }),
     read: (m) => [keyInt(m[1]), keyInt(m[2]), keyInt(m[3])],
   },
-  { re: finiteTupleRegex('Vector2', 2), read: (m) => [keyFloat(m[1]), keyFloat(m[2])] },
+  { re: finiteTupleRegex('Vector2', 2, { exact: true }), read: (m) => [keyFloat(m[1]), keyFloat(m[2])] },
   {
-    re: finiteTupleRegex('Vector3', 3),
+    re: finiteTupleRegex('Vector3', 3, { exact: true }),
     read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3])],
   },
   {
-    re: finiteTupleRegex('Color', 4),
+    re: finiteTupleRegex('Color', 4, { exact: true }),
     read: (m) => [keyFloat(m[1]), keyFloat(m[2]), keyFloat(m[3]), keyFloat(m[4])],
   },
 ];

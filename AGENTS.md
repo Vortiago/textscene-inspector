@@ -140,7 +140,8 @@ real parser instead of the decode/build split. Conformance:
   this. Read the getter signature for every array or dictionary property, or ship a
   validator that rejects what Godot itself wrote.
 - That grounding is declared, not inferred. Every validator carries `formatOnly` (it
-  rejects only what Godot's parser could not read either, so no citation exists),
+  rejects only values that never reach the property — unreadable text, or a type
+  `can_convert_strict` refuses — so no per-property citation exists),
   `grounding` (it rejects a real value, and names the `file:line`), or `intSlot` (it
   reads an INT slot, so `_to_int` itself is the authority and the citation is always
   `variant.h:360-377`; it also records the slot's `width`, since `4294967296` is

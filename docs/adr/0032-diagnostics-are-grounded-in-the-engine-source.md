@@ -109,7 +109,10 @@ A convention decays; the guards below hold. Each closes one way a diagnostic can
 reject a value with nothing behind it.
 
 **Every validator declares which kind it is.** A `PropertyValidator` carries one of
-three tags: `formatOnly` (it rejects only input Godot's own parser could not read,
+three tags: `formatOnly` (it rejects only values that never reach the property —
+text the tokenizer refuses, or a type `can_convert_strict` (`variant.cpp:536-830`)
+will not convert into the slot, which `PackedScene` then drops silently at
+`packed_scene.cpp:492`,
 so no citation is possible or needed), `grounding` (it rejects a real value, and
 says which `file:line` says so), or `intSlot` (it reads an INT slot, where the
 authority is the conversion itself and the citation is therefore always

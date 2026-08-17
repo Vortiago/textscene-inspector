@@ -125,7 +125,8 @@ pixel_size = 0.01
         // components (sprite_3d.cpp:894-895), so on the default 1x1 grid
         // `Vector2i(1, 2)` is a write Godot refuses, not a valid example.
         with: { hframes: 4, vframes: 4 },
-        invalid: [{ value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] }],
+        // `Color` does not convert into a Vector2i slot; `Vector2` does.
+        invalid: [{ value: 'Color(1, 1, 1, 1)', contains: ['frame_coords', 'Vector2i'] }],
       },
       {
         prop: 'region_rect',

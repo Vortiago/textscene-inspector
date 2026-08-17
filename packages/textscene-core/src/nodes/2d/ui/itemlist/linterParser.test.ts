@@ -230,7 +230,10 @@ describe('ItemList counts and sizes', () => {
     // does not convert.
     // Loads, but stores 32 rather than 32.5 — the truncation warning.
     expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')?.severity).toBe('warning');
-    expect(check('fixed_icon_size', 'Vector2(32, 24)')?.severity).toBe('error');
+    // `Vector2` converts into a `Vector2i` slot (variant.cpp:536-830), so this
+    // is a file Godot opens; only a type that does NOT convert is an error.
+    expect(check('fixed_icon_size', 'Vector2(32, 24)')).toBeNull();
+    expect(check('fixed_icon_size', 'Color(1, 1, 1, 1)')?.severity).toBe('error');
   });
 });
 

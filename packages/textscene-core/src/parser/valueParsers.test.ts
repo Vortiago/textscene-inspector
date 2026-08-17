@@ -205,7 +205,9 @@ describe('vec2iOr / parseOptionalVector2i', () => {
   it('warns-then-falls-back on a present-but-malformed value (error path)', () => {
     expect(vec2iOr('Vector2i(nope)', { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
     expect(vec2iOr('Vector2i(1, 2) trailing', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
-    expect(vec2iOr('Vector2(1, 2)', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    // NOT here: `can_convert_strict` (variant.cpp:536-830) permits VECTOR2 in
+    // a VECTOR2I slot, so `Vector2(1, 2)` is a file Godot loads as (1, 2) — and
+    // falling back to a default drew a different scene from the one on disk.
     expect(warnSpy).toHaveBeenCalled();
   });
 });

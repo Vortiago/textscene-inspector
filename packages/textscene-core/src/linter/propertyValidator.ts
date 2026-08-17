@@ -35,10 +35,21 @@ export type PropertyValidator = ((
   accepts?: string;
 
   /**
-   * True when the ONLY thing this validator rejects is a value Godot's own
-   * parser could not read either — `Color(1, 1)`, `not-a-float`, an unquoted
-   * string. Such a rejection needs no citation, because no `.tscn` the engine
-   * loads carries the value.
+   * True when the ONLY thing this validator rejects is a value that never
+   * reaches the property — `Color(1, 1)`, `not-a-float`, an unquoted string.
+   * Such a rejection needs no citation, because no `.tscn` the engine loads
+   * puts that value in this slot.
+   *
+   * "Never reaches the property", not "the parser could not read it": those
+   * differ. Godot's tokenizer reads `Color(1, 1, 1, 1)` perfectly well, but
+   * writing it to a `Vector2i` slot fails `can_convert_strict`
+   * (`variant.cpp:536-830`) and `PackedScene` ignores the failure
+   * (`packed_scene.cpp:492`), so the property keeps its default and the value
+   * is nowhere. Both halves are still uncitable per PROPERTY, which is what
+   * this flag is for — the authority is the Variant layer, one rule for every
+   * slot, not a setter line. The composite grammars encode the conversion table
+   * itself, so a spelling Godot DOES convert is accepted rather than rejected
+   * here.
    *
    * It is a positive declaration rather than an inference: a validator with
    * neither this flag nor `grounding` is one nobody has classified, and

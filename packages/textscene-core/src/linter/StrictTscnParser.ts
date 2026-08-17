@@ -133,14 +133,21 @@ export class StrictTscnParser {
         // not, the accurate claim is what the engine does instead. NIL converts
         // strictly only to OBJECT (variant.cpp:543-544), so every other slot
         // takes the type's zero. Measured on 4.6.3, `Control`:
-        // `texture_filter = null` stores 0 and `visible = null` stores FALSE
-        // against a default of true.
+        // `texture_filter = null` stores 0 and `visible = null` stores FALSE.
+        //
+        // The message does NOT contrast with the property's default, which a
+        // validator does not carry and this seam cannot look up. It said "rather
+        // than the property's default" and was wrong wherever the two coincide:
+        // `CanvasItem::texture_filter` defaults to TEXTURE_FILTER_PARENT_NODE,
+        // which IS 0 (canvas_item.h:123), so the stored value there is the
+        // default. What holds for every slot is the part now stated — `null` is
+        // not what ends up in the property.
         if (value.trim() === 'null') {
           errors.push({
             severity: error.severity,
             message:
-              `Property '${key}' is null, which this slot cannot hold: Godot stores the type's ` +
-              `zero value rather than the property's default.`,
+              `Property '${key}' is null, which this slot cannot hold: Godot stores the ` +
+              `type's zero value instead.`,
             line,
             column: 1,
             code: error.code,

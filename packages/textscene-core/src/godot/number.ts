@@ -6,6 +6,8 @@
  * drift; see {@link TSCN_FLOAT_PATTERN_SOURCE} for why they differ.
  */
 
+import { compositeSpellings } from './variantConversion.js';
+
 /**
  * One float component, in the language Godot's own tokenizer reads. Strict by
  * construction: `1.2.3` or a lone `-` fail the whole anchored match, so callers
@@ -60,10 +62,25 @@ export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`
  * takes any number token and converts it, so `Vector2i(2e1, 0)` is a file Godot
  * loads as `(20, 0)`. Read their captures through `storedInt` in `./int.js`.
  */
-export function finiteTupleRegex(typeName: string, arity: number): RegExp {
+export function finiteTupleRegex(
+  typeName: string,
+  arity: number,
+  opts: { exact?: boolean } = {}
+): RegExp {
   const component = `(${FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join(String.raw`\s*,\s*`);
-  return new RegExp(String.raw`^${typeName}\s*\(\s*${body}\s*\)$`);
+  // `compositeSpellings` by default: a property SLOT also takes the spellings
+  // `can_convert_strict` converts into its type, and the renderer has to read
+  // them or it falls back to a default for a file the linter accepts.
+  //
+  // `exact` is for a value that is NOT a property write. An animation keyframe
+  // is stored as a Variant of whatever type the file spells, so no conversion
+  // applies — and a reader that dispatches int-vs-float by which regex matches
+  // first needs `Vector3i` to mean `Vector3i`. Without this, a `Vector3`
+  // rotation key matched the widened `Vector3i` arm and was truncated to whole
+  // degrees.
+  const name = opts.exact === true ? typeName : compositeSpellings(typeName);
+  return new RegExp(String.raw`^${name}\s*\(\s*${body}\s*\)$`);
 }
 
 /**

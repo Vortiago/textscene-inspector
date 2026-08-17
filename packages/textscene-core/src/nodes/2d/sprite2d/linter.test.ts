@@ -119,7 +119,8 @@ describe('Sprite2D Linter', () => {
         with: { hframes: 4, vframes: 3 },
         invalid: [
           { value: 'Vector2i(-1, 0)', contains: ['frame_coords', 'non-negative'] },
-          { value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] },
+          // `Color` does not convert into a Vector2i slot; `Vector2` does.
+          { value: 'Color(1, 1, 1, 1)', contains: ['frame_coords', 'Vector2i'] },
         ],
       },
     ]);

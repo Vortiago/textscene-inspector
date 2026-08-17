@@ -1,5 +1,6 @@
 /** Arity-driven validator for fixed-length float-tuple TSCN values. */
 
+import { compositeSpellings } from '../../godot/variantConversion.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
@@ -31,7 +32,9 @@ import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 export function makeFloatTupleRegex(typeName: string, arity: number): RegExp {
   const component = `(${TSCN_FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join('\\s*,\\s*');
-  return new RegExp(`^${typeName}\\s*\\(\\s*${body}\\s*\\)$`);
+  // Same alternation as the renderer's builder, from the same table: a slot
+  // accepts every spelling `can_convert_strict` converts into it.
+  return new RegExp(`^${compositeSpellings(typeName)}\\s*\\(\\s*${body}\\s*\\)$`);
 }
 
 /**
