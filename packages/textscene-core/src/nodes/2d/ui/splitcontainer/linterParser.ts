@@ -72,8 +72,7 @@ function splitOffsetsValidator(): PropertyValidator {
         format: SPLIT_OFFSETS_FORMAT,
         value: 'INVALID_SPLIT_OFFSETS_VALUE',
     });
-    if (bad !== null) return bad;
-    return null;
+    return bad.error ?? bad.truncated;
   }, 'PackedInt32Array(n, n, …)');
   // Format-only: rejects a malformed literal or a non-integer element.
   // `set_split_offsets` (split_container.cpp:1071) accepts any length and any

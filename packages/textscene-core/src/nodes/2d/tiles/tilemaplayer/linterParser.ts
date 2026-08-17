@@ -68,10 +68,11 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
   // BYTES, so the FLOAT grammar this used accepted `1e20` — a literal Godot
   // reads and no integer slot holds — and the decoder then dropped the layer
   // with nothing said about which element did it.
-  return badIntElement('tile_map_data', key, line, body, {
+  const bad = badIntElement('tile_map_data', key, line, body, {
     format: 'INVALID_TILE_MAP_DATA_FORMAT',
     value: 'INVALID_TILE_MAP_DATA_VALUE',
   });
+  return bad.error ?? bad.truncated;
 }, 'PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');
 
 // The tag the sweep reads: this is an INT slot, and an element it cannot hold

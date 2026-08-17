@@ -58,8 +58,7 @@ const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
       format: 'INVALID_TILE_DATA_FORMAT',
       value: 'INVALID_TILE_DATA_VALUE',
   });
-  if (bad !== null) return bad;
-  return null;
+  return bad.error ?? bad.truncated;
 }, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');
 // An INT slot, not format-only: it rejects a literal the tokenizer reads.
 // The tag never reaches the registry — `indexedFamilyValidator` re-tags the

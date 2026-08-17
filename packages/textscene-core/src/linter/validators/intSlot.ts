@@ -148,8 +148,10 @@ export function truncatedInt(
  * The scalar half warned while the composite half was silent, which made the
  * tier depend on the shape of the property rather than on the engine.
  *
- * Takes captures a finite grammar already matched, and names the offending
- * component rather than the whole literal.
+ * Its callers match on the linter's WIDENED grammar, which admits `inf`/`nan`
+ * deliberately, so this guards finiteness itself rather than trusting the
+ * regex — both live callers happen to refuse a non-finite component first, and
+ * that is their choice to change.
  */
 export function truncatedComponent(
   propertyName: string,
@@ -161,7 +163,12 @@ export function truncatedComponent(
   for (const text of components) {
     if (text === undefined) continue;
     const asFloat = parseGodotFloat(text);
-    if (asFloat === null || Number.isInteger(asFloat)) continue;
+    // `Number.isFinite` first: `Number.isInteger(Infinity)` and
+    // `Number.isInteger(NaN)` are both FALSE, so `inf`/`nan` fell through to
+    // `stores ${Math.trunc(asFloat)}` and printed "stores Infinity" — a value
+    // ADR-0032 forbids naming, since the conversion is undefined. A non-finite
+    // component is the unstorable REFUSAL, reported by the caller's own arm.
+    if (asFloat === null || !Number.isFinite(asFloat) || Number.isInteger(asFloat)) continue;
     return propertyError(
       key,
       line,

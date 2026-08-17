@@ -37,3 +37,26 @@ describe('canonicalPropertyName', () => {
     expect(isDeprecatedPropertyName('Label', 'horizontal_alignment')).toBe(false);
   });
 });
+
+describe('a property key that collides with Object.prototype', () => {
+  // A `.tscn` chooses these strings, and a plain object literal answers
+  // `constructor`/`__proto__`/`toString` from the prototype chain — so the
+  // declared `: string` return handed back a FUNCTION and the linter threw
+  // `propertyKey.startsWith is not a function` on a four-line scene.
+  it.each(['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'])(
+    'returns %s unchanged rather than a prototype member',
+    (key) => {
+      expect(canonicalPropertyName('Label', key)).toBe(key);
+    }
+  );
+
+  it('is not fooled by a node type that collides either', () => {
+    expect(canonicalPropertyName('constructor', 'frames')).toBe('frames');
+    expect(canonicalPropertyName('__proto__', 'align')).toBe('align');
+  });
+
+  it('reports such a key as not deprecated', () => {
+    expect(isDeprecatedPropertyName('Label', 'constructor')).toBe(false);
+    expect(isDeprecatedPropertyName('constructor', 'align')).toBe(false);
+  });
+});

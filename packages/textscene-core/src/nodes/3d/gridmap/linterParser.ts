@@ -49,7 +49,7 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
       format: 'INVALID_DATA_CELLS_FORMAT',
       value: 'INVALID_DATA_CELLS_VALUE',
   });
-  if (bad !== null) return bad;
+  if (bad.error !== null) return bad.error;
   const count = cells.length;
   if (count % 3 !== 0) {
     return propertyError(
@@ -59,7 +59,9 @@ const dataValidator: PropertyValidator = accepts((key, value, line) => {
       'INVALID_DATA_CELLS_COUNT'
     );
   }
-  return null;
+  // Last: the truncation WARNING must not preempt the grounded count error
+  // above it, which is what returning the scan's single answer did.
+  return bad.truncated;
 }, 'Dictionary literal { "cells": PackedInt32Array(...) }');
 dataValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:71' };
 // The cell stream is an INT slot too: a key no int32 holds places the cell

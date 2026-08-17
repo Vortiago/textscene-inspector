@@ -68,8 +68,7 @@ const pinnedPointsValidator: PropertyValidator = accepts((key, value, line) => {
       format: 'INVALID_PINNED_POINTS_FORMAT',
       value: 'INVALID_PINNED_POINTS_VALUE',
   });
-  if (bad !== null) return bad;
-  return null;
+  return bad.error ?? bad.truncated;
 }, 'int array ([…] or PackedInt32Array(…))');
 // An INT slot, not format-only: an index no int32 holds reads and is altered.
 markIntSlot(pinnedPointsValidator);

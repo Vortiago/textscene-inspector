@@ -15,7 +15,7 @@ import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
  * because the linter is where they are reached for.
  */
 export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/number.js';
-export { parseGodotInt, ruleInt } from '../../godot/int.js';
+export { parseGodotInt, ruleInt, storedFromFloat } from '../../godot/int.js';
 
 /**
  * One capture group of an ALREADY-MATCHED float tuple, as a number.

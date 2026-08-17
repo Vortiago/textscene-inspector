@@ -12,6 +12,7 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import type { ParseError } from '../../../linter/types.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
@@ -61,6 +62,8 @@ function polygonsValidator(): PropertyValidator {
     }
     const body = wrapper[1]!.trim();
     if (body === '') return null;
+    /** The first fractional element seen, held back until every entry is scanned. */
+    let truncated: ParseError | null = null;
     for (const entry of dropTrailingComma(splitTopLevel(body))) {
       // `PackedInt32Array(…)` is a CONSTRUCTOR call: `_parse_construct`
       // (variant_parser.cpp:552-596) demands a value right after each comma it
@@ -89,9 +92,12 @@ function polygonsValidator(): PropertyValidator {
           format: code,
           value: 'INVALID_POLYGONS_VALUE',
       });
-      if (bad !== null) return bad;
+      if (bad.error !== null) return bad.error;
+      // Remembered, not returned: a later entry may be unreadable, and that
+      // error outranks this warning.
+      truncated ??= bad.truncated;
     }
-    return null;
+    return truncated;
   }, 'Array of PackedInt32Array(i0, i1, …) or bare [i0, i1, …] index lists'));
 }
 

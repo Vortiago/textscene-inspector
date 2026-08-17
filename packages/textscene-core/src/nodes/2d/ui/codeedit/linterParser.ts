@@ -59,8 +59,7 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
         format: code,
         value: 'INVALID_LINE_LENGTH_GUIDELINES_VALUE',
     });
-    if (bad !== null) return bad;
-    return null;
+    return bad.error ?? bad.truncated;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
   // Format-only: rejects a malformed literal or a non-integer element only.
   // `set_line_length_guidelines` accepts any length and any value.

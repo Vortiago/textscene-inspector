@@ -4,20 +4,38 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat, parseGodotInt, TSCN_FLOAT_RE } from '../commonValidators.js';
+import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {
-  /**
-   * `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32
-   * holds it. `truncated` — it reads and fits, but the element is fractional and
-   * the int32 conversion drops the fraction.
-   */
-  kind: 'unreadable' | 'unstorable' | 'truncated';
+  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32 holds it. */
+  kind: 'unreadable' | 'unstorable';
   text: string;
+}
+
+/** A fractional element: it reads and fits, but the conversion drops the fraction. */
+interface TruncatedElement {
+  text: string;
+  /** The int the slot ends up with, already narrowed. */
+  stored: number;
+}
+
+/**
+ * Both verdicts a packed INT body can produce, from ONE walk.
+ *
+ * They are returned side by side rather than as one winner because their tiers
+ * differ and the CALLER decides the order: `error` outranks everything,
+ * including the grounded checks a caller runs afterwards, while `truncated` is
+ * a warning that must come last. Returning the warning as if it were the single
+ * answer silenced `INVALID_DATA_CELLS_COUNT` on a GridMap whose cell stream had
+ * a fractional element, and stopped Polygon2D scanning its second entry.
+ */
+interface IntElementVerdict {
+  error: BadIntElement | null;
+  truncated: TruncatedElement | null;
 }
 
 /**
@@ -40,20 +58,25 @@ interface BadIntElement {
  * Takes the raw body or already-split parts, for the callers that must strip a
  * trailing comma first.
  */
-function firstBadIntElement(body: string | readonly string[]): BadIntElement | null {
-  let truncated: BadIntElement | null = null;
+function scanIntElements(body: string | readonly string[]): IntElementVerdict {
+  let truncated: TruncatedElement | null = null;
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
-    const num = parseGodotInt(text);
-    if (num === null) return { kind: 'unreadable', text };
-    if (Number.isNaN(num)) return { kind: 'unstorable', text };
-    // Remembered rather than returned: an unreadable or unstorable element
-    // later in the body is the stronger claim and must win.
-    if (truncated === null && !Number.isInteger(parseGodotFloat(text) ?? 0)) {
-      truncated = { kind: 'truncated', text };
+    // `parseGodotFloat` + `storedFromFloat`, which is what `parseGodotInt` does
+    // internally — spelled out so the float is in hand for the fractional test
+    // below. Calling `parseGodotInt` and then re-parsing added a second
+    // `TSCN_FLOAT_RE` run to every element of every CLEAN body, measured at
+    // +39% on a real 7,848-element GridMap stream, to detect a condition a
+    // clean body by definition does not have.
+    const asFloat = parseGodotFloat(text);
+    if (asFloat === null) return { error: { kind: 'unreadable', text }, truncated: null };
+    const stored = storedFromFloat(asFloat, text);
+    if (Number.isNaN(stored)) return { error: { kind: 'unstorable', text }, truncated: null };
+    if (truncated === null && Number.isFinite(asFloat) && !Number.isInteger(asFloat)) {
+      truncated = { text, stored };
     }
   }
-  return truncated;
+  return { error: null, truncated };
 }
 
 /**
@@ -73,32 +96,37 @@ export function badIntElement(
   line: number,
   body: string | readonly string[],
   codes: { format: string; value: string }
-): ParseError | null {
-  const bad = firstBadIntElement(body);
-  if (bad === null) return null;
-  if (bad.kind === 'truncated') {
-    return propertyError(
-      key,
-      line,
-      `Property '${propertyName}' has integer elements, so Godot drops the fractional part of "${bad.text}" and stores ${Math.trunc(parseGodotFloat(bad.text) ?? 0)}.`,
-      codes.value,
-      'warning'
-    );
-  }
-  return bad.kind === 'unreadable'
-    ? propertyError(
-        key,
-        line,
-        `Property '${propertyName}' contains a non-numeric value: "${bad.text}"`,
-        codes.format
-      )
-    : propertyError(
-        key,
-        line,
-        `Property '${propertyName}' has an element no integer can hold: "${bad.text}"`,
-        codes.value,
-        'error'
-      );
+): { error: ParseError | null; truncated: ParseError | null } {
+  const { error, truncated } = scanIntElements(body);
+  return {
+    error:
+      error === null
+        ? null
+        : error.kind === 'unreadable'
+          ? propertyError(
+              key,
+              line,
+              `Property '${propertyName}' contains a non-numeric value: "${error.text}"`,
+              codes.format
+            )
+          : propertyError(
+              key,
+              line,
+              `Property '${propertyName}' has an element no integer can hold: "${error.text}"`,
+              codes.value,
+              'error'
+            ),
+    truncated:
+      truncated === null
+        ? null
+        : propertyError(
+            key,
+            line,
+            `Property '${propertyName}' has integer elements, so Godot drops the fractional part of "${truncated.text}" and stores ${truncated.stored}.`,
+            codes.value,
+            'warning'
+          ),
+  };
 }
 
 /**

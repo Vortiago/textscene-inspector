@@ -255,3 +255,20 @@ describe('GridMap strict validators', () => {
     });
   });
 });
+
+describe('a fractional cell element beside a grounded error', () => {
+  const check = (value: string) => validatorRegistry.findValidator('GridMap', 'data')!('data', value, 1);
+
+  it('reports the count error, not the truncation warning', () => {
+    // The warning used to short-circuit every grounded check the caller runs
+    // afterwards, so a stream that was BOTH fractional and not a whole number
+    // of triples lost `INVALID_DATA_CELLS_COUNT` (grid_map.cpp:71) entirely.
+    expect(check('{ "cells": PackedInt32Array(1.5, 2) }')?.code).toBe('INVALID_DATA_CELLS_COUNT');
+  });
+
+  it('reports the truncation once nothing stronger applies', () => {
+    const diagnostic = check('{ "cells": PackedInt32Array(1.5, 2, 3) }');
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('1.5');
+  });
+});

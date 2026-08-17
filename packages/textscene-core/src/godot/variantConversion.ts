@@ -24,8 +24,14 @@
  * this table existed: `size = Vector2(1920, 1080)` drew a 512x512 viewport.
  */
 
-/** Same-arity conversions, keyed by the slot's declared type. */
-const CONVERTIBLE_SPELLINGS: Readonly<Record<string, readonly string[]>> = {
+/**
+ * Same-arity conversions, keyed by the slot's declared type.
+ *
+ * A `Map`: `typeName` reaches `compositeSpellings` from a validator parameter,
+ * so a plain object would answer `constructor` with a function and the spread
+ * below would throw `also is not iterable` instead of returning a diagnostic.
+ */
+const CONVERTIBLE_SPELLINGS = new Map<string, readonly string[]>(Object.entries({
   Vector2: ['Vector2i'],
   Vector2i: ['Vector2'],
   Vector3: ['Vector3i'],
@@ -34,7 +40,7 @@ const CONVERTIBLE_SPELLINGS: Readonly<Record<string, readonly string[]>> = {
   Vector4i: ['Vector4'],
   Rect2: ['Rect2i'],
   Rect2i: ['Rect2'],
-};
+}));
 
 /**
  * The regex alternation matching every spelling a `typeName` slot accepts —
@@ -44,11 +50,11 @@ const CONVERTIBLE_SPELLINGS: Readonly<Record<string, readonly string[]>> = {
  * interpolate the result unconditionally.
  */
 export function compositeSpellings(typeName: string): string {
-  const also = CONVERTIBLE_SPELLINGS[typeName];
+  const also = CONVERTIBLE_SPELLINGS.get(typeName);
   return also === undefined ? typeName : `(?:${[typeName, ...also].join('|')})`;
 }
 
 /** Whether `spelling` is a convertible alternative to `typeName`, not the name itself. */
 export function isConvertedSpelling(typeName: string, spelling: string): boolean {
-  return CONVERTIBLE_SPELLINGS[typeName]?.includes(spelling) ?? false;
+  return CONVERTIBLE_SPELLINGS.get(typeName)?.includes(spelling) ?? false;
 }
