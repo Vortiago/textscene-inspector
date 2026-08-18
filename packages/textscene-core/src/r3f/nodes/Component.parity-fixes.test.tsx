@@ -38,7 +38,7 @@ import {
   KeepAspectMode,
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { BillboardMode, HorizontalAlignment } from '../../nodes/3d/label3d/types';
+import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -396,6 +396,10 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       line_spacing: 0,
       horizontal_alignment: HorizontalAlignment.CENTER,
       no_depth_test: false,
+      render_priority: 0,
+      outline_render_priority: -1,
+      alpha_cut: AlphaCutMode.DISABLED,
+      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
@@ -444,6 +448,10 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       line_spacing: 0,
       horizontal_alignment: HorizontalAlignment.CENTER,
       no_depth_test: false,
+      render_priority: 0,
+      outline_render_priority: -1,
+      alpha_cut: AlphaCutMode.DISABLED,
+      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },

@@ -174,16 +174,21 @@ describe('Imperatively built canvas materials', () => {
     expect(defaulted.forceSinglePass).toBe(true);
     expect(defaulted.side).toBe(THREE.DoubleSide);
 
-    // Label3D's `double_sided = false` — one-sided, still one pass.
     const oneSided = createMsdfMaterial({ ...base, side: THREE.FrontSide });
     expect(oneSided.forceSinglePass).toBe(true);
     expect(oneSided.side).toBe(THREE.FrontSide);
   });
 
-  it('leaves createCanvasTextMaterial single-pass', () => {
+  it('leaves createCanvasTextMaterial single-pass, at its default side and a caller-chosen one', () => {
     const material = createCanvasTextMaterial({ map: texture(), opacity: 1 });
     expect(material.forceSinglePass).toBe(true);
     expect(material.side).toBe(THREE.DoubleSide);
+
+    // Label3D's `double_sided = false` — one-sided, still one pass. Label3D
+    // rasterises its glyphs through this painter, not the MSDF atlas.
+    const oneSided = createCanvasTextMaterial({ map: texture(), opacity: 1, side: THREE.FrontSide });
+    expect(oneSided.forceSinglePass).toBe(true);
+    expect(oneSided.side).toBe(THREE.FrontSide);
   });
 
   it('leaves both light-accumulation quads single-pass, where a second pass would double-count', () => {

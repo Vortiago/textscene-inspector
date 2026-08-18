@@ -6,26 +6,16 @@
  * embolden strokes (widening the shape by shifting the zero-crossing before
  * thresholding) without re-baking the atlas.
  *
- * `outlineBias`/`outlineColor`/`outlineOpacity` add a SECOND, more-dilated
- * threshold of the SAME distance field, decoded in the SAME draw call
- * (Label3D's outline pass — see `nodes/3d/label3d/glyphLayout.ts`'s own
- * doc). This is deliberately ONE shader evaluation, not two overlapping
- * alpha-blended meshes (an outline mesh drawn behind a fill mesh): a spike
- * tried that first and found it darkens every anti-aliased edge, because
- * compositing two independently alpha-blended layers of a near-identical
- * shape is not equivalent to one shape with two colour bands — the two
- * layers' partial-coverage fragments both contribute alpha at the same
- * screen pixel, over-darkening it. At a small on-screen glyph (a caption a
- * few pixels tall, where nearly every fragment IS a partial-coverage edge
- * fragment) that over-darkening covers almost the whole glyph, rendering a
- * solid blob instead of a thin outline. One `coverage`/`outlineMix` pair
- * below has exactly one alpha value per fragment, so there is nothing to
- * double-composite regardless of on-screen size.
- *
- * This is msdfgen's own standard shading technique (Chlumsky, "Shape
- * Decomposition for Multi-Channel Distance Fields"), not a Godot port — the
- * engine's own TextServer rasterizes through FreeType bitmaps, not MSDF, so
- * there is no Godot GLSL source for this stage to match.
+ * This shader serves the 2D Control text path only. Godot's default project
+ * font is NOT MSDF (`servers/text/text_server.cpp:2386`, read by
+ * `scene/theme/theme_db.cpp:59`), so nothing here is a port of the path an
+ * unconfigured scene actually takes; Godot's own MSDF-font branch is
+ * `scene/resources/material.cpp:1639-1656`, and its TextServer carries both
+ * a FreeType-bitmap and an MSDF rasteriser
+ * (`modules/text_server_adv/text_server_adv.cpp`, `rasterize_bitmap` /
+ * `rasterize_msdf`). The decode below is msdfgen's own standard shading
+ * technique (Chlumsky, "Shape Decomposition for Multi-Channel Distance
+ * Fields") against this repo's own bake.
  *
  * TONE CURVE + ENCODE — the two trailing chunks, and why a hand-written shader
  * needs both spelled out. Every built-in three material ends with
@@ -48,10 +38,10 @@
  *     built from those two alone shows nothing at all.
  *
  * The curve is unconditional here rather than an opt-in some 3D caller passes,
- * and this material IS the default painter for 2D Control text as well as for
- * Label3D — the sibling `MeshBasicMaterial` painter
- * (`canvasTextPainter.ts`'s `createCanvasTextMaterial`) takes only the
- * scene-authored-font branch. What keeps the chunk inert in 2D is that the
+ * and this material IS the painter for 2D Control text at the bundled font —
+ * the sibling `MeshBasicMaterial` painter (`canvasTextPainter.ts`'s
+ * `createCanvasTextMaterial`) takes every canvas-rasterised branch. What
+ * keeps the chunk inert in 2D is that the
  * 2D world canvas is mounted `flat`, i.e. `NoToneMapping`
  * (`r3f/components/Canvas2DStage/World2DCanvas.tsx` — Godot composites canvas
  * items AFTER tone mapping the 3D buffers, so authored 2D colour reaches the
@@ -111,9 +101,6 @@ uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uDistanceBias;
 uniform float uPxRange;
-uniform vec3 uOutlineColor;
-uniform float uOutlineOpacity;
-uniform float uOutlineBias;
 varying vec2 vUv;
 #include <clipping_planes_pars_fragment>
 
@@ -131,38 +118,10 @@ void main() {
   vec3 msd = texture2D(uMap, vUv).rgb;
   float m = median(msd.r, msd.g, msd.b);
   float spr = screenPxRange();
-  // \`spr\` floors at 1.0 (screenPxRange()'s own \`max(..., 1.0)\`) once a glyph
-  // is minified enough that a screen pixel spans more than one atlas texel —
-  // ordinary for a Label3D caption viewed from a few world units away. AT
-  // that floor, \`sigDist\`'s "outside" value (median 0) is only ever 0.5
-  // away from the alpha=0 threshold regardless of \`uOutlineBias\`, so a fixed
-  // outline bias would paint a FLAT, uniform haze across the whole quad's
-  // background — not a thin edge — the instant it floors. \`outlineDampen\`
-  // ramps the outline contribution from 0 exactly at the floor to full
-  // strength by \`spr == 2\` (an arbitrary-but-cheap one-\`screenPxRange\`-unit
-  // ramp), so a shrinking caption loses its outline gracefully instead of
-  // blooming into a solid block. \`uDistanceBias\` (embolden) is deliberately
-  // NOT dampened — that path is calibrated and shipped for 2D UI bold text
-  // at ordinary sizes, and this dampening exists only for the NEW outline
-  // path Label3D adds.
-  float outlineDampen = clamp(spr - 1.0, 0.0, 1.0);
-  float effectiveOutlineBias = uOutlineBias * outlineDampen;
-  // The fill edge (embolden-adjusted) and, when uOutlineBias > 0, a SECOND,
-  // more-dilated edge for Label3D's outline — same texture sample, same
-  // draw call, see this file's own doc for why that matters.
-  float alphaFill = clamp(spr * (m - 0.5 + uDistanceBias) + 0.5, 0.0, 1.0);
-  float alphaOutline = clamp(spr * (m - 0.5 + uDistanceBias + effectiveOutlineBias) + 0.5, 0.0, 1.0);
-  // \`outlineMix\` is 0 in the outline-only band (outside the fill edge) and 1
-  // once well inside the fill — \`uOutlineBias\` 0 (every 2D-UI caller) makes
-  // alphaOutline === alphaFill, so \`coverage\` and \`outlineMix\` both collapse
-  // to plain \`alphaFill\` and this reduces exactly to the pre-outline shader.
-  float outlineMix = alphaFill;
-  float coverage = alphaOutline;
-  vec3 rgb = mix(uOutlineColor, uColor, outlineMix);
-  float alpha = coverage * mix(uOutlineOpacity, uOpacity, outlineMix);
+  float alpha = clamp(spr * (m - 0.5 + uDistanceBias) + 0.5, 0.0, 1.0) * uOpacity;
   // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
   // and discards outright otherwise, so the value has to exist either way.
-  vec4 diffuseColor = vec4(rgb, alpha);
+  vec4 diffuseColor = vec4(uColor, alpha);
   #include <clipping_planes_fragment>
   gl_FragColor = diffuseColor;
   // The tone curve, then the encode — the pair, and the order, every built-in
@@ -204,12 +163,6 @@ export interface MsdfMaterialOptions {
    * either way the run is drawn in ONE pass, for the reason that module gives.
    */
   side?: THREE.Side;
-  /** Outline tint, LINEAR rgb. Defaults to `color` — irrelevant when `outlineBias` is 0, see the shader's own doc. */
-  outlineColor?: { r: number; g: number; b: number };
-  /** Outline alpha. Defaults to `opacity` so an omitted outline reduces exactly to the pre-outline shader. */
-  outlineOpacity?: number;
-  /** Additional dilation, atlas-`distanceRange`-normalized, for a SECOND (outline) edge. 0 (default) disables the outline band entirely. */
-  outlineBias?: number;
 }
 
 export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMaterial {
@@ -222,9 +175,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     clippingPlanes = [],
     depthTest = false,
     side,
-    outlineColor = color,
-    outlineOpacity = opacity,
-    outlineBias = 0,
   } = options;
   return new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -235,9 +185,6 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
       uOpacity: { value: opacity },
       uDistanceBias: { value: distanceBias },
       uPxRange: { value: pxRange },
-      uOutlineColor: { value: new THREE.Vector3(outlineColor.r, outlineColor.g, outlineColor.b) },
-      uOutlineOpacity: { value: outlineOpacity },
-      uOutlineBias: { value: outlineBias },
     },
     transparent: true,
     depthWrite: false,

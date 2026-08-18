@@ -4,6 +4,7 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
+  CANVAS_TEXT_SUPERSAMPLE,
 } from './canvasTextPainter';
 import { shapeText, AutowrapMode } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
@@ -14,14 +15,38 @@ const CANVAS_METRICS = createRuntimeFontMetrics({
   cssFontFamily: 'scene-font-test',
 });
 
-function layoutFor(text: string) {
+function layoutFor(text: string, lineSpacingPx = 3) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.OFF,
     fontMetrics: CANVAS_METRICS,
-    lineSpacingPx: 3,
+    lineSpacingPx,
   });
+}
+
+/**
+ * Where the raster pixel the painter draws content-box x=0 (resp. y=0) into
+ * actually lands in the quad's own coordinate space — the painter draws at
+ * CSS `offsetXPx`/`offsetYPx` on a canvas sized ``deviceWidthPx` x
+ * `deviceHeightPx` device px, and the quad samples that whole canvas across
+ * its own extent.
+ */
+function contentOriginOnQuad(
+  canvasLayout: ReturnType<typeof computeCanvasTextCanvasLayout>
+): { x: number; y: number } {
+  const { positions } = buildCanvasTextQuadArrays(canvasLayout);
+  const [left, top] = [positions[0]!, positions[1]!];
+  const [right, bottom] = [positions[3]!, positions[7]!];
+  const { deviceWidthPx: deviceW, deviceHeightPx: deviceH } = canvasLayout;
+  const col = canvasLayout.offsetXPx * CANVAS_TEXT_SUPERSAMPLE;
+  const row = canvasLayout.offsetYPx * CANVAS_TEXT_SUPERSAMPLE;
+  return {
+    x: left + (col / deviceW) * (right - left),
+    // Quad Y is negated Godot Y (`buildCanvasTextQuadArrays`), so the
+    // content-box top is the LARGEST y.
+    y: -(top + (row / deviceH) * (bottom - top)),
+  };
 }
 
 describe('computeCanvasTextCanvasLayout', () => {
@@ -51,11 +76,37 @@ describe('computeCanvasTextCanvasLayout', () => {
   });
 });
 
+describe('the outline surface overlays the fill surface exactly', () => {
+  // Label3D draws two surfaces from one layout — a stroked outline
+  // (`label_3d.cpp:610-615`) and the fill — and they must line up
+  // glyph-for-glyph despite the outline's own stroke padding. Fractional
+  // line spacing makes the UNSTROKED surface fractional too, so neither side
+  // gets to be accidentally whole-pixel.
+  const layout = layoutFor('AB', 0.5);
+  const stroked = computeCanvasTextCanvasLayout(layout, 0, 1.5);
+  const filled = computeCanvasTextCanvasLayout(layout, 0, 0);
+
+  it('puts the content-box origin at the same place on a stroked and an unstroked quad', () => {
+    const a = contentOriginOnQuad(stroked);
+    const b = contentOriginOnQuad(filled);
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(a.y).toBeCloseTo(b.y, 6);
+  });
+
+  it('puts it exactly at the quad origin, so neighbouring runs laid out against layout.widthPx line up', () => {
+    for (const canvasLayout of [stroked, filled]) {
+      const origin = contentOriginOnQuad(canvasLayout);
+      expect(origin.x).toBeCloseTo(0, 6);
+      expect(origin.y).toBeCloseTo(0, 6);
+    }
+  });
+});
+
 describe('buildCanvasTextQuadArrays', () => {
   it('emits exactly one quad (4 verts, 6 indices) regardless of glyph count', () => {
     const layout = layoutFor('Hello World');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    const arrays = buildCanvasTextQuadArrays(layout, canvasLayout);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout);
     expect(arrays.positions.length).toBe(4 * 3);
     expect(arrays.uvs.length).toBe(4 * 2);
     expect(arrays.indices.length).toBe(6);
@@ -64,7 +115,7 @@ describe('buildCanvasTextQuadArrays', () => {
   it('the quad spans exactly the PADDED canvas box, in Godot px (+Y down) negated to three-local Y-up, offset so the UNPADDED content still starts at local x=0', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0.3);
-    const arrays = buildCanvasTextQuadArrays(layout, canvasLayout);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout);
     // Vertex order TL, TR, BL, BR (matches buildGlyphQuadArrays's own convention).
     const tlX = arrays.positions[0]!;
     const tlY = arrays.positions[1]!;
@@ -80,7 +131,7 @@ describe('buildCanvasTextQuadArrays', () => {
   it('UVs cover the full [0,1] texture with flipY convention (top edge v=1)', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
-    const arrays = buildCanvasTextQuadArrays(layout, canvasLayout);
+    const arrays = buildCanvasTextQuadArrays(canvasLayout);
     // TL uv
     expect(arrays.uvs[0]).toBe(0);
     expect(arrays.uvs[1]).toBe(1);

@@ -1,7 +1,10 @@
 /**
- * The canvas-2D painter for a scene-authored (runtime-loaded) font —
- * `TextRun.tsx`'s SECOND glyph-painting path, alongside the vendored
- * MSDF-atlas one (`buildGlyphQuadArrays`/`msdfMaterial.ts`). Dispatches on
+ * The canvas-2D glyph painter — `TextRun.tsx`'s SECOND painting path,
+ * alongside the vendored MSDF-atlas one
+ * (`buildGlyphQuadArrays`/`msdfMaterial.ts`). Serves a scene-authored
+ * (runtime-loaded) font, which has no bake at all, and the bundled font
+ * wherever a consumer needs FreeType semantics the distance field cannot
+ * carry — Label3D's stroked outline above all. Dispatches on
  * `TextLayoutResult.fontMetrics.kind === 'canvas'` (`fontMetrics.ts`'s
  * `FontMetricsKind`) — see `TextRun.tsx`'s own doc for where that check
  * lives.
@@ -52,26 +55,48 @@ import { canvasItemFacing } from '../../../canvasItemFacing';
 /** Raster supersampling factor — canvas text has no distance field to stay crisp under magnification (unlike the MSDF path), so this trades memory/fill-rate for sharpness at the zoom levels this previewer's viewport typically sits at. Not adaptive: a fixed, documented quality/perf tradeoff, not a per-frame recompute. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
 
-/** Fixed vertical pad, CSS px (pre-supersample), on every raster edge — anti-aliased ink can overshoot a glyph's own ascent/descent box by a pixel or two; cropping tight would clip it. */
-const VERTICAL_PAD_PX = 4;
+/** Fixed vertical pad, CSS px (pre-supersample), on every raster edge — anti-aliased ink can overshoot a glyph's own ascent/descent box by a pixel or two; cropping tight would clip it. Exported because it is part of the quad's own contract: the destination quad is this much TALLER than `layout.heightPx`, on both edges. */
+export const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
+
+/**
+ * The whole supersampled device pixels a CSS-px extent needs. The quad
+ * samples the WHOLE canvas across its own extent, so a canvas allocated
+ * larger than what the quad spans stretches the raster by the rounding
+ * residual — and two surfaces of the same layout with DIFFERENT padding
+ * (Label3D's stroked outline and its fill) then land their ink at different
+ * places. Rounding ONCE, here, and having both halves read the result is
+ * what keeps the content box at the quad origin for every padding.
+ */
+function wholeDevicePx(cssPx: number): number {
+  return Math.max(1, Math.ceil(cssPx * CANVAS_TEXT_SUPERSAMPLE));
+}
 
 export interface CanvasTextCanvasLayout {
-  /** Raster canvas width, CSS px (pre-supersample) — `layout.widthPx` plus horizontal shear padding. */
+  /** Raster canvas width, CSS px (pre-supersample) — `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole device pixel. */
   canvasWidthPx: number;
-  /** Raster canvas height, CSS px (pre-supersample) — `layout.heightPx` plus `2 * VERTICAL_PAD_PX`. */
+  /** Raster canvas height, CSS px (pre-supersample) — `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole device pixel. */
   canvasHeightPx: number;
-  /** Left padding, CSS px — where the UNPADDED content box (x=0 in `layout`'s own coordinate space) sits within the raster canvas. Half of the total horizontal pad; the same amount is mirrored on the right. */
+  /** Left padding, CSS px — where the UNPADDED content box (x=0 in `layout`'s own coordinate space) sits within the raster canvas. Half of the total horizontal pad (shear reach plus any outline-stroke reach); the same amount is mirrored on the right. */
   offsetXPx: number;
-  /** Top padding, CSS px — always `VERTICAL_PAD_PX`. */
+  /** Top padding, CSS px — `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
   offsetYPx: number;
+  /** `HTMLCanvasElement#width` — whole supersampled device pixels, rounded here so the painter never re-rounds `canvasWidthPx` to a different answer. */
+  deviceWidthPx: number;
+  /** `HTMLCanvasElement#height`, likewise. */
+  deviceHeightPx: number;
 }
 
 /**
  * Sizes the raster canvas for `layout` at a given synthesized-italic `skew`
- * coefficient (`TextRun.tsx`'s own `skew` prop; 0 = upright). Pure — no
- * canvas/DOM touched.
+ * coefficient (`TextRun.tsx`'s own `skew` prop; 0 = upright) and outline
+ * stroke width (`paintSceneFontCanvas`'s own `strokeWidthPx`; 0 = filled).
+ * Pure — no canvas/DOM touched.
  */
-export function computeCanvasTextCanvasLayout(layout: TextLayoutResult, skew: number): CanvasTextCanvasLayout {
+export function computeCanvasTextCanvasLayout(
+  layout: TextLayoutResult,
+  skew: number,
+  strokeWidthPx = 0
+): CanvasTextCanvasLayout {
   // Worst-case horizontal displacement a shear this steep introduces over
   // the full line-pitch height (buildGlyphQuadArrays's own `dx(y) = -skew *
   // (y - baselinePx)` — the largest |y - baselinePx| within one line is
@@ -79,11 +104,21 @@ export function computeCanvasTextCanvasLayout(layout: TextLayoutResult, skew: nu
   // line and is exact for the tallest case; a small over-pad costs nothing
   // but idle canvas pixels).
   const shearPadPx = Math.abs(skew) * layout.linePitchPx;
+  // A CENTRED stroke reaches half its width outside the glyph contour, on
+  // every side — including horizontally, where an upright fill needs no pad
+  // at all and the outermost glyph would otherwise be cut at the canvas edge.
+  const strokePadPx = strokeWidthPx / 2;
+  const offsetXPx = shearPadPx + strokePadPx;
+  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx;
+  const deviceWidthPx = wholeDevicePx(layout.widthPx + 2 * offsetXPx);
+  const deviceHeightPx = wholeDevicePx(layout.heightPx + 2 * offsetYPx);
   return {
-    canvasWidthPx: layout.widthPx + 2 * shearPadPx,
-    canvasHeightPx: layout.heightPx + 2 * VERTICAL_PAD_PX,
-    offsetXPx: shearPadPx,
-    offsetYPx: VERTICAL_PAD_PX,
+    canvasWidthPx: deviceWidthPx / CANVAS_TEXT_SUPERSAMPLE,
+    canvasHeightPx: deviceHeightPx / CANVAS_TEXT_SUPERSAMPLE,
+    offsetXPx,
+    offsetYPx,
+    deviceWidthPx,
+    deviceHeightPx,
   };
 }
 
@@ -102,12 +137,12 @@ export interface CanvasTextQuadArrays {
  * canvas one) laid out against `layout.widthPx`/`.heightPx` lines up with
  * this quad's content exactly as if the padding did not exist.
  */
-export function buildCanvasTextQuadArrays(
-  layout: TextLayoutResult,
-  canvasLayout: CanvasTextCanvasLayout
-): CanvasTextQuadArrays {
+export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout): CanvasTextQuadArrays {
   const left = -canvasLayout.offsetXPx;
-  const right = layout.widthPx + canvasLayout.offsetXPx;
+  // The whole canvas, not `layout.widthPx + offsetXPx` — the device-pixel
+  // rounding's slack sits on this edge, and the quad must span it or the
+  // raster samples stretched.
+  const right = canvasLayout.canvasWidthPx - canvasLayout.offsetXPx;
   const top = -canvasLayout.offsetYPx;
   const bottom = canvasLayout.canvasHeightPx - canvasLayout.offsetYPx;
 
@@ -142,7 +177,10 @@ function opaqueCssColor(tint: Pick<Color, 'r' | 'g' | 'b'>): string {
  * Draws `layout` (already shaped against a `'canvas'`-kind `FontMetrics`) to
  * a fresh `HTMLCanvasElement` sized by `canvasLayout`, glyph-by-glyph at
  * each `GlyphPlacement.x` (this module's own doc has why not one
- * `fillText(line.text, ...)` call). `skew` shears each LINE's own content
+ * `fillText(line.text, ...)` call). A positive `strokeWidthPx` paints the
+ * glyph OUTLINE ring instead of the fill — Godot's own separate outline
+ * surface (`label_3d.cpp:610-615`), never a stroke layered under a fill in
+ * the same raster. `skew` shears each LINE's own content
  * around ITS OWN baseline (`lineTopPx + layout.baselineOffsetPx`) via a
  * canvas transform reset per line — equivalent to `buildGlyphQuadArrays`'s
  * per-vertex shear, but applied to the raster pixels instead of the quad
@@ -158,7 +196,8 @@ export function paintSceneFontCanvas(
   fontSizePx: number,
   tint: Color,
   skew: number,
-  canvasLayout: CanvasTextCanvasLayout
+  canvasLayout: CanvasTextCanvasLayout,
+  strokeWidthPx = 0
 ): HTMLCanvasElement {
   const metrics = layout.fontMetrics;
   if (!isCanvasFontMetrics(metrics)) {
@@ -166,8 +205,8 @@ export function paintSceneFontCanvas(
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.ceil(canvasLayout.canvasWidthPx * CANVAS_TEXT_SUPERSAMPLE));
-  canvas.height = Math.max(1, Math.ceil(canvasLayout.canvasHeightPx * CANVAS_TEXT_SUPERSAMPLE));
+  canvas.width = canvasLayout.deviceWidthPx;
+  canvas.height = canvasLayout.deviceHeightPx;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return canvas; // happy-dom/vitest only — see this function's own doc.
@@ -176,7 +215,20 @@ export function paintSceneFontCanvas(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.font = `${fontSizePx}px "${metrics.cssFontFamily}"`;
-  ctx.fillStyle = opaqueCssColor(tint);
+  const stroked = strokeWidthPx > 0;
+  if (stroked) {
+    // FreeType's `FT_Glyph_Stroke` exports BOTH borders, so the outline
+    // bitmap is an annulus with a transparent interior — what a centred
+    // canvas stroke of the same total width paints
+    // (`text_server_adv.cpp:1376-1403`). `LINEJOIN_ROUND`/`LINECAP_BUTT` are
+    // that stroker's own settings (`:1383`).
+    ctx.strokeStyle = opaqueCssColor(tint);
+    ctx.lineWidth = strokeWidthPx;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'butt';
+  } else {
+    ctx.fillStyle = opaqueCssColor(tint);
+  }
 
   const baselineOffsetPx = layout.baselineOffsetPx;
 
@@ -193,7 +245,8 @@ export function paintSceneFontCanvas(
     }
     for (const gp of line.glyphs) {
       if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') continue;
-      ctx.fillText(gp.char, canvasLayout.offsetXPx + gp.x, baselineY);
+      if (stroked) ctx.strokeText(gp.char, canvasLayout.offsetXPx + gp.x, baselineY);
+      else ctx.fillText(gp.char, canvasLayout.offsetXPx + gp.x, baselineY);
     }
     ctx.restore();
   });

@@ -4,7 +4,7 @@ import { getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetric
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
-import { layoutLabel3DLines, outlineDistanceBias, MAX_DISTANCE_BIAS } from './glyphLayout';
+import { layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
 
@@ -136,42 +136,39 @@ describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position �
   });
 });
 
-describe('outlineDistanceBias', () => {
-  it('is 0 when outline_size is 0 (Godot skips the outline pass entirely)', () => {
-    expect(outlineDistanceBias(0, FONT_SIZE)).toBe(0);
+describe('the outline stroke (FreeType stroker, text_server_adv.cpp:1383)', () => {
+  // `FT_Stroker_Set(stroker, (int)(fd->size.y * 16.0), ...)` takes a 26.6
+  // fixed-point radius and `fd->size.y` is the RAW `outline_size`
+  // (`text_server_adv.h:406-414` puts `p_size.y` in unscaled), so
+  // `outline_size` 12 is 12 * 16 = 192 in 26.6, i.e. 192 / 64 = 3 px of
+  // one-sided reach. Godot's own default `outline_size` is 12
+  // (`label_3d.h:126`).
+  it('gives Label3D\'s default outline_size a 3 px one-sided radius', () => {
+    expect(outlineRadiusPx(12)).toBe(3);
+  });
+
+  it('scales linearly with outline_size and never with font_size (outline_size is an absolute pixel quantity)', () => {
+    expect(outlineRadiusPx(4)).toBe(1);
+    expect(outlineRadiusPx(32)).toBe(8);
+    // No font_size parameter exists to pass — the C++ keys the stroker off
+    // `fd->size.y` alone.
+    expect(outlineRadiusPx.length).toBe(1);
+  });
+
+  it('truncates to whole 26.6 steps, as the C++ int cast does', () => {
+    // 0.5 * 16 = 8 exactly -> 8/64; 0.53 * 16 = 8.48 -> truncated to 8.
+    expect(outlineRadiusPx(0.53)).toBe(outlineRadiusPx(0.5));
+  });
+
+  it('strokes at twice the radius — a centred canvas stroke reaches half its width outside the contour', () => {
+    expect(outlineStrokeWidthPx(12)).toBe(2 * outlineRadiusPx(12));
+  });
+
+  it('is 0 when outline_size is 0 (Godot skips the outline pass entirely, label_3d.cpp:610)', () => {
+    expect(outlineStrokeWidthPx(0)).toBe(0);
   });
 
   it('is 0 for a negative outline_size (defensive; the parser never emits one)', () => {
-    expect(outlineDistanceBias(-1, FONT_SIZE)).toBe(0);
-  });
-
-  it('is 0 when fontSizePx is 0 (defensive; avoids a divide-by-zero)', () => {
-    expect(outlineDistanceBias(8, 0)).toBe(0);
-  });
-
-  it('grows with outline_size, until the atlas headroom clamp', () => {
-    const small = outlineDistanceBias(1, FONT_SIZE);
-    const larger = outlineDistanceBias(2, FONT_SIZE);
-    expect(larger).toBeGreaterThan(small);
-    expect(larger).toBeLessThanOrEqual(MAX_DISTANCE_BIAS);
-  });
-
-  it('clamps at MAX_DISTANCE_BIAS for a large outline_size', () => {
-    expect(outlineDistanceBias(200, FONT_SIZE)).toBe(MAX_DISTANCE_BIAS);
-  });
-
-  it('requests a LARGER bias at a SMALLER font_size for the same outline_size (outline_size is an absolute px quantity, independent of font_size)', () => {
-    // outline_size 1 (not 4): large enough to be unambiguously positive, small
-    // enough that neither font_size clamps at MAX_DISTANCE_BIAS, or this
-    // comparison would trivially see two equal, clamped values.
-    const at32 = outlineDistanceBias(1, 32);
-    const at16 = outlineDistanceBias(1, 16);
-    expect(at16).toBeGreaterThan(at32);
-    expect(at16).toBeLessThan(MAX_DISTANCE_BIAS);
-  });
-
-  it('never exceeds the atlas distanceRange-normalized upper bound of 1.0', () => {
-    expect(MAX_DISTANCE_BIAS).toBeLessThan(1);
-    expect(OPEN_SANS_ATLAS_INFO.distanceRange).toBeGreaterThan(0);
+    expect(outlineStrokeWidthPx(-1)).toBe(0);
   });
 });

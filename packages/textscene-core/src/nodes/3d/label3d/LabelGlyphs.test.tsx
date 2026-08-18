@@ -11,13 +11,32 @@
  * double_sided, multi-line layout) against the new BufferGeometry +
  * ShaderMaterial shape, plus the outline pass this rewrite adds.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
+import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import {
+  CANVAS_TEXT_SUPERSAMPLE,
+  CANVAS_TEXT_VERTICAL_PAD_PX,
+} from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
 import type { Label3DProperties } from './types';
-import { BillboardMode, HorizontalAlignment } from './types';
-import { outlineDistanceBias } from './glyphLayout';
+import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
+
+// happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
+// registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
+// own doc). Mocking the two functions `LabelGlyphs` actually calls is what
+// lets both sides of the gate be exercised.
+const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
+vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
+  peekBundledCanvasFontMetrics: () => loader.metrics,
+  onSceneFontMetricsSettled: () => () => {},
+}));
+
+beforeEach(() => {
+  loader.metrics = createOpenSansCanvasFontMetrics('label3d-test-family');
+});
 
 function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
@@ -33,6 +52,10 @@ function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
     line_spacing: 0,
     horizontal_alignment: HorizontalAlignment.CENTER,
     no_depth_test: false,
+    render_priority: 0,
+    outline_render_priority: -1,
+    alpha_cut: AlphaCutMode.DISABLED,
+    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };
 }
@@ -47,6 +70,22 @@ async function render(p: Label3DProperties) {
   return ReactThreeTestRenderer.create(<LabelGlyphs properties={p} />);
 }
 
+describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
+  it('paints through the canvas rasteriser, not the MSDF atlas (Godot default project font is not MSDF: text_server.cpp:2386)', async () => {
+    const renderer = await render(props({ text: 'Hi' }));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    expect(material.type).toBe('MeshBasicMaterial');
+    expect(material.map).toBeTruthy();
+  });
+
+  it('paints nothing at all until the bundled font registration resolves (an unregistered family rasterises a SYSTEM font silently)', async () => {
+    loader.metrics = undefined;
+    const renderer = await render(props({ text: 'Hi' }));
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
+  });
+});
+
 describe('<LabelGlyphs>', () => {
   it('renders a Mesh with a non-empty BufferGeometry for non-empty text', async () => {
     const renderer = await render(props({ text: 'Hi' }));
@@ -55,10 +94,14 @@ describe('<LabelGlyphs>', () => {
     expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(0);
   });
 
-  it('renders no glyph ink for empty text (zero-vertex geometry), no throw', async () => {
+  it('renders no glyph ink for empty text — a zero-width content box, no throw', async () => {
     const renderer = await render(props({ text: '' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    expect(mesh.geometry.getAttribute('position').count).toBe(0);
+    // The raster painter always emits its one quad; "no ink" is the quad
+    // spanning no content at all (with no outline stroke and no skew there
+    // is no horizontal pad to widen it) — down to the single device pixel a
+    // canvas must be at minimum.
+    expect(boundingSize(mesh).x).toBeCloseTo(1 / CANVAS_TEXT_SUPERSAMPLE, 6);
   });
 
   it('scales glyph geometry with font_size — to within the whole-pixel advance round, which is not proportional', async () => {
@@ -75,21 +118,21 @@ describe('<LabelGlyphs>', () => {
     // therefore does not exactly double the pen extent; the residual is
     // bounded by the rounding, not by the scale.
     expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(2);
-    expect(largeSize.y).toBeCloseTo(smallSize.y * 2, 1);
+    // Vertically the quad carries a FIXED anti-aliasing pad on each edge
+    // that does not scale with the glyphs, so the CONTENT box is what grows
+    // — and it too is only near-proportional: ascent and descent each ceil
+    // to a whole pixel INDEPENDENTLY at each size
+    // (`text_server_adv.cpp:1515-1516`).
+    const contentHeight = (size: THREE.Vector3) => size.y - 2 * CANVAS_TEXT_VERTICAL_PAD_PX;
+    expect(Math.abs(contentHeight(largeSize) - contentHeight(smallSize) * 2)).toBeLessThan(3);
   });
 
-  it('applies modulate as the material tint (sRGB→linear) and alpha as opacity', async () => {
+  it("applies modulate's alpha as the material opacity (its rgb is baked into the raster, sRGB, and decoded by the texture's own tag)", async () => {
     const renderer = await render(props({ modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const material = mesh.material as THREE.ShaderMaterial;
-    const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(srgbToLinear(0.5), 4);
-    // `uOpacity`, a shader uniform the fragment shader multiplies into alpha
-    // itself — NOT `material.opacity` (the built-in THREE.Material field),
-    // which a hand-written ShaderMaterial never reads unless the shader
-    // says so, and this one does not: `opacity` reaching the glyph's actual
-    // alpha is exactly what this asserts.
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 6);
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    expect(material.opacity).toBeCloseTo(0.5, 6);
+    expect(material.map!.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
   it('uses a transparent material, so a translucent modulate blends over what is behind it', async () => {
@@ -121,45 +164,123 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('outline pass', () => {
-    // The outline is a SECOND threshold of the SAME draw call (msdfMaterial.ts's
-    // `uOutlineBias`/`uOutlineColor`/`uOutlineOpacity`), not a second mesh —
-    // see that file's own doc for the measured reason (two overlapping
-    // alpha-blended meshes of a near-identical shape darken every
-    // anti-aliased edge). So every line still renders exactly ONE mesh either way.
+    // Godot emits the outline glyphs as their OWN surfaces before the fill
+    // (`label_3d.cpp:610-621`), both `TRANSPARENCY_ALPHA` (`:386`) on the
+    // same cached shader (`:396`) — `blend_mix, depth_draw_opaque`
+    // (`material.cpp:775-812`), ordered by `material_set_render_priority`
+    // (`:402`). Two overlapping alpha-blended surfaces is the engine's own
+    // design, not something to collapse into one draw call.
 
-    it('sets a non-zero uOutlineBias when outline_size > 0 and outline_modulate.a !== 0', async () => {
-      const renderer = await render(props({ outline_size: 8, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } }));
-      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
-      const material = mesh.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uOutlineBias!.value).toBeGreaterThan(0);
+    it('draws the outline as its own surface BEFORE the fill, at outline_render_priority then render_priority', async () => {
+      const renderer = await render(props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } }));
+      const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+      expect(meshes.length).toBe(2);
+      expect(meshes.map((m) => m.renderOrder)).toEqual([-1, 0]);
     });
 
-    it('leaves uOutlineBias at 0 when outline_size is 0', async () => {
+    it('carries outline_modulate alpha on the outline surface and modulate alpha on the fill', async () => {
+      const renderer = await render(
+        props({
+          outline_size: 12,
+          outline_modulate: { r: 1, g: 0, b: 0, a: 0.25 },
+          modulate: { r: 1, g: 1, b: 1, a: 0.75 },
+        })
+      );
+      const [outline, fill] = renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
+      expect(outline!.opacity).toBeCloseTo(0.25, 6);
+      expect(fill!.opacity).toBeCloseTo(0.75, 6);
+    });
+
+    it('draws the fill alone when outline_size is 0', async () => {
       const renderer = await render(props({ outline_size: 0 }));
-      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      const material = mesh.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uOutlineBias!.value).toBe(0);
+      const meshes = renderer.scene.findAllByType('Mesh');
+      expect(meshes.length).toBe(1);
+      expect((meshes[0]!.instance as THREE.Mesh).renderOrder).toBe(0);
     });
 
-    it('leaves uOutlineBias at 0 when outline_modulate.a is 0, even with outline_size > 0', async () => {
+    it('draws the fill alone when outline_modulate.a is 0, even with outline_size > 0', async () => {
       const renderer = await render(
-        props({ outline_size: 8, outline_modulate: { r: 0, g: 0, b: 0, a: 0 } })
+        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0 } })
       );
-      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      const material = mesh.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uOutlineBias!.value).toBe(0);
+      expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
     });
 
-    it('carries outline_modulate as uOutlineColor/uOutlineOpacity and the calibrated distanceBias', async () => {
+    it('takes both surfaces\' paint order from the authored priorities, not a hardcoded pair', async () => {
+      const renderer = await render(props({ outline_size: 12, render_priority: 5, outline_render_priority: 3 }));
+      const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+      expect(meshes.map((m) => m.renderOrder)).toEqual([3, 5]);
+    });
+  });
+
+  describe('texture_filter', () => {
+    // Expressible at last: a rasterised glyph texture HAS a magnification
+    // filter, where a distance field never did. `label_3d.h:140` defaults to
+    // LINEAR_WITH_MIPMAPS; the enum's even members are the NEAREST ones
+    // (`material.h:172-177`).
+    const mapFilters = (renderer: Awaited<ReturnType<typeof render>>) => {
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+        .material as THREE.MeshBasicMaterial;
+      return { mag: material.map!.magFilter, min: material.map!.minFilter };
+    };
+
+    it('defaults to linear filtering', async () => {
+      expect(mapFilters(await render(props()))).toEqual({
+        mag: THREE.LinearFilter,
+        min: THREE.LinearFilter,
+      });
+    });
+
+    it('NEAREST magnifies the raster without smoothing', async () => {
+      expect(mapFilters(await render(props({ texture_filter: TextureFilter.NEAREST })))).toEqual({
+        mag: THREE.NearestFilter,
+        min: THREE.NearestFilter,
+      });
+    });
+
+    it('reads the nearest/linear bit of every mipmap variant, not just the two plain ones', async () => {
+      const nearestMip = await render(props({ texture_filter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC }));
+      const linearMip = await render(props({ texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC }));
+      expect(mapFilters(nearestMip).mag).toBe(THREE.NearestFilter);
+      expect(mapFilters(linearMip).mag).toBe(THREE.LinearFilter);
+    });
+  });
+
+  describe('alpha_cut', () => {
+    // `label_3d.cpp:401-405`: the priority reaches the renderer as a MATERIAL
+    // render priority only while `alpha_cut == ALPHA_CUT_DISABLED`. Otherwise
+    // the material leaves `TRANSPARENCY_ALPHA`, the priority comparator no
+    // longer applies to it, and Godot bakes `z_shift = priority * pixel_size`
+    // into the vertex Z instead (`:417-420`). Geometry here is Godot px inside
+    // `Component.tsx`'s own `pixel_size` group, so the shift is the bare
+    // priority.
+    const surfaceZ = (renderer: Awaited<ReturnType<typeof render>>) =>
+      renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).getWorldPosition(new THREE.Vector3()).z);
+
+    it('DISABLED (default) orders by priority and leaves every surface at z=0', async () => {
+      const renderer = await render(props({ outline_size: 12 }));
+      expect(surfaceZ(renderer)).toEqual([0, 0]);
+      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual([
+        -1, 0,
+      ]);
+    });
+
+    it('DISCARD shifts each surface in Z by its own priority and stops ordering by it', async () => {
+      const renderer = await render(props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD }));
+      expect(surfaceZ(renderer)).toEqual([-1, 0]);
+      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual([
+        0, 0,
+      ]);
+    });
+
+    it('shifts by the AUTHORED priorities, not the defaults', async () => {
       const renderer = await render(
-        props({ outline_size: 8, font_size: 32, outline_modulate: { r: 1, g: 0, b: 0, a: 0.5 } })
+        props({ outline_size: 12, alpha_cut: AlphaCutMode.HASH, render_priority: 4, outline_render_priority: -3 })
       );
-      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      const material = mesh.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uOutlineColor!.value.x).toBeCloseTo(1, 4); // red channel, linear(1) === 1
-      expect(material.uniforms.uOutlineOpacity!.value).toBeCloseTo(0.5, 6);
-      expect(material.uniforms.uOutlineBias!.value).toBeCloseTo(outlineDistanceBias(8, 32), 6);
+      expect(surfaceZ(renderer)).toEqual([-3, 4]);
     });
   });
 

@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { BillboardMode, HorizontalAlignment } from './types';
+import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 
 function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
@@ -31,6 +31,10 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     line_spacing: 0,
     horizontal_alignment: HorizontalAlignment.CENTER,
     no_depth_test: false,
+    render_priority: 0,
+    outline_render_priority: -1,
+    alpha_cut: AlphaCutMode.DISABLED,
+    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };
   return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };

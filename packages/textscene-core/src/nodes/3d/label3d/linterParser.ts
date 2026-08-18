@@ -10,6 +10,15 @@ const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
 const HORIZONTAL_ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
 // ALPHA_CUT_MAX = 4 (scene/3d/label_3d.h:50-56), enforced at label_3d.cpp:1013.
 const ALPHA_CUT = { 0: 'DISABLED', 1: 'DISCARD', 2: 'OPAQUE_PREPASS', 3: 'HASH' };
+// TEXTURE_FILTER_MAX = 6 (scene/resources/material.h:172-178).
+const TEXTURE_FILTER = {
+  0: 'NEAREST',
+  1: 'LINEAR',
+  2: 'NEAREST_WITH_MIPMAPS',
+  3: 'LINEAR_WITH_MIPMAPS',
+  4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
+  5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
+};
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
@@ -27,4 +36,8 @@ validatorRegistry.registerAll('Label3D', {
   line_spacing: v.float('line_spacing'),
   horizontal_alignment: v.enumInt('horizontal_alignment', 0, 3, HORIZONTAL_ALIGNMENT),
   no_depth_test: v.boolean('no_depth_test'),
+  texture_filter: v.enumInt('texture_filter', 0, 5, TEXTURE_FILTER),
+  // Godot's own priorities are signed and unbounded in either direction.
+  render_priority: v.int('render_priority'),
+  outline_render_priority: v.int('outline_render_priority'),
 });

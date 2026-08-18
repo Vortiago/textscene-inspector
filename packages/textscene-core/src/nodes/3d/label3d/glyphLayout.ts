@@ -1,15 +1,13 @@
 /**
- * Label3D's own line-placement + outline-dilation math — a port of
+ * Label3D's own line-placement + outline-stroke math — a port of
  * `scene/3d/label_3d.cpp Label3D::_shape()` (~562-623) for the parts this
  * component parses (see `types.ts`/`parser.ts` for the parsed set;
- * `vertical_alignment`, `autowrap_mode`, `width`, `render_priority` and
- * `outline_render_priority` are unparsed and out of scope — every Label3D
- * therefore renders as Godot's own DEFAULT for each).
+ * `vertical_alignment`, `autowrap_mode` and `width` are unparsed and out of
+ * scope — every Label3D therefore renders as Godot's own DEFAULT for each).
  *
  * This module only turns an ALREADY-SHAPED `TextLayoutResult` (from the
  * shared `shapeText`, reused verbatim — see `LabelGlyphs.tsx`) into per-line
- * pixel placements and the MSDF `distanceBias` that approximates Godot's
- * outline pass. It plays the same role `nodes/2d/ui/label/nativeSolver.ts`
+ * pixel placements and the stroke width of Godot's own outline pass. It plays the same role `nodes/2d/ui/label/nativeSolver.ts`
  * plays for the 2D Control Label, for Label3D's own (different) rules:
  * always-centred vertical placement (`vertical_alignment` defaults to
  * `VERTICAL_ALIGNMENT_CENTER`, `label_3d.h`, and is never parsed away from
@@ -25,7 +23,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { OPEN_SANS_ATLAS_INFO } from '../../../r3f/controls/native/text/openSansAtlas';
 import { HorizontalAlignment } from './types';
 
 export interface Label3DLinePlacement {
@@ -84,79 +81,31 @@ export function layoutLabel3DLines(
 }
 
 /**
- * Approximates Godot's outline pass — a SEPARATE FreeType-stroked glyph
- * bitmap, keyed by `Vector2i(font_size, outline_size)`
- * (`label_3d.cpp:344-349`; a real geometric dilation, not a shader trick) —
- * as an MSDF `distanceBias` shift of the SAME glyph quad (`TextRun`'s
- * existing synthesized-bold mechanism,
- * `r3f/controls/native/text/msdfMaterial.ts`; `richtextlabel/nativeSolver.ts`'s
- * `BOLD_DISTANCE_BIAS` is the same trick calibrated for a different purpose).
+ * The one-sided reach of Godot's outline stroke, Godot px.
  *
- * Calibrated against real Godot 4.6.3 via `pnpm ref:godot` (not derived from
- * the C++, which never states the actual rendered stroke width): a
- * single-glyph scratch scene (`text="H"`, `outline_size=32`,
- * `outline_modulate=black`, camera `(0,0,3)` looking at the origin,
- * `pixel_size=0.01`) rendered at `font_size=128` AND again at `font_size=64`
- * both measured a one-sided outline band of ≈13.4 screen px around the H's
- * stems (half-max crossings of the background/outline and outline/ink
- * transitions) — confirming the dilation is independent of `font_size`,
- * exactly as `outline_size` being its own absolute font-pixel quantity
- * (not a fraction of `font_size`) predicts. Converting that screen-px
- * measurement to Godot px used the SAME glyph's own known atlas bounding-box
- * width as a ruler (`OPEN_SANS_ATLAS_GLYPHS.H.width` = 28 atlas-bake px,
- * scale `fontSizePx/42`, measured ink-edge-to-ink-edge width ≈130.98 screen
- * px at `font_size=128`) rather than deriving the camera's world-to-screen
- * scale, which `--frame`/`--camera` do not print: 13.4 / (130.98/85.33) ≈
- * 8.66 Godot px of one-sided dilation for `outline_size=32`, i.e. ≈0.27
- * Godot px per unit of `outline_size`. `OUTLINE_DILATION_PX_PER_UNIT` is
- * that constant.
- *
- * `distanceBias` is normalized to the atlas's own `distanceRange` (4
- * atlas-bake px — the SDF's full encoded falloff band), so a target
- * dilation in Godot px converts to atlas-bake px by the SAME
- * `OPEN_SANS_ATLAS_INFO.fontSize / fontSizePx` scale before dividing by
- * `distanceRange`.
- *
- * This trades exactness for reusing the existing MSDF pipeline with zero new
- * atlas bytes: the atlas's own padding around each glyph bounds how far a
- * `distanceBias` shift can dilate before the shape clips flat at the quad's
- * own edge — `MAX_DISTANCE_BIAS` caps the request there (measured the same
- * way, `comparison.md` has the resulting divergence) rather than let a large
- * `outline_size` render a visibly flat-cut silhouette. `msdfMaterial.ts`'s
- * own `outlineDampen` handles the OTHER failure mode (a small on-screen
- * caption, where the shape's own screen-space AA band widens disproportionately) —
- * this cap is purely about the atlas's own per-glyph padding.
+ * The outline pass rasterises a SEPARATE glyph bitmap through FreeType's
+ * stroker (`text_server_adv.cpp:1376-1403`), keyed by `Vector2i(font_size,
+ * outline_size)` (`label_3d.cpp:344-349`). `_get_size_outline`
+ * (`text_server_adv.h:406-414`) puts `outline_size` into `fd->size.y`
+ * UNSCALED, and `FT_Stroker_Set(stroker, (int)(fd->size.y * 16.0), ...)`
+ * (`text_server_adv.cpp:1383`) takes its radius in 26.6 fixed point — so the
+ * radius is `outline_size * 16 / 64` px. Independent of `font_size`, exactly
+ * as `outline_size` being its own absolute pixel quantity implies.
  */
-const OUTLINE_DILATION_PX_PER_UNIT = 0.27;
+export function outlineRadiusPx(outlineSizePx: number): number {
+  return Math.trunc(outlineSizePx * 16) / 64;
+}
 
 /**
- * The largest `distanceBias` the vendored atlas's own per-glyph bitmap can
- * dilate into before the outline stops reading as a glyph-shaped band and
- * starts reading as its QUAD's own bounding rectangle.
+ * The full canvas stroke width for that radius — a canvas 2D stroke is
+ * CENTRED on the path, so it reaches `lineWidth / 2` outside the contour,
+ * matching `FT_Glyph_Stroke`'s both-borders export (`text_server_adv.cpp:
+ * 1392`: an annulus with a transparent interior, not a filled dilation).
  *
- * The atlas's own padding sets a theoretical ceiling around ≈0.5-0.6
- * (sampling the MSDF median channel across the `H` glyph's reported bitmap
- * bounds, `openSansAtlas.ts`'s `OPEN_SANS_ATLAS_PNG_DATA_URL` decoded: the
- * value is already fully saturated — "maximally outside" — one pixel
- * outside the bitmap's own edge, and the halfway/shape-boundary crossing
- * sits only ≈2.5 atlas px, of the atlas's 4px `distanceRange`, further in).
- * In practice a bias that large visibly SQUARES OFF thinner glyphs' outlines
- * (measured on `unit-box-mesh.tscn`'s "BoxMesh Test" caption, a
- * `font_size`-32/`pixel_size`-0.008 label sitting well above
- * `msdfMaterial.ts`'s `outlineDampen` floor — that dampening only helps a
- * SMALLER on-screen caption, not this one). `0.3` is the largest value that
- * rendered every letter's outline as a rounded band rather than a
- * rectangle across the three arbitration scenes in `comparison.md`'s own
- * table; the resulting under-dilation (thinner than Godot's own outline for
- * outline_size ≳ 4) is the accepted trade and is measured there too.
+ * `0` when Godot would skip the outline pass entirely (`label_3d.cpp:610`:
+ * `outline_modulate.a != 0.0 && outline_size > 0`).
  */
-export const MAX_DISTANCE_BIAS = 0.3;
-
-/** `0` when Godot would skip the outline pass entirely (`label_3d.cpp:610`: `outline_modulate.a != 0.0 && outline_size > 0`). */
-export function outlineDistanceBias(outlineSizePx: number, fontSizePx: number): number {
-  if (outlineSizePx <= 0 || fontSizePx <= 0) return 0;
-  const targetDilationGodotPx = outlineSizePx * OUTLINE_DILATION_PX_PER_UNIT;
-  const targetDilationAtlasPx = targetDilationGodotPx * (OPEN_SANS_ATLAS_INFO.fontSize / fontSizePx);
-  const bias = targetDilationAtlasPx / OPEN_SANS_ATLAS_INFO.distanceRange;
-  return Math.min(bias, MAX_DISTANCE_BIAS);
+export function outlineStrokeWidthPx(outlineSizePx: number): number {
+  if (outlineSizePx <= 0) return 0;
+  return 2 * outlineRadiusPx(outlineSizePx);
 }

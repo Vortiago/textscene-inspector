@@ -279,12 +279,7 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
       // linter (boolean with Godot-default=true, no range constraint).
       'double_sided',
     ],
-    linterOnly: [
-      // Four-mode enum Godot bounds-checks (scene/3d/label_3d.h:50-56); the
-      // parser does not read it, so the preview renders unaffected.
-      'alpha_cut',
-    ],
-    reason: 'Label3D.double_sided is a boolean read by the parser; the linter has no constraint to enforce. alpha_cut is a bounded Godot enum the linter checks but the renderer ignores.',
+    reason: 'Label3D.double_sided is a boolean read by the parser; the linter has no constraint to enforce.',
   },
 
   CSGBox3D: {

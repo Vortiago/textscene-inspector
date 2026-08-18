@@ -14,7 +14,9 @@
  *     below, sampled from the vendored Open Sans MSDF atlas, unchanged from
  *     before a second `FontMetrics` kind existed.
  *   - `'canvas'` (`runtimeFontMetrics.ts`'s `CanvasFontMetrics` — a
- *     scene-authored font with no baked atlas) — `canvasTextPainter.ts`'s
+ *     scene-authored font with no baked atlas, and the BUNDLED font when a
+ *     consumer needs FreeType semantics an MSDF field cannot carry, which is
+ *     every Label3D) — `canvasTextPainter.ts`'s
  *     `buildCanvasTextQuadArrays`/`paintSceneFontCanvas`, ONE textured quad
  *     rasterised through canvas-2D instead of many atlas-sampled ones (that
  *     module's own doc has the full reasoning and the CSP constraint that
@@ -230,10 +232,21 @@ export interface TextRunProps {
   depthTest?: boolean;
   /** Forwarded to `createMsdfMaterial` — see its own doc. Omitted (2D-UI default) leaves `canvasItemFacing()`'s side; either way the run is drawn in one pass. */
   side?: THREE.Side;
-  /** Outline colour, Godot sRGB (converted to linear like `tint`) — Label3D's `outline_modulate`. Forwarded to `createMsdfMaterial`; see its own doc. */
-  outlineTint?: Color;
-  /** Additional dilation for a second (outline) edge, forwarded to `createMsdfMaterial`. 0 (default) disables the outline band. */
-  outlineBias?: number;
+  /**
+   * Paints this run as a stroked glyph OUTLINE ring of this width (CSS px)
+   * rather than a filled glyph — Godot's own separate outline surface
+   * (`label_3d.cpp:610-615`), drawn from the same pen positions as the fill.
+   * 0 (default) fills. Canvas-rasterised runs only; the MSDF atlas has no
+   * contour to stroke.
+   */
+  strokeWidthPx?: number;
+  /**
+   * Magnification/minification of the rasterised glyph texture — Label3D's
+   * `texture_filter` (`label_3d.h:140`). `'linear'` (default) is Godot's own
+   * default's nearest/linear bit. Canvas-rasterised runs only; the MSDF atlas
+   * decodes a distance field and is always sampled linearly.
+   */
+  textureFilter?: 'nearest' | 'linear';
   /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips —
    * for Label3D's own use ONLY (`LabelGlyphs.tsx`'s own doc has the
@@ -259,12 +272,9 @@ interface BuiltTextRun {
  * The canvas branch (`layout.fontMetrics.kind === 'canvas'`) is the ONLY
  * place this component's own doc's "internal dispatch" actually happens —
  * see that doc for why a per-slice `Component.tsx` never needs its own
- * branch. Outline (`outlineTint`/`outlineBias`) and synthesized-bold
- * (`distanceBias`) are MSDF-distance-field techniques with no canvas-path
- * equivalent yet — a canvas-rasterised run ignores both rather than
- * approximating them, a deliberate, documented scope boundary (see this
- * packet's own report), not a silent drop of a feature the atlas path still
- * has.
+ * branch. `strokeWidthPx` is canvas-only (there is no glyph contour in a
+ * distance field to stroke) and synthesized-bold (`distanceBias`) is
+ * atlas-only; each branch ignores the other's.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -275,18 +285,18 @@ function buildTextRun(
   clippingPlanes: readonly THREE.Plane[] | undefined,
   depthTest: boolean | undefined,
   side: THREE.Side | undefined,
-  outlineTint: Color | undefined,
-  outlineBias: number | undefined
+  strokeWidthPx: number,
+  textureFilter: 'nearest' | 'linear'
 ): BuiltTextRun {
   if (isCanvasFontMetrics(layout.fontMetrics)) {
-    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew);
-    const { positions, uvs, indices } = buildCanvasTextQuadArrays(layout, canvasLayout);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
+    const { positions, uvs, indices } = buildCanvasTextQuadArrays(canvasLayout);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
-    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout);
+    const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
     // DELIBERATELY `SRGBColorSpace`, not the `NoColorSpace` the general 2D-
     // canvas rule (`canvas2DTextureDecode.ts`'s own doc — `rendering/viewport/
@@ -335,9 +345,14 @@ function buildTextRun(
     // separately-modulated colour, matching Godot's own model exactly) would
     // reopen this question; a plain retag today would not.
     texture.colorSpace = THREE.SRGBColorSpace;
+    // `generateMipmaps` stays off for every filter: Godot's own default asks
+    // for mipmaps, but a per-label raster rebuilt on every text/size change
+    // is the wrong thing to build a chain for, so the minified case samples
+    // the base level. Only the nearest/linear bit is honoured.
     texture.generateMipmaps = false;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    const filter = textureFilter === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
+    texture.minFilter = filter;
+    texture.magFilter = filter;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -352,7 +367,6 @@ function buildTextRun(
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-  const outline = outlineTint ? sRGBToLinearRGB(outlineTint.r, outlineTint.g, outlineTint.b) : null;
   const material = createMsdfMaterial({
     map: getAtlasTexture(),
     color: { r, g, b },
@@ -362,9 +376,6 @@ function buildTextRun(
     clippingPlanes,
     depthTest,
     side,
-    outlineColor: outline ? { r: outline[0], g: outline[1], b: outline[2] } : undefined,
-    outlineOpacity: outlineTint?.a,
-    outlineBias,
   });
   return { geometry: geo, material };
 }
@@ -379,14 +390,14 @@ export function TextRun({
   renderOrder = 0,
   depthTest,
   side,
-  outlineTint,
-  outlineBias,
+  strokeWidthPx = 0,
+  textureFilter = 'linear',
   frameExcluded,
 }: TextRunProps) {
   const { geometry, material, ownedTexture } = useMemo(
-    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, outlineTint, outlineBias),
+    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint` is compared by its own r/g/b/a fields, not object identity (a caller re-creating an equal-valued tint object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself.
-    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, outlineTint, outlineBias]
+    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter]
   );
 
   // R3F does not dispose a geometry/material passed as a PROP (only ones it
