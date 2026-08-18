@@ -217,3 +217,36 @@ describe('parseHeading value text', () => {
     expect(result!.attributes.index).toBe('5');
   });
 });
+
+describe('parseHeading bounds a delimiter scan at the next attribute', () => {
+  it('stops a constructor scan at the next attribute instead of swallowing it', () => {
+    // `=` cannot appear unquoted inside a Godot heading value: constructor
+    // arguments are values, dictionaries key on `:`, and a quoted string is
+    // skipped whole. So an unquoted `=` is the next attribute, not content.
+    const result = parseHeading('[node name="X" transform=Transform3D(1, 0 type="Node2D") parent="."]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({
+      name: 'X',
+      transform: 'Transform3D(1,',
+      type: 'Node2D',
+      parent: '.',
+    });
+  });
+
+  it('stops an array scan at the next attribute instead of swallowing it', () => {
+    const result = parseHeading('[node name="X" arr=[1, 2 parent="." type="Node2D"]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({ name: 'X', arr: '[1,', parent: '.', type: 'Node2D' });
+  });
+
+  it('keeps an unclosed-constructor heading linear, not quadratic', () => {
+    // Every attribute used to rescan to end-of-line before falling back, so a
+    // long bracket line hung the extension host as the user typed.
+    const line = `[node ${'a=f( '.repeat(20000)}]`;
+    const start = performance.now();
+    const result = parseHeading(line);
+    const elapsed = performance.now() - start;
+    expect(result).not.toBeNull();
+    expect(elapsed).toBeLessThan(500);
+  });
+});

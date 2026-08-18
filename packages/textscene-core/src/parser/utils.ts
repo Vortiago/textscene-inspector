@@ -63,6 +63,13 @@ function scanQuoted(str: string, pos: number): number {
 /**
  * Index just past the `close` that matches the `open` at `start`, counting
  * nesting and ignoring delimiters inside quoted strings; -1 if it never closes.
+ *
+ * An unquoted `=` ends the search unmatched. It cannot be content: constructor
+ * arguments are values, dictionaries key on `:`, and a quoted string is
+ * skipped whole — so an `=` is the next attribute, reached because this value's
+ * delimiter never closed. Stopping there is what keeps a stray `(` from
+ * swallowing the attributes behind it, and bounds the scan to one attribute
+ * instead of re-reading to end-of-line for every attribute on the line.
  */
 function scanBalanced(str: string, start: number, open: string, close: string): number {
   let depth = 0;
@@ -73,7 +80,8 @@ function scanBalanced(str: string, start: number, open: string, close: string): 
       const end = scanQuoted(str, i);
       if (end === -1) return -1;
       i = end - 1;
-    } else if (c === open) depth++;
+    } else if (c === '=') return -1;
+    else if (c === open) depth++;
     else if (c === close && --depth === 0) return i + 1;
   }
   return -1;
