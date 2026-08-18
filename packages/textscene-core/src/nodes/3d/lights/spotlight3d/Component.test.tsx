@@ -23,6 +23,15 @@ function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
 }
 
 describe('<SpotLight3D>', () => {
+  it('converts shadow_bias at the shadow camera’s far plane', async () => {
+    // 0.03 / 100 * soft_shadow_scale(2) / spot_range.
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ shadow_enabled: true, spot_range: 5 })} />
+    );
+    const light = renderer.scene.findByType('SpotLight');
+    expect(instanceAs<THREE.SpotLight>(light).shadow.bias).toBeCloseTo(-0.00012, 12);
+  });
+
   it('renders a SpotLight', async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
     expect(renderer.scene.findAllByType('SpotLight').length).toBe(1);

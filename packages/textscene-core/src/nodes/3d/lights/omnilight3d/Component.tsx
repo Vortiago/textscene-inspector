@@ -12,11 +12,14 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import {
   LIGHT_INTENSITY_SCALE,
-  DEFAULT_SHADOW_BIAS,
   SHADOW_MAP_SIZE,
   SHADOW_NORMAL_BIAS,
 } from '../../../../r3f/lightConstants';
+import { omniShadowBias } from '../shared/shadowBias';
 import { PointLightGizmo } from '../shared/lightHelpers';
+
+/** three's cube shadow camera needs a positive near; Godot's omni pass has none. */
+const SHADOW_NEAR = 0.5;
 
 export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
@@ -27,9 +30,7 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
   );
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
-  const bias = properties.shadow_bias !== undefined
-    ? -properties.shadow_bias * 0.01
-    : DEFAULT_SHADOW_BIAS.OMNI;
+  const bias = omniShadowBias(properties.shadow_bias, SHADOW_NEAR, properties.omni_range);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
@@ -44,7 +45,7 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
         shadow-mapSize-height={SHADOW_MAP_SIZE}
         shadow-bias={bias}
         shadow-normalBias={SHADOW_NORMAL_BIAS}
-        shadow-camera-near={0.5}
+        shadow-camera-near={SHADOW_NEAR}
         shadow-camera-far={properties.omni_range}
       />
       <PointLightGizmo lightRef={lightRef} />

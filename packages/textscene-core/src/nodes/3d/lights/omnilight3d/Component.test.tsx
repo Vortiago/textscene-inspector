@@ -26,6 +26,25 @@ describe('<OmniLight3D>', () => {
     expect(renderer.scene.findAllByType('PointLight').length).toBe(1);
   });
 
+  it('converts shadow_bias at the shadow camera’s far plane', async () => {
+    // Godot's default 0.1 is a WORLD radial offset; at our 0.5 near and this
+    // light's range-5 far that is 0.1 * 0.5 / (5 * 4.5) of three's cube depth.
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = renderer.scene.findByType('PointLight');
+    expect(instanceAs<THREE.PointLight>(light).shadow.bias).toBeCloseTo(-1 / 450, 12);
+  });
+
+  it('rescales shadow_bias with the light’s own range', async () => {
+    // 0.2 * 0.5 / (10 * 9.5).
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true, shadow_bias: 0.2, omni_range: 10 })} />
+    );
+    const light = renderer.scene.findByType('PointLight');
+    expect(instanceAs<THREE.PointLight>(light).shadow.bias).toBeCloseTo(-0.1 / 95, 12);
+  });
+
   it('maps omni_range to distance', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OmniLight3D node={makeNode({ omni_range: 12 })} />

@@ -11,12 +11,12 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import {
   LIGHT_INTENSITY_SCALE,
-  DEFAULT_SHADOW_BIAS,
   DIRECTIONAL_SHADOW_FRUSTUM_HALF,
   DIRECTIONAL_SHADOW_NEAR,
   SHADOW_MAP_SIZE,
   SHADOW_NORMAL_BIAS,
 } from '../../../../r3f/lightConstants';
+import { directionalShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
 
@@ -31,9 +31,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
   const shadowFar = properties.directional_shadow_max_distance ?? 100;
-  const bias = properties.shadow_bias !== undefined
-    ? -properties.shadow_bias * 0.01
-    : DEFAULT_SHADOW_BIAS.DIRECTIONAL;
+  const bias = directionalShadowBias(properties.shadow_bias, properties.shadow_blur);
 
   return (
     <LightWithTarget

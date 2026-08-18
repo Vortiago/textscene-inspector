@@ -12,10 +12,10 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import {
   LIGHT_INTENSITY_SCALE,
-  DEFAULT_SHADOW_BIAS,
   SHADOW_MAP_SIZE,
   SHADOW_NORMAL_BIAS,
 } from '../../../../r3f/lightConstants';
+import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 
@@ -38,9 +38,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const penumbra =
     properties.penumbra ??
     Math.max(0, Math.min(1, 1 / ((properties.spot_angle_attenuation ?? 1) + 1)));
-  const bias = properties.shadow_bias !== undefined
-    ? -properties.shadow_bias * 0.01
-    : DEFAULT_SHADOW_BIAS.SPOT;
+  const bias = spotShadowBias(properties.shadow_bias, properties.shadow_blur, properties.spot_range);
 
   return (
     <LightWithTarget

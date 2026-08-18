@@ -32,6 +32,24 @@ describe('<DirectionalLight3D>', () => {
     expect(instanceAs<THREE.DirectionalLight>(light).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
   });
 
+  it('maps shadow_bias through Godot’s own normalized-depth arithmetic', async () => {
+    // 0.5 / 100 * soft_shadow_scale(2) = 0.01, negated for three's compare.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true, shadow_bias: 0.5 })} />
+    );
+    const light = renderer.scene.findByType('DirectionalLight');
+    expect(instanceAs<THREE.DirectionalLight>(light).shadow.bias).toBeCloseTo(-0.01, 12);
+  });
+
+  it('defaults an absent shadow_bias to Godot’s own default', async () => {
+    // `light_3d.cpp:490` — 0.1 / 100 * 2 = 0.002.
+    const renderer = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = renderer.scene.findByType('DirectionalLight');
+    expect(instanceAs<THREE.DirectionalLight>(light).shadow.bias).toBeCloseTo(-0.002, 12);
+  });
+
   it('parses light_color hex', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ light_color: 'Color(1, 0, 0, 1)' })} />

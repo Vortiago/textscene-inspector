@@ -1,0 +1,77 @@
+import { describe, expect, it } from 'vitest';
+import { directionalShadowBias, omniShadowBias, spotShadowBias } from './shadowBias';
+
+describe('directionalShadowBias', () => {
+  it('is Godot’s own depth-range-free fraction, negated for three’s compare', () => {
+    // `light_storage.cpp:722-723` sends `shadow_bias / 100 * bias_scale` and
+    // `renderer_scene_cull.cpp:2348` makes `bias_scale` the cascade's ortho depth
+    // range, which `scene_forward_clustered.glsl:2304` then spends as a world
+    // offset inside that same range — so in normalized depth the range cancels
+    // and only `shadow_bias / 100 * soft_shadow_scale` survives. Godot's
+    // DirectionalLight3D default is 0.1 (`light_3d.cpp:490`) and the default PCF
+    // quality radius is 2 (`rendering_server.cpp:3706`,
+    // `renderer_scene_render_rd.cpp:1204-1207`): 0.1 / 100 * 2 = 0.002.
+    expect(directionalShadowBias(undefined, undefined)).toBeCloseTo(-0.002, 12);
+  });
+
+  it('scales linearly with shadow_bias', () => {
+    // 0.5 / 100 * 2 = 0.01.
+    expect(directionalShadowBias(0.5, undefined)).toBeCloseTo(-0.01, 12);
+  });
+
+  it('takes shadow_blur into the same product Godot does', () => {
+    // `light_storage.cpp:697` seeds soft_shadow_scale from SHADOW_BLUR before
+    // the quality radius multiplies it: 0.1 / 100 * (0.5 * 2) = 0.001.
+    expect(directionalShadowBias(0.1, 0.5)).toBeCloseTo(-0.001, 12);
+  });
+
+  it('is zero when the author zeroes the bias', () => {
+    expect(directionalShadowBias(0, undefined)).toBe(-0);
+  });
+});
+
+describe('omniShadowBias', () => {
+  it('converts Godot’s unscaled world-space radial offset at the far plane', () => {
+    // `light_storage.cpp:973` passes `shadow_bias` through unscaled and
+    // `scene_forward_lights_inc.glsl:594` subtracts it from a world distance.
+    // three's cube depth is projective (`shadowmap_pars_fragment.glsl.js:292`),
+    // so d(dp)/dz = far * near / (z^2 * (far - near)); at z = far that is
+    // near / (far * (far - near)). Godot's default 0.1 (`light_3d.cpp:490`)
+    // over a range-5 light with our 0.5 near: 0.1 * 0.5 / (5 * 4.5) = 1/450.
+    expect(omniShadowBias(undefined, 0.5, 5)).toBeCloseTo(-1 / 450, 12);
+  });
+
+  it('shrinks as the light’s range grows, because the far plane moves out', () => {
+    // 0.2 * 0.5 / (10 * 9.5) = 0.1 / 95.
+    expect(omniShadowBias(0.2, 0.5, 10)).toBeCloseTo(-0.1 / 95, 12);
+  });
+
+  it('is zero for a light with no depth range to bias within', () => {
+    expect(omniShadowBias(0.1, 0.5, 0.5)).toBe(0);
+  });
+});
+
+describe('spotShadowBias', () => {
+  it('divides Godot’s pre-divide clip offset by the far plane', () => {
+    // `scene_forward_lights_inc.glsl:786` adds before `splane /= splane.w`, so
+    // the depth Godot buys is `shadow_bias / w` for `w` the axial distance.
+    // SpotLight3D's default is 0.03 (`light_3d.cpp:681`) and
+    // `light_storage.cpp:1024` scales it by soft_shadow_scale:
+    // 0.03 / 100 * 2 / 5 = 0.00012.
+    expect(spotShadowBias(undefined, undefined, 5)).toBeCloseTo(-0.00012, 12);
+  });
+
+  it('gives the same depth for twice the bias over twice the range', () => {
+    // 0.06 / 100 * 2 / 10 = 0.00012 — the offset is a ratio, not a distance.
+    expect(spotShadowBias(0.06, undefined, 10)).toBeCloseTo(-0.00012, 12);
+  });
+
+  it('carries shadow_blur, which Godot folds into the spot bias alone', () => {
+    // 0.03 / 100 * (0.5 * 2) / 5 = 0.00006.
+    expect(spotShadowBias(0.03, 0.5, 5)).toBeCloseTo(-0.00006, 12);
+  });
+
+  it('is zero for a light with no range to divide by', () => {
+    expect(spotShadowBias(0.03, undefined, 0)).toBe(0);
+  });
+});

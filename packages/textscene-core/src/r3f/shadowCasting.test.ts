@@ -4,9 +4,10 @@ import { shadowCastingEffects } from './shadowCasting';
 import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 
 /**
- * three's shadow pass, reproduced: `getDepthMaterial` assigns the side
- * (`WebGLShadowMap.js:477`), then the per-object hook runs
- * (`WebGLShadowMap.js:535,549`).
+ * three's shadow pass, reproduced: `getDepthMaterial` assigns the flipped side
+ * (`WebGLShadowMap.js:51,477`), then the per-object hook runs. three passes the
+ * OBJECT second (`WebGLShadowMap.js:535,549`), which its own typing calls a
+ * `Scene`.
  */
 function depthSideAfterPass(value: number | undefined, materialSide: THREE.Side): THREE.Side {
   const flip: Record<number, THREE.Side> = {
@@ -20,7 +21,7 @@ function depthSideAfterPass(value: number | undefined, materialSide: THREE.Side)
   const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
   Object.assign(mesh, { onBeforeShadow: shadowCastingEffects(value).onBeforeShadow });
   mesh.onBeforeShadow(
-    null as never, new THREE.Scene(), null as never, null as never,
+    null as never, mesh as never, null as never, null as never,
     mesh.geometry, depthMaterial, null as never
   );
   return depthMaterial.side;
@@ -73,13 +74,14 @@ describe('shadowCastingEffects', () => {
     );
   });
 
-  it('leaves three’s FrontSide↔BackSide flip alone for every other value', () => {
-    // Godot keeps the material's own cull unless DOUBLE_SIDED
-    // (`render_forward_clustered.cpp:395-411`); three flips it as acne
-    // mitigation (`WebGLShadowMap.js:51`) and that flip is not ours to change.
+  it('undoes three’s flip so every other value keeps the material’s own cull', () => {
+    // Godot's shadow pass takes CULL_VARIANT_DOUBLE_SIDED only for
+    // FLAG_USES_DOUBLE_SIDED_SHADOWS and otherwise falls through to the
+    // material's own cull (`render_forward_clustered.cpp:395-411`); three flips
+    // it as its own acne mitigation (`WebGLShadowMap.js:51`).
     for (const value of [undefined, ShadowCastingSetting.OFF, ShadowCastingSetting.ON, ShadowCastingSetting.SHADOWS_ONLY]) {
-      expect(depthSideAfterPass(value, THREE.FrontSide)).toBe(THREE.BackSide);
-      expect(depthSideAfterPass(value, THREE.BackSide)).toBe(THREE.FrontSide);
+      expect(depthSideAfterPass(value, THREE.FrontSide)).toBe(THREE.FrontSide);
+      expect(depthSideAfterPass(value, THREE.BackSide)).toBe(THREE.BackSide);
     }
   });
 
