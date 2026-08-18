@@ -45,7 +45,7 @@ describe('parseCSGCylinder3D', () => {
       transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.4, -16.5)',
       material: 'SubResource("StandardMaterial3D_frame")',
     });
-    expect(props.material).toBe('SubResource("StandardMaterial3D_frame")');
+    expect(props.materialPath).toBe('SubResource("StandardMaterial3D_frame")');
     expect(props.transform?.origin.x).toBeCloseTo(8.5, 5);
   });
 

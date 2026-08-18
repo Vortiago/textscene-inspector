@@ -16,7 +16,7 @@ describe('parseCSGMesh3D', () => {
       material: 'SubResource("StandardMaterial3D_1")',
       operation: '2',
     });
-    expect(result.material).toBe('SubResource("StandardMaterial3D_1")');
+    expect(result.materialPath).toBe('SubResource("StandardMaterial3D_1")');
     expect(result.operation).toBe(2);
   });
 

@@ -52,7 +52,7 @@ describe('<CSGBox3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_floor")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_floor")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

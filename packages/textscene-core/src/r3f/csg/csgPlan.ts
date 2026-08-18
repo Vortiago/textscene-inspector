@@ -47,7 +47,7 @@ export interface CsgPlan {
   rootPath: string;
   contributions: CsgContribution[];
   /**
-   * Distinct material references in first-seen order, with `undefined` for "no material".
+   * Distinct material paths in first-seen order, with `undefined` for "no material".
    * Godot interns materials per root the same way and emits one surface each.
    */
   surfaces: (string | undefined)[];
@@ -106,10 +106,10 @@ export function buildCsgPlan(
   const absorbedPaths = new Set<string>();
   const keyParts: string[] = [`root:${root.type}`];
 
-  const surfaceIndex = (material: string | undefined): number => {
-    const existing = surfaces.indexOf(material);
+  const surfaceIndex = (materialPath: string | undefined): number => {
+    const existing = surfaces.indexOf(materialPath);
     if (existing !== -1) return existing;
-    surfaces.push(material);
+    surfaces.push(materialPath);
     return surfaces.length - 1;
   };
 
@@ -128,7 +128,7 @@ export function buildCsgPlan(
         keyParts.push(`${path}:nonfinite`);
       } else {
         const props = node.properties as Record<string, unknown>;
-        const material = typeof props.material === 'string' ? props.material : undefined;
+        const materialPath = typeof props.materialPath === 'string' ? props.materialPath : undefined;
         // A root's operation is inert; Godot has nothing to fold it into.
         const operation = isRoot
           ? CsgOperation.UNION
@@ -141,11 +141,11 @@ export function buildCsgPlan(
           type: node.type,
           operation,
           matrix,
-          surface: surfaceIndex(material),
+          surface: surfaceIndex(materialPath),
           node,
         });
         keyParts.push(
-          `${path}|${node.type}|${operation}|${shape.key(node)}|${material ?? ''}|` +
+          `${path}|${node.type}|${operation}|${shape.key(node)}|${materialPath ?? ''}|` +
             matrix.elements.map((n) => n.toFixed(6)).join(',')
         );
       }

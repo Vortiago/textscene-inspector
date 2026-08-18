@@ -82,7 +82,7 @@ describe('<CSGCylinder3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_pole")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_pole")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

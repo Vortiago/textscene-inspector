@@ -11,7 +11,7 @@ export function parseCSGCombiner3D(
 ): CSGCombiner3DProperties {
   const result: CSGCombiner3DProperties = { ...parseNode3D(heading, properties) };
 
-  // Not routed through finishCsgParse: that helper also copies `material`, which a
+  // Not routed through finishCsgParse: that helper also copies the `material` path, which a
   // combiner does not have (it is a CSGShape3D, not a CSGPrimitive3D).
   const operation = parseOptionalInt(properties.operation);
   if (operation !== undefined) result.operation = operation;

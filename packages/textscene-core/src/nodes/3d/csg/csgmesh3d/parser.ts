@@ -19,7 +19,7 @@ export function parseCSGMesh3D(
 
   if (properties.mesh) result.mesh = properties.mesh;
 
-  // finishCsgParse copies `material` and `operation`.
+  // finishCsgParse copies the `material` path and `operation`.
   finishCsgParse(result, properties);
 
   return result;

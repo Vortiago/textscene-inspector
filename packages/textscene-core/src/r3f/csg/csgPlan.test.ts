@@ -140,9 +140,9 @@ describe('buildCsgPlan', () => {
 
   describe('surfaces', () => {
     it('interns each distinct material once, in first-seen order', () => {
-      const root = node('CSGBox3D', 'Root', { material: 'SubResource("A")' }, [
-        node('CSGSphere3D', 'X', { material: 'SubResource("B")' }),
-        node('CSGSphere3D', 'Y', { material: 'SubResource("A")' }),
+      const root = node('CSGBox3D', 'Root', { materialPath: 'SubResource("A")' }, [
+        node('CSGSphere3D', 'X', { materialPath: 'SubResource("B")' }),
+        node('CSGSphere3D', 'Y', { materialPath: 'SubResource("A")' }),
       ]);
       const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(plan.surfaces).toEqual(['SubResource("A")', 'SubResource("B")']);
@@ -150,7 +150,7 @@ describe('buildCsgPlan', () => {
     });
 
     it('gives "no material" its own surface slot', () => {
-      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'X', { material: 'SubResource("A")' })]);
+      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'X', { materialPath: 'SubResource("A")' })]);
       const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(plan.surfaces).toEqual([undefined, 'SubResource("A")']);
     });

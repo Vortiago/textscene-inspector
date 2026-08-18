@@ -18,8 +18,8 @@ export interface CSGCylinder3DProperties extends Node3DProperties {
   smoothFaces: boolean;
   /** Reverse winding and negate normals (CSGPrimitive3D). Godot default false. */
   flipFaces: boolean;
-  /** Material reference (SubResource/ExtResource); StandardMaterial3D in practice. */
-  material?: string;
+  /** `material` path (SubResource/ExtResource); StandardMaterial3D in practice. */
+  materialPath?: string;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
   /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */

@@ -31,7 +31,7 @@ describe('parseCSGBox3D', () => {
     const props = parseCSGBox3D(heading('CSGBox3D', { name: 'Floor' }), {
       material: 'SubResource("StandardMaterial3D_floor")',
     });
-    expect(props.material).toBe('SubResource("StandardMaterial3D_floor")');
+    expect(props.materialPath).toBe('SubResource("StandardMaterial3D_floor")');
   });
 
   it('parses the operation enum (parsed, not applied)', () => {

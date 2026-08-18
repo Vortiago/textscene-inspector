@@ -33,7 +33,7 @@ describe('parseCSGSphere3D', () => {
     const props = parseCSGSphere3D(heading('CSGSphere3D', { name: 'Union' }), {
       material: 'ExtResource("4_dsi4m")',
     });
-    expect(props.material).toBe('ExtResource("4_dsi4m")');
+    expect(props.materialPath).toBe('ExtResource("4_dsi4m")');
   });
 
   it('parses the operation enum (parsed, not applied)', () => {

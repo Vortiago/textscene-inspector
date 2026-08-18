@@ -53,7 +53,7 @@ export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
-  properties: Node3DProperties & { material?: string; castShadow?: number };
+  properties: Node3DProperties & { materialPath?: string; castShadow?: number };
   children?: ReactNode;
 }
 
@@ -88,14 +88,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
-  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource; the
+  // A CSG `material` path is as often an ExtResource `.tres` as an inline sub-resource; the
   // slot renders either, textures included.
   const materialSource = useMemo((): MaterialSource | undefined => {
-    const sub = resolveStandardMaterial(properties.material, internalResources);
+    const sub = resolveStandardMaterial(properties.materialPath, internalResources);
     if (sub) return { kind: 'scene', resource: sub };
-    const path = resolveExtResourcePath(properties.material, externalResources);
+    const path = resolveExtResourcePath(properties.materialPath, externalResources);
     return path === null ? undefined : { kind: 'path', path };
-  }, [properties.material, internalResources, externalResources]);
+  }, [properties.materialPath, internalResources, externalResources]);
 
   // Absorbed while the ancestor's boolean is pending or ready; NOT while it has failed,
   // which is what makes every contributor start drawing itself again.

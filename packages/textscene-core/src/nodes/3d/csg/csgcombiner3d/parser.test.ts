@@ -28,7 +28,7 @@ describe('parseCSGCombiner3D', () => {
     const result = parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), {
       material: 'SubResource("StandardMaterial3D_1")',
     });
-    expect('material' in result).toBe(false);
+    expect('materialPath' in result).toBe(false);
   });
 
   it('parses name, parent, and transform (happy path)', () => {

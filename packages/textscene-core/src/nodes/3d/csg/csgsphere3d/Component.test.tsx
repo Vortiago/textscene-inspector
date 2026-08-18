@@ -50,7 +50,7 @@ describe('<CSGSphere3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_sphere")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_sphere")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

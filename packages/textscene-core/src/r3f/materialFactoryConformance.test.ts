@@ -347,8 +347,6 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
  * license the second.
  */
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
-  'packages/textscene-core/src/nodes/3d/csg/sharedParser.ts':
-    'the parser tail: copies the `material` PROPERTY — a `res://` path string — onto a parse result, in a file that imports no THREE at all',
   'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
