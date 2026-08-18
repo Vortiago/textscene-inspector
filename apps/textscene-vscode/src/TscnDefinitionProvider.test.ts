@@ -120,6 +120,28 @@ texture = ExtResource("wood_texture")`;
       expect(definition).toBeDefined();
       expect(definition.range.start.line).toBe(0);
     });
+
+    it('should find ExtResource on a heading that also carries a uid', () => {
+      // Godot 4 writes `uid=` on every ext_resource, and an unanchored `id=`
+      // match reads the uid instead — leaving go-to-definition dead on the
+      // shape that occurs in every real scene.
+      const content = `[ext_resource type="Texture2D" uid="uid://cabc123" path="res://icon.svg" id="1_x7k2n"]
+
+[node name="Sprite" type="Sprite2D"]
+texture = ExtResource("1_x7k2n")`;
+
+      const document = createMockDocument(content);
+      const position = new vscode.Position(3, 25);
+
+      const definition = provider.provideDefinition(
+        document,
+        position,
+        mockCancellationToken
+      ) as vscode.Location;
+
+      expect(definition).toBeDefined();
+      expect(definition.range.start.line).toBe(0);
+    });
   });
 
   // ============================================================================

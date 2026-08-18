@@ -83,9 +83,10 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
         continue;
       }
 
-      // Extract id attribute from heading
-      // Matches: id="value" or id='value'
-      const idMatch = line.match(/id\s*=\s*["']([^"']+)["']/);
+      // Extract the id attribute. The key must start at a token boundary:
+      // unanchored, `id=` also matches inside the `uid=` Godot 4 writes on
+      // every ext_resource, and the uid would then shadow the real id.
+      const idMatch = line.match(/(?:^|[\s[])id\s*=\s*["']([^"']+)["']/);
 
       if (!idMatch) {
         continue;

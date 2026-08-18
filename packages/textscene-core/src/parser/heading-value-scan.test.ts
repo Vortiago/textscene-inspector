@@ -1,14 +1,7 @@
 /**
- * Contract for the heading-attribute scanner arms the #150 and #393 contracts
- * leave unpinned.
- *
- * Those two files pin the STRUCTURED value forms (`Name(...)`, `[...]`, quoted
- * strings with delimiters inside). Between them they never pin the arm that
- * handled everything else — the old alternation's `[^\s]+` fallback — nor what
- * happens when a heading is malformed, tab-separated, or carries an escape
- * INSIDE a structured value. Every rung here is a behaviour the pre-#393 regex
- * had and a hand-written scanner can silently lose while both contracts stay
- * green.
+ * Contract for the heading-attribute scanner arms the two structured-value
+ * contracts beside it leave unpinned: the bare token, malformed input, and the
+ * boundary between raw source text and a decoded value.
  *
  * Four axes, all asserted at `parseHeading`'s own boundary:
  *
@@ -16,19 +9,20 @@
  *     punctuation included (`res://art/icon.png`, `-1`, `1.5`). Narrowing it to
  *     an identifier class truncates the value AND, because the scan then stops
  *     mid-token, drops every attribute after it.
- *  2. SEPARATOR IS `\s`, NOT `' '`. A tab between attributes — or between the
- *     section keyword and its first attribute — must separate them, not become
- *     part of a key. This parser's job is leniency toward hand-edited input;
- *     Godot's own writer emits single spaces, so the corpus cannot pin this.
+ *  2. SEPARATOR IS `\s`, NOT `' '`. A tab or a non-breaking space between
+ *     attributes — or between the section keyword and its first attribute —
+ *     must separate them, not become part of a key. This parser's job is
+ *     leniency toward hand-edited and pasted input; Godot's own writer emits
+ *     single spaces, so the corpus cannot pin this.
  *  3. RECOVERY, NOT ABANDONMENT. A stray token, an empty value or an
  *     unterminated delimiter costs at most its own attribute: the scan resyncs
- *     at the next whitespace and the REMAINING attributes still parse. Each
- *     rung asserts the complete surviving attribute set, so "give up here"
- *     cannot pass.
+ *     and the REMAINING attributes still parse. Each rung asserts the complete
+ *     surviving attribute set, so "give up here" cannot pass.
  *  4. RAW-TEXT BOUNDARY. A structured value is captured verbatim, escapes
- *     intact, so it stays re-parseable; only a QUOTED scalar is unwrapped, and
- *     it decodes `\"` alone. Decoding a heading value further is the node
- *     parsers' business (`unquoteString` on a property), not the scanner's.
+ *     intact, so it stays re-parseable; only a QUOTED scalar — quoted at BOTH
+ *     ends — is unwrapped, and it decodes `\"` alone. Decoding a heading value
+ *     further is the node parsers' business (`unquoteString` on a property),
+ *     not the scanner's.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -89,6 +83,14 @@ describe('parseHeading separates attributes on any whitespace', () => {
     expect(result!.type).toBe('node');
     expect(result!.attributes).toEqual({ name: 'X', parent: '.' });
   });
+
+  it('treats a non-breaking space between attributes as a separator', () => {
+    // Godot rejects such a heading outright ("Unexpected character"), so this
+    // is the lenient reading: split, and keep the node the tree needs.
+    const result = parseHeading('[node name="X"\u00A0parent="."\uFEFFtype="Node2D"]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({ name: 'X', parent: '.', type: 'Node2D' });
+  });
 });
 
 describe('parseHeading recovers from a malformed attribute', () => {
@@ -110,6 +112,12 @@ describe('parseHeading recovers from a malformed attribute', () => {
     expect(result!.attributes).toEqual({ name: 'X', foo: 'a=b', parent: '.' });
   });
 
+  it('steps over a stray "=" without losing the attribute behind it', () => {
+    const result = parseHeading('[node name="X" =parent="." type="Node2D"]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({ name: 'X', parent: '.', type: 'Node2D' });
+  });
+
   it('drops an attribute with no value instead of swallowing the next one', () => {
     const result = parseHeading('[node name="X" type= parent="Foo" index="2"]');
     expect(result).not.toBeNull();
@@ -125,24 +133,41 @@ describe('parseHeading recovers from a malformed attribute', () => {
   it('recovers the attributes after an unterminated constructor', () => {
     const result = parseHeading('[node name="A" transform=Transform3D(1, 0, 0 parent="." type="Node2D"]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.parent).toBe('.');
-    expect(result!.attributes.type).toBe('Node2D');
-    expect(result!.attributes.transform).toBe('Transform3D(1,');
+    expect(result!.attributes).toEqual({
+      name: 'A',
+      transform: 'Transform3D(1,',
+      parent: '.',
+      type: 'Node2D',
+    });
   });
 
   it('recovers the attributes after an unterminated bracketed array', () => {
     const result = parseHeading('[node name="A" groups=["a", "b" parent="." type="Node2D"]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.parent).toBe('.');
-    expect(result!.attributes.type).toBe('Node2D');
-    expect(result!.attributes.groups).toBe('["a",');
+    expect(result!.attributes).toEqual({
+      name: 'A',
+      groups: '["a",',
+      parent: '.',
+      type: 'Node2D',
+    });
   });
 
   it('recovers the attributes after an unterminated quoted value', () => {
     const result = parseHeading('[node name="A" type="Node2D" parent=". index=5]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.index).toBe('5');
-    expect(result!.attributes.parent).toBe('".');
+    expect(result!.attributes).toEqual({
+      name: 'A',
+      type: 'Node2D',
+      parent: '".',
+      index: '5',
+    });
+  });
+
+  it('reads a lone quote as an empty value, not as a one-character name', () => {
+    // `name` must stay falsy so the strict parser still reports it missing.
+    const result = parseHeading('[node name=" type=]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({ name: '' });
   });
 
   it('terminates on pathological input', () => {
@@ -181,5 +206,14 @@ describe('parseHeading value text', () => {
     expect(result!.attributes.name).toBe('say "hi"');
     // heading values are source text: a node parser decodes the rest downstream
     expect(result!.attributes.path).toBe('a\\nb');
+  });
+
+  it('leaves a value quoted at only its leading end verbatim, escapes undecoded', () => {
+    // Decoding without unwrapping would destroy the `\"` that keeps the raw
+    // text re-parseable, and invent a closing quote the source never had.
+    const result = parseHeading('[node name="a\\"b index=5]');
+    expect(result).not.toBeNull();
+    expect(result!.attributes.name).toBe('"a\\"b');
+    expect(result!.attributes.index).toBe('5');
   });
 });
