@@ -105,7 +105,12 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'process_thread_group', 'process_thread_group_order', 'process_thread_messages',
       'physics_interpolation_mode',
       // Editor and localisation metadata the renderer never consults.
-      'auto_translate_mode', 'editor_description', 'unique_name_in_owner',
+      'auto_translate_mode', 'editor_description',
+      // The render path DOES consult this one, just not as a typed property:
+      // `utils/uniqueNames.ts` reads it off `rawProperties` to build the `%Name`
+      // claim table a NodePath walk needs. Nothing about the node's own frame
+      // depends on it, so node/parser.ts has no reason to carry it.
+      'unique_name_in_owner',
     ],
     reason: 'Node is the terminal of every base chain, so its ten validators reach all 240 types; node/parser.ts reads none of them because pause/threading/localisation state has no effect on a rendered frame. One entry here rather than the same ten repeated on every leaf.',
   },

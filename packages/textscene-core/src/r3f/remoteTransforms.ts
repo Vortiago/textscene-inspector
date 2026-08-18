@@ -50,6 +50,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties, Vector2 } from '../nodes/base/node2d/types.js';
 import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
+import { uniqueNamePaths } from '../utils/uniqueNames.js';
 import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
@@ -87,9 +88,13 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
 
   if (relays.length === 0) return nodes;
 
+  // `remote_path = NodePath("%Target")` addresses the owner's claim table rather
+  // than a child, so the table has to be in hand before any relay resolves.
+  const uniquePaths = uniqueNamePaths(nodes);
+
   for (const { node, path } of relays) {
-    if (node.type === 'RemoteTransform3D') applyRelay3D(node, path, nodeByPath);
-    else applyRelay2D(node, path, nodeByPath);
+    if (node.type === 'RemoteTransform3D') applyRelay3D(node, path, nodeByPath, uniquePaths);
+    else applyRelay2D(node, path, nodeByPath, uniquePaths);
   }
   return nodes;
 }
@@ -116,10 +121,11 @@ function parentPathOf(path: string): string | null {
 function applyRelay3D(
   relay: TscnNode,
   relayPath: string,
-  nodeByPath: Map<string, TscnNode>
+  nodeByPath: Map<string, TscnNode>,
+  uniquePaths: ReadonlyMap<string, string>
 ): void {
   const props = relay.properties as RelayProps;
-  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path);
+  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path, uniquePaths);
   if (!targetPath) return;
   const target = nodeByPath.get(targetPath);
   if (!target) return;
@@ -189,10 +195,11 @@ const IDENTITY_2D: Affine2D = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
 function applyRelay2D(
   relay: TscnNode,
   relayPath: string,
-  nodeByPath: Map<string, TscnNode>
+  nodeByPath: Map<string, TscnNode>,
+  uniquePaths: ReadonlyMap<string, string>
 ): void {
   const props = relay.properties as RelayProps;
-  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path);
+  const targetPath = resolveNodePathLiteral(relayPath, props.remote_path, uniquePaths);
   if (!targetPath) return;
   const target = nodeByPath.get(targetPath);
   if (!target) return;

@@ -5,9 +5,10 @@
  * would silently drop the other's geometry.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
 import { resolveCsgPolygonPaths } from './csgPolygonPaths';
+import * as logger from '../logger';
 import type { CSGPolygon3DProperties } from '../nodes/3d/csg/csgpolygon3d/types';
 import type { TscnNode } from '../parser/types';
 
@@ -60,6 +61,40 @@ path_local = true
 curve = SubResource("Curve3D_road")`;
 
 describe('resolveCsgPolygonPaths', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** A polygon addressing its Path3D by unique name from an unrelated branch. */
+  const UNIQUE_SCENE = `[node name="Root" type="Node3D"]
+
+[node name="Holder" type="Node3D" parent="."]
+
+[node name="Racetrack" type="CSGPolygon3D" parent="Holder"]
+mode = 2
+path_node = NodePath("%Track")
+path_local = true
+
+[node name="Elsewhere" type="Node3D" parent="."]
+
+[node name="Path3D" type="Path3D" parent="Elsewhere"]
+unique_name_in_owner = true
+curve = SubResource("Curve3D_road")`;
+
+  it('resolves a %UniqueName path_node', () => {
+    const scene = UNIQUE_SCENE.replace('name="Path3D" type="Path3D"', 'name="Track" type="Path3D"');
+    const resolved = resolvedOf(parse(scene), 'Racetrack');
+    expect(resolved).toBeDefined();
+    expect(resolved!.curvePoints).toHaveLength(3);
+  });
+
+  it('warns with the literal when no node claims the unique name', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    resolvedOf(parse(UNIQUE_SCENE), 'Racetrack');
+    expect(warn).toHaveBeenCalledTimes(1);
+    // The literal as written — a resolved path would be a name no node can hold.
+    expect(warn.mock.calls[0]![0]).toContain('%Track');
+    expect(warn.mock.calls[0]![0]).not.toContain('Holder/Racetrack/%Track');
+  });
+
   it('resolves a SIBLING path_node (csg.tscn:365, the Road)', () => {
     const resolved = resolvedOf(parse(SIBLING_SCENE), 'RoadTop');
     expect(resolved).toBeDefined();

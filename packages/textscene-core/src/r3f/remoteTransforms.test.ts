@@ -27,6 +27,37 @@ function targetNode2D(content: string, path: string): Node2DProperties {
 }
 
 describe('applyRemoteTransforms (3D)', () => {
+  it('relays through a %UniqueName target', () => {
+    // Same geometry as the sibling case below, addressed by unique name instead.
+    // Godot resolves `%TargetCube` through the owner's claim table, so the target
+    // still lands at +2.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="TargetCube" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+[node name="Holder" type="Node3D" parent="."]
+[node name="Relay" type="RemoteTransform3D" parent="Holder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+remote_path = NodePath("%TargetCube")
+`;
+    const { position } = targetTransform3D(content, 'Root/TargetCube');
+    expect(position.x).toBeCloseTo(2, 5);
+  });
+
+  it('leaves the target alone when nothing claims the unique name', () => {
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="TargetCube" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+[node name="Relay" type="RemoteTransform3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+remote_path = NodePath("%TargetCube")
+`;
+    const { position } = targetTransform3D(content, 'Root/TargetCube');
+    expect(position.x).toBeCloseTo(-2, 5);
+  });
+
   it('copies the relay global transform onto the target (default flags)', () => {
     // Relay authored at +2 X, target authored at -2 X, both children of root.
     // Godot renders the target at +2 (measured). Default flags = full copy.

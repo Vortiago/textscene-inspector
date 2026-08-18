@@ -24,7 +24,8 @@
 import type { TscnNode, TscnInternalResource } from '../parser/types.js';
 import type { CSGPolygon3DProperties } from '../nodes/3d/csg/csgpolygon3d/types.js';
 import type { Path3DProperties } from '../nodes/paths/path3d/types.js';
-import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
+import { joinPath, resolveNodePathLiteral, unclaimedUniqueNames } from '../utils/nodePath.js';
+import { uniqueNamePaths } from '../utils/uniqueNames.js';
 import { findSubResource, parseResourceReference } from '../resources/SubResourceResolver.js';
 import { parseCurve3DPoints } from '../resources/curves/curve3d/index.js';
 import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
@@ -62,12 +63,26 @@ export function resolveCsgPolygonPaths(
 
   if (polygons.length === 0) return nodes;
 
+  // `path_node = NodePath("%Track")` addresses the owner's claim table, not a child.
+  const uniquePaths = uniqueNamePaths(nodes);
+
   for (const { node, path } of polygons) {
     const props = node.properties as CSGPolygon3DProperties;
     delete props.resolvedPath;
 
-    const targetPath = resolveNodePathLiteral(path, props.pathNode);
-    if (!targetPath) continue;
+    const targetPath = resolveNodePathLiteral(path, props.pathNode, uniquePaths);
+    if (!targetPath) {
+      // A unique name nothing claims is a dangling reference, not a path that
+      // deliberately addresses no node — report it against the literal, since
+      // there is no resolved path to quote.
+      const unclaimed = unclaimedUniqueNames(props.pathNode, uniquePaths);
+      if (unclaimed.length > 0) {
+        warn(
+          `[CSGPolygon3D] ${path}: path_node names ${unclaimed.join(', ')}, which no node in this scene claims.`
+        );
+      }
+      continue;
+    }
 
     const target = nodeByPath.get(targetPath);
     if (!target) {

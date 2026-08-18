@@ -953,6 +953,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform Unique Name",
+    "file": "unit-remote-transform-unique-name.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Resource Preloader",
     "file": "unit-resource-preloader.tscn",
     "category": "Other"

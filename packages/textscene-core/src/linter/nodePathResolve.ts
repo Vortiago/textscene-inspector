@@ -38,20 +38,16 @@
  * `scenes/demos/3d/ik/fps/fps_example.tscn` relays into an instanced `.dae`
  * weapon and was warned about.
  *
- * Unique names are decidable, though. `_acquire_unique_name_in_owner`
- * (node.cpp:2222-2234) registers `"%" + name` on the node's OWNER, which for a
- * `.tscn` is the scene root, and `unique_name_in_owner` is a stored BOOL
- * (node.cpp:4050 — `PROPERTY_USAGE_NO_EDITOR` hides it from the inspector and
- * still serialises it). So the map is exactly the nodes in this file carrying
- * that flag, and a `%Name` with no such node really does resolve to null.
+ * Unique names are decidable, though: the claim table is exactly the nodes in
+ * this file carrying `unique_name_in_owner`, so a `%Name` with no such node
+ * really does resolve to null. The table itself is built in
+ * `utils/uniqueNames.ts`, which the render path's NodePath resolution shares.
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
-
-/** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
-const UNIQUE_NODE_PREFIX = '%';
+import { UNIQUE_NODE_PREFIX, uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
  * What resolving a NodePath against the authored tree can say.
@@ -69,28 +65,6 @@ export type NodePathResolution =
 
 const UNKNOWABLE: NodePathResolution = { status: 'unknowable' };
 const MISSING: NodePathResolution = { status: 'missing' };
-
-/** `unique_name_in_owner = true` on this node (node.cpp:4050). */
-function isUniqueNameInOwner(node: TscnNode): boolean {
-  const props = node.properties as Record<string, unknown> | undefined;
-  return props?.unique_name_in_owner === true || props?.unique_name_in_owner === 'true';
-}
-
-/** `%Name` -> the node claiming it, gathered depth-first over the whole file. */
-function uniqueNameOwners(roots: TscnNode[]): Map<string, TscnNode> {
-  const out = new Map<string, TscnNode>();
-  const walk = (nodes: TscnNode[]): void => {
-    for (const node of nodes) {
-      // First claim wins, matching `_acquire_unique_name_in_owner`'s refusal to
-      // overwrite an existing entry (node.cpp:2224-2231).
-      const key = UNIQUE_NODE_PREFIX + node.name;
-      if (isUniqueNameInOwner(node) && !out.has(key)) out.set(key, node);
-      walk(node.children);
-    }
-  };
-  walk(roots);
-  return out;
-}
 
 /** The direct child named `name`, mirroring `data.children.getptr(name)`. */
 function childNamed(node: TscnNode, name: string): TscnNode | undefined {
@@ -129,7 +103,7 @@ export function resolveNodePath(
   const segments = nameSegments(path);
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
-  let uniques: Map<string, TscnNode> | null = null;
+  let uniques: ReturnType<typeof uniqueNameClaims> | null = null;
   let current: TscnNode = referencingNode;
 
   for (const name of segments) {
@@ -151,10 +125,10 @@ export function resolveNodePath(
     }
 
     if (name.startsWith(UNIQUE_NODE_PREFIX)) {
-      uniques ??= uniqueNameOwners(scene.nodes);
+      uniques ??= uniqueNameClaims(scene.nodes);
       const claimed = uniques.get(name);
       if (!claimed) return MISSING; // :1935-1937
-      current = claimed;
+      current = claimed.node;
       continue;
     }
 
