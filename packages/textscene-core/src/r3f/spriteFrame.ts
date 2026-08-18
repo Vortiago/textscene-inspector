@@ -37,11 +37,11 @@ import { pinNoColorSpace } from './canvas2DTextureDecode';
  *              the edge texel column stretched — transparent when that column
  *              is transparent, which is why an oversized background region
  *              reads as "the texture, then nothing".
- *   'repeat' — Sprite3D. `SpriteBase3D` draws through
- *              `StandardMaterial3D::get_material_for_2d`, which never clears
- *              `FLAG_USE_TEXTURE_REPEAT`; its default is `true`
- *              (scene/resources/material.cpp), emitting `repeat_enable`. The
- *              overrun tiles.
+ *   'repeat' — Sprite3D, and only where it must. `SpriteBase3D` DERIVES the
+ *              `texture_repeat` it passes to `get_material_for_2d` from the
+ *              frame's own UV corners (`sprite_3d.cpp:163`), so a window inside
+ *              `[0, 1]` clamps and only an overrun tiles. `spriteWrapMode()` is
+ *              that derivation.
  *
  * Required rather than defaulted on purpose: a default is exactly the silent
  * hand-syncing this module exists to prevent.
@@ -101,12 +101,7 @@ export function composeFrameTexture(
   cloned.wrapS = WRAP[wrap];
   cloned.wrapT = WRAP[wrap];
 
-  if (props.region_enabled && props.region_rect) {
-    applyRegionRect(cloned, props.region_rect);
-  }
-  if (props.hframes > 1 || props.vframes > 1) {
-    applySpritesheetUV(cloned, props);
-  }
+  windowFrameUv(cloned, props);
 
   cloned.needsUpdate = true;
   return cloned;
@@ -134,7 +129,54 @@ export function frameSizePx(
   return { width: pxW / H, height: pxH / V };
 }
 
-function applySpritesheetUV(texture: THREE.Texture, props: SpriteFrameProps): void {
+/**
+ * The offset/repeat pair the frame math writes, and the image it needs to do
+ * it. `THREE.Texture` satisfies it structurally, so `spriteWrapMode()` can run
+ * the SAME two helpers over a throwaway window rather than a second
+ * implementation that could drift from the one that draws.
+ */
+interface UvWindow {
+  offset: THREE.Vector2;
+  repeat: THREE.Vector2;
+  /** `unknown`, as three types it — narrowed where the dimensions are read. */
+  image: unknown;
+}
+
+/**
+ * Godot's `texture_repeat` (`sprite_3d.cpp:163`): REPEAT only where the frame's
+ * UV window leaves `[0, 1]`, on strict `< 0` / `> 1` tests. flip_h/flip_v swap
+ * the uv pairs and hand the test the other diagonal of the same bounding box,
+ * so they cannot change the answer; and our v-window is Godot's mirrored about
+ * 0.5, which the `min < 0 || max > 1` pair is symmetric under.
+ */
+export function spriteWrapMode(
+  texture: THREE.Texture | undefined,
+  props: SpriteFrameProps
+): SpriteWrapMode {
+  if (!texture) return 'clamp';
+  const window: UvWindow = {
+    offset: new THREE.Vector2(0, 0),
+    repeat: new THREE.Vector2(1, 1),
+    image: texture.image,
+  };
+  windowFrameUv(window, props);
+  const outside = (min: number, size: number): boolean => min < 0 || min + size > 1;
+  return outside(window.offset.x, window.repeat.x) || outside(window.offset.y, window.repeat.y)
+    ? 'repeat'
+    : 'clamp';
+}
+
+/** The region-then-frame-grid composition, on anything carrying a UV window. */
+function windowFrameUv(target: UvWindow, props: SpriteFrameProps): void {
+  if (props.region_enabled && props.region_rect) {
+    applyRegionRect(target, props.region_rect);
+  }
+  if (props.hframes > 1 || props.vframes > 1) {
+    applySpritesheetUV(target, props);
+  }
+}
+
+function applySpritesheetUV(texture: UvWindow, props: SpriteFrameProps): void {
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
@@ -164,7 +206,7 @@ function applySpritesheetUV(texture: THREE.Texture, props: SpriteFrameProps): vo
 }
 
 function applyRegionRect(
-  texture: THREE.Texture,
+  texture: UvWindow,
   rect: { x: number; y: number; width: number; height: number }
 ): void {
   const image = texture.image as { width?: number; height?: number } | undefined;

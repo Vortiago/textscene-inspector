@@ -60,6 +60,8 @@
  *     NormalBlending && alphaToCoverage === false`, one boolean at `:581`
  *   - `alphaToCoverage` (`:213`, layer `:589`), which is BOTH a term of `opaque`
  *     and a parameter in its own right
+ *   - `alphaHash` (`:172`, published `:266`). `Material.js:134` declares it as a
+ *     plain field, so `alphaTest`'s exemption below does not transfer to it.
  *   - per-texture-slot PRESENCE, which reaches the key as each slot's `…MapUv`
  *     term (`:444-466`) and the shader's `USE_…` define. Ten of the slots three
  *     reads are GATED on a feature being on (`:147-169`), so their presence
@@ -330,6 +332,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   if (props.transparent === true || blending !== THREE.NormalBlending || alphaToCoverage)
     add('blended');
   if (alphaToCoverage) add('a2c');
+  if (props.alphaHash === true) add('ahash');
   // `side` has ONE default across every material type, so it is normalised;
   // `combine` and `fog` do not, and an absent one is not an explicit default.
   const side = props.side ?? THREE.FrontSide;

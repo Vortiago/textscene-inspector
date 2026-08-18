@@ -1,10 +1,10 @@
 /**
  * Sprite3D component tests.
  *
- * 12 assertions covering texture loading, billboard persistence, quad
- * sizing, modulate, transparency, alpha_cut, spritesheet UV (the
- * load-bearing new logic), region cropping, render priority, and
- * transform application.
+ * Texture loading, billboard persistence, quad sizing, modulate,
+ * transparency, the alpha_cut arms, the derived sampler wrap mode,
+ * spritesheet UV, region cropping, render priority and transform
+ * application.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -290,6 +290,90 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     expect(mat.alphaTest).toBeGreaterThan(0);
     expect(mat.depthWrite).toBe(true);
+  });
+
+  it('alpha_cut=DISCARD cuts at the authored alpha_scissor_threshold', async () => {
+    // `sprite_3d.cpp:281` feeds the node's own `alpha_scissor_threshold` to the
+    // material; the scissor compares against it (`scene_forward_clustered.glsl:1391`).
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_scissor_threshold: 0.25,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaTest).toBe(0.25);
+  });
+
+  it('alpha_cut=HASH hashes rather than blends', async () => {
+    // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail
+    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`) — a
+    // dithered discard into the opaque pass, never a blend.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaHash).toBe(true);
+    expect(mat.alphaTest).toBe(0);
+    expect(mat.depthWrite).toBe(true);
+    expect(mat.transparent).toBe(false);
+  });
+
+  it('transparent=false disables hashing, as it disables the whole alpha-cut switch', async () => {
+    // `sprite_3d.cpp:286` gates every `mat_transparency` arm on FLAG_TRANSPARENT.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        transparent: false,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaHash).toBe(false);
+  });
+
+  it('clamps the sampler for a frame window inside [0, 1]', async () => {
+    // `sprite_3d.cpp:163` derives `texture_repeat` from the frame's UV corners,
+    // so the ordinary sprite is CLAMP and repeating it would smear a half-texel
+    // of the opposite edge across all four borders under linear filtering.
+    const tex = makeTexture(64, 64);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(mat.map?.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('repeats the sampler only where the frame window overruns the texture', async () => {
+    const tex = makeTexture(64, 64);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        region_enabled: true,
+        region_rect: { x: 0, y: 0, width: 192, height: 128 },
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.wrapS).toBe(THREE.RepeatWrapping);
+    expect(mat.map?.wrapT).toBe(THREE.RepeatWrapping);
   });
 
   it('render_priority maps to mesh.renderOrder + transform origin propagates to mesh.position', async () => {

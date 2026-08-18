@@ -15,9 +15,9 @@
  *   - UV math: region_rect + hframes/vframes composition lives in the
  *     shared `r3f/spriteFrame` module (one home for Sprite2D +
  *     Sprite3D). flip_h/flip_v stay here — 3D mirrors via UV negation
- *     where 2D mirrors via mesh scale — as does the wrap mode: a
- *     region overrunning its texture TILES here, where the 2D canvas
- *     clamps to the edge texel.
+ *     where 2D mirrors via mesh scale — as does the wrap mode, which
+ *     Sprite3D derives per frame (`spriteWrapMode`) where the 2D
+ *     canvas always clamps.
  *
  * Material:
  *   - `meshBasicMaterial`, or `meshStandardMaterial` when `shaded`
@@ -25,10 +25,9 @@
  *   - `color`     ← modulate RGB
  *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)),
  *                   `transparent` flag follows
- *   - `alphaTest` ← non-zero when alpha_cut === DISCARD (Godot
- *                   doesn't expose the threshold; 0.5 is the Godot
- *                   default for `alpha_scissor_threshold`)
- *   - `depthWrite`← false except in DISCARD mode (sharp-edge pass)
+ *   - `alphaTest` ← `alpha_scissor_threshold` when alpha_cut === DISCARD,
+ *                   `alphaHash` when === HASH — see `alphaCutBehaviour`
+ *   - `depthWrite`← false only on the plain blended path
  *   - `side`      ← DoubleSide (sprite quads should be visible from
  *                   the back too — Godot's runtime behaviour)
  *   - `renderOrder` on the mesh ← render_priority
@@ -44,7 +43,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { composeFrameTexture, frameSizePx } from '../../../r3f/spriteFrame';
+import { composeFrameTexture, frameSizePx, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -59,7 +58,8 @@ import {
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
-const DEFAULT_ALPHA_TEST = 0.5;
+/** Stand-in for the prepass cut, which Godot takes from the SCENE, not the node. */
+const PREPASS_ALPHA_TEST = 0.5;
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -91,13 +91,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // (already cropped) UV window by negating the repeat and shifting the
   // offset to the opposite edge.
   const displayedTexture = useMemo(() => {
-    // 'repeat': Sprite3D's material keeps StandardMaterial3D's texture-repeat
-    // default, so an oversized region_rect tiles here where the 2D canvas clamps.
+    // The wrap mode is DERIVED, not fixed: `sprite_3d.cpp:163` reads it off the
+    // frame's own UV corners, so only an overrunning window tiles.
     // SRGBColorSpace: Sprite3D draws through Godot's 3D pipeline (always a
     // hardware sRGB decode before filtering, `canvas2DTextureDecode.ts`), so
     // it keeps the shared cache entry's own colour space rather than the 2D
     // canvas's `NoColorSpace` retag.
-    const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, 'repeat', THREE.SRGBColorSpace);
+    const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+    const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, wrap, THREE.SRGBColorSpace);
     if (!cloned) return undefined;
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
@@ -126,23 +127,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // (matching Sprite2D / WorldEnvironment).
   const color = useGodotLinearColor(properties.modulate);
   const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
-  // `transparent=false` (Godot) ignores texture alpha entirely → opaque quad.
-  const transparent =
-    properties.transparent === false
-      ? false
-      : opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;
 
-  // Alpha-cut → material configuration:
-  //   DISABLED       → standard alpha blending; depthWrite off.
-  //   DISCARD        → alphaTest threshold; depthWrite ON (sharp edges).
-  //   OPAQUE_PREPASS → same as DISCARD for now (no separate prepass).
-  const { alphaTest: alphaCutTest, depthWrite: alphaCutDepthWrite } = alphaCutBehaviour(properties.alpha_cut);
-  const alphaTest = properties.transparent === false ? 0 : alphaCutTest;
+  const cut = alphaCutBehaviour(properties);
+  // A prepass arm blends whatever the modulate says; plain ALPHA blends only
+  // where it must, and the two cutting arms output opaque.
+  const transparent =
+    cut.blended &&
+    (opacity < 1 || properties.alpha_cut === AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);
+  const alphaTest = cut.alphaTest;
   // An opaque sprite must write depth so it occludes and sorts correctly
-  // against other opaque geometry; only the blended (transparent) paths skip
-  // depthWrite. Without this an opaque `transparent=false` sprite kept the
-  // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
-  const depthWrite = transparent ? alphaCutDepthWrite : true;
+  // against other opaque geometry; only the blended paths may skip depthWrite.
+  const depthWrite = transparent ? cut.depthWrite : true;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -234,6 +229,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       opacity,
       transparent,
       alphaTest,
+      alphaHash: cut.alphaHash,
       depthWrite,
       // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
       depthTest: !properties.no_depth_test,
@@ -265,14 +261,42 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   );
 }
 
-function alphaCutBehaviour(mode: AlphaCutMode): { alphaTest: number; depthWrite: boolean } {
-  switch (mode) {
+interface AlphaCutBehaviour {
+  alphaTest: number;
+  alphaHash: boolean;
+  depthWrite: boolean;
+  /** Whether the arm reaches the blended pass at all. */
+  blended: boolean;
+}
+
+/**
+ * Godot's `mat_transparency` switch (`sprite_3d.cpp:285-297`) in three's terms.
+ * ALPHA_SCISSOR and ALPHA_HASH force `alpha = 1.0` past the cut
+ * (`scene_forward_clustered.glsl:1414-1416`) and so land in the opaque pass
+ * (`scene_shader_forward_clustered.cpp:252`); ALPHA_DEPTH_PRE_PASS keeps
+ * blending and cuts only in the depth pass, against the scene's own
+ * `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`).
+ */
+function alphaCutBehaviour(props: Sprite3DProperties): AlphaCutBehaviour {
+  // FLAG_TRANSPARENT off disables the whole switch (`sprite_3d.cpp:286`).
+  if (props.transparent === false)
+    return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false };
+  switch (props.alpha_cut) {
     case AlphaCutMode.ALPHA_CUT_DISCARD:
+      // `sprite_3d.cpp:281` hands the node's own threshold to the material.
+      return {
+        alphaTest: props.alpha_scissor_threshold,
+        alphaHash: false,
+        depthWrite: true,
+        blended: false,
+      };
+    case AlphaCutMode.ALPHA_CUT_HASH:
+      return { alphaTest: 0, alphaHash: true, depthWrite: true, blended: false };
     case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS:
-      return { alphaTest: DEFAULT_ALPHA_TEST, depthWrite: true };
+      return { alphaTest: PREPASS_ALPHA_TEST, alphaHash: false, depthWrite: true, blended: true };
     case AlphaCutMode.ALPHA_CUT_DISABLED:
     default:
-      return { alphaTest: 0, depthWrite: false };
+      return { alphaTest: 0, alphaHash: false, depthWrite: false, blended: true };
   }
 }
 

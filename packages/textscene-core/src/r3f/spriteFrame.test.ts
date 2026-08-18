@@ -2,7 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { composeFrameTexture, frameSizePx, type SpriteFrameProps } from './spriteFrame';
+import {
+  composeFrameTexture,
+  frameSizePx,
+  spriteWrapMode,
+  type SpriteFrameProps,
+} from './spriteFrame';
 
 function makeTexture(width = 100, height = 80): THREE.Texture {
   const texture = new THREE.Texture();
@@ -154,7 +159,7 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
     expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it('tiles the overrun for Sprite3D (StandardMaterial3D keeps FLAG_USE_TEXTURE_REPEAT)', () => {
+  it('tiles the overrun for a sprite whose derived wrap mode is REPEAT', () => {
     const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat', THREE.SRGBColorSpace)!;
     expect(result.wrapS).toBe(THREE.RepeatWrapping);
     expect(result.wrapT).toBe(THREE.RepeatWrapping);
@@ -164,6 +169,70 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
     // `get_rect()` uses `s = region_rect.size` — the sprite does NOT shrink to
     // the part of the region the texture actually covers.
     expect(frameSizePx(makeTexture(100, 80), oversized())).toEqual({ width: 200, height: 40 });
+  });
+});
+
+describe('spriteWrapMode — Godot\'s own texture_repeat derivation', () => {
+  /**
+   * `sprite_3d.cpp:163` decides REPEAT from the FRAME's UV corners alone:
+   *
+   *     bool texture_repeat = (MIN(uvs[0].x, uvs[2].x) < 0.0) || ... || (MAX(uvs[0].y, uvs[2].y) > 1.0);
+   *
+   * Strict `< 0.0` / `> 1.0`, so a window that merely touches the edge clamps.
+   * flip_h/flip_v SWAP the uv pairs (`:154-161`) and hand the test the other
+   * diagonal, whose bounding box is the same — so flips cannot move the answer
+   * and this reads the unflipped window. Our v-window is Godot's mirrored about
+   * 0.5, and `min < 0 || max > 1` is symmetric under `v → 1 - v`, so the OR is
+   * identical either way round.
+   */
+  it('clamps a plain full-image sprite — the common case', () => {
+    expect(spriteWrapMode(makeTexture(), baseProps())).toBe('clamp');
+  });
+
+  it('clamps a region that stays inside the texture', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 10, y: 20, width: 50, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+  });
+
+  it('clamps a region covering the texture EXACTLY — the tests are strict', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 100, height: 80 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+  });
+
+  it('repeats a region overrunning the far edge', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 200, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+  });
+
+  it('repeats a region starting before the texture origin', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: -10, y: 0, width: 50, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+  });
+
+  it('clamps a sprite-sheet frame, which only ever subdivides the base rect', () => {
+    const props = baseProps({ hframes: 3, vframes: 2, frame: 4 });
+    expect(spriteWrapMode(makeTexture(90, 80), props)).toBe('clamp');
+  });
+
+  it('clamps before the image has loaded, where no window can be computed', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 200, height: 40 },
+    });
+    expect(spriteWrapMode(undefined, props)).toBe('clamp');
+    expect(spriteWrapMode(new THREE.Texture(), props)).toBe('clamp');
   });
 });
 

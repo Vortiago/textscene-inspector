@@ -109,6 +109,8 @@ describe('materialProgramInputs', () => {
       ['blending, on an opaque material', { blending: THREE.CustomBlending }],
       // Both a term of `opaque` and a parameter of its own (`:213`, layer `:589`).
       ['alphaToCoverage', { alphaToCoverage: true }],
+      // `:172` `HAS_ALPHAHASH`, published at `:266`, layer `:530`.
+      ['alphaHash', { alphaHash: true }],
       ['side', { side: THREE.DoubleSide }],
       ['vertexColors', { vertexColors: true }],
       ['premultipliedAlpha', { premultipliedAlpha: true }],
@@ -159,6 +161,14 @@ describe('materialProgramInputs', () => {
       expect(keyOf({ anisotropy: 0.5, anisotropyMap: flowmap })).not.toBe(
         keyOf({ anisotropy: 0.5 })
       );
+    });
+
+    it('keys alphaHash even though its neighbour alphaTest is exempt', () => {
+      // `Material.js:134` declares `alphaHash` as a plain field — no setter, no
+      // `version++` — so the exemption `alphaTest` earns at `:494-502` does not
+      // transfer, and hashing would never reach a mounted material's shader.
+      expect(keyOf({ alphaHash: true })).not.toBe(keyOf({ alphaHash: false }));
+      expect(keyOf({ alphaHash: false })).toBe(keyOf({}));
     });
   });
 

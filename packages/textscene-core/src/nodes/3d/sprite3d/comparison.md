@@ -35,21 +35,21 @@ blue-tinted one.
 quad in the vertex shader in proportion to depth (`material.cpp:1357`) so the
 sprite keeps a constant on-screen size; the previewer draws it at its world size.
 
-The alpha uniforms `alpha_scissor_threshold`, `alpha_hash_scale`,
+`alpha_hash_scale` has no counterpart to bind to. Godot's hash threshold divides
+by the uniform (`scene_forward_aa_inc.glsl:17`, default 1.0 at `sprite_3d.h:90`);
+three runs the same Wyman-McGuire hash against a hardcoded
+`const float ALPHA_HASH_SCALE = 0.05` (`alphahash_pars_fragment.glsl.js`), with no
+uniform and no material property to move it. The dither grain therefore differs
+in size from Godot's, though the pattern is stochastic in both and both hash on
+object-space position. Authoring a value changes nothing here.
+
 `alpha_antialiasing_mode` and `alpha_antialiasing_edge` are parsed but not
-honoured. `alpha_cut = DISCARD` cuts at a fixed 0.5 rather than the authored
-`alpha_scissor_threshold`; alpha hashing and alpha-to-coverage are not
-implemented at all.
+honoured; alpha-to-coverage and edge feathering are not implemented.
 
-`alpha_cut = HASH` parses but renders as ordinary alpha blending. Godot maps it
-to `TRANSPARENCY_ALPHA_HASH` (`sprite_3d.cpp:289-294`), a per-fragment dithered
-discard scaled by `alpha_hash_scale`.
-
-Wrap mode is always REPEAT. Godot derives `texture_repeat` from the UV window and
-passes it to the material (`sprite_3d.cpp:163`), so a window that stays inside
-`[0, 1]` — every sprite that does not overrun its region — clamps in Godot and
-repeats here. The difference is a half-texel at the quad's border under linear
-filtering.
+`alpha_cut = OPAQUE_PREPASS` cuts at a fixed 0.5. Godot cuts it in the depth pass
+only, against the SCENE's `opaque_prepass_threshold` — 0.99 for the main render
+(`render_forward_clustered.cpp:1791`) — which is not a node property at all, so
+there is nothing on the node to read it from.
 
 `modulate` does not accumulate down a chain of nested sprites. A SpriteBase3D
 parented to another multiplies its own modulate by the parent's accumulated
