@@ -105,10 +105,18 @@ export function seamlessNoiseImage(
 
   const dest = new Uint8Array(width * height);
 
+  // `wr`/`rd_dest` are `img_buff`s over the OUTPUT with no offset, so both wrap
+  // on the output size (noise.h:66-67). Past a 0.5 skirt the blend loops run x
+  // to `skirtEdgeX` and y to `skirtEdgeY`, beyond the image, and the modulo is
+  // what carries those writes back onto the opposite edge. Indexing raw instead
+  // dropped them — a silent no-op on a Uint8Array — leaving three quarters of
+  // the pixels unblended at `seamless_blend_skirt = 1`.
+  const at = (x: number, y: number): number => (x % width) + (y % height) * width;
+
   // Swap the quadrants so the edges are perfect matches.
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      dest[x + y * width] = rdSrc(x, y, 'altXY');
+      dest[at(x, y)] = rdSrc(x, y, 'altXY');
     }
   }
 
@@ -121,7 +129,7 @@ export function seamlessNoiseImage(
         y = skirtEdgeY - 1;
         continue;
       }
-      dest[x + y * width] = alphaBlend(dest[x + y * width]!, rdSrc(x, y, 'altY'), alpha);
+      dest[at(x, y)] = alphaBlend(dest[at(x, y)]!, rdSrc(x, y, 'altY'), alpha);
     }
   }
 
@@ -133,7 +141,7 @@ export function seamlessNoiseImage(
         x = skirtEdgeX - 1;
         continue;
       }
-      dest[x + y * width] = alphaBlend(dest[x + y * width]!, rdSrc(x, y, 'altX'), alpha);
+      dest[at(x, y)] = alphaBlend(dest[at(x, y)]!, rdSrc(x, y, 'altX'), alpha);
     }
   }
 
@@ -144,7 +152,7 @@ export function seamlessNoiseImage(
       const ypos = Math.trunc(255 * (1 - smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
       const topBlend = alphaBlend(rdSrc(x, y, 'altX'), rdSrc(x, y, 'default'), xpos);
       const bottomBlend = alphaBlend(rdSrc(x, y, 'altXY'), rdSrc(x, y, 'altY'), xpos);
-      dest[x + y * width] = alphaBlend(bottomBlend, topBlend, ypos);
+      dest[at(x, y)] = alphaBlend(bottomBlend, topBlend, ypos);
     }
   }
 
