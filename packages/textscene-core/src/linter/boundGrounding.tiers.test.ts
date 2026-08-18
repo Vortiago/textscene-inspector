@@ -79,7 +79,7 @@ describe('per-end grounding', () => {
       v.strictNonNegativeInt('s', { hinted: 'e.cpp:5' }),
       v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' }),
       v.strictInt('si', { min: 0, hinted: 'g.cpp:7' }),
-      layerBitmask('mask', { hinted: 'h.cpp:8' }),
+      layerBitmask('mask', { hinted: 'h.cpp:8', width: 'uint32' }),
     ];
     for (const validator of cases) {
       expect(validator.grounding?.kind).toBe('hinted');

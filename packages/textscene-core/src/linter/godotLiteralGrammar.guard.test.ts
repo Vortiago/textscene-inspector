@@ -116,11 +116,13 @@ function handRolledComposite(source: string): string | null {
  * class, invisible to the guard. Importing the builder is the property that
  * actually matters, and it cannot be renamed out of.
  *
- * The renderer's `slotTupleRegex` consumers are deliberately NOT here: their
- * grammar is finite, so a matched capture always reads back through `parseFloat`
- * and there is nothing to get wrong. `godot/number.ts` mentions the linter
- * builder only in a docblock, which is why this matches an `import` and not the
- * bare name.
+ * The renderer's `slotTupleRegex` consumers are deliberately NOT here; they are
+ * held by two other assertions instead. `RAW_VARIANT_PARSE` bans
+ * `parseInt`/`parseFloat` outside `godot/` tree-wide, and the i-suffixed
+ * assertion below owns the one thing a SLOT grammar adds over a finite one — a
+ * converted spelling whose components are doubles. `godot/number.ts` mentions
+ * the linter builder only in a docblock, which is why this matches an `import`
+ * and not the bare name.
  */
 const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\bmakeFloatTupleRegex\b/;
 
@@ -188,6 +190,86 @@ const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
  */
 const PACKED_ARRAY_READERS = /\b(?:packedArrayLiteral|packedArrayCallAnywhere)\(/;
 const RAW_INT_PARSE = /\bparseInt\(/;
+
+/**
+ * The composites whose slot narrows every component to `int32_t`. Derived from
+ * `COMPOSITES`, where no other name ends in `i`.
+ */
+const I_SUFFIXED = COMPOSITES.filter((name) => name.endsWith('i'));
+
+/**
+ * Whoever reads a component out of an `i`-suffixed SLOT grammar.
+ *
+ * A slot grammar takes the converted spelling as well (`compositeSpellings`),
+ * and a `Vector2` holds two DOUBLES — so `Vector2(…)` written to a `Vector2i`
+ * property converts BOTH components through `double -> int32` however the token
+ * was spelled. `storedInt`/`ruleInt` take that branch only when told, and the
+ * two branches disagree for exactly one input class: a whole-valued token in
+ * `[2^31, 2^32-1]`, which the int branch wraps and the double branch cannot
+ * store. Measured on 4.6.3, `Vector2(4294967295, 64)` in a `Vector2i` slot
+ * stores `(-2147483648, 64)` where `Vector2i(4294967295, 64)` stores `(-1, 64)`.
+ * That narrowness is why source text has to ask: a `.`/`e` token already takes
+ * the double branch, so no ordinary value observes the omission.
+ *
+ * `variantTupleRegex` is out, by name and by meaning: it refuses the converted
+ * spelling, so its captures are the i-type's own ints and the flag would be
+ * wrong (`nodes/animation/animationplayer/animationResolver.ts`).
+ *
+ * The population is scraped twice over, because a grammar is reachable two
+ * ways — built inline, or referenced under the name it was bound to — and both
+ * terms are derived, so no roster of constant names exists to fall out of date.
+ * A file that stops touching the grammar and routes through a shared reader
+ * leaves the population; that is the intended exit, not an evasion, because the
+ * shared reader carries the flag once on behalf of all of them.
+ */
+const BUILDS_I_SLOT_GRAMMAR = new RegExp(
+  String.raw`\b(?:slotTupleRegex|makeFloatTupleRegex)\(\s*['"](?:${I_SUFFIXED.join('|')})['"]`
+);
+const I_SLOT_CONSTANT = new RegExp(
+  String.raw`\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:slotTupleRegex|makeFloatTupleRegex)\(\s*['"](?:${I_SUFFIXED.join('|')})['"]`,
+  'g'
+);
+
+/** Where `alwaysFloatBranch` sits in each reader's argument list (`godot/int.ts`). */
+const CONVERTED_ARG: Readonly<Record<string, number>> = { storedInt: 1, ruleInt: 3 };
+
+/**
+ * A first argument that is a matched capture, `match[1]`-shaped.
+ *
+ * The one read shape this scan can see. `linter/validators/v/vectors.ts` reads
+ * its four `Rect2i` components through a `.some((component) => …)` callback,
+ * where the argument is a bare identifier; that file is held by the
+ * `isConvertedSpelling` term instead, at file granularity. A SECOND reader
+ * added there with a bare `ruleInt(c)` would pass both terms. Stated rather
+ * than contorted around, the way every population above states its edge.
+ */
+const CAPTURE_ARG = /^[A-Za-z_$][\w$]*\[\d+\]/;
+
+/** Top-level arguments of every `fn(…)` call, with the offset the call starts at. */
+function readerCalls(src: string, fn: string): Array<{ args: string[]; index: number }> {
+  const calls: Array<{ args: string[]; index: number }> = [];
+  const opener = new RegExp(String.raw`\b${fn}\(`, 'g');
+  for (let m = opener.exec(src); m !== null; m = opener.exec(src)) {
+    const args: string[] = [];
+    let arg = '';
+    let depth = 1;
+    for (let i = opener.lastIndex; i < src.length; i++) {
+      const ch = src[i]!;
+      if (ch === '(' || ch === '[' || ch === '{') depth++;
+      else if (ch === ')' || ch === ']' || ch === '}') depth--;
+      if (depth === 0) break;
+      if (ch === ',' && depth === 1) {
+        args.push(arg.trim());
+        arg = '';
+        continue;
+      }
+      arg += ch;
+    }
+    args.push(arg.trim());
+    calls.push({ args, index: m.index });
+  }
+  return calls;
+}
 
 /**
  * Each composite at the arity Godot writes it with, for the parity probe below.
@@ -274,6 +356,40 @@ describe('Godot composite literal grammar', () => {
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
+  });
+
+  it('reads an i-suffixed slot capture through the converted branch', () => {
+    const bound = new Set<string>();
+    for (const { bare } of files) for (const m of bare.matchAll(I_SLOT_CONSTANT)) bound.add(m[1]!);
+    // Anti-vacuity, and load-bearing: an empty alternation below would be
+    // `\b(?:)\b`, which matches every file with a word in it.
+    expect(bound.size).toBeGreaterThan(0);
+    const named = new RegExp(String.raw`\b(?:${[...bound].join('|')})\b`);
+
+    const population = files.filter(
+      ({ bare }) => BUILDS_I_SLOT_GRAMMAR.test(bare) || named.test(bare)
+    );
+    // Anti-vacuity: four modules own an i-suffixed slot grammar, and the
+    // population is scraped rather than listed, so a rename that hid all four
+    // would empty it and leave this trivially green.
+    expect(population.length).toBeGreaterThan(3);
+
+    const offenders: string[] = [];
+    for (const { rel, bare } of population) {
+      if (!bare.includes('isConvertedSpelling(')) {
+        offenders.push(`${rel}: never asks isConvertedSpelling`);
+      }
+      for (const [reader, flagAt] of Object.entries(CONVERTED_ARG)) {
+        for (const { args, index } of readerCalls(bare, reader)) {
+          if (!CAPTURE_ARG.test(args[0] ?? '') || args.length > flagAt) continue;
+          // Offsets survive `stripComments` — it blanks in place, keeping both
+          // length and newlines — so this is the line in the real file.
+          const line = bare.slice(0, index).split('\n').length;
+          offenders.push(`${rel}:${line} ${reader}(${args[0]}) takes no converted flag`);
+        }
+      }
+    }
+    expect(offenders.sort()).toEqual([]);
   });
 
   /**

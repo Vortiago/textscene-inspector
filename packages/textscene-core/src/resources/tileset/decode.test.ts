@@ -180,6 +180,47 @@ sources/0 = SubResource("TileSetAtlasSource_a")
   });
 });
 
+describe('a TileSet Vector2i slot follows the composite type, not the token', () => {
+  // A `Vector2` holds two doubles, so `Vector2(4294967295, 16)` narrows through
+  // `double -> int32` to the UB sentinel rather than wrapping to -1 the way the
+  // `Vector2i` spelling of the same digits does. Measured on 4.6.3.
+  it('falls back rather than sizing a tile at a number no platform holds', () => {
+    const wide: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: { id: 'ts', tile_size: 'Vector2(4294967295, 16)', 'sources/0': 'SubResource("atlas1")' },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', wide, externals);
+    expect(model!.tileSize).toEqual({ x: 16, y: 16 }); // Godot's default
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('still wraps the same digits in the canonical spelling, and reads an ordinary conversion', () => {
+    const cases: Array<[string, { x: number; y: number }]> = [
+      ['Vector2i(4294967295, 16)', { x: -1, y: 16 }],
+      ['Vector2(128, 64)', { x: 128, y: 64 }],
+    ];
+    for (const [literal, expected] of cases) {
+      const model = tileSetFromScene(
+        'SubResource("ts")',
+        [
+          internals[0]!,
+          {
+            id: 'ts',
+            type: 'TileSet',
+            data: { id: 'ts', tile_size: literal, 'sources/0': 'SubResource("atlas1")' },
+          },
+        ],
+        externals
+      );
+      expect(model!.tileSize).toEqual(expected);
+    }
+  });
+});
+
 describe('a TileSet enum Godot reads differently from `parseInt`', () => {
   it('reads the layout the exponent spelling names', () => {
     // `parseInt` stops at the `e`, so `1e1` decoded to 1 (STACKED_OFFSET)

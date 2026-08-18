@@ -18,7 +18,7 @@ validatorRegistry.registerAll('RayCast3D', {
   // display hint, not a range; only the Vector3 format is enforceable.
   target_position: v.vector3('target_position'),
   // scene/3d/physics/ray_cast_3d.cpp:380: PROPERTY_HINT_LAYERS_3D_PHYSICS
-  collision_mask: layerBitmask('collision_mask', { hinted: 'ray_cast_3d.cpp:380' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'ray_cast_3d.cpp:380', width: 'uint32' /* ray_cast_3d.h:100 */ }),
   hit_from_inside: v.boolean('hit_from_inside'),
   hit_back_faces: v.boolean('hit_back_faces'),
   collide_with_areas: v.boolean('collide_with_areas'),

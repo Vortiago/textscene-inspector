@@ -39,6 +39,20 @@ const REFUSED = [...NON_FINITE, ...UNSTORABLE];
  */
 const PAST_32_BIT = '4294967296';
 
+/**
+ * Outside a BYTE, in both directions, and refusable only by a byte slot.
+ *
+ * A `PackedByteArray` element is read by `_parse_byte_array`
+ * (`variant_parser.cpp:600`) into a `Vector<uint8_t>` (`:650`), so it converts
+ * through `Variant::operator uint8_t()` (`variant.cpp:1519-1521`) rather than
+ * through int32. Measured on 4.6.3, `PackedByteArray(-1, 0)` stores `[255, 0]`
+ * and `PackedByteArray(300.5, 0)` stores `[44, 0]` — altered in both cases,
+ * which is ADR-0032's error tier. `300.5` is the FLOAT branch
+ * (`variant.h:369-370`), undefined outside [0, 255], and is here because a
+ * width that only bounds INT literals reports it as a truncation instead.
+ */
+const PAST_BYTE = ['256', '-1', '300.5'] as const;
+
 const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;
 const PACKED_INT_ARRAY = /PackedInt32Array/;
 
@@ -185,6 +199,25 @@ describe('a literal an INT slot cannot hold', () => {
       .map(({ at }) => at)
       .sort();
     expect(silent).toEqual([]);
+  });
+
+  it.each(PAST_BYTE)('is an error from every byte slot, outside a byte (%s)', (spelling) => {
+    const bytes = intSlots.filter(({ validator }) => validator.intSlot!.width === 'uint8');
+    // Anti-vacuity: a byte slot left at the int32 default would empty this and
+    // leave it green, which is the exact defect it exists to catch.
+    expect(bytes.length).toBeGreaterThan(0);
+
+    // Severity, not just presence: the truncation WARNING fires on `300.5` at a
+    // width whose band admits 300, and a warning naming a stored 300 is both the
+    // wrong tier and a number Godot does not hold.
+    const notRefused = bytes
+      .filter(
+        ({ key, validator }) =>
+          validator(key, probe(validator.accepts!, spelling), 1)?.severity !== 'error'
+      )
+      .map(({ at }) => at)
+      .sort();
+    expect(notRefused).toEqual([]);
   });
 
   it('is not called unstorable by an int64 slot, which holds it exactly', () => {

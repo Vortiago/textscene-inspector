@@ -166,6 +166,33 @@ describe('CodeEdit strict validators', () => {
     it('still rejects an element Godot cannot tokenise at all', () => {
       expect(check('line_length_guidelines', 'PackedInt32Array(80abc)')).not.toBeNull();
     });
+
+    /*
+     * The width is a per-SPELLING fact here, not a per-slot one. The setter and
+     * getter are `TypedArray<int>` (code_edit.h:505-506, code_edit.cpp:2499-2506)
+     * behind `PropertyInfo(Variant::PACKED_INT32_ARRAY, …)` (code_edit.cpp:2981),
+     * so only the packed constructor narrows — the typed and bare forms reach the
+     * setter as int64 elements. Measured on 4.6.3:
+     * `Array[int]([4294967296, 1])` -> [4294967296, 1],
+     * `PackedInt32Array(4294967296, 1)` -> [0, 1].
+     */
+    it('accepts a past-32-bit element in the typed and bare forms, which hold it exactly', () => {
+      expect(check('line_length_guidelines', 'Array[int]([4294967296, 1])')).toBeNull();
+      expect(check('line_length_guidelines', '[4294967296]')).toBeNull();
+    });
+
+    it('rejects the same element in the packed form, which narrows it away', () => {
+      const diagnostic = check('line_length_guidelines', 'PackedInt32Array(4294967296, 1)');
+      expect(diagnostic?.severity).toBe('error');
+      expect(diagnostic?.code).toBe('INVALID_LINE_LENGTH_GUIDELINES_VALUE');
+    });
+
+    it('reports a literal no width can hold, whichever form spells it', () => {
+      // `1e20` is past int64 too, and the FLOAT branch is undefined there
+      // (variant.h:369-370), so widening the typed form must not go silent.
+      expect(check('line_length_guidelines', 'Array[int]([1e20])')?.severity).toBe('error');
+      expect(check('line_length_guidelines', 'Array[int]([inf])')?.severity).toBe('error');
+    });
   });
 
   describe('the typed-array spelling Godot writes for every string array', () => {

@@ -39,7 +39,7 @@ validatorRegistry.registerAll('Light3D', {
   light_bake_mode: v.enumInt('light_bake_mode', 0, 2, LIGHT_BAKE_MODE, {
     hinted: 'light_3d.cpp:398',
   }),
-  light_cull_mask: layerBitmask('light_cull_mask', { hinted: 'light_3d.cpp:399' }),
+  light_cull_mask: layerBitmask('light_cull_mask', { hinted: 'light_3d.cpp:399', width: 'uint32' /* light_3d.h:130 */ }),
   // light_3d.cpp:393, PROPERTY_HINT_RESOURCE_TYPE
   // "Texture2D,-AnimatedTexture,-AtlasTexture,-CameraTexture,-CanvasTexture,
   // -MeshTexture,-Texture2DRD,-ViewportTexture". The excluded subclasses are a
@@ -94,7 +94,7 @@ validatorRegistry.registerAll('Light3D', {
   shadow_blur: v.float('shadow_blur', { min: 0, max: 10, hinted: 'light_3d.cpp:408' }),
   // light_3d.cpp:409, PROPERTY_HINT_LAYERS_3D_RENDER. set_shadow_caster_mask
   // (light_3d.cpp:148) is a bare assignment, so out-of-widget is a warning.
-  shadow_caster_mask: layerBitmask('shadow_caster_mask', { hinted: 'light_3d.cpp:409' }),
+  shadow_caster_mask: layerBitmask('shadow_caster_mask', { hinted: 'light_3d.cpp:409', width: 'uint32' /* light_3d.h:139 */ }),
   // light_3d.cpp:406, PROPERTY_HINT_RANGE "-16,16,0.001": both ends closed, no
   // or_greater/or_less. The previous ±10 bound was narrower than the hint and
   // rejected a legal ±16 value; Light3D::set_param:36 still only guards the

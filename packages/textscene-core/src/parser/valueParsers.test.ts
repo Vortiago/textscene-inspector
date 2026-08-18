@@ -340,4 +340,13 @@ describe('the conversion branch follows the composite type, not the token', () =
   it('leaves an ordinary converted value alone', () => {
     expect(vec2iOr('Vector2(100, 64)', { x: -9, y: -9 })).toEqual({ x: 100, y: 64 });
   });
+
+  it('reads the optional arm through the same branch', () => {
+    // `frame_coords` on Sprite2D/Sprite3D, where -1 is a frame Godot never
+    // selects.
+    expect(parseOptionalVector2i('Vector2(4294967295, 64)')).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(parseOptionalVector2i('Vector2i(4294967295, 64)')).toEqual({ x: -1, y: 64 });
+    expect(parseOptionalVector2i('Vector2(100, 64)')).toEqual({ x: 100, y: 64 });
+  });
 });

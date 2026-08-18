@@ -49,8 +49,8 @@ const shared = (disableModeHint: string, layerHint: string, maskHint: string) =>
   disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE, { hinted: disableModeHint }),
   // PROPERTY_HINT_LAYERS_{2D,3D}_PHYSICS: a 32-checkbox widget, so the width is
   // a UI-control hint and an out-of-range mask warns rather than errors.
-  collision_layer: layerBitmask('collision_layer', { hinted: layerHint }),
-  collision_mask: layerBitmask('collision_mask', { hinted: maskHint }),
+  collision_layer: layerBitmask('collision_layer', { hinted: layerHint, width: 'uint32' /* collision_object_2d.h:121 / collision_object_3d.h:130 */ }),
+  collision_mask: layerBitmask('collision_mask', { hinted: maskHint, width: 'uint32' /* collision_object_2d.h:124 / collision_object_3d.h:133 */ }),
   // collision_object_2d.cpp:647 — a plain FLOAT, no range hint, so no bound.
   collision_priority: v.float('collision_priority'),
 });

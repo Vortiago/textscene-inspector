@@ -34,7 +34,7 @@ validatorRegistry.registerAll('ShapeCast2D', {
   // scene/2d/physics/shape_cast_2d.cpp:473 — plain INT, no PROPERTY_HINT_RANGE, so no bound
   max_results: v.int('max_results'),
   // scene/2d/physics/shape_cast_2d.cpp:474 — PROPERTY_HINT_LAYERS_2D_PHYSICS
-  collision_mask: layerBitmask('collision_mask', { hinted: 'shape_cast_2d.cpp:474' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'shape_cast_2d.cpp:474', width: 'uint32' /* shape_cast_2d.h:91 */ }),
   collide_with_areas: v.boolean('collide_with_areas'),
   collide_with_bodies: v.boolean('collide_with_bodies'),
 });

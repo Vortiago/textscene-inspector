@@ -54,7 +54,7 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   // Bare uint32_t assignment (set_navigation_layers, cpp:412-422): the
   // parameter type is the ceiling, and PROPERTY_HINT_LAYERS_2D_NAVIGATION (:148)
   // is a UI-control hint, not a range.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_agent_2d.cpp:148' }),
+  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_agent_2d.cpp:148', width: 'uint32' /* navigation_agent_2d.h:132 */ }),
   // set_pathfinding_algorithm (cpp:446-454) is a bare assignment (plus an
   // equal-check). The HINT_ENUM at :149 lists a single value, "AStar" — the
   // only member of NavigationPathQueryParameters2D::PathfindingAlgorithm
@@ -186,10 +186,10 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   }),
   // Bare uint32_t assignment (set_avoidance_layers, cpp:932-935); PROPERTY_HINT_LAYERS_AVOIDANCE
   // at :168 is a UI-control hint, not a range.
-  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_agent_2d.cpp:168' }),
+  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_agent_2d.cpp:168', width: 'uint32' /* navigation_agent_2d.h:229 */ }),
   // Bare uint32_t assignment (set_avoidance_mask, cpp:941-944); PROPERTY_HINT_LAYERS_AVOIDANCE
   // at :169 is a UI-control hint, not a range.
-  avoidance_mask: layerBitmask('avoidance_mask', { hinted: 'navigation_agent_2d.cpp:169' }),
+  avoidance_mask: layerBitmask('avoidance_mask', { hinted: 'navigation_agent_2d.cpp:169', width: 'uint32' /* navigation_agent_2d.h:232 */ }),
   // navigation_agent_2d.cpp:986-991, ERR_FAIL_COND_MSG(p_priority < 0.0, ...) at
   // :987 and ERR_FAIL_COND_MSG(p_priority > 1.0, ...) at :988 — both ends refused
   // by the setter, matching the hint's own "0.0,1.0,0.01" exactly.

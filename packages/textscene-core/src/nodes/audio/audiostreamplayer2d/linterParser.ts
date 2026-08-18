@@ -64,7 +64,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   }),
   // Bare uint32_t assignment (:316): the parameter type is the only ceiling, so
   // the citation is the setter signature rather than an ERR_FAIL.
-  area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_2d.cpp:441' }),
+  area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_2d.cpp:441', width: 'uint32' /* audio_stream_player_2d.h:124 */ }),
   // audio_stream_player_internal.cpp:337 is a bare assignment; no engine-side range check.
   playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE, {
     hinted: 'audio_stream_player_2d.cpp:442',

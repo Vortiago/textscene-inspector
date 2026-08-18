@@ -20,6 +20,7 @@ import {
   createVector2iValidator,
   createVector3Validator,
 } from '../vectorValidators.js';
+import { compositeTypeName, isConvertedSpelling } from '../../../godot/variantConversion.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
 
@@ -42,8 +43,12 @@ export const vectorCombinators = {
           code
         );
       }
-      // Same arm as `vector2i`: the component reads, no int32 holds it.
-      if (match.slice(1, 5).some((component) => ruleInt(component) === null)) {
+      const components = match.slice(1, 5);
+      // Same arm as `vector2i`: the component reads, no int32 holds it. A
+      // `Rect2(...)` in a Rect2i slot holds four doubles, so every component
+      // takes the `double -> int32` branch whatever the token looks like.
+      const converted = isConvertedSpelling('Rect2i', compositeTypeName(value));
+      if (components.some((component) => ruleInt(component, null, 'int32', converted) === null)) {
         return propertyError(
           key,
           line,
@@ -52,7 +57,7 @@ export const vectorCombinators = {
           'error'
         );
       }
-      return truncatedComponent(name, key, line, match.slice(1, 5), valueCode(name));
+      return truncatedComponent(name, key, line, components, valueCode(name));
     }, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts'));
   },
 

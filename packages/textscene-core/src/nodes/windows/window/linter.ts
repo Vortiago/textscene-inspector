@@ -14,17 +14,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
+import { matchVector2i } from '../../../linter/validators/index.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
-
-function parseVector2i(raw: string): { x: number; y: number } | null {
-  const match = VECTOR2I_REGEX.exec(raw);
-  if (!match) return null;
-  const x = ruleInt(match[1]);
-  const y = ruleInt(match[2]);
-  return x === null || y === null ? null : { x, y };
-}
 
 function checkWindow(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -37,8 +28,8 @@ function checkWindow(context: RuleContext): Diagnostic[] {
     return diagnostics;
   }
 
-  const maxSize = parseVector2i(rawProps.max_size);
-  const minSize = parseVector2i(rawProps.min_size);
+  const maxSize = matchVector2i(rawProps.max_size);
+  const minSize = matchVector2i(rawProps.min_size);
   if (!maxSize || !minSize) return diagnostics;
 
   // scene/main/window.cpp:473, Window::_validate_limit_size():

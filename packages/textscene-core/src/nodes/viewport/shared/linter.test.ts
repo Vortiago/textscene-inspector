@@ -20,6 +20,29 @@ describe('viewport size with a component no int32 holds', () => {
   });
 });
 
+/**
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
+ * scene, not an error-free one), so a converted spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
+ * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
+ * spelling of the same digits wraps to. Measured on 4.6.3.
+ */
+describe('viewport size with a CONVERTED component no int32 holds', () => {
+  it('says nothing rather than naming Vector2i(-1, 1080) as the size', () => {
+    expectNoDiagnostic(scene(node('Window', { size: 'Vector2(4294967295, 1080)' })), {
+      ruleName: 'viewport-size-too-small',
+    });
+  });
+
+  it('still warns on the canonical spelling of the same digits', () => {
+    expectDiagnostic(scene(node('Window', { size: 'Vector2i(4294967295, 1080)' })), {
+      ruleName: 'viewport-size-too-small',
+      severity: 'warning',
+      contains: ['Vector2i(-1, 1080)'],
+    });
+  });
+});
+
 describe('Viewport size rule (viewport-size-too-small)', () => {
   it('warns on a Window with size.x <= 1', () => {
     const diagnostic = expectDiagnostic(scene(node('Window', { size: 'Vector2i(1, 480)' })), {

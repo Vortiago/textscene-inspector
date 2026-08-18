@@ -26,7 +26,7 @@ import '../textedit/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { arrayBody, INT_ARRAY_FORMS } from './arrayForms.js';
+import { arrayBody, INT_ARRAY_FORMS, PACKED_INT32_ARRAY_RE } from './arrayForms.js';
 import { bracePairsValidator } from './bracePairValidators.js';
 import { delimiterArrayValidator } from './delimiterValidators.js';
 import { prefixArrayValidator } from './prefixValidators.js';
@@ -36,9 +36,16 @@ import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 /**
  * `line_length_guidelines` — `set_line_length_guidelines`
  * (code_edit.cpp:2499-2502) stores the array verbatim with no per-element check
- * at all (no clamp, no sort, no uniqueness requirement): format-only, mirroring
- * `SplitContainer.split_offsets`
+ * at all (no clamp, no sort, no uniqueness requirement), so this carries no
+ * bound of its own — mirroring `SplitContainer.split_offsets`
  * (nodes/2d/ui/splitcontainer/linterParser.ts), which is the same shape.
+ *
+ * The element WIDTH is per-spelling, not per-slot. Setter and getter are
+ * `TypedArray<int>` (code_edit.h:505-506, code_edit.cpp:2499-2506) behind
+ * `PropertyInfo(Variant::PACKED_INT32_ARRAY, …)` (code_edit.cpp:2981), so the
+ * packed constructor narrows to int32 on the way in
+ * (`_parse_construct<int32_t>`, variant_parser.cpp:1428-1430) and the other two
+ * forms reach the setter as int64 elements. See {@link PACKED_INT32_ARRAY_RE}.
  */
 function lineLengthGuidelinesValidator(): PropertyValidator {
   const code = 'INVALID_LINE_LENGTH_GUIDELINES_FORMAT';
@@ -53,17 +60,22 @@ function lineLengthGuidelinesValidator(): PropertyValidator {
       );
     }
     if (body === '') return null;
-    // One pass: unreadable by the tokenizer, or read and then narrowed
-    // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-    const bad = badIntElement('line_length_guidelines', key, line, body, {
-        format: code,
-        value: 'INVALID_LINE_LENGTH_GUIDELINES_VALUE',
-    });
+    // One pass: unreadable by the tokenizer, or read and then narrowed away —
+    // at the width the MATCHED spelling converts through.
+    const bad = badIntElement(
+      'line_length_guidelines',
+      key,
+      line,
+      body,
+      { format: code, value: 'INVALID_LINE_LENGTH_GUIDELINES_VALUE' },
+      PACKED_INT32_ARRAY_RE.test(value) ? 'int32' : 'int64'
+    );
     return bad.error ?? bad.truncated;
   }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
-  // Format-only: rejects a malformed literal or a non-integer element only.
-  // `set_line_length_guidelines` accepts any length and any value.
   // An INT slot, not format-only: it rejects a literal the tokenizer reads.
+  // The tag carries int32, the width of the `PackedInt32Array` spelling the
+  // `nonFiniteInts` sweep probes with; the validator picks per spelling above,
+  // which no single tag can express.
   return markIntSlot(validator);
 }
 

@@ -100,8 +100,8 @@ validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:269/270, both PROPERTY_HINT_LAYERS_3D_RENDER — a
   // 32-checkbox editor widget, not a range; set_cull_mask/set_reflection_mask
   // (:169-185) are bare assignments.
-  cull_mask: layerBitmask('cull_mask', { hinted: 'reflection_probe.cpp:269' }),
-  reflection_mask: layerBitmask('reflection_mask', { hinted: 'reflection_probe.cpp:270' }),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'reflection_probe.cpp:269', width: 'uint32' /* reflection_probe.h:117 */ }),
+  reflection_mask: layerBitmask('reflection_mask', { hinted: 'reflection_probe.cpp:270', width: 'uint32' /* reflection_probe.h:120 */ }),
 
   // reflection_probe.cpp:271, PROPERTY_HINT_RANGE "0,1024,0.1". No or_greater/
   // or_less; set_mesh_lod_threshold (:90-93) is a bare assignment, so both ends

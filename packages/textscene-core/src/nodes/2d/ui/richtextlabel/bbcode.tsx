@@ -47,7 +47,9 @@ export function parseBBCode(text: string): ReactNode[] {
     const open = OPEN.exec(part);
     if (open) {
       const name = open[1]!.toLowerCase();
-      const make = TAG_STYLE[name];
+      // hasOwn: the tag name is text from the label, so `[constructor]` would
+      // otherwise resolve a function and be called as a style builder.
+      const make = Object.hasOwn(TAG_STYLE, name) ? TAG_STYLE[name] : undefined;
       stack.push({ name, style: make ? make(open[2]) : {} });
       continue;
     }

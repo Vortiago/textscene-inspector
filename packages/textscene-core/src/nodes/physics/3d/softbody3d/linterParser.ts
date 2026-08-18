@@ -117,9 +117,9 @@ const attachmentsValidator = indexedFamilyValidator({
 validatorRegistry.registerAll('SoftBody3D', {
   // soft_body_3d.cpp:381: PROPERTY_HINT_LAYERS_3D_PHYSICS. SoftBody3D is not a
   // CollisionObject3D, so this is its own 32-bit mask, not an inherited one.
-  collision_layer: layerBitmask('collision_layer', { hinted: 'soft_body_3d.cpp:381' }),
+  collision_layer: layerBitmask('collision_layer', { hinted: 'soft_body_3d.cpp:381', width: 'uint32' /* soft_body_3d.h:140 */ }),
   // soft_body_3d.cpp:382: PROPERTY_HINT_LAYERS_3D_PHYSICS, own member (see above).
-  collision_mask: layerBitmask('collision_mask', { hinted: 'soft_body_3d.cpp:382' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'soft_body_3d.cpp:382', width: 'uint32' /* soft_body_3d.h:137 */ }),
   // soft_body_3d.cpp:390: PROPERTY_HINT_RANGE "0,1,0.01,or_greater" (or_greater
   // makes the 1 a soft editor extent). set_damping_coefficient passes straight
   // to the physics server with no guard, so out-of-range warns.

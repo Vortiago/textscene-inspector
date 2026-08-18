@@ -188,7 +188,11 @@ const AXIS_PREFIX_RE = /^[xyz]\//;
 const jointConstraintsValidator: PropertyValidator = accepts((key, value, line) => {
   const rest = key.slice(JOINT_CONSTRAINTS_PREFIX.length);
   const leafName = rest.replace(AXIS_PREFIX_RE, '');
-  const leaf = JOINT_CONSTRAINT_LEAVES[leafName];
+  // hasOwn, so a leaf named `toString` cannot resolve an inherited function and
+  // get called as a validator. The key is text the `.tscn` chooses.
+  const leaf = Object.hasOwn(JOINT_CONSTRAINT_LEAVES, leafName)
+    ? JOINT_CONSTRAINT_LEAVES[leafName]
+    : undefined;
   if (!leaf) {
     return propertyError(
       key,

@@ -69,6 +69,7 @@ export {
   TYPED_OR_BARE_ARRAY_RE,
   TYPED_WRAPPER_RE,
   compositeCallPrefix,
+  isNilLiteral,
   packedArrayCallAnywhere,
   packedArrayLiteral,
   nodePathLiteral,

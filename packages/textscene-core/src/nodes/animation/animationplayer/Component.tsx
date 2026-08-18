@@ -200,7 +200,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const clip = animations.find((a) => a.name === transport.selectedClip);
     if (!clip) return null;
     const targets = clip.tracks
-      .filter((t) => t.type === 'value' && t.property in VALUE_PUSH_PROPERTIES)
+      .filter((t) => t.type === 'value' && Object.hasOwn(VALUE_PUSH_PROPERTIES, t.property))
       .map((t) => ({
         path: resolveTargetNodePath(nodePath, properties.root_node, t.targetPath),
         property: t.property,
@@ -231,7 +231,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const owned = ownedValues.current;
     const next = new Map<string, { path: string; property: string }>();
     for (const { path, property, keys, interp } of valueTargets.targets) {
-      const value = VALUE_PUSH_PROPERTIES[property]
+      const value = Object.hasOwn(VALUE_PUSH_PROPERTIES, property) && VALUE_PUSH_PROPERTIES[property]
         ? sampleInterpolatedValue(keys, action.time, interp)
         : [sampleSteppedValue(keys, action.time)];
       valueRegistry.set(path, property, value);

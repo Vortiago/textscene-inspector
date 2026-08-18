@@ -51,5 +51,5 @@ validatorRegistry.registerAll('GPUParticlesCollisionHeightField3D', {
   follow_camera_enabled: v.boolean('follow_camera_enabled'),
   // gpu_particles_collision_3d.cpp:737, PROPERTY_HINT_LAYERS_3D_RENDER: same
   // 32-bit render-layer mask shape as the base class's cull_mask.
-  heightfield_mask: layerBitmask('heightfield_mask', { hinted: 'gpu_particles_collision_3d.cpp:737' }),
+  heightfield_mask: layerBitmask('heightfield_mask', { hinted: 'gpu_particles_collision_3d.cpp:737', width: 'uint32' /* gpu_particles_collision_3d.h:252 */ }),
 });

@@ -41,6 +41,17 @@ export class ValidatorRegistry {
   constructor(private baseTypes: Readonly<Record<string, string>> = {}) {}
 
   /**
+   * The declared base of `type`, or `undefined`.
+   *
+   * `Object.hasOwn`, because the key is a node type the `.tscn` chooses: bare
+   * indexing answers the `Object` FUNCTION for `type="constructor"`, which then
+   * travels as a `string` through every walk below.
+   */
+  private baseOf(type: string): string | undefined {
+    return Object.hasOwn(this.baseTypes, type) ? this.baseTypes[type] : undefined;
+  }
+
+  /**
    * Register multiple validators for a node type
    * @param nodeType - TSCN node type (e.g., "MeshInstance3D")
    * @param validators - Map of property keys to validator functions
@@ -128,7 +139,7 @@ export class ValidatorRegistry {
       // Added after this hop's removals, so a type that both removes and
       // declares a key still reports it removed, as findValidator does.
       for (const key of Object.keys(this.validators.get(type) ?? {})) reDeclared.add(key);
-      type = this.baseTypes[type];
+      type = this.baseOf(type);
     }
     return [...keys];
   }
@@ -169,7 +180,7 @@ export class ValidatorRegistry {
       const validator = this.findOwnValidator(type, propertyKey);
       if (validator) return validator;
 
-      type = this.baseTypes[type];
+      type = this.baseOf(type);
     }
     return null;
   }
@@ -226,10 +237,10 @@ export class ValidatorRegistry {
    */
   baseChainOf(nodeType: string): string[] {
     const chain: string[] = [];
-    let type: string | undefined = this.baseTypes[nodeType];
+    let type: string | undefined = this.baseOf(nodeType);
     for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
       chain.push(type);
-      type = this.baseTypes[type];
+      type = this.baseOf(type);
     }
     return chain;
   }

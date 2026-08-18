@@ -193,7 +193,9 @@ function groupValidator(
 ): PropertyValidator {
   const validator = accepts((key, value, line) => {
     const leafName = key.replace(GROUP_AXIS_PREFIX_RE, '');
-    const leaf = leaves[leafName];
+    // hasOwn, so a leaf named `toString` cannot resolve an inherited function
+    // and get called as a validator. The key is text the `.tscn` chooses.
+    const leaf = Object.hasOwn(leaves, leafName) ? leaves[leafName] : undefined;
     if (!leaf) {
       return propertyError(key, line, `Unknown ${groupLabel} property: "${key}"`, unknownCode);
     }

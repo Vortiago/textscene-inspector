@@ -76,8 +76,8 @@ validatorRegistry.registerAll('Light2D', {
   // (light_2d.cpp:152-154) both assign unconditionally, no ERR_FAIL, no
   // clamp. The 0..2^32-1 `layerBitmask` bound these used to carry was never
   // engine-enforced, so it is removed here (ADR-0032 "none").
-  range_item_cull_mask: layerBitmask('range_item_cull_mask', { hinted: 'light_2d.cpp:313' }),
-  shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask', { hinted: 'light_2d.cpp:320' }),
+  range_item_cull_mask: layerBitmask('range_item_cull_mask', { hinted: 'light_2d.cpp:313', width: 'int32' /* light_2d.h:112 */ }),
+  shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask', { hinted: 'light_2d.cpp:320', width: 'int32' /* light_2d.h:115 */ }),
   shadow_enabled: v.boolean('shadow_enabled'),
   shadow_color: v.color('shadow_color'),
   // light_2d.cpp:318, ENUM 3 labels (matches SHADOW_FILTER_MAX=3,

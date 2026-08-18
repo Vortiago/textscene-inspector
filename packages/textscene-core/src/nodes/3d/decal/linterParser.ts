@@ -34,7 +34,7 @@ validatorRegistry.registerAll('Decal', {
   // :98), so min 0 is a real, enforced floor and there is no maximum.
   upper_fade: v.nonNegativeFloat('upper_fade', { enforced: 'decal.cpp:89' }),
   lower_fade: v.nonNegativeFloat('lower_fade', { enforced: 'decal.cpp:98' }),
-  cull_mask: layerBitmask('cull_mask', { hinted: 'decal.cpp:263' }),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'decal.cpp:263', width: 'uint32' /* decal.h:106 */ }),
   // decal.cpp:258-260. `or_greater` with no `or_less`, so the 0 floor is a real
   // bound and 4096 is only the slider extent. Both setters (:134-146) are bare
   // assignments.

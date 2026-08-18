@@ -37,11 +37,17 @@ const TYPE_SHORTHAND: Record<string, string> = {
 };
 
 function getTypeBadgeClass(type: string): string {
-  return TYPE_BADGE_CLASS[type] ?? styles.typeUnknown!;
+  // hasOwn: `type` comes from the file, and a prototype member is not nullish,
+  // so `??` would let a function through as a className.
+  return (Object.hasOwn(TYPE_BADGE_CLASS, type) ? TYPE_BADGE_CLASS[type] : undefined) ??
+    styles.typeUnknown!;
 }
 
 function getTypeShorthand(type: string): string {
-  return TYPE_SHORTHAND[type] ?? type.substring(0, 4);
+  return (
+    (Object.hasOwn(TYPE_SHORTHAND, type) ? TYPE_SHORTHAND[type] : undefined) ??
+    type.substring(0, 4)
+  );
 }
 
 function hasTransform(node: TscnNode): boolean {

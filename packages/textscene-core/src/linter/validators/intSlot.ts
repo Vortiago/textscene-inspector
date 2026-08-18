@@ -66,8 +66,8 @@ export function slotWidth(max?: number | null): IntWidth {
  * question of every slot and then re-read the answer as unsigned, which refused
  * `seed = 4294967295.0` at the ceiling its own `PROPERTY_HINT_RANGE` declares.
  */
-export function storedInSlot(value: string, max?: number | null): number | null {
-  return parseGodotInt(value, slotWidth(max));
+export function storedInSlot(value: string, max?: number | null, width?: IntWidth): number | null {
+  return parseGodotInt(value, width ?? slotWidth(max));
 }
 
 /**

@@ -16,7 +16,7 @@ validatorRegistry.registerAll('RayCast2D', {
   exclude_parent: v.boolean('exclude_parent'),
   target_position: v.vector2('target_position'),
   // scene/2d/physics/ray_cast_2d.cpp: ADD_PROPERTY(..., "collision_mask", PROPERTY_HINT_LAYERS_2D_PHYSICS)
-  collision_mask: layerBitmask('collision_mask', { hinted: 'ray_cast_2d.cpp:364' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'ray_cast_2d.cpp:364', width: 'uint32' /* ray_cast_2d.h:81 */ }),
   hit_from_inside: v.boolean('hit_from_inside'),
   collide_with_areas: v.boolean('collide_with_areas'),
   collide_with_bodies: v.boolean('collide_with_bodies'),

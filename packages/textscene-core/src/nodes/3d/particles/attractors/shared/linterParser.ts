@@ -34,5 +34,5 @@ validatorRegistry.registerAll('GPUParticlesAttractor3D', {
     hinted: 'gpu_particles_collision_3d.cpp:902',
   }),
   // :903, PROPERTY_HINT_LAYERS_3D_RENDER.
-  cull_mask: layerBitmask('cull_mask', { hinted: 'gpu_particles_collision_3d.cpp:51' }),
+  cull_mask: layerBitmask('cull_mask', { hinted: 'gpu_particles_collision_3d.cpp:903', width: 'uint32' /* gpu_particles_collision_3d.h:286 */ }),
 });

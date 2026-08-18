@@ -21,7 +21,11 @@ export function parseHeading(line: string): ParsedHeading | null {
   const attributesStr = content.slice(spaceIndex + 1);
 
   const attributes: Record<string, string> = {};
-  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|PackedStringArray\([^)]*\)|\[[^\]]*\]|[^\s]+)/g;
+  // `PackedStringArray\s*\(`: the tokenizer discards any character <= 32 before a
+  // token (variant_parser.cpp:416), so `PackedStringArray ("*.png")` loads. Written
+  // out rather than composed from `packedArrayCallAnywhere`, whose capture group
+  // would shift the `match[1]`/`match[2]` reads below.
+  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|PackedStringArray\s*\([^)]*\)|\[[^\]]*\]|[^\s]+)/g;
   let match: RegExpExecArray | null;
 
   while ((match = attrRegex.exec(attributesStr)) !== null) {

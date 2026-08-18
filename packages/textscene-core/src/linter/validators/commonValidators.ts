@@ -4,7 +4,7 @@ import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
 import { storedInSlot, truncatedInt, unrepresentableInt } from './intSlot.js';
-import { parseGodotFloat, parseGodotInt } from '../../godot/index.js';
+import { parseGodotFloat, parseGodotInt, type IntWidth } from '../../godot/index.js';
 
 /**
  * The Variant-literal readers, re-exported from their home in `src/godot/`.
@@ -119,6 +119,15 @@ export interface NumericRangeSpec {
   /** Outer ceiling. */
   max?: number | null;
   /**
+   * The slot's C++ integer type, where the class declares one.
+   *
+   * `slotWidth` can only infer `uint32` from a ceiling above `INT32_MAX`, so an
+   * unsigned slot whose hint states no such ceiling reads as int32 and refuses
+   * values the engine stores. Naming it here is the declaration; the inference
+   * stays as the fallback for the slots that do carry the ceiling.
+   */
+  width?: IntWidth;
+  /**
    * The setter's floor, below `min`. Anything under it is an ERROR whatever
    * `minSeverity` says, and the band up to `min` still reports at that tier.
    */
@@ -207,7 +216,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
   const validator: PropertyValidator = (key, value, line) => {
     // `inf`/`nan` are legal literals in either slot, so the miss signal is null
     // and a parsed NaN falls through to the range checks, which it never trips.
-    const num = parseAsInt ? storedInSlot(value, max) : parseGodotFloat(value);
+    const num = parseAsInt ? storedInSlot(value, max, spec.width) : parseGodotFloat(value);
     // An INT slot narrows a non-finite at PARSE time to a value the file does
     // not state (see `asStoredInt`), so the literal is ALTERED and reports as
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the

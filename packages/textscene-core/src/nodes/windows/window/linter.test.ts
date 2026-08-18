@@ -53,3 +53,26 @@ describe('Window semantic rules', () => {
     expectClean(scene(node('Window', { max_size: 'Vector2i(800, 600)' })));
   });
 });
+
+/**
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
+ * scene, not an error-free one), so a converted spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
+ * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
+ * spelling of the same digits wraps to. Measured on 4.6.3.
+ */
+describe('Window sizes with a converted component no int32 holds', () => {
+  it('says nothing rather than naming a max_size the file does not state', () => {
+    expectNoDiagnostic(
+      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2(4294967295, 600)' })),
+      { ruleName: 'window-max-size-below-min-size' }
+    );
+  });
+
+  it('still warns on the canonical spelling of the same digits', () => {
+    expectDiagnostic(
+      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' })),
+      { ruleName: 'window-max-size-below-min-size', severity: 'warning', contains: ['Vector2i(-1, 600)'] }
+    );
+  });
+});

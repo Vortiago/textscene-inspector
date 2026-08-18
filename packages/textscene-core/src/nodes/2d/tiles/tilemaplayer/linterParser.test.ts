@@ -215,8 +215,47 @@ describe('tile_map_data element storage', () => {
     expect(validator('tile_map_data', 'PackedByteArray(inf, 0, 0)', 1)).not.toBeNull();
   });
 
-  it('is tagged as the int slot it reads, so the sweep sees it', () => {
-    expect(validator.intSlot).toBeDefined();
+  it('is tagged as the BYTE slot it reads, so the sweep asks the right question', () => {
+    expect(validator.intSlot?.width).toBe('uint8');
+  });
+
+  /*
+   * Every element converts through `Variant::operator uint8_t()`
+   * (variant.cpp:1519-1521), because `_parse_byte_array`
+   * (variant_parser.cpp:600) pushes into a `Vector<uint8_t>` (:650). Measured
+   * on 4.6.3: `PackedByteArray(0, 0, 300, 0)` -> [0, 0, 44, 0],
+   * `PackedByteArray(-1, 0)` -> [255, 0],
+   * `PackedByteArray(1000000000, 0)` -> [0, 0],
+   * `PackedByteArray(300.5, 0)` -> [44, 0].
+   */
+  it.each(['300', '-1', '1000000000', '300.5'])(
+    'reports an element outside a byte as an error (%s)',
+    (element) => {
+      const diagnostic = validator('tile_map_data', `PackedByteArray(0, 0, ${element}, 0)`, 1);
+      expect(diagnostic?.severity).toBe('error');
+      expect(diagnostic?.code).toBe('INVALID_TILE_MAP_DATA_VALUE');
+      expect(diagnostic?.message).toContain(element);
+    }
+  );
+
+  it('never names the byte a value outside the band is stored as', () => {
+    // `uint8_t(300.5)` is undefined behaviour (variant.h:369-370); the 44 this
+    // x86_64 build stores is not a portable claim, so the message reports the
+    // ALTERATION and quotes the literal only.
+    const diagnostic = validator('tile_map_data', 'PackedByteArray(300.5, 0)', 1);
+    expect(diagnostic?.message).not.toMatch(/stores/);
+  });
+
+  it('warns rather than errors on a fraction the byte range holds', () => {
+    // `uint8_t(1.5)` is 1, defined and nameable — the truncation tier, which the
+    // narrower band must not swallow.
+    const diagnostic = validator('tile_map_data', 'PackedByteArray(1.5, 0)', 1);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('stores 1');
+  });
+
+  it('accepts both ends of the byte range', () => {
+    expect(validator('tile_map_data', 'PackedByteArray(0, 255)', 1)).toBeNull();
   });
 
   it('still accepts the bodies Godot writes', () => {

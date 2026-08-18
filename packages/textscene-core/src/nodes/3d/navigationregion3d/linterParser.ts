@@ -17,7 +17,7 @@ validatorRegistry.registerAll('NavigationRegion3D', {
   // 3D counterpart of NavigationRegion2D's LAYERS_2D_NAVIGATION hint; same
   // verdict, different cited line). set_navigation_layers (:95-103) only
   // short-circuits on an unchanged value, otherwise a bare assignment.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_region_3d.cpp:301' }),
+  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_region_3d.cpp:301', width: 'uint32' /* navigation_region_3d.h:89 */ }),
   // navigation_region_3d.cpp:302 declares plain FLOAT with NO
   // PROPERTY_HINT_RANGE, but set_enter_cost (:132) opens with
   // ERR_FAIL_COND_MSG(p_enter_cost < 0.0, ...): an ENFORCED floor.

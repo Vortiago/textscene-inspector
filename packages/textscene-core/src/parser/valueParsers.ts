@@ -295,8 +295,11 @@ export function parseOptionalVector2i(
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  const x = storedInt(match[1]);
-  const y = storedInt(match[2]);
+  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+  // the `double -> int32` branch whatever the token looks like — see `vec2iOr`.
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
+  const x = storedInt(match[1], converted);
+  const y = storedInt(match[2], converted);
   if (x === null || y === null) {
     warn(`${context}: Vector2i "${value}" has a component Godot cannot store`);
     return undefined;

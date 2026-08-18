@@ -38,14 +38,31 @@
  */
 
 import { v, type Grounding } from './v.js';
+import type { IntWidth } from '../../godot/index.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 /**
+ * ## The width is declared, never inferred
+ *
+ * These carry no bounds, so `slotWidth` — which can only read `uint32` off a
+ * ceiling above `INT32_MAX` — returned int32 for all of them, and the FLOAT
+ * branch then refused values the engine stores exactly: `Camera3D.cull_mask =
+ * 3e9` and `MeshInstance3D.layers = 3000000000.0` both errored while
+ * `set_cull_mask(uint32_t)` / `set_layer_mask(uint32_t)` store them. The family
+ * genuinely splits — `CanvasItem::set_light_mask` takes `int`
+ * (`canvas_item.h:278`) and `CanvasItem::set_visibility_layer` takes `uint32_t`
+ * (`canvas_item.h:288`), three lines apart — so the width is a required
+ * argument rather than a default: a new mask has to state which it is.
+ *
  * @param hinted - `file:line` of this property's own ADD_PROPERTY, the
  *   PROPERTY_HINT_LAYERS_* that states the width. Kept even though no bound
  *   rides on it: it is what a reader checks the "32 layers" claim against.
+ * @param width - the setter's C++ parameter type, cited per call site.
  */
-export function layerBitmask(name: string, opts: Grounding = {}): PropertyValidator {
+export function layerBitmask(
+  name: string,
+  opts: Grounding & { width: IntWidth }
+): PropertyValidator {
   const validator = v.int(name, opts);
   // `integer` is what v.int tags it, but what matters to a reader of the
   // generated sheet is that the number is a layer mask.

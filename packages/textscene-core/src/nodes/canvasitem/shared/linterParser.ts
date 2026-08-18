@@ -62,10 +62,10 @@ validatorRegistry.registerAll('CanvasItem', {
   // set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, no
   // ERR_FAIL, no clamp. The 0..2^32-1 `layerBitmask` bound this used to carry
   // was never engine-enforced, so it is removed here (ADR-0032 "none").
-  light_mask: layerBitmask('light_mask', { hinted: 'canvas_item.cpp:1477' }),
+  light_mask: layerBitmask('light_mask', { hinted: 'canvas_item.cpp:1477', width: 'int32' /* canvas_item.h:278 */ }),
   // canvas_item.cpp:1478, same PROPERTY_HINT_LAYERS_2D_RENDER shape.
   // set_visibility_layer (canvas_item.cpp:1598-1602) assigns unconditionally.
-  visibility_layer: layerBitmask('visibility_layer', { hinted: 'canvas_item.cpp:1478' }),
+  visibility_layer: layerBitmask('visibility_layer', { hinted: 'canvas_item.cpp:1478', width: 'uint32' /* canvas_item.h:288 */ }),
   // scene/main/canvas_item.cpp:1481 builds the hint from the rendering server's
   // own constants, and set_z_index (canvas_item.cpp:668-669) ERR_FAIL_CONDs
   // against the same two — so this is enforced, not merely hinted.

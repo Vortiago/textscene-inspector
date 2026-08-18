@@ -63,6 +63,8 @@ const BUILDERS: Record<string, (data: Record<string, string>) => THREE.BufferGeo
 export function buildPrimitiveMeshGeometry(
   resource: TscnInternalResource
 ): THREE.BufferGeometry | null {
-  const build = BUILDERS[resource.type];
+  // hasOwn: the key is a `[sub_resource type=…]` the file chooses, and bare
+  // indexing hands back `Object` for `constructor` or throws for `valueOf`.
+  const build = Object.hasOwn(BUILDERS, resource.type) ? BUILDERS[resource.type] : undefined;
   return build ? build(resource.data as Record<string, string>) : null;
 }

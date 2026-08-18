@@ -53,6 +53,18 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     expect(v.rect2i('region')('region', 'Rect2i(0, 0, abc, 16)', 1)).not.toBeNull();
   });
 
+  it('rect2i follows the composite type, not the token, into the int32 branch', () => {
+    // A `Rect2(...)` in a Rect2i slot holds four DOUBLES, so every component
+    // narrows through `double -> int32` however it was spelled: `4294967295`
+    // reaches the UB sentinel, while the `Rect2i` spelling of the same digits
+    // wraps an int64 to -1. Measured on 4.6.3.
+    const converted = v.rect2i('region')('region', 'Rect2(0, 0, 4294967295, 16)', 1);
+    expect(converted?.severity).toBe('error');
+    expect(converted?.code).toBe('INVALID_REGION_VALUE');
+    expect(v.rect2i('region')('region', 'Rect2i(0, 0, 4294967295, 16)', 1)).toBeNull();
+    expect(v.rect2i('region')('region', 'Rect2(0, 0, 320, 16)', 1)).toBeNull();
+  });
+
   it('vector2i with a min rejects a component below it', () => {
     const err = v.vector2i('grid', { min: 0, enforced: 'window.cpp:1190' })('grid', 'Vector2i(-1, 0)', 1);
     expect(err!.code).toBe('INVALID_GRID_VALUE');

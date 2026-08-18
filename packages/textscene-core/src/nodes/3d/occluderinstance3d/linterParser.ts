@@ -26,7 +26,7 @@ validatorRegistry.registerAll('OccluderInstance3D', {
   // PROPERTY_HINT_LAYERS_3D_RENDER), ... . set_bake_mask (:472-475) is
   // `bake_mask = p_mask;` — a bare uint32 assignment, no `p_flags & MASK`
   // truncation, so this is the plain 32-bit layer widget, not a maskedBitField.
-  bake_mask: layerBitmask('bake_mask', { hinted: 'occluder_instance_3d.cpp:746' }),
+  bake_mask: layerBitmask('bake_mask', { hinted: 'occluder_instance_3d.cpp:746', width: 'uint32' /* occluder_instance_3d.h:196 */ }),
   // occluder_instance_3d.cpp:747, PROPERTY_HINT_RANGE "0.0,2.0,0.01,suffix:m".
   // set_bake_simplification_distance (:481-483) is `MAX(p_dist, 0.0f)`: the
   // floor is enforced (an ERROR alters the value), the hint's 2.0 ceiling has

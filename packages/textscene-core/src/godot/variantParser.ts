@@ -108,6 +108,24 @@ export function packedArrayCallAnywhere(typeName: string, global = false): RegEx
  */
 export const SUB_RESOURCE_REF_BODY = `SubResource${WS}\\(${WS}"([^"]+)"${WS}\\)`;
 
+/**
+ * A whole value that is NIL, in either of the two spellings Godot reads.
+ *
+ * `variant_parser.cpp:699` takes `null` and `nil` through ONE arm to `Variant()`,
+ * so a slot that accepts either accepts both. The writer only ever emits `null`
+ * (`:2013`), which is a write-side fact and does not bound what the loader takes.
+ *
+ * Whole values only. `_parse_construct` (`:552-598`) admits an identifier argument
+ * only where `stor_fix` (`:149-159`) recognises it, and it knows `inf`, `-inf`,
+ * `inf_neg` and `nan` and nothing else — so `Vector2(nil, 0)` is a real
+ * `ERR_PARSE_ERROR` and the composite grammars must not take this.
+ */
+export function isNilLiteral(value: string): boolean {
+  return NIL_LITERAL_RE.test(value);
+}
+
+const NIL_LITERAL_RE = /^\s*(?:null|nil)\s*$/;
+
 /** A value that is EXACTLY a `NodePath("…")` literal. No `g` flag, so `.test()` is stateless. */
 export const NODE_PATH_LITERAL_RE = new RegExp(`^${NODE_PATH_BODY}$`);
 

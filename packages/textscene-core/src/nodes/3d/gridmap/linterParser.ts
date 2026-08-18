@@ -175,10 +175,10 @@ validatorRegistry.registerAll('GridMap', {
   cell_scale: v.float('cell_scale'),
   // grid_map.cpp:1260 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_layer
   // (:162-165) is a bare assignment.
-  collision_layer: layerBitmask('collision_layer', { hinted: 'grid_map.cpp:1260' }),
+  collision_layer: layerBitmask('collision_layer', { hinted: 'grid_map.cpp:1260', width: 'uint32' /* grid_map.h:245 */ }),
   // grid_map.cpp:1261 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_mask
   // (:171-174) is a bare assignment.
-  collision_mask: layerBitmask('collision_mask', { hinted: 'grid_map.cpp:1261' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'grid_map.cpp:1261', width: 'uint32' /* grid_map.h:248 */ }),
   // grid_map.cpp:1262 — plain FLOAT, no hint. set_collision_priority
   // (:210-213) is a bare assignment: nothing to bound.
   collision_priority: v.float('collision_priority'),

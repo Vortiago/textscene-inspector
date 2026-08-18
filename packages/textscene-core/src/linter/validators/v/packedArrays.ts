@@ -5,13 +5,14 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
+import type { IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {
-  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, no int32 holds it. */
+  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, the slot's width cannot hold it. */
   kind: 'unreadable' | 'unstorable';
   text: string;
 }
@@ -55,10 +56,21 @@ interface IntElementVerdict {
  * `IS_VALID_INT_RE` describes `String::is_valid_int()`, which is the grammar of
  * an index inside a property KEY, not of a Variant literal.
  *
+ * `width` is the ELEMENT's C++ type, and it is not always int32.
+ * `PackedByteArray` goes through a helper of its own — `_parse_byte_array`
+ * (`variant_parser.cpp:600`) pushing into a `Vector<uint8_t>` (`:650`) — so its
+ * elements convert through `Variant::operator uint8_t()`
+ * (`variant.cpp:1519-1521`). Read at int32 a byte slot says nothing at all
+ * about `300`, `-1` or `1000000000`, each of which Godot alters (to 44, 255
+ * and 0).
+ *
  * Takes the raw body or already-split parts, for the callers that must strip a
  * trailing comma first.
  */
-function scanIntElements(body: string | readonly string[]): IntElementVerdict {
+function scanIntElements(
+  body: string | readonly string[],
+  width: IntWidth = 'int32'
+): IntElementVerdict {
   let truncated: TruncatedElement | null = null;
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
@@ -70,7 +82,7 @@ function scanIntElements(body: string | readonly string[]): IntElementVerdict {
     // clean body by definition does not have.
     const asFloat = parseGodotFloat(text);
     if (asFloat === null) return { error: { kind: 'unreadable', text }, truncated: null };
-    const stored = storedFromFloat(asFloat, text);
+    const stored = storedFromFloat(asFloat, text, width);
     if (Number.isNaN(stored)) return { error: { kind: 'unstorable', text }, truncated: null };
     if (truncated === null && Number.isFinite(asFloat) && !Number.isInteger(asFloat)) {
       truncated = { text, stored };
@@ -89,15 +101,20 @@ function scanIntElements(body: string | readonly string[]): IntElementVerdict {
  * own parser could not read the element, `_VALUE` means it read a real value
  * the slot then altered. Two sites reported the second under a `_FORMAT` code,
  * which tells a consumer the opposite of what happened.
+ *
+ * `width` is the element's C++ type; see {@link scanIntElements}. It also names
+ * the thing the value did not fit, since `300` is an integer and is not a byte.
  */
 export function badIntElement(
   propertyName: string,
   key: string,
   line: number,
   body: string | readonly string[],
-  codes: { format: string; value: string }
+  codes: { format: string; value: string },
+  width: IntWidth = 'int32'
 ): { error: ParseError | null; truncated: ParseError | null } {
-  const { error, truncated } = scanIntElements(body);
+  const { error, truncated } = scanIntElements(body, width);
+  const holder = width === 'uint8' ? 'byte' : 'integer';
   return {
     error:
       error === null
@@ -112,7 +129,7 @@ export function badIntElement(
           : propertyError(
               key,
               line,
-              `Property '${propertyName}' has an element no integer can hold: "${error.text}"`,
+              `Property '${propertyName}' has an element no ${holder} can hold: "${error.text}"`,
               codes.value,
               'error'
             ),

@@ -53,8 +53,8 @@ validatorRegistry.registerAll('CharacterBody3D', {
   // character_body_3d.cpp:938/939, PROPERTY_HINT_LAYERS_3D_PHYSICS (no range
   // hint). Shares the layerBitmask() factory instead of hand-inlining the same
   // 0..4294967295 bound.
-  platform_floor_layers: layerBitmask('platform_floor_layers', { hinted: 'character_body_3d.cpp:938' }),
-  platform_wall_layers: layerBitmask('platform_wall_layers', { hinted: 'character_body_3d.cpp:939' }),
+  platform_floor_layers: layerBitmask('platform_floor_layers', { hinted: 'character_body_3d.cpp:938', width: 'uint32' /* character_body_3d.h:103 */ }),
+  platform_wall_layers: layerBitmask('platform_wall_layers', { hinted: 'character_body_3d.cpp:939', width: 'uint32' /* character_body_3d.h:106 */ }),
   // character_body_3d.cpp:942 hints "0.001,256,0.001,suffix:m", closed both
   // ends; set_safe_margin (:637) is a bare assignment, so both ends warn.
   safe_margin: v.float('safe_margin', {

@@ -10,6 +10,7 @@
 
 import type { TscnScene } from '../parser/types.js';
 import { findSubResource, parseResourceReference } from '../resources/SubResourceResolver.js';
+import { isNilLiteral } from '../godot/index.js';
 
 /**
  * The declared type of whatever a reference names — `'BoxShape3D'`,
@@ -39,31 +40,31 @@ function resolveReference(
 }
 
 /**
- * An explicitly CLEARED resource slot, written as a bare `null`.
+ * An explicitly CLEARED resource slot, written as a bare `null` or `nil`.
  *
  * Distinct from an absent key and from a dangling reference: the author said
- * "no resource here", and `variant_parser.cpp:699` reads it as `Variant()`,
- * which every `Ref<T>` setter takes. See `createResourceReferenceValidator`
- * for the format half of the same rule.
+ * "no resource here", and `variant_parser.cpp:699` reads BOTH identifiers
+ * through one arm to `Variant()`, which every `Ref<T>` setter takes. See
+ * `createResourceReferenceValidator` for the format half of the same rule.
  */
 export function isClearedResource(resourceRef: string | undefined): boolean {
-  return resourceRef?.trim() === 'null';
+  return resourceRef !== undefined && isNilLiteral(resourceRef);
 }
 
 /**
  * Whether a resource slot holds NOTHING — the question every "this node needs a
  * resource" rule is actually asking.
  *
- * Three spellings, one state: the key is absent, the value is empty, or the
- * author wrote a bare `null`. Godot cannot tell them apart — all three reach the
- * `Ref<T>` as an invalid reference (`variant_parser.cpp:699` reads the token as
- * `Variant()`), so every `is_null()` in a `get_configuration_warnings()` answers
- * the same for all three.
+ * Four spellings, one state: the key is absent, the value is empty, or the
+ * author wrote a bare `null` or `nil`. Godot cannot tell them apart — all reach
+ * the `Ref<T>` as an invalid reference (`variant_parser.cpp:699` reads either
+ * identifier as `Variant()`), so every `is_null()` in a
+ * `get_configuration_warnings()` answers the same for all of them.
  *
  * It lives here rather than at the two dozen call sites because the sites that
  * hand-rolled it drifted the same way: `'null'` is a TRUTHY string, so `!ref`
  * steps over it and `checkResourceExists` then reports the slot as fine, leaving
- * the node silently unreported. `clearedResourceSlot.test.ts` holds the two
+ * the node silently unreported. `clearedResourceSlot.test.ts` holds the
  * spellings to one answer.
  */
 export function resourceSlotIsEmpty(resourceRef: string | undefined): boolean {

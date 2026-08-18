@@ -12,6 +12,7 @@ import {
   RESOURCE_REF_RE,
   SUB_RESOURCE_REF_ANYWHERE_RE,
   SUB_RESOURCE_REF_BODY,
+  isNilLiteral,
   nodePathLiteral,
   resourceRef,
 } from './variantParser.js';
@@ -116,5 +117,29 @@ describe('shared instances are stateless', () => {
       expect(RESOURCE_REF_RE.test('SubResource("a")')).toBe(true);
       expect(NODE_PATH_LITERAL_RE.test('NodePath("a")')).toBe(true);
     }
+  });
+});
+
+describe('the NIL literal', () => {
+  it('takes both spellings the parser reads through one arm', () => {
+    // `variant_parser.cpp:699` — `} else if (id == "null" || id == "nil") {`
+    expect(isNilLiteral('null')).toBe(true);
+    expect(isNilLiteral('nil')).toBe(true);
+  });
+
+  it('tolerates the padding the tokenizer discards', () => {
+    expect(isNilLiteral('  null ')).toBe(true);
+    expect(isNilLiteral('\tnil')).toBe(true);
+  });
+
+  it('is a WHOLE value, so a composite argument is still a parse error', () => {
+    // `stor_fix` (`variant_parser.cpp:149-159`) knows only inf/-inf/inf_neg/nan,
+    // so `Vector2(nil, 0)` is a real ERR_PARSE_ERROR and must not read as NIL.
+    expect(isNilLiteral('Vector2(nil, 0)')).toBe(false);
+    expect(isNilLiteral('nil,')).toBe(false);
+    expect(isNilLiteral('nullptr')).toBe(false);
+    expect(isNilLiteral('nils')).toBe(false);
+    expect(isNilLiteral('NULL')).toBe(false);
+    expect(isNilLiteral('')).toBe(false);
   });
 });

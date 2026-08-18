@@ -20,7 +20,7 @@ import {
   parseGodotInt,
   enforcedEndRefusal,
 } from '../commonValidators.js';
-import { storedFromFloat } from '../../../godot/index.js';
+import { storedFromFloat, type IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
@@ -44,7 +44,8 @@ function storedStrictInt(
   value: string,
   line: number,
   codes: { format: string; value: string },
-  max: number | undefined
+  max: number | undefined,
+  width?: IntWidth
 ): { stored: number } | { error: ParseError } {
   const parsed = parseGodotFloat(value);
   // Text outside the grammar is the only FORMAT failure here. A fractional
@@ -57,7 +58,7 @@ function storedStrictInt(
       error: propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, codes.format),
     };
   }
-  const stored = storedFromFloat(parsed, value, slotWidth(max));
+  const stored = storedFromFloat(parsed, value, width ?? slotWidth(max));
   const unfit = unrepresentableInt(name, key, value, line, codes.value, stored);
   return unfit ? { error: unfit } : { stored };
 }
@@ -65,12 +66,17 @@ function storedStrictInt(
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
+    // ONE declaration for the read and the tag. They used to be derived
+    // separately — `slotWidth(max)` for the read, a defaulted `'int32'` for the
+    // tag — and disagreed on every slot whose ceiling exceeds INT32_MAX.
+    const width = opts.width ?? slotWidth(opts.max);
     return markIntSlot(ground(
       accepts(
         createNumericRangeValidator({
           propertyName: name,
           min: opts.min ?? null,
           max: opts.max ?? null,
+          width,
           enforcedMin: opts.enforcedMin,
           enforcedMax: opts.enforcedMax,
           parseAsInt: true,
@@ -84,7 +90,7 @@ export const integerCombinators = {
       ),
       opts,
       { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    ));
+    ), width);
   },
 
   /** Positive integer (> 0). Specialised wrapper from `commonValidators`. */
@@ -170,11 +176,12 @@ export const integerCombinators = {
     const formatErr = formatCode(name);
     const valueErr = valueCode(name);
     const { min, max, enforcedMin, enforcedMax } = opts;
+    const width = opts.width ?? slotWidth(max);
     return markIntSlot(ground(accepts((key, value, line) => {
       // The STORED int32, not the raw double: the setter's guard sees what
       // `_to_int` handed it, so `frame = 4294967295` is -1 to its ERR_FAIL_INDEX
       // and must be judged as -1.
-      const read = storedStrictInt(name, key, value, line, { format: formatErr, value: valueErr }, max);
+      const read = storedStrictInt(name, key, value, line, { format: formatErr, value: valueErr }, max, width);
       if ('error' in read) return read.error;
       const { stored } = read;
       // The setter's own ends first: they are the more severe tier, and the
@@ -197,7 +204,7 @@ export const integerCombinators = {
         );
       }
       return truncatedInt(name, key, value, line, valueErr, stored);
-    }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }));
+    }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }), width);
   },
 
   /**

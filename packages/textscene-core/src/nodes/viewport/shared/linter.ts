@@ -43,8 +43,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { VECTOR2I_REGEX } from '../../../linter/validators/index.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { matchVector2i } from '../../../linter/validators/index.js';
 
 function checkViewportSize(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -57,18 +56,16 @@ function checkViewportSize(context: RuleContext): Diagnostic[] {
   const raw = props.size;
   if (raw === undefined) return [];
 
-  const match = VECTOR2I_REGEX.exec(raw);
-  if (!match) return [];
-  const x = ruleInt(match[1]);
-  const y = ruleInt(match[2]);
-  // A component no int32 holds is the validator's error, not a size to name.
-  if (x === null || y === null) return [];
-  if (x > 1 && y > 1) return [];
+  // `null` for a component no int32 holds: that is the validator's error, and
+  // not a size this warning may name.
+  const size = matchVector2i(raw);
+  if (!size) return [];
+  if (size.x > 1 && size.y > 1) return [];
 
   return [
     {
       severity: 'warning',
-      message: `${node.type} '${node.name}' has 'size = Vector2i(${x}, ${y})'. The size must be at least 2 pixels on both dimensions to render anything.`,
+      message: `${node.type} '${node.name}' has 'size = Vector2i(${size.x}, ${size.y})'. The size must be at least 2 pixels on both dimensions to render anything.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'viewport-size-too-small',

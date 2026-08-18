@@ -34,9 +34,22 @@ export const STRING_ARRAY_FORMS: readonly RegExp[] = [
   /^\s*\[([\s\S]*)\]\s*$/,
 ];
 
+/**
+ * The one int-array spelling the PARSER narrows.
+ *
+ * `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) builds the packed
+ * form element by element, so the setter receives int32s; the typed and bare
+ * forms reach `TypedArray<int>` as int64 elements and are stored verbatim.
+ * Measured on 4.6.3, `line_length_guidelines = Array[int]([4294967296, 1])`
+ * stores `[4294967296, 1]` where `PackedInt32Array(4294967296, 1)` stores
+ * `[0, 1]` — so the element width is a per-SPELLING fact for this property, not
+ * a per-slot one.
+ */
+export const PACKED_INT32_ARRAY_RE = /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/;
+
 /** `PackedInt32Array(24)`, `Array[int]([24])`, or `[24]`. */
 export const INT_ARRAY_FORMS: readonly RegExp[] = [
-  /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/,
+  PACKED_INT32_ARRAY_RE,
   /^\s*Array\s*\[\s*int\s*\]\s*\(\s*\[([\s\S]*)\]\s*\)\s*$/,
   /^\s*\[([\s\S]*)\]\s*$/,
 ];

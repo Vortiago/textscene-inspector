@@ -17,6 +17,7 @@
 
 import { warn } from '../../logger';
 import { slotTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
+import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
@@ -194,13 +195,18 @@ const VECTOR2I_RE = slotTupleRegex('Vector2i', 2);
 
 function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
   if (value === undefined || value === null) return fallback;
-  const m = typeof value === 'string' ? VECTOR2I_RE.exec(value.trim()) : null;
+  // A non-string never matches the grammar, so it falls into the warn branch.
+  const literal = typeof value === 'string' ? value.trim() : '';
+  const m = VECTOR2I_RE.exec(literal);
   if (!m) {
     warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
     return fallback;
   }
-  const x = storedInt(m[1]);
-  const y = storedInt(m[2]);
+  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+  // the `double -> int32` branch whatever the token looks like.
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(literal));
+  const x = storedInt(m[1], converted);
+  const y = storedInt(m[2], converted);
   if (x === null || y === null) {
     warn(`[TileSet] ${label} "${String(value)}" has a component Godot cannot store — using default`);
     return fallback;

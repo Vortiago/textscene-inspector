@@ -4,10 +4,10 @@
  *   writing `key = null` must say exactly what omitting `key` says, and both
  *   must say the one thing the rule owes an empty slot.
  *
- * Both spellings reach a `Ref<T>` setter as an invalid Ref — `variant_parser.cpp:699`
- * reads the bare token as `Variant()`, and `variant.cpp:543` converts NIL to a null
- * object — so every `is_null()` / `!is_valid()` check in Godot answers the same for
- * the two. A rule that treats them differently is reporting a distinction the engine
+ * Every spelling reaches a `Ref<T>` setter as an invalid Ref — `variant_parser.cpp:699`
+ * reads `null` and `nil` through ONE arm to `Variant()`, and `variant.cpp:543` converts
+ * NIL to a null object — so every `is_null()` / `!is_valid()` check in Godot answers the
+ * same for all of them. A rule that treats them differently is reporting a distinction the engine
  * does not make.
  *
  * The defect is uniform and easy to reintroduce: `'null'` is a TRUTHY string, so a
@@ -295,9 +295,9 @@ const SLOTS: Slot[] = [
 ];
 
 /** The scene for one slot, with the property absent or explicitly cleared. */
-function sceneFor(slot: Slot, value: 'absent' | 'null'): string {
+function sceneFor(slot: Slot, value: 'absent' | 'null' | 'nil'): string {
   const props = { ...(slot.props ?? {}) };
-  if (value === 'null') props[slot.prop] = 'null';
+  if (value !== 'absent') props[slot.prop] = value;
   const heading = node(slot.type, props, slot.parent ? { parent: slot.parent.path } : {});
   const blocks = [...(slot.extra ?? [])];
   if (slot.parent) blocks.push(slot.parent.block);
@@ -402,6 +402,10 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
     (_label, slot) => {
       expect(shapeOf(sceneFor(slot, 'null'))).toEqual(slot.expected);
       expect(shapeOf(sceneFor(slot, 'absent'))).toEqual(slot.expected);
+      // `nil` is the same arm of the same `if` (`variant_parser.cpp:699`), so it
+      // owes the same answer. Godot's writer never emits it, which bounds how
+      // often it is seen and not whether the loader takes it.
+      expect(shapeOf(sceneFor(slot, 'nil'))).toEqual(slot.expected);
     }
   );
 

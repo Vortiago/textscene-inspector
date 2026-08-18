@@ -411,3 +411,30 @@ describe('frame_coords against the authored grid', () => {
     expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
   });
 });
+
+/**
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
+ * scene, not an error-free one), so a converted spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
+ * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
+ * spelling of the same digits wraps to. Measured on 4.6.3. The rule owes
+ * silence on the whole literal — the sibling component is no more authored
+ * than the unstorable one — and phase 1 reports the value itself.
+ */
+describe('Sprite3D frame_coords with a converted component no int32 holds', () => {
+  it('says nothing about the sibling row, and phase 1 still errors', () => {
+    const diagnostics = lint(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2(4294967295, 5)' }))
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
+    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('frame_coords'))).toBe(true);
+  });
+
+  it('still reports the row on the canonical spelling of the same digits', () => {
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })),
+      { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['frame_coords.y'] }
+    );
+  });
+});
+

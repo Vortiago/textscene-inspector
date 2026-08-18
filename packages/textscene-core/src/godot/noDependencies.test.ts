@@ -35,8 +35,13 @@ function sourceFiles(): string[] {
 /**
  * Any `import`/`export … from` specifier, `import type` included, plus bare
  * side-effect imports and dynamic `import()`.
+ *
+ * The clause between the keyword and `from` is `[^;]*?`, not `[^\n;]*?`: a
+ * braced specifier list spans lines, which is the form most of this directory
+ * uses, and a newline-bounded class saw none of them.
  */
-const IMPORT_RE = /(?:^|\n)\s*(?:import|export)\b[^\n;]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+const IMPORT_RE =
+  /(?:^|\n)\s*(?:import|export)\b[^;]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 function specifiersIn(source: string): string[] {
   const found: string[] = [];
@@ -61,6 +66,23 @@ describe('src/godot is a dependency-free leaf', () => {
     expect(specifiersIn("import 'three';")).toEqual(['three']);
     expect(specifiersIn("export { a } from './math.js';")).toEqual(['./math.js']);
     expect(specifiersIn("const m = await import('node:fs');")).toEqual(['node:fs']);
+  });
+
+  it('sees a multi-line specifier list, the form this directory mostly uses', () => {
+    expect(specifiersIn("import {\n  Mesh,\n  Vector3,\n} from 'three';")).toEqual(['three']);
+    expect(specifiersIn("import type {\n  P,\n} from '../linter/types.js';")).toEqual([
+      '../linter/types.js',
+    ]);
+    expect(specifiersIn("export {\n  a,\n  b,\n} from './math.js';")).toEqual(['./math.js']);
+  });
+
+  it('sees every specifier this directory actually writes', () => {
+    // index.ts re-exports each sibling through a braced multi-line block, so a
+    // scraper blind to those reads the barrel as importing nothing.
+    const specs = specifiersIn(readFileSync(resolve(here, 'index.ts'), 'utf8'));
+    for (const sibling of ['./number.js', './int.js', './variantParser.js', './rendering.js']) {
+      expect(specs).toContain(sibling);
+    }
   });
 
   it('imports nothing outside this directory', () => {

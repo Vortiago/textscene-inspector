@@ -36,7 +36,7 @@ validatorRegistry.registerAll('ShapeCast3D', {
   // scene/3d/physics/shape_cast_3d.cpp:170 — plain INT, no PROPERTY_HINT_RANGE, so no bound
   max_results: v.int('max_results'),
   // scene/3d/physics/shape_cast_3d.cpp:171 — PROPERTY_HINT_LAYERS_3D_PHYSICS
-  collision_mask: layerBitmask('collision_mask', { hinted: 'shape_cast_3d.cpp:171' }),
+  collision_mask: layerBitmask('collision_mask', { hinted: 'shape_cast_3d.cpp:171', width: 'uint32' /* shape_cast_3d.h:106 */ }),
   // scene/3d/physics/shape_cast_3d.cpp:175 (ADD_GROUP "Collide With")
   collide_with_areas: v.boolean('collide_with_areas'),
   // scene/3d/physics/shape_cast_3d.cpp:176 (ADD_GROUP "Collide With")

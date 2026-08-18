@@ -28,7 +28,7 @@ validatorRegistry.registerAll('NavigationLink3D', {
   // navigation_link_3d.cpp:214, PROPERTY_HINT_LAYERS_3D_NAVIGATION. The setter
   // (:366-374) is a bare uint32_t assignment — no masking, no ERR_FAIL — so the
   // hint is the only authority and an out-of-range value is a warning.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_3d.cpp:214' }),
+  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_3d.cpp:214', width: 'uint32' /* navigation_link_3d.h:81 */ }),
   // navigation_link_3d.cpp:398-411 and :419-432: bare assignment (only an
   // equal-check early return), no PROPERTY_HINT_RANGE on the VECTOR3 — every
   // component is unconstrained, inf/nan included.

@@ -295,7 +295,7 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5218, PROPERTY_HINT_LAYERS_2D_RENDER — a UI-control hint, so
   // out-of-range is a warning (layerBitmask's own grounding), never an error:
   // set_canvas_cull_mask (viewport.cpp:4242-4246) bare-assigns.
-  canvas_cull_mask: layerBitmask('canvas_cull_mask', { hinted: 'viewport.cpp:5218' }),
+  canvas_cull_mask: layerBitmask('canvas_cull_mask', { hinted: 'viewport.cpp:5218', width: 'uint32' /* viewport.h:717 */ }),
 
   oversampling: v.boolean('oversampling'),
   // viewport.cpp:5221 hints RANGE "0,16,0.0001,or_greater" — `or_greater` opens

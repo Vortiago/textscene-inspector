@@ -10,7 +10,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { VECTOR2I_REGEX } from '../../../linter/validators/vectorValidators.js';
+import { matchVector2i } from '../../../linter/validators/vectorValidators.js';
 
 /**
  * The grid count Godot ACTUALLY holds, or `null` for a literal no rule can use.
@@ -89,14 +89,15 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
 
   // Validate frame_coords is within valid grid range
   if (rawProps.frame_coords !== undefined) {
-    const coordsMatch = VECTOR2I_REGEX.exec(rawProps.frame_coords);
-    if (coordsMatch) {
-      const coordX = ruleInt(coordsMatch[1]);
-      const coordY = ruleInt(coordsMatch[2]);
+    // `null` for a component no int32 holds: linterParser.ts reports that, and
+    // the narrowed value is not a coordinate to name.
+    const coords = matchVector2i(rawProps.frame_coords);
+    if (coords) {
+      const { x: coordX, y: coordY } = coords;
       const hframes = gridCount(rawProps.hframes);
       const vframes = gridCount(rawProps.vframes);
 
-      if (coordX !== null && coordY !== null && hframes !== null && vframes !== null) {
+      if (hframes !== null && vframes !== null) {
         if (coordX >= hframes) {
           diagnostics.push({
             severity: 'error',

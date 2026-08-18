@@ -69,16 +69,37 @@ export { UNCATALOGUED as UNCATALOGUED_BASE_TYPES };
  * hierarchy verdict about a GDExtension it cannot see.
  */
 export function isCatalogedType(nodeType: string): boolean {
-  return nodeType === 'Node' || nodeType in NODE_BASE_TYPES;
+  return nodeType === 'Node' || Object.hasOwn(NODE_BASE_TYPES, nodeType);
+}
+
+/**
+ * How many hops the ancestry walks before giving up.
+ *
+ * Godot's deepest chain is 7; 32 is slack enough never to bind while still
+ * terminating on a malformed hand-built table.
+ */
+const MAX_BASE_CHAIN_HOPS = 32;
+
+/**
+ * The declared base of `nodeType`, or `undefined`.
+ *
+ * `Object.hasOwn`, because the key is a type name the `.tscn` chooses: bare
+ * indexing answers `Object` for `type="constructor"` and `Object.prototype` for
+ * `type="__proto__"`, putting a function into a declared `string`.
+ */
+function baseTypeOf(nodeType: string): string | undefined {
+  return Object.hasOwn(NODE_BASE_TYPES, nodeType) ? NODE_BASE_TYPES[nodeType] : undefined;
 }
 
 export function descendsFrom(nodeType: string, ancestor: string): boolean {
-  const seen = new Set<string>();
+  // A hop counter, not a visited Set: this runs per node per ancestor test, and
+  // the Set was an allocation on every call including every miss. The table is
+  // derived from ClassDB ancestry and acyclic by construction; the bound only
+  // stops a malformed hand-built table from spinning.
   let current: string | undefined = nodeType;
-  while (current && !seen.has(current)) {
+  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
     if (current === ancestor) return true;
-    seen.add(current);
-    current = NODE_BASE_TYPES[current];
+    current = baseTypeOf(current);
   }
   return false;
 }
@@ -95,11 +116,11 @@ export function descendsFrom(nodeType: string, ancestor: string): boolean {
 export function baseChain(nodeType: string): string[] {
   const chain: string[] = [];
   const seen = new Set<string>([nodeType]);
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
+  let current: string | undefined = baseTypeOf(nodeType);
   while (current && !seen.has(current)) {
     seen.add(current);
     chain.push(current);
-    current = NODE_BASE_TYPES[current];
+    current = baseTypeOf(current);
   }
   return chain;
 }

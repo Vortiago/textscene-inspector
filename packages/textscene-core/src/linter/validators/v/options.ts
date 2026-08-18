@@ -4,6 +4,7 @@
  */
 
 import type { EnforcedEnd } from '../commonValidators.js';
+import type { IntWidth } from '../../../godot/index.js';
 import type { FiniteGrounding, Grounding } from './grounding.js';
 
 /** The numbers alone, shared by both option bags. */
@@ -35,7 +36,16 @@ export interface FloatOpts extends NumericBounds, FiniteGrounding {}
  * The same bounds, without `finite`: an INT slot cannot hold a non-finite in
  * the first place, so no int setter has an `is_finite` guard to cite.
  */
-export interface IntOpts extends NumericBounds, Grounding {}
+export interface IntOpts extends NumericBounds, Grounding {
+  /**
+   * The slot's C++ integer type, where it is not what the bounds imply.
+   *
+   * A `uint32_t` setter whose hint states no ceiling above `INT32_MAX` is
+   * indistinguishable from an `int` one by the bounds alone, and reading it at
+   * int32 refuses values the engine stores exactly.
+   */
+  width?: IntWidth;
+}
 
 export interface EnumOpts extends Grounding {
   /** Per-value display labels, e.g. `{0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'}`. */

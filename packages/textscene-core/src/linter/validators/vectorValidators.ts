@@ -37,6 +37,29 @@ export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 export const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
 
 /**
+ * The two components a `Vector2i` slot HOLDS, or `null` when no int32 holds one.
+ *
+ * The one reader for every phase-2 rule over a `Vector2i` property. Phase 2 runs
+ * after a phase-1 error (`linter/Linter.ts:32` gates on a parsed scene, not on
+ * an error-free one), so a rule that read the components itself named a number
+ * no platform holds: `size = Vector2(4294967295, 1080)` reads back as
+ * `Vector2i(-1, 1080)` on the int branch, where Godot stores -2147483648.
+ *
+ * `null` rather than a component, so the rule's block is skipped and only phase
+ * 1's error stands — a value the file does not state is not a value to quote.
+ */
+export function matchVector2i(raw: string): { x: number; y: number } | null {
+  const match = VECTOR2I_REGEX.exec(raw);
+  if (!match) return null;
+  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+  // the `double -> int32` branch whatever the token looks like.
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(raw));
+  const x = ruleInt(match[1], null, 'int32', converted);
+  const y = ruleInt(match[2], null, 'int32', converted);
+  return x === null || y === null ? null : { x, y };
+}
+
+/**
  * Creates a Vector2 validator
  */
 export function createVector2Validator(

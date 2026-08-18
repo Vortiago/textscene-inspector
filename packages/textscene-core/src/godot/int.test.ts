@@ -80,6 +80,46 @@ describe('a FLOAT-typed literal', () => {
   });
 });
 
+describe('a byte slot', () => {
+  /*
+   * `_parse_byte_array` (variant_parser.cpp:600) pushes each element into a
+   * `Vector<uint8_t>` (:650), so the conversion is
+   * `Variant::operator uint8_t()` (variant.cpp:1519-1521). Measured on 4.6.3:
+   * `PackedByteArray(0, 0, 300, 0)` -> [0, 0, 44, 0],
+   * `PackedByteArray(-1, 0)` -> [255, 0],
+   * `PackedByteArray(300.5, 0)` -> [44, 0],
+   * `PackedByteArray(1000000000, 0)` -> [0, 0],
+   * `PackedByteArray(1.5, 0)` -> [1, 0],
+   * `PackedByteArray(-0.5, 0)` -> [0, 0],
+   * `PackedByteArray(-1.5, 0)` -> [255, 0],
+   * `PackedByteArray(2e3, 0)` -> [208, 0].
+   */
+  it('holds the byte range and truncates a fraction inside it', () => {
+    expect(parseGodotInt('0', 'uint8')).toBe(0);
+    expect(parseGodotInt('255', 'uint8')).toBe(255);
+    expect(parseGodotInt('1.5', 'uint8')).toBe(1); // uint8_t(1.5) is defined
+    // The band applies to the TRUNCATED value: measured, -0.5 stores 0 while
+    // -1.5 stores 255, so the first is defined and the second is not.
+    expect(parseGodotInt('-0.5', 'uint8')).toBe(0);
+  });
+
+  it('refuses an INT literal outside a byte, in either direction', () => {
+    expect(parseGodotInt('256', 'uint8')).toBeNaN();
+    expect(parseGodotInt('300', 'uint8')).toBeNaN();
+    expect(parseGodotInt('1000000000', 'uint8')).toBeNaN();
+    // No opposite-spelling band here: the writer emits `itos` off a
+    // `const uint8_t *` (variant_parser.cpp:2408), so no Godot-written file
+    // holds a negative byte and 255 is an alteration of -1, not its spelling.
+    expect(parseGodotInt('-1', 'uint8')).toBeNaN();
+  });
+
+  it('refuses a FLOAT literal outside a byte, where the conversion is undefined', () => {
+    expect(parseGodotInt('300.5', 'uint8')).toBeNaN();
+    expect(parseGodotInt('-1.5', 'uint8')).toBeNaN();
+    expect(parseGodotInt('2e3', 'uint8')).toBeNaN();
+  });
+});
+
 describe('text outside the grammar', () => {
   it('reads as null, distinct from an unstorable value', () => {
     expect(parseGodotInt('8abc')).toBeNull();

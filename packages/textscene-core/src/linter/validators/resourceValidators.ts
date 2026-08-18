@@ -2,7 +2,7 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
-import { NODE_PATH_LITERAL_RE, RESOURCE_REF_RE } from '../../godot/index.js';
+import { NODE_PATH_LITERAL_RE, RESOURCE_REF_RE, isNilLiteral } from '../../godot/index.js';
 
 /**
  * Creates a resource reference validator
@@ -13,14 +13,14 @@ export function createResourceReferenceValidator(
   errorCode: string = 'INVALID_REFERENCE'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    // `null` is legal for every resource slot. Godot's writer normally omits a
+    // NIL is legal for every resource slot. Godot's writer normally omits a
     // cleared one instead of emitting `null`, which is a WRITE-side fact and
     // reads as a reason to reject the spelling; it is not one.
-    // `variant_parser.cpp:699` parses a bare `null` to `Variant()`,
-    // `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543), and a
-    // `Ref<T>` setter takes an invalid Ref without complaint, so the value
+    // `variant_parser.cpp:699` parses `null` AND `nil` through one arm to
+    // `Variant()`, `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543),
+    // and a `Ref<T>` setter takes an invalid Ref without complaint, so the value
     // LOADS. Whether the slot ought to be filled is a semantic rule's question.
-    if (value !== 'null' && !RESOURCE_REF_RE.test(value)) {
+    if (!isNilLiteral(value) && !RESOURCE_REF_RE.test(value)) {
       return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), or null, got: "${value}"`, errorCode);
     }
     return null;

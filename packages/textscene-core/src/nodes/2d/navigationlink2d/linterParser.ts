@@ -17,7 +17,7 @@ validatorRegistry.registerAll('NavigationLink2D', {
   // navigation_link_2d.cpp:75, PROPERTY_HINT_LAYERS_2D_NAVIGATION — a UI-control
   // hint, not a range the setter enforces: set_navigation_layers (:205-213) is a
   // bare assignment with no ERR_FAIL or mask.
-  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_2d.cpp:75' }),
+  navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_2d.cpp:75', width: 'uint32' /* navigation_link_2d.h:79 */ }),
   start_position: v.vector2('start_position'),
   end_position: v.vector2('end_position'),
   // navigation_link_2d.cpp:310, ERR_FAIL_COND_MSG(p_enter_cost < 0.0, "The

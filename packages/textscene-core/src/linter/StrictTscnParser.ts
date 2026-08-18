@@ -14,6 +14,7 @@ import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
+import { isNilLiteral } from '../godot/index.js';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
@@ -142,12 +143,12 @@ export class StrictTscnParser {
         // which IS 0 (canvas_item.h:123), so the stored value there is the
         // default. What holds for every slot is the part now stated — `null` is
         // not what ends up in the property.
-        if (value.trim() === 'null') {
+        if (isNilLiteral(value)) {
           errors.push({
             severity: error.severity,
             message:
-              `Property '${key}' is null, which this slot cannot hold: Godot stores the ` +
-              `type's zero value instead.`,
+              `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
+              `the type's zero value instead.`,
             line,
             column: 1,
             code: error.code,

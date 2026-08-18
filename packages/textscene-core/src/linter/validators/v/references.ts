@@ -6,6 +6,7 @@ import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { createNodePathValidator, createResourceReferenceValidator } from '../resourceValidators.js';
 import { upper } from './codes.js';
 import { accepts, shape } from './grounding.js';
+import { isNilLiteral } from '../../../godot/index.js';
 
 export const referenceCombinators = {
   /**
@@ -52,7 +53,7 @@ export const referenceCombinators = {
     const validator = createNodePathValidator(name, `INVALID_${upper(name)}_PATH`);
     if (!opts?.orNull) return shape(validator, 'NodePath("path/to/node")');
     return shape(
-      (key, value, line) => (value.trim() === 'null' ? null : validator(key, value, line)),
+      (key, value, line) => (isNilLiteral(value) ? null : validator(key, value, line)),
       'null or NodePath("path/to/node")'
     );
   },

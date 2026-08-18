@@ -36,7 +36,12 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   const shape = props.emission_shape?.trim();
-  const shapeName = shape === undefined ? undefined : GLOBAL_RNG_SHAPES[shape];
+  // hasOwn: `shape` is the raw value from the file, so bare indexing puts
+  // `function Object() { … }` into the diagnostic text for `= constructor`.
+  const shapeName =
+    shape !== undefined && Object.hasOwn(GLOBAL_RNG_SHAPES, shape)
+      ? GLOBAL_RNG_SHAPES[shape]
+      : undefined;
   if (shapeName) {
     diagnostics.push({
       severity: 'warning',

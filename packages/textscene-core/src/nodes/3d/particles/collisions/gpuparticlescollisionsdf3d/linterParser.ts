@@ -37,7 +37,7 @@ validatorRegistry.registerAll('GPUParticlesCollisionSDF3D', {
     hinted: 'gpu_particles_collision_3d.cpp:556',
   }),
   // gpu_particles_collision_3d.cpp:557, PROPERTY_HINT_LAYERS_3D_RENDER.
-  bake_mask: layerBitmask('bake_mask', { hinted: 'gpu_particles_collision_3d.cpp:557' }),
+  bake_mask: layerBitmask('bake_mask', { hinted: 'gpu_particles_collision_3d.cpp:557', width: 'uint32' /* gpu_particles_collision_3d.h:183 */ }),
   // gpu_particles_collision_3d.cpp:558, PROPERTY_HINT_RESOURCE_TYPE "Texture3D",
   // with a non-empty setter ("set_texture"): unlike GPUParticlesCollisionHeightField3D's
   // texture, which is getter-only and gets no validator.

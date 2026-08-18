@@ -34,7 +34,7 @@ validatorRegistry.registerAll('NavigationObstacle3D', {
   vertices: v.packedVector3Array('vertices'),
   avoidance_enabled: v.boolean('avoidance_enabled'),
   // Bare uint32_t assignment (:341): the parameter type is the ceiling.
-  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_obstacle_3d.cpp:86' }),
+  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_obstacle_3d.cpp:86', width: 'uint32' /* navigation_obstacle_3d.h:107 */ }),
   affect_navigation_mesh: v.boolean('affect_navigation_mesh'),
   carve_navigation_mesh: v.boolean('carve_navigation_mesh'),
   use_3d_avoidance: v.boolean('use_3d_avoidance'),

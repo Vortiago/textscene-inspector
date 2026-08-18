@@ -45,5 +45,5 @@ validatorRegistry.registerAll('NavigationObstacle2D', {
   // navigation_obstacle_2d.cpp:80, PROPERTY_HINT_LAYERS_AVOIDANCE. Bare
   // uint32_t assignment in set_avoidance_layers (:261): the parameter type is
   // the ceiling, not a setter guard.
-  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_obstacle_2d.cpp:80' }),
+  avoidance_layers: layerBitmask('avoidance_layers', { hinted: 'navigation_obstacle_2d.cpp:80', width: 'uint32' /* navigation_obstacle_2d.h:98 */ }),
 });

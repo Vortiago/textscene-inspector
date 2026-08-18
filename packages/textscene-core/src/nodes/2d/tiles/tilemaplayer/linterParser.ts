@@ -28,12 +28,14 @@ const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
  * PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR)` (tile_map_layer.cpp:2267),
  * storage-bearing. Godot's text writer (resource_format_text.cpp:1724-1728)
  * switches the WHOLE FILE to base64 the moment any PackedByteArray in it
- * exceeds 64 bytes, so real scenes carry BOTH spellings: decimal bytes
- * `PackedByteArray(0, 0, 1, …)` on small hand-authored fixtures, base64
- * `PackedByteArray("QUJD…")` on every Godot-exported demo — and the reader
+ * exceeds 64 bytes, and a layer's stream is 12 bytes per cell plus a 2-byte
+ * header — so `ResourceSaver.save` itself writes DECIMAL bytes while every layer
+ * in the file stays at five cells or fewer, and base64 from six on. Both
+ * spellings are Godot output rather than one exported form and one hand-authored
+ * one; this repo's corpus carries 4 decimal values against 16 base64. The reader
  * (`variant_parser.cpp:1410-1427`) accepts either regardless of which the
- * declared `format=` header names. Rejecting either spelling refuses a file
- * Godot itself opens.
+ * declared `format=` header names, so rejecting one refuses a file Godot itself
+ * opens.
  *
  * Shape-only: the format-AWARE decode (2-byte header + 12-byte cell records)
  * is the `tilemaplayer-invalid-tile-data` rule's job
@@ -64,20 +66,26 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
     }
     return null;
   }
-  // `badIntElement`, like the other six packed-int slots: the elements are
-  // BYTES, so the FLOAT grammar this used accepted `1e20` — a literal Godot
-  // reads and no integer slot holds — and the decoder then dropped the layer
-  // with nothing said about which element did it.
-  const bad = badIntElement('tile_map_data', key, line, body, {
-    format: 'INVALID_TILE_MAP_DATA_FORMAT',
-    value: 'INVALID_TILE_MAP_DATA_VALUE',
-  });
+  // `uint8`, alone among the seven packed-int slots: `_parse_byte_array`
+  // (variant_parser.cpp:600) pushes each element into a `Vector<uint8_t>` (:650),
+  // so it converts through `Variant::operator uint8_t()`
+  // (variant.cpp:1519-1521) rather than through int32. Measured on 4.6.3,
+  // `PackedByteArray(0, 0, 300, 0)` stores [0, 0, 44, 0].
+  const bad = badIntElement(
+    'tile_map_data',
+    key,
+    line,
+    body,
+    { format: 'INVALID_TILE_MAP_DATA_FORMAT', value: 'INVALID_TILE_MAP_DATA_VALUE' },
+    'uint8'
+  );
   return bad.error ?? bad.truncated;
 }, 'PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');
 
 // The tag the sweep reads: this is an INT slot, and an element it cannot hold
-// is a refusal of a real value rather than a format complaint.
-markIntSlot(tileMapDataValidator);
+// is a refusal of a real value rather than a format complaint. `uint8` is the
+// element's own width, so the sweep probes a byte's bounds rather than int32's.
+markIntSlot(tileMapDataValidator, 'uint8');
 
 validatorRegistry.registerAll('TileMapLayer', {
   tile_set: v.resourceReference('tile_set'),
