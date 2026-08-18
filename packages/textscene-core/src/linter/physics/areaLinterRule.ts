@@ -92,8 +92,9 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     if (monitoring === 'true' && collisionMask !== undefined) {
       // `ruleInt`, not `parseInt`: the latter stops at the first
       // character it cannot use, so `1e-1` read as 1 and missed the zero mask
-      // Godot actually stores.
-      const mask = ruleInt(collisionMask);
+      // Godot actually stores. uint32_t setter (collision_object_2d.h:124,
+      // collision_object_3d.h:133).
+      const mask = ruleInt(collisionMask, null, 'uint32');
       if (mask === 0) {
         diagnostics.push({
           severity: 'warning',

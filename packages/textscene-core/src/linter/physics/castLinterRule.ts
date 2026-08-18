@@ -64,8 +64,10 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     }
 
     // `ruleInt` reads the value Godot stores; `parseInt` stops at the
-    // first character it cannot use and misses an exponent-written zero.
-    const mask = ruleInt(props.collision_mask ?? '');
+    // first character it cannot use and misses an exponent-written zero. All
+    // four setters take uint32_t (ray_cast_2d.h:81, shape_cast_2d.h:91,
+    // ray_cast_3d.h:100, shape_cast_3d.h:106).
+    const mask = ruleInt(props.collision_mask ?? '', null, 'uint32');
     if (mask === 0) {
       diagnostics.push({
         severity: 'warning',

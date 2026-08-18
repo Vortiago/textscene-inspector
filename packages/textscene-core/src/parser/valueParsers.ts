@@ -125,6 +125,9 @@ export function floatOr(value: string | undefined, fallback: number, context = '
  * take `uint32_t`, while `CanvasItem::set_light_mask` and
  * `CanvasLayer::set_layer` take `int`. Reading an unsigned slot as signed would
  * show `4294967295` as `-1` in the inspector, which is not what Godot holds.
+ *
+ * The slot's width is declared here and again on its validator;
+ * `intSlotWidth.guard.test.ts` holds the two to one answer.
  */
 export function intOr(
   value: string | undefined,
@@ -310,9 +313,11 @@ export function parseOptionalVector2i(
 /**
  * Optional int reader: returns `undefined` for an absent or unparseable
  * value — no fallback, no warning. Distinct from `intOr`; used where a
- * missing property is itself meaningful (Control layout props). This was
- * `intOr` in `parser/utils.ts` before the value-decoder consolidation;
- * renamed so the two contracts no longer share a name.
+ * missing property is itself meaningful (Control layout props).
+ *
+ * `width` is the setter's argument type, as on {@link intOr}: read at int32, a
+ * `uint32_t` slot shows `4294967295` as -1 and refuses `3e9` — a FLOAT literal
+ * it holds exactly — leaving the caller with `undefined` and a default.
  */
 export function parseOptionalInt(
   value: string | undefined,

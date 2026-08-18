@@ -50,8 +50,8 @@ function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
 
   // occluder_instance_3d.cpp:700-702. Godot's serialiser omits a property left
   // at its default (4294967295, all layers), so only an EXPLICIT `bake_mask = 0`
-  // fires this.
-  if (rawProps.bake_mask !== undefined && ruleInt(rawProps.bake_mask) === 0) {
+  // fires this. The setter takes uint32_t (occluder_instance_3d.h:196).
+  if (rawProps.bake_mask !== undefined && ruleInt(rawProps.bake_mask, null, 'uint32') === 0) {
     diagnostics.push({
       severity: 'warning',
       message: `OccluderInstance3D '${node.name}' has a Bake Mask with no bits enabled, so baking will not produce any occluder mesh for it. Enable at least one bit in the Bake Mask property.`,

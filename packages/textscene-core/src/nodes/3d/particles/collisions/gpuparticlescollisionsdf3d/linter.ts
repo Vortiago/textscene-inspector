@@ -37,7 +37,8 @@ function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
   if (rawProps.bake_mask === undefined) return [];
 
-  if (ruleInt(rawProps.bake_mask) !== 0) return [];
+  // uint32_t setter (gpu_particles_collision_3d.h:183).
+  if (ruleInt(rawProps.bake_mask, null, 'uint32') !== 0) return [];
 
   return [
     {

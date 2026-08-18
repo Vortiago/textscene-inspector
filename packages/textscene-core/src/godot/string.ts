@@ -10,11 +10,12 @@
  * sibling reported a write the engine applies.
  *
  * NOT the same as `to_int()`, which is the other of Godot's two integer parses:
- * `to_int` SKIPS non-digits rather than stopping at them (`ustring.cpp:2268-2298`),
- * so `"x"` reads as 0 and `"a1b2"` as 12, and text this regex rejects still
- * resolves to a number under it. Which parse a class uses decides whether a
- * non-numeric index is a dropped write or a landed one, so never substitute one
- * for the other — see `indexedFamilyValidator`'s `indexParse` option.
+ * {@link stringToInt} SKIPS non-digits rather than stopping at them
+ * (`ustring.cpp:2267-2301`), so `"x"` reads as 0 and `"a1b2"` as 12, and text
+ * this regex rejects still resolves to a number under it. Which parse a class
+ * uses decides whether a non-numeric index is a dropped write or a landed one,
+ * so never substitute one for the other — see `indexedFamilyValidator`'s
+ * `indexParse` option.
  *
  * No `g` flag, so `.test()` on the shared instance is stateless.
  */
@@ -100,4 +101,66 @@ export function splitTopLevel(body: string): string[] {
  */
 export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
+}
+
+/**
+ * The largest magnitude a JS number spells exactly.
+ *
+ * The reader's bound, tighter than the engine's own: `_to_int` saturates at
+ * INT64_MAX / INT64_MIN (`ustring.cpp:2283-2284`), and every value that reaches
+ * either is long past the point where the double stops being the integer the
+ * text states. So the saturation is subsumed rather than reproduced — anything
+ * that would hit it is refused here first.
+ */
+const TO_INT_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+
+const ZERO = '0'.charCodeAt(0);
+const MINUS = '-'.charCodeAt(0);
+const NINE = '9'.charCodeAt(0);
+
+/**
+ * `String::to_int()` (`ustring.cpp:2303-2311`) — Godot's OTHER integer parse,
+ * and not a parse in the usual sense at all.
+ *
+ * Three behaviours separate it from every other reader here, and each one turns
+ * text that looks unreadable into a number the engine acts on:
+ *
+ * - A character it cannot use is SKIPPED, not a failure and not a stop: the
+ *   digit branch and the sign branch are the only two, and anything else falls
+ *   past both (`:2280-2293`). `"x"` is 0 and `"a1b2"` is 12.
+ * - A `-` seen while the accumulated total is still 0 FLIPS the sign
+ *   (`:2291-2292`). That is a flip, not a leading-sign rule: `"a-1"` is -1,
+ *   `"--1"` is 1, and `"1-2"` is 12 because the total is no longer 0 by then.
+ * - The scan stops at the first `.` (`:2308`), so `"12.9"` is 12 without a
+ *   float ever being read.
+ *
+ * Which of the two parses a class uses decides whether a malformed index is a
+ * dropped write or a landed one, so never substitute {@link IS_VALID_INT_RE}
+ * for this or the reverse.
+ *
+ * `NaN` for a value outside {@link TO_INT_SAFE}: the engine holds an int64
+ * there and this reader cannot name it, and NaN keeps every comparison false
+ * rather than letting a wrong number travel.
+ */
+export function stringToInt(text: string): number {
+  // `if (length() == 0) return 0` (`:2304-2306`).
+  if (text.length === 0) return 0;
+  const dot = text.indexOf('.');
+  const to = dot >= 0 ? dot : text.length;
+  let integer = 0n;
+  let positive = true;
+  for (let i = 0; i < to; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= ZERO && code <= NINE) {
+      integer = integer * 10n + BigInt(code - ZERO);
+      // Returning here rather than at the end also keeps a pathological run of
+      // digits from growing a BigInt nobody will read.
+      if (integer > TO_INT_SAFE) return NaN;
+    } else if (integer === 0n && code === MINUS) {
+      positive = !positive;
+    }
+  }
+  // Negated as a BigInt, not as a double: `-Number(0n)` is `-0`, and the engine
+  // holds one zero.
+  return Number(positive ? integer : -integer);
 }

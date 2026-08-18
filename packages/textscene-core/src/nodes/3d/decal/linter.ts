@@ -88,8 +88,9 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   }
 
   // decal.cpp:191-192. Default cull_mask is (1 << 20) - 1 (decal.h:54), so an
-  // absent key never trips this — only an explicit 0.
-  if (rawProps.cull_mask !== undefined && ruleInt(rawProps.cull_mask) === 0) {
+  // absent key never trips this — only an explicit 0. The setter takes uint32_t
+  // (decal.h:106), which is the width the validator declares too.
+  if (rawProps.cull_mask !== undefined && ruleInt(rawProps.cull_mask, null, 'uint32') === 0) {
     diagnostics.push({
       severity: 'warning',
       message:

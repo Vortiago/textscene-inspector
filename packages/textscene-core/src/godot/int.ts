@@ -72,6 +72,10 @@ const INT64_MAX = Number.MAX_SAFE_INTEGER;
  * happened), and refusing before the width is known asks the wrong question —
  * `uint32_t(4294967295.0)` is perfectly defined, and reading every slot as
  * int32 rejected the exact ceiling `PROPERTY_HINT_RANGE` declares for it.
+ *
+ * Per-slot means declared twice — once on the validator (`intSlot.width`) and
+ * once at the reader's call site — since ADR-0001 keeps the two apart at
+ * runtime. `intSlotWidth.guard.test.ts` holds the pair to one answer.
  */
 export type IntWidth = 'uint8' | 'int32' | 'uint32' | 'int64';
 
