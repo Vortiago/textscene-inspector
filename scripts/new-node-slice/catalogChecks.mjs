@@ -43,6 +43,24 @@ export function checkTier(typeName) {
 }
 
 /**
+ * The tier's OWN parent: the hop after it in any heir's catalogued chain.
+ *
+ * An abstract class is absent from `catalog.nodes` — `checkTier` asserts as
+ * much — so it has no chain of its own to read. Its heirs do, and every one of
+ * them passes through it, so the entry after `typeName` in any of their chains
+ * is the class directly above the tier.
+ */
+export function tierParent(typeName) {
+  const catalog = loadCatalog();
+  for (const node of catalog.nodes) {
+    const chain = node.chain ?? [];
+    const at = chain.indexOf(typeName);
+    if (at !== -1 && chain[at + 1]) return chain[at + 1];
+  }
+  return undefined;
+}
+
+/**
  * Check `--chain` against Godot's own answer in the node catalog.
  *
  * `NODE_BASE_TYPES` is derived from that catalog, so nothing needs writing —

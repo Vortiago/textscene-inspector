@@ -77,7 +77,7 @@ export function parseMeshInstance3D(
     'visibilityRangeFadeMode',
     parseOptionalInt(properties.visibility_range_fade_mode)
   );
-  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers));
+  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers, 'uint32'));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

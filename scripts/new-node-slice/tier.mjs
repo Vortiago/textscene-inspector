@@ -16,7 +16,8 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkTier } from './catalogChecks.mjs';
+import { checkTier, tierParent } from './catalogChecks.mjs';
+import { parentLinterParser } from './ancestry.mjs';
 import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
 import { tierFiles } from './templates/tier.mjs';
 import { wireImport } from './wiring.mjs';
@@ -38,7 +39,12 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   if (!dryRun && existsSync(sliceDir)) fail(`tier already exists: ${sliceDir}`);
   const toSrc = '../'.repeat(sliceRel.split('/').length);
 
-  const files = tierFiles({ typeName, heirs, toSrc, rule });
+  // Same resolution the leaf scaffold uses: walk Godot's ancestry to the
+  // nearest class that actually registers something. Without it a scaffolded
+  // tier registers unchained and fails baseChainImport's reachability arm.
+  const parentLinterImport = parentLinterParser(typeName, tierParent(typeName), sliceDir, null);
+
+  const files = tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport });
 
   const wirings = rule
     ? [wireImport(join(CORE_SRC, 'linter/index.ts'), `import '../${sliceRel}/index.linter.js';`, `'../nodes/${category}/`)]
@@ -47,6 +53,7 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   console.log(`[new-node-slice] ${typeName} tier -> ${sliceRel}${rule ? ' (with family rule)' : ' (validators only)'}`);
   for (const name of files.keys()) console.log(`  create  ${sliceRel}/${name}`);
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
+  if (parentLinterImport) console.log(`  inherit ${parentLinterImport}`);
   console.log(`  heirs   ${heirs.length}: ${heirs.slice(0, 6).join(', ')}${heirs.length > 6 ? ', ...' : ''}`);
   if (!rule) {
     console.log('  note    validators-only tier: no barrel entry, each leaf imports ./linterParser.js');

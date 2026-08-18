@@ -111,6 +111,16 @@ const results = Object.fromEntries(
   (await Promise.all(keys.map((k) => dry(INVOCATIONS[k])))).map((r, i) => [keys[i], r])
 );
 
+describe('new-node-slice tier chaining', () => {
+  it('chains a validators-only tier to the registration above it', () => {
+    // A tier that registers without importing its parent's linterParser fails
+    // baseChainImport's "every slice REACHES the ancestor the base chain names",
+    // and the cheapest wrong fix is to import any sibling that silences it.
+    expect(results.tierValidatorsOnly.ok).toBe(true);
+    expect(results.tierValidatorsOnly.out).toMatch(/inherit\s+\S*linterParser\.js/);
+  });
+});
+
 describe('new-node-slice argument contract', () => {
   it('refuses to run without --intent', () => {
     expect(results.noIntent.ok).toBe(false);

@@ -56,6 +56,7 @@ export const keyVerdictCombinators = {
       `read-only (derived from ${opts.derivedFrom})`
     );
     validator.grounding = { kind: 'enforced', cite: opts.cite };
+    validator.keyVerdict = true;
     return validator;
   },
 };

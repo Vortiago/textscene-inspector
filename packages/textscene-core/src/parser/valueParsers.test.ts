@@ -350,3 +350,22 @@ describe('the conversion branch follows the composite type, not the token', () =
     expect(parseOptionalVector2i('Vector2(100, 64)')).toEqual({ x: 100, y: 64 });
   });
 });
+
+describe('parseOptionalInt width', () => {
+  // The bitmask slots it reads are uint32 in the engine and declared uint32 on
+  // the linter side, so a value the linter accepts must not read back narrowed.
+  it('reads a uint32 slot without narrowing to int32', () => {
+    expect(parseOptionalInt('2147483648', 'uint32')).toBe(2147483648);
+    expect(parseOptionalInt('4294967295', 'uint32')).toBe(4294967295);
+  });
+
+  it('keeps a FLOAT literal inside the uint32 range instead of dropping it', () => {
+    // int32 called 3e9 unrepresentable and returned undefined, and every caller
+    // then fell back to its default — layers 3e9 rendered as layer 1.
+    expect(parseOptionalInt('3e9', 'uint32')).toBe(3000000000);
+  });
+
+  it('still defaults to int32', () => {
+    expect(parseOptionalInt('2147483648')).toBe(-2147483648);
+  });
+});

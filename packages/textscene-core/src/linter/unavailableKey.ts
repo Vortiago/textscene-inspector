@@ -49,5 +49,6 @@ export function unavailableValidator(nodeType: string, removal: Removal): Proper
   // is a grounded rejection (ADR-0032), not a format check.
   validator.grounding = { kind: 'enforced', cite: removal.cite };
   unavailableValidators.set(cacheKey, validator);
+  validator.keyVerdict = true;
   return validator;
 }

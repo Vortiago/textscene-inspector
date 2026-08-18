@@ -100,7 +100,7 @@ export function applyGlbNodeOverrides(
     // would write its 3.33x scale and 7.5-unit offset onto the whole robot.
     if (!isApplicableGlbOverride(override)) continue;
 
-    const layers = parseOptionalInt(override.rawProperties?.layers);
+    const layers = parseOptionalInt(override.rawProperties?.layers, 'uint32');
     const visible = override.rawProperties?.visible;
     const transform = (override.properties as Node3DProperties).transform;
     // Nothing to write means nothing to resolve. The town's four terrain

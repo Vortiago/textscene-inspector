@@ -314,9 +314,12 @@ export function parseOptionalVector2i(
  * `intOr` in `parser/utils.ts` before the value-decoder consolidation;
  * renamed so the two contracts no longer share a name.
  */
-export function parseOptionalInt(value: string | undefined): number | undefined {
+export function parseOptionalInt(
+  value: string | undefined,
+  width: IntWidth = 'int32'
+): number | undefined {
   if (value === undefined) return undefined;
-  return finiteIntScalar(value, 'int32') ?? undefined;
+  return finiteIntScalar(value, width) ?? undefined;
 }
 
 /**

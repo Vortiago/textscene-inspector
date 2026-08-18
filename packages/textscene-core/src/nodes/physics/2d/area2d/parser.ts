@@ -18,10 +18,10 @@ export function parseArea2D(
   const monitorable = parseOptionalBool(properties.monitorable);
   if (monitorable !== undefined) result.monitorable = monitorable;
 
-  const collisionLayer = parseOptionalInt(properties.collision_layer);
+  const collisionLayer = parseOptionalInt(properties.collision_layer, 'uint32');
   if (collisionLayer !== undefined) result.collision_layer = collisionLayer;
 
-  const collisionMask = parseOptionalInt(properties.collision_mask);
+  const collisionMask = parseOptionalInt(properties.collision_mask, 'uint32');
   if (collisionMask !== undefined) result.collision_mask = collisionMask;
 
   return result;

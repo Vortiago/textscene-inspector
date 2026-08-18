@@ -4,7 +4,7 @@
  * entry that pulls them in.
  */
 
-export function tierFiles({ typeName, heirs, toSrc, rule }) {
+export function tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport }) {
   const files = new Map();
   files.set(
     'linterParser.ts',
@@ -21,7 +21,7 @@ export function tierFiles({ typeName, heirs, toSrc, rule }) {
  * in the .cpp. Quote the governing source line beside every non-obvious bound.
  */
 
-import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
+${parentLinterImport ? `import '${parentLinterImport}';\n` : ''}import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry.js';
 
 validatorRegistry.registerAll('${typeName}', {});
 `

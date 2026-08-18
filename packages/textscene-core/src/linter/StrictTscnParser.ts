@@ -152,7 +152,10 @@ export class StrictTscnParser {
         // which IS 0 (canvas_item.h:123), so the stored value there is the
         // default. What holds for every slot is the part now stated — `null` is
         // not what ends up in the property.
-        if (isNilLiteral(value)) {
+        // Not for a key-level verdict: those reject every value because the KEY
+        // is wrong, so "this slot stores zero instead" describes a slot the
+        // class does not have and hides the removal's own reason.
+        if (isNilLiteral(value) && !validator.keyVerdict) {
           errors.push({
             severity: error.severity,
             message:

@@ -24,7 +24,7 @@ export function parseNavigationObstacle3D(
   const avoidanceEnabled = parseOptionalBool(properties.avoidance_enabled);
   if (avoidanceEnabled !== undefined) result.avoidance_enabled = avoidanceEnabled;
 
-  const avoidanceLayers = parseOptionalInt(properties.avoidance_layers);
+  const avoidanceLayers = parseOptionalInt(properties.avoidance_layers, 'uint32');
   if (avoidanceLayers !== undefined) result.avoidance_layers = avoidanceLayers;
 
   const affectNavigationMesh = parseOptionalBool(properties.affect_navigation_mesh);

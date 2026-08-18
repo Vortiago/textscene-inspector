@@ -35,6 +35,19 @@ export type PropertyValidator = ((
   accepts?: string;
 
   /**
+   * True when this validator's verdict is about the KEY, not the value it was
+   * handed: the key is one the class removes, or one `_set` refuses to read
+   * back. Every value fails, `null` included.
+   *
+   * The strict parser's nil-literal rewrite reads it. That rewrite says Godot
+   * stores the type's zero value instead, which is true of a slot that exists
+   * and false here — `BoxContainer::set_vertical` is `ERR_FAIL_COND_MSG(is_fixed)`
+   * and stores nothing — and it replaced the removal's own reason and cite with
+   * a claim about a slot the class does not have.
+   */
+  keyVerdict?: true;
+
+  /**
    * True when the ONLY thing this validator rejects is a value that never
    * reaches the property — `Color(1, 1)`, `not-a-float`, an unquoted string.
    * Such a rejection needs no citation, because no `.tscn` the engine loads
