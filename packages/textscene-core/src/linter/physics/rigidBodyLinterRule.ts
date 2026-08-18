@@ -87,7 +87,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     if (!hasCollisionShapeChild(node, dim)) {
       diagnostics.push({
         severity: 'warning',
-        message: `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Rigid bodies need collision shapes to function in physics.`,
+        message: `${node.type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Rigid bodies need collision shapes to function in physics.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: `${prefix}-needs-collision-shape`,
