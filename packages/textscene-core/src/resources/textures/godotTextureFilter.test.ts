@@ -112,3 +112,31 @@ describe('applyTextureFilterState', () => {
     expect(texture.minFilter).toBe(THREE.NearestFilter);
   });
 });
+
+describe('a texture with no mipmaps', () => {
+  // Godot's procedural textures never call `generate_mipmaps`
+  // (`scene/resources/gradient_texture.cpp`), so a `*_WITH_MIPMAPS` filter
+  // samples base level only — it does not manufacture a mip chain.
+  it('keeps a mipless texture mipless and degrades the min filter', () => {
+    const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+    expect(texture.generateMipmaps).toBe(false);
+
+    applyTextureFilterState(texture, godotTextureFilterState(3));
+
+    expect(texture.generateMipmaps).toBe(false);
+    expect(texture.minFilter).toBe(THREE.LinearFilter);
+    expect(texture.magFilter).toBe(THREE.LinearFilter);
+  });
+
+  it('still uses mipmaps on a texture that has them', () => {
+    const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    texture.generateMipmaps = true;
+
+    applyTextureFilterState(texture, godotTextureFilterState(3));
+
+    expect(texture.generateMipmaps).toBe(true);
+    expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+  });
+});

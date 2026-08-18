@@ -107,26 +107,56 @@ export function godotTextureFilterState(filter: number | undefined): TextureFilt
   return STATES[filter ?? GODOT_TEXTURE_FILTER_DEFAULT] ?? STATES[GODOT_TEXTURE_FILTER_DEFAULT]!;
 }
 
+/** The state as it lands on THIS texture, once its own mip availability is honoured. */
+function effectiveState(texture: THREE.Texture, state: TextureFilterState): TextureFilterState {
+  if (!state.generateMipmaps || texture.generateMipmaps) return state;
+  return {
+    ...state,
+    minFilter: WITHOUT_MIPMAPS[state.minFilter] ?? state.minFilter,
+    generateMipmaps: false,
+  };
+}
+
 /** Whether a texture already samples the way this state asks, so no clone is needed. */
 export function textureFilterMatches(
   texture: THREE.Texture,
   state: TextureFilterState
 ): boolean {
+  const wanted = effectiveState(texture, state);
   return (
-    texture.magFilter === state.magFilter &&
-    texture.minFilter === state.minFilter &&
-    texture.generateMipmaps === state.generateMipmaps &&
-    texture.anisotropy === state.anisotropy
+    texture.magFilter === wanted.magFilter &&
+    texture.minFilter === wanted.minFilter &&
+    texture.generateMipmaps === wanted.generateMipmaps &&
+    texture.anisotropy === wanted.anisotropy
   );
 }
 
-/** Write the sampler state onto a texture the caller owns. */
+/** The mip-free equivalent of a minification filter, for a texture with no mip chain. */
+const WITHOUT_MIPMAPS: Partial<
+  Record<THREE.MinificationTextureFilter, THREE.MinificationTextureFilter>
+> = {
+  [THREE.NearestMipmapLinearFilter]: THREE.NearestFilter,
+  [THREE.NearestMipmapNearestFilter]: THREE.NearestFilter,
+  [THREE.LinearMipmapLinearFilter]: THREE.LinearFilter,
+  [THREE.LinearMipmapNearestFilter]: THREE.LinearFilter,
+};
+
+/**
+ * Write the sampler state onto a texture the caller owns.
+ *
+ * A `*_WITH_MIPMAPS` filter does not CREATE a mip chain: mipmaps are a property
+ * of the texture resource, and a procedural one never calls `generate_mipmaps`
+ * (`scene/resources/gradient_texture.cpp`), so Godot's sampler reads base level
+ * only. Manufacturing them here renders such a texture blurrier under
+ * minification than the engine does.
+ */
 export function applyTextureFilterState(
   texture: THREE.Texture,
   state: TextureFilterState
 ): void {
-  texture.magFilter = state.magFilter;
-  texture.minFilter = state.minFilter;
-  texture.generateMipmaps = state.generateMipmaps;
-  texture.anisotropy = state.anisotropy;
+  const wanted = effectiveState(texture, state);
+  texture.magFilter = wanted.magFilter;
+  texture.minFilter = wanted.minFilter;
+  texture.generateMipmaps = wanted.generateMipmaps;
+  texture.anisotropy = wanted.anisotropy;
 }
