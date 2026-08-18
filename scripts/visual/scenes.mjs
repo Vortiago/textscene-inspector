@@ -572,6 +572,7 @@ export const GOLDEN_SCENES = [
   // filtering, the opposite convention to the 2D canvas, so a procedural
   // texture can resolve correctly for Sprite2D and still be tagged wrongly here.
   { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
+  { name: 'sprite3d-nested-modulate', file: 'unit-sprite3d-nested-modulate.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
   // A region_rect bigger than its texture. Godot clips neither the region nor
   // the quad, so the overrun is decided by the sampler — and the two families

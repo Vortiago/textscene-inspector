@@ -69,6 +69,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { transformFromNode3DProperties, type NodeTransform } from './nodeTransform.js';
 import { node2dGroupProps } from './node2dTransform.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
+import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
@@ -373,11 +374,16 @@ function PlainNode({
         >
           <Component node={node}>
             {children.length > 0 ? (
-              startsCanvas ? (
-                <CanvasLayerScope node={node}>{children}</CanvasLayerScope>
-              ) : (
-                <>{children}</>
-              )
+              /* Every node's children, at every level, so a non-sprite parent
+                 always overwrites with white — `sprite_3d.cpp:75` accumulates
+                 from the IMMEDIATE parent only. */
+              <SpriteBase3DChildAccum node={node}>
+                {startsCanvas ? (
+                  <CanvasLayerScope node={node}>{children}</CanvasLayerScope>
+                ) : (
+                  <>{children}</>
+                )}
+              </SpriteBase3DChildAccum>
             ) : null}
           </Component>
         </ErrorBoundary>

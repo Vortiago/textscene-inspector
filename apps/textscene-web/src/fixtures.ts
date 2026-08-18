@@ -598,6 +598,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Nested Modulate",
+    "file": "unit-sprite3d-nested-modulate.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Region Oversized",
     "file": "unit-sprite3d-region-oversized.tscn",
     "category": "Other"
