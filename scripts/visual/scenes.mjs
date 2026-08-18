@@ -574,6 +574,15 @@ export const GOLDEN_SCENES = [
   { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
   { name: 'sprite3d-nested-modulate', file: 'unit-sprite3d-nested-modulate.tscn' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // The pass a default-`alpha_cut` sprite lands in, which Godot reads off the
+  // generated shader rather than off a colour: a texture with transparent
+  // texels standing in front of an opaque wall. Every other sprite scene draws
+  // an alpha-less texture against the background alone, where blending an
+  // opaque texel and painting it produce identical pixels and a skipped depth
+  // write has nothing to lose — so an opaque-list sprite looks right in all of
+  // them and paints a black rectangle here. Content is a flat quad plus the
+  // walk sprite's antialiased edge band.
+  { name: 'sprite3d-blended-pass', file: 'unit-sprite3d-blended-pass.tscn' },
   // A region_rect bigger than its texture. Godot clips neither the region nor
   // the quad, so the overrun is decided by the sampler — and the two families
   // disagree: the 2D canvas clamps to the edge texel (one "F" plus a blue

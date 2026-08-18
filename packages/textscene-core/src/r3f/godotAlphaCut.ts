@@ -42,7 +42,13 @@ export interface AlphaCutSurface {
   alphaTest: number;
   alphaHash: boolean;
   depthWrite: boolean;
-  /** Whether the arm reaches the blended pass at all. */
+  /**
+   * Whether the arm reaches the blended pass at all. A COMPILE-TIME property of
+   * the arm's shader, never of a colour: `uses_alpha_pass()`
+   * (`scene_shader_forward_clustered.h:279-287`) reads the `ALPHA`-written flag
+   * (`material.cpp:1836`, `scene_shader_forward_clustered.cpp:123`) that
+   * classifies the surface at `render_forward_clustered.cpp:4079-4090`.
+   */
   blended: boolean;
 }
 

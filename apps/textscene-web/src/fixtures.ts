@@ -593,6 +593,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Blended Pass",
+    "file": "unit-sprite3d-blended-pass.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Gradienttexture",
     "file": "unit-sprite3d-gradienttexture.tscn",
     "category": "Other"
