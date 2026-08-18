@@ -27,17 +27,16 @@ interface ExternalMaterialSlotProps {
   path: string | null;
   /** R3F attach key — `material` for a single surface, `material-N` for many. */
   attach?: string;
-  shadowSide?: THREE.Side;
 }
 
-export function ExternalMaterialSlot({ path, attach, shadowSide }: ExternalMaterialSlotProps) {
+export function ExternalMaterialSlot({ path, attach }: ExternalMaterialSlotProps) {
   const result = useResource<THREE.Material>(path ?? '', 'StandardMaterial3D');
   if (path && result.value) {
     return <primitive object={result.value} attach={attach} />;
   }
-  // Not literal-only — `attach` and `shadowSide` come off props — but neither is
-  // a program input, and every one that IS here is a module constant, so the key
-  // is constant and this fallback never remounts.
+  // Not literal-only — `attach` comes off props — but it is not a program input,
+  // and every one that IS here is a module constant, so the key is constant and
+  // this fallback never remounts.
   const fallback = materialProgramInputs({
     props: {
       attach,
@@ -45,7 +44,6 @@ export function ExternalMaterialSlot({ path, attach, shadowSide }: ExternalMater
       metalness: GODOT_DEFAULT_METALLIC,
       roughness: GODOT_DEFAULT_ROUGHNESS,
       side: THREE.FrontSide,
-      shadowSide: shadowSide ?? null,
     },
   });
   return <meshStandardMaterial key={fallback.key} {...fallback.props} />;

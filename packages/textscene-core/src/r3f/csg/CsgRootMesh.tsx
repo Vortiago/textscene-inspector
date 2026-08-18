@@ -14,10 +14,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { resolveStandardMaterial } from '../materials/resolveStandardMaterial';
-import { StandardMaterialSlot } from '../materials/StandardMaterialSlot';
-import { ExternalMaterialSlot } from '../materials/ExternalMaterialSlot';
+import { SurfaceMaterialSlot } from '../materials/SurfaceMaterialSlot';
+import type { MaterialSource } from '../materials/materialSource';
 import { resolveExtResourcePath } from '../../resources/SubResourceResolver';
 import { useSceneResources } from '../SceneResourcesContext';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
@@ -26,9 +25,13 @@ import type { CsgPlan } from './csgPlan';
 import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
+import type { ShadowCastingEffects } from '../shadowCasting';
+import { CSG_SHADOWS_ONLY_MATERIAL } from './csgShadowsOnlyMaterial';
 
 export interface CsgRootMeshProps {
   plan: CsgPlan;
+  /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
+  shadow: ShadowCastingEffects;
   /**
    * The root's own solid, drawn while the library loads or after it failed. Passed in
    * because building it needs the slice's material resolution, which lives in
@@ -39,7 +42,7 @@ export interface CsgRootMeshProps {
   children?: ReactNode;
 }
 
-export function CsgRootMesh({ plan, fallback, children }: CsgRootMeshProps) {
+export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshProps) {
   const { internalResources, externalResources } = useSceneResources();
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -93,15 +96,14 @@ export function CsgRootMesh({ plan, fallback, children }: CsgRootMeshProps) {
   // Resolve each output surface to a material slot. One component per slot keeps
   // ExternalMaterialSlot's useResource call one-per-component, so rules of hooks holds
   // for any surface count.
-  const surfaces = useMemo(() => {
+  const surfaces = useMemo((): Array<MaterialSource | undefined> => {
     if (!evaluation) return [];
     return evaluation.surfaceSlots.map((planSurface) => {
       const reference = plan.surfaces[planSurface];
       const sub = resolveStandardMaterial(reference, internalResources);
-      return {
-        scalars: sub ? parseStandardMaterial3DScalars(sub.data as Record<string, string>) : null,
-        externalPath: sub ? null : resolveExtResourcePath(reference, externalResources),
-      };
+      if (sub) return { kind: 'scene', resource: sub };
+      const path = resolveExtResourcePath(reference, externalResources);
+      return path === null ? undefined : { kind: 'path', path };
     });
   }, [evaluation, plan.surfaces, internalResources, externalResources]);
 
@@ -110,17 +112,25 @@ export function CsgRootMesh({ plan, fallback, children }: CsgRootMeshProps) {
   return (
     <>
       {drawable && (
-        <mesh castShadow receiveShadow geometry={evaluation!.geometry as THREE.BufferGeometry}>
+        <mesh
+          castShadow={shadow.castShadow}
+          onBeforeShadow={shadow.onBeforeShadow}
+          receiveShadow
+          geometry={evaluation!.geometry as THREE.BufferGeometry}
+        >
           {surfaces.map((surface, index) => {
             // A single-surface mesh keeps the SINGULAR attach key, so `mesh.material`
             // stays one material rather than a length-1 array.
             const attach = surfaces.length > 1 ? `material-${index}` : 'material';
-            return surface.externalPath === null ? (
-              <StandardMaterialSlot key={index} scalars={surface.scalars} attach={attach} />
-            ) : (
-              <ExternalMaterialSlot key={index} path={surface.externalPath} attach={attach} />
-            );
+            return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
           })}
+          {/* SHADOWS_ONLY: mounted last, so it is the material R3F attaches. */}
+          {shadow.shadowsOnly && (
+            <meshBasicMaterial
+              key={CSG_SHADOWS_ONLY_MATERIAL.key}
+              {...CSG_SHADOWS_ONLY_MATERIAL.props}
+            />
+          )}
         </mesh>
       )}
       {/*

@@ -22,4 +22,6 @@ export interface CSGCylinder3DProperties extends Node3DProperties {
   material?: string;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
+  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  castShadow?: number;
 }

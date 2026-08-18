@@ -6,12 +6,11 @@
  * PrismMesh). GLB / unresolvable references render a magenta wireframe
  * placeholder.
  *
- * Material: synchronously parses StandardMaterial3D scalar properties
- * (albedo color, metallic, roughness, opacity) from the scene's internal
- * resources. External textures route through `useResource` and the host
- * file provider. When ANY referenced texture comes back missing, the
- * mesh switches to a magenta placeholder material with a drei `<Text>`
- * label naming the missing path.
+ * Material: scalars parse synchronously off the scene's internal resources;
+ * every surface's textures resolve through `<SurfaceMaterialSlot>`, the shared
+ * per-surface chain. This node keeps only what is per-MESH: when the PRIMARY
+ * material's texture comes back missing (or its ViewportTexture albedo is
+ * cyclic), the whole mesh switches to a magenta placeholder material.
  *
  * Material precedence, per surface, is Godot's:
  *   material_override > surface_material_override/N > the surface's own material >
@@ -37,49 +36,25 @@ import {
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
 import { parseResourceReference } from '../../../resources/SubResourceResolver';
-import { resolveProceduralTexture } from '../../../resources/textures/resolveProceduralTexture';
-import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
-import { resolveEmission } from '../../../resources/materials/standardmaterial3d/emission';
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
-import { materialBlendProps } from '../../../resources/materials/standardmaterial3d/build';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import {
+  SurfaceMaterialSlot,
+  useMaterialTextures,
+} from '../../../r3f/materials/SurfaceMaterialSlot';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from '../../../r3f/materials/godotDefaultMaterial';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import type { MaterialTextureState } from '../../../resources/textures/applyTextureState';
-import {
-  bindSlotTexture,
-  releaseBoundTexture,
-} from '../../../resources/materials/standardmaterial3d/textureBinding';
-import {
-  TEXTURE_SLOTS,
-  type TextureSlot,
-} from '../../../resources/materials/standardmaterial3d/types';
-import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../../resources/textures/godotTextureFilter';
-import { repackAnisotropyFlowmap } from '../../../resources/textures/repackFlowmap';
-import { triplanarPlaneScale } from './triplanarScale';
-
-// The slot list is the decode's own (`TEXTURE_SLOTS`), not a second copy: the
-// `useResource` fan-out below calls one hook per entry, so a list that drifted
-// from the decode's would silently stop fetching a slot the material declares.
-// Its ORDER is load-bearing here — hooks must be called unconditionally in a
-// stable order.
-const TEXTURE_PROPERTIES = TEXTURE_SLOTS;
+import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 
 /** Literal-only, so each key is constant and none of these ever remounts. */
 const PLACEHOLDER_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
@@ -156,297 +131,20 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [materialSubResource]
   );
 
-  // Collect texture-path references off the SubResource material and
-  // ask the resource loader for each one. The path is the resolved
-  // `ExtResource("id").path`; if the metadata doesn't include it (rare),
-  // we skip the slot.
-  const textureRequests = useMemo(
-    () => collectTextureRequests(materialSubResource, externalResources),
-    [materialSubResource, externalResources]
+  // The material's textures, through the SAME per-surface chain every other
+  // surface uses. Called here rather than mounted as `<SurfaceMaterialSlot>`
+  // because the node needs the chain's OUTCOME: an unresolvable texture diverts
+  // the whole MESH below, and mounting the component as well would bind — and
+  // later dispose — every slot of this surface twice.
+  const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(
+    materialScalars,
+    meshResource
   );
 
-  // Drive `useResource` for every requested slot. Hooks must be called
-  // unconditionally, in stable order — `TEXTURE_PROPERTIES` is the
-  // canonical ordering so even an empty request still calls each hook
-  // with an `''` path placeholder, which the hook treats as a no-op
-  // (returns `pending` and emits nothing because nothing subscribes
-  // to an empty path).
-  const albedoStatus = useResource<THREE.Texture>(
-    textureRequests.albedo_texture ?? '',
-    'Texture2D'
-  );
-  const normalStatus = useResource<THREE.Texture>(
-    textureRequests.normal_texture ?? '',
-    'Texture2D'
-  );
-  const roughnessStatus = useResource<THREE.Texture>(
-    textureRequests.roughness_texture ?? '',
-    'Texture2D'
-  );
-  const metallicStatus = useResource<THREE.Texture>(
-    textureRequests.metallic_texture ?? '',
-    'Texture2D'
-  );
-  const emissionStatus = useResource<THREE.Texture>(
-    textureRequests.emission_texture ?? '',
-    'Texture2D'
-  );
-  // Parity-audit fix: `ao_texture` now resolves and wires
-  // through to `material.aoMap`. Was silently dropped because the slot
-  // wasn't in `TEXTURE_PROPERTIES` pre-fix.
-  const aoStatus = useResource<THREE.Texture>(
-    textureRequests.ao_texture ?? '',
-    'Texture2D'
-  );
-  const heightmapStatus = useResource<THREE.Texture>(
-    textureRequests.heightmap_texture ?? '',
-    'Texture2D'
-  );
-  const anisotropyFlowmapStatus = useResource<THREE.Texture>(
-    textureRequests.anisotropy_flowmap ?? '',
-    'Texture2D'
-  );
-
-  const textureSlots = useMemo(
-    () => ({
-      albedo_texture: textureRequests.albedo_texture ? albedoStatus : null,
-      normal_texture: textureRequests.normal_texture ? normalStatus : null,
-      roughness_texture: textureRequests.roughness_texture ? roughnessStatus : null,
-      metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
-      emission_texture: textureRequests.emission_texture ? emissionStatus : null,
-      ao_texture: textureRequests.ao_texture ? aoStatus : null,
-      heightmap_texture: textureRequests.heightmap_texture ? heightmapStatus : null,
-      anisotropy_flowmap: textureRequests.anisotropy_flowmap ? anisotropyFlowmapStatus : null,
-    }),
-    [
-      textureRequests,
-      albedoStatus,
-      normalStatus,
-      roughnessStatus,
-      metallicStatus,
-      emissionStatus,
-      aoStatus,
-      heightmapStatus,
-      anisotropyFlowmapStatus,
-    ]
-  );
-
-  // Procedural texture slots resolve synchronously from the scene's internal
-  // resources — a `SubResource(GradientTexture2D)` is fully described in the
-  // scene, so it is rasterised here rather than fetched through `useResource`
-  // like an ExtResource image. This is what gives the platformer coin its
-  // additive gradient glow. Any slot NOT carrying a procedural sub-resource
-  // stays undefined and falls back to the async `textureSlots` above.
-  //
-  // Not disposed here: a procedural texture is shared by every node pointing at
-  // the same sub-resource and owned by the procedural cache, which frees it on
-  // eviction. Freeing it per consumer would pull it out from under the others.
-  // Pinned instead, so that eviction cannot free it while THIS node is still
-  // sampling it — borrowing only works if the owner knows the borrow exists.
-  const { textures: proceduralTextures, keys: proceduralKeys } = useMemo(
-    () => resolveProceduralTextures(materialSubResource, internalResources),
-    [materialSubResource, internalResources]
-  );
-  useProceduralTexturePins(proceduralKeys);
-
-  // The per-material half of every texture binding: the UV transform
-  // (`uv1_scale` / `uv1_offset`), the sampler filter (`texture_filter`) and the
-  // wrapping (`texture_repeat`, whose default is applied to the shared texture
-  // at load). The per-SLOT half — which slots decode sRGB — is added by
-  // `bindSlotTexture`, which clones before mutating, so two MeshInstance3D nodes
-  // sharing a texture path with different tiling, filtering or slot roles don't
-  // clobber each other, and hands the original straight back when this binding
-  // needs nothing of its own.
-  //
-  // A triplanar material tiles per WORLD unit, not across the
-  // mesh's 0..1 UVs. For a PlaneMesh we reproduce that density by folding
-  // the plane's size into the scale (repeat = size × uv1_scale) — otherwise
-  // a 12×3.5 hallway floor stretched one texture copy and read "too big".
-  const textureState = useMemo((): MaterialTextureState | null => {
-    if (!materialScalars) return null;
-    const scale =
-      materialScalars.triplanar && meshResource
-        ? triplanarPlaneScale(meshResource, materialScalars.uv1Scale)
-        : materialScalars.uv1Scale;
-    // PARITY LIMITATION (uv1_offset + world-triplanar): three.js applies
-    // `offset` in UV space, but Godot's world-triplanar offset is in world
-    // units, so a non-zero offset would shift by a different amount here. No
-    // shipped scene sets uv1_offset, so impact is currently zero.
-    return {
-      uv: { scale, offset: materialScalars.uv1Offset },
-      // Only an AUTHORED filter is a divergence. The scalars parser fills in
-      // Godot's default, and passing that would clone every texture whose
-      // sampler state merely differs from it — a procedural GradientTexture2D
-      // has no mipmaps, so it would clone and re-upload per material per slot
-      // for a filter no material asked for.
-      filter:
-        materialScalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT
-          ? undefined
-          : materialScalars.textureFilter,
-      repeat: materialScalars.textureRepeat,
-    };
-  }, [materialScalars, meshResource]);
-
-  // A `SubResource(ViewportTexture)` albedo names a `<SubViewport>` rather than
-  // a file, so it resolves through the live registry instead of the loader —
-  // and it arrives AFTER first paint, once that sub-viewport has published.
-  // Highest precedence of the three: nothing else can be in the slot when the
-  // authored value is a ViewportTexture.
-  const { texture: viewportAlbedo, cyclic: viewportAlbedoCyclic } = useViewportTextureSlot(
-    (materialSubResource?.data as { albedo_texture?: string } | undefined)?.albedo_texture,
-    internalResources
-  );
-
-  const albedoMap = useMemo(
-    () =>
-      transformedTexture(
-        viewportAlbedo
-          ? { value: viewportAlbedo }
-          : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
-        textureState,
-        'albedo_texture'
-      ),
-    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureState]
-  );
-  const normalMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        textureState,
-        'normal_texture'
-      ),
-    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureState]
-  );
-  // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
-  // channel named by `metallic_texture_channel` / `roughness_texture_channel`
-  // (default RED). three.js's metalnessMap/roughnessMap read fixed channels
-  // (BLUE / GREEN). Faithful for grayscale or matching-channel (ORM) maps; a
-  // RED-packed map with differing channels would misread. A true fix needs
-  // runtime channel-swizzling.
-  const roughnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        textureState,
-        'roughness_texture'
-      ),
-    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureState]
-  );
-  const metalnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        textureState,
-        'metallic_texture'
-      ),
-    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureState]
-  );
-  const emissiveMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        textureState,
-        'emission_texture'
-      ),
-    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureState]
-  );
-  const aoMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        textureState,
-        'ao_texture'
-      ),
-    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
-  );
-  const displacementMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        textureState,
-        'heightmap_texture'
-      ),
-    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureState]
-  );
-  // Depend on the two values the repack actually reads, not on their wrappers:
-  // `materialScalars` and the slot object are re-created on every re-parse and
-  // every re-emit of the same cached texture, and a repack is now a canvas
-  // readback plus a full-buffer copy plus a GPU re-upload.
-  const anisotropyStrength = materialScalars?.anisotropy ?? 0;
-  const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
-  const repackedFlowmap = useMemo(() => {
-    // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap; skip the repack when the strength is 0 — the map
-    // would never be read on the standard-material fallback.
-    if (anisotropyStrength <= 0 || !anisotropyFlowmap) return undefined;
-    return repackAnisotropyFlowmap(anisotropyFlowmap);
-  }, [anisotropyStrength, anisotropyFlowmap]);
-
-  const anisotropyMap = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
-    [repackedFlowmap, textureState]
-  );
-
-  // The repack allocates its own pixel buffer, so it is disposed on the same
-  // terms as the procedural DataTextures above. The binding may hand back a
-  // CLONE of it, and the clone is what the material samples: three keys its GPU
-  // texture on the sampler parameters, so a clone that changes wrapS/wrapT or
-  // colour space gets an upload of its own while the original is never uploaded
-  // at all — disposing only the original frees nothing. When nothing diverged
-  // they are the same object and one dispose is enough.
-  useEffect(() => {
-    return () => {
-      repackedFlowmap?.dispose();
-      if (anisotropyMap !== repackedFlowmap) anisotropyMap?.dispose();
-    };
-  }, [repackedFlowmap, anisotropyMap]);
-
-  // Every OTHER slot's binding may equally have produced a clone, and each one
-  // is a GPU upload of its own. `releaseBoundTexture` frees exactly those and
-  // leaves the loader's shared cache entries alone, so a slot that needed
-  // nothing costs nothing here. Listed rather than folded into an array literal
-  // in the dependency list, which would be a new array every render and free
-  // the textures the material is still sampling.
-  //
-  // Same shape as the flowmap effect above and as the per-clone dispose the
-  // colour-space retag used to carry inside the material slot, so the exposure
-  // is unchanged: under StrictMode's mount → unmount → mount the cleanup fires
-  // once on a still-live clone. three's dispose is refcounted per source and
-  // clears only the renderer's per-texture properties — the pixels live on the
-  // shared `source` — so the remount re-uploads rather than sampling nothing.
-  // Replacement is ordered safely: R3F applies the new props during commit,
-  // before React runs this cleanup for the old ones.
-  useEffect(() => {
-    return () => {
-      releaseBoundTexture(albedoMap);
-      releaseBoundTexture(normalMap);
-      releaseBoundTexture(roughnessMap);
-      releaseBoundTexture(metalnessMap);
-      releaseBoundTexture(emissiveMap);
-      releaseBoundTexture(aoMap);
-      releaseBoundTexture(displacementMap);
-    };
-  }, [albedoMap, normalMap, roughnessMap, metalnessMap, emissiveMap, aoMap, displacementMap]);
-
-  // If any requested slot resolved to `unavailable`, surface the FIRST
-  // such path as the placeholder label. Listing more than one would
-  // bury the user under text.
-  const firstMissingPath = useMemo(() => {
-    for (const slot of TEXTURE_PROPERTIES) {
-      const result = textureSlots[slot];
-      const requested = textureRequests[slot];
-      if (result && result.status === 'unavailable' && requested) {
-        return requested;
-      }
-    }
-    return null;
-  }, [textureSlots, textureRequests]);
-
-  // A ViewportTexture albedo whose target's pass is cyclic never renders —
-  // same visible fact as a missing file, so it takes the same magenta
-  // placeholder branch below rather than silently sampling the unwritten
-  // target (`useViewportTextureSlot`'s `cyclic`).
-  const materialUnresolved = firstMissingPath !== null || viewportAlbedoCyclic;
+  // A ViewportTexture albedo whose target's pass is cyclic never renders — same
+  // visible fact as a missing file, so it takes the same magenta placeholder
+  // branch below rather than silently sampling the unwritten target.
+  const materialUnresolved = firstMissingPath !== null || viewportCyclic;
 
   // A StandardMaterial3D carrying `billboard_mode` turns the whole mesh to
   // face the camera — the same per-material effect Godot's shader applies, and
@@ -460,10 +158,10 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const meshRef = useRef<THREE.Mesh | null>(null);
   useBillboard(meshRef, materialScalars?.billboardMode);
 
-  // cast_shadow mode 2 (DOUBLE_SIDED) sets material.shadowSide = DoubleSide;
-  // mode 3 (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps
-  // casting — see MeshShell for why that is NOT `visible = false`.
-  const shadowFlags = shadowCastingFlags(properties.castShadow);
+  // Mode 2 (DOUBLE_SIDED) reaches three's depth material per mesh; mode 3
+  // (SHADOWS_ONLY) hides the mesh from the colour buffer while it keeps casting
+  // — see MeshShell for why that is NOT `visible = false`.
+  const shadowFlags = shadowCastingEffects(properties.castShadow);
   // A blend-mode-transparent material (additive / subtractive / multiply)
   // writes no shadow: Godot excludes those surfaces from the shadow pass, so an
   // additive glow sprite must not drop a solid silhouette on the ground.
@@ -482,6 +180,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     visible,
     castShadow,
     shadowsOnly: shadowFlags.shadowsOnly,
+    onBeforeShadow: shadowFlags.onBeforeShadow,
     godotLayers: properties.layers,
     subtree: children,
   };
@@ -509,7 +208,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <ArrayMeshSurfaces
           mesh={arrayMeshResult.value}
           overrides={meshOverrides}
-          shadowSide={shadowFlags.shadowSide}
         />
       </MeshShell>
     );
@@ -527,7 +225,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
             mesh={sceneArrayMesh.resource}
             sceneMaterials={sceneArrayMesh.sceneMaterials}
             overrides={meshOverrides}
-            shadowSide={shadowFlags.shadowSide}
           />
         ) : (
           UNRESOLVED_MESH
@@ -565,41 +262,23 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <ExternalMaterialSlot
           path={primarySource.path}
           attach={primaryAttach}
-          shadowSide={shadowFlags.shadowSide}
         />
       ) : (
         <StandardMaterialSlot
           scalars={materialScalars}
-          albedoMap={albedoMap}
-          normalMap={normalMap}
-          roughnessMap={roughnessMap}
-          metalnessMap={metalnessMap}
-          emissiveMap={emissiveMap}
-          aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
-          displacementMap={displacementMap}
-          anisotropyMap={anisotropyMap}
-          shadowSide={shadowFlags.shadowSide}
+          {...maps}
           meshType={meshResource?.type}
           attach={primaryAttach}
         />
       )}
-      {materialSources.slice(1).map((source, i) =>
-        source?.kind === 'path' ? (
-          <ExternalMaterialSlot
-            key={`mat-${i + 1}`}
-            path={source.path}
-            attach={`material-${i + 1}`}
-            shadowSide={shadowFlags.shadowSide}
-          />
-        ) : (
-          <SecondarySurfaceMaterial
-            key={`mat-${i + 1}`}
-            attach={`material-${i + 1}`}
-            subResource={source?.resource}
-            shadowSide={shadowFlags.shadowSide}
-          />
-        )
-      )}
+      {materialSources.slice(1).map((source, i) => (
+        <SurfaceMaterialSlot
+          key={`mat-${i + 1}`}
+          source={source}
+          attach={`material-${i + 1}`}
+          triplanarMesh={meshResource}
+        />
+      ))}
     </MeshShell>
   );
 }
@@ -615,6 +294,8 @@ interface MeshShellProps {
   castShadow: boolean;
   /** `cast_shadow = SHADOWS_ONLY` (3): cast, but draw nothing. */
   shadowsOnly: boolean;
+  /** `cast_shadow = DOUBLE_SIDED` (2) reaches the depth material through this. */
+  onBeforeShadow: THREE.Object3D['onBeforeShadow'];
   /** `layers` — the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
   godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
@@ -644,6 +325,7 @@ function MeshShell({
   visible,
   castShadow,
   shadowsOnly,
+  onBeforeShadow,
   godotLayers,
   subtree,
   children,
@@ -657,6 +339,10 @@ function MeshShell({
       scale={scale}
       visible={visible}
       castShadow={castShadow}
+      // three fires this per mesh per light, after `getDepthMaterial` has set
+      // the side (`WebGLShadowMap.js:477,535,549`) — the only per-mesh reach
+      // into a depth material three shares across objects.
+      onBeforeShadow={onBeforeShadow}
       receiveShadow
       // Godot's `layers`, carried for the consumers that filter on it — today
       // `Decal.cull_mask`. Set on every branch's mesh, including the placeholder
@@ -682,132 +368,6 @@ function MeshShell({
   );
 }
 
-interface SecondarySurfaceMaterialProps {
-  attach: string;
-  subResource: TscnInternalResource | undefined;
-  shadowSide?: THREE.Side;
-}
-
-/**
- * Material attached at `material-N` (N > 0) for multi-surface meshes.
- *
- * Scalar properties only — texture slots are unwired, not unreachable. This is a
- * component rendered once per surface, so it may call `useResource` itself, as
- * `ExternalMaterialSlot` does for the external-ArrayMesh path.
- *
- * An unpopulated slot gets Godot's default 3D material: the renderer's fallback
- * is per surface index, not per mesh, so a slot past the material array is
- * exactly the material-less case surface 0 would hit.
- */
-function SecondarySurfaceMaterial({
-  attach,
-  subResource,
-  shadowSide,
-}: SecondarySurfaceMaterialProps) {
-  if (!subResource) {
-    // Literal-only, so the key is constant and the empty slot never remounts.
-    const fallback = materialProgramInputs({
-      props: {
-        attach,
-        color: GODOT_DEFAULT_ALBEDO,
-        metalness: GODOT_DEFAULT_METALLIC,
-        roughness: GODOT_DEFAULT_ROUGHNESS,
-        shadowSide: shadowSide ?? null,
-      },
-    });
-    return <meshStandardMaterial key={fallback.key} {...fallback.props} />;
-  }
-  const scalars = parseStandardMaterial3DScalars(
-    subResource.data as Record<string, string>
-  );
-  // Through the same resolution slot 0 uses, so one mesh cannot show two results
-  // for the same material. These slots never load a texture (see above), which is
-  // exactly the case where `emission_operator = MULTIPLY` collapses to no emission
-  // at all — Godot's absent sampler reads black.
-  const emission = resolveEmission(scalars, scalars.emissionOperator, false);
-  const program = materialProgramInputs({
-    props: {
-      attach,
-      color: scalars.color,
-      metalness: scalars.metalness,
-      roughness: scalars.roughness,
-      transparent: scalars.transparent,
-      opacity: scalars.opacity,
-      ...materialBlendProps(scalars),
-      depthTest: scalars.depthTest,
-      side: scalars.side,
-      shadowSide: shadowSide ?? null,
-      emissive: emission.emissive,
-      emissiveIntensity: emission.emissiveIntensity,
-    },
-  });
-  return <meshStandardMaterial key={program.key} {...program.props} />;
-}
-
-/**
- * Clone the loaded texture (if any) with the material's own texture state
- * applied. Returns `undefined` when nothing is loaded yet, so the
- * `<meshStandardMaterial>` falls back to `null` for that slot.
- */
-function transformedTexture(
-  resolved: { value: THREE.Texture | undefined } | null,
-  state: MaterialTextureState | null,
-  slot: TextureSlot
-): THREE.Texture | undefined {
-  const value = resolved?.value;
-  if (!value) return undefined;
-  if (!state) return value;
-  return bindSlotTexture(value, slot, state);
-}
-
-/**
- * A synchronously-resolved procedural texture (e.g. GradientTexture2D) takes
- * precedence over the async-loaded slot for the same map. Returns a
- * `transformedTexture`-shaped slot so the UV-transform path is shared.
- */
-function effectiveSlot(
-  procedural: THREE.Texture | undefined,
-  asyncSlot: { value: THREE.Texture | undefined } | null
-): { value: THREE.Texture | undefined } | null {
-  return procedural ? { value: procedural } : asyncSlot;
-}
-
-interface ProceduralTextureSlots {
-  textures: Partial<Record<TextureSlot, THREE.Texture>>;
-  /** Cache keys for the slots that resolved — exactly those, so a key is never
-   *  pinned for a texture the cache does not hold. */
-  keys: string[];
-}
-
-/**
- * Rasterise every material texture slot that references an inline procedural
- * texture (currently `SubResource(GradientTexture2D)`) into a THREE.Texture,
- * collecting the cache keys those same slots must pin. Slots carrying an
- * ExtResource image, a non-gradient SubResource, or nothing are omitted,
- * leaving the async `useResource` path to handle them.
- *
- * One walk yields both: a second walk deriving keys on its own is free to
- * disagree with this one about which references are procedural.
- */
-function resolveProceduralTextures(
-  materialSubResource: TscnInternalResource | undefined,
-  internalResources: readonly TscnInternalResource[]
-): ProceduralTextureSlots {
-  const out: ProceduralTextureSlots = { textures: {}, keys: [] };
-  if (!materialSubResource) return out;
-  const data = materialSubResource.data as Record<string, unknown>;
-  for (const slot of TEXTURE_PROPERTIES) {
-    const raw = data[slot];
-    if (typeof raw !== 'string') continue;
-    const resolved = resolveProceduralTexture(raw, internalResources);
-    if (resolved) {
-      out.textures[slot] = resolved.texture;
-      out.keys.push(resolved.key);
-    }
-  }
-  return out;
-}
-
 /**
  * What a mesh reference that resolves to nothing renders as. One value, because
  * three branches reach it: no mesh at all, an external `.tres` that failed, and a
@@ -822,9 +382,9 @@ const UNRESOLVED_MESH = (
 
 /**
  * A decoded ArrayMesh's geometry plus one material slot per draw group. Each
- * surface's material is resolved through the pipeline by its own
- * `<ExternalMaterialSlot>`, which keeps `useResource` one-per-component (rules of
- * hooks) while still loading textured materials for every surface.
+ * surface resolves its own material — scene sub-resource or `.tres`, textures
+ * included — through its own `<SurfaceMaterialSlot>`, which keeps `useResource`
+ * one-per-component (rules of hooks) for any surface count.
  *
  * Shared by both ArrayMesh sources — an external `.tres` and a scene's own
  * `[sub_resource]` — because where the bytes came from stops mattering here.
@@ -836,12 +396,10 @@ const UNRESOLVED_MESH = (
  */
 function ArrayMeshSurfaces({
   mesh,
-  shadowSide,
   sceneMaterials,
   overrides,
 }: {
   mesh: ArrayMeshResource;
-  shadowSide: THREE.Side | undefined;
   /**
    * For a mesh inlined in the scene: its own `[sub_resource]` materials, by id.
    * Those cannot be addressed by a resource path, so they arrive already resolved
@@ -864,22 +422,7 @@ function ArrayMeshSurfaces({
             ? { kind: 'path', path: mesh.materialPaths[i]! }
             : undefined;
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
-        // A scene-local material is already in hand; only a PATH needs the pipeline.
-        return source?.kind === 'scene' ? (
-          <StandardMaterialSlot
-            key={`surf-${i}`}
-            scalars={parseStandardMaterial3DScalars(source.resource.data as Record<string, string>)}
-            attach={attach}
-            shadowSide={shadowSide}
-          />
-        ) : (
-          <ExternalMaterialSlot
-            key={`surf-${i}`}
-            path={source?.path ?? null}
-            attach={attach}
-            shadowSide={shadowSide}
-          />
-        );
+        return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
       })}
     </>
   );
@@ -1077,59 +620,5 @@ function findMeshOwnMaterial(
   return typeof material === 'string' ? material : undefined;
 }
 
-
-/**
- * Walk the material's texture slots and resolve each `ExtResource("id")`
- * reference to the underlying path string. Returns `{ slot: path | undefined }`
- * so the caller can fan out to `useResource` for each.
- */
-function collectTextureRequests(
-  materialSubResource: TscnInternalResource | undefined,
-  externalResources: readonly TscnExternalResource[]
-): Partial<Record<TextureSlot, string>> {
-  if (!materialSubResource) return {};
-  const out: Partial<Record<TextureSlot, string>> = {};
-  const data = materialSubResource.data as Record<string, unknown>;
-  for (const slot of TEXTURE_PROPERTIES) {
-    const raw = data[slot];
-    if (typeof raw !== 'string') continue;
-    const parsed = parseResourceReference(raw);
-    if (!parsed || parsed.type !== 'ExtResource') continue;
-    const ext = externalResources.find((r) => r.id === parsed.id);
-    if (ext?.path) {
-      out[slot] = ext.path;
-    }
-  }
-  return out;
-}
-
-interface ShadowFlags {
-  castShadow: boolean;
-  /** Mesh still casts a shadow but isn't drawn into the colour buffer. */
-  shadowsOnly: boolean;
-  /** Override material.shadowSide so both faces participate in the shadow pass. */
-  shadowSide?: THREE.Side;
-}
-
-/**
- * Decode Godot's `cast_shadow` enum (0=OFF, 1=ON, 2=DOUBLE_SIDED,
- * 3=SHADOWS_ONLY) into the three flags the renderer needs. Previously
- * only the boolean was returned and modes 2 and 3 collapsed silently to
- * castShadow=true.
- */
-function shadowCastingFlags(value: number | undefined): ShadowFlags {
-  // class_geometryinstance3d.html: cast_shadow defaults to 1
-  // (SHADOW_CASTING_SETTING_ON), so an absent key means the mesh DOES cast.
-  if (value === 0) {
-    return { castShadow: false, shadowsOnly: false };
-  }
-  if (value === 2) {
-    return { castShadow: true, shadowsOnly: false, shadowSide: THREE.DoubleSide };
-  }
-  if (value === 3) {
-    return { castShadow: true, shadowsOnly: true };
-  }
-  return { castShadow: true, shadowsOnly: false };
-}
 
 export { THREE };

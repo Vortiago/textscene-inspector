@@ -1,11 +1,10 @@
 /**
- * `SecondarySurfaceMaterial` (the `material-N`, N > 0 slot) is mounted like any
- * other React element, so a `.tscn` re-parse mutates props on the material three
- * already compiled. It re-derives its baked program parameters
- * (`WebGLPrograms.js:56` `getParameters`) only on a `material.version` bump or
- * one of `WebGLRenderer.js:2388`'s fixed re-checks, so this slot's key carries
- * the two parameters it can actually change: the `opaque` composite and the side
- * flags. No texture, vertex colour or physical feature reaches this slot.
+ * The `material-N` (N > 0) slot is mounted like any other React element, so a
+ * `.tscn` re-parse mutates props on the material three already compiled. It
+ * re-derives its baked program parameters (`WebGLPrograms.js:56`
+ * `getParameters`) only on a `material.version` bump or one of
+ * `WebGLRenderer.js:2388`'s fixed re-checks, so the slot's key must carry every
+ * parameter an edit can move — here the `opaque` composite and the side flags.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

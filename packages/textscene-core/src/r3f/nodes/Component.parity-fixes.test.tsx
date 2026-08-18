@@ -8,7 +8,7 @@
  *
  * Audit slot numbers from STRICT-VERIFICATION.md Section 1:
  *   14a — surface_material_override slot N>0 → mesh.material[N]
- *   16a — cast_shadow=2 → material.shadowSide === DoubleSide
+ *   16a — cast_shadow=2 → the depth pass draws both faces
  *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
  *   38a — ao_texture → material.aoMap is a THREE.Texture
  *   59a — PrismMesh rotateY(π/6) aligns triangular face with +X
@@ -82,7 +82,7 @@ async function renderMesh(
 }
 
 describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
-  it('audit slot 16a — cast_shadow=2 (DOUBLE_SIDED) → material.shadowSide === DoubleSide', async () => {
+  it('audit slot 16a — cast_shadow=2 (DOUBLE_SIDED) → the depth pass draws both faces', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
@@ -102,7 +102,19 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
-    expect(material.shadowSide).toBe(THREE.DoubleSide);
+
+    // `cast_shadow` is GeometryInstance3D state, never material state
+    // (`servers/rendering/renderer_scene_cull.cpp:732`), so it lands on the
+    // depth material three built for this mesh — `getDepthMaterial` assigns the
+    // side, then the per-object hook runs (`WebGLShadowMap.js:477,535,549`).
+    const depthMaterial = new THREE.MeshDepthMaterial();
+    depthMaterial.side = material.shadowSide ?? THREE.BackSide;
+    mesh.onBeforeShadow(
+      null as never, new THREE.Scene(), null as never, null as never,
+      mesh.geometry, depthMaterial, null as never
+    );
+    expect(depthMaterial.side).toBe(THREE.DoubleSide);
+    expect(material.shadowSide).toBeNull();
   });
 
   it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → still casts, draws no colour', async () => {

@@ -26,10 +26,9 @@ import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../base/node3d/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
-import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
-import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
@@ -37,6 +36,8 @@ import { useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
+import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMaterial';
 
 const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 
@@ -52,7 +53,7 @@ export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
-  properties: Node3DProperties & { material?: string };
+  properties: Node3DProperties & { material?: string; castShadow?: number };
   children?: ReactNode;
 }
 
@@ -87,17 +88,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
-  const scalars = useMemo(() => {
+  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource; the
+  // slot renders either, textures included.
+  const materialSource = useMemo((): MaterialSource | undefined => {
     const sub = resolveStandardMaterial(properties.material, internalResources);
-    return sub ? parseStandardMaterial3DScalars(sub.data as Record<string, string>) : null;
-  }, [properties.material, internalResources]);
-
-  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource; those
-  // load through the material pipeline.
-  const externalMaterialPath = useMemo(
-    () => (scalars ? null : resolveExtResourcePath(properties.material, externalResources)),
-    [scalars, properties.material, externalResources]
-  );
+    if (sub) return { kind: 'scene', resource: sub };
+    const path = resolveExtResourcePath(properties.material, externalResources);
+    return path === null ? undefined : { kind: 'path', path };
+  }, [properties.material, internalResources, externalResources]);
 
   // Absorbed while the ancestor's boolean is pending or ready; NOT while it has failed,
   // which is what makes every contributor start drawing itself again.
@@ -121,6 +119,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.contributions.length > 1;
+  const shadow = shadowCastingEffects(properties.castShadow);
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 
@@ -147,12 +146,19 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // The node drawing its own solid: what a lone root IS, and what a combining root falls
   // back to while the library loads or after it failed.
   const ownSolid = geometry && (
-    <mesh castShadow receiveShadow>
+    <mesh
+      castShadow={shadow.castShadow}
+      onBeforeShadow={shadow.onBeforeShadow}
+      receiveShadow
+    >
       {geometry}
-      {externalMaterialPath === null ? (
-        <StandardMaterialSlot scalars={scalars} />
-      ) : (
-        <ExternalMaterialSlot path={externalMaterialPath} />
+      <SurfaceMaterialSlot source={materialSource} />
+      {/* SHADOWS_ONLY: mounted last, so it is the material R3F attaches. */}
+      {shadow.shadowsOnly && (
+        <meshBasicMaterial
+          key={CSG_SHADOWS_ONLY_MATERIAL.key}
+          {...CSG_SHADOWS_ONLY_MATERIAL.props}
+        />
       )}
     </mesh>
   );
@@ -161,7 +167,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} fallback={ownSolid}>
+        <CsgRootMesh plan={plan} shadow={shadow} fallback={ownSolid}>
           {children}
         </CsgRootMesh>
       </group>

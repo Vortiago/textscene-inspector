@@ -15,4 +15,6 @@ import type { Node3DProperties } from '../../../base/node3d/types';
 export interface CSGCombiner3DProperties extends Node3DProperties {
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
+  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  castShadow?: number;
 }

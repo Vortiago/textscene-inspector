@@ -157,3 +157,55 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
     expect(isGodotDefaultMaterial(materials[0]!)).toBe(true);
   });
 });
+
+/**
+ * `cast_shadow` is GeometryInstance3D state, not material state
+ * (`servers/rendering/renderer_scene_cull.cpp:732`), so it must survive a
+ * material that arrives already built from a `.tres`.
+ */
+describe('<MeshInstance3D> cast_shadow through an external .tres material', () => {
+  /** three's own shadow pass: `result.side` first, then the per-object hook. */
+  function shadowSideAfterPass(mesh: THREE.Mesh, material: THREE.Material): THREE.Side {
+    // WebGLShadowMap.js:477 — `shadowSide` wins, else the acne-mitigating flip.
+    const flip: Record<number, THREE.Side> = {
+      [THREE.FrontSide]: THREE.BackSide,
+      [THREE.BackSide]: THREE.FrontSide,
+      [THREE.DoubleSide]: THREE.DoubleSide,
+    };
+    const depthMaterial = new THREE.MeshDepthMaterial();
+    depthMaterial.side = material.shadowSide ?? flip[material.side as number]!;
+    // WebGLShadowMap.js:535,549 — fired per mesh, per light, after the above.
+    // three passes the scene, not the object, as the second argument.
+    mesh.onBeforeShadow(
+      null as never, new THREE.Scene(), null as never, null as never,
+      mesh.geometry, depthMaterial, null as never
+    );
+    return depthMaterial.side;
+  }
+
+  it('casts double-sided shadows when the material came from a .tres', async () => {
+    const seeded = loadedMaterials();
+    const fake = createFakeResourceLoader();
+    for (const [path, material] of seeded) fake.materials.seed(path, material);
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
+          <MeshInstance3D
+            node={makeNode({
+              castShadow: 2,
+              surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]),
+            })}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const mesh = findMesh(renderer.scene);
+    const material = mesh.material as THREE.Material;
+    expect(shadowSideAfterPass(mesh, material)).toBe(THREE.DoubleSide);
+
+    // The cached `.tres` material is shared by every node referencing it, so a
+    // node's own cast_shadow must not be written onto it.
+    expect(material).toBe(seeded.get(EXTERNAL_PATH));
+    expect(material.shadowSide).toBeNull();
+  });
+});

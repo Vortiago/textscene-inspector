@@ -41,8 +41,6 @@ export interface StandardMaterialSlotProps {
   displacementMap?: THREE.Texture;
   /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
   anisotropyMap?: THREE.Texture;
-  /** Override for shadow-pass side culling (Godot DOUBLE_SIDED cast_shadow). */
-  shadowSide?: THREE.Side;
   /**
    * The underlying mesh type (PlaneMesh, BoxMesh, etc.). Reserved for
    * per-mesh-type culling defaults; currently unused (see git history for the
@@ -80,14 +78,13 @@ export function StandardMaterialSlot({
   aoMap,
   displacementMap,
   anisotropyMap,
-  shadowSide,
   meshType: _meshType,
   attach,
 }: StandardMaterialSlotProps) {
   if (!scalars) {
-    // Not literal-only — `attach` and `shadowSide` come off props — but neither is
-    // a program input, and every one that IS here is a module constant, so the key
-    // is constant and this fallback never remounts.
+    // Not literal-only — `attach` comes off props — but it is not a program
+    // input, and every one that IS here is a module constant, so the key is
+    // constant and this fallback never remounts.
     const fallback = materialProgramInputs({
       props: {
         attach,
@@ -95,7 +92,6 @@ export function StandardMaterialSlot({
         metalness: GODOT_DEFAULT_METALLIC,
         roughness: GODOT_DEFAULT_ROUGHNESS,
         side: THREE.FrontSide,
-        shadowSide: shadowSide ?? null,
       },
     });
     return <meshStandardMaterial key={fallback.key} {...fallback.props} />;
@@ -160,7 +156,6 @@ export function StandardMaterialSlot({
     depthTest: scalars.depthTest,
     ...blendProps,
     side: effectiveSide,
-    shadowSide: shadowSide ?? null,
     map: albedoMap ?? null,
     normalMap: normalMap ?? null,
     normalScale,

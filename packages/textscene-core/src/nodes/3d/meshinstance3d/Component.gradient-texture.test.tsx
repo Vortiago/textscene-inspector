@@ -151,7 +151,9 @@ describe('<MeshInstance3D> procedural texture pins', () => {
       data: {
         id: 'StandardMaterial3D_mixed',
         albedo_texture: 'SubResource("GradientTexture2D_qhu5r")',
-        // Resolves to nothing procedural: the async slot handles it.
+        // Resolves to nothing procedural: the async slot handles it. Gated on,
+        // or the slot is dropped before the walk and the mixed case goes untested.
+        normal_enabled: 'true',
         normal_texture: 'SubResource("ImageTexture_plain")',
         roughness_texture: 'ExtResource("7")',
       } as Record<string, string>,

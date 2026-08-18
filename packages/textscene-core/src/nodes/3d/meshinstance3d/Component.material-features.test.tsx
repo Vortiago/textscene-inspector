@@ -194,6 +194,8 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
         data: {
           id: 'mat',
           albedo_texture: 'ExtResource("1")',
+          // Godot emits the normal sampler only inside `if (features[…])`.
+          normal_enabled: 'true',
           normal_texture: 'ExtResource("2")',
         } as Record<string, string>,
       },

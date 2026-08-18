@@ -21,12 +21,20 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 
+const ALBEDO_PATH = 'res://textures/albedo.png';
+
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_blue', path: 'res://blue_material.tres', type: 'Material' },
+  { id: '2_tex', path: ALBEDO_PATH, type: 'Texture2D' },
 ];
 
 const INTERNALS: readonly TscnInternalResource[] = [
   { id: 'Mat_inline', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
+  {
+    id: 'Mat_textured',
+    type: 'StandardMaterial3D',
+    data: { albedo_texture: 'ExtResource("2_tex")' },
+  },
 ];
 
 function makeNode(material: string | undefined): TscnNode {
@@ -40,6 +48,9 @@ function makeNode(material: string | undefined): TscnNode {
 async function render(material: string | undefined, seed?: THREE.Material) {
   const fake = createFakeResourceLoader();
   if (seed) fake.materials.seed('res://blue_material.tres', seed);
+  const albedo = new THREE.Texture();
+  albedo.needsUpdate = false;
+  fake.textures.seed(ALBEDO_PATH, albedo);
   const node = makeNode(material);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
@@ -59,6 +70,11 @@ describe('<CsgPrimitive> material resolution', () => {
     const loaded = new THREE.MeshStandardMaterial({ color: 0x5ab7ff });
     const renderer = await render('ExtResource("1_blue")', loaded);
     expect(materialOf(renderer)).toBe(loaded);
+  });
+
+  it('resolves an inline material\'s texture slots, as a mesh surface does', async () => {
+    const renderer = await render('SubResource("Mat_textured")');
+    expect(materialOf(renderer).map).toBeInstanceOf(THREE.Texture);
   });
 
   it('still parses an inline SubResource material', async () => {
