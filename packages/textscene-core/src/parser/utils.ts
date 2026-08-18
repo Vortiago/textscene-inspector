@@ -3,6 +3,112 @@ export interface ParsedHeading {
   attributes: Record<string, string>;
 }
 
+/** ASCII whitespace: a heading separates its tokens on any of it, not just `' '`. */
+function isSpaceCode(code: number): boolean {
+  return code === 32 || (code >= 9 && code <= 13);
+}
+
+/** `[A-Za-z0-9_]` — the characters a constructor name is built from. */
+function isIdentCode(code: number): boolean {
+  return (
+    (code >= 97 && code <= 122) ||
+    (code >= 65 && code <= 90) ||
+    (code >= 48 && code <= 57) ||
+    code === 95
+  );
+}
+
+/** First index at or after `pos` that is whitespace (or `str.length`). */
+function skipToSpace(str: string, pos: number): number {
+  let i = pos;
+  while (i < str.length && !isSpaceCode(str.charCodeAt(i))) i++;
+  return i;
+}
+
+/**
+ * Index just past the quote closing the string whose OPENING quote is at `pos`;
+ * -1 if it never closes. Godot's escape rule: `\` consumes the next character,
+ * and the next unescaped `"` ends the string. The one shared statement of that
+ * rule for whole-string scans — {@link scanValueChunk} restates it because it
+ * resumes mid-string across chunks and so has no opening quote to anchor on.
+ */
+function scanQuoted(str: string, pos: number): number {
+  for (let i = pos + 1; i < str.length; i++) {
+    if (str[i] === '\\') i++; // skip the escaped character
+    else if (str[i] === '"') return i + 1;
+  }
+  return -1;
+}
+
+/**
+ * Index just past the `close` that matches the `open` at `start`, counting
+ * nesting and ignoring delimiters inside quoted strings; -1 if it never closes.
+ */
+function scanBalanced(str: string, start: number, open: string, close: string): number {
+  let depth = 0;
+  for (let i = start; i < str.length; i++) {
+    const c = str[i];
+    if (c === '"') {
+      // An unterminated string swallows the rest, so nothing can still close.
+      const end = scanQuoted(str, i);
+      if (end === -1) return -1;
+      i = end - 1;
+    } else if (c === open) depth++;
+    else if (c === close && --depth === 0) return i + 1;
+  }
+  return -1;
+}
+
+/**
+ * Scan one attribute value starting at `pos` in `str`, returning it verbatim
+ * (quotes and escapes intact) plus the index just past it. A quoted string, a
+ * `[...]` array and a `Name(...)` constructor are delimiter-balanced so a space
+ * or a nested delimiter inside them doesn't end the value; anything else — and
+ * any value whose delimiter never closes — runs to the next whitespace, which
+ * is where the next attribute can start.
+ */
+function scanHeadingValue(str: string, pos: number): { value: string; nextPos: number } {
+  const len = str.length;
+  const first = str[pos];
+  let end = -1;
+
+  if (first === '"') {
+    end = scanQuoted(str, pos);
+  } else if (first === '[') {
+    end = scanBalanced(str, pos, '[', ']');
+  } else {
+    // A constructor is an identifier IMMEDIATELY followed by `(` — a space
+    // before the paren belongs to the next attribute, not to this value.
+    let i = pos;
+    while (i < len && isIdentCode(str.charCodeAt(i))) i++;
+    if (str[i] === '(') end = scanBalanced(str, i, '(', ')');
+  }
+
+  if (end === -1) end = skipToSpace(str, pos);
+  return { value: str.slice(pos, end), nextPos: end };
+}
+
+/**
+ * What counts as a quoted literal, for every caller that unwraps one: a value
+ * quoted at BOTH ends. Anything else (including a lone `"`) passes through.
+ */
+function stripQuotes(value: string): string {
+  return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
+    ? value.slice(1, -1)
+    : value;
+}
+
+/**
+ * Unwrap a quoted heading value: strip the surrounding quotes and decode `\"`.
+ * Heading attributes are carried as source text — a node parser decodes the
+ * rest of Godot's escapes ({@link unquoteString}) when it reads a string
+ * property — so a structured value stays verbatim and re-parseable.
+ */
+function unquoteHeadingValue(value: string): string {
+  if (!value.startsWith('"')) return value;
+  return stripQuotes(value).replace(/\\"/g, '"');
+}
+
 export function parseHeading(line: string): ParsedHeading | null {
   const trimmed = line.trim();
 
@@ -12,34 +118,39 @@ export function parseHeading(line: string): ParsedHeading | null {
 
   const content = trimmed.slice(1, -1).trim();
 
-  const spaceIndex = content.indexOf(' ');
-  if (spaceIndex === -1) {
-    return { type: content, attributes: {} };
-  }
-
+  // No whitespace means `spaceIndex === content.length`, so the type is the
+  // whole content and the attribute scan runs over an empty string.
+  const spaceIndex = skipToSpace(content, 0);
   const type = content.slice(0, spaceIndex);
-  const attributesStr = content.slice(spaceIndex + 1);
+  const attributesStr = content.slice(spaceIndex);
 
   const attributes: Record<string, string> = {};
-  // `PackedStringArray\s*\(`: the tokenizer discards any character <= 32 before a
-  // token (variant_parser.cpp:416), so `PackedStringArray ("*.png")` loads. Written
-  // out rather than composed from `packedArrayCallAnywhere`, whose capture group
-  // would shift the `match[1]`/`match[2]` reads below.
-  const attrRegex = /(\w+)=("(?:[^"\\]|\\.)*"|PackedStringArray\s*\([^)]*\)|\[[^\]]*\]|[^\s]+)/g;
-  let match: RegExpExecArray | null;
+  let pos = 0;
+  const len = attributesStr.length;
 
-  while ((match = attrRegex.exec(attributesStr)) !== null) {
-    const key = match[1];
-    let value = match[2];
+  while (pos < len) {
+    while (pos < len && isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
+    if (pos >= len) break;
 
-    if (!key || !value) continue;
+    const keyStart = pos;
+    while (pos < len && attributesStr[pos] !== '=' && !isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
 
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value.slice(1, -1);
-      value = value.replace(/\\"/g, '"');
+    // Not `key=…`: drop this token alone and resync at the next whitespace,
+    // rather than abandoning every attribute that follows it.
+    if (pos === keyStart || attributesStr[pos] !== '=') {
+      pos = skipToSpace(attributesStr, pos);
+      continue;
     }
+    const key = attributesStr.slice(keyStart, pos);
+    pos++; // skip '='
 
-    attributes[key] = value;
+    // An empty capture means `pos` sits on whitespace or the end (`key=` with
+    // nothing after it), so the skip at the top of the loop still advances.
+    const { value: rawValue, nextPos } = scanHeadingValue(attributesStr, pos);
+    pos = nextPos;
+    if (!rawValue) continue;
+
+    attributes[key] = unquoteHeadingValue(rawValue);
   }
 
   return { type, attributes };
@@ -172,16 +283,15 @@ const ESCAPE_MAP: Record<string, string> = {
  * reads a string property (label/button text, …).
  */
 export function unquoteString(value: string): string {
-  let v = value;
-  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
-    v = v.slice(1, -1);
-  }
-  return v.replace(/\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g, (_match, seq: string) => {
-    if (seq[0] === 'u' || seq[0] === 'U') {
-      return String.fromCodePoint(parseInt(seq.slice(1), 16));
-    }
-    return ESCAPE_MAP[seq] ?? seq;
-  });
+  return stripQuotes(value).replace(
+    /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g,
+    (_match, seq: string) => {
+      if (seq[0] === 'u' || seq[0] === 'U') {
+        return String.fromCodePoint(parseInt(seq.slice(1), 16));
+      }
+      return ESCAPE_MAP[seq] ?? seq;
+    },
+  );
 }
 
 /**
