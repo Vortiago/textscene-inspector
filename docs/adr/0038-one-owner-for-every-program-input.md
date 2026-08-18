@@ -17,6 +17,9 @@
   owner like any other, while the per-light cookie quad — memoised on every
   input, its shadow `defines` included, and disposed on replacement — is a named
   imperative exemption; what that ADR decided is untouched either way).
+  ADR-0039 (one StandardMaterial3D derivation, two adapters — the bag this owner
+  keys is derived there, and its `MaterialKey` audit is the field-by-field
+  companion to the term list here).
 
 ## Context
 
@@ -55,6 +58,39 @@ covered — `premultipliedAlpha`, the `opaque` composite, and `defines` VALUES,
 which the map key hashed the names of and not the values. Each was inert, and
 each for a reason written down nowhere; an unstated reason is not one anything
 can rely on staying true.
+
+### Keying a program is also Godot's own model, not only a three workaround
+
+Everything above is a hazard report, and it is the reason this decision was
+FORCED. It is not the only reason the answer is a key, and a reader who leaves
+with only the hazard will read the key as a workaround for a three defect that a
+tidier renderer would not need.
+
+Godot keys programs the same way. `BaseMaterial3D::MaterialKey`
+(`scene/resources/material.h:359-393`) is a packed struct of exactly the terms
+that change the emitted shader — the enums, five booleans, and the `feature_mask`
+/ `flags` bitmasks. `_compute_key()` (`:421`) packs one, and `_update_shader()`
+(declared `:530`, body `scene/resources/material.cpp:685`) returns immediately
+when the new key equals the current one (`:690-693`), and otherwise looks the key
+up in a static `shader_map` (`material.h:416`). `CanvasItemMaterial` does the same
+with a three-field union (`scene/resources/canvas_item_material.h:55-71`,
+`:90-97`). So "the set of props that decides a program's identity" is a concept
+this codebase INHERITS from the engine it ports, not one three imposed on it —
+which is why the term list below is arbitrated against `WebGLPrograms` and the
+QUESTION is arbitrated against `MaterialKey`. ADR-0039's audit table is that
+second arbitration, field by field.
+
+The two run in OPPOSITE DIRECTIONS, and conflating them is the mistake this
+paragraph exists to prevent. Godot's key is a SHARING key: many materials with
+the same key share one compiled shader, refcounted in `shader_map`
+(`material.cpp:696-720`), and a material whose key stops matching hands its old
+entry back. Ours is a SEPARATING key: it distinguishes one material from its own
+PAST SELF, and nothing is shared across siblings — two identical materials
+mounting the same key is exactly the case where nothing should happen. That is
+the hazard's doing. Godot rebuilds a material's program from its current key
+whenever the key moves; a mounted React material never re-derives at all, so the
+only way to make the key move anything is to replace the material it is on.
+
 
 ## Decision
 

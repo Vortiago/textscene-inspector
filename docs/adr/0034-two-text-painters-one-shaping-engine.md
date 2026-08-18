@@ -1,3 +1,21 @@
+**Superseded by ADR-0040 (2026-08-18): the painter follows Godot's own glyph path,
+not the font's provenance.** The history below is kept because it records what the
+two painters ARE, why the second one exists at all, and the CSP measurement that
+still forbids the obvious alternative — none of which ADR-0040 reopens. What it
+corrects is the ORGANIZING PRINCIPLE: the split below is by font provenance, and
+"`Label3D` draws through the same atlas" is no longer true. Godot's default project
+font is not MSDF (`servers/text/text_server.cpp:2386`), so the engine rasterises it
+through FreeType and strokes a real contour annulus for an outline — something the
+baked field cannot represent at any font's provenance. Label3D therefore paints
+through the raster painter with the SAME bundled font, which the axis below cannot
+express. Its "removed the last host-font dependency from the renderer" clause is
+NOT corrected and remains load-bearing: the bundled font is registered through
+`document.fonts` and painted by name, and painting is withheld until that resolves,
+because an unregistered family rasterises a system font silently. Its
+scale-invariance consequence is discharged for scene fonts only ("the 2D parity
+capture renders at zoom 1"); that reasoning does not cover a 3D billboard, and
+ADR-0040 restates the trade as it now stands.
+
 # Two text painters, one shaping engine
 
 - Status: Accepted (2026-08-06).
