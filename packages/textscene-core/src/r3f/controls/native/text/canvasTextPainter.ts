@@ -254,7 +254,20 @@ export function paintSceneFontCanvas(
   return canvas;
 }
 
-export interface CanvasTextMaterialOptions {
+/**
+ * One `BaseMaterial3D::Transparency` (`material.h:200-207`) in three's terms —
+ * what a 3D text surface's `alpha_cut` selects (`label_3d.cpp:386-393`). A 2D
+ * Control never picks one; it always paints `TRANSPARENCY_ALPHA`, which is
+ * every field's own default below.
+ */
+export interface CanvasTextTransparency {
+  transparent: boolean;
+  depthWrite: boolean;
+  alphaTest: number;
+  alphaHash: boolean;
+}
+
+export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
   map: THREE.Texture;
   /** Combined with the raster's own per-pixel (anti-aliasing) alpha — the raster itself is drawn fully opaque (`opaqueCssColor`'s own doc), so this is the ONLY place `tint.a` is applied. */
   opacity: number;
@@ -306,13 +319,25 @@ const DECODE_VIDEO_TEXTURE_DEFINES: Readonly<Record<string, string>> = { DECODE_
  * the compiled shader; only the constructor-object shortcut does not.
  */
 export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): THREE.MeshBasicMaterial {
-  const { map, opacity, depthTest = false, side, clippingPlanes = [] } = options;
+  const {
+    map,
+    opacity,
+    depthTest = false,
+    side,
+    clippingPlanes = [],
+    transparent = true,
+    depthWrite = false,
+    alphaTest = 0,
+    alphaHash = false,
+  } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
-    transparent: true,
+    transparent,
     opacity,
-    depthWrite: false,
+    depthWrite,
     depthTest,
+    alphaTest,
+    alphaHash,
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),

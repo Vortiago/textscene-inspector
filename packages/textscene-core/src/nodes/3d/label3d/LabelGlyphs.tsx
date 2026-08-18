@@ -70,8 +70,43 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
+import type { CanvasTextTransparency } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
+
+/** Stand-in for the prepass cut, which Godot takes from the SCENE, not the node — same constant Sprite3D's own switch uses. */
+const PREPASS_ALPHA_TEST = 0.5;
+
+/**
+ * `label_3d.cpp:386-393`'s `mat_transparency` switch in three's terms, the
+ * other half of what `alpha_cut` selects (the z-shift/render-priority half is
+ * `surface()` below). SCISSOR and HASH force `alpha = 1.0` past the cut
+ * (`scene_forward_clustered.glsl:1414-1416`) and so land in the opaque list
+ * (`scene_shader_forward_clustered.cpp:252`), which writes depth;
+ * DEPTH_PRE_PASS keeps blending and cuts only in the depth pass, against the
+ * scene's own `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`).
+ * Label3D has no `FLAG_TRANSPARENT` to disable the switch (`label_3d.h:42-47`).
+ */
+function alphaCutTransparency(properties: Label3DProperties): CanvasTextTransparency {
+  switch (properties.alpha_cut) {
+    case AlphaCutMode.DISCARD:
+      // `label_3d.cpp:378` hands the node's own threshold to the material.
+      return {
+        transparent: false,
+        depthWrite: true,
+        alphaTest: properties.alpha_scissor_threshold,
+        alphaHash: false,
+      };
+    case AlphaCutMode.HASH:
+      return { transparent: false, depthWrite: true, alphaTest: 0, alphaHash: true };
+    case AlphaCutMode.OPAQUE_PREPASS:
+      return { transparent: true, depthWrite: true, alphaTest: PREPASS_ALPHA_TEST, alphaHash: false };
+    case AlphaCutMode.DISABLED:
+    default:
+      // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
+      return { transparent: true, depthWrite: false, alphaTest: 0, alphaHash: false };
+  }
+}
 
 export interface LabelGlyphsProps {
   properties: Label3DProperties;
@@ -136,6 +171,10 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   const outlineSurface = surface(properties.outline_render_priority);
   const fillSurface = surface(properties.render_priority);
 
+  // Not memoised: `TextRun` keys its material off this object's FIELDS, not its
+  // identity, so a fresh equal-valued one rebuilds nothing.
+  const transparency = alphaCutTransparency(properties);
+
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
   const textureFilter = properties.texture_filter % 2 === TextureFilter.NEAREST ? 'nearest' : 'linear';
@@ -158,6 +197,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
                   side={side}
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
+                  transparency={transparency}
                   frameExcluded
                 />
               </group>
@@ -171,6 +211,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
                 side={side}
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
+                transparency={transparency}
                 frameExcluded
               />
             </group>

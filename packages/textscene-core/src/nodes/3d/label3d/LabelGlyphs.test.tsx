@@ -55,6 +55,8 @@ function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
     render_priority: 0,
     outline_render_priority: -1,
     alpha_cut: AlphaCutMode.DISABLED,
+    alpha_scissor_threshold: 0.5,
+    fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };
@@ -281,6 +283,59 @@ describe('<LabelGlyphs>', () => {
         props({ outline_size: 12, alpha_cut: AlphaCutMode.HASH, render_priority: 4, outline_render_priority: -3 })
       );
       expect(surfaceZ(renderer)).toEqual([-3, 4]);
+    });
+
+    // `label_3d.cpp:386-393` picks the material's TRANSPARENCY from the same
+    // property, which is the half the z-shift tests above do not cover.
+    const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
+      renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
+
+    it('DISCARD scissors at the authored alpha_scissor_threshold and paints opaque', async () => {
+      // `label_3d.cpp:388` -> TRANSPARENCY_ALPHA_SCISSOR, whose threshold is
+      // the node's own (`label_3d.h:62`, `:378`); the cut forces `alpha = 1.0`
+      // (`scene_forward_clustered.glsl:1414-1416`) so the surface lands in the
+      // opaque list and writes depth.
+      const renderer = await render(
+        props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD, alpha_scissor_threshold: 0.25 })
+      );
+      for (const material of materials(renderer)) {
+        expect(material.alphaTest).toBe(0.25);
+        expect(material.alphaHash).toBe(false);
+        expect(material.transparent).toBe(false);
+        expect(material.depthWrite).toBe(true);
+      }
+    });
+
+    it('HASH cuts stochastically and paints opaque; OPAQUE_PREPASS keeps blending but writes depth', async () => {
+      // `label_3d.cpp:390,392`. The prepass cut is the SCENE's
+      // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), not
+      // the node's `alpha_scissor_threshold` — authoring one must not move it.
+      const hash = await render(props({ alpha_cut: AlphaCutMode.HASH, alpha_scissor_threshold: 0.25 }));
+      const [hashMaterial] = materials(hash);
+      expect(hashMaterial!.alphaHash).toBe(true);
+      expect(hashMaterial!.alphaTest).toBe(0);
+      expect(hashMaterial!.transparent).toBe(false);
+      expect(hashMaterial!.depthWrite).toBe(true);
+
+      const prepass = await render(
+        props({ alpha_cut: AlphaCutMode.OPAQUE_PREPASS, alpha_scissor_threshold: 0.25 })
+      );
+      const [prepassMaterial] = materials(prepass);
+      expect(prepassMaterial!.alphaHash).toBe(false);
+      expect(prepassMaterial!.alphaTest).toBe(0.5);
+      expect(prepassMaterial!.transparent).toBe(true);
+      expect(prepassMaterial!.depthWrite).toBe(true);
+    });
+
+    it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {
+      const renderer = await render(props({ alpha_scissor_threshold: 0.25 }));
+      const [material] = materials(renderer);
+      expect(material!.transparent).toBe(true);
+      expect(material!.depthWrite).toBe(false);
+      expect(material!.alphaTest).toBe(0);
+      expect(material!.alphaHash).toBe(false);
     });
   });
 

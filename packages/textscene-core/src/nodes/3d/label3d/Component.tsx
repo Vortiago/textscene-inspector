@@ -87,6 +87,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 
 const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
 
@@ -107,6 +108,10 @@ export function Label3D({ node, children }: NodeComponentProps) {
   // `TscnRenderer.updateLabels()`; `useBillboard` is that behaviour, shared
   // with Sprite3D so both slices implement Godot's modes identically.
   useBillboard(groupRef, properties.billboard);
+
+  // `label_3d.cpp:396` hands the flag to the same cached shader the billboard
+  // mode does; both are per-frame effects on the label's own group.
+  useFixedSize(groupRef, properties.fixed_size, scale);
 
   // On by default to match Godot (ADR-0008 point 4 superseded — see its
   // amendment note); the Labels toggle can hide it. When off, render an

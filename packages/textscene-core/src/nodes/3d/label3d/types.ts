@@ -70,6 +70,12 @@ export interface Label3DProperties extends Node3DProperties {
   /** Transparency mode (`label_3d.h:61`, default DISABLED). */
   alpha_cut: AlphaCutMode;
 
+  /** Scissor cut used by `alpha_cut` DISCARD (`label_3d.h:62`, default 0.5). */
+  alpha_scissor_threshold: number;
+
+  /** Keep a constant on-screen size regardless of distance (`label_3d.h:46`, default false). */
+  fixed_size: boolean;
+
   /** Glyph-texture sampling (`label_3d.h:140`, default LINEAR_WITH_MIPMAPS). */
   texture_filter: TextureFilter;
 }

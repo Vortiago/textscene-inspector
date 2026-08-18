@@ -57,6 +57,7 @@ import {
 } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 
 /** Stand-in for the prepass cut, which Godot takes from the SCENE, not the node. */
 const PREPASS_ALPHA_TEST = 0.5;
@@ -76,6 +77,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     () => transformFromNode3DProperties(properties),
     [properties]
   );
+
+  // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
+  // mode does; both are per-frame effects on the sprite quad itself.
+  useFixedSize(spriteRef, properties.fixed_size, scale);
 
   // `texture` may be an image file, or a procedural texture described entirely
   // inside the scene; `useTexture2D` resolves either and reports a reference it

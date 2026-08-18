@@ -31,10 +31,6 @@ blue-tinted one.
 
 ## Divergences
 
-`fixed_size` is parsed but not honoured. Godot's `FLAG_FIXED_SIZE` rescales the
-quad in the vertex shader in proportion to depth (`material.cpp:1357`) so the
-sprite keeps a constant on-screen size; the previewer draws it at its world size.
-
 `alpha_hash_scale` has no counterpart to bind to. Godot's hash threshold divides
 by the uniform (`scene_forward_aa_inc.glsl:17`, default 1.0 at `sprite_3d.h:90`);
 three runs the same Wyman-McGuire hash against a hardcoded

@@ -25,6 +25,7 @@ validatorRegistry.registerAll('Label3D', {
   pixel_size: v.positiveFloat('pixel_size'),
   billboard: v.enumInt('billboard', 0, 2, BILLBOARD),
   alpha_cut: v.enumInt('alpha_cut', 0, 3, ALPHA_CUT),
+  alpha_scissor_threshold: v.float('alpha_scissor_threshold'),
   modulate: v.color('modulate'),
   outline_size: v.float('outline_size', {
     min: 0,
@@ -36,6 +37,7 @@ validatorRegistry.registerAll('Label3D', {
   line_spacing: v.float('line_spacing'),
   horizontal_alignment: v.enumInt('horizontal_alignment', 0, 3, HORIZONTAL_ALIGNMENT),
   no_depth_test: v.boolean('no_depth_test'),
+  fixed_size: v.boolean('fixed_size'),
   texture_filter: v.enumInt('texture_filter', 0, 5, TEXTURE_FILTER),
   // Godot's own priorities are signed and unbounded in either direction.
   render_priority: v.int('render_priority'),

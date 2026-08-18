@@ -399,6 +399,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       render_priority: 0,
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
+      alpha_scissor_threshold: 0.5,
+      fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
@@ -451,6 +453,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       render_priority: 0,
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
+      alpha_scissor_threshold: 0.5,
+      fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },

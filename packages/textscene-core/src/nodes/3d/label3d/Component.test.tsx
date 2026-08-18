@@ -34,6 +34,8 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     render_priority: 0,
     outline_render_priority: -1,
     alpha_cut: AlphaCutMode.DISABLED,
+    alpha_scissor_threshold: 0.5,
+    fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };

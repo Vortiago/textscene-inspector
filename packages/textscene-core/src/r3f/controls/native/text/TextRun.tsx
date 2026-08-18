@@ -60,6 +60,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
+  type CanvasTextTransparency,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -248,6 +249,13 @@ export interface TextRunProps {
    */
   textureFilter?: 'nearest' | 'linear';
   /**
+   * The `BaseMaterial3D::Transparency` this surface paints in — what a 3D
+   * caller's `alpha_cut` selects (`label_3d.cpp:386-393`). Canvas-rasterised
+   * runs only. Omitted (2D-UI default) paints `TRANSPARENCY_ALPHA`, which is
+   * the only mode a Control ever has.
+   */
+  transparency?: CanvasTextTransparency;
+  /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips —
    * for Label3D's own use ONLY (`LabelGlyphs.tsx`'s own doc has the
    * measurement): its real glyph geometry mounts asynchronously and, when it
@@ -286,7 +294,8 @@ function buildTextRun(
   depthTest: boolean | undefined,
   side: THREE.Side | undefined,
   strokeWidthPx: number,
-  textureFilter: 'nearest' | 'linear'
+  textureFilter: 'nearest' | 'linear',
+  transparency: CanvasTextTransparency | undefined
 ): BuiltTextRun {
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -356,7 +365,14 @@ function buildTextRun(
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
-    const material = createCanvasTextMaterial({ map: texture, opacity: tint.a, clippingPlanes, depthTest, side });
+    const material = createCanvasTextMaterial({
+      map: texture,
+      opacity: tint.a,
+      clippingPlanes,
+      depthTest,
+      side,
+      ...transparency,
+    });
     return { geometry: geo, material, ownedTexture: texture };
   }
 
@@ -392,12 +408,13 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   textureFilter = 'linear',
+  transparency,
   frameExcluded,
 }: TextRunProps) {
   const { geometry, material, ownedTexture } = useMemo(
-    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint` is compared by its own r/g/b/a fields, not object identity (a caller re-creating an equal-valued tint object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself.
-    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter]
+    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter, transparency),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint` is compared by its own r/g/b/a fields, not object identity (a caller re-creating an equal-valued tint object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself, and `transparency` for the same reason.
+    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter, transparency?.transparent, transparency?.depthWrite, transparency?.alphaTest, transparency?.alphaHash]
   );
 
   // R3F does not dispose a geometry/material passed as a PROP (only ones it
