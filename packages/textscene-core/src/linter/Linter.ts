@@ -6,6 +6,7 @@ import type { TscnScene, TscnNode } from '../parser/types.js';
 import { SEVERITY_ORDER, type Diagnostic, type RuleContext, type ParseError } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
+import { LEGACY_FORMAT_CEILING, readHeaderFormat } from './headerFormat.js';
 
 export class Linter {
   private parser = new StrictTscnParser();
@@ -21,6 +22,12 @@ export class Linter {
   lint(content: string): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
+    // Phase 0: the file's own format version. These rules are written against
+    // the format Godot writes today, so an older one is declined whole rather
+    // than reported against a grammar it predates.
+    const legacy = this.legacyFormatDiagnostic(content);
+    if (legacy) return [legacy];
+
     // Phase 1: Strict parsing
     const parseResult = this.parser.parse(content);
 
@@ -35,8 +42,42 @@ export class Linter {
       diagnostics.push(...semanticDiagnostics);
     }
 
-    // Sort diagnostics by severity (errors first, then warnings, then info)
+    // Sort diagnostics by severity: errors first, then warnings.
     return this.sortDiagnostics(diagnostics);
+  }
+
+  /**
+   * The one diagnostic a pre-current-format file gets, or `null` for every
+   * other file.
+   *
+   * Suppressing the rest is the point, not a side effect. Version 3 gave
+   * ext/subresources their string ids (`resource_format_text.h:44`), so on a
+   * `format=2` file the reference rules read integer ids as dangling and every
+   * property bound is judged against a grammar the file predates: those
+   * diagnostics would be wrong, not merely noisy. The message says the
+   * suppression out loud so the short result is not a mystery.
+   *
+   * It does NOT claim the file is invalid. The engine loads it — there is no
+   * less-than comparison against the format version anywhere in
+   * `resource_format_text.cpp` — so this reports the linter's scope, and warns
+   * rather than errors.
+   */
+  private legacyFormatDiagnostic(content: string): Diagnostic | null {
+    const header = readHeaderFormat(content);
+    if (!header || header.format === null || header.format > LEGACY_FORMAT_CEILING) return null;
+    return {
+      severity: 'warning',
+      // "3 or 4" rather than one number: one 4.6.3 saver writes both, choosing
+      // per file (`resource_format_text.cpp:1798`).
+      message:
+        `Header format=${header.format} predates the text format Godot writes today (3 or 4). ` +
+        'Lint rules target the current format, so nothing else in this file is reported. ' +
+        'Open and re-save the file in Godot to migrate it.',
+      nodeName: '<unknown>',
+      nodeType: '<unknown>',
+      ruleName: 'legacy-format-version',
+      location: { line: header.line, column: 1 },
+    };
   }
 
   /**

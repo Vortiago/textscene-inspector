@@ -47,6 +47,11 @@ const scenesRoot = resolve(here, '../../../../scenes');
  * is the default.
  */
 const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+  'unit-legacy-format.tscn': {
+    rules: ['legacy-format-version'],
+    reason:
+      'a Godot 3 file; the single warning IS the fixture, and the errors its pre-4.0 spellings would otherwise draw are what the suppression exists to withhold',
+  },
   'unit-unsupported-nodes.tscn': {
     rules: ['area3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',

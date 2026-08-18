@@ -75,6 +75,40 @@ Every surviving threshold carries the governing `file:line` in a comment beside 
 A constant named for a feeling rather than a source — `EXTREME_*`, `LARGE_*`,
 `SMALL_*`, `*_RECOMMENDED` — does not pass review without that citation.
 
+### File scope is declared, not grounded
+
+`legacy-format-version` cites no engine rule, because there is none to cite. The
+text loader compares the header's format version in exactly three places and
+every one is `>`: `if (format_version > FORMAT_VERSION)` refuses a file as
+`ERR_FILE_UNRECOGNIZED` (`resource_format_text.cpp:1141`, `:1331`, `:1369`).
+There is no less-than comparison anywhere in that file, no `DISABLE_DEPRECATED`
+branch in it, and the Variant parser's tolerance for Godot-3 spellings
+(`PoolByteArray`, `variant_parser.cpp:1410`) is not gated on the version either.
+Godot 4.6.3 opens a `format=2` file and parses it with the current grammar.
+
+The linter declines it regardless, and that is a decision about this tool's
+scope rather than a report about the engine. Version 3 gave ext/subresources
+their string ids — "Version 3: New string ID for ext/subresources, breaks
+forward compat." (`resource_format_text.h:44`) — so on a `format=2` file the
+reference rules read integer ids as dangling and every bound is judged against a
+grammar the file predates. Those diagnostics would be WRONG, not merely noisy,
+which is why the file gets one warning and nothing else.
+
+Two consequences, both load-bearing:
+
+- **It warns, never errors.** The file loads. An error would misstate the engine
+  and would fail `lint:scenes` on content Godot accepts.
+- **The current end is deliberately unbounded.** `FORMAT_VERSION = 4`
+  (`resource_format_text.h:46`) is the accepted ceiling and
+  `FORMAT_VERSION_COMPAT = 3` (`:48`) the saver's default; ONE 4.6.3 saver
+  writes both, choosing per file on whether a `PackedVector4Array` or a
+  >64-byte `PackedByteArray` is present (`resource_format_text.cpp:1724-1732`,
+  `:1770`, `:1798`). Neither is legacy — 44 of the vendored Godot demo scenes
+  are `format=4` and 802 are `format=3`. A header declaring no format is current
+  too (`} else { format_version = FORMAT_VERSION; }`, `:1147-1148`). A ceiling
+  check would begin firing on legitimately-current files the moment a later
+  engine raises `FORMAT_VERSION`, so there is none.
+
 ### Usage flags decide whether there is anything to ground at all
 
 Before asking which tier a property belongs to, ask whether it reaches a `.tscn`

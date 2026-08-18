@@ -583,6 +583,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Legacy Format",
+    "file": "unit-legacy-format.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Base Properties",
     "file": "unit-light-base-properties.tscn",
     "category": "Other"

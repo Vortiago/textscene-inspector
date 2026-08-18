@@ -76,9 +76,10 @@ describe('rule emits meta-guard', () => {
    * nothing else did.
    */
   const allFiles = allSourceFiles();
-  // `strict-parser` is not a rule emission: Linter.ts stamps it on Phase-1 parse
-  // errors, which come from the validator side and belong to no LintRule.
-  const NON_RULE_NAMES = new Set(['strict-parser']);
+  // Neither is a rule emission: Linter.ts stamps `strict-parser` on Phase-1
+  // parse errors, which come from the validator side, and `legacy-format-version`
+  // on a whole FILE, which has no node slice to declare it.
+  const NON_RULE_NAMES = new Set(['strict-parser', 'legacy-format-version']);
   const codePairs = allFiles
     .flatMap((f) => scrapePairs(f))
     .filter((p) => !NON_RULE_NAMES.has(p.name));

@@ -95,8 +95,8 @@ real parser instead of the decode/build split. Conformance:
 - Two parsers, one scanning loop (`TscnParserCore`, `ParseObserver` seam): lenient
   `TscnParser` renders what it can; `StrictTscnParser` lints and reports everything.
   Depth: ARCHITECTURE.md.
-- **The linter's subject is every valid `.tscn`, not the subset this previewer
-  renders.** It exists because no Godot text-scene linter did, and its job is helping
+- **The linter's subject is every valid current-format `.tscn`, not the subset this
+  previewer renders.** It exists because no Godot text-scene linter did, and its job is helping
   someone author a sound, valid scene file. A property therefore earns a validator
   because Godot SERIALISES it, never because something here reads it: `Viewport.vrs_mode`
   is exactly as much the linter's business as `Line2D.points`. The
@@ -104,6 +104,11 @@ real parser instead of the decode/build split. Conformance:
   (should the RENDERER read this key) and must never decide whether a validator is worth
   writing. Same for the vendored corpus: it is a false-positive detector, so "no scene
   sets this" sizes the blast radius of a change and never justifies skipping one.
+  The one scope limit is the file's own header. `format <= 2` predates the string
+  ext/subresource ids version 3 introduced, so those files get a single
+  `legacy-format-version` warning and no other diagnostic (ADR-0032). Formats 3 and 4
+  are BOTH current — one 4.6.3 saver writes either, per file — and a header declaring
+  no format is current too, so none of them is bounded.
 - Every diagnostic is grounded in the engine source, in one of three tiers (ADR-0032).
   **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask
   that drops bits). **warning** = outside what the property's own
