@@ -19,7 +19,8 @@
  * Control-ish"; this module reads it rather than keeping a second list.
  *
  * `generation` bumps whenever ANY scene/texture/theme/font-resource
- * load/failure lands on the bus, OR a runtime scene-font metrics load settles
+ * load/failure lands on the bus, OR a runtime font's metrics settle — a
+ * scene-authored one, or the bundled font's own `FontFace` registration
  * (`text/sceneFontLoader.ts`'s `onSceneFontMetricsSettled` — the SAME
  * mechanism, a second listener source rather than a second one: that module's
  * `peekSceneFontMetrics` answers synchronously with the bundled fallback

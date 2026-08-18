@@ -19,7 +19,7 @@
  * Getters, not a snapshot, for the reason `openSansFontMetrics.ts` uses
  * them: a live mutation of `OPEN_SANS_METRICS` stays visible.
  *
- * `bundledFontRegistration.ts` is the only intended production caller — an
+ * `sceneFontLoader.ts`'s bundled arm is the only intended production caller — an
  * unregistered `cssFontFamily` makes `ctx.fillText` paint a SYSTEM font.
  */
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';

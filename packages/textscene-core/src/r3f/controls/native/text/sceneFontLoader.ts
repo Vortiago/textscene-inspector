@@ -10,6 +10,19 @@
  * broken/missing/unsupported font falls back to the bundled default and
  * renders something, matching Godot's own theme-default fallback).
  *
+ * ## The bundled default's own registration
+ *
+ * The bundled Open Sans SemiBold goes through the SAME door here
+ * (`peekBundledCanvasFontMetrics`/`resolveBundledCanvasFontMetrics`), not a
+ * module of its own: registering a `FontFace` and notifying the settled
+ * channel below are one mechanism, and a second copy of either would be a
+ * second, silently-diverging one. Its `'canvas'`-kind metrics
+ * (`openSansCanvasFontMetrics.ts`) are `undefined` until `document.fonts.add`
+ * has happened, because `ctx.fillText` with an UNREGISTERED family does not
+ * fail — it silently rasterises a SYSTEM font, whose pixels are frame-stable
+ * enough for a visual harness to settle on and capture. Withholding the
+ * metrics until registration resolves is what makes that unreachable.
+ *
  * ## The CSP-validated door
  *
  * `default-src 'none'`, no `connect-src`/`font-src`/`worker-src` — no
@@ -58,7 +71,10 @@
  * ## Re-solve/re-render on arrival
  *
  * A font resolves asynchronously, so the FIRST solve/paint of a node
- * necessarily uses the bundled fallback. `onSceneFontMetricsSettled` is this
+ * necessarily uses the bundled fallback — and a consumer that peeks the
+ * BUNDLED canvas metrics before their registration resolves is in exactly
+ * the same position, which is why both arms fire the one channel below.
+ * `onSceneFontMetricsSettled` is this
  * module's half of the SAME generation-bump mechanism `buildSolveTree.ts`
  * already uses for a texture/scene/theme/font-RESOURCE arrival (`generation`,
  * bumped from `loader.eventBus` listeners in a `useEffect`) — not a second,
@@ -72,6 +88,8 @@
  */
 import type { FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
+import { OPEN_SANS_WOFF2_BASE64 } from './openSansFontBytes';
 import { parseSfntScalars, type SfntScalars } from './sfntTables';
 import { createRuntimeFontMetrics, type CanvasFontMetrics, type DesignUnitWidthFn } from './runtimeFontMetrics';
 import { resolveFontFileBytes } from './sceneFontResolution';
@@ -98,15 +116,17 @@ export type SceneFontMetricsListener = () => void;
 const settledListeners = new Set<SceneFontMetricsListener>();
 
 /**
- * Subscribes to "a runtime scene-font metrics load just settled" — this
+ * Subscribes to "a runtime font metrics load just settled" — a scene font's,
+ * or the bundled font's own registration. This is this
  * module's own half of the SAME generation-bump mechanism
  * `buildSolveTree.ts` already uses for a texture/scene/theme/font-resource
  * arrival (this file's own doc, "Re-solve/re-render on arrival"). Fires once
  * per resource the FIRST time its `resolveSceneFontMetrics` promise settles
- * (success or fallback — see the call site below); never for a font that
- * short-circuits synchronously (`null`/`undefined`, or an unresolvable
- * resource caught by `warnUnresolvable` before any async work starts) since
- * nothing there can later change value.
+ * (success or fallback — see the call site below), and once for the bundled
+ * registration; never for a font that short-circuits synchronously
+ * (`null`/`undefined`, or an unresolvable resource caught by
+ * `warnUnresolvable` before any async work starts) since nothing there can
+ * later change value.
  *
  * Returns an unsubscribe function, the same shape `ResourceEventBus.on`'s
  * callers already unwind via their own `off` call in a `useEffect` cleanup.
@@ -138,6 +158,32 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
       ? `a SystemFont (OS family names: ${font.fontNames.join(', ') || '(none)'}) -- this previewer has no access to the user's system fonts`
       : 'no FontFile in its fallback chain carries loadable bytes';
   logger.warn(`[SceneFont] Node "${nodePath}": font resource is unresolvable (${reason}). Falling back to the bundled default font.`);
+}
+
+/**
+ * The CSP-validated door itself (this file's own doc): `new FontFace(name,
+ * arrayBuffer)` + `document.fonts.add`, never a fetch. Both arms of this
+ * module — a scene font and the bundled default — register through here.
+ *
+ * Read off `globalThis` lazily, not as a module-scope binding: a non-DOM
+ * environment then answers `undefined` instead of throwing a `ReferenceError`
+ * on the bare global, and a host that installs `document.fonts` after this
+ * module loads is still seen.
+ *
+ * Resolves to the `Document` the face was added to, `undefined` where the
+ * environment has no `FontFace`/`document.fonts` at all; REJECTS only when
+ * the bytes themselves are not a loadable font. Callers distinguish the two
+ * (an absent environment is not a broken font) — hence `bytes` as a thunk:
+ * decoding must not run, nor misreport its own failure as a broken font,
+ * where there is no door to register through anyway.
+ */
+async function registerFontFace(family: string, bytes: () => ArrayBuffer): Promise<Document | undefined> {
+  const { FontFace: FontFaceCtor, document: doc } = globalThis as { FontFace?: typeof FontFace; document?: Document };
+  if (!FontFaceCtor || !doc?.fonts) return undefined;
+  const face = new FontFaceCtor(family, bytes());
+  await face.load();
+  doc.fonts.add(face);
+  return doc;
 }
 
 /**
@@ -173,13 +219,17 @@ function warnUnresolvable(font: FontResource, nodePath: string): void {
  */
 async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<CanvasFontMetrics> {
   const family = `tscn-scene-font-${++familyCounter}`;
-  const face = new FontFace(family, bytes);
-  await face.load();
-  document.fonts.add(face);
+  const doc = await registerFontFace(family, () => bytes);
+  if (!doc) {
+    // Same warn-then-throw shape as the no-2D-context branch below: a real
+    // environment that cannot register a font is a genuine fallback.
+    logger.warn(`[SceneFont] Node "${nodePath}": no FontFace/document.fonts in this environment; falling back to the bundled default font.`);
+    throw new Error('FontFace unavailable');
+  }
 
   const tableScalars = parseSfntScalars(bytes);
 
-  const measureCanvas = document.createElement('canvas');
+  const measureCanvas = doc.createElement('canvas');
   const ctx = measureCanvas.getContext('2d');
   if (!ctx) {
     // Real-browser-unreachable in practice (every supported browser has a 2D
@@ -276,4 +326,49 @@ export function peekSceneFontMetrics(font: FontResource | null | undefined, node
     void resolveSceneFontMetrics(font, nodePath);
   }
   return OPEN_SANS_FONT_METRICS;
+}
+
+/** Fixed, unlike a scene font's counter-suffixed name: there is exactly one bundled font and it is registered exactly once. */
+const BUNDLED_FAMILY = 'tscn-bundled-open-sans-semibold';
+
+let bundledRegistration: Promise<CanvasFontMetrics | undefined> | undefined;
+let bundledMetrics: CanvasFontMetrics | undefined;
+
+function decodeBundledWoff2(): ArrayBuffer {
+  const binary = atob(OPEN_SANS_WOFF2_BASE64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function registerBundledFont(): Promise<CanvasFontMetrics | undefined> {
+  try {
+    const doc = await registerFontFace(BUNDLED_FAMILY, decodeBundledWoff2);
+    if (!doc) {
+      logger.warn('[BundledFont] No FontFace/document.fonts in this environment; the bundled canvas-rasterised font is unavailable.');
+      return undefined;
+    }
+    bundledMetrics = createOpenSansCanvasFontMetrics(BUNDLED_FAMILY);
+    return bundledMetrics;
+  } catch (err: unknown) {
+    logger.warn(`[BundledFont] Failed to register the bundled font (${err instanceof Error ? err.message : String(err)}).`);
+    return undefined;
+  } finally {
+    // Any settle, exactly as the scene arm notifies after its own `.catch`
+    // has turned a failure into the fallback: a peek-then-settle consumer
+    // re-renders once and reads whatever the peek now answers.
+    notifySceneFontMetricsSettled();
+  }
+}
+
+/** Registers the bundled font once, resolving to its canvas metrics — or `undefined` if this environment or the bytes cannot. Never throws. */
+export function resolveBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
+  bundledRegistration ??= registerBundledFont();
+  return bundledRegistration;
+}
+
+/** Synchronous answer for a solve/paint pass: the canvas metrics once registration resolved, `undefined` before that. Kicks the registration off on first call. */
+export function peekBundledCanvasFontMetrics(): CanvasFontMetrics | undefined {
+  if (!bundledMetrics) void resolveBundledCanvasFontMetrics();
+  return bundledMetrics;
 }
