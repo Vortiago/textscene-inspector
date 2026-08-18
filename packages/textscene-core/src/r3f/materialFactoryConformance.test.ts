@@ -27,6 +27,20 @@
  * This scan takes NO per-line opt-out. A tag is three tokens long; an escape
  * hatch on it would be an escape hatch on the whole rule.
  *
+ * A MATERIAL TAG IS NOT THE ONLY WAY TO MOUNT ONE, so the tag rule alone is a
+ * gate with two doors left open — `<mesh material={m} />` hands the material
+ * over as a prop, and `<primitive object={m} attach={a} />` is how every
+ * external `.tres` reaches a mesh. Both are read too, and again by spelling:
+ * a `material` prop (or a pierced `material-…` one) on a LOWER-CASE element,
+ * where it is R3F's reconciler reading the props rather than a component of
+ * ours; a spread on such an element, which could carry `material`, `object` or
+ * `attach` and name none of them; and a `<primitive>` that does not name its
+ * slot in a string literal — R3F derives a missing `attach` from the OBJECT
+ * (`isMaterial`), not from the tag name, so `<primitive object={m} />` lands in
+ * the material slot exactly as `attach="material"` would. These three carry a
+ * named-file exemption list of their own, on the same terms as the imperative
+ * one below.
+ *
  * TEST FILES ARE DELIBERATELY OUT OF SCOPE. Dozens of them construct materials
  * or render material JSX directly to drive an assertion, and routing those
  * through the factory would couple every material assertion to the thing under
@@ -39,13 +53,13 @@
  * this file rather than lingering.
  */
 import { describe, expect, it } from 'vitest';
+import type { JsxTag } from './testing/sourceScan';
 import {
-  isCommentLine,
   isProductionSource,
+  jsxTags,
   offendingLines,
   repoPath,
   repoRoot,
-  tagEnd,
   walkSources,
 } from './testing/sourceScan';
 
@@ -66,34 +80,11 @@ const MATERIAL_TAG = /<[a-z][A-Za-z0-9]*Material(?![A-Za-z0-9])/;
 const FACTORY_TAG =
   /^<[a-z][A-Za-z0-9]*Material key=\{([A-Za-z0-9_$.]+)\.key\} \{\.\.\.([A-Za-z0-9_$.]+)\.props\} \/>$/;
 
-/** Every material element in the file, as `{ line, tag }` with the tag collapsed to one line. */
-function materialTags(source: string): { line: number; tag: string }[] {
-  const lines = source.split('\n');
-  const tags: { line: number; tag: string }[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    if (isCommentLine(lines[i]!)) continue;
-    // Suffix-only strip, so the match index still addresses the raw line below.
-    const start = lines[i]!.replace(/\/\/.*$/, '').search(MATERIAL_TAG);
-    if (start < 0) continue;
-
-    // The tag runs to its own closing `>`, which is NOT simply the first one on
-    // the line: a prop value may hold a `>`, and the tag may not start (or end)
-    // at a line boundary — `return <meshStandardMaterial … />;` is both.
-    let text = '';
-    let end = -1;
-    for (let j = i; j < lines.length && end < 0; j++) {
-      text += (j > i ? '\n' : '') + lines[j];
-      end = tagEnd(text, start);
-    }
-    if (end < 0) continue;
-    tags.push({ line: i + 1, tag: text.slice(start, end).replace(/\s+/g, ' ') });
-  }
-  return tags;
-}
+/** Every material element in the file, each read to its own `>`. */
+const materialTags = (source: string): JsxTag[] => jsxTags(source, MATERIAL_TAG);
 
 /** The subset of already-read tags that does not take both halves from ONE factory result. */
-function offendingTagLines(tags: readonly { line: number; tag: string }[]): number[] {
+function offendingTagLines(tags: readonly JsxTag[]): number[] {
   return tags
     .filter(({ tag }) => {
       const factory = FACTORY_TAG.exec(tag);
@@ -106,6 +97,109 @@ function offendingTagLines(tags: readonly { line: number; tag: string }[]): numb
 export function rawMaterialTagLines(source: string): number[] {
   return offendingTagLines(materialTags(source));
 }
+
+/**
+ * A JSX element that could hold a material without ever writing a material tag.
+ * Lower-case first letter, so it is R3F's reconciler that reads the props and
+ * not a component of ours — a component's own body is scanned in its own turn.
+ * Read even when the name ends the line: a multi-line element opens that way.
+ */
+const HOST_TAG = /<[a-z][A-Za-z0-9]*(?=[\s/>]|$)/;
+
+/** The same shape anchored, to ask an already-read tag what it is. */
+const MATERIAL_TAG_HEAD = new RegExp(`^${MATERIAL_TAG.source}`);
+const PRIMITIVE_TAG_HEAD = /^<primitive(?![A-Za-z0-9])/;
+
+/** `material={…}`, and the pierced `material-transparent={…}` that writes THROUGH one. */
+const MATERIAL_PROP = /(?:^|\s)material(?:-[A-Za-z0-9-]+)?=/;
+/** A spread names nothing, so nothing can be proven about what it carries. */
+const SPREAD = /\{\.\.\./;
+/** `attach="…"` — the only spelling that says WHICH slot a `<primitive>` lands in. */
+const LITERAL_ATTACH = /(?:^|\s)attach="([^"]*)"/;
+
+/** Which of the three an offence is — reported, and asserted still live below. */
+type OffTagShape = 'material prop' | 'spread' | 'unslotted primitive';
+const OFF_TAG_SHAPES: readonly OffTagShape[] = ['material prop', 'spread', 'unslotted primitive'];
+
+/**
+ * Whether a host element mounts a material by some spelling other than a
+ * material tag.
+ *
+ * Three shapes, none of them a scan for a value's NAME:
+ *   - a `material` prop (or a pierced `material-…` one) on the element itself,
+ *     whatever the value is called;
+ *   - a spread, which could carry `material`, `object` or `attach` and say so
+ *     nowhere — the same blindness the tag rule above exists to close;
+ *   - a `<primitive>` that does not name its slot in a string literal. R3F
+ *     derives a missing `attach` from the OBJECT (`isMaterial`), not from the
+ *     tag name, so `<primitive object={x} />` lands a material in the material
+ *     slot exactly as `attach="material"` would, and a computed `attach={a}`
+ *     is a slot this scan cannot read.
+ */
+function offTagShape(tag: string): OffTagShape | null {
+  if (MATERIAL_TAG_HEAD.test(tag)) return null; // the factory spelling owns these
+  if (MATERIAL_PROP.test(tag)) return 'material prop';
+  if (SPREAD.test(tag)) return 'spread';
+  if (!PRIMITIVE_TAG_HEAD.test(tag)) return null;
+  const attach = LITERAL_ATTACH.exec(tag);
+  return attach === null || attach[1]!.startsWith('material') ? 'unslotted primitive' : null;
+}
+
+export interface OffTagMount {
+  readonly line: number;
+  readonly shape: OffTagShape;
+}
+
+/** Host elements that could mount a material outside a material tag. One entry per element. */
+export function offTagMounts(source: string): OffTagMount[] {
+  return jsxTags(source, HOST_TAG).flatMap(({ line, tag }) => {
+    const shape = offTagShape(tag);
+    return shape ? [{ line, shape }] : [];
+  });
+}
+
+/**
+ * Files allowed to mount off-tag, each with the reason it cannot suffer the
+ * defect: it mounts no material at all, or one that is fresh per input change.
+ * Verified individually; a file that stops matching fails the staleness check
+ * below rather than sitting here forever.
+ */
+const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
+    'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
+    'spreads the sampled curve transform onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
+    'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
+  'packages/textscene-core/src/nodes/3d/camera3d/Component.tsx':
+    'mounts a THREE CameraHelper — an Object3D, which R3F adds as a child and never routes to a material slot',
+  'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
+    'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
+    'mounts the built InstancedMesh — an Object3D, added as a child; its tile material is mounted on the mesh itself',
+  'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
+    'mounts a THREE light helper — an Object3D, added as a child',
+  'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
+    "mounts the light's aim target — an empty Object3D, added as a child",
+  'packages/textscene-core/src/r3f/YSortDispatcher.tsx':
+    "spreads a lifted ancestor's restored transform onto a `<group>`, which has no material slot",
+  'packages/textscene-core/src/r3f/components/CanvasItem2D.tsx':
+    "spreads the canvas item's transform onto a `<group>`, which has no material slot",
+  'packages/textscene-core/src/r3f/components/CanvasItemGroup.tsx':
+    'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
+  'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
+    'one material per built text run, replaced and disposed together with the run geometry it was built with',
+  'packages/textscene-core/src/r3f/environment/GlowLayer.tsx':
+    'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
+  'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
+    'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
+  'packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx':
+    'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
+  'packages/textscene-core/src/r3f/materials/ExternalMaterialSlot.tsx':
+    'the `.tres` arrival: the resource pipeline hands over a material constructed complete and never writes to it again, and a re-resolve replaces the whole object',
+  'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
+    "mounts the preview sun's aim target — an empty Object3D, added as a child",
+};
 
 /** `new THREE.SomethingMaterial(` — the imperative door. */
 const MATERIAL_CONSTRUCTOR = /\bnew\s+(?:THREE\.)?[A-Za-z0-9_]*Material\s*\(/;
@@ -154,6 +248,12 @@ const CONSTRUCTOR_SITES = SOURCES.map(({ file, source }) => ({
   file,
   lines: materialConstructorLines(source),
 })).filter(({ lines }) => lines.length > 0);
+const OFF_TAG_SITES = SOURCES.map(({ file, source }) => ({
+  file,
+  mounts: offTagMounts(source),
+})).filter(({ mounts }) => mounts.length > 0);
+/** Every host element the off-tag scan read, offending or not — its corpus. */
+const HOST_TAG_COUNT = SOURCES.reduce((n, { source }) => n + jsxTags(source, HOST_TAG).length, 0);
 
 describe('Material factory conformance', () => {
   it('writes no material element outside the factory spelling', () => {
@@ -178,11 +278,49 @@ describe('Material factory conformance', () => {
     ).toEqual([]);
   });
 
+  it('mounts no material off the tag outside the named exemptions', () => {
+    const offenders = OFF_TAG_SITES.filter(
+      ({ file }) => OFF_TAG_EXEMPTIONS[repoPath(file)] === undefined
+    ).flatMap(({ file, mounts }) =>
+      mounts.map(({ line, shape }) => `${repoPath(file)}:${line} (${shape})`)
+    );
+
+    expect(
+      offenders,
+      `a material mounted through a \`material\` prop, a spread or an unslotted \`<primitive>\` never passes the factory — render it from materialProgramInputs(), or add it to OFF_TAG_EXEMPTIONS with the reason it cannot go stale: ${offenders.join(', ')}`
+    ).toEqual([]);
+  });
+
   it('keeps no exemption that has stopped constructing a material', () => {
     const live = new Set(CONSTRUCTOR_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(IMPERATIVE_EXEMPTIONS).filter((file) => !live.has(file));
 
     expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+  });
+
+  it('keeps no exemption that has stopped mounting off the tag', () => {
+    const live = new Set(OFF_TAG_SITES.map(({ file }) => repoPath(file)));
+    const stale = Object.keys(OFF_TAG_EXEMPTIONS).filter((file) => !live.has(file));
+
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+  });
+
+  it('reads every host element whole — no comment truncates one', () => {
+    // Openers here carry `//` comments between their props, and the reader drops
+    // a comment LINE. One surviving into a read tag is a comment sharing a line
+    // with a prop, where a `>` or a lone brace would end the read early and take
+    // every prop after it out of view — silently, for a rule that reports what
+    // it FOUND.
+    const truncatable = SOURCES.flatMap(({ file, source }) =>
+      jsxTags(source, HOST_TAG)
+        .filter(({ tag }) => tag.includes('//'))
+        .map(({ line }) => `${repoPath(file)}:${line}`)
+    );
+
+    expect(
+      truncatable,
+      `move the comment onto its own line — the scan below reads these elements only as far as the comment allows: ${truncatable.join(', ')}`
+    ).toEqual([]);
   });
 
   it('would catch a raw material element — the check is not vacuous', () => {
@@ -203,6 +341,44 @@ describe('Material factory conformance', () => {
     expect(rawMaterialTagLines('  <meshBasicMaterialish key={p.key} {...p.props} />')).toEqual([]);
     expect(rawMaterialTagLines(' * `<meshBasicMaterial map={tex} />` in a comment is not a use')).toEqual([]);
     expect(rawMaterialTagLines('  <mesh /> // <meshBasicMaterial map={tex} /> in prose')).toEqual([]);
+  });
+
+  it('would catch a material mounted off the tag — the check is not vacuous', () => {
+    const mounts = (source: string): string[] =>
+      offTagMounts(source).map(({ line, shape }) => `${line}:${shape}`);
+
+    // The prop itself, whatever the value is called.
+    expect(mounts('  <mesh geometry={g} material={m} />')).toEqual(['1:material prop']);
+    expect(mounts('  <mesh\n    material={built[i]}\n    renderOrder={2}\n  />')).toEqual(['1:material prop']);
+    // Writing THROUGH a mounted material is the same defect one level down.
+    expect(mounts('  <mesh material-transparent={true} />')).toEqual(['1:material prop']);
+    // A spread could carry `material`, `object` or `attach` and name none of them.
+    expect(mounts('  <mesh {...quad} />')).toEqual(['1:spread']);
+    // `<primitive>` with no literal slot: R3F reads the slot off the OBJECT.
+    expect(mounts('  <primitive object={material} />')).toEqual(['1:unslotted primitive']);
+    expect(mounts('  <primitive object={m} attach={attach} />')).toEqual(['1:unslotted primitive']);
+    expect(mounts('  <primitive object={m} attach="material-1" />')).toEqual(['1:unslotted primitive']);
+    // Naming a non-material slot in a literal is what clears a primitive.
+    expect(mounts('  <primitive object={geometry} attach="geometry" />')).toEqual([]);
+    // One element, one offence, however many shapes it carries.
+    expect(mounts('  <primitive object={m} {...rest} attach={a} />')).toEqual(['1:spread']);
+    // A component of ours takes its props in its own body, which is scanned there.
+    expect(mounts('  <SurfaceMaterialSlot source={source} attach={attach} {...maps} />')).toEqual([]);
+    // The factory spelling answers to the tag rule, not to this one.
+    expect(mounts('  <meshBasicMaterial key={p.key} {...p.props} />')).toEqual([]);
+    // A prop value holding a `>` does not close the tag early.
+    expect(mounts('  <mesh visible={a > b} material={m} />')).toEqual(['1:material prop']);
+    // Neither does a comment line between two props, `>` and lone brace and all.
+    expect(mounts('  <mesh\n    ref={r}\n    // a > b, and a { of prose\n    material={m}\n  />')).toEqual([
+      '1:material prop',
+    ]);
+    // A second element on one line cannot hide behind the first.
+    expect(mounts('  <group><mesh material={m} /></group>')).toEqual(['1:material prop']);
+    // Neither a longer prop name nor a longer tag name is the thing banned.
+    expect(mounts('  <mesh materialize={x} />')).toEqual([]);
+    expect(mounts('  <primitiveish object={m} />')).toEqual([]);
+    expect(mounts(' * `<mesh material={m} />` in a comment is not a use')).toEqual([]);
+    expect(mounts('  <group /> // <mesh material={m} /> in prose')).toEqual([]);
   });
 
   it('would catch an imperative construction — the check is not vacuous', () => {
@@ -227,5 +403,12 @@ describe('Material factory conformance', () => {
     expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
     // And the constructor regex, the same way.
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
+    // The host-element corpus the off-tag scan reads: a reader that stopped
+    // finding elements would clear that scan without examining anything.
+    expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(200);
+    // And each off-tag shape separately, against the live tree: they share one
+    // scan, so a floor over the total would let two of the three go silent.
+    const liveShapes = new Set(OFF_TAG_SITES.flatMap(({ mounts }) => mounts.map((m) => m.shape)));
+    for (const shape of OFF_TAG_SHAPES) expect(liveShapes.has(shape), shape).toBe(true);
   });
 });

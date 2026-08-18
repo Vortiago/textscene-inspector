@@ -84,6 +84,49 @@ export function tagEnd(text: string, start: number): number {
   return -1;
 }
 
+/** One JSX opener, read whole and collapsed to a single line. */
+export interface JsxTag {
+  /** 1-based line the opener starts on. */
+  readonly line: number;
+  /** `<name … />` or `<name …>`, whitespace collapsed to single spaces. */
+  readonly tag: string;
+}
+
+/**
+ * Every JSX opener matching `opener`, read to ITS OWN `>` — not the first one
+ * on the line: a prop value may hold a `>`, and a tag may neither start nor end
+ * at a line boundary. Every match on a line is read, so a second tag cannot
+ * hide behind the first.
+ *
+ * A comment line BETWEEN two props drops out: prose there is not part of the
+ * tag, and a `>` or a lone brace inside it would otherwise end the read early
+ * and hand the caller a tag missing everything after it.
+ */
+export function jsxTags(source: string, opener: RegExp): JsxTag[] {
+  const lines = source.split('\n');
+  const scan = new RegExp(opener.source, opener.flags.includes('g') ? opener.flags : `${opener.flags}g`);
+  const tags: JsxTag[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (isCommentLine(lines[i]!)) continue;
+    // Suffix-only strip, so a match index still addresses the raw line below.
+    const code = lines[i]!.replace(/\/\/.*$/, '');
+    scan.lastIndex = 0;
+    for (let match = scan.exec(code); match; match = scan.exec(code)) {
+      const start = match.index;
+      let text = '';
+      let end = -1;
+      for (let j = i; j < lines.length && end < 0; j++) {
+        text += (j > i ? '\n' : '') + (j > i && isCommentLine(lines[j]!) ? '' : lines[j]);
+        end = tagEnd(text, start);
+      }
+      if (end >= 0) tags.push({ line: i + 1, tag: text.slice(start, end).replace(/\s+/g, ' ') });
+      if (scan.lastIndex === match.index) scan.lastIndex++;
+    }
+  }
+  return tags;
+}
+
 /**
  * Lines matching `pattern` in code. A trailing `//` comment is prose too, and
  * can launder nothing. Pass `marker` to allow a per-line opt-out; omit it for a
