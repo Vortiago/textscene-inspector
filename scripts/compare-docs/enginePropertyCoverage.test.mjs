@@ -67,6 +67,21 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 const EXPECTED_UNVALIDATED = 4;
 
 /**
+ * The classes this ledger measures: only ones this repo already claims.
+ *
+ * An unregistered type's properties are the coverage ledger's business, not
+ * this guard's, and mixing the two populations would make both numbers
+ * unreadable. Derived from the registries, which is why the test above names
+ * the load-bearing members outright.
+ */
+function coveredClasses(nodeRegistry, validatorRegistry) {
+  return new Set([
+    ...nodeRegistry.getAllTypeNames(),
+    ...validatorRegistry.getRegisteredNodeTypes(),
+  ]);
+}
+
+/**
  * A registered key can stand for a whole indexed family.
  *
  * `Generic6DOFJoint3D` registers 18 wildcard keys covering 84 engine
@@ -147,14 +162,36 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
     expect(missing).toEqual([]);
   });
 
+  it('scopes to the classes this repo claims, named rather than only derived', () => {
+    const covered = coveredClasses(nodeRegistry, validatorRegistry);
+    // NAMED, because the scope is derived from the very registry this ledger
+    // audits: deregistering a class removes its rows from the count instead of
+    // failing it. Measured — 262 of the 266 contribute no unvalidated property,
+    // so they could all be deregistered wholesale and the total below would
+    // still read 4 and pass. The floor and these names are what make coverage
+    // going away a failure rather than a smaller population.
+    for (const cls of [
+      'Node',
+      'CanvasItem',
+      'Node2D',
+      'Node3D',
+      'Control',
+      'Range',
+      'BaseButton',
+      'Camera3D',
+      'MeshInstance3D',
+      'Viewport',
+    ]) {
+      expect([...covered]).toContain(cls);
+    }
+    expect(covered.size).toBeGreaterThanOrEqual(266);
+    // Editor internals are not ours to validate, and stay outside the scope
+    // rather than counting as a gap in it.
+    expect(covered.has('EditorFileDialog')).toBe(false);
+  });
+
   it('the unvalidated-property ledger has not grown', () => {
-    // Only classes this repo already claims. An unregistered type's properties
-    // are the coverage ledger's business, not this guard's, and mixing the two
-    // populations would make both numbers unreadable.
-    const covered = new Set([
-      ...nodeRegistry.getAllTypeNames(),
-      ...validatorRegistry.getRegisteredNodeTypes(),
-    ]);
+    const covered = coveredClasses(nodeRegistry, validatorRegistry);
 
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);

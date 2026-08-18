@@ -11,13 +11,12 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { markIntSlot, slotWidth, truncatedInt, unrepresentableInt } from '../intSlot.js';
+import { markIntSlot, readIntSlot, slotWidth, truncatedInt, unrepresentableInt } from '../intSlot.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
   createPositiveIntegerValidator,
   parseGodotFloat,
-  parseGodotInt,
   enforcedEndRefusal,
 } from '../commonValidators.js';
 import { storedFromFloat, type IntWidth } from '../../../godot/index.js';
@@ -46,7 +45,7 @@ function storedStrictInt(
   codes: { format: string; value: string },
   max: number | undefined,
   width?: IntWidth
-): { stored: number } | { error: ParseError } {
+): { stored: number; asFloat: number } | { error: ParseError } {
   const parsed = parseGodotFloat(value);
   // Text outside the grammar is the only FORMAT failure here. A fractional
   // literal used to be one too, which reported a file Godot opens as
@@ -60,7 +59,10 @@ function storedStrictInt(
   }
   const stored = storedFromFloat(parsed, value, width ?? slotWidth(max));
   const unfit = unrepresentableInt(name, key, value, line, codes.value, stored);
-  return unfit ? { error: unfit } : { stored };
+  // The float goes back out with the int: the truncation check needs the value
+  // the narrowing started from, and re-reading the text for it parsed every
+  // clean literal twice.
+  return unfit ? { error: unfit } : { stored, asFloat: parsed };
 }
 
 export const integerCombinators = {
@@ -150,13 +152,13 @@ export const integerCombinators = {
     const formatErr = formatCode(name);
     return markIntSlot(shape(
       (key, value, line) => {
-      const num = parseGodotInt(value);
-      if (num === null) {
+      const read = readIntSlot(value);
+      if (read.stored === null) {
         return propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, formatErr);
       }
       return (
-        unrepresentableInt(name, key, value, line, valueCode(name), num) ??
-        truncatedInt(name, key, value, line, valueCode(name), num)
+        unrepresentableInt(name, key, value, line, valueCode(name), read.stored) ??
+        truncatedInt(name, key, value, line, valueCode(name), read)
       );
     },
       'integer'
@@ -203,7 +205,7 @@ export const integerCombinators = {
           endSeverity(opts, belowMin ? 'min' : 'max')
         );
       }
-      return truncatedInt(name, key, value, line, valueErr, stored);
+      return truncatedInt(name, key, value, line, valueErr, read);
     }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }), width);
   },
 
@@ -226,7 +228,7 @@ export const integerCombinators = {
           if (stored < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${stored})`, valueErr, severity);
           }
-          return truncatedInt(name, key, value, line, valueErr, stored);
+          return truncatedInt(name, key, value, line, valueErr, read);
         },
         'integer >= 0'
       ),

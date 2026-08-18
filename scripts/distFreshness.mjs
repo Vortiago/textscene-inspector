@@ -81,6 +81,20 @@ export function stalenessMessage(core, what = 'this ledger') {
     );
   }
 
+  // A stamp a `--noEmit` run wrote. `tsc --noEmit` keeps the same incremental
+  // record a build does, so `pnpm type-check` refreshed the very file dist is
+  // dated against and every ledger then read the previous build as current —
+  // measured, four of them reported a stale registry as fact. tsc's own record
+  // of the distinction is `affectedFilesPendingEmit`: files it evaluated and
+  // did NOT emit, absent from a build that emitted everything. An interrupted
+  // build leaves it too, and reads as stale for the same reason.
+  if ((record.affectedFilesPendingEmit ?? []).length > 0) {
+    return (
+      `packages/textscene-core/tsconfig.tsbuildinfo was written by a type-check rather than ` +
+      `a build, so dist is older than the stamp and ${what} would measure it. Run \`${BUILD}\`.`
+    );
+  }
+
   // A DELETED source bumps no mtime under `src`, so the comparison below cannot
   // see one and a dist still carrying the removed slice's self-registration
   // reads fresh forever. tsc's file list is the record of what the build saw:

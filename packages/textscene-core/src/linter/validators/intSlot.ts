@@ -9,7 +9,7 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { INT32_MAX, parseGodotFloat, parseGodotInt, type IntWidth } from '../../godot/index.js';
+import { INT32_MAX, parseGodotFloat, storedFromFloat, type IntWidth } from '../../godot/index.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`) — the conversion every int slot's write
@@ -58,7 +58,23 @@ export function slotWidth(max?: number | null): IntWidth {
 }
 
 /**
- * A literal as the integer this slot stores.
+ * Both readings of one literal, from ONE parse.
+ *
+ * An int slot asks two questions of the same text — what does the slot store,
+ * and was anything dropped getting there — and the second needs the double the
+ * first was derived from. Reading them separately parsed every CLEAN int
+ * property twice to detect a condition a clean value does not have. Same shape
+ * as `badIntElement`, which pays the array-element half of the same cost.
+ */
+export interface IntSlotRead {
+  /** The tokenizer's double, or `null` for text outside the grammar. */
+  readonly asFloat: number | null;
+  /** The integer stored: `null` unreadable, `NaN` read but unstorable. */
+  readonly stored: number | null;
+}
+
+/**
+ * A literal as the integer this slot stores, beside the double it came from.
  *
  * The width goes IN, rather than being applied to the result: `_to_int`'s FLOAT
  * branch is undefined outside the target type's range, so which values are
@@ -66,8 +82,10 @@ export function slotWidth(max?: number | null): IntWidth {
  * question of every slot and then re-read the answer as unsigned, which refused
  * `seed = 4294967295.0` at the ceiling its own `PROPERTY_HINT_RANGE` declares.
  */
-export function storedInSlot(value: string, max?: number | null, width?: IntWidth): number | null {
-  return parseGodotInt(value, width ?? slotWidth(max));
+export function readIntSlot(value: string, max?: number | null, width?: IntWidth): IntSlotRead {
+  const asFloat = parseGodotFloat(value);
+  if (asFloat === null) return { asFloat: null, stored: null };
+  return { asFloat, stored: storedFromFloat(asFloat, value, width ?? slotWidth(max)) };
 }
 
 /**
@@ -118,6 +136,10 @@ export function markIntSlot<T extends PropertyValidator>(
  *
  * Checked LAST, after every bound: a value that is both fractional and out of
  * range has a genuine error to report, and that outranks this.
+ *
+ * Takes the caller's {@link IntSlotRead} rather than the raw text: the float
+ * this needs is the one the stored int was derived from, so re-reading it here
+ * parsed the same literal a second time on every clean property.
  */
 export function truncatedInt(
   propertyName: string,
@@ -125,10 +147,10 @@ export function truncatedInt(
   value: string,
   line: number,
   errorCodeValue: string,
-  stored: number | null
+  read: IntSlotRead
 ): ParseError | null {
+  const { asFloat, stored } = read;
   if (stored === null || Number.isNaN(stored)) return null;
-  const asFloat = parseGodotFloat(value);
   if (asFloat === null || Number.isInteger(asFloat)) return null;
   return propertyError(
     key,

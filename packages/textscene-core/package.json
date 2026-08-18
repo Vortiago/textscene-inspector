@@ -48,9 +48,9 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit --tsBuildInfoFile tsconfig.typecheck.tsbuildinfo",
     "type-check:tests": "tsc --noEmit -p tsconfig.tests.json",
-    "clean": "rimraf dist tsconfig.tsbuildinfo"
+    "clean": "rimraf dist tsconfig.tsbuildinfo tsconfig.typecheck.tsbuildinfo"
   },
   "keywords": [
     "tscn",

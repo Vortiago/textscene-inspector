@@ -3,8 +3,8 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { storedInSlot, truncatedInt, unrepresentableInt } from './intSlot.js';
-import { parseGodotFloat, parseGodotInt, type IntWidth } from '../../godot/index.js';
+import { readIntSlot, truncatedInt, unrepresentableInt } from './intSlot.js';
+import { parseGodotFloat, type IntWidth } from '../../godot/index.js';
 
 /**
  * The Variant-literal readers, re-exported from their home in `src/godot/`.
@@ -73,7 +73,8 @@ export function createEnumValidator(
   maxSeverity: ParseError['severity'] = valueSeverity
 ): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
-    const num = storedInSlot(value, max);
+    const read = readIntSlot(value, max);
+    const num = read.stored;
     if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
@@ -91,7 +92,7 @@ export function createEnumValidator(
         num < min ? valueSeverity : maxSeverity
       );
     }
-    return truncatedInt(propertyName, key, value, line, errorCodeValue, num);
+    return truncatedInt(propertyName, key, value, line, errorCodeValue, read);
   };
   return validator;
 }
@@ -216,7 +217,10 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
   const validator: PropertyValidator = (key, value, line) => {
     // `inf`/`nan` are legal literals in either slot, so the miss signal is null
     // and a parsed NaN falls through to the range checks, which it never trips.
-    const num = parseAsInt ? storedInSlot(value, max, spec.width) : parseGodotFloat(value);
+    // `null` in the FLOAT case, and that is the flag the truncation check reads
+    // at the end: only an INT slot has a fractional part to drop.
+    const read = parseAsInt ? readIntSlot(value, max, spec.width) : null;
+    const num = read ? read.stored : parseGodotFloat(value);
     // An INT slot narrows a non-finite at PARSE time to a value the file does
     // not state (see `asStoredInt`), so the literal is ALTERED and reports as
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the
@@ -270,7 +274,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // Last, so a value that is BOTH fractional and out of range reports the
     // error rather than this warning. A FLOAT slot stores `5.5` verbatim and
     // has nothing to say.
-    return parseAsInt ? truncatedInt(propertyName, key, value, line, errorCodeValue, num) : null;
+    return read ? truncatedInt(propertyName, key, value, line, errorCodeValue, read) : null;
   };
   return validator;
 }
@@ -288,7 +292,8 @@ export function createPositiveIntegerValidator(
   valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    const num = parseGodotInt(value);
+    const read = readIntSlot(value);
+    const num = read.stored;
     if (num === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
     }
@@ -298,6 +303,6 @@ export function createPositiveIntegerValidator(
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
       return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
-    return truncatedInt(propertyName, key, value, line, errorCodeValue, num);
+    return truncatedInt(propertyName, key, value, line, errorCodeValue, read);
   };
 }

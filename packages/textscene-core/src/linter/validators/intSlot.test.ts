@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { slotWidth, truncatedComponent, truncatedInt, unrepresentableInt } from './intSlot.js';
+import {
+  readIntSlot,
+  slotWidth,
+  truncatedComponent,
+  truncatedInt,
+  unrepresentableInt,
+} from './intSlot.js';
 
 describe('truncatedComponent', () => {
   it('warns about a finite fractional component, naming it and what is stored', () => {
@@ -44,15 +50,43 @@ describe('truncatedComponent', () => {
 
 describe('truncatedInt', () => {
   it('warns about a fractional scalar at the value code, never the format one', () => {
-    const diagnostic = truncatedInt('hframes', 'hframes', '5.5', 1, 'INVALID_HFRAMES_VALUE', 5);
+    const diagnostic = truncatedInt('hframes', 'hframes', '5.5', 1, 'INVALID_HFRAMES_VALUE', {
+      asFloat: 5.5,
+      stored: 5,
+    });
     expect(diagnostic?.severity).toBe('warning');
     expect(diagnostic?.code).toBe('INVALID_HFRAMES_VALUE');
   });
 
   it('says nothing about a whole value or an unstorable one', () => {
-    expect(truncatedInt('hframes', 'hframes', '5', 1, 'CODE', 5)).toBeNull();
-    expect(truncatedInt('hframes', 'hframes', 'inf', 1, 'CODE', NaN)).toBeNull();
-    expect(truncatedInt('hframes', 'hframes', 'nope', 1, 'CODE', null)).toBeNull();
+    expect(truncatedInt('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5, stored: 5 })).toBeNull();
+    expect(
+      truncatedInt('hframes', 'hframes', 'inf', 1, 'CODE', { asFloat: Infinity, stored: NaN })
+    ).toBeNull();
+    expect(
+      truncatedInt('hframes', 'hframes', 'nope', 1, 'CODE', { asFloat: null, stored: null })
+    ).toBeNull();
+  });
+
+  it('answers from the float its caller read, never from the text again', () => {
+    // The proof it parses once. A re-reading implementation reads "5", finds it
+    // whole and says nothing; this one follows the read it was handed. The
+    // message still quotes the LITERAL, which is what the file says.
+    expect(
+      truncatedInt('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5.5, stored: 5 })
+    ).not.toBeNull();
+  });
+});
+
+describe('readIntSlot', () => {
+  it('returns both readings of one literal, and null for text outside the grammar', () => {
+    expect(readIntSlot('5.5')).toEqual({ asFloat: 5.5, stored: 5 });
+    expect(readIntSlot('nope')).toEqual({ asFloat: null, stored: null });
+  });
+
+  it('reads at the width the slot ceiling implies, so an unsigned ceiling is reachable', () => {
+    expect(readIntSlot('4294967295.0', 4294967295).stored).toBe(4294967295);
+    expect(Number.isNaN(readIntSlot('4294967295.0', 255).stored)).toBe(true);
   });
 });
 
