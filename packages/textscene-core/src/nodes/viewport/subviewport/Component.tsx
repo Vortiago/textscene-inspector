@@ -39,7 +39,7 @@ import {
   useCanvasWorkspace,
 } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import {
-  useRegisterViewportTexture,
+  usePublishViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
@@ -149,7 +149,6 @@ function OffscreenViewport({
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);
-  const registerViewportTexture = useRegisterViewportTexture();
 
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
@@ -192,10 +191,7 @@ function OffscreenViewport({
     [target, width, height, readPixels]
   );
 
-  useEffect(
-    () => registerViewportTexture(path, entry),
-    [registerViewportTexture, path, entry]
-  );
+  usePublishViewportTexture(node, path, entry);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its CANVAS TRANSFORM, which is the identity until a Camera2D in the

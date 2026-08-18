@@ -12,6 +12,8 @@
  */
 
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
+import type { TscnNode } from '../parser/types.js';
+import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
 
 /**
  * `NodePath("FogOfWar/CombinedViewport")` → `'FogOfWar/CombinedViewport'`.
@@ -49,4 +51,19 @@ export function viewportTextureRegistryKey(
   // `NodePath(".")` names the viewport itself — the scene root here, not a child.
   if (viewportPath === '.') return root;
   return `${root}/${viewportPath}`;
+}
+
+/**
+ * The second key a viewport publishes under when it claims a unique name, or null.
+ *
+ * `viewport_path` is resolved with `get_node_or_null` (viewport.cpp:198), so
+ * `NodePath("%Name")` addresses the same viewport as its path does — a second
+ * spelling, not a second viewport. `viewportTextureRegistryKey` builds the
+ * consumer's key by joining the literal to the scene root, so the publisher
+ * answers it by registering that join too.
+ */
+export function viewportTextureUniqueNameKey(node: TscnNode, path: string): string | null {
+  if (!isUniqueNameInOwner(node)) return null;
+  const root = path.split('/')[0];
+  return root ? `${root}/${UNIQUE_NODE_PREFIX}${node.name}` : null;
 }

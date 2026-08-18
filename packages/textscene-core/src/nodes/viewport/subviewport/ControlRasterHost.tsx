@@ -53,7 +53,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { ControlParentProvider } from '../../../r3f/controls/ControlParentContext.js';
 import { rasterizeControlSubtree } from '../../../r3f/controls/rasterizeControlSubtree.js';
 import {
-  useRegisterViewportTexture,
+  usePublishViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
@@ -131,7 +131,6 @@ function ControlRasterHost({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, transparentBg, internalResources, externalResources } = viewport;
   const { x: width, y: height } = viewport.size;
   const hostRef = useRef<HTMLDivElement>(null);
-  const registerViewportTexture = useRegisterViewportTexture();
   // Memoised so a re-render cannot rewrite the host's own style attribute — the
   // MutationObserver below watches attributes, and a rewrite would schedule a
   // pointless redraw on every commit.
@@ -173,10 +172,7 @@ function ControlRasterHost({ viewport }: { viewport: ControlRasterViewport }) {
     [surface, width, height, readPixels]
   );
 
-  useEffect(
-    () => registerViewportTexture(path, entry),
-    [registerViewportTexture, path, entry]
-  );
+  usePublishViewportTexture(node, path, entry);
 
   useEffect(() => {
     const host = hostRef.current;

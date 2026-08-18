@@ -27,7 +27,9 @@
  * rasterized Control subtree.
  */
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { TscnNode } from '../../parser/types.js';
+import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
 import type * as THREE from 'three';
 
 export interface ViewportTextureEntry {
@@ -60,6 +62,32 @@ ViewportTexturesContext.displayName = 'ViewportTexturesContext';
 /** Stable publisher, for `<SubViewport>`. */
 export function useRegisterViewportTexture(): RegisterViewportTexture {
   return useContext(RegisterViewportTextureContext);
+}
+
+/**
+ * Publish `entry` for `node` at `path`, and at its `%UniqueName` spelling when it
+ * claims one — the two keys a `viewport_path` can name the same viewport by.
+ *
+ * One hook rather than the same effect in each publisher: the WebGL and
+ * DOM-raster hosts publish to the same registry, and a consumer is meant to stay
+ * ignorant of which produced its target.
+ */
+export function usePublishViewportTexture(
+  node: TscnNode,
+  path: string,
+  entry: ViewportTextureEntry
+): void {
+  const register = useRegisterViewportTexture();
+  // The derived key, not the node, so a re-parse that changes node identity
+  // without changing the spelling does not withdraw and republish the target.
+  const alias = viewportTextureUniqueNameKey(node, path);
+  useEffect(() => {
+    const withdraw = [register(path, entry)];
+    if (alias) withdraw.push(register(alias, entry));
+    return () => {
+      for (const fn of withdraw) fn();
+    };
+  }, [register, path, alias, entry]);
 }
 
 /** Reactive lookup: the target published at `path`, or null. */
