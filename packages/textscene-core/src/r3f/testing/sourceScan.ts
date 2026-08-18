@@ -19,8 +19,20 @@ export interface SourceFile {
   readonly source: string;
 }
 
-/** Never walked: generated output and installed packages are nobody's source. */
-const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'coverage', '.git']);
+/**
+ * Never walked: generated output and installed packages are nobody's source.
+ * `.vscode-test` is a DOWNLOADED VS Code plus its bundled `.d.ts` files — it is
+ * gitignored, so walking it makes every corpus depend on whether the machine
+ * has run the extension gate.
+ */
+const SKIPPED_DIRECTORIES = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.git',
+  '.vscode-test',
+]);
 
 const REPO_ROOT = join(import.meta.dirname, '../../../../..');
 
@@ -125,6 +137,90 @@ export function jsxTags(source: string, opener: RegExp): JsxTag[] {
     }
   }
   return tags;
+}
+
+/**
+ * The top-level arguments of the call whose `(` sits at `open`, or null when the
+ * closing `)` is not in `text` yet. Nested calls, arrays, object literals and
+ * string bodies are all skipped over, so neither a nested comma nor a `)` inside
+ * a `'res://…'` can end an argument or the call early.
+ */
+function callArguments(text: string, open: number): string[] | null {
+  const args: string[] = [];
+  let current = '';
+  let depth = 0;
+  let quote: string | null = null;
+
+  for (let i = open; i < text.length; i++) {
+    const char = text[i]!;
+    if (quote !== null) {
+      current += char;
+      if (char === '\\') current += text[++i] ?? '';
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+      current += char;
+    } else if (char === '(' || char === '[' || char === '{') {
+      if (depth++ > 0) current += char;
+    } else if (char === ')' || char === ']' || char === '}') {
+      if (--depth === 0) {
+        if (current.trim() !== '') args.push(current.trim());
+        return args;
+      }
+      current += char;
+    } else if (char === ',' && depth === 1) {
+      args.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  return null;
+}
+
+/** One call, read whole: where it starts, what it names and what it was passed. */
+export interface CallSite {
+  /** 1-based line the callee starts on. */
+  readonly line: number;
+  /** The matched opener, up to and including its `(`. */
+  readonly callee: string;
+  /** Top-level arguments, each trimmed. */
+  readonly args: readonly string[];
+}
+
+/**
+ * Every call matching `opener` — which must match up to and including the `(` —
+ * read to ITS OWN `)`, across as many lines as that takes. The counterpart of
+ * `jsxTags` for a rule whose unit is an ARGUMENT POSITION rather than a prop:
+ * an argument names nothing, so only where it sits can be read.
+ *
+ * A comment line between two arguments drops out, on the same terms as there.
+ */
+export function callSites(source: string, opener: RegExp): CallSite[] {
+  const lines = source.split('\n');
+  const scan = new RegExp(opener.source, opener.flags.includes('g') ? opener.flags : `${opener.flags}g`);
+  const sites: CallSite[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (isCommentLine(lines[i]!)) continue;
+    // Suffix-only strip, so a match index still addresses the raw line below.
+    const code = lines[i]!.replace(/\/\/.*$/, '');
+    scan.lastIndex = 0;
+    for (let match = scan.exec(code); match; match = scan.exec(code)) {
+      const open = match.index + match[0].length - 1;
+      let text = '';
+      let args: string[] | null = null;
+      for (let j = i; j < lines.length && args === null; j++) {
+        text += (j > i ? '\n' : '') + (j > i && isCommentLine(lines[j]!) ? '' : lines[j]);
+        args = callArguments(text, open);
+      }
+      if (args !== null) sites.push({ line: i + 1, callee: match[0], args });
+      if (scan.lastIndex === match.index) scan.lastIndex++;
+    }
+  }
+  return sites;
 }
 
 /**

@@ -41,6 +41,21 @@
  * named-file exemption list of their own, on the same terms as the imperative
  * one below.
  *
+ * A JSX ELEMENT IS NOT THE ONLY WAY EITHER. Two spellings mount a material with
+ * no element at all, and both are read as well: `mesh.material = m` assigns into
+ * a material SLOT, and `new THREE.Mesh(geometry, material)` fills one from a
+ * constructor ARGUMENT — an argument names nothing at the call site, so its
+ * position is the only readable thing about it, and three's own signatures say
+ * which position that is per class. Each carries its own named-file exemption
+ * list: a file cleared to BUILD a material is not thereby cleared to MOUNT one.
+ *
+ * THE TWO HALVES READ DIFFERENT CORPORA. An assignment or a `new` is ordinary
+ * TypeScript and is read across the whole repo; JSX exists only in `.tsx`, and
+ * the host-element scan is narrowed again to this package — outside the renderer
+ * a lower-case element is a `<div>`, which has no material slot, and a gate that
+ * would one day fail an idiomatic `<div {...rest}>` with a message about
+ * materials is reaching past its remit. Narrowed by corpus, never by tag name.
+ *
  * TEST FILES ARE DELIBERATELY OUT OF SCOPE. Dozens of them construct materials
  * or render material JSX directly to drive an assertion, and routing those
  * through the factory would couple every material assertion to the thing under
@@ -55,6 +70,7 @@
 import { describe, expect, it } from 'vitest';
 import type { JsxTag } from './testing/sourceScan';
 import {
+  callSites,
   isProductionSource,
   jsxTags,
   offendingLines,
@@ -69,6 +85,27 @@ const SOURCES = walkSources(
   SCANNED_ROOTS.map((dir) => repoRoot(dir)),
   isProductionSource
 );
+
+/**
+ * The JSX half of that. TypeScript parses JSX in `.tsx` and nowhere else, so a
+ * `<…>` match in a `.ts` file is a string body or prose however it is spelled —
+ * noise a JSX rule can only mis-read.
+ */
+const JSX_SOURCES = SOURCES.filter(({ file }) => file.endsWith('.tsx'));
+
+/**
+ * The RENDERER's JSX: this package's own source. The host-element scan below
+ * reads every lower-case element there is, and outside the renderer that is a
+ * `<div>` — no DOM element has a material slot, so an idiomatic `<div {...rest}>`
+ * in an app would one day fail a material gate with a message about materials.
+ *
+ * Scoped by CORPUS and not by tag name: a name list would have to track three's
+ * and R3F's element sets forever, which is the brittleness these rules exist to
+ * avoid. R3F elements only exist inside a `<Canvas>` tree, and every one of
+ * those is built here — the apps mount this package's components and add DOM.
+ */
+const RENDERER_ROOT = 'packages/textscene-core/src';
+const RENDERER_JSX = JSX_SOURCES.filter(({ file }) => repoPath(file).startsWith(`${RENDERER_ROOT}/`));
 
 /** Any R3F material element — `meshBasicMaterial`, `shaderMaterial`, `pointsMaterial`, … */
 const MATERIAL_TAG = /<[a-z][A-Za-z0-9]*Material(?![A-Za-z0-9])/;
@@ -242,18 +279,119 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the uncompiled-shader fallback, literal-only',
 };
 
-/** One walk of the repo per shape — both assertions over each read it. */
-const TAGS = SOURCES.map(({ file, source }) => ({ file, tags: materialTags(source) }));
+/**
+ * Assignment into a material SLOT. `mesh.material = x` mounts a material on an
+ * object three will compile, and does it where no factory, no `key` and no
+ * reconciler can see — the same defect as `<mesh material={m} />`, one layer
+ * below JSX. The three sibling slots are read too: `overrideMaterial` and the
+ * `customDepth`/`customDistance` pair are each a material three compiles for a
+ * pass of its own.
+ *
+ * The SLOT is the unit, never the value's name: the right-hand side is called
+ * whatever its author called it, and `.materials` or `.materialPath` is not a
+ * slot at all.
+ */
+const MATERIAL_ASSIGNMENT =
+  /\.(?:material|overrideMaterial|customDepthMaterial|customDistanceMaterial)(?![A-Za-z0-9_])\s*(?:\[[^\]]*\]\s*)?=(?!=)/;
+
+export function materialAssignmentLines(source: string): number[] {
+  return offendingLines(source, MATERIAL_ASSIGNMENT);
+}
+
+/**
+ * Mesh-likes that take a material argument, each mapped to the arity that
+ * carries NONE: `new THREE.Mesh(geometry)` is a mesh with three's default
+ * material, `new THREE.Mesh(geometry, material)` is a mount. `Sprite` takes its
+ * material FIRST and `BatchedMesh` fourth, so the position is per class and
+ * comes from three's own constructors.
+ *
+ * Read as an argument POSITION and not as a name, for the reason the tag rule
+ * gives: an argument names nothing at the call site, so where it sits is the
+ * only thing about it that can be read.
+ */
+const MESH_LIKE_ARITY: Readonly<Record<string, number>> = {
+  Mesh: 1,
+  InstancedMesh: 1,
+  SkinnedMesh: 1,
+  BatchedMesh: 3,
+  Points: 1,
+  Line: 1,
+  LineSegments: 1,
+  LineLoop: 1,
+  Sprite: 0,
+};
+
+const MESH_LIKE_CONSTRUCTOR = new RegExp(
+  `\\bnew\\s+(?:THREE\\.)?(${Object.keys(MESH_LIKE_ARITY).join('|')})\\s*\\(`
+);
+
+export interface MeshArgumentMount {
+  readonly line: number;
+  /** The class whose material argument was filled — reported, and asserted live below. */
+  readonly mesh: string;
+}
+
+/** Mesh-likes constructed WITH a material argument. One entry per call. */
+export function meshArgumentMounts(source: string): MeshArgumentMount[] {
+  return callSites(source, MESH_LIKE_CONSTRUCTOR).flatMap(({ line, callee, args }) => {
+    const mesh = MESH_LIKE_CONSTRUCTOR.exec(callee)![1]!;
+    return args.length > MESH_LIKE_ARITY[mesh]! ? [{ line, mesh }] : [];
+  });
+}
+
+/**
+ * Files allowed to assign into a material slot, each with the reason it cannot
+ * suffer the defect. Separate from the constructor list on purpose: a file
+ * cleared to BUILD a material is not thereby cleared to MOUNT one, and reusing
+ * one entry for both would let a reason written about the first silently
+ * license the second.
+ */
+const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/nodes/3d/csg/sharedParser.ts':
+    'the parser tail: copies the `material` PROPERTY — a `res://` path string — onto a parse result, in a file that imports no THREE at all',
+  'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
+    'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
+  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
+    'the `.tres` arrival for a mesh inside a GLB: the resource pipeline hands over a material constructed complete, a re-resolve replaces the whole object, and unmount puts the loader’s own material back',
+  'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
+    'gives each GLB clone its own copy of the loader’s materials; a `.clone()` carries every program input of the original, so nothing about the material changes',
+};
+
+/**
+ * Files allowed to construct a mesh-like around a material, on the same terms
+ * and separate from both lists above for the same reason.
+ */
+const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
+    'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
+  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
+    'the tile material is either the literal-only module constant or one the resource pipeline handed over complete, and the InstancedMesh is rebuilt whenever either moves',
+  'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
+    'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
+  'packages/textscene-core/src/resources/sky/build.ts':
+    'the sky cube: built once, consumed by a single cube render, disposed with the environment',
+};
+
+/** One walk per shape, over the corpus that shape belongs to — every assertion reads these. */
+const TAGS = JSX_SOURCES.map(({ file, source }) => ({ file, tags: materialTags(source) }));
 const CONSTRUCTOR_SITES = SOURCES.map(({ file, source }) => ({
   file,
   lines: materialConstructorLines(source),
 })).filter(({ lines }) => lines.length > 0);
-const OFF_TAG_SITES = SOURCES.map(({ file, source }) => ({
+const ASSIGNMENT_SITES = SOURCES.map(({ file, source }) => ({
+  file,
+  lines: materialAssignmentLines(source),
+})).filter(({ lines }) => lines.length > 0);
+const MESH_ARGUMENT_SITES = SOURCES.map(({ file, source }) => ({
+  file,
+  mounts: meshArgumentMounts(source),
+})).filter(({ mounts }) => mounts.length > 0);
+const OFF_TAG_SITES = RENDERER_JSX.map(({ file, source }) => ({
   file,
   mounts: offTagMounts(source),
 })).filter(({ mounts }) => mounts.length > 0);
 /** Every host element the off-tag scan read, offending or not — its corpus. */
-const HOST_TAG_COUNT = SOURCES.reduce((n, { source }) => n + jsxTags(source, HOST_TAG).length, 0);
+const HOST_TAG_COUNT = RENDERER_JSX.reduce((n, { source }) => n + jsxTags(source, HOST_TAG).length, 0);
 
 describe('Material factory conformance', () => {
   it('writes no material element outside the factory spelling', () => {
@@ -278,6 +416,30 @@ describe('Material factory conformance', () => {
     ).toEqual([]);
   });
 
+  it('assigns no material into a slot outside the named exemptions', () => {
+    const offenders = ASSIGNMENT_SITES.filter(
+      ({ file }) => ASSIGNED_MOUNT_EXEMPTIONS[repoPath(file)] === undefined
+    ).flatMap(({ file, lines }) => lines.map((line) => `${repoPath(file)}:${line}`));
+
+    expect(
+      offenders,
+      `a material assigned into a slot reaches three with no key to remount it — render it from materialProgramInputs(), or add it to ASSIGNED_MOUNT_EXEMPTIONS with the reason it cannot go stale: ${offenders.join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('constructs no mesh around a material outside the named exemptions', () => {
+    const offenders = MESH_ARGUMENT_SITES.filter(
+      ({ file }) => CONSTRUCTED_MOUNT_EXEMPTIONS[repoPath(file)] === undefined
+    ).flatMap(({ file, mounts }) =>
+      mounts.map(({ line, mesh }) => `${repoPath(file)}:${line} (${mesh})`)
+    );
+
+    expect(
+      offenders,
+      `a material passed to a mesh constructor is mounted before React ever sees it — render it from materialProgramInputs(), or add it to CONSTRUCTED_MOUNT_EXEMPTIONS with the reason it cannot go stale: ${offenders.join(', ')}`
+    ).toEqual([]);
+  });
+
   it('mounts no material off the tag outside the named exemptions', () => {
     const offenders = OFF_TAG_SITES.filter(
       ({ file }) => OFF_TAG_EXEMPTIONS[repoPath(file)] === undefined
@@ -298,6 +460,20 @@ describe('Material factory conformance', () => {
     expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
   });
 
+  it('keeps no exemption that has stopped assigning into a slot', () => {
+    const live = new Set(ASSIGNMENT_SITES.map(({ file }) => repoPath(file)));
+    const stale = Object.keys(ASSIGNED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
+
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+  });
+
+  it('keeps no exemption that has stopped constructing a mesh around a material', () => {
+    const live = new Set(MESH_ARGUMENT_SITES.map(({ file }) => repoPath(file)));
+    const stale = Object.keys(CONSTRUCTED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
+
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual([]);
+  });
+
   it('keeps no exemption that has stopped mounting off the tag', () => {
     const live = new Set(OFF_TAG_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(OFF_TAG_EXEMPTIONS).filter((file) => !live.has(file));
@@ -311,7 +487,7 @@ describe('Material factory conformance', () => {
     // with a prop, where a `>` or a lone brace would end the read early and take
     // every prop after it out of view — silently, for a rule that reports what
     // it FOUND.
-    const truncatable = SOURCES.flatMap(({ file, source }) =>
+    const truncatable = RENDERER_JSX.flatMap(({ file, source }) =>
       jsxTags(source, HOST_TAG)
         .filter(({ tag }) => tag.includes('//'))
         .map(({ line }) => `${repoPath(file)}:${line}`)
@@ -391,7 +567,62 @@ describe('Material factory conformance', () => {
     expect(materialConstructorLines('// safe: fresh every time\nnew THREE.MeshBasicMaterial();')).toEqual([2]);
   });
 
-  it('reads the whole repo and finds both shapes, so neither scan can pass vacuously', () => {
+  it('would catch an assignment into a material slot — the check is not vacuous', () => {
+    expect(materialAssignmentLines('  mesh.material = built;')).toEqual([1]);
+    expect(materialAssignmentLines('  for (const [m, previous] of restore) m.material = previous;')).toEqual([1]);
+    expect(materialAssignmentLines('  node.material[0] = fresh;')).toEqual([1]);
+    expect(materialAssignmentLines('  scene.overrideMaterial = depthOnly;')).toEqual([1]);
+    expect(materialAssignmentLines('  mesh.customDepthMaterial = shadow;')).toEqual([1]);
+    expect(materialAssignmentLines('  mesh.customDistanceMaterial = shadow;')).toEqual([1]);
+    // Reading a slot is not mounting into one, and neither is a longer name.
+    expect(materialAssignmentLines('  if (mesh.material === built) return;')).toEqual([]);
+    expect(materialAssignmentLines('  if (mesh.material !== built) return;')).toEqual([]);
+    expect(materialAssignmentLines('  this.materials = createMaterialProcessor();')).toEqual([]);
+    expect(materialAssignmentLines('  result.materialPath = properties.material;')).toEqual([]);
+    expect(materialAssignmentLines('  const props = { material: built };')).toEqual([]);
+    expect(materialAssignmentLines(' * `mesh.material = built` in a comment is not a use')).toEqual([]);
+    // No opt-out: only the named-file list exempts an assignment.
+    expect(materialAssignmentLines('// safe: fresh every time\nmesh.material = built;')).toEqual([2]);
+  });
+
+  it('would catch a material passed to a mesh constructor — the check is not vacuous', () => {
+    const mounts = (source: string): string[] =>
+      meshArgumentMounts(source).map(({ line, mesh }) => `${line}:${mesh}`);
+
+    expect(mounts('  const mesh = new THREE.Mesh(geometry, material);')).toEqual(['1:Mesh']);
+    expect(mounts('  const m = new THREE.InstancedMesh(geometry, material, cells.length);')).toEqual([
+      '1:InstancedMesh',
+    ]);
+    expect(mounts('  return new SkinnedMesh(geometry, built);')).toEqual(['1:SkinnedMesh']);
+    expect(mounts('  scene.add(new THREE.Points(geometry, dots));')).toEqual(['1:Points']);
+    expect(mounts('  const l = new THREE.LineSegments(geometry, lineMaterial);')).toEqual(['1:LineSegments']);
+    // Its material is the FIRST argument, so any argument at all is a mount.
+    expect(mounts('  const s = new THREE.Sprite(billboard);')).toEqual(['1:Sprite']);
+    expect(mounts('  const s = new THREE.Sprite();')).toEqual([]);
+    // And a BatchedMesh takes three counts before its material.
+    expect(mounts('  new THREE.BatchedMesh(10, 100, 200);')).toEqual([]);
+    expect(mounts('  new THREE.BatchedMesh(10, 100, 200, shared);')).toEqual(['1:BatchedMesh']);
+    // Geometry alone leaves the slot to three's own default.
+    expect(mounts('  const proxy = new THREE.Mesh(receiver.geometry);')).toEqual([]);
+    expect(mounts('  next = new THREE.Mesh();')).toEqual([]);
+    // A comma inside a nested call does not read as a second argument.
+    expect(mounts('  const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));')).toEqual([]);
+    expect(mounts('  const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), pass);')).toEqual(['1:Mesh']);
+    // Nor one inside an array, an object literal or a string body.
+    expect(mounts('  new THREE.Mesh(merge([a, b]));')).toEqual([]);
+    expect(mounts('  new THREE.Mesh(build({ x: 1, y: 2 }));')).toEqual([]);
+    expect(mounts("  new THREE.Mesh(cached('res://a,b.mesh'));")).toEqual([]);
+    // Read across lines, and a comment line between arguments drops out.
+    expect(mounts('  const mesh = new THREE.Mesh(\n    geometry,\n    material\n  );')).toEqual(['1:Mesh']);
+    expect(mounts('  new THREE.Mesh(\n    geometry\n    // one, two)\n  );')).toEqual([]);
+    // Neither a material class nor a longer class name is the thing banned.
+    expect(mounts('  const m = new THREE.MeshBasicMaterial({ map, color });')).toEqual([]);
+    expect(mounts('  const m = new THREE.LineDashedMaterial({ scale: 2 });')).toEqual([]);
+    expect(mounts('  const g = new MeshBuilder(geometry, material);')).toEqual([]);
+    expect(mounts(' * `new THREE.Mesh(geometry, material)` in a comment is not a use')).toEqual([]);
+  });
+
+  it('finds every shape in the tree, so no scan can pass vacuously', () => {
     // The file walk — a scan that stops finding source proves nothing. Each
     // root is asserted separately: `packages/` alone would clear the floor, so
     // `apps/` or `scripts/` could drop out of the walk unnoticed.
@@ -399,13 +630,30 @@ describe('Material factory conformance', () => {
       expect(SOURCES.some(({ file }) => repoPath(file).startsWith(`${dir}/`)), dir).toBe(true);
     }
     expect(SOURCES.length).toBeGreaterThanOrEqual(1000);
+    // The renderer's JSX, the narrower corpus the host-element scan reads. Each
+    // subtree separately, for the reason the roots are: `r3f/` alone would clear
+    // a total, so the node and resource slices could drop out of it unnoticed.
+    for (const dir of ['nodes', 'r3f', 'resources']) {
+      expect(
+        RENDERER_JSX.some(({ file }) => repoPath(file).startsWith(`${RENDERER_ROOT}/${dir}/`)),
+        dir
+      ).toBe(true);
+    }
+    expect(RENDERER_JSX.length).toBeGreaterThanOrEqual(120);
     // The tag regex — if it stopped matching, "no offenders" would be silence.
     expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
     // And the constructor regex, the same way.
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
+    // As does the slot-assignment regex.
+    expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(5);
     // The host-element corpus the off-tag scan reads: a reader that stopped
     // finding elements would clear that scan without examining anything.
-    expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(200);
+    expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(350);
+    // The mesh-likes actually built around a material here. The other classes in
+    // the arity table have no site in the tree, so the unit cases above are all
+    // that hold them up — named here so the difference stays visible.
+    const liveMeshes = new Set(MESH_ARGUMENT_SITES.flatMap(({ mounts }) => mounts.map((m) => m.mesh)));
+    for (const mesh of ['Mesh', 'InstancedMesh']) expect(liveMeshes.has(mesh), mesh).toBe(true);
     // And each off-tag shape separately, against the live tree: they share one
     // scan, so a floor over the total would let two of the three go silent.
     const liveShapes = new Set(OFF_TAG_SITES.flatMap(({ mounts }) => mounts.map((m) => m.shape)));
