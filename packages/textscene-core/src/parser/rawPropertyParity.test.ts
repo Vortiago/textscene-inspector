@@ -37,7 +37,9 @@ function rawByName(nodes: TscnNode[], out = new Map<string, Record<string, strin
 
 describe('raw property bag, across both parsers', () => {
   const lenient = rawByName(new TscnParser().parse(SRC).nodes);
-  const strict = rawByName(new StrictTscnParser().parse(SRC).scene.nodes);
+  const parsed = new StrictTscnParser().parse(SRC);
+  if (!parsed.scene) throw new Error('strict parser produced no scene');
+  const strict = rawByName(parsed.scene.nodes);
 
   it('lands in rawProperties on both trees', () => {
     expect([...strict.keys()].sort()).toEqual([...lenient.keys()].sort());

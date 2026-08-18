@@ -24,6 +24,9 @@ unique_name_in_owner = true
 
 function strictScene(source: string) {
   const { scene } = new StrictTscnParser().parse(source);
+  // Absent only if the scanner could not run at all, which these sources do not
+  // provoke — so it is a broken test, not a case to assert around.
+  if (!scene) throw new Error('strict parser produced no scene');
   return scene;
 }
 
