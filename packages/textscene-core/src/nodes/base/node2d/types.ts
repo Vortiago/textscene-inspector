@@ -64,7 +64,7 @@ export interface Node2DProperties {
    * CanvasItem `material` — an `ExtResource`/`SubResource` reference to a
    * `CanvasItemMaterial` (or a ShaderMaterial, which is not implemented).
    */
-  material?: string;
+  materialPath?: string;
   /**
    * When true the node draws with its PARENT's material instead of its own,
    * inherited up the chain until a node supplies one (CanvasItem, default false).

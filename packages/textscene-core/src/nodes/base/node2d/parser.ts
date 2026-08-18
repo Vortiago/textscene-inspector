@@ -68,7 +68,7 @@ export function parseNode2D(
     y_sort_origin: properties.y_sort_origin !== undefined
       ? floatOr(properties.y_sort_origin, 0)
       : 0,
-    ...(properties.material !== undefined ? { material: properties.material } : {}),
+    ...(properties.material !== undefined ? { materialPath: properties.material } : {}),
     use_parent_material: properties.use_parent_material === 'true',
   };
 }
