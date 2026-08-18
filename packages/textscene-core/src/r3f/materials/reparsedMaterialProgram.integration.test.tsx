@@ -110,7 +110,7 @@ mesh = SubResource("Box_1")
 surface_material_override/1 = SubResource("Mat_1")
 `;
 
-const spriteScene = (transparency: string) => `[gd_scene load_steps=2 format=3]
+const spriteScene = (alphaCut: string) => `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Texture2D" path="${SPRITE_TEXTURE}" id="1_tex"]
 
@@ -119,7 +119,7 @@ const spriteScene = (transparency: string) => `[gd_scene load_steps=2 format=3]
 [node name="Billboard" type="Sprite3D" parent="."]
 texture = ExtResource("1_tex")
 double_sided = false
-transparency = ${transparency}
+alpha_cut = ${alphaCut}
 `;
 
 describe('a re-parsed scene rebuilds materials whose baked program parameters moved', () => {
@@ -155,19 +155,24 @@ describe('a re-parsed scene rebuilds materials whose baked program parameters mo
     expect(blended !== opaque || blended.version > compiledVersion).toBe(true);
   });
 
-  it('Sprite3D: transparency 0 → 0.5 on a single-sided sprite', async () => {
+  // `transparency` cannot serve here: a sprite blends at every value of it
+  // (`scene/3d/sprite_3d.cpp:293` → TRANSPARENCY_ALPHA), so nothing baked moves.
+  // `alpha_cut` DISCARD leaves the alpha pass entirely (`:287`).
+  it('Sprite3D: alpha_cut DISABLED → DISCARD on a single-sided sprite', async () => {
     const fake = createFakeResourceLoader();
     fake.textures.seed(SPRITE_TEXTURE, seededTexture());
     const renderer = await ReactThreeTestRenderer.create(treeFor(spriteScene('0'), fake.loader));
-    const opaque = materialAt(renderer.scene, 'Billboard');
-    expect(opaque.transparent).toBe(false);
-    const compiledVersion = opaque.version;
-
-    await renderer.update(treeFor(spriteScene('0.5'), fake.loader));
-
     const blended = materialAt(renderer.scene, 'Billboard');
     expect(blended.transparent).toBe(true);
-    expect(blended.side).toBe(THREE.FrontSide);
-    expect(blended !== opaque || blended.version > compiledVersion).toBe(true);
+    expect(blended.alphaTest).toBe(0);
+    const compiledVersion = blended.version;
+
+    await renderer.update(treeFor(spriteScene('1'), fake.loader));
+
+    const scissored = materialAt(renderer.scene, 'Billboard');
+    expect(scissored.transparent).toBe(false);
+    expect(scissored.alphaTest).toBeGreaterThan(0);
+    expect(scissored.side).toBe(THREE.FrontSide);
+    expect(scissored !== blended || scissored.version > compiledVersion).toBe(true);
   });
 });

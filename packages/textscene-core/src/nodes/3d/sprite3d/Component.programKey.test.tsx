@@ -89,50 +89,47 @@ async function rebuilds(
   return findMesh(renderer.scene).material !== first;
 }
 
-const BLENDED: Partial<Sprite3DProperties> = { transparency: 0.5 };
+/** The default sprite is already blended; only the alpha-cut arms leave that pass. */
+const OPAQUE_CUT: Partial<Sprite3DProperties> = { alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD };
 
 describe('<Sprite3D> rebuilds its material when a baked program parameter moves', () => {
-  it('transparency 0 → 0.5 crosses the `opaque` composite', async () => {
-    expect(await rebuilds({}, BLENDED)).toBe(true);
-  });
-
-  it('transparent true → false forces the sprite back into the opaque pass', async () => {
-    expect(await rebuilds(BLENDED, { ...BLENDED, transparent: false })).toBe(true);
+  it('transparent true → false forces the sprite into the opaque pass', async () => {
+    expect(await rebuilds({}, { transparent: false })).toBe(true);
   });
 
   it('double_sided false → true moves doubleSided/flipSided', async () => {
     expect(await rebuilds({}, { double_sided: true })).toBe(true);
   });
 
-  it('alpha_cut DISABLED → HASH, which nothing in three re-derives for us', async () => {
+  it('alpha_cut DISCARD → HASH, which nothing in three re-derives for us', async () => {
     // The isolating case: the sprite is opaque either side, so `alphaHash` is
     // the only parameter that moves — and `Material.js:134` is a plain field.
-    expect(await rebuilds({}, { alpha_cut: AlphaCutMode.ALPHA_CUT_HASH })).toBe(true);
+    expect(await rebuilds(OPAQUE_CUT, { alpha_cut: AlphaCutMode.ALPHA_CUT_HASH })).toBe(true);
   });
 
-  it('alpha_cut on a blended sprite: ALPHA_SCISSOR leaves the blended pass', async () => {
+  it('alpha_cut DISABLED → DISCARD leaves the blended pass', async () => {
     // `scene_shader_forward_clustered.cpp:252` puts a scissored surface in the
     // opaque list, so the `opaque` composite (`WebGLPrograms.js:262`) moves.
-    expect(
-      await rebuilds(BLENDED, { ...BLENDED, alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD })
-    ).toBe(true);
+    expect(await rebuilds({}, OPAQUE_CUT)).toBe(true);
   });
 });
 
 describe('<Sprite3D> keeps the compiled material for a plain uniform', () => {
-  it('transparency 0.5 → 0.25 is opacity alone', async () => {
-    expect(await rebuilds(BLENDED, { transparency: 0.25 })).toBe(false);
+  it('transparency 0 → 0.5 is opacity alone', async () => {
+    // The blended pass is the shader's, not the colour's, so a fading sprite
+    // never crosses the `opaque` composite.
+    expect(await rebuilds({}, { transparency: 0.5 })).toBe(false);
   });
 
   it('modulate RGB is the colour uniform', async () => {
-    expect(
-      await rebuilds(BLENDED, { ...BLENDED, modulate: { r: 1, g: 0, b: 0, a: 1 } })
-    ).toBe(false);
+    expect(await rebuilds({}, { modulate: { r: 1, g: 0, b: 0, a: 1 } })).toBe(false);
   });
 
-  it('alpha_cut on an ALREADY-opaque sprite: three bumps `version` itself', async () => {
-    // Only `alphaTest` moves here (0 → 0.5), and `Material.js:494-502` bumps
-    // `version` on that zero crossing — which is why it is not in the key.
-    expect(await rebuilds({}, { alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD })).toBe(false);
+  it('alpha_scissor_threshold 0 → 0.5: three bumps `version` itself', async () => {
+    // Only `alphaTest` moves here, and `Material.js:494-502` bumps `version` on
+    // that zero crossing — which is why it is not in the key.
+    expect(
+      await rebuilds({ ...OPAQUE_CUT, alpha_scissor_threshold: 0 }, OPAQUE_CUT)
+    ).toBe(false);
   });
 });

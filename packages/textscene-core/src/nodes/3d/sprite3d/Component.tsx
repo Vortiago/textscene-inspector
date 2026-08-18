@@ -23,11 +23,10 @@
  *   - `meshBasicMaterial`, or `meshStandardMaterial` when `shaded`
  *     (`material.cpp:3045`: SHADING_MODE_UNSHADED vs SHADING_MODE_PER_PIXEL)
  *   - `color`     ← modulate RGB
- *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)),
- *                   `transparent` flag follows
- *   - `alphaTest` ← `alpha_scissor_threshold` when alpha_cut === DISCARD,
- *                   `alphaHash` when === HASH — see `alphaCutSurface`
- *   - `depthWrite`← false only on the plain blended path
+ *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)); a uniform,
+ *                   never a term of `transparent` — see `alphaCutSurface`
+ *   - `transparent`/`alphaTest`/`alphaHash`/`depthWrite` ← the alpha_cut arm
+ *                   alone (`alphaCutSurface`)
  *   - `side`      ← DoubleSide (sprite quads should be visible from
  *                   the back too — Godot's runtime behaviour)
  *   - `renderOrder` on the mesh ← render_priority
@@ -53,10 +52,7 @@ import {
   applyTextureFilterState,
   godotTextureFilterState,
 } from '../../../resources/textures/godotTextureFilter';
-import {
-  AlphaCutMode,
-  type Sprite3DProperties,
-} from './types';
+import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -141,16 +137,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
   });
-  // OURS, not Godot's: TRANSPARENCY_ALPHA is in the blended list whatever the
-  // modulate says, but an opaque quad costs nothing to sort, so plain ALPHA
-  // blends only where it must. The prepass arm always does.
-  const transparent =
-    cut.blended &&
-    (opacity < 1 || properties.alpha_cut === AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);
-  const alphaTest = cut.alphaTest;
-  // An opaque sprite must write depth so it occludes and sorts correctly
-  // against other opaque geometry; only the blended paths may skip depthWrite.
-  const depthWrite = transparent ? cut.depthWrite : true;
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -240,10 +226,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       map: displayedTexture,
       color,
       opacity,
-      transparent,
-      alphaTest,
+      transparent: cut.blended,
+      alphaTest: cut.alphaTest,
       alphaHash: cut.alphaHash,
-      depthWrite,
+      depthWrite: cut.depthWrite,
       // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
       depthTest: !properties.no_depth_test,
       side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,

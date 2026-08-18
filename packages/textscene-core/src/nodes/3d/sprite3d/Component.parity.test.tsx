@@ -124,7 +124,7 @@ describe('Sprite3D render parity', () => {
   });
 
   it('default (transparent) sprite keeps depthWrite=false on the blended path', async () => {
-    const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' }); // opacity < 1 → blended
+    const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' });
     expect((findMesh(r.scene).material as THREE.Material).depthWrite).toBe(false);
   });
 

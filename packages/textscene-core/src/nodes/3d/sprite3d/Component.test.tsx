@@ -177,7 +177,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.color.b).toBeCloseTo(0, 3);
   });
 
-  it('combines modulate.a and transparency into opacity (transparent=true when opacity<1)', async () => {
+  it('combines modulate.a and transparency into opacity', async () => {
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({
@@ -307,6 +307,25 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     expect(mat.alphaTest).toBe(0.25);
+  });
+
+  it('alpha_cut=DISABLED blends at full modulate alpha', async () => {
+    // `sprite_3d.cpp:293` → TRANSPARENCY_ALPHA, which writes ALPHA in the
+    // generated shader (`material.cpp:1836`) and so raises the compile-time
+    // `uses_alpha` (`scene_shader_forward_clustered.cpp:123`). The alpha list is
+    // chosen from that flag alone (`scene_shader_forward_clustered.h:279-287`,
+    // `render_forward_clustered.cpp:4079-4090`) — no colour is read.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.opacity).toBe(1);
+    expect(mat.transparent).toBe(true);
+    // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
+    expect(mat.depthWrite).toBe(false);
   });
 
   it('alpha_cut=DISCARD paints opaque', async () => {
