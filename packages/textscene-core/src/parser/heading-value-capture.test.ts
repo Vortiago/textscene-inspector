@@ -1,27 +1,18 @@
 /**
- * Contract for #393 — a heading attribute value must be captured WHOLE, whatever
- * its form.
+ * Contract: a heading attribute value is captured WHOLE, whatever its form.
  *
- * `parseHeading` scans attribute values with an alternation whose only structured
- * arms are `PackedStringArray(...)` and `[...]`, each matched with a naive
- * character class (`[^)]*` / `[^\]]*`), and whose fallback is `[^\s]+`. Godot
- * writes a space after every comma, so ANY other constructor truncates at the
- * first space: `parent_id_path=PackedInt32Array(840561040, 1598164129)` is
- * captured as `PackedInt32Array(840561040,` and the rest is silently dropped.
- *
- * The #150 contract (heading-array-attrs.test.ts, same gate) already pins the
- * four value TYPES the current scanner branches on — bare token, quoted-with-
- * spaces, `PackedStringArray(...)`, `[...]` — and those pins stay authoritative.
- * This file pins only what that alternation cannot express, so the two together
- * cover the whole value grammar.
+ * Godot writes a space after every comma, so a value scanner that is not
+ * delimiter-balanced truncates at that space —
+ * `parent_id_path=PackedInt32Array(840561040, 1598164129)` down to
+ * `PackedInt32Array(840561040,`, silently dropping the rest.
  *
  * Non-gameable by construction, in three directions:
  *
  *  1. GENERALITY. `Vector2(1, 2)` is pinned deliberately, so no list of
- *     constructor names can satisfy this file. A fix must capture ANY
- *     `Name(...)` call, not a wider enumeration — enumerating is precisely how
- *     the #150 fix left this hole. (Godot does not emit `Vector2(...)` in a
- *     heading today; the rung constrains the GRAMMAR, not Godot's writer.)
+ *     constructor names can satisfy this file — the capture must accept ANY
+ *     `Name(...)` call rather than an enumeration. (Godot does not emit
+ *     `Vector2(...)` in a heading; the rung constrains the GRAMMAR, not
+ *     Godot's writer.)
  *  2. NO OVER-CAPTURE. A greedy `\w+\(.*\)` would swallow two adjacent
  *     constructor attributes into one, so every multi-attribute rung asserts the
  *     COMPLETE attribute set, not just the value under test.
@@ -31,20 +22,18 @@
  *     knows, so the capture has to track quotes rather than count characters.
  *
  * Asserted at `parseHeading`'s own boundary on purpose: nothing in the tree reads
- * `parent_id_path` or `node_paths` today, so there is no downstream layer to
- * assert at and none should be invented to create one.
+ * `parent_id_path` or `node_paths`, so there is no downstream layer to assert at
+ * and none should be invented to create one.
  *
- * Rung status when committed: five rungs FAIL (PackedInt32Array, non-Packed
- * constructor, two adjacent constructors, ")" in a string, "]" in a string).
- * Five PASS and must keep passing — the four regression guards, plus the nested
- * `[Vector2(0, 0), Vector2(1, 1)]` rung, which the bracket arm happens to get
- * right today and which a paren-aware rewrite could easily break.
+ * `heading-array-attrs.test.ts` beside it pins the same grammar for the two
+ * array-shaped values with simpler cases; the two files together, plus
+ * `heading-value-scan.test.ts`, cover the whole value grammar.
  */
 
 import { describe, it, expect } from 'vitest';
 import { parseHeading } from './utils';
 
-describe('#393 parseHeading captures a complete attribute value', () => {
+describe('parseHeading captures a complete attribute value', () => {
   it('captures a multi-element PackedInt32Array (the reported truncation)', () => {
     const result = parseHeading(
       '[node name="Robot" parent="Player" parent_id_path=PackedInt32Array(840561040, 1598164129)]',
@@ -58,8 +47,12 @@ describe('#393 parseHeading captures a complete attribute value', () => {
     // The generality rung: a fix that enumerates constructor names fails here.
     const result = parseHeading('[node name="X" type="Node2D" position=Vector2(1, 2) parent="."]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.position).toBe('Vector2(1, 2)');
-    expect(result!.attributes.parent).toBe('.');
+    expect(result!.attributes).toEqual({
+      name: 'X',
+      type: 'Node2D',
+      position: 'Vector2(1, 2)',
+      parent: '.',
+    });
   });
 
   it('keeps two adjacent constructor attributes separate', () => {
@@ -84,22 +77,27 @@ describe('#393 parseHeading captures a complete attribute value', () => {
       '[node name="X" node_paths=PackedStringArray("Foo (copy)", "Bar") parent="."]',
     );
     expect(result).not.toBeNull();
-    expect(result!.attributes.node_paths).toBe('PackedStringArray("Foo (copy)", "Bar")');
-    expect(result!.attributes.parent).toBe('.');
+    expect(result!.attributes).toEqual({
+      name: 'X',
+      node_paths: 'PackedStringArray("Foo (copy)", "Bar")',
+      parent: '.',
+    });
   });
 
   it('does not end a bracketed array at a "]" inside one of its quoted strings', () => {
     const result = parseHeading('[node name="X" groups=["a]b", "c"] parent="."]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.groups).toBe('["a]b", "c"]');
-    expect(result!.attributes.parent).toBe('.');
+    expect(result!.attributes).toEqual({ name: 'X', groups: '["a]b", "c"]', parent: '.' });
   });
 
   it('captures a constructor nested inside a bracketed array', () => {
     const result = parseHeading('[node name="X" bounds=[Vector2(0, 0), Vector2(1, 1)] parent="."]');
     expect(result).not.toBeNull();
-    expect(result!.attributes.bounds).toBe('[Vector2(0, 0), Vector2(1, 1)]');
-    expect(result!.attributes.parent).toBe('.');
+    expect(result!.attributes).toEqual({
+      name: 'X',
+      bounds: '[Vector2(0, 0), Vector2(1, 1)]',
+      parent: '.',
+    });
   });
 
   // --- regression guards: these pass today and must keep passing ---
@@ -116,8 +114,11 @@ describe('#393 parseHeading captures a complete attribute value', () => {
       '[ext_resource type="Texture2D" path="res://art/Foo (1)/[x].png" id="1_a"]',
     );
     expect(result).not.toBeNull();
-    expect(result!.attributes.path).toBe('res://art/Foo (1)/[x].png');
-    expect(result!.attributes.id).toBe('1_a');
+    expect(result!.attributes).toEqual({
+      type: 'Texture2D',
+      path: 'res://art/Foo (1)/[x].png',
+      id: '1_a',
+    });
   });
 
   it('still parses a heading of bare unquoted values', () => {

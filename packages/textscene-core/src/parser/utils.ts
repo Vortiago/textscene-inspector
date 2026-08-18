@@ -3,9 +3,29 @@ export interface ParsedHeading {
   attributes: Record<string, string>;
 }
 
-/** ASCII whitespace: a heading separates its tokens on any of it, not just `' '`. */
+/**
+ * Whitespace, enumerated as `\s` matches it. Godot itself accepts none of the
+ * non-ASCII tail: a heading key is an identifier, `[A-Za-z_][A-Za-z0-9_]*`
+ * (variant_parser.cpp:493), and an NBSP is neither whitespace to skip
+ * (`cchar <= 32`) nor an identifier character, so it raises "Unexpected
+ * character" (:508) and the file does not load. Splitting is the lenient
+ * reading: it keeps the attribute, and so the node, rather than gluing the
+ * space into the next key and dropping a node the tree needs.
+ */
 function isSpaceCode(code: number): boolean {
-  return code === 32 || (code >= 9 && code <= 13);
+  if (code === 32 || (code >= 9 && code <= 13)) return true;
+  if (code < 0xa0) return false;
+  return (
+    code === 0xa0 ||
+    code === 0x1680 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x205f ||
+    code === 0x3000 ||
+    code === 0xfeff
+  );
 }
 
 /** `[A-Za-z0-9_]` — the characters a constructor name is built from. */
@@ -89,8 +109,8 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
 }
 
 /**
- * What counts as a quoted literal, for every caller that unwraps one: a value
- * quoted at BOTH ends. Anything else (including a lone `"`) passes through.
+ * Drop a property value's surrounding quotes: a value quoted at BOTH ends, and
+ * long enough for the two quotes to be distinct. Anything else passes through.
  */
 function stripQuotes(value: string): string {
   return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
@@ -100,13 +120,16 @@ function stripQuotes(value: string): string {
 
 /**
  * Unwrap a quoted heading value: strip the surrounding quotes and decode `\"`.
- * Heading attributes are carried as source text — a node parser decodes the
- * rest of Godot's escapes ({@link unquoteString}) when it reads a string
- * property — so a structured value stays verbatim and re-parseable.
+ * Both steps together or neither — decoding a value whose quote never closed
+ * would destroy the `\"` that keeps the raw text re-parseable. Heading
+ * attributes are carried as source text, so a structured value stays verbatim
+ * and the rest of Godot's escapes are a node parser's business
+ * ({@link unquoteString}).
  */
 function unquoteHeadingValue(value: string): string {
-  if (!value.startsWith('"')) return value;
-  return stripQuotes(value).replace(/\\"/g, '"');
+  if (!value.startsWith('"') || !value.endsWith('"')) return value;
+  const inner = value.slice(1, -1);
+  return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
 }
 
 export function parseHeading(line: string): ParsedHeading | null {
@@ -135,9 +158,17 @@ export function parseHeading(line: string): ParsedHeading | null {
     const keyStart = pos;
     while (pos < len && attributesStr[pos] !== '=' && !isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
 
+    // An empty key means `pos` sits on a stray `=`: step over that ONE
+    // character, so a `=key="v"` typo costs the `=` and not the attribute
+    // behind it.
+    if (pos === keyStart) {
+      pos++;
+      continue;
+    }
+
     // Not `key=…`: drop this token alone and resync at the next whitespace,
     // rather than abandoning every attribute that follows it.
-    if (pos === keyStart || attributesStr[pos] !== '=') {
+    if (attributesStr[pos] !== '=') {
       pos = skipToSpace(attributesStr, pos);
       continue;
     }
@@ -283,11 +314,16 @@ const ESCAPE_MAP: Record<string, string> = {
  * reads a string property (label/button text, …).
  */
 export function unquoteString(value: string): string {
-  return stripQuotes(value).replace(
+  const unquoted = stripQuotes(value);
+  if (!unquoted.includes('\\')) return unquoted;
+  return unquoted.replace(
     /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g,
     (_match, seq: string) => {
       if (seq[0] === 'u' || seq[0] === 'U') {
-        return String.fromCodePoint(parseInt(seq.slice(1), 16));
+        const code = parseInt(seq.slice(1), 16);
+        // `\UXXXXXX` accepts six hex digits, past the Unicode maximum — a
+        // literal beyond it would throw and abort the whole scene parse.
+        return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
       }
       return ESCAPE_MAP[seq] ?? seq;
     },

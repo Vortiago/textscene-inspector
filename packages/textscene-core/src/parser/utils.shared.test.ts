@@ -56,4 +56,10 @@ describe('unquoteString', () => {
   it('treats an escaped backslash before u as literal (\\\\u1234 → \\u1234)', () => {
     expect(unquoteString('"a\\\\u1234"')).toBe('a\\u1234');
   });
+  it('leaves a \\UXXXXXX escape past the Unicode maximum undecoded', () => {
+    // Six hex digits reach 0xFFFFFF; String.fromCodePoint throws above
+    // 0x10FFFF, and one such literal would abort the whole scene parse.
+    expect(unquoteString('"x \\U110000 y"')).toBe('x \\U110000 y');
+    expect(unquoteString('"x \\U10FFFF y"')).toBe('x \u{10FFFF} y');
+  });
 });
