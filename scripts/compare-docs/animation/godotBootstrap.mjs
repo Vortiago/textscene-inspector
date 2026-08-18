@@ -7,25 +7,21 @@
  * environment, while a 2D one renders into the project viewport with neither.
  */
 
+import { PREVIEW_LIGHTING_GD, gdString } from '../../godot-ref/bootstrap.mjs';
 import { EDITOR_CAMERA_DIRECTION, EDITOR_CAMERA_DISTANCE, EDITOR_FOV } from '../../godot-ref/run.mjs';
 import { CANVAS_2D_CAPTURE } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
-
-// `_load_default_preview_settings`, mirrored from scripts/godot-ref/bootstrap.mjs so
-// the animated reference gets the same sky as the still one.
-const PREVIEW_SUN_ALTITUDE_DEG = -60;
-const PREVIEW_SUN_AZIMUTH_DEG = 150;
-const PREVIEW_SKY_TOP = '0.385, 0.454, 0.55';
-const PREVIEW_GROUND_BOTTOM = '0.2, 0.169, 0.133';
 
 export function godotBootstrap(resPath, framesDir) {
   const dir = EDITOR_CAMERA_DIRECTION.map((c) => c * EDITOR_CAMERA_DISTANCE);
   return `extends Node3D
 
 func _ready() -> void:
-	var target: Node = load("${resPath}").instantiate()
+	var target: Node = load(${gdString(resPath)}).instantiate()
 	add_child(target)
-	_apply_preview_environment(target)
+	# The editor preview sun and environment (ADR-0025), the same block the still
+	# capture emits, so the two references light a scene identically.
+	_apply_preview_lighting(target)
 	var cam := Camera3D.new()
 	add_child(cam)
 	cam.fov = ${EDITOR_FOV}
@@ -45,60 +41,10 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png("${framesDir}/frame_%02d.png" % i)
+		get_viewport().get_texture().get_image().save_png(${gdString(`${framesDir}/frame_%02d.png`)} % i)
 	get_tree().quit()
 
-# The editor preview environment (ADR-0025): injected only when the scene has no
-# WorldEnvironment of its own, exactly as the still capture does.
-func _apply_preview_environment(target: Node) -> void:
-	if _has_world_environment(target):
-		return
-	var sky_material := ProceduralSkyMaterial.new()
-	var sky_top := Color(${PREVIEW_SKY_TOP})
-	var ground_bottom := Color(${PREVIEW_GROUND_BOTTOM})
-	var hz: Color = sky_top.lerp(ground_bottom, 0.5)
-	var hz_lum: float = hz.get_luminance() * 3.333
-	hz = hz.lerp(Color(hz_lum, hz_lum, hz_lum), 0.5)
-	sky_material.sky_top_color = sky_top
-	sky_material.sky_horizon_color = hz
-	sky_material.ground_bottom_color = ground_bottom
-	sky_material.ground_horizon_color = hz
-	var sky := Sky.new()
-	sky.sky_material = sky_material
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.glow_enabled = true
-	var world_env := WorldEnvironment.new()
-	world_env.environment = env
-	add_child(world_env)
-	# The fixture supplies its own DirectionalLight3D, so the preview sun yields;
-	# add one only if it does not.
-	if not _has_directional_light(target):
-		var sun := DirectionalLight3D.new()
-		sun.shadow_enabled = true
-		sun.transform = Transform3D(
-			Basis.from_euler(Vector3(deg_to_rad(${PREVIEW_SUN_ALTITUDE_DEG}), deg_to_rad(${PREVIEW_SUN_AZIMUTH_DEG}), 0.0)),
-			Vector3.ZERO
-		)
-		add_child(sun)
-
-func _has_world_environment(node: Node) -> bool:
-	if node is WorldEnvironment:
-		return true
-	for child in node.get_children():
-		if _has_world_environment(child):
-			return true
-	return false
-
-func _has_directional_light(node: Node) -> bool:
-	if node is DirectionalLight3D:
-		return true
-	for child in node.get_children():
-		if _has_directional_light(child):
-			return true
-	return false
+${PREVIEW_LIGHTING_GD}
 `;
 }
 
@@ -117,7 +63,7 @@ func _ready() -> void:
 	vp.size = Vector2i(${CANVAS_2D_CAPTURE.width}, ${CANVAS_2D_CAPTURE.height})
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
-	var target: Node = load("${resPath}").instantiate()
+	var target: Node = load(${gdString(resPath)}).instantiate()
 	_disable_2d_cameras(target)
 	vp.add_child(target)
 	var sprite := _find_sprite(target)
@@ -138,7 +84,7 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		vp.get_texture().get_image().save_png("${framesDir}/frame_%02d.png" % i)
+		vp.get_texture().get_image().save_png(${gdString(`${framesDir}/frame_%02d.png`)} % i)
 	get_tree().quit()
 
 func _disable_2d_cameras(node: Node) -> void:

@@ -11,21 +11,27 @@ import { sign } from '../../godot/math.js';
  * `parseTransform3D` returns Godot's Basis ROWS (utils/transform.ts docblock), so
  * column `i` is the `i`-th component picked from each of the three rows.
  *
- * Godot's `get_scale()` (basis.cpp:300-321) multiplies these magnitudes by a
+ * Godot's `get_scale()` (basis.cpp:300-322) multiplies these magnitudes by a
  * single `det_sign`. That factor cancels out of a pairwise difference at ±1, so
  * the unsigned form is exact for the equality check the callers run — but NOT at
  * 0. `SIGN` is three-valued (typedefs.h:123-126), so a degenerate basis scales
  * to (0, 0, 0), which is uniform however unequal the magnitudes are.
  *
- * Does NOT handle `inf`/`nan` components — see
- * {@link basisColumnScalesGodotFloat} for the caller that needs to.
+ * Null for an `inf`/`nan` component too: `parseTransform3D` matches the FINITE
+ * grammar (`slotTupleRegex`) and throws on one. See
+ * {@link basisColumnScalesGodotFloat} for the caller that needs those.
  */
 export function basisColumnScales(raw: string): [number, number, number] | null {
   try {
     const { basis_x, basis_y, basis_z } = parseTransform3D(raw);
     // Exact, like `SIGN` itself: a determinant of 1e-30 signs to +1 in Godot and
     // really does have a scale, so an epsilon here would silence a live warning.
-    if (determinantOfRows(basis_x, basis_y, basis_z) === 0) return [0, 0, 0];
+    const det = basisDeterminant(
+      basis_x.x, basis_x.y, basis_x.z,
+      basis_y.x, basis_y.y, basis_y.z,
+      basis_z.x, basis_z.y, basis_z.z
+    );
+    if (det === 0) return [0, 0, 0];
     return [
       Math.hypot(basis_x.x, basis_y.x, basis_z.x),
       Math.hypot(basis_x.y, basis_y.y, basis_z.y),
@@ -36,36 +42,45 @@ export function basisColumnScales(raw: string): [number, number, number] | null 
   }
 }
 
-/** `Basis::determinant()` (basis.h:350-354) over the three parsed rows. */
-function determinantOfRows(
-  r0: { x: number; y: number; z: number },
-  r1: { x: number; y: number; z: number },
-  r2: { x: number; y: number; z: number }
+/**
+ * `Basis::determinant()` (basis.h:350-354) over the nine row-major components,
+ * expanded along the first COLUMN exactly as the engine writes it.
+ *
+ * The grouping is transcribed rather than simplified. Expanding along the first
+ * ROW is the same number for every finite basis and not for one carrying `inf`:
+ * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` reaches `1 - 0*inf + 1*inf`
+ * (NaN, signing to 0) one way and `1 + inf` (signing to +1) the other, which is
+ * the difference between reporting Godot's scale and reporting one it never
+ * holds.
+ */
+function basisDeterminant(
+  a: number, b: number, c: number,
+  d: number, e: number, f: number,
+  g: number, h: number, i: number
 ): number {
-  return (
-    r0.x * (r1.y * r2.z - r2.y * r1.z) -
-    r1.x * (r0.y * r2.z - r2.y * r0.z) +
-    r2.x * (r0.y * r1.z - r1.y * r0.z)
-  );
+  return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
 }
 
 const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
 
 /**
- * The same basis-column magnitudes as {@link basisColumnScales}, but parsed
- * with Godot's own float grammar (`TSCN_FLOAT_PATTERN_SOURCE`, via
- * `makeFloatTupleRegex`/`tupleComponent`) rather than `parseTransform3D`.
+ * The same basis columns as {@link basisColumnScales}, parsed with Godot's own
+ * float grammar (`TSCN_FLOAT_PATTERN_SOURCE`, via
+ * `makeFloatTupleRegex`/`tupleComponent`) rather than `parseTransform3D`, and
+ * signed by the determinant.
  *
- * `parseTransform3D`'s regex (`[\d\s.,e+-]+`) cannot match `inf`/`-inf`/`nan`,
- * and its `.filter(v => !isNaN(v))` silently DROPS a component its narrower
- * grammar cannot read rather than failing — which shifts every value after it
- * into the wrong slot instead of raising. That is invisible to
- * `collisionshape3d-non-uniform-scale`'s pairwise equality test (an infinite
- * OR a dropped-and-shifted component both tend to compare unequal, so it still
- * warns), but `rigid_body_3d.cpp:667`'s `abs(scale.axis - 1) > 0.05` needs the
- * distinction Godot itself draws: TRUE for an infinite column, FALSE for a
- * `nan` one (every comparison against NaN is false) — a rule built on the
- * narrower parser cannot reproduce that split.
+ * `parseTransform3D` matches the FINITE grammar and throws on `inf`/`-inf`/`nan`,
+ * so {@link basisColumnScales} reads a basis carrying one as unparseable and its
+ * callers say nothing at all. Godot reads a scale off it either way, which
+ * `rigid_body_3d.cpp:666`'s `abs(scale.axis - 1.0) > 0.05` then warns about.
+ *
+ * What it reads is not a per-axis magnitude: `get_scale()` is
+ * `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321-322), so ONE non-finite
+ * component reaches all three axes. `SIGN` takes neither of its comparisons on a
+ * NaN determinant and returns 0 (typedefs.h:123-126), which leaves the `nan` axis
+ * NaN — comparing FALSE against 1.0 — and collapses the other two to exact 0,
+ * a whole unit outside the tolerance. The warning fires, from the axes that did
+ * NOT carry the `nan`.
  */
 export function basisColumnScalesGodotFloat(raw: string): [number, number, number] | null {
   const match = TRANSFORM3D_REGEX.exec(raw);
@@ -97,6 +112,5 @@ function detSign(n: number[]): number {
   const [a, b, c, d, e, f, g, h, i] = n as [
     number, number, number, number, number, number, number, number, number,
   ];
-  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-  return sign(det);
+  return sign(basisDeterminant(a, b, c, d, e, f, g, h, i));
 }

@@ -41,7 +41,31 @@ describe('CPUParticles2D preview rule', () => {
     expect(linter.lint(content)[0]!.message).toContain(label);
   });
 
-  it.each(['0', '1', '2', '3'])('stays silent for the previewable shape %s', (value) => {
+  it.each(['4.0', '4e0', ' 4 ', '5.9'])(
+    'warns for `emission_shape = %s`, which an INT slot stores as a global-RNG shape',
+    (value) => {
+      // The tokenizer types `4.0`/`4e0` FLOAT (variant_parser.cpp:442-448) and
+      // the write converts through `_to_int` (variant.h:369-370), truncating
+      // toward zero — so `set_emission_shape` (cpu_particles_2d.cpp:480-481)
+      // receives EMISSION_SHAPE_POINTS and the preview diverges exactly as it
+      // does for the `4` spelling.
+      expect(namesOf(scene(`emission_shape = ${value}\n`))).toContain(
+        'cpuparticles2d-nondeterministic-emission-shape'
+      );
+    }
+  );
+
+  it('stays silent for `+4`, which Godot refuses to tokenize at all', () => {
+    // `get_token` takes a leading `-` and nothing else before a digit
+    // (variant_parser.cpp:420-423); a `+` reaches no branch and raises
+    // "Unexpected character" (:508), so the file does not load and this rule
+    // has no shape to report.
+    expect(namesOf(scene('emission_shape = +4\n'))).not.toContain(
+      'cpuparticles2d-nondeterministic-emission-shape'
+    );
+  });
+
+  it.each(['0', '1', '2', '3', '3.9', '0e0'])('stays silent for the previewable shape %s', (value) => {
     expect(namesOf(scene(`emission_shape = ${value}\n`))).not.toContain(
       'cpuparticles2d-nondeterministic-emission-shape'
     );

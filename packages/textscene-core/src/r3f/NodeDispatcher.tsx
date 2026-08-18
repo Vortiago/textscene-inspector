@@ -41,8 +41,6 @@ import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js'
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { DispatchedNode } from './DispatchedNode.js';
 
-export { DispatchedNode } from './DispatchedNode.js';
-
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
   if (nodeComponentRegistry.isCsgShape(node.type)) return true;

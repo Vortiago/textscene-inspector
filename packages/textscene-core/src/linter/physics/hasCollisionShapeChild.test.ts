@@ -10,7 +10,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { hasCollisionShapeChild, collisionShapeTypesPhrase } from './hasCollisionShapeChild.js';
+import {
+  collisionShapeTypes,
+  collisionShapeTypesPhrase,
+  hasCollisionShapeChild,
+} from './hasCollisionShapeChild.js';
 import type { TscnNode } from '../../parser/types.js';
 
 /** The smallest node shape these rules walk. */
@@ -65,5 +69,15 @@ describe('hasCollisionShapeChild', () => {
 
   it('names both accepted types in the diagnostic', () => {
     expect(collisionShapeTypesPhrase('2D')).toBe('CollisionShape2D or CollisionPolygon2D');
+  });
+
+  // The message and the check read one set. A third shape provider added to
+  // `collisionShapeTypes` alone would otherwise be offered by every warning while
+  // the predicate kept ignoring it.
+  it.each(['2D', '3D'] as const)('accepts exactly the types it names (%s)', (dim) => {
+    for (const type of collisionShapeTypes(dim)) {
+      expect(hasCollisionShapeChild(node('Body', [node(type)]), dim)).toBe(true);
+      expect(collisionShapeTypesPhrase(dim)).toContain(type);
+    }
   });
 });

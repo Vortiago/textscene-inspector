@@ -18,10 +18,15 @@
  * An unresolved class gets NO `source` field and a loud console.error. A missing
  * link is honest; a wrong one is not.
  *
- * The parts live in `godotLinks/`: `sourceIndex` (what headers exist), `headers`
- * (fetching one and checking its GDCLASS), `resolve` (the candidate strategies)
- * and `pool` (bounded fan-out).
+ * This file is the subsystem's surface; the parts live in `godotLinks/`:
+ * `sourceIndex` (what headers exist), `headers` (fetching one and checking its
+ * GDCLASS), `resolve` (the candidate strategies) and `pool` (bounded fan-out).
+ * Import from here, so a consumer never depends on which of them owns a helper.
  */
+
+export { fetchSourceIndex } from './godotLinks/sourceIndex.mjs';
+export { makeResolver } from './godotLinks/resolve.mjs';
+export { mapPool } from './godotLinks/pool.mjs';
 
 export const docsUrl = (name) =>
   `https://docs.godotengine.org/en/stable/classes/class_${name.toLowerCase()}.html`;

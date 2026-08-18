@@ -10,6 +10,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { TEXTURE_CHANNELS } from './pbr.js';
 
 export const featureKeys: Record<string, PropertyValidator> = {
   rim_enabled: v.boolean('rim_enabled'),
@@ -42,13 +43,9 @@ export const featureKeys: Record<string, PropertyValidator> = {
   ao_light_affect: v.float('ao_light_affect', { min: 0, max: 1, hinted: 'material.cpp:3669' }),
   ao_texture: v.resourceReference('ao_texture'),
   ao_on_uv2: v.boolean('ao_on_uv2'),
-  ao_texture_channel: v.enumInt(
-    'ao_texture_channel',
-    0,
-    4,
-    { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'GRAYSCALE' },
-    { enforced: 'material.cpp:2984' }
-  ),
+  ao_texture_channel: v.enumInt('ao_texture_channel', 0, 4, TEXTURE_CHANNELS, {
+    enforced: 'material.cpp:2984',
+  }),
 
   heightmap_enabled: v.boolean('heightmap_enabled'),
   // material.cpp:3676 ("-16,16,0.001"); set_heightmap_scale (:2283) bare assigns.
@@ -108,13 +105,9 @@ export const featureKeys: Record<string, PropertyValidator> = {
   // material.cpp:3705 ("-1,1,0.01"); set_refraction (:2337) bare assigns.
   refraction_scale: v.float('refraction_scale', { min: -1, max: 1, hinted: 'material.cpp:3705' }),
   refraction_texture: v.resourceReference('refraction_texture'),
-  refraction_texture_channel: v.enumInt(
-    'refraction_texture_channel',
-    0,
-    4,
-    { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'GRAYSCALE' },
-    { enforced: 'material.cpp:2994' }
-  ),
+  refraction_texture_channel: v.enumInt('refraction_texture_channel', 0, 4, TEXTURE_CHANNELS, {
+    enforced: 'material.cpp:2994',
+  }),
 
   detail_enabled: v.boolean('detail_enabled'),
   detail_mask: v.resourceReference('detail_mask'),

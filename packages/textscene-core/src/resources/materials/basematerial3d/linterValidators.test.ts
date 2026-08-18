@@ -251,6 +251,18 @@ describe('BaseMaterial3D Linter Validators', () => {
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('warning');
     });
+
+    it('names BaseMaterial3D’s own constants, not another TextureFilter enum', () => {
+      // Three engine enums carry the name. `CanvasItem::TextureFilter` prepends
+      // PARENT_NODE at 0 and runs offset by one;
+      // `Viewport::DefaultCanvasItemTextureFilter` swaps LINEAR_WITH_MIPMAPS and
+      // NEAREST_WITH_MIPMAPS. Either would mislabel every value here.
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'texture_filter');
+      const message = validator!('texture_filter', '6', 1)!.message;
+      expect(message).toContain('2=NEAREST_WITH_MIPMAPS');
+      expect(message).toContain('3=LINEAR_WITH_MIPMAPS');
+      expect(message).toContain('0=NEAREST');
+    });
   });
 
   describe('emission_intensity validator', () => {

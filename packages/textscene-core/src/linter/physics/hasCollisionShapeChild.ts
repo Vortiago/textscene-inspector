@@ -42,6 +42,9 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  * `Area2D > StaticBody2D > CollisionShape2D` gives the shape to the inner body
  * while the outer one keeps none. Both went unreported.
  *
+ * Reads `collisionShapeTypes`, the set `collisionShapeTypesPhrase` names, so the
+ * warning text can never offer a type this check ignores.
+ *
  * A child `isTypeUnknowable` covers counts, because its class is not in this
  * file: an `instance=` heading names a PackedScene and a heading with neither
  * `type=` nor `instance=` overrides a node declared elsewhere, so a sub-scene
@@ -51,11 +54,8 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  * declines on, so the two helpers answer this one question the same way.
  */
 export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
-  const shape = `CollisionShape${dim}`;
-  const polygon = `CollisionPolygon${dim}`;
-  return node.children.some(
-    (child) => isTypeUnknowable(child) || child.type === shape || child.type === polygon
-  );
+  const providers = collisionShapeTypes(dim);
+  return node.children.some((child) => isTypeUnknowable(child) || providers.includes(child.type));
 }
 
 /** `CollisionShape2D or CollisionPolygon2D`, for a diagnostic message. */

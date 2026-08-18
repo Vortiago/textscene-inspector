@@ -155,15 +155,15 @@ export class StrictTscnParser {
         // Not for a key-level verdict: those reject every value because the KEY
         // is wrong, so "this slot stores zero instead" describes a slot the
         // class does not have and hides the removal's own reason.
+        //
+        // Only the message is rewritten: severity, line, column and code stay
+        // the validator's, so the diagnostic keeps anchoring on the value.
         if (isNilLiteral(value) && !validator.keyVerdict) {
           errors.push({
-            severity: error.severity,
+            ...error,
             message:
               `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
               `the type's zero value instead.`,
-            line,
-            column: 1,
-            code: error.code,
           });
           return;
         }

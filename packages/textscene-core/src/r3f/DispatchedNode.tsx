@@ -5,10 +5,7 @@
 
 import type { ReactNode } from 'react';
 import type { TscnExternalResource, TscnNode } from '../parser/types.js';
-import {
-  SceneResourcesProvider,
-  useSceneResources,
-} from './SceneResourcesContext.js';
+import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { InstancedNode } from './InstancedNode.js';
 import { PlainNode } from './PlainNode.js';
 
@@ -45,11 +42,11 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
  * absent entirely — a failure that shows up as something plausible rather than
  * as nothing, which is the worse kind.
  *
- * `internalResources` is carried through untouched rather than reset: the
- * provider would default it to empty, and a grafted node's `SubResource(...)`
- * would then resolve to nothing. Those ids belong to the outer scene too, so
- * this is not yet exactly right — but no corpus scene puts a SubResource in a
- * deep override, and keeping what is in scope beats wiping it.
+ * Only the ExtResource table is declared here. `SceneResourcesProvider`
+ * inherits the ambient SubResource pool by itself, so handing that pool back in
+ * would prepend it to a copy of itself — once per graft, and again per nesting
+ * level. A grafted node's `SubResource(...)` ids belong to the outer scene too,
+ * so resolving them against the inherited pool is not yet exactly right.
  */
 function AuthoredResourceScope({
   resources,
@@ -58,10 +55,5 @@ function AuthoredResourceScope({
   resources: readonly TscnExternalResource[];
   children: ReactNode;
 }): ReactNode {
-  const { internalResources } = useSceneResources();
-  return (
-    <SceneResourcesProvider externalResources={resources} internalResources={internalResources}>
-      {children}
-    </SceneResourcesProvider>
-  );
+  return <SceneResourcesProvider externalResources={resources}>{children}</SceneResourcesProvider>;
 }

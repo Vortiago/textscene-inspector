@@ -9,6 +9,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../linter/validators/sharedEnumLabels.js';
 
 export const uvKeys: Record<string, PropertyValidator> = {
   // A zero component is legal grammar but a degenerate scale; catching it needs
@@ -34,20 +35,9 @@ export const uvKeys: Record<string, PropertyValidator> = {
   uv2_world_triplanar: v.boolean('uv2_world_triplanar'),
 
   // material.cpp:3732, set_texture_filter (:2567-2570) is a bare assignment.
-  texture_filter: v.enumInt(
-    'texture_filter',
-    0,
-    5,
-    {
-      0: 'NEAREST',
-      1: 'LINEAR',
-      2: 'NEAREST_WITH_MIPMAPS',
-      3: 'LINEAR_WITH_MIPMAPS',
-      4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-      5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
-    },
-    { hinted: 'material.cpp:3732' }
-  ),
+  texture_filter: v.enumInt('texture_filter', 0, 5, BASE_MATERIAL_TEXTURE_FILTER, {
+    hinted: 'material.cpp:3732',
+  }),
   // material.cpp:3733 and :3736-3737, FLAG_* booleans.
   texture_repeat: v.boolean('texture_repeat'),
   disable_receive_shadows: v.boolean('disable_receive_shadows'),

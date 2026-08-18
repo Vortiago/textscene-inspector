@@ -1,9 +1,6 @@
 /** The docs/source chips, and what happens to a link the network could not verify. */
 
-import { docsUrl } from '../godotLinks.mjs';
-import { fetchSourceIndex } from '../godotLinks/sourceIndex.mjs';
-import { makeResolver } from '../godotLinks/resolve.mjs';
-import { mapPool } from '../godotLinks/pool.mjs';
+import { docsUrl, fetchSourceIndex, makeResolver, mapPool } from '../godotLinks.mjs';
 
 /**
  * Attach `docs` and `source` to every entry. Source resolution is network-bound

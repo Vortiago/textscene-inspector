@@ -13,7 +13,7 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 /** The five channels every `*_texture_channel` enum offers (material.h TextureChannel). */
-const TEXTURE_CHANNELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'GRAYSCALE' };
+export const TEXTURE_CHANNELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'GRAYSCALE' };
 
 export const pbrKeys: Record<string, PropertyValidator> = {
   // material.cpp:3612-3618

@@ -78,7 +78,7 @@ describe('the y-sort pass and the light cull agree on z', () => {
     // y-sorted children and once as the `z_final` a light's window is tested
     // against. Two copies here could only drift, which is the failure mode the
     // tile-source band and the y-sort worldY both had.
-    const { collectYSortedItems } = await import('../YSortDispatcher');
+    const { collectYSortedItems } = await import('../ySortItems');
     const node = {
       name: 'Root',
       type: 'Node2D',

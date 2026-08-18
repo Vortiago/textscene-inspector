@@ -13,6 +13,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { ruleInt } from '../../../godot/index.js';
 
 /**
  * `emission_shape` values that sample Godot's process-wide RNG rather than the
@@ -22,11 +23,20 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
  * layout differs between two runs of Godot itself — there is no pose a static
  * previewer could match.
  */
-const GLOBAL_RNG_SHAPES: Record<string, string> = {
-  '4': 'POINTS',
-  '5': 'DIRECTED_POINTS',
-  '6': 'RING',
-};
+/**
+ * The EMISSION_SHAPE_* ordinals whose positions come from the global RNG
+ * (cpu_particles_2d.cpp:1586, PROPERTY_HINT_ENUM
+ * "Point,Sphere,Sphere Surface,Rectangle,Points,Directed Points,Ring").
+ *
+ * Keyed by the stored INT, not by the file's text: the slot is Variant::INT, so
+ * `4.0` and `4e0` are FLOAT tokens the write truncates to 4 and `+4` is the
+ * same 4, and all three name a shape the preview cannot place.
+ */
+const GLOBAL_RNG_SHAPES = new Map<number, string>([
+  [4, 'POINTS'],
+  [5, 'DIRECTED_POINTS'],
+  [6, 'RING'],
+]);
 
 function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -35,13 +45,10 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  const shape = props.emission_shape?.trim();
-  // hasOwn: `shape` is the raw value from the file, so bare indexing puts
-  // `function Object() { … }` into the diagnostic text for `= constructor`.
-  const shapeName =
-    shape !== undefined && Object.hasOwn(GLOBAL_RNG_SHAPES, shape)
-      ? GLOBAL_RNG_SHAPES[shape]
-      : undefined;
+  // A Map keyed by the stored int, so a value the engine converts is read the
+  // way the engine reads it and no prototype key can be reached from the file.
+  const shape = ruleInt(props.emission_shape);
+  const shapeName = shape === null ? undefined : GLOBAL_RNG_SHAPES.get(shape);
   if (shapeName) {
     diagnostics.push({
       severity: 'warning',

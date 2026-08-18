@@ -11,35 +11,11 @@
 
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { killPreviewGroup, startPreview, waitForServer } from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
 const PORT = 4188; // uncommon fixed port so we know the URL without parsing stdout
-
-function startPreview() {
-  // strictPort: fail fast if 4188 is somehow taken, rather than silently
-  // auto-incrementing to a port we'd then have to discover.
-  const proc = spawn(
-    'pnpm',
-    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
-    { shell: true, stdio: 'ignore' }
-  );
-  return { proc, baseUrl: `http://localhost:${PORT}` };
-}
-
-async function waitForServer(url, timeoutMs = 40000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(url, { method: 'GET' });
-      if (res.ok) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
-}
 
 function spawnNode(args, env) {
   return new Promise((resolve, reject) => {
@@ -48,7 +24,7 @@ function spawnNode(args, env) {
   });
 }
 
-const { proc, baseUrl } = startPreview();
+const { proc, baseUrl } = startPreview(PORT);
 let exitCode = 0;
 try {
   await waitForServer(`${baseUrl}/`);
@@ -89,6 +65,8 @@ try {
   console.error('[regenerate] failed:', err.message);
   exitCode = 1;
 } finally {
-  proc.kill();
+  // The whole group: `proc` is the shell, not the pnpm→vite grandchild holding
+  // the port, and an orphaned grandchild keeps this script's event loop open.
+  killPreviewGroup(proc);
 }
 process.exit(exitCode);

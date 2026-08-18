@@ -35,10 +35,8 @@ import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
 // y-sort without a copy of each that can drift. The reverse edge
 // (Node2D → YSortDispatcher) resolves through `nodeComponentRegistry` at
 // runtime, so this import introduces no static cycle.
-import { DispatchedNode } from './NodeDispatcher.js';
+import { DispatchedNode } from './DispatchedNode.js';
 import { useNodePath } from './contexts/NodePathContext.js';
-
-export { collectYSortedItems, type YSortItem } from './ySortItems.js';
 
 /**
  * <YSortDispatcher> — the component that performs the y-sort pass on a

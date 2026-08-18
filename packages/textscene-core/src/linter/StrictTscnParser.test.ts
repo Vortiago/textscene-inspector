@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StrictTscnParser } from './StrictTscnParser.js';
+import '../linter/index.js'; // trigger all validator registrations
 
 describe('StrictTscnParser', () => {
   let parser: StrictTscnParser;
@@ -167,6 +168,24 @@ visible = true
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene!.internalResources).toHaveLength(1);
+    });
+  });
+
+  describe('a rewritten nil diagnostic', () => {
+    it('anchors on the value, exactly where the validator put it', () => {
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Panel" type="Control"]
+texture_filter = null
+`;
+
+      const result = parser.parse(content);
+
+      const nil = result.errors.find((e) => e.message.includes('cannot hold'));
+      expect(nil).toBeDefined();
+      // Same anchor as every other property diagnostic: just past `key = `.
+      expect(nil!.column).toBe('texture_filter'.length + 3);
+      expect(nil!.line).toBe(4);
     });
   });
 });
