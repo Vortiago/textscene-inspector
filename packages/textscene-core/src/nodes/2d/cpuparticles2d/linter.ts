@@ -16,17 +16,13 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { ruleInt } from '../../../godot/index.js';
 
 /**
- * `emission_shape` values that sample Godot's process-wide RNG rather than the
- * per-particle one (`cpu_particles_2d.cpp:936` `Math::rand()` for
- * POINTS/DIRECTED_POINTS, `:953` and `:956` `Math::randf()` for RING). That RNG
- * is never serialised, so the emitter's
- * layout differs between two runs of Godot itself — there is no pose a static
- * previewer could match.
- */
-/**
- * The EMISSION_SHAPE_* ordinals whose positions come from the global RNG
- * (cpu_particles_2d.cpp:1586, PROPERTY_HINT_ENUM
- * "Point,Sphere,Sphere Surface,Rectangle,Points,Directed Points,Ring").
+ * The EMISSION_SHAPE_* ordinals whose positions come from Godot's process-wide
+ * RNG rather than the per-particle one (`cpu_particles_2d.cpp:936`
+ * `Math::rand()` for POINTS/DIRECTED_POINTS, `:953` and `:956` `Math::randf()`
+ * for RING; the enum is at `:1586`, PROPERTY_HINT_ENUM
+ * "Point,Sphere,Sphere Surface,Rectangle,Points,Directed Points,Ring"). That
+ * RNG is never serialised, so the layout differs between two runs of Godot
+ * itself — there is no pose a static previewer could match.
  *
  * Keyed by the stored INT, not by the file's text: the slot is Variant::INT, so
  * `4.0` and `4e0` are FLOAT tokens the write truncates to 4 and `+4` is the

@@ -174,13 +174,15 @@ describe('GPUParticles3D Linter', () => {
       },
       {
         // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -
-        // CMP_EPSILON): the enforced floor is 0.01, not the previous ~0.
+        // CMP_EPSILON): the refusal is one epsilon under the hint's floor
+        // (:847), so the band between the two loads and only warns.
         prop: 'trail_lifetime',
         valid: [0.01, 0.1, 0.5, 1.0, 2.0],
         with: { trail_enabled: true },
         invalid: [
-          { value: '0.0', contains: ['>= 0.01'] },
-          { value: '-1.0', contains: ['>= 0.01'] },
+          { value: '0.0', contains: ['0.00999'], severity: 'error' },
+          { value: '-1.0', contains: ['0.00999'], severity: 'error' },
+          { value: '0.009995', contains: ['trail_lifetime'], severity: 'warning' },
         ],
       },
       {

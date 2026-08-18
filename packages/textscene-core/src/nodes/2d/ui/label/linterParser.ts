@@ -35,8 +35,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { hintedBitField, maskedBitField, propertyError, v } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { hintedBitField, maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,
@@ -77,14 +76,6 @@ const VISIBLE_CHARACTERS_BEHAVIOR = {
 };
 
 /**
- * A quoted TSCN string literal. Checked locally rather than through
- * `v.quotedString` because `ellipsis_char` needs the unquoted body to measure
- * its length, same pattern as LinkButton's and LineEdit's own `ellipsis_char` /
- * `secret_character`.
- */
-const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
-
-/**
  * label.cpp:1258-1275: `set_ellipsis_char` does not refuse a literal longer
  * than one character; it `WARN_PRINT`s and truncates it with `c = c.left(1)`
  * (label.cpp:1260-1262), so a longer value is silently altered rather than
@@ -92,28 +83,9 @@ const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
  * is an ERROR grounded in the setter, not a hint; `ellipsis_char` carries no
  * `PROPERTY_HINT` at all (label.cpp:1442).
  */
-const ellipsisCharValidator: PropertyValidator = (key, value, line) => {
-  if (!QUOTED_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'ellipsis_char' must be a quoted string, got: ${value}`,
-      'INVALID_ELLIPSIS_CHAR_FORMAT'
-    );
-  }
-  const body = value.slice(1, -1).replace(/\\"/g, '"');
-  if (body.length > 1) {
-    return propertyError(
-      key,
-      line,
-      `Property 'ellipsis_char' must be exactly one character, got ${body.length} characters: "${body}"`,
-      'INVALID_ELLIPSIS_CHAR_VALUE'
-    );
-  }
-  return null;
-};
-ellipsisCharValidator.accepts = 'quoted string, at most one character';
-ellipsisCharValidator.grounding = { kind: 'enforced', cite: 'label.cpp:1260' };
+const ellipsisCharValidator = v.singleCharacter('ellipsis_char', {
+  enforced: 'label.cpp:1260',
+});
 
 /**
  * `tab_stops` is a plain `PackedFloat32Array` (doc/classes/Label.xml, default

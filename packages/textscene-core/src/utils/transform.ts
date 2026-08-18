@@ -4,7 +4,7 @@
 
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
-import { isEqualApprox } from '../godot/math.js';
+import { basisDeterminant, isEqualApprox } from '../godot/math.js';
 import { slotTupleRegex, matchedFloat } from '../godot/number.js';
 
 const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
@@ -238,7 +238,18 @@ export function parseOptionalTransform(
 export function hasNonUnitScale3D(rawTransform: string | undefined): boolean {
   if (rawTransform === undefined) return false;
   try {
-    const { scale } = decomposeTransform3D(parseTransform3D(rawTransform));
+    const t = parseTransform3D(rawTransform);
+    // `Basis::get_scale()` is `SIGN(determinant()) * get_scale_abs()`
+    // (basis.cpp:321-322) and `SIGN` is three-valued, so a DEGENERATE basis
+    // scales to (0, 0, 0) — non-unit on every axis. three.js's decomposition
+    // has no such branch and hands back (1, 1, 1), which read as unit and
+    // silenced the warning Godot raises.
+    if (basisDeterminant(
+      t.basis_x.x, t.basis_x.y, t.basis_x.z,
+      t.basis_y.x, t.basis_y.y, t.basis_y.z,
+      t.basis_z.x, t.basis_z.y, t.basis_z.z
+    ) === 0) return true;
+    const { scale } = decomposeTransform3D(t);
     return !isEqualApprox(scale.x, 1) || !isEqualApprox(scale.y, 1) || !isEqualApprox(scale.z, 1);
   } catch {
     return false;

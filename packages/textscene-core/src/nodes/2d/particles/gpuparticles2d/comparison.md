@@ -72,7 +72,7 @@ Strict parsing format-checks these `GPUParticles2D` properties, plus 12 inherite
 | `sub_emitter` | NodePath("path/to/node") |  |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
 | `trail_enabled` | true or false |  |
-| `trail_lifetime` | float >= 0.01 | error below |
+| `trail_lifetime` | float >= 0.01 | error below 0.00999, warning below 0.01 |
 | `trail_section_subdivisions` | integer 1-1024 | error |
 | `trail_sections` | integer 2-128 | error |
 | `use_fixed_seed` | true or false |  |

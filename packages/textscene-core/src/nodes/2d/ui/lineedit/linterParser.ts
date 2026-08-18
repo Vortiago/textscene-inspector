@@ -26,8 +26,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { propertyError, v } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import { v } from '../../../../linter/validators/index.js';
 import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
@@ -69,13 +68,6 @@ const EXPAND_MODE = {
 };
 
 /**
- * A quoted TSCN string literal. Checked locally rather than through
- * `v.quotedString` because `secret_character` needs the unquoted body to
- * measure its length, same pattern as LinkButton's `ellipsis_char`.
- */
-const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
-
-/**
  * line_edit.cpp:2608-2621: `set_secret_character` does not refuse a literal
  * longer than one character; it `WARN_PRINT`s and truncates it with
  * `c = c.left(1)` (line_edit.cpp:2610-2612). That is the "alters the value"
@@ -84,28 +76,9 @@ const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
  * An empty literal is legal (length 0 is not `> 1`) and falls back to the
  * bullet at display time (displayText.ts), not at the setter.
  */
-const secretCharacterValidator: PropertyValidator = (key, value, line) => {
-  if (!QUOTED_RE.test(value)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'secret_character' must be a quoted string, got: ${value}`,
-      'INVALID_SECRET_CHARACTER_FORMAT'
-    );
-  }
-  const body = value.slice(1, -1).replace(/\\"/g, '"');
-  if (body.length > 1) {
-    return propertyError(
-      key,
-      line,
-      `Property 'secret_character' must be at most one character, got ${body.length} characters: "${body}"`,
-      'INVALID_SECRET_CHARACTER_VALUE'
-    );
-  }
-  return null;
-};
-secretCharacterValidator.accepts = 'quoted string, at most one character';
-secretCharacterValidator.grounding = { kind: 'enforced', cite: 'line_edit.cpp:2612' };
+const secretCharacterValidator = v.singleCharacter('secret_character', {
+  enforced: 'line_edit.cpp:2612',
+});
 
 validatorRegistry.registerAll('LineEdit', {
   // -- Ungrouped run (line_edit.cpp:3483-3501) --------------------------------

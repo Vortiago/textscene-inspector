@@ -1,9 +1,10 @@
 /** Shared basis-column-scale helpers for the physics linter-rule factories. */
 
-import { parseTransform3D } from '../../utils/transform.js';
 import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import { tupleComponent } from '../validators/commonValidators.js';
-import { sign } from '../../godot/math.js';
+import { basisDeterminant, sign } from '../../godot/math.js';
+
+const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
 
 /**
  * Basis-column magnitudes of a `Transform3D(...)` literal, or null when it does
@@ -17,51 +18,25 @@ import { sign } from '../../godot/math.js';
  * 0. `SIGN` is three-valued (typedefs.h:123-126), so a degenerate basis scales
  * to (0, 0, 0), which is uniform however unequal the magnitudes are.
  *
- * Null for an `inf`/`nan` component too: `parseTransform3D` matches the FINITE
- * grammar (`slotTupleRegex`) and throws on one. See
- * {@link basisColumnScalesGodotFloat} for the caller that needs those.
+ * Read through the LINTER's float grammar, so an `inf`/`nan` component reaches
+ * it: `parseTransform3D` matches the finite grammar and throws on one, and the
+ * callers then said nothing at all about a basis Godot reads a scale off.
  */
 export function basisColumnScales(raw: string): [number, number, number] | null {
-  try {
-    const { basis_x, basis_y, basis_z } = parseTransform3D(raw);
-    // Exact, like `SIGN` itself: a determinant of 1e-30 signs to +1 in Godot and
-    // really does have a scale, so an epsilon here would silence a live warning.
-    const det = basisDeterminant(
-      basis_x.x, basis_x.y, basis_x.z,
-      basis_y.x, basis_y.y, basis_y.z,
-      basis_z.x, basis_z.y, basis_z.z
-    );
-    if (det === 0) return [0, 0, 0];
-    return [
-      Math.hypot(basis_x.x, basis_y.x, basis_z.x),
-      Math.hypot(basis_x.y, basis_y.y, basis_z.y),
-      Math.hypot(basis_x.z, basis_y.z, basis_z.z),
-    ];
-  } catch {
-    return null; // malformed literal is linterParser.ts's job, not this rule's
-  }
+  const match = TRANSFORM3D_REGEX.exec(raw);
+  // A malformed literal is linterParser.ts's job, not this rule's.
+  if (!match) return null;
+  const n = match.slice(1, 10).map(tupleComponent);
+  // Exact, like `SIGN` itself: a determinant of 1e-30 signs to +1 in Godot and
+  // really does have a scale, so an epsilon here would silence a live warning.
+  const det = basisDeterminant(n[0]!, n[1]!, n[2]!, n[3]!, n[4]!, n[5]!, n[6]!, n[7]!, n[8]!);
+  if (det === 0) return [0, 0, 0];
+  return [
+    Math.hypot(n[0]!, n[3]!, n[6]!),
+    Math.hypot(n[1]!, n[4]!, n[7]!),
+    Math.hypot(n[2]!, n[5]!, n[8]!),
+  ];
 }
-
-/**
- * `Basis::determinant()` (basis.h:350-354) over the nine row-major components,
- * expanded along the first COLUMN exactly as the engine writes it.
- *
- * The grouping is transcribed rather than simplified. Expanding along the first
- * ROW is the same number for every finite basis and not for one carrying `inf`:
- * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` reaches `1 - 0*inf + 1*inf`
- * (NaN, signing to 0) one way and `1 + inf` (signing to +1) the other, which is
- * the difference between reporting Godot's scale and reporting one it never
- * holds.
- */
-function basisDeterminant(
-  a: number, b: number, c: number,
-  d: number, e: number, f: number,
-  g: number, h: number, i: number
-): number {
-  return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
-}
-
-const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
 
 /**
  * The same basis columns as {@link basisColumnScales}, parsed with Godot's own

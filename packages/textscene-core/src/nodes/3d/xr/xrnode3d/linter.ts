@@ -65,12 +65,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
+import { literalText } from '../../../../godot/index.js';
 
 const PARENT_RULE = 'xrnode3d-parent-not-xrorigin3d';
 const NO_POSE_RULE = 'xrnode3d-no-pose-set';
-
-/** `""` or `&""` — `pose` explicitly cleared to empty (xr_nodes.cpp:510-512). */
-const EMPTY_STRING_NAME_RE = /^&?""$/;
 
 function checkXRNode3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
@@ -96,7 +94,9 @@ function checkXRNode3D(context: RuleContext): Diagnostic[] {
   }
 
   const pose = properties.pose;
-  if (pose !== undefined && EMPTY_STRING_NAME_RE.test(pose.trim())) {
+  // `literalText` rather than a hand-rolled regex: it takes every spelling
+  // of an empty name, `&""` and `''` alike (xr_nodes.cpp:510-512).
+  if (pose !== undefined && literalText(pose) === '') {
     diagnostics.push({
       severity: 'warning',
       message: `${node.type} '${node.name}' has its pose cleared to an empty string. No pose is set, the same configuration warning Godot's own editor reports.`,

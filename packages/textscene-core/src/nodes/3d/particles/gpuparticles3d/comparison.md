@@ -69,7 +69,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 | `speed_scale` | float 0-64 | warning |
 | `sub_emitter` | NodePath("path/to/node") |  |
 | `trail_enabled` | true or false |  |
-| `trail_lifetime` | float >= 0.01 | error below |
+| `trail_lifetime` | float >= 0.01 | error below 0.00999, warning below 0.01 |
 | `transform_align` | enum 0-3 (DISABLED/Z_BILLBOARD/Y_TO_VELOCITY/Z_BILLBOARD_Y_TO_VELOCITY) | error |
 | `use_fixed_seed` | true or false |  |
 | `visibility_aabb` | AABB(x, y, z, w, h, d) |  |

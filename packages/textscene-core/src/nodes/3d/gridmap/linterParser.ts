@@ -12,10 +12,13 @@ import { accepts, layerBitmask, propertyError, v } from '../../../linter/validat
 import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
-import { markIntSlot } from '../../../linter/validators/intSlot.js';
-import { unrepresentableInt } from '../../../linter/validators/intSlot.js';
+import {
+  markIntSlot,
+  readIntSlot,
+  truncatedInt,
+  unrepresentableInt,
+} from '../../../linter/validators/intSlot.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
 const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedInt32Array').source}`);
@@ -115,9 +118,11 @@ const CELL_OCTANT_SIZE_HINT_MAX = 1024;
  * warning.
  */
 const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
-  // `parseGodotInt`, so `5e-1` truncates to 0 and trips the zero guard below,
-  // and an unstorable literal stays NaN for `unrepresentableInt` to report.
-  const parsed = parseGodotInt(value);
+  // `readIntSlot`, so `5e-1` truncates to 0 and trips the zero guard below, an
+  // unstorable literal stays NaN for `unrepresentableInt` to report, and the
+  // double the int came from is still there for the truncation tier.
+  const read = readIntSlot(value);
+  const parsed = read.stored;
   if (parsed === null) {
     return propertyError(
       key,
@@ -147,7 +152,10 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
       'warning'
     );
   }
-  return null;
+  // Last, after both bounds: an out-of-range value has a diagnostic of its own.
+  return truncatedInt(
+    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', read
+  );
 }, 'integer, nonzero, 1-1024 hinted');
 // An INT slot, hand-rolled: it already refuses an unstorable literal above.
 markIntSlot(cellOctantSizeValidator);

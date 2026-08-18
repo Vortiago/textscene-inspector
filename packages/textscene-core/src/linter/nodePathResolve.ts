@@ -127,7 +127,12 @@ export function resolveNodePath(
     if (name.startsWith(UNIQUE_NODE_PREFIX)) {
       uniques ??= uniqueNameClaims(scene.nodes);
       const claimed = uniques.get(name);
-      if (!claimed) return MISSING; // :1935-1937
+      // The claim table is built from THIS file's headings only, and
+      // `owned_unique_nodes` belongs to the node the walk has reached
+      // (`node.cpp:1930-1933`) — so a sub-scene root owns unique names declared
+      // in another file. A miss there is our blindness, exactly as a child miss
+      // below is, not the engine's null. (:1935-1937)
+      if (!claimed) return isTypeUnknowable(current) ? UNKNOWABLE : MISSING;
       current = claimed.node;
       continue;
     }

@@ -10,55 +10,59 @@ import { checkResourceExists } from './resourceChecker.js';
 import type { TscnScene, TscnExternalResource } from '../parser/types.js';
 
 describe('checkResourceExists', () => {
-  describe('invalid reference formats', () => {
-    it('should return false for invalid format (no quotes)', () => {
+  // A value that is not a reference at all is TRUE: only a well-formed
+  // reference can dangle, and its format is the strict parser's diagnostic.
+  // Answering false put a second, factually wrong "resource not found" beside
+  // it, naming a resource nothing had asked for.
+  describe('values that are not references at all', () => {
+    it('is not dangling when the id is unquoted', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, 'SubResource(mesh_1)')).toBe(false);
+      expect(checkResourceExists(scene, 'SubResource(mesh_1)')).toBe(true);
     });
 
-    it('should return false for invalid format (missing parentheses)', () => {
+    it('is not dangling when the parentheses are missing', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, 'SubResource"mesh_1"')).toBe(false);
+      expect(checkResourceExists(scene, 'SubResource"mesh_1"')).toBe(true);
     });
 
-    it('should return false for invalid format (wrong resource type)', () => {
+    it('is not dangling when the constructor name is not a reference kind', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, 'InvalidResource("mesh_1")')).toBe(false);
+      expect(checkResourceExists(scene, 'InvalidResource("mesh_1")')).toBe(true);
     });
 
-    it('should return false for plain string', () => {
+    it('is not dangling for a plain string', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, 'mesh_1')).toBe(false);
+      expect(checkResourceExists(scene, 'mesh_1')).toBe(true);
     });
 
-    it('should return false for empty string', () => {
+    it('is not dangling for an empty string', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, '')).toBe(false);
+      expect(checkResourceExists(scene, '')).toBe(true);
     });
 
     it('should return true for a cleared slot, which names nothing on purpose', () => {
@@ -74,16 +78,18 @@ describe('checkResourceExists', () => {
       expect(checkResourceExists(scene, 'null')).toBe(true);
     });
 
-    it('should return false for malformed reference', () => {
+    it('is not dangling for a malformed reference', () => {
       const scene: TscnScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
       };
 
-      expect(checkResourceExists(scene, 'SubResource(')).toBe(false);
-      expect(checkResourceExists(scene, 'SubResource()')).toBe(false);
-      expect(checkResourceExists(scene, 'SubResource("")')).toBe(false);
+      expect(checkResourceExists(scene, 'SubResource(')).toBe(true);
+      expect(checkResourceExists(scene, 'SubResource()')).toBe(true);
+      // An empty id is not a well-formed reference either — `resourceRef`'s id
+      // class needs at least one character.
+      expect(checkResourceExists(scene, 'SubResource("")')).toBe(true);
     });
   });
 

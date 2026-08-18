@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { collectValidators } from './testing/validatorClassification.js';
+import { probe, taggedIntSlots } from './testing/intSlotProbe.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** The four spellings Godot's tokenizer resolves (`variant_parser.cpp:701-707`). */
@@ -53,49 +53,7 @@ const PAST_32_BIT = '4294967296';
  */
 const PAST_BYTE = ['256', '-1', '300.5'] as const;
 
-const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;
-const PACKED_INT_ARRAY = /PackedInt32Array/;
-
-/**
- * A literal of the right SHAPE for `accepts`, carrying `spelling` in one slot.
- *
- * Every arm has to produce a literal the validator's own format branch accepts,
- * or the probe reports a format error and the sweep passes for the wrong
- * reason. The `reaches every slot` assertion is what proves each arm does.
- */
-function probe(accepts: string, spelling: string): string {
-  if (accepts.startsWith('Vector2i')) return `Vector2i(${spelling}, 0)`;
-  if (accepts.startsWith('Vector3i')) return `Vector3i(${spelling}, 0, 0)`;
-  if (accepts.startsWith('Vector4i')) return `Vector4i(${spelling}, 0, 0, 0)`;
-  if (accepts.startsWith('Rect2i')) return `Rect2i(${spelling}, 0, 1, 1)`;
-  if (accepts.startsWith('Dictionary literal'))
-    return `{ "cells": PackedInt32Array(${spelling}, 0, 0) }`;
-  if (NESTED_INT_ARRAY.test(accepts))
-    return `[PackedInt32Array(${spelling}, 0, 0)]`;
-  if (PACKED_INT_ARRAY.test(accepts)) return `PackedInt32Array(${spelling}, 0, 0)`;
-  if (accepts.startsWith('PackedByteArray')) return `PackedByteArray(${spelling}, 0, 0)`;
-  return spelling;
-}
-
-/**
- * Every tagged int slot the registry RESOLVES, dispatchers descended.
- *
- * `getOwnKeys` + `findValidator` was a one-level walk, so a slot reached
- * through a wildcard dispatcher (`settings/#/*`, `layer_#/tile_data`) was
- * outside the sweep entirely — the same silent-population defect the tag was
- * introduced to close, one level down. `collectValidators` is the walk the
- * classification guard already uses, and it dedupes a leaf shared by two
- * dispatchers.
- */
-const intSlots = collectValidators((validator) => validator.intSlot !== undefined).map(
-  ({ label, validator }) => ({
-    at: label,
-    // The dispatcher's own key: a leaf reads `name` from its closure and uses
-    // `key` only to address the diagnostic, so any key it routes for will do.
-    key: label.slice(label.indexOf('.') + 1).replace(/\[\d+\]$/, ''),
-    validator,
-  })
-);
+const intSlots = taggedIntSlots();
 
 describe('a literal an INT slot cannot hold', () => {
   it('has int slots to ask about, so an empty registry cannot pass this', () => {

@@ -57,6 +57,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 
 /** Any `settings/<i>/…` leaf, whatever its depth. */
 const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
@@ -147,7 +148,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   }
 
   if (outOfRange.size > 0) {
-    const indices = [...outOfRange].sort((a, b) => a - b).join(', ');
+    const indices = listIndices([...outOfRange].sort((a, b) => a - b));
     diagnostics.push({
       severity: 'error',
       message:
@@ -162,7 +163,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   }
 
   if (missingTargets.size > 0) {
-    const indices = [...missingTargets].sort((a, b) => a - b).join(', ');
+    const indices = listIndices([...missingTargets].sort((a, b) => a - b));
     diagnostics.push({
       severity: 'warning',
       message:
@@ -175,7 +176,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   }
 
   if (ignoredVectors.size > 0) {
-    const indices = [...ignoredVectors].sort((a, b) => a - b).join(', ');
+    const indices = listIndices([...ignoredVectors].sort((a, b) => a - b));
     diagnostics.push({
       severity: 'error',
       message:

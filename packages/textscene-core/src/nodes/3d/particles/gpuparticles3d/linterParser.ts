@@ -9,6 +9,7 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { CMP_EPSILON } from '../../../../godot/index.js';
 
 // gpu_particles_3d.cpp:843 hints 4 labels ("Index,Lifetime,Reverse
 // Lifetime,View Depth"); BIND_ENUM_CONSTANT binds all 4 (:857-860). The
@@ -127,11 +128,15 @@ validatorRegistry.registerAll('GPUParticles3D', {
   }),
   trail_enabled: v.boolean('trail_enabled'),
   // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -
-  // CMP_EPSILON): the real enforced floor is 0.01, not the ~0 `positiveFloat`
-  // previously used here.
+  // CMP_EPSILON): the refusal sits one epsilon BELOW the hint's floor
+  // (:847, "0.01,10,0.01,or_greater,suffix:s"), so that band loads and only
+  // warns; `or_greater` opens the ceiling. `min: 0.01` alone reported the band
+  // as a refused write.
   trail_lifetime: v.float('trail_lifetime', {
+    enforcedMin: { at: 0.01 - CMP_EPSILON },
     min: 0.01,
-    enforced: 'gpu_particles_3d.cpp:248',
+    enforced: { min: 'gpu_particles_3d.cpp:248' },
+    hinted: { min: 'gpu_particles_3d.cpp:847' },
   }),
   // gpu_particles_3d.cpp:839 hints "0,128,0.01,or_greater" (0 is legal, means
   // no collision radius); set_collision_base_size:179-182 is a bare

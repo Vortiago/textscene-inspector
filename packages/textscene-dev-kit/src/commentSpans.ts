@@ -134,8 +134,13 @@ export function commentSpans(
 
     // A regex literal, whose body may hold `//` or `/*`. Told from a division
     // by what precedes it, the standard lexical test.
+    //
+    // `blockOnly` is CSS, which has no regex literal at all: `calc(100% / 3)`
+    // opened a scan that ran forward and swallowed the `/*` of the comment
+    // after it, so every CSS block comment fell out of the conventions guard.
     if (
       c === '/' &&
+      !opts.blockOnly &&
       (prev === '' ||
         REGEX_ALLOWED_AFTER.test(prev) ||
         REGEX_ALLOWED_AFTER_KEYWORD.test(source.slice(Math.max(0, prevEnd - 10), prevEnd)))

@@ -11,7 +11,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { CMP_EPSILON } from '../../../godot/index.js';
+import { isZeroApprox } from '../../../godot/index.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
@@ -29,7 +29,7 @@ const zoomValidator: PropertyValidator = (key, value, line) => {
   const x = tupleComponent(match[1]);
   const y = tupleComponent(match[2]);
 
-  if (Math.abs(x) < CMP_EPSILON || Math.abs(y) < CMP_EPSILON) {
+  if (isZeroApprox(x) || isZeroApprox(y)) {
     return propertyError(key, line, `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.`, 'INVALID_ZOOM_VALUE');
   }
   return null;

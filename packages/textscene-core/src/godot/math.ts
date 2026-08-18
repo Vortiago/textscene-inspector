@@ -83,3 +83,26 @@ export function smoothstep(from: number, to: number, x: number): number {
   const s = Math.min(1, Math.max(0, (x - from) / (to - from)));
   return s * s * (3 - 2 * s);
 }
+
+/**
+ * `Basis::determinant()` (`basis.h:350-354`) over the nine row-major
+ * components, expanded along the first COLUMN exactly as the engine writes it.
+ *
+ * The grouping is transcribed rather than simplified. Expanding along the first
+ * ROW is the same number for every finite basis and not for one carrying `inf`:
+ * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` reaches `1 - 0*inf + 1*inf`
+ * (NaN, signing to 0) one way and `1 + inf` (signing to +1) the other, which is
+ * the difference between reporting Godot's scale and reporting one it never
+ * holds.
+ *
+ * Here rather than beside either caller because both the linter's scale rules
+ * and the renderer's transform decomposition ask it, and `Basis::get_scale`'s
+ * three-valued `SIGN` makes the answer at exactly 0 load-bearing for both.
+ */
+export function basisDeterminant(
+  a: number, b: number, c: number,
+  d: number, e: number, f: number,
+  g: number, h: number, i: number
+): number {
+  return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
+}

@@ -294,6 +294,10 @@ function node3DCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
+    // `descendsFrom` is false for two unrelated reasons, and only one of them
+    // ends the chain: a GDExtension class this build has never heard of may
+    // well BE a Node3D. `parentTypeVerdict` already guards the same case.
+    if (!isCatalogedType(current.type)) return 'unknowable';
     if (!descendsFrom(current.type, 'Node3D')) return 'visible';
     if (ownVisibleKeyIsFalse(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
@@ -321,6 +325,8 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
+    // See `node3DCascade`: an uncataloged ancestor may be a CanvasItem.
+    if (!isCatalogedType(current.type)) return 'unknowable';
     if (!descendsFrom(current.type, 'CanvasItem')) break;
     if (ownVisibleKeyIsFalse(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);

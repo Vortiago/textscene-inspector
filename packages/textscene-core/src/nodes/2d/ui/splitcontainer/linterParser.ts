@@ -74,10 +74,10 @@ function splitOffsetsValidator(): PropertyValidator {
     });
     return bad.error ?? bad.truncated;
   }, 'PackedInt32Array(n, n, …)');
-  // Format-only: rejects a malformed literal or a non-integer element.
-  // `set_split_offsets` (split_container.cpp:1071) accepts any length and any
-  // value, so there is nothing here to ground.
-  // An INT slot, not format-only: it rejects a literal the tokenizer reads.
+  // An INT slot, not format-only: it rejects a literal the tokenizer reads, so
+  // `variant.h:360-377` is its authority. `set_split_offsets`
+  // (split_container.cpp:1071) accepts any length and any value, so there is no
+  // bound here beyond that.
   return markIntSlot(validator);
 }
 

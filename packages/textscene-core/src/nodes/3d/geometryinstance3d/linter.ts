@@ -29,9 +29,10 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/index.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
-const FADE_SELF = '1';
-const FADE_DEPENDENCIES = '2';
+const FADE_SELF = 1;
+const FADE_DEPENDENCIES = 2;
 
 /** `Math::is_zero_approx`, against the engine's own tolerance. */
 function isZeroish(raw: string | undefined): boolean {
@@ -52,7 +53,10 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   }
 
   const props = node.properties as Record<string, string>;
-  const fadeMode = props.visibility_range_fade_mode;
+  // `ruleInt`, not a string compare: the slot is an INT, so `1.0` and `01` are
+  // both the 1 Godot stores, and comparing the raw text read them as "no fade"
+  // on a value the validator beside this had already accepted.
+  const fadeMode = ruleInt(props.visibility_range_fade_mode, 0);
   const fades = fadeMode === FADE_SELF || fadeMode === FADE_DEPENDENCIES;
 
   // scene/3d/visual_instance_3d.cpp: !is_zero_approx(visibility_range_end) &&

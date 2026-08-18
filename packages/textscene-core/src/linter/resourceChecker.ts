@@ -86,8 +86,11 @@ export function heldResource(resourceRef: string | undefined): string | undefine
 /**
  * Whether a reference is anything OTHER than a dangling one.
  *
- * A malformed reference is `false` here rather than throwing — its format is
- * the strict parser's job, and reporting it twice would double the diagnostic.
+ * A value that is not a reference at all is `true`: only a WELL-FORMED
+ * reference can dangle. Its format is the strict parser's diagnostic, and
+ * answering `false` here put a second, factually wrong error beside it —
+ * `shape = "hello"` reported that a resource named `hello` was missing, when
+ * nothing had asked for one.
  *
  * A CLEARED slot is `true`, because it names nothing on purpose. Every caller
  * uses this to decide whether to report a missing resource, and `null` is a
@@ -105,5 +108,6 @@ export function heldResource(resourceRef: string | undefined): string | undefine
  */
 export function checkResourceExists(scene: TscnScene, resourceRef: string): boolean {
   if (isClearedResource(resourceRef)) return true;
+  if (parseResourceReference(resourceRef) === null) return true;
   return resolveReference(scene, resourceRef) !== undefined;
 }

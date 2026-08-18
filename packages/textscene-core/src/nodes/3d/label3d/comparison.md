@@ -64,7 +64,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `outline_modulate` | Color(r, g, b, a) |  |
 | `outline_render_priority` | integer -128-127 | error |
-| `outline_size` | float 0-127 | warning |
+| `outline_size` | integer 0-127 | warning |
 | `pixel_size` | float 0.0001-128 | warning |
 | `render_priority` | integer -128-127 | error |
 | `shaded` | true or false |  |

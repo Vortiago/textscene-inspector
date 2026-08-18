@@ -22,8 +22,18 @@ import { transformFromNode3DProperties, type NodeTransform } from './nodeTransfo
 
 export function fallbackTransform(node: TscnNode): NodeTransform {
   if (nodeComponentRegistry.isCanvasItem(node.type)) {
-    const props = node.properties as Node2DProperties;
-    const { position, rotation, scale } = node2dGroupProps(props);
+    // Read defensively: this runs INSIDE an ErrorBoundary's own fallback, where
+    // a throw escapes the boundary and blanks the whole viewport. Not every
+    // canvas-item slice publishes the discrete Node2D transform —
+    // ParallaxBackground parses `offset` and no `position` at all — so the
+    // absent field must fall back rather than deref.
+    const props = node.properties as Partial<Node2DProperties>;
+    const { position, rotation, scale } = node2dGroupProps({
+      position: props.position ?? { x: 0, y: 0 },
+      rotation: props.rotation ?? 0,
+      scale: props.scale ?? { x: 1, y: 1 },
+      skew: props.skew,
+    });
     return { position, rotation, scale };
   }
   return transformFromNode3DProperties(node.properties as Node3DProperties);

@@ -9,6 +9,8 @@ import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 import { ARRAY_LITERAL_RE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
+import { unquoteString } from '../../../parser/utils.js';
+import { valueCode } from './codes.js';
 
 /**
  * One TSCN quoted literal: a quote, an escape-aware body, a closing quote, and
@@ -63,6 +65,51 @@ export const scalarCombinators = {
       }
       return null;
     }, 'quoted string or &"name"');
+  },
+
+  /**
+   * A string slot the setter cuts to its first character.
+   *
+   * Counted in CODE POINTS off the DECODED text, because both halves of the
+   * comparison are the engine's: `String` is UTF-32, so `left(1)` keeps one code
+   * point and `"\ud83d\udd12"` is one character to Godot and two UTF-16 units to
+   * JS; and the tokenizer resolves `\uXXXX` before the setter runs, so
+   * `ellipsis_char = "\u2026"` is one character, not six. Measuring the raw
+   * literal in JS units errored on both, on files Godot loads unaltered.
+   *
+   * An empty literal is legal — `left(1)` of `""` is `""` — and each caller's
+   * own fallback, not the setter's, decides what is drawn then.
+   *
+   * @param enforced - `file:line` of the `left(1)` that cuts the value, which is
+   *   the "silently alters the write" branch of ADR-0032 and so the error tier.
+   */
+  singleCharacter(name: string, opts: { enforced: string }): PropertyValidator {
+    const format = formatCode(name);
+    const code = valueCode(name);
+    const validator: PropertyValidator = (key, value, line) => {
+      if (!QUOTED_RE.test(value)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be a quoted string, got: ${value}`,
+          format
+        );
+      }
+      const text = unquoteString(value);
+      const characters = [...text].length;
+      if (characters > 1) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be at most one character, got ${characters} characters: "${text}"`,
+          code
+        );
+      }
+      return null;
+    };
+    validator.accepts = 'quoted string, at most one character';
+    validator.grounding = { kind: 'enforced', cite: opts.enforced };
+    return validator;
   },
 
   /**

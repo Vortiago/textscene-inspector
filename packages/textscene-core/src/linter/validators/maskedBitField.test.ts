@@ -105,7 +105,16 @@ describe('maskedBitField', () => {
       // converts: `32.5` stores 32. Whether 32 is a legal bit is the VALUE
       // question below, not a format one.
       expect(run('32.5')?.code).not.toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
-      expect(run('64.9')).toBeNull();
+    });
+
+    it('warns that the fraction was dropped, at the shared truncation tier', () => {
+      // 64 is a legal bit, so the arms have nothing to say and the slot used to
+      // go silent — leaving `_to_int`'s own alteration unreported on a slot
+      // `markIntSlot` tags. `truncatedInts.test.ts` sweeps for the same gap.
+      const truncated = run('64.9');
+      expect(truncated?.severity).toBe('warning');
+      expect(truncated?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
+      expect(truncated?.message).toContain('stores 64');
     });
 
     it('tolerates surrounding whitespace, as the property scanner may leave it', () => {

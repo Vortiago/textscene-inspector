@@ -39,10 +39,11 @@ validatorRegistry.registerAll('CollisionPolygon2D', {
   // collision_polygon_2d.cpp:314, PROPERTY_HINT_RANGE "0,128,0.1,suffix:px".
   // set_one_way_collision_margin (:284-289) is a bare assignment, so
   // out-of-range warns rather than errors.
+  // No `message` override: it would answer for BOTH ends, so a value above 128
+  // reported "must be non-negative", which the value satisfies.
   one_way_collision_margin: v.float('one_way_collision_margin', {
     min: 0,
     max: 128,
-    message: "Property 'one_way_collision_margin' must be non-negative (>= 0)",
     hinted: 'collision_polygon_2d.cpp:314',
   }),
 });

@@ -114,7 +114,10 @@ function handRolledComposite(source: string): string | null {
  * `bone2d/linter`) and every one of them was outside it, so a `parseFloat` on a
  * matched capture in any of the four left this green — the guard's own defect
  * class, invisible to the guard. Importing the builder is the property that
- * actually matters, and it cannot be renamed out of.
+ * actually matters, and it cannot be renamed out of. The shared `VECTOR2_REGEX`
+ * / `VECTOR3_REGEX` count as importing it: a file that stops rebuilding the
+ * grammar and reaches for the constant instead still reads the same captures,
+ * and must not fall out of the population by doing the right thing.
  *
  * The renderer's `slotTupleRegex` consumers are deliberately NOT here; they are
  * held by two other assertions instead. `RAW_VARIANT_PARSE` bans
@@ -124,7 +127,8 @@ function handRolledComposite(source: string): string | null {
  * the linter builder only in a docblock, which is why this matches an `import`
  * and not the bare name.
  */
-const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\bmakeFloatTupleRegex\b/;
+const IMPORTS_TUPLE_BUILDER =
+  /import\s[^;]*\b(?:makeFloatTupleRegex|VECTOR2_REGEX|VECTOR3_REGEX)\b/;
 
 /**
  * Reading a matched capture without the shared reader. `Number(` is in the ban

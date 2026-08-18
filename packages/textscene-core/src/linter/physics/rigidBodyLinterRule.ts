@@ -17,7 +17,7 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 
 /**
@@ -32,7 +32,6 @@ import { tupleComponent } from '../validators/commonValidators.js';
  */
 const RIGID_BODY_SCALE_TOLERANCE = 0.05;
 
-const SCALE_VECTOR2_RE = makeFloatTupleRegex('Vector2', 2);
 
 /**
  * Node2D's own `scale` (node_2d.cpp:499), defaulting to `(1, 1)` when absent —
@@ -43,7 +42,7 @@ const SCALE_VECTOR2_RE = makeFloatTupleRegex('Vector2', 2);
  */
 function parseScale2D(raw: string | undefined): { x: number; y: number } {
   if (raw === undefined) return { x: 1, y: 1 };
-  const match = SCALE_VECTOR2_RE.exec(raw);
+  const match = VECTOR2_REGEX.exec(raw);
   if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
   return { x: tupleComponent(match[1]), y: tupleComponent(match[2]) };
 }
@@ -114,7 +113,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
         diagnostics.push({
           severity: 'warning',
           message:
-            `${type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
+            `${node.type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
             'so get_colliding_bodies() stays empty and the body_entered/exited signals never ' +
             'fire. The contact COUNT still works: _sync_body_state assigns contact_count at ' +
             `${bodyFile}:${countLine}, before the contact_monitor guard at :181, and the physics server ` +
@@ -150,7 +149,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
           diagnostics.push({
             severity: 'warning',
             message:
-              `${type} '${node.name}' has a scaled transform (${shown}). ` +
+              `${node.type} '${node.name}' has a scaled transform (${shown}). ` +
               'Scale changes to RigidBody3D will be overridden by the physics engine when running. ' +
               'Change the size in its children collision shapes instead.',
             nodeName: node.name,
@@ -177,7 +176,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
         diagnostics.push({
           severity: 'warning',
           message:
-            `${type} '${node.name}' has scale (${scale.x}, ${scale.y}). ` +
+            `${node.type} '${node.name}' has scale (${scale.x}, ${scale.y}). ` +
             'Size changes to RigidBody2D will be overridden by the physics engine when running. ' +
             'Change the size in its children collision shapes instead.',
           nodeName: node.name,

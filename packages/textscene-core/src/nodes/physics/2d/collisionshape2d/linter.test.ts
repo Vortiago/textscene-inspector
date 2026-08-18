@@ -111,7 +111,9 @@ describe('CollisionShape2D Linter', () => {
             {
               value: -1.0,
               ruleName: 'strict-parser',
-              contains: ['one_way_collision_margin', 'non-negative'],
+              // Both ends share the derived message; a min-only override read
+              // as satisfied by an over-max value.
+              contains: ['one_way_collision_margin', 'between 0 and 128'],
             },
             { value: '"invalid"', contains: ['one_way_collision_margin', 'number'] },
           ],

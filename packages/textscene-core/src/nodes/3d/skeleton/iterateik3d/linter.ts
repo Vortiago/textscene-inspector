@@ -27,6 +27,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 
 const RULE_NAME = 'iterateik3d-setting-missing-target-node';
 
@@ -54,7 +55,7 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
     {
       severity: 'warning',
       message:
-        `${node.type} '${node.name}' setting(s) ${missing.join(', ')} have no target_node. ` +
+        `${node.type} '${node.name}' setting(s) ${listIndices(missing)} have no target_node. ` +
         "IterateIK3D resolves 'settings/<i>/target_node' during IK solving and skips a setting " +
         'with none (iterate_ik_3d.cpp:511), so this chain of bones is never posed.',
       nodeName: node.name,

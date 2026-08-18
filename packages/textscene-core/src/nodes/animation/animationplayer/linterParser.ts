@@ -25,7 +25,7 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { splitTopLevel } from '../../../godot/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { ARRAY_LITERAL_RE } from '../../../godot/index.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
@@ -73,7 +73,10 @@ const blendTimesValidator: PropertyValidator = accepts((key, value, line) => {
       'INVALID_BLEND_TIMES_FORMAT'
     );
   }
-  const count = splitTopLevel(match[1]!).length;
+  // `dropTrailingComma`: `[a, b, 0.5,]` loads as three elements
+  // (variant_parser.cpp:1643-1677), so counting the empty tail made a legal
+  // literal fail the multiple-of-3 check.
+  const count = dropTrailingComma(splitTopLevel(match[1]!)).length;
   if (count % 3 !== 0) {
     return propertyError(
       key,

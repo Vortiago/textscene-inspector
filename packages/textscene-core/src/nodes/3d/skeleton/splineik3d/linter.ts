@@ -27,6 +27,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { nodePathLiteral } from '../../../../godot/index.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { cappedIndices, omittedIndexCount } from '../../../../linter/reportedIndices.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {
@@ -42,13 +43,26 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const count = ruleInt(properties['setting_count'] ?? '');
   if (count === null || count <= 0) return [];
 
-  const diagnostics: Diagnostic[] = [];
+  const missing: number[] = [];
   for (let index = 0; index < count; index++) {
     const path = properties[`settings/${index}/path_3d`];
     if (path !== undefined && !isUnsetPath(path.trim())) continue;
+    missing.push(index);
+  }
+  // Capped: `setting_count` has no ceiling, and one diagnostic per index threw
+  // the whole lint away past ~130,000 of them. See `reportedIndices.ts`.
+  const omitted = omittedIndexCount(missing);
+  const diagnostics: Diagnostic[] = cappedIndices(missing).map((index) => ({
+    severity: 'warning' as const,
+    message: `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`,
+    nodeName: node.name,
+    nodeType: node.type,
+    ruleName: 'splineik3d-setting-without-path-3d',
+  }));
+  if (omitted > 0) {
     diagnostics.push({
       severity: 'warning',
-      message: `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`,
+      message: `SplineIK3D '${node.name}' has ${omitted.toLocaleString('en-US')} further settings with no Path3D, not listed individually.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'splineik3d-setting-without-path-3d',

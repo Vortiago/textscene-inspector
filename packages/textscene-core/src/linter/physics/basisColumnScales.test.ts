@@ -35,9 +35,14 @@ describe('basisColumnScales', () => {
     expect(basisColumnScales(t(0, 0, 0, 0, 2, 0, 0, 0, 7))).toEqual([0, 0, 0]);
   });
 
-  it('returns null for a non-finite component, which its finite grammar refuses', () => {
-    expect(basisColumnScales(t('nan', 0, 0, 0, 1, 0, 0, 0, 1))).toBeNull();
-    expect(basisColumnScales(t('inf', 0, 0, 0, 1, 0, 0, 0, 1))).toBeNull();
+  it('reads a non-finite component, which Godot reads a scale off too', () => {
+    // The finite grammar refused these, so the non-uniform-scale rules went
+    // silent on a basis the engine warns about.
+    expect(basisColumnScales(t('inf', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([Infinity, 1, 1]);
+    // Unsigned, so the `nan` axis stays NaN where `get_scale`'s SIGN(NaN) == 0
+    // zeroes the other two. Both readings are non-uniform, which is the only
+    // question the callers ask.
+    expect(basisColumnScales(t('nan', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([NaN, 1, 1]);
   });
 
   it('returns null for a malformed literal rather than throwing', () => {

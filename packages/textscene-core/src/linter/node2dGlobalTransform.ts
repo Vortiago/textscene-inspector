@@ -61,7 +61,7 @@ import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isValidProperties } from './linterUtils.js';
 import { searchAncestors } from './parentType.js';
 import { descendsFrom } from './nodeBaseTypes.js';
-import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
+import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
 
@@ -93,11 +93,10 @@ function multiply(parent: Transform2DMatrix, local: Transform2DMatrix): Transfor
   };
 }
 
-const VECTOR2_RE = makeFloatTupleRegex('Vector2', 2);
 
 function parseVector2(raw: string | undefined, fallback: { x: number; y: number }): { x: number; y: number } {
   if (raw === undefined) return fallback;
-  const match = VECTOR2_RE.exec(raw);
+  const match = VECTOR2_REGEX.exec(raw);
   if (!match) return fallback; // malformed is linterParser.ts's job, not this helper's
   return { x: tupleComponent(match[1]), y: tupleComponent(match[2]) };
 }

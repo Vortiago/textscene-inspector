@@ -33,13 +33,12 @@ export class Linter {
 
     // Convert parse errors to diagnostics
     if (parseResult.errors.length > 0) {
-      diagnostics.push(...this.convertParseErrors(parseResult.errors));
+      for (const d of this.convertParseErrors(parseResult.errors)) diagnostics.push(d);
     }
 
     // Phase 2: Semantic validation (only if parsing succeeded)
     if (parseResult.scene) {
-      const semanticDiagnostics = this.lintScene(parseResult.scene);
-      diagnostics.push(...semanticDiagnostics);
+      for (const d of this.lintScene(parseResult.scene)) diagnostics.push(d);
     }
 
     // Sort diagnostics by severity: errors first, then warnings.
@@ -129,8 +128,10 @@ export class Linter {
 
     // Run all applicable rules
     for (const rule of rules) {
-      const ruleDiagnostics = rule.check(context);
-      diagnostics.push(...ruleDiagnostics);
+      // Appended one at a time: a rule that walks an indexed family reports
+      // per index, and spreading 130,000 arguments exceeds the call limit —
+      // which threw out of `lint` and returned NO diagnostics for the file.
+      for (const diagnostic of rule.check(context)) diagnostics.push(diagnostic);
     }
 
     // Recursively lint children

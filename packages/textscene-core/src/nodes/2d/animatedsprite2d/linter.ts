@@ -59,7 +59,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   ) {
     diagnostics.push({
       severity: 'error',
-      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
+      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite2d-animation-no-spriteframes',

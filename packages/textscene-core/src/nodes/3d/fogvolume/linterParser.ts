@@ -54,12 +54,15 @@ const sizeValidator: PropertyValidator = (key, value, line) => {
       'INVALID_SIZE_FORMAT'
     );
   }
+  // The literals as written beside the numbers: `NaN`/`Infinity` are not
+  // spellings a `.tscn` can carry, so echoing them named no text to change.
+  const written = `Vector3(${[match[1], match[2], match[3]].map((t) => t!.trim()).join(', ')})`;
   const parts = [match[1], match[2], match[3]].map(tupleComponent);
   if (parts.some((component) => component < 0)) {
     return propertyError(
       key,
       line,
-      `Property 'size' components must be >= 0; Godot's setter clamps a negative component up to 0 (fog_volume.cpp:78), got: Vector3(${parts.join(', ')})`,
+      `Property 'size' components must be >= 0; Godot's setter clamps a negative component up to 0 (fog_volume.cpp:78), got: ${written}`,
       'INVALID_SIZE_VALUE'
     );
   }
@@ -67,7 +70,7 @@ const sizeValidator: PropertyValidator = (key, value, line) => {
     return propertyError(
       key,
       line,
-      `Property 'size' components should be >= 0.01 per the editor's range hint (fog_volume.cpp:46); Godot's setter accepts a smaller non-negative value unaltered, got: Vector3(${parts.join(', ')})`,
+      `Property 'size' components should be >= 0.01 per the editor's range hint (fog_volume.cpp:46); Godot's setter accepts a smaller non-negative value unaltered, got: ${written}`,
       'INVALID_SIZE_VALUE',
       'warning'
     );

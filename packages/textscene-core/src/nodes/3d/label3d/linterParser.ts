@@ -48,7 +48,9 @@ validatorRegistry.registerAll('Label3D', {
   // label_3d.cpp:155 hints "0,127,1,suffix:px" — closed at both ends, the
   // suffix being a unit and not a bound; set_outline_size:873-880 is a bare
   // assignment (only guarded against a redundant set), so both ends warn.
-  outline_size: v.float('outline_size', {
+  // `v.int`, like `font_size` below: the slot is Variant::INT, so it also owes
+  // the shared truncation warning and the unstorable-literal refusal.
+  outline_size: v.int('outline_size', {
     min: 0,
     max: 127,
     hinted: 'label_3d.cpp:155',

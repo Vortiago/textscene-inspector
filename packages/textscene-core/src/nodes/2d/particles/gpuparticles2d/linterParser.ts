@@ -24,6 +24,7 @@
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { CMP_EPSILON } from '../../../../godot/index.js';
 
 // gpu_particles_2d.cpp:964 hints 3 labels ("Index,Lifetime,Reverse
 // Lifetime"); BIND_ENUM_CONSTANT binds all 3 (:972-974). NOT the same enum as
@@ -137,10 +138,15 @@ validatorRegistry.registerAll('GPUParticles2D', {
   trail_enabled: v.boolean('trail_enabled'),
 
   // gpu_particles_2d.cpp:967 hints "0.01,10,0.01,or_greater,suffix:s" —
-  // `or_greater` makes 10 a soft ceiling; 0.01 is the hard floor.
-  // set_trail_lifetime (gpu_particles_2d.cpp:187-188) ERR_FAILs below
-  // `0.01 - CMP_EPSILON`, confirming the floor as an enforced error.
-  trail_lifetime: v.float('trail_lifetime', { min: 0.01, enforced: 'gpu_particles_2d.cpp:187' }),
+  // `or_greater` opens the ceiling. set_trail_lifetime
+  // (gpu_particles_2d.cpp:187-188) ERR_FAILs below `0.01 - CMP_EPSILON`, one
+  // epsilon UNDER the hint's floor, so that band loads and only warns.
+  trail_lifetime: v.float('trail_lifetime', {
+    enforcedMin: { at: 0.01 - CMP_EPSILON },
+    min: 0.01,
+    enforced: { min: 'gpu_particles_2d.cpp:187' },
+    hinted: { min: 'gpu_particles_2d.cpp:967' },
+  }),
 
   // gpu_particles_2d.cpp:968 hints "2,128,1" — no `or_greater`/`or_less`.
   // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside

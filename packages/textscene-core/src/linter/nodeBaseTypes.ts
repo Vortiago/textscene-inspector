@@ -42,21 +42,6 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
 export { UNCATALOGUED as UNCATALOGUED_BASE_TYPES };
 
 /**
- * Does `nodeType` descend from (or equal) `ancestor`, per Godot's class tree?
- *
- * `RuleRegistry` matches `applicableNodeTypes` by exact name, unlike
- * `ValidatorRegistry`, which walks this table. A rule mirroring a
- * `get_configuration_warnings` override therefore reaches only the class that
- * declares it, never the subclasses that inherit the warning, unless it pairs
- * `applicableNodeTypeMatcher` with this.
- *
- * Use it instead of a name heuristic. `nodeType.endsWith('3D')` was the earlier
- * approximation and disagrees with the real tree on 17 types: it claims
- * `NavigationAgent3D` (whose base is plain `Node`) and misses the 16 spatial
- * nodes Godot did not suffix, `GridMap`, `Decal`, `ReflectionProbe`, `VoxelGI`
- * and the OpenXR family among them.
- */
-/**
  * Whether Godot's ClassDB knows this class name at all.
  *
  * `NODE_BASE_TYPES` carries one entry per hop of every catalogued node's
@@ -95,6 +80,21 @@ function baseTypeOf(nodeType: string): string | undefined {
   return Object.hasOwn(NODE_BASE_TYPES, nodeType) ? NODE_BASE_TYPES[nodeType] : undefined;
 }
 
+/**
+ * Does `nodeType` descend from (or equal) `ancestor`, per Godot's class tree?
+ *
+ * `RuleRegistry` matches `applicableNodeTypes` by exact name, unlike
+ * `ValidatorRegistry`, which walks this table. A rule mirroring a
+ * `get_configuration_warnings` override therefore reaches only the class that
+ * declares it, never the subclasses that inherit the warning, unless it pairs
+ * `applicableNodeTypeMatcher` with this.
+ *
+ * Use it instead of a name heuristic. `nodeType.endsWith('3D')` was the earlier
+ * approximation and disagrees with the real tree on 17 types: it claims
+ * `NavigationAgent3D` (whose base is plain `Node`) and misses the 16 spatial
+ * nodes Godot did not suffix, `GridMap`, `Decal`, `ReflectionProbe`, `VoxelGI`
+ * and the OpenXR family among them.
+ */
 export function descendsFrom(nodeType: string, ancestor: string): boolean {
   // A hop counter, not a visited Set: this runs per node per ancestor test, and
   // the Set was an allocation on every call including every miss. The table is
