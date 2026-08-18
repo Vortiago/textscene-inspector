@@ -10,7 +10,11 @@ renders_as: a textured THREE.Mesh quad
 
 Sprite3D draws a 2D texture on a quad in 3D space. The previewer renders it as a
 textured plane sized by `pixel_size` × the texture, with `modulate` driving colour
-and opacity and `billboard` applied as a per-frame look-at. Godot builds the whole
+and opacity and `billboard` applied as a per-frame look-at. `modulate` accumulates
+from an immediately-parenting Sprite3D as `_get_color_accum` does
+(`sprite_3d.cpp:36-52`), r/g/b and a; one intervening node of any other type — a
+Node3D, or a Label3D, which is SpriteBase3D's sibling rather than its base
+(`label_3d.h:38`, `sprite_3d.h:36`) — restarts the accumulation at white. Godot builds the whole
 material from node properties through `BaseMaterial3D::get_material_for_2d`
 (`material.cpp:3021`), so `shaded` picks the material class — unlit
 `meshBasicMaterial` by default, `meshStandardMaterial` when set — `no_depth_test`
@@ -46,11 +50,6 @@ honoured; alpha-to-coverage and edge feathering are not implemented.
 only, against the SCENE's `opaque_prepass_threshold` — 0.99 for the main render
 (`render_forward_clustered.cpp:1791`) — which is not a node property at all, so
 there is nothing on the node to read it from.
-
-`modulate` does not accumulate down a chain of nested sprites. A SpriteBase3D
-parented to another multiplies its own modulate by the parent's accumulated
-colour (`sprite_3d.cpp:41-50`, `:75-77`); the previewer applies each sprite's
-modulate on its own.
 
 ## Linting
 

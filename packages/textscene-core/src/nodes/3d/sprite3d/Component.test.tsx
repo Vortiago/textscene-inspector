@@ -309,6 +309,46 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.alphaTest).toBe(0.25);
   });
 
+  it('alpha_cut=DISCARD paints opaque', async () => {
+    // `sprite_3d.cpp:287` → TRANSPARENCY_ALPHA_SCISSOR, whose fragment tail
+    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`), so the
+    // surface lands in the opaque list rather than the blended one.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.transparent).toBe(false);
+    expect(mat.alphaHash).toBe(false);
+  });
+
+  it('alpha_cut=OPAQUE_PREPASS keeps blending and still writes depth', async () => {
+    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass
+    // still blends, the depth pass cuts. The cut is the SCENE's
+    // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), never
+    // the node's own `alpha_scissor_threshold` — authoring one must not move it.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
+        alpha_scissor_threshold: 0.25,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.transparent).toBe(true);
+    expect(mat.depthWrite).toBe(true);
+    expect(mat.alphaHash).toBe(false);
+    expect(mat.alphaTest).not.toBe(0.25);
+  });
+
   it('alpha_cut=HASH hashes rather than blends', async () => {
     // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail
     // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`) — a

@@ -26,7 +26,7 @@
  *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)),
  *                   `transparent` flag follows
  *   - `alphaTest` ← `alpha_scissor_threshold` when alpha_cut === DISCARD,
- *                   `alphaHash` when === HASH — see `alphaCutBehaviour`
+ *                   `alphaHash` when === HASH — see `alphaCutSurface`
  *   - `depthWrite`← false only on the plain blended path
  *   - `side`      ← DoubleSide (sprite quads should be visible from
  *                   the back too — Godot's runtime behaviour)
@@ -46,6 +46,8 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { composeFrameTexture, frameSizePx, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
+import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   applyTextureFilterState,
@@ -58,9 +60,6 @@ import {
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-
-/** Stand-in for the prepass cut, which Godot takes from the SCENE, not the node. */
-const PREPASS_ALPHA_TEST = 0.5;
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -126,16 +125,25 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
   }, [sourceTexture, properties]);
 
-  // Modulate RGB and effective opacity. Transparency property is
-  // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
-  // in sRGB → convert to the linear working space before the unlit material
-  // (matching Sprite2D / WorldEnvironment).
-  const color = useGodotLinearColor(properties.modulate);
-  const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
+  // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's
+  // accumulation into this node's modulate, r/g/b and a. Godot multiplies the
+  // STORED colours and converts once, so the sRGB→linear step stays here, after
+  // the product (matching Sprite2D / WorldEnvironment).
+  const accum = useSpriteBase3DColorAccum(properties.modulate);
+  const color = useGodotLinearColor(accum);
+  // `transparency` is a per-instance GeometryInstance3D property, outside the
+  // accumulation — only `modulate` accumulates.
+  const opacity = clamp01(accum.a * (1 - properties.transparency));
 
-  const cut = alphaCutBehaviour(properties);
-  // A prepass arm blends whatever the modulate says; plain ALPHA blends only
-  // where it must, and the two cutting arms output opaque.
+  const cut = alphaCutSurface({
+    mode: properties.alpha_cut,
+    scissorThreshold: properties.alpha_scissor_threshold,
+    // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
+    transparentFlag: properties.transparent,
+  });
+  // OURS, not Godot's: TRANSPARENCY_ALPHA is in the blended list whatever the
+  // modulate says, but an opaque quad costs nothing to sort, so plain ALPHA
+  // blends only where it must. The prepass arm always does.
   const transparent =
     cut.blended &&
     (opacity < 1 || properties.alpha_cut === AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);
@@ -264,45 +272,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       {subtree}
     </>
   );
-}
-
-interface AlphaCutBehaviour {
-  alphaTest: number;
-  alphaHash: boolean;
-  depthWrite: boolean;
-  /** Whether the arm reaches the blended pass at all. */
-  blended: boolean;
-}
-
-/**
- * Godot's `mat_transparency` switch (`sprite_3d.cpp:285-297`) in three's terms.
- * ALPHA_SCISSOR and ALPHA_HASH force `alpha = 1.0` past the cut
- * (`scene_forward_clustered.glsl:1414-1416`) and so land in the opaque pass
- * (`scene_shader_forward_clustered.cpp:252`); ALPHA_DEPTH_PRE_PASS keeps
- * blending and cuts only in the depth pass, against the scene's own
- * `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`).
- */
-function alphaCutBehaviour(props: Sprite3DProperties): AlphaCutBehaviour {
-  // FLAG_TRANSPARENT off disables the whole switch (`sprite_3d.cpp:286`).
-  if (props.transparent === false)
-    return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false };
-  switch (props.alpha_cut) {
-    case AlphaCutMode.ALPHA_CUT_DISCARD:
-      // `sprite_3d.cpp:281` hands the node's own threshold to the material.
-      return {
-        alphaTest: props.alpha_scissor_threshold,
-        alphaHash: false,
-        depthWrite: true,
-        blended: false,
-      };
-    case AlphaCutMode.ALPHA_CUT_HASH:
-      return { alphaTest: 0, alphaHash: true, depthWrite: true, blended: false };
-    case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS:
-      return { alphaTest: PREPASS_ALPHA_TEST, alphaHash: false, depthWrite: true, blended: true };
-    case AlphaCutMode.ALPHA_CUT_DISABLED:
-    default:
-      return { alphaTest: 0, alphaHash: false, depthWrite: false, blended: true };
-  }
 }
 
 function clamp01(value: number): number {
