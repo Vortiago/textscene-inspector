@@ -23,6 +23,8 @@ import {
   AlphaCutMode,
   AxisMode,
   BillboardMode,
+  AlphaAntiAliasing,
+  TextureFilterMode,
 } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 
@@ -44,6 +46,14 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
   const props: Sprite3DProperties = {
     name: overrides.name ?? 'Sprite',
     billboard: BillboardMode.BILLBOARD_DISABLED,
+    shaded: false,
+    no_depth_test: false,
+    fixed_size: false,
+    alpha_scissor_threshold: 0.5,
+    alpha_hash_scale: 1.0,
+    alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    alpha_antialiasing_edge: 0.0,
+    texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,

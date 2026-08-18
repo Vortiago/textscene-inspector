@@ -134,3 +134,14 @@ describe('formatSprite3DProperties', () => {
     expect(section(sections, 'Scale')).toBeDefined();
   });
 });
+
+describe('formatSprite3DProperties alpha_cut', () => {
+  it('names ALPHA_CUT_HASH', () => {
+    // Godot's own editor label, from the property hint (`sprite_3d.cpp:691`).
+    const sections = formatSprite3DProperties(props({ alpha_cut: '3' }));
+    expect(section(sections, 'Appearance')!.items).toContainEqual({
+      label: 'Alpha Cut',
+      value: 'Alpha Hash',
+    });
+  });
+});

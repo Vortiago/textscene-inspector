@@ -11,6 +11,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { GODOT_ANISOTROPY_MAX } from '../../../resources/textures/godotTextureFilter';
 
 const heading = { type: 'node', attributes: { type: 'Sprite3D', name: 'S' } };
 const TEX = 'res://sprite.png';
@@ -137,5 +138,66 @@ describe('Sprite3D render parity', () => {
     const center = geom.boundingBox!.getCenter(new THREE.Vector3());
     expect(center.x).toBeCloseTo(0.5, 5);
     expect(center.y).toBeCloseTo(-0.25, 5);
+  });
+});
+
+/**
+ * `get_material_for_2d` (`material.cpp:3021`) builds the sprite's whole
+ * material from node properties; these are the ones that reach three.
+ */
+describe('Sprite3D material-property parity', () => {
+  it('no_depth_test disables depth testing', async () => {
+    // `set_flag(FLAG_DISABLE_DEPTH_TEST, p_no_depth)` (`material.cpp:3051`)
+    // emits `render_mode depth_test_disabled` (`material.cpp:863-864`).
+    const r = await render({ no_depth_test: 'true' });
+    expect((findMesh(r.scene).material as THREE.Material).depthTest).toBe(false);
+  });
+
+  it('keeps depth testing on by default', async () => {
+    const r = await render();
+    expect((findMesh(r.scene).material as THREE.Material).depthTest).toBe(true);
+  });
+
+  it('is unlit by default — FLAG_SHADED starts false', async () => {
+    const r = await render();
+    const material = findMesh(r.scene).material as THREE.Material;
+    expect((material as THREE.MeshBasicMaterial).isMeshBasicMaterial).toBe(true);
+  });
+
+  it('shaded mounts a lit material carrying the same map', async () => {
+    // `set_shading_mode(p_shaded ? SHADING_MODE_PER_PIXEL : SHADING_MODE_UNSHADED)`
+    // (`material.cpp:3045`).
+    const r = await render({ shaded: 'true' });
+    const material = findMesh(r.scene).material as THREE.MeshStandardMaterial;
+    expect(material.isMeshStandardMaterial).toBe(true);
+    expect(material.map).toBeTruthy();
+  });
+
+  it('shaded uses the sprite material\'s own metallic and roughness', async () => {
+    // `material_set_param(material, "metallic", 0.0)` / `"roughness", 1.0`
+    // (`sprite_3d.cpp:721-722`).
+    const r = await render({ shaded: 'true' });
+    const material = findMesh(r.scene).material as THREE.MeshStandardMaterial;
+    expect([material.metalness, material.roughness]).toEqual([0, 1]);
+  });
+
+  it('texture_filter NEAREST samples the composed texture unfiltered', async () => {
+    // `set_texture_filter(p_filter)` (`material.cpp:3055`); row 0 of the sampler
+    // table in `resources/textures/godotTextureFilter.ts`.
+    const r = await render({ texture_filter: '0' });
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+    expect([map.generateMipmaps, map.anisotropy]).toEqual([false, 1]);
+  });
+
+  it('texture_filter LINEAR_..._ANISOTROPIC raises anisotropy', async () => {
+    // Row 5: Godot's anisotropy ceiling, `GODOT_ANISOTROPY_MAX`.
+    const r = await render({ texture_filter: '5' });
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([
+      THREE.LinearFilter,
+      THREE.LinearMipmapLinearFilter,
+    ]);
+    expect([map.generateMipmaps, map.anisotropy]).toEqual([true, GODOT_ANISOTROPY_MAX]);
   });
 });

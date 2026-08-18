@@ -20,7 +20,8 @@
  *     clamps to the edge texel.
  *
  * Material:
- *   - `meshBasicMaterial` (sprites are unlit in Godot)
+ *   - `meshBasicMaterial`, or `meshStandardMaterial` when `shaded`
+ *     (`material.cpp:3045`: SHADING_MODE_UNSHADED vs SHADING_MODE_PER_PIXEL)
  *   - `color`     ← modulate RGB
  *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)),
  *                   `transparent` flag follows
@@ -48,6 +49,10 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
+  applyTextureFilterState,
+  godotTextureFilterState,
+} from '../../../resources/textures/godotTextureFilter';
+import {
   AlphaCutMode,
   type Sprite3DProperties,
 } from './types';
@@ -55,6 +60,9 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 
 const DEFAULT_ALPHA_TEST = 0.5;
+
+/** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
+const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
   // Godot's billboard is a material-side effect on the sprite quad; the shared
@@ -91,6 +99,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // canvas's `NoColorSpace` retag.
     const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, 'repeat', THREE.SRGBColorSpace);
     if (!cloned) return undefined;
+    // Sprite3D's texture is a node property, not a material slot, so the node's
+    // own `texture_filter` (`material.cpp:3055`) lands on this clone.
+    applyTextureFilterState(cloned, godotTextureFilterState(properties.texture_filter));
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;
       cloned.repeat.x = -cloned.repeat.x;
@@ -224,8 +235,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       transparent,
       alphaTest,
       depthWrite,
+      // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
+      depthTest: !properties.no_depth_test,
       side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
     },
+    merge: [properties.shaded ? SHADED_SCALARS : undefined],
   });
 
   return (
@@ -240,7 +254,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
       >
         <primitive object={geometry} attach="geometry" />
-        <meshBasicMaterial key={program.key} {...program.props} />
+        {properties.shaded ? (
+          <meshStandardMaterial key={program.key} {...program.props} />
+        ) : (
+          <meshBasicMaterial key={program.key} {...program.props} />
+        )}
       </mesh>
       {subtree}
     </>

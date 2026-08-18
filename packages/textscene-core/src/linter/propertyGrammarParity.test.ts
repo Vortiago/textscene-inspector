@@ -282,15 +282,6 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Label3D.double_sided is a boolean read by the parser; the linter has no constraint to enforce.',
   },
 
-  Sprite3D: {
-    parserOnly: [
-      // Properties read by the parser for rendering but not validated by the
-      // linter (booleans with Godot defaults, no range constraints).
-      'centered', 'flip_h', 'flip_v', 'region_enabled', 'double_sided', 'transparent',
-    ],
-    reason: 'Sprite3D boolean toggles (centered, flip_h/v, region_enabled, double_sided, transparent) are read for rendering but the linter enforces no constraint on boolean values that are always valid.',
-  },
-
   CSGBox3D: {
     linterOnly: [
       // CSG parsers call finishCsgParse which reads material/operation from

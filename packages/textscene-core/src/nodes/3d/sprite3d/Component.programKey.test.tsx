@@ -18,7 +18,10 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
-import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties } from './types';
+import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties,
+  AlphaAntiAliasing,
+  TextureFilterMode,
+} from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
@@ -28,6 +31,14 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     name: 'Sprite',
     texture: 'ExtResource("1_tex")',
     billboard: BillboardMode.BILLBOARD_DISABLED,
+    shaded: false,
+    no_depth_test: false,
+    fixed_size: false,
+    alpha_scissor_threshold: 0.5,
+    alpha_hash_scale: 1.0,
+    alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    alpha_antialiasing_edge: 0.0,
+    texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,

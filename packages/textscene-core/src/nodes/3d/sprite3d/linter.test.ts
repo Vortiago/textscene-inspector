@@ -42,17 +42,20 @@ pixel_size = 0.01
         invalid: [{ value: '"invalid_format"', contains: ['texture', 'resource reference'] }],
       },
       {
+        // Godot rejects BILLBOARD_PARTICLES on a sprite (scene/3d/sprite_3d.cpp:598).
         prop: 'billboard',
-        valid: [0, 1, 2, 3],
+        valid: [0, 1, 2],
         invalid: [
-          { value: 99, contains: ['billboard', '0-3'] },
+          { value: 3, contains: ['billboard', '0-2'] },
+          { value: 99, contains: ['billboard', '0-2'] },
           { value: -1, contains: ['billboard'] },
         ],
       },
       {
+        // ALPHA_CUT_HASH = 3 is a real mode (scene/3d/sprite_3d.h:52-58).
         prop: 'alpha_cut',
-        valid: [0, 1, 2],
-        invalid: [{ value: 5, contains: ['alpha_cut', '0-2'] }],
+        valid: [0, 1, 2, 3],
+        invalid: [{ value: 5, contains: ['alpha_cut', '0-3'] }],
       },
       {
         prop: 'axis',
@@ -119,6 +122,14 @@ pixel_size = 0.01
         prop: 'render_priority',
         valid: [5, -10],
       },
+      // Variant::BOOL in Godot (scene/3d/sprite_3d.cpp:677-688, :1019).
+      ...(['centered', 'flip_h', 'flip_v', 'region_enabled', 'double_sided', 'transparent'] as const).map(
+        (prop) => ({
+          prop,
+          valid: [true, false],
+          invalid: [{ value: '"yes"', contains: [prop, 'boolean'] }],
+        })
+      ),
     ]);
   });
 

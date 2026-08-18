@@ -10,7 +10,13 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseSprite3D } from './parser';
-import { AlphaCutMode, AxisMode, BillboardMode } from './types';
+import {
+  AlphaAntiAliasing,
+  AlphaCutMode,
+  AxisMode,
+  BillboardMode,
+  TextureFilterMode,
+} from './types';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -121,5 +127,75 @@ describe('parseSprite3D properties', () => {
     });
     expect(props.transform).toBeDefined();
     expect(props.transform!.origin).toEqual({ x: 5, y: 0, z: -3 });
+  });
+});
+
+/**
+ * The material-property half of `get_material_for_2d`'s parameter set
+ * (`scene/resources/material.cpp:3021`), plus the alpha-* uniforms
+ * `sprite_3d.cpp:148-152` feeds the shader.
+ */
+describe('parseSprite3D material properties', () => {
+  it('defaults them to Godot\'s', () => {
+    const props = parseSprite3D(HEADING, {});
+    // `SpriteBase3D::SpriteBase3D` sets `flags[i] = i == FLAG_TRANSPARENT ||
+    // i == FLAG_DOUBLE_SIDED` (`sprite_3d.cpp:712-714`), so every other flag
+    // — FLAG_SHADED, FLAG_DISABLE_DEPTH_TEST, FLAG_FIXED_SIZE — starts false.
+    expect(props.shaded).toBe(false);
+    expect(props.no_depth_test).toBe(false);
+    expect(props.fixed_size).toBe(false);
+    // `sprite_3d.h:89-94`.
+    expect(props.alpha_scissor_threshold).toBe(0.5);
+    expect(props.alpha_hash_scale).toBe(1);
+    expect(props.alpha_antialiasing_mode).toBe(AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF);
+    expect(props.alpha_antialiasing_edge).toBe(0);
+    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS);
+  });
+
+  it('parses each authored value', () => {
+    const props = parseSprite3D(HEADING, {
+      shaded: 'true',
+      no_depth_test: 'true',
+      fixed_size: 'true',
+      alpha_scissor_threshold: '0.25',
+      alpha_hash_scale: '2.0',
+      alpha_antialiasing_mode: '1',
+      alpha_antialiasing_edge: '0.6',
+      texture_filter: '0',
+    });
+    expect(props.shaded).toBe(true);
+    expect(props.no_depth_test).toBe(true);
+    expect(props.fixed_size).toBe(true);
+    expect(props.alpha_scissor_threshold).toBe(0.25);
+    expect(props.alpha_hash_scale).toBe(2);
+    expect(props.alpha_antialiasing_mode).toBe(
+      AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+    );
+    expect(props.alpha_antialiasing_edge).toBe(0.6);
+    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_NEAREST);
+  });
+
+  it('falls back to the Godot default on an out-of-range enum', () => {
+    // `ALPHA_ANTIALIASING_MAX` = 3 and `TEXTURE_FILTER_MAX` = 6 (`material.h:200,178`).
+    const props = parseSprite3D(HEADING, {
+      alpha_antialiasing_mode: '3',
+      texture_filter: '6',
+    });
+    expect(props.alpha_antialiasing_mode).toBe(AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF);
+    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS);
+  });
+});
+
+describe('parseSprite3D alpha_cut', () => {
+  it('accepts ALPHA_CUT_HASH', () => {
+    // `ALPHA_CUT_HASH` is ordinal 3 (`sprite_3d.h:52-58`) and maps to
+    // `TRANSPARENCY_ALPHA_HASH` (`sprite_3d.cpp:289-294`).
+    const props = parseSprite3D(HEADING, { alpha_cut: '3' });
+    expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_HASH);
+  });
+
+  it('falls back past ALPHA_CUT_MAX', () => {
+    const props = parseSprite3D(HEADING, { alpha_cut: '4' });
+    expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISABLED);
   });
 });
