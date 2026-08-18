@@ -66,6 +66,16 @@ describe('Label3D Linter', () => {
         ],
       },
       {
+        // Four modes, ALPHA_CUT_MAX = 4 (scene/3d/label_3d.h:50-56).
+        prop: 'alpha_cut',
+        valid: [0, 1, 2, 3],
+        invalid: [
+          { value: 4, contains: ['alpha_cut', '0-3'] },
+          { value: 5, contains: ['alpha_cut', '0-3'] },
+          { value: 'invalid', contains: ['must be a number'] },
+        ],
+      },
+      {
         prop: 'modulate',
         valid: ['Color(1, 0.5, 0, 1)'],
         invalid: [{ value: 'RGB(255, 128, 0)', contains: ['Color('] }],

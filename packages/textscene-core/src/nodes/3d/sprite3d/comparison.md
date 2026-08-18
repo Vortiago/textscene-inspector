@@ -63,19 +63,33 @@ Strict parsing format-checks these `Sprite3D` properties, plus 16 inherited from
 
 | Property |
 | --- |
+| `alpha_antialiasing_edge` |
+| `alpha_antialiasing_mode` |
 | `alpha_cut` |
+| `alpha_hash_scale` |
+| `alpha_scissor_threshold` |
 | `axis` |
 | `billboard` |
+| `centered` |
+| `double_sided` |
+| `fixed_size` |
+| `flip_h` |
+| `flip_v` |
 | `frame` |
 | `frame_coords` |
 | `hframes` |
 | `modulate` |
+| `no_depth_test` |
 | `offset` |
 | `pixel_size` |
+| `region_enabled` |
 | `region_rect` |
 | `render_priority` |
+| `shaded` |
 | `texture` |
+| `texture_filter` |
 | `transparency` |
+| `transparent` |
 | `vframes` |
 
 | Rule | Reports | Severity |
