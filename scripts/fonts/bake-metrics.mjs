@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * Bakes the OpenSans_SemiBold font metrics + MSDF glyph atlas that the native
- * (WebGL) Control text painter reads, from the vendored font, into two
+ * (WebGL) Control text painter reads, from the vendored font, into three
  * COMMITTED TypeScript modules:
  *
  *   packages/textscene-core/src/r3f/controls/native/text/openSansMetrics.ts
  *   packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts
+ *   packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts
  *
  * ## Why a pre-baked MSDF atlas, not a runtime font
  *
@@ -57,6 +58,7 @@ const WOFF2_PATH = join(REPO_ROOT, 'packages/textscene-core/assets/fonts/OpenSan
 const TEXT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/r3f/controls/native/text');
 const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
+const FONT_BYTES_OUT = join(TEXT_DIR, 'openSansFontBytes.ts');
 
 // Full ASCII printable, 0x20 (space) .. 0x7E (~) — 95 glyphs. Do not narrow it.
 const CHARSET_START = 0x20;
@@ -594,6 +596,27 @@ export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
 `;
 }
 
+function renderFontBytesModule(woff2Buffer) {
+  return `${GENERATED_HEADER}
+// The base64 payload below is generated data on one very long line. Unlike
+// \`openSansAtlas.ts\` this file needs no eslint ignore entry — it is one
+// string export and lints clean.
+
+/**
+ * The vendored woff2's own bytes, base64. INLINE rather than fetched: the VS
+ * Code webview CSP is \`default-src 'none'\` with no \`connect-src\`/\`font-src\`,
+ * so the only validated door is \`new FontFace(name, arrayBuffer)\` +
+ * \`document.fonts.add\` (\`sceneFontLoader.ts\`'s own doc) — a \`data:\` URL would
+ * still be a blocked FETCH.
+ *
+ * Shaping never reads this: \`openSansMetrics.ts\`'s baked design-unit tables
+ * do. These bytes exist so a canvas-2D painter can RASTERISE the same font
+ * (\`openSansCanvasFontMetrics.ts\`).
+ */
+export const OPEN_SANS_WOFF2_BASE64 = ${JSON.stringify(woff2Buffer.toString('base64'))};
+`;
+}
+
 async function bake() {
   const { font, ttfBuffer } = await loadFont();
   const kerning = bakeKerning(font);
@@ -605,18 +628,20 @@ async function bake() {
   return {
     metricsSource: renderMetricsModule(metrics),
     atlasSource: renderAtlasModule({ pngDataUrl, glyphsByChar, atlasInfo }),
+    fontBytesSource: renderFontBytesModule(readFileSync(WOFF2_PATH)),
   };
 }
 
 async function main() {
   const check = process.argv.includes('--check');
-  const { metricsSource, atlasSource } = await bake();
+  const { metricsSource, atlasSource, fontBytesSource } = await bake();
 
   if (check) {
     let stale = false;
     for (const [path, expected] of [
       [METRICS_OUT, metricsSource],
       [ATLAS_OUT, atlasSource],
+      [FONT_BYTES_OUT, fontBytesSource],
     ]) {
       let actual;
       try {
@@ -645,8 +670,10 @@ async function main() {
 
   writeFileSync(METRICS_OUT, metricsSource);
   writeFileSync(ATLAS_OUT, atlasSource);
+  writeFileSync(FONT_BYTES_OUT, fontBytesSource);
   console.log(`[bake-metrics] wrote ${METRICS_OUT}`);
   console.log(`[bake-metrics] wrote ${ATLAS_OUT}`);
+  console.log(`[bake-metrics] wrote ${FONT_BYTES_OUT}`);
 }
 
 main().catch((err) => {
