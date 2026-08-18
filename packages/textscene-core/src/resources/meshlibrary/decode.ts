@@ -12,6 +12,7 @@
  *   item/7/mesh = ExtResource("8_v1wcb")        // → an ArrayMesh .tres
  *   item/7/mesh = SubResource("ArrayMesh_x")    // → embedded in THIS .tres
  *   item/7/mesh_transform = Transform3D(1,0,0, 0,1,0, 0,0,1, 0,0,0)
+ *   item/7/mesh_cast_shadow = 2                 // RS::ShadowCastingSetting ordinal
  */
 
 import { warn } from '../../logger';
@@ -19,9 +20,27 @@ import type { ParsedResource } from '../../parser/parsedResource';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
-import type { MeshLibraryModel, MeshLibraryItem } from './types';
+import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
 
-const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform)$/;
+const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform|mesh_cast_shadow)$/;
+
+/**
+ * `mesh_cast_shadow` is serialised as the `RS::ShadowCastingSetting` ordinal.
+ * Anything outside 0-3 lands on Godot's own default branch, which is ON
+ * (`scene/resources/3d/mesh_library.cpp:65-67`).
+ */
+function decodeCastShadow(rawValue: string): ShadowCastingSetting {
+  switch (parseInt(rawValue, 10)) {
+    case 0:
+      return ShadowCastingSetting.OFF;
+    case 2:
+      return ShadowCastingSetting.DOUBLE_SIDED;
+    case 3:
+      return ShadowCastingSetting.SHADOWS_ONLY;
+    default:
+      return ShadowCastingSetting.ON;
+  }
+}
 
 /**
  * @param selfPath - the `res://` path the library was loaded from. An item mesh
@@ -38,7 +57,8 @@ export function meshLibraryFromTres(
   const ensure = (id: number): MeshLibraryItem => {
     let item = items.get(id);
     if (!item) {
-      item = { id, meshPath: null, meshTransform: null };
+      // Absent = ON (`scene/resources/3d/mesh_library.h:58`).
+      item = { id, meshPath: null, meshTransform: null, castShadow: ShadowCastingSetting.ON };
       items.set(id, item);
     }
     return item;
@@ -66,6 +86,8 @@ export function meshLibraryFromTres(
       } catch {
         warn(`[MeshLibrary] item/${id}/mesh_transform is malformed — using identity: ${rawValue}`);
       }
+    } else if (field === 'mesh_cast_shadow') {
+      item.castShadow = decodeCastShadow(rawValue);
     }
   }
 
