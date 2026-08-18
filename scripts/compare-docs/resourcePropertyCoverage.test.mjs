@@ -24,6 +24,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
+import { unvalidatedByClass } from './registryKeys.mjs';
 
 const PROPS = join(import.meta.dirname, 'resource-properties.json');
 const BASES = join(import.meta.dirname, 'resource-bases.json');
@@ -59,37 +60,6 @@ export function coveredClasses(registeredTypes, bases) {
     }
   }
   return scope;
-}
-
-/** A registered key can stand for a whole indexed family (`glow_levels/*`). */
-function keyMatcher(key) {
-  if (!key.includes('*') && !key.includes('#')) return (name) => name === key;
-  const source = key
-    .split('')
-    .map((ch) => {
-      if (ch === '*') return '[^/]+';
-      if (ch === '#') return '\\d+';
-      return /[a-zA-Z0-9_/]/.test(ch) ? ch : `\\${ch}`;
-    })
-    .join('');
-  const re = new RegExp(`^${source}$`);
-  return (name) => re.test(name);
-}
-
-/**
- * Per declaring class, not per leaf: a validator for a `BaseMaterial3D`
- * property belongs on `BaseMaterial3D`, so the base-walk is deliberately not
- * applied and `getOwnKeys` is asked instead of `findValidator`.
- */
-function unvalidatedByClass(engine, validatorRegistry, covered) {
-  const rows = [];
-  for (const [cls, props] of Object.entries(engine)) {
-    if (!covered.has(cls)) continue;
-    const matchers = validatorRegistry.getOwnKeys(cls).map(keyMatcher);
-    const missing = props.map((p) => p.name).filter((name) => !matchers.some((m) => m(name)));
-    if (missing.length > 0) rows.push({ cls, missing });
-  }
-  return rows.sort((a, b) => b.missing.length - a.missing.length);
 }
 
 describe('resource property coverage', { timeout: 60_000 }, () => {

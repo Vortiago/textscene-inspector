@@ -9,22 +9,26 @@
  * the allowlist's shared-helper entries record.
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { baseChain } from '../nodeBaseTypes.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.
 export { nodesRoot } from './ruleNameScrape.js';
-import { nodesRoot } from './ruleNameScrape.js';
+import { atLeast, nodesRoot, walk } from './ruleNameScrape.js';
 
 // ---------------------------------------------------------------------------
 // Base-type to parser directory mapping.
 // Used to walk the inherited parser property chain in parallel with the
 // NODE_BASE_TYPES validator chain.
+//
+// Exported so `propertyGrammarParityScan.test.ts` can hold it COMPLETE: an
+// ancestor missing here is skipped in silence, unlike a mapped one whose file
+// has moved.
 // ---------------------------------------------------------------------------
 
-const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
+export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
@@ -34,10 +38,13 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // subclass, which reads as a validator desync when the parser is fine.
   Button: '2d/ui/button/parser.ts',
   Control: '2d/ui/control/parser.ts',
+  // ParallaxBackground is a CanvasLayer, not a Node2D, so `visible` and `layer`
+  // reach it through this parser and nothing else.
+  CanvasLayer: '2d/ui/canvaslayer/parser.ts',
   Node: 'node/parser.ts',
-  // The last four hops, measured rather than guessed: walking NODE_BASE_TYPES for
-  // every base-parser-reusing slice shows just NINE distinct ancestors cover all
-  // of them, and the six above already resolve all but these.
+  // The container and mesh hops, measured rather than guessed: walking
+  // NODE_BASE_TYPES for every base-parser-reusing slice shows a small fixed set
+  // of ancestors covers all of them, and the entries above resolve all but these.
   VBoxContainer: '2d/ui/vboxcontainer/parser.ts',
   HBoxContainer: '2d/ui/hboxcontainer/parser.ts',
   PanelContainer: '2d/ui/panelcontainer/parser.ts',
@@ -45,28 +52,21 @@ const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
 };
 
 /**
- * Walk dir recursively; collect every path holding a `linterParser.ts`,
- * `parser.ts` or not. The superset {@link findSliceDirs} narrows, so the
- * blind-spot count at the bottom of this file has something to measure against.
+ * Every directory holding a `linterParser.ts`, `parser.ts` or not. The subset
+ * {@link findSliceDirs} narrows, so the parity guard's blind-spot count has
+ * something to measure against.
+ *
+ * Floored, because every consumer of both walks reports its finding as an EMPTY
+ * list: a walk that matched nothing reads exactly like a clean tree.
  */
 export function findLinterParserDirs(dir: string): string[] {
-  const entries = readdirSync(dir, { withFileTypes: true });
-  const result = entries.some((e) => e.name === 'linterParser.ts') ? [dir] : [];
-  for (const e of entries) {
-    if (e.isDirectory()) result.push(...findLinterParserDirs(join(dir, e.name)));
-  }
-  return result;
+  return atLeast(walk(dir, 'linterParser.ts').map(dirname), 150, 'findLinterParserDirs');
 }
 
-/** Walk dir recursively; collect paths where both parser.ts and linterParser.ts exist. */
+/** The directories holding both `parser.ts` and `linterParser.ts`. */
 export function findSliceDirs(dir: string): string[] {
-  const entries = readdirSync(dir, { withFileTypes: true });
-  const names = new Set(entries.map((e) => e.name));
-  const result = names.has('parser.ts') && names.has('linterParser.ts') ? [dir] : [];
-  for (const e of entries) {
-    if (e.isDirectory()) result.push(...findSliceDirs(join(dir, e.name)));
-  }
-  return result;
+  const dirs = findLinterParserDirs(dir).filter((d) => existsSync(join(d, 'parser.ts')));
+  return atLeast(dirs, 50, 'findSliceDirs');
 }
 
 /**

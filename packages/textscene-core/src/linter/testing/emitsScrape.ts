@@ -22,13 +22,50 @@ export interface EmittedPair {
   readonly severity: string;
 }
 
+/** Index of the quote closing the string or template opening at `open`. */
+function endOfString(src: string, open: number): number {
+  const quote = src[open];
+  for (let i = open + 1; i < src.length; i++) {
+    if (src[i] === '\\') {
+      i++;
+      continue;
+    }
+    if (src[i] === quote) return i;
+  }
+  return src.length;
+}
+
+/**
+ * Index of the `]` closing the array opening at `open`.
+ *
+ * String and template contents are skipped rather than counted. A grounding's
+ * `unused`/`because` clause is free prose, and a bracket in one moves the end
+ * of the array either way: a `]` closes it early and leaves the rest of the
+ * DECLARATIONS in the scraped text, where they read as emissions the check
+ * function never makes; a `[` runs it past the end and deletes real
+ * diagnostics from the scrape instead.
+ */
+function endOfArray(src: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === "'" || ch === '"' || ch === '`') {
+      i = endOfString(src, i);
+      continue;
+    }
+    if (ch === '[') depth++;
+    else if (ch === ']' && --depth === 0) return i;
+  }
+  return src.length;
+}
+
 /**
  * Remove every `emits: [ … ]` array before scraping, else the guard validates
  * its own declarations. Bracket-matched rather than regex'd: an emits array may
  * be one line (`emits: [{ ruleName, severity: 'error' }]`) or many, and may
  * contain nested brackets (the conditional entry in collisionShapeLinterRule).
  */
-function stripEmits(src: string): string {
+export function stripEmits(src: string): string {
   // Anchored to a property position (line start or after `{`/`,`) and required to
   // be followed by `[`. A bare indexOf also matched `emits:` inside a comment or
   // string and then cut everything up to the next `]`, silently deleting real
@@ -41,15 +78,8 @@ function stripEmits(src: string): string {
     const match = opener.exec(src);
     if (!match) return out + src.slice(index);
     const at = match.index + match[0].indexOf('emits:');
-    const open = src.indexOf('[', at);
-    let depth = 0;
-    let close = open;
-    for (; close < src.length; close++) {
-      if (src[close] === '[') depth++;
-      else if (src[close] === ']' && --depth === 0) break;
-    }
     out += src.slice(index, at);
-    index = close + 1;
+    index = endOfArray(src, src.indexOf('[', at)) + 1;
   }
 }
 

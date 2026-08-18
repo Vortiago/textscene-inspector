@@ -32,8 +32,10 @@ import { propertyError } from './propertyError.js';
 import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
+import type { Severity } from '../types.js';
 import { parseGodotInt } from './commonValidators.js';
 import { markIntSlot } from './intSlot.js';
+import { formatCode, valueCode } from './v/codes.js';
 
 /** `LABEL (bit) | LABEL (bit)` for whichever of `labels` appear in `bits`. */
 function describeBits(labels: Record<number, string>, bits: number): string {
@@ -41,6 +43,74 @@ function describeBits(labels: Record<number, string>, bits: number): string {
     .filter(([bit]) => (Number(bit) & bits) !== 0)
     .map(([bit, label]) => `${label} (${bit})`)
     .join(' | ');
+}
+
+/** One bit set a value has to lie inside, and what it means when it does not. */
+interface BitFieldArm {
+  /** The OR of every bit this arm permits. */
+  bits: number;
+  severity: Severity;
+  /** The diagnostic, given the value Godot reads from the literal. */
+  message: (num: number) => string;
+}
+
+/**
+ * The body both combinators below share: read the INT, refuse what the slot
+ * cannot hold, then test each arm in turn.
+ *
+ * @param arms - tested in order, so the setter's own tier reports before the
+ *   narrower one the inspector's flag list states. The widest set comes first
+ *   and is the one `accepts` names, since it is every bit the slot carries.
+ */
+function bitField(
+  name: string,
+  opts: {
+    labels: Record<number, string>;
+    arms: readonly [BitFieldArm, ...BitFieldArm[]];
+    grounding: { kind: 'enforced' | 'hinted'; cite: string };
+  }
+): PropertyValidator {
+  const validator = accepts((key, value, line) => {
+    // `parseGodotInt`, not `IS_VALID_INT_RE`: that regex describes
+    // `String::is_valid_int()`, which is the grammar of an index inside a
+    // property KEY, not of a Variant literal. A bit-field slot is an INT, so
+    // Godot reads any number token and converts — `justification_flags = 3.0`
+    // and `= 2e1` are files it loads, and a format error on either reported on
+    // a scene the engine opens. The `${num}` an arm interpolates is the STORED
+    // int, which is what every message here should have said.
+    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
+    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
+    // engine keeps intact drew an error saying the engine does not hold it.
+    const num = parseGodotInt(value, 'int64');
+    if (num === null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be an integer, got: "${value}"`,
+        formatCode(name)
+      );
+    }
+    // A non-finite READS but does not FIT, and every bit test below is false
+    // for NaN, so without this the slot said nothing at all.
+    const refused = unrepresentableInt(name, key, value, line, valueCode(name), num);
+    if (refused) return refused;
+    for (const arm of opts.arms) {
+      // `num > arm.bits` first: a value whose bits all lie inside the set
+      // cannot exceed it, so this rejects everything too wide before `&`
+      // reaches the 32-bit signed range, where ToInt32 wraps and would answer
+      // for a different number. Below that point `num & ~arm.bits` is exact,
+      // and it is the check that catches the in-range non-subsets a max bound
+      // would wave through.
+      if (num < 0 || num > arm.bits || (num & ~arm.bits) !== 0) {
+        return propertyError(key, line, arm.message(num), valueCode(name), arm.severity);
+      }
+    }
+    return null;
+  }, `bit mask of ${describeBits(opts.labels, opts.arms[0].bits)}`);
+
+  validator.grounding = opts.grounding;
+  // An INT slot: a bit field refuses a literal the tokenizer reads.
+  return markIntSlot(validator, 'int64');
 }
 
 export interface MaskedBitFieldOptions {
@@ -73,72 +143,39 @@ export function maskedBitField(
   mask: number,
   opts: MaskedBitFieldOptions
 ): PropertyValidator {
-  const upper = name.toUpperCase();
   const describe = (bits: number): string => describeBits(opts.labels, bits);
   const allNames = describe(mask);
+  const { hintedBits } = opts;
 
-  const validator = accepts((key, value, line) => {
-    // `parseGodotInt`, not `IS_VALID_INT_RE`: that regex describes
-    // `String::is_valid_int()`, which is the grammar of an index inside a
-    // property KEY, not of a Variant literal. A bit-field slot is an INT, so
-    // Godot reads any number token and converts — `justification_flags = 3.0`
-    // and `= 2e1` are files it loads, and a format error on either reported on
-    // a scene the engine opens. The interpolated `${num}` below is now the
-    // STORED int, which is what every message here should have said.
-    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
-    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
-    // engine keeps intact drew an error saying the engine does not hold it.
-    const num = parseGodotInt(value, 'int64');
-    if (num === null) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be an integer, got: "${value}"`,
-        `INVALID_${upper}_FORMAT`
-      );
-    }
-    // A non-finite READS but does not FIT, and every bit test below is false
-    // for NaN, so without this the slot said nothing at all.
-    const refused = unrepresentableInt(name, key, value, line, `INVALID_${upper}_VALUE`, num);
-    if (refused) return refused;
-    // `num > mask` first: a value whose bits all lie inside the mask cannot
-    // exceed it, so this rejects everything too wide before `&` reaches the
-    // 32-bit signed range where it would wrap and give a wrong answer. Below
-    // that point `num & ~mask` is exact, and it is the check that catches the
-    // in-range non-subsets a max bound would wave through.
-    if (num < 0 || num > mask || (num & ~mask) !== 0) {
-      // `&` coerces through ToInt32, which is modulo 2^32 — exactly what
-      // masking the low bits does — so this names the stored value for a
-      // negative spelling and a wide one alike. `parseGodotInt` has already
-      // refused anything past 2^53, where the double stops being the integer
-      // the file spells.
-      const stored = ` (Godot stores ${num & mask})`;
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' accepts only the bits ${allNames}; ${num} sets bits outside the mask, which Godot drops on assignment${stored}`,
-        `INVALID_${upper}_VALUE`
-      );
-    }
-    if (opts.hintedBits !== undefined && (num & ~opts.hintedBits) !== 0) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' sets ${describe(num & ~opts.hintedBits)}, which the engine keeps but the inspector's flag list does not offer (it lists only ${describe(opts.hintedBits)})`,
-        `INVALID_${upper}_VALUE`,
-        'warning'
-      );
-    }
-    return null;
-  }, `bit mask of ${allNames}`);
+  const maskArm: BitFieldArm = {
+    bits: mask,
+    severity: 'error',
+    // `&` coerces through ToInt32, which is modulo 2^32 — exactly what masking
+    // the low bits does — so this names the stored value for a negative
+    // spelling and a wide one alike. `parseGodotInt` has already refused
+    // anything past 2^53, where the double stops being the integer the file
+    // spells.
+    message: (num) =>
+      `Property '${name}' accepts only the bits ${allNames}; ${num} sets bits outside the mask, which Godot drops on assignment (Godot stores ${num & mask})`,
+  };
+  const arms: [BitFieldArm, ...BitFieldArm[]] = [maskArm];
+  if (hintedBits !== undefined) {
+    arms.push({
+      bits: hintedBits,
+      severity: 'warning',
+      message: (num) =>
+        `Property '${name}' sets ${describe(num & ~hintedBits)}, which the engine keeps but the inspector's flag list does not offer (it lists only ${describe(hintedBits)})`,
+    });
+  }
 
-  // The error branch is the stronger claim, so it carries the tag; a narrower
-  // `hintedBits` cites its ADD_PROPERTY in the comment at the call site.
-  validator.grounding = { kind: 'enforced', cite: opts.enforced };
-  // An INT slot: a bit field refuses a literal the tokenizer reads.
-  return markIntSlot(validator, 'int64');
+  return bitField(name, {
+    labels: opts.labels,
+    arms,
+    // The error branch is the stronger claim, so it carries the tag; a narrower
+    // `hintedBits` cites its ADD_PROPERTY in the comment at the call site.
+    grounding: { kind: 'enforced', cite: opts.enforced },
+  });
 }
-
 
 export interface HintedBitFieldOptions {
   /** `file:line` of the `ADD_PROPERTY` whose PROPERTY_HINT_FLAGS lists the bits. */
@@ -165,45 +202,19 @@ export interface HintedBitFieldOptions {
  * through the two values a reader most needs told about.
  */
 export function hintedBitField(name: string, opts: HintedBitFieldOptions): PropertyValidator {
-  const upper = name.toUpperCase();
   const hintedBits = Object.keys(opts.labels).reduce((acc, bit) => acc | Number(bit), 0);
   const allNames = describeBits(opts.labels, hintedBits);
 
-  const validator = accepts((key, value, line) => {
-    // Same reasoning as `maskedBitField` above: an INT slot takes any number
-    // token, so the gate is a parse and not `String::is_valid_int()`.
-    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
-    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
-    // engine keeps intact drew an error saying the engine does not hold it.
-    const num = parseGodotInt(value, 'int64');
-    if (num === null) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be an integer, got: "${value}"`,
-        `INVALID_${upper}_FORMAT`
-      );
-    }
-    // A non-finite READS but does not FIT, and every bit test below is false
-    // for NaN, so without this the slot said nothing at all.
-    const refused = unrepresentableInt(name, key, value, line, `INVALID_${upper}_VALUE`, num);
-    if (refused) return refused;
-    // `num > hintedBits` first, so a value past 32 bits never reaches `&`,
-    // where JS would coerce and wrap. Same ordering, same reason, as
-    // `maskedBitField`.
-    if (num < 0 || num > hintedBits || (num & ~hintedBits) !== 0) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' sets a bit the inspector's flag list does not offer; it lists only ${allNames}. Godot keeps the value, so this loads and runs, but the value is unreachable from the editor`,
-        `INVALID_${upper}_VALUE`,
-        'warning'
-      );
-    }
-    return null;
-  }, `bit mask of ${allNames}`);
-
-  validator.grounding = { kind: 'hinted', cite: opts.hinted };
-  // An INT slot: a bit field refuses a literal the tokenizer reads.
-  return markIntSlot(validator, 'int64');
+  return bitField(name, {
+    labels: opts.labels,
+    arms: [
+      {
+        bits: hintedBits,
+        severity: 'warning',
+        message: () =>
+          `Property '${name}' sets a bit the inspector's flag list does not offer; it lists only ${allNames}. Godot keeps the value, so this loads and runs, but the value is unreachable from the editor`,
+      },
+    ],
+    grounding: { kind: 'hinted', cite: opts.hinted },
+  });
 }

@@ -151,6 +151,19 @@ describe('indexedFamilyValidator', () => {
       expect(family('settings/-1/relative', 'true', 1)?.code).toBe('INVALID_SETTING_INDEX');
     });
 
+    it('errors on a negative index reached through a non-digit, which to_int resolves', () => {
+      // `to_int` flips the sign on a `-` seen while the total is still 0
+      // (ustring.cpp:2291-2292) and skips the letter entirely, so "a-1" is -1
+      // and ERR_FAIL_INDEX_V refuses the write exactly as it does for "-1".
+      expect(family('settings/a-1/relative', 'true', 1)?.code).toBe('INVALID_SETTING_INDEX');
+    });
+
+    it('keeps accepting a non-digit index that resolves non-negative', () => {
+      // "-0-1" is 1, not -1: the `0` leaves the total at 0 so the second `-`
+      // flips the sign back. The write lands, so nothing is refused.
+      expect(family('settings/-0-1/relative', 'true', 1)).toBeNull();
+    });
+
     it('still rejects a key with no index segment at all', () => {
       expect(family('settings/relative', 'true', 1)?.code).toBe('INVALID_SETTING');
     });

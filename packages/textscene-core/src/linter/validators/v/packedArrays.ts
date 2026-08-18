@@ -153,7 +153,7 @@ export function badIntElement(
  * Returns the offending text rather than a `ParseError` so each caller keeps
  * its own property name, message wording and error code.
  */
-export function firstNonNumericElement(body: string | readonly string[]): string | null {
+function firstNonNumericElement(body: string | readonly string[]): string | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const trimmed = part.trim();
     // The component GRAMMAR, not a numeric parse: `Number()` refuses `inf`,

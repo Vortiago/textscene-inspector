@@ -5,6 +5,8 @@
  * point — type-only imports are skipped because the bundler erases them — and
  * asserts:
  *
+ *   - both closures resolve every workspace specifier, so no assertion is
+ *     answered over a subtree the walk never entered.
  *   - `linter/index.ts` reaches no `.tsx` and value-imports no react/three.
  *   - `parser/TscnParser.ts` reaches no `.tsx` and value-imports no react/three.
  *
@@ -41,6 +43,14 @@ const linterClosure = walkImportClosure(resolve(here, 'index.ts'));
 const parserClosure = walkImportClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
 
 describe('React-free boundary (ADR-0001)', () => {
+  // An unresolvable specifier is not followed, so every file under it drops out
+  // of the closure and the four assertions below report clean over a subtree
+  // nothing walked. The walker must not go blind.
+  it('walker resolves every workspace import (guard stays exhaustive)', () => {
+    expect(linterClosure.unresolved).toEqual([]);
+    expect(parserClosure.unresolved).toEqual([]);
+  });
+
   it('linter entry point reaches no .tsx render component', () => {
     expect(tsxFiles(linterClosure)).toEqual([]);
   });

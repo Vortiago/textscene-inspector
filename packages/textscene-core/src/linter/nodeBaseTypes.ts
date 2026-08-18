@@ -73,12 +73,16 @@ export function isCatalogedType(nodeType: string): boolean {
 }
 
 /**
- * How many hops the ancestry walks before giving up.
+ * How many hops a base-chain walk takes before giving up.
  *
- * Godot's deepest chain is 7; 32 is slack enough never to bind while still
- * terminating on a malformed hand-built table.
+ * The deepest chain either catalog states is 7 hops
+ * (`OpenXRInteractionProfileEditor` → … → `Node`); 32 is slack enough never to
+ * bind while still terminating on a malformed hand-built table.
+ *
+ * Exported because `ValidatorRegistry` walks the same ancestry over the merged
+ * class table, and a bound stated twice is a bound that can differ.
  */
-const MAX_BASE_CHAIN_HOPS = 32;
+export const MAX_BASE_CHAIN_HOPS = 32;
 
 /**
  * The declared base of `nodeType`, or `undefined`.

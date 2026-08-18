@@ -9,20 +9,13 @@
  */
 
 import { CLASS_BASE_TYPES } from './classBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS } from './nodeBaseTypes.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { buildWildcardIndex, matchesIndexedKey, type WildcardEntry } from './wildcardIndex.js';
 import { unavailableValidator, type Removal } from './unavailableKey.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
 export type { Removal } from './unavailableKey.js';
-
-/**
- * How many base-chain hops `findValidator` will walk before giving up.
- *
- * Godot's deepest ancestry is a dozen or so; 32 is slack enough to never bind in
- * practice while still terminating on a malformed hand-built registry.
- */
-const MAX_BASE_CHAIN_HOPS = 32;
 
 /**
  * Registry for property validators by node type

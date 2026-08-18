@@ -42,7 +42,7 @@ export function walk(dir: string, match: string | ((name: string) => boolean)): 
  * BROKE, not a tree that changed. A guard that also wants to notice drift pins
  * the exact number at its own call site, which is a different assertion.
  */
-function atLeast<T>(items: T[], floor: number, what: string): T[] {
+export function atLeast<T>(items: T[], floor: number, what: string): T[] {
   if (items.length < floor) {
     throw new Error(`${what}: scraped ${items.length}, expected at least ${floor} — the walk is broken`);
   }

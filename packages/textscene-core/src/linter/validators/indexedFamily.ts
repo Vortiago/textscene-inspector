@@ -64,7 +64,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE } from '../../godot/index.js';
+import { IS_VALID_INT_RE, stringToInt } from '../../godot/index.js';
 
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
@@ -176,20 +176,24 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       return unknown(key, line);
     }
 
-    if (IS_VALID_INT_RE.test(indexText)) {
-      const index = Number(indexText);
-      if (index < 0) {
-        // Godot refuses to RESOLVE a negative index under either parse, so
-        // `_set` treats the key as unrecognised and the write never lands.
-        if (!negativeIndex) return unknown(key, line);
-        return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
-      }
-    } else if (gatesOnValidInt) {
-      return unknown(key, line);
+    // The index Godot resolves. The strict parse takes a clean integer only;
+    // `to_int` skips non-digits rather than stopping at them and flips the sign
+    // on a `-` seen while the total is still 0 (ustring.cpp:2303-2311), so
+    // `settings/a-1/…` resolves to -1 rather than to no index at all.
+    const index = IS_VALID_INT_RE.test(indexText)
+      ? Number(indexText)
+      : gatesOnValidInt
+        ? null
+        : stringToInt(indexText);
+    if (index === null) return unknown(key, line);
+    if (index < 0) {
+      // Godot refuses to RESOLVE a negative index under either parse, so
+      // `_set` treats the key as unrecognised and the write never lands.
+      if (!negativeIndex) return unknown(key, line);
+      return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
     }
-    // Under `to_int` a non-numeric index falls through uncommented-on: it
-    // resolves to SOME setting and the write lands, so the leaf below is the
-    // only thing left that Godot can refuse.
+    // A non-negative index resolves to SOME setting and the write lands, so the
+    // leaf below is the only thing left that Godot can refuse.
 
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.

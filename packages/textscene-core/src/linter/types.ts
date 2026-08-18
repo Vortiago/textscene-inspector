@@ -210,9 +210,7 @@ export interface RuleMeta {
    * WHEN WRITING A RULE: put `severity:` before `ruleName:` in every diagnostic
    * object literal. The coverage guard pairs the two by source order, so the
    * reverse order silently mispairs a severity. (That scrape strips the whole
-   * `emits` array first, so `grounding` cannot disturb the pairing — but it
-   * bracket-matches to find the array's end, so no string inside one may
-   * contain `[` or `]`.)
+   * `emits` array first, so `grounding` cannot disturb the pairing.)
    *
    * Each entry also says where its authority comes from; see `EmitGrounding`.
    */

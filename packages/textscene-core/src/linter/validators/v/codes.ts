@@ -4,15 +4,16 @@
  * in the generated `## Linting` table.
  */
 
-/**
- * Convert `cast_shadow` → `CAST_SHADOW`. Used to auto-derive error
- * codes so call sites don't pass them.
- */
-export function upper(name: string): string {
+/** Convert `cast_shadow` → `CAST_SHADOW`, for the codes derived below. */
+function upper(name: string): string {
   return name.toUpperCase();
 }
 
-/** Auto-derived error codes for the "must be a number" branch. */
+/**
+ * The code a branch reports under: `INVALID_<NAME>_FORMAT` by default, and the
+ * one spelling of that template. `kind` names a branch of its own — a reference
+ * that is not a `SubResource(…)`, a path that is not a `NodePath(…)`.
+ */
 export function formatCode(name: string, kind = 'FORMAT'): string {
   return `INVALID_${upper(name)}_${kind}`;
 }

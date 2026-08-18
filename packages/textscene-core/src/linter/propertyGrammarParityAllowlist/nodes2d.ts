@@ -155,12 +155,12 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   CanvasLayer: {
     renderGap: [
       // The layer's own canvas transform, and the parallax-style viewport
-      // follow. Godot composites the layer through both; the previewer reads
-      // only `layer`, `visible` and the composed `transform`.
+      // follow. Godot composites the layer through both; `canvaslayer/parser.ts`
+      // reads `layer` and `visible` and nothing else.
       'offset', 'rotation', 'scale',
       'follow_viewport_enabled', 'follow_viewport_scale',
     ],
-    reason: 'layer, visible and transform are parsed and validated; the discrete offset/rotation/scale and the viewport-follow pair all move what the layer draws and are unread.',
+    reason: 'The bare CanvasLayer parser reads layer and visible only, so the discrete offset/rotation/scale and the viewport-follow pair — each of which moves what the layer draws — go unread. ParallaxBackground, the one descendant carrying a parser of its own, reads and renders all of them but follow_viewport_scale.',
   },
 
   SubViewportContainer: {

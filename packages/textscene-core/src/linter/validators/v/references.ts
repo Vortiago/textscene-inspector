@@ -4,8 +4,8 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { createNodePathValidator, createResourceReferenceValidator } from '../resourceValidators.js';
-import { upper } from './codes.js';
-import { accepts, shape } from './grounding.js';
+import { formatCode } from './codes.js';
+import { shape } from './grounding.js';
 import { isNilLiteral } from '../../../godot/index.js';
 
 export const referenceCombinators = {
@@ -30,10 +30,7 @@ export const referenceCombinators = {
    */
   resourceReference(name: string): PropertyValidator {
     return shape(
-      accepts(
-        createResourceReferenceValidator(name, `INVALID_${upper(name)}_REFERENCE`),
-        'null, SubResource("id") or ExtResource("id")'
-      ),
+      createResourceReferenceValidator(name, formatCode(name, 'REFERENCE')),
       'null, SubResource("id") or ExtResource("id")'
     );
   },
@@ -50,7 +47,7 @@ export const referenceCombinators = {
    * `null`, so widening every call site would accept a value Godot refuses.
    */
   nodePath(name: string, opts?: { orNull?: boolean }): PropertyValidator {
-    const validator = createNodePathValidator(name, `INVALID_${upper(name)}_PATH`);
+    const validator = createNodePathValidator(name, formatCode(name, 'PATH'));
     if (!opts?.orNull) return shape(validator, 'NodePath("path/to/node")');
     return shape(
       (key, value, line) => (isNilLiteral(value) ? null : validator(key, value, line)),

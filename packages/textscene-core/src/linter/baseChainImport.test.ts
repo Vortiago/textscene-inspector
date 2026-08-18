@@ -106,6 +106,12 @@ function reachableRegistrationModules(file: string): Set<string> {
   return seen;
 }
 
+/**
+ * The two hierarchy roots. Nothing sits above them, so they are the only names
+ * `CLASS_BASE_TYPES` legitimately has no entry for.
+ */
+const HIERARCHY_ROOTS = new Set(['Node', 'Resource']);
+
 /** The closest ancestor that registers validators, or null at the terminal. */
 function nearestValidatorAncestor(type: string, owners: Map<string, string>): string | null {
   const seen = new Set<string>();
@@ -184,10 +190,28 @@ describe('base-chain imports', () => {
     ).toHaveLength(2);
   });
 
+  it('registers only names the base table knows', () => {
+    // A name absent from `CLASS_BASE_TYPES` has no chain to walk, so the sweep
+    // below skips it — and a skipped slice reads exactly like a clean one. The
+    // registry-side sweep cannot close this: `getRegisteredNodeTypes()` excludes
+    // a type whose whole contribution is a removal, which is the half of the
+    // population that reaches this file and nothing else.
+    const unknown = [...owners]
+      .filter(([type]) => !HIERARCHY_ROOTS.has(type) && CLASS_BASE_TYPES[type] === undefined)
+      .map(([type, file]) => `${type} (${relative(srcRoot, file)})`)
+      .sort();
+    expect(
+      unknown,
+      `These registered names are in no base table, so Godot has no such class and\n` +
+        `their chain is never checked:\n  ${unknown.join('\n  ')}`
+    ).toEqual([]);
+  });
+
   it('every slice REACHES the ancestor the base chain names', () => {
     const wrong: string[] = [];
     for (const [type, file] of [...owners].sort()) {
-      // `Node` and `Resource` terminate their hierarchies and have nothing above.
+      // Null at a hierarchy root, which has nothing above it. Every other name
+      // resolves, held true by the check above.
       const ancestor = nearestValidatorAncestor(type, owners);
       if (!ancestor) continue;
       const wanted = owners.get(ancestor)!;

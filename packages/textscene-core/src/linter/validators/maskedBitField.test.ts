@@ -180,6 +180,30 @@ describe('hintedBitField', () => {
   });
 });
 
+describe('a mask that keeps a bit past 32', () => {
+  // `BitField<T>` is int64 and the engine states such bits:
+  // `RenderingServer::ArrayFormat` sets one at 35 and asserts its own 64-bit
+  // width (servers/rendering/rendering_server.h:351, :357).
+  const wide = maskedBitField('flags', 2 ** 32 + 192, {
+    enforced: 'label.cpp:63',
+    labels: { 64: 'START_EDGE', 128: 'END_EDGE' },
+    hintedBits: 192,
+  });
+
+  it('warns on a kept bit past 32 that the hint does not offer', () => {
+    // `&` coerces through ToInt32, which reads 2^32 as 0, so the hint arm has
+    // to refuse a value wider than the bits it offers BEFORE masking — the
+    // same ordering the mask arm above uses.
+    const diagnostic = wide('flags', String(2 ** 32), 5);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.code).toBe('INVALID_FLAGS_VALUE');
+  });
+
+  it('stays silent on a value inside the bits the hint offers', () => {
+    expect(wide('flags', '192', 5)).toBeNull();
+  });
+});
+
 describe('a masked bit field names what the engine keeps', () => {
   it('reports the stored bits for the negative spelling too', () => {
     // `-1` and `4294967295` are the same 32 bits, and Godot's `p_flags & MASK`

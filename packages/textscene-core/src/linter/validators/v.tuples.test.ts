@@ -130,10 +130,23 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
     expect(err!.code).toBe('INVALID_MESH_REFERENCE');
   });
 
+  it('resourceReference declares the shape it takes, and that it rejects nothing else', () => {
+    // What `boundGrounding` and the generated sheet read: a reference validator
+    // refuses a spelling rather than a value, so it owes no citation.
+    const validator = v.resourceReference('mesh');
+    expect(validator.formatOnly).toBe(true);
+    expect(validator.accepts).toBe('null, SubResource("id") or ExtResource("id")');
+  });
+
   it('nodePath accepts NodePath("…")', () => {
     expect(
       v.nodePath('skeleton')('skeleton', 'NodePath("../Armature")', 1)
     ).toBeNull();
+  });
+
+  it('nodePath rejects a bare quoted path under the property\'s own code', () => {
+    const err = v.nodePath('skeleton')('skeleton', '"../Armature"', 1);
+    expect(err!.code).toBe('INVALID_SKELETON_PATH');
   });
 
   it('color accepts 4-component Color', () => {

@@ -16,6 +16,7 @@ import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.j
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
 import { FLOAT_PATTERN_SOURCE } from '../../godot/number.js';
 import { v } from './v.js';
+import { withFiniteGuard } from './v/grounding.js';
 
 const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
 
@@ -129,6 +130,17 @@ describe('a property whose setter guards is_finite', () => {
     });
     expect(both.bounds).toEqual({ min: 0, max: 360 });
     expect(both.tiers).toEqual({ min: 'error', max: 'error' });
+  });
+
+  it('keeps the tags a registry sweep selects and recurses on', () => {
+    // `collectValidators` descends `leaves` and the int-slot sweep selects on
+    // `intSlot`. A wrapper that drops either takes the slot out of the sweep
+    // in silence, so the guard passes by asking a smaller population.
+    const inner = v.int('bits');
+    inner.leaves = [v.float('leaf')];
+    const guarded = withFiniteGuard(inner, 'bits', 'x.cpp:1');
+    expect(guarded.intSlot).toEqual(inner.intSlot);
+    expect(guarded.leaves).toEqual(inner.leaves);
   });
 
   it('applies to nonNegativeFloat too, where zoom_step needs it', () => {
