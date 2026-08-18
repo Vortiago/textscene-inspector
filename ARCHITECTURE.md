@@ -194,6 +194,15 @@ loop parses or recovers, so renderer behavior is identical with or
 without it. `TscnParserCore` stays three.js-free, preserving the
 React-free linter boundary (ADR-0001).
 
+They differ in exactly one place: the `NodeCreator` the core loop calls
+per node. The lenient one runs the slice registry, so
+`TscnNode.properties` holds the typed shape a slice parsed out; the
+strict one keeps the raw string bag there. Both publish that raw bag in
+`rawProperties`, making it the only property field whose meaning does not
+depend on which parser produced the node — code shared by the linter and
+the render path reads it, and `parser/rawPropertyParity.test.ts` pins the
+agreement.
+
 The lenient parser uses `NodeRegistry` to convert raw TSCN body
 properties (snake_case strings) into the strongly-typed shape declared
 by each node type's `parser.ts`. Each node-type's `index.ts` registers

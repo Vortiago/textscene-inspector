@@ -29,17 +29,13 @@ export interface UniqueNameClaim {
  * `unique_name_in_owner = true` on this node (node.cpp:4050 — `PROPERTY_USAGE_NO_EDITOR`
  * hides it from the inspector and still serialises it).
  *
- * Both tree shapes, because both callers are real: the strict parser puts every
- * key in `properties`, while the lenient one models a slice's own keys there and
- * keeps the rest in `rawProperties` — and no node slice models this flag, so on
- * the render tree `properties` never carries it. Reading one shape alone answers
- * false for half the callers. The value is the raw literal `'true'` from either
- * parser; the boolean arm covers a caller holding an already-decoded tree.
+ * `rawProperties` and nothing else: both parsers publish the raw bag there
+ * (`parser/rawPropertyParity.test.ts`), and it is the only field whose meaning
+ * does not depend on which one produced the node. No slice models this flag, so
+ * on the render tree the typed `properties` never carries it at all.
  */
 export function isUniqueNameInOwner(node: TscnNode): boolean {
-  const declared = (node.properties as Record<string, unknown> | undefined)?.unique_name_in_owner;
-  const raw = node.rawProperties?.unique_name_in_owner;
-  return declared === true || declared === 'true' || raw === 'true';
+  return node.rawProperties?.unique_name_in_owner === 'true';
 }
 
 /**

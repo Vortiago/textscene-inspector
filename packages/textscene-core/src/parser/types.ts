@@ -33,7 +33,14 @@ export interface TscnNode {
   children: TscnNode[];
   /** Type-specific properties (e.g., Node3DProperties for Node3D nodes) */
   properties: Node3DProperties | Record<string, unknown>;
-  /** Raw body properties as strings, retained so a type-less instance node's overrides can be re-parsed against the instanced root's type. */
+  /**
+   * Raw body properties as strings, exactly as written. Published by BOTH parsers
+   * (`parser/rawPropertyParity.test.ts`), so it is the one field whose meaning does
+   * not depend on which produced the node — `properties` is the typed slice shape on
+   * the lenient tree and this same bag on the strict one. Read this from anything the
+   * linter and the render path share. Also what lets a type-less instance node's
+   * overrides be re-parsed against the instanced root's type.
+   */
   rawProperties?: Record<string, string>;
   /**
    * Set when this node's authored `parent` path descends INTO instanced content

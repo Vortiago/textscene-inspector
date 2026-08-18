@@ -18,6 +18,14 @@ import { isNilLiteral } from '../godot/index.js';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
+ *
+ * `properties` and `rawProperties` are the SAME bag here, which is what the
+ * lenient tree means by `rawProperties` too — its `properties` holds the typed
+ * shape a slice parsed out, so the raw literals live only in the second field.
+ * Publishing both means the raw bag has one name whichever parser produced the
+ * node, and a helper the linter and the render path share needs no idea which
+ * one it is holding. Pinned by `parser/rawPropertyParity.test.ts`. Same object,
+ * so this costs a reference.
  */
 function createSimpleNode(heading: ParsedHeading, properties: Record<string, string>): TscnNode {
   const node: TscnNode = {
@@ -26,6 +34,7 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
     // Note: For index=/instance= nodes, type may be inferred from parent scene or remain as identifier
     type: heading.attributes.type || heading.attributes.index || heading.attributes.instance || '',
     properties,
+    rawProperties: properties,
     children: [], // Will be populated by buildSceneTree
   };
 

@@ -4,10 +4,10 @@ import { StrictTscnParser } from '../linter/StrictTscnParser.js';
 import { uniqueNameClaims } from './uniqueNames.js';
 
 /**
- * Both trees, every time: the lenient parser keeps `unique_name_in_owner` only in
- * `rawProperties` (a slice's `properties` carries the keys it models), while the
- * strict parser puts it in `properties` and has no `rawProperties`. A predicate
- * reading one shape answers false on the other.
+ * Both trees, every time. They agree on `rawProperties` by construction
+ * (`parser/rawPropertyParity.test.ts`), but only a real parse proves this reads
+ * the field they agree on — a hand-built `TscnNode` is written in whichever
+ * shape its author had in mind, so it can only confirm that.
  */
 const SRC = `[gd_scene format=3]
 
@@ -28,12 +28,12 @@ function strictScene(source: string) {
 }
 
 describe('uniqueNameClaims', () => {
-  it('finds a claim in the lenient tree, where the flag is only in rawProperties', () => {
+  it('finds a claim in the lenient tree, whose typed properties never carry the flag', () => {
     const claims = uniqueNameClaims(new TscnParser().parse(SRC).nodes);
     expect(claims.get('%Target')?.path).toBe('Root/Target');
   });
 
-  it('finds the same claim in the strict tree, where the flag is in properties', () => {
+  it('finds the same claim in the strict tree', () => {
     const claims = uniqueNameClaims(strictScene(SRC).nodes);
     expect(claims.get('%Target')?.path).toBe('Root/Target');
   });

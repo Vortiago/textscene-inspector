@@ -17,7 +17,14 @@ function node(
   children: TscnNode[] = [],
   extra: Partial<TscnNode> = {}
 ): TscnNode {
-  return { name, type: 'Node3D', properties: {}, children, ...extra } as TscnNode;
+  const built = { name, type: 'Node3D', properties: {}, children, ...extra } as TscnNode;
+  // Mirror `properties` into `rawProperties` the way `createSimpleNode` does, so
+  // these literals model a node a parser could have produced. Anything reading the
+  // raw bag reads that field.
+  return {
+    ...built,
+    rawProperties: built.rawProperties ?? (built.properties as Record<string, string>),
+  };
 }
 
 const sceneOf = (...roots: TscnNode[]): TscnScene => ({ nodes: roots }) as TscnScene;
@@ -142,10 +149,12 @@ describe('resolveNodePath', () => {
     });
   });
 
+  // The flag arrives as the raw literal `'true'` from either parser, so every
+  // case below spells it that way.
   describe('%unique names (node.cpp:1930-1938)', () => {
     const withUnique = () =>
       node('Root', [
-        node('Deep', [node('Marker', [], { properties: { unique_name_in_owner: true } })]),
+        node('Deep', [node('Marker', [], { properties: { unique_name_in_owner: 'true' } })]),
         node('Other'),
       ]);
 
@@ -156,15 +165,6 @@ describe('resolveNodePath', () => {
         status: 'found',
         node: pick([tree], 'Marker'),
       });
-    });
-
-    it('accepts the serialised string spelling of the flag', () => {
-      const tree = node('Root', [
-        node('Marker', [], { properties: { unique_name_in_owner: 'true' } }),
-        node('Other'),
-      ]);
-      const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Other'), '%Marker').status).toBe('found');
     });
 
     // A node named Marker without the flag claims nothing: the map is keyed by
@@ -179,7 +179,7 @@ describe('resolveNodePath', () => {
 
     it('continues walking below the unique node', () => {
       const tree = node('Root', [
-        node('Rig', [node('Hand')], { properties: { unique_name_in_owner: true } }),
+        node('Rig', [node('Hand')], { properties: { unique_name_in_owner: 'true' } }),
         node('Other'),
       ]);
       const scene = sceneOf(tree);
