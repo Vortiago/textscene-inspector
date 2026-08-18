@@ -12,8 +12,9 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial } from './build';
 import { parseStandardMaterial3DScalars } from './scalars';
+import type { ResolvedTextureSlots } from './types';
 
 function build(
   properties: Record<string, string>,
@@ -449,6 +450,20 @@ describe('buildStandardMaterial — texture slots', () => {
 
   it('treats a null slot as empty', () => {
     expect(build({}, { albedo_texture: null }).map).toBeNull();
+  });
+
+  it('applies the anisotropy flowmap it is handed', () => {
+    // Godot's `texture_flowmap` (`scene/resources/material.cpp:1122`) is
+    // three's `anisotropyMap`, declared by MeshPhysicalMaterial alone. Declining
+    // to FETCH one — it needs an alpha→blue repack first — is the loader's
+    // decision, not this adapter's: a caller holding a repacked flowmap gets it
+    // applied, exactly like every other slot.
+    const texture = loadedTexture();
+    const material = buildStandardMaterial(
+      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.6' }),
+      { anisotropy_flowmap: texture }
+    ) as THREE.MeshPhysicalMaterial;
+    expectBoundRaw(material.anisotropyMap, texture);
   });
 });
 

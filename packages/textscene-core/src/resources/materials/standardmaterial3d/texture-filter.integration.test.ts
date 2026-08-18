@@ -10,8 +10,9 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial } from './build';
 import { parseStandardMaterial3DScalars } from './scalars';
+import type { ResolvedTextureSlots } from './types';
 import { GODOT_ANISOTROPY_MAX } from '../../textures/godotTextureFilter';
 
 function build(

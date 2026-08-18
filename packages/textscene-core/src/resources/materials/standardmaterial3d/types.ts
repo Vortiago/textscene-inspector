@@ -78,6 +78,12 @@ export const TEXTURE_SLOTS = [
 export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
 
 /**
+ * A resolved texture per slot; absent or null both mean "nothing in that slot".
+ * Every one arrives ALREADY BOUND — see `textureBinding.ts`.
+ */
+export type ResolvedTextureSlots = Partial<Record<TextureSlot, THREE.Texture | null>>;
+
+/**
  * A texture slot's raw reference string (`ExtResource("1_x")`,
  * `SubResource("NoiseTexture2D_y")`, a bare `res://` path), present only when
  * the slot's feature gate is on. Resolving a reference to a real texture is the

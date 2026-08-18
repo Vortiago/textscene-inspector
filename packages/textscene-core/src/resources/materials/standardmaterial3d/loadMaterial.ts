@@ -27,9 +27,30 @@ import {
   unpinProceduralTexture,
 } from '../../textures/proceduralTextureCache';
 import { BUILDABLE_MATERIAL_TYPES } from '../buildableMaterialTypes';
-import { APPLIED_TEXTURE_SLOTS, buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial } from './build';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { TextureSlot } from './types';
+import type { ResolvedTextureSlots, TextureSlot } from './types';
+
+/**
+ * The slots this path FETCHES.
+ *
+ * `anisotropy_flowmap` is absent on purpose: Godot stores the per-pixel
+ * anisotropy STRENGTH in the alpha channel and three reads it from blue, so the
+ * image needs a channel repack before it means anything. That repack is a canvas
+ * readback living in the shared applier layer (`resources/textures/repackFlowmap.ts`),
+ * which this layer must not import — so an external material's flowmap is not
+ * fetched at all rather than sampled wrongly. Its anisotropy SCALARS still
+ * apply, which is already the whole effect for a flowmap-less material.
+ */
+const APPLIED_TEXTURE_SLOTS: readonly TextureSlot[] = [
+  'albedo_texture',
+  'normal_texture',
+  'roughness_texture',
+  'metallic_texture',
+  'emission_texture',
+  'ao_texture',
+  'heightmap_texture',
+];
 
 /**
  * Where a built material records the procedural-cache keys it borrowed, so its

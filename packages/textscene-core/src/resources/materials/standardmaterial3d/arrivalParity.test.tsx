@@ -18,6 +18,13 @@
  * because of it. This suite is the guard: every case's property text is decoded
  * ONCE and each path must land on the same material state.
  *
+ * TWO LAYERS, because one cannot see what the other can:
+ *   - a pure bag guard per case, whose comparison keys ARE the derived bag's, so
+ *     every prop is covered by construction rather than by a list to maintain;
+ *   - a mounted, texture-bearing snapshot per adapter, for the state that only
+ *     exists AFTER the bag — what R3F's commit does to a texture, which is the
+ *     axis these paths actually diverged on.
+ *
  * RESIDUE this suite deliberately does not claim — each needs a file outside the
  * slice and is reported rather than hidden:
  *   - `uv1_triplanar` tiling DENSITY needs the mesh size, which only the node
@@ -30,16 +37,21 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { ReactElement } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
+import {
+  StandardMaterialSlot,
+  type StandardMaterialSlotProps,
+} from '../../../r3f/materials/StandardMaterialSlot';
 import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
-import { buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial } from './build';
+import { standardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { createMaterialFromContent } from './loadMaterial';
 import { parseStandardMaterial3DScalars } from './scalars';
-import { TEXTURE_SLOTS, type TextureSlot } from './types';
+import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
 
 interface ParityCase {
   name: string;
@@ -51,6 +63,7 @@ interface ParityCase {
 const ALBEDO = 'res://textures/albedo.png';
 const NORMAL = 'res://textures/normal.png';
 const EMISSION = 'res://textures/emission.png';
+const FLOWMAP = 'res://textures/flowmap.png';
 
 const CASES: ParityCase[] = [
   { name: 'all Godot defaults', properties: {} },
@@ -259,6 +272,66 @@ const CASES: ParityCase[] = [
 ];
 
 /**
+ * Every slot bound at once, on DEFAULT sampler state — so the slots Godot binds
+ * sRGB need no clone and the material is handed the loader's own cache entries.
+ * That is what makes a stray retag observable; a case where every slot clones
+ * cannot see one.
+ */
+const EVERY_SLOT: ParityCase = {
+  name: 'every slot bound at once',
+  properties: {
+    albedo_texture: 'ExtResource("1_tex")',
+    emission_enabled: 'true',
+    emission_texture: 'ExtResource("3_em")',
+    normal_enabled: 'true',
+    normal_texture: 'ExtResource("2_n")',
+    roughness_texture: 'ExtResource("2_n")',
+    metallic_texture: 'ExtResource("1_tex")',
+    ao_enabled: 'true',
+    ao_texture: 'ExtResource("1_tex")',
+    heightmap_enabled: 'true',
+    heightmap_texture: 'ExtResource("1_tex")',
+  },
+  extResources: [
+    { id: '1_tex', path: ALBEDO, type: 'Texture2D' },
+    { id: '2_n', path: NORMAL, type: 'Texture2D' },
+    { id: '3_em', path: EMISSION, type: 'Texture2D' },
+  ],
+};
+
+/**
+ * The same slots under a UV transform and an authored sampler, so every one of
+ * them clones: one snapshot then covers repeat, offset, wrapping and filtering
+ * as well as colour space.
+ */
+const EVERY_SLOT_TRANSFORMED: ParityCase = {
+  name: 'every slot bound at once, transformed',
+  properties: {
+    ...EVERY_SLOT.properties,
+    uv1_scale: 'Vector3(3, 2, 1)',
+    uv1_offset: 'Vector3(0.25, 0.125, 0)',
+    texture_filter: '0',
+    texture_repeat: 'false',
+  },
+  extResources: EVERY_SLOT.extResources,
+};
+
+/**
+ * Outside CASES on purpose: the `.tres` path fetches no flowmap (the alpha→blue
+ * repack it needs lives in the node layer), so the two adapters cannot be
+ * compared on this one — only the reactive pass-through can be.
+ */
+const ANISOTROPIC: ParityCase = {
+  name: 'anisotropy with a flowmap',
+  properties: {
+    anisotropy_enabled: 'true',
+    anisotropy: '0.6',
+    anisotropy_flowmap: 'ExtResource("4_flow")',
+  },
+  extResources: [{ id: '4_flow', path: FLOWMAP, type: 'Texture2D' }],
+};
+
+/**
  * One shared texture per path, as the loader's cache hands out — so the two
  * paths' texture state is comparable and both land on the same `source`.
  *
@@ -386,37 +459,41 @@ const SNAPSHOT_MAPS = [
   'anisotropyMap',
 ] as const;
 
+/**
+ * A bound texture's STATE, never its identity: each path clones the shared
+ * source separately when the material diverges, so two equal clones are the
+ * correct answer and two different sources are not.
+ *
+ * `source` is shared by `Texture.clone()`, so this pins that both paths landed
+ * on the same IMAGE while allowing separate clones — `.source` identity is the
+ * documented equality for that case (AGENTS.md).
+ */
+function textureFingerprint(texture: THREE.Texture): string {
+  return [
+    texture.source.uuid,
+    texture.repeat.x,
+    texture.repeat.y,
+    texture.offset.x,
+    texture.offset.y,
+    texture.wrapS,
+    texture.wrapT,
+    texture.magFilter,
+    texture.minFilter,
+    texture.generateMipmaps,
+    texture.anisotropy,
+    // The state the two paths silently disagreed on for as long as each decided
+    // it for itself. `''` is three's spelling of `NoColorSpace`, so it is
+    // normalised to a name a failure message can be read from.
+    texture.colorSpace || 'NoColorSpace',
+  ].join('/');
+}
+
 function snapshot(material: THREE.Material): MaterialSnapshot {
   const m = material as THREE.MeshPhysicalMaterial;
   const maps: Record<string, string> = {};
   for (const key of SNAPSHOT_MAPS) {
     const texture = (m as unknown as Record<string, THREE.Texture | null>)[key];
-    // Texture STATE, not identity: each path clones the shared source
-    // separately when the material diverges, so two equal clones are the
-    // correct answer and two different sources are not.
-    maps[key] = texture
-      ? [
-          // `source` is shared by `Texture.clone()`, so this pins that both
-          // paths landed on the same IMAGE while allowing separate clones —
-          // each path binds its own, and `.source` identity is the documented
-          // equality for that case (AGENTS.md).
-          texture.source.uuid,
-          texture.repeat.x,
-          texture.repeat.y,
-          texture.offset.x,
-          texture.offset.y,
-          texture.wrapS,
-          texture.wrapT,
-          texture.magFilter,
-          texture.minFilter,
-          texture.generateMipmaps,
-          texture.anisotropy,
-          // The state the two paths silently disagreed on for as long as each
-          // decided it for itself. `''` is three's spelling of `NoColorSpace`,
-          // so it is normalised to a name a failure message can be read from.
-          texture.colorSpace || 'NoColorSpace',
-        ].join('/')
-      : 'none';
+    maps[key] = texture ? textureFingerprint(texture) : 'none';
   }
   return {
     type: material.type,
@@ -455,25 +532,55 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
   };
 }
 
+/** The bound slots as the reactive adapter's own prop names. */
+function slotProps(
+  testCase: ParityCase,
+  textures: ResolvedTextureSlots
+): StandardMaterialSlotProps {
+  return {
+    scalars: parseStandardMaterial3DScalars(testCase.properties),
+    albedoMap: textures.albedo_texture ?? undefined,
+    normalMap: textures.normal_texture ?? undefined,
+    roughnessMap: textures.roughness_texture ?? undefined,
+    metalnessMap: textures.metallic_texture ?? undefined,
+    emissiveMap: textures.emission_texture ?? undefined,
+    aoMap: textures.ao_texture ?? undefined,
+    displacementMap: textures.heightmap_texture ?? undefined,
+    anisotropyMap: textures.anisotropy_flowmap ?? undefined,
+  };
+}
+
 async function renderThroughSlot(testCase: ParityCase): Promise<THREE.Material> {
-  const scalars = parseStandardMaterial3DScalars(testCase.properties);
-  const textures = inlineTextures(testCase);
   const renderer = await ReactThreeTestRenderer.create(
     <mesh>
-      <StandardMaterialSlot
-        scalars={scalars}
-        albedoMap={textures.albedo_texture ?? undefined}
-        normalMap={textures.normal_texture ?? undefined}
-        roughnessMap={textures.roughness_texture ?? undefined}
-        metalnessMap={textures.metallic_texture ?? undefined}
-        emissiveMap={textures.emission_texture ?? undefined}
-        aoMap={textures.ao_texture ?? undefined}
-        displacementMap={textures.heightmap_texture ?? undefined}
-      />
+      <StandardMaterialSlot {...slotProps(testCase, inlineTextures(testCase))} />
     </mesh>
   );
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
 }
+
+/** The `THREE.Material` type the imperative adapter constructs per derived class. */
+const TYPE_FOR: Readonly<Record<StandardMaterialClass, string>> = {
+  basic: 'MeshBasicMaterial',
+  standard: 'MeshStandardMaterial',
+  physical: 'MeshPhysicalMaterial',
+};
+
+/**
+ * A prop as the guard compares it. Textures compare by bound STATE: binding is
+ * the imperative adapter's own step, and a second bind of an already-bound
+ * texture is a fresh clone carrying the same state.
+ */
+function comparable(value: unknown): unknown {
+  return value instanceof THREE.Texture ? textureFingerprint(value) : value;
+}
+
+/** The JSX tag the reactive adapter mounts for each derived class. */
+const TAG_FOR: Readonly<Record<StandardMaterialClass, string>> = {
+  basic: 'meshBasicMaterial',
+  standard: 'meshStandardMaterial',
+  physical: 'meshPhysicalMaterial',
+};
 
 describe('StandardMaterial3D arrival parity', () => {
   for (const testCase of CASES) {
@@ -509,12 +616,79 @@ describe('StandardMaterial3D arrival parity', () => {
         expect(snapshot(fromSub)).toEqual(snapshot(inline));
       });
 
-      it('renders the same material state through the reactive JSX slot', async () => {
-        const fromTres = await createMaterialFromContent(standaloneTres(testCase), loadTexture);
-        expect(snapshot(await renderThroughSlot(testCase))).toEqual(snapshot(fromTres));
-      });
     });
   }
+
+  describe('one derivation, consumed verbatim by each adapter', () => {
+    // The cases above are crossed with a hand-maintained key list, and both real
+    // divergences hid in its blind spots. Here the comparison keys ARE the
+    // derived bag's, so a prop nobody thought to list cannot go unasserted —
+    // and each adapter is pinned to the SAME derivation rather than to the
+    // other's output.
+    for (const testCase of CASES) {
+      it(`${testCase.name}: the reactive adapter mounts the derived bag`, () => {
+        const textures = inlineTextures(testCase);
+        const props = slotProps(testCase, textures);
+        const bag = standardMaterialBag(props.scalars, textures);
+        const element = StandardMaterialSlot(props) as ReactElement;
+        expect(element.type).toBe(TAG_FOR[bag.materialClass]);
+        // `attach` is the mount's own, and the React key is the program
+        // factory's output — neither is derived, so neither is compared.
+        expect(element.props).toEqual({ ...bag.props, attach: undefined });
+      });
+
+      it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {
+        const textures = inlineTextures(testCase);
+        const scalars = parseStandardMaterial3DScalars(testCase.properties);
+        const bag = standardMaterialBag(scalars, textures);
+        const material = buildStandardMaterial(scalars, textures);
+        expect(material.type).toBe(TYPE_FOR[bag.materialClass]);
+        const held = material as unknown as Record<string, unknown>;
+        const applied: Record<string, unknown> = {};
+        const derived: Record<string, unknown> = {};
+        for (const [prop, value] of Object.entries(bag.props)) {
+          applied[prop] = comparable(held[prop]);
+          derived[prop] = comparable(value);
+        }
+        expect(applied).toEqual(derived);
+      });
+    }
+
+    it('compares a bag with every prop on it — neither guard is vacuous', () => {
+      // A derivation that silently returned `{}` would satisfy both loops above
+      // for every case.
+      const physical = standardMaterialBag(
+        parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '0.5' })
+      );
+      expect(Object.keys(physical.props).length).toBeGreaterThan(20);
+    });
+  });
+
+  describe('mounted, with every slot bound', () => {
+    // What a bag guard is blind to: what R3F's own commit does to a texture
+    // AFTER the bag — the sRGB it reasserts on colour-map props, and the
+    // sampler state a clone carries. That is the axis these two paths actually
+    // diverged on, so one mounted, texture-bearing snapshot per adapter stays.
+    it('the reactive adapter lands on the state the imperative one builds', async () => {
+      const fromTres = await createMaterialFromContent(
+        standaloneTres(EVERY_SLOT_TRANSFORMED),
+        loadTexture
+      );
+      expect(snapshot(await renderThroughSlot(EVERY_SLOT_TRANSFORMED))).toEqual(snapshot(fromTres));
+    });
+
+    it('passes an anisotropy flowmap through to the physical material', async () => {
+      // Godot's `texture_flowmap` (`scene/resources/material.cpp:1122`) carries
+      // no `source_color` hint, so it samples raw — and only
+      // MeshPhysicalMaterial declares the slot at all.
+      const material = await renderThroughSlot(ANISOTROPIC);
+      expect(material.type).toBe('MeshPhysicalMaterial');
+      const physical = material as THREE.MeshPhysicalMaterial;
+      expect(physical.anisotropy).toBeCloseTo(0.6);
+      expect(physical.anisotropyMap?.source).toBe(textureFor(FLOWMAP).source);
+      expect(physical.anisotropyMap?.colorSpace).toBe(THREE.NoColorSpace);
+    });
+  });
 
   describe('every slot samples in the colour space Godot binds it with', () => {
     // Equality between the paths is not enough on its own: the two agreed while
@@ -526,28 +700,6 @@ describe('StandardMaterial3D arrival parity', () => {
     // `texture_roughness` (:1030), `texture_normal` (:1092),
     // `texture_ambient_occlusion` (:1128) and `texture_heightmap` (:1172) do not
     // and read stored bytes.
-    const EVERY_SLOT: ParityCase = {
-      name: 'every slot bound at once',
-      properties: {
-        albedo_texture: 'ExtResource("1_tex")',
-        emission_enabled: 'true',
-        emission_texture: 'ExtResource("3_em")',
-        normal_enabled: 'true',
-        normal_texture: 'ExtResource("2_n")',
-        roughness_texture: 'ExtResource("2_n")',
-        metallic_texture: 'ExtResource("1_tex")',
-        ao_enabled: 'true',
-        ao_texture: 'ExtResource("1_tex")',
-        heightmap_enabled: 'true',
-        heightmap_texture: 'ExtResource("1_tex")',
-      },
-      extResources: [
-        { id: '1_tex', path: ALBEDO, type: 'Texture2D' },
-        { id: '2_n', path: NORMAL, type: 'Texture2D' },
-        { id: '3_em', path: EMISSION, type: 'Texture2D' },
-      ],
-    };
-
     const EXPECTED: Record<string, string> = {
       map: THREE.SRGBColorSpace,
       emissiveMap: THREE.SRGBColorSpace,
@@ -618,7 +770,8 @@ describe('StandardMaterial3D arrival parity', () => {
       }
     }
     // `anisotropy_flowmap` is the documented exception: the `.tres` path cannot
-    // repack it, so no case can claim parity for it.
+    // repack it, so no case can claim ARRIVAL PARITY for it — the reactive
+    // adapter's pass-through is asserted on its own instead.
     expect([...TEXTURE_SLOTS].filter((slot) => !exercised.has(slot))).toEqual([
       'anisotropy_flowmap',
     ]);
