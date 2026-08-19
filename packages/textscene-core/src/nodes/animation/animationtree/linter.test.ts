@@ -493,10 +493,14 @@ describe('AnimationTree Linter', () => {
       const diagnostics = lint(
         scene(
           blendTree,
-          node('AnimationPlayer', {}, { name: 'Player' }),
+          // Both nodes state `parent="."`. Without it the second heading is a
+          // second ROOT, which the tree build drops — so every rule below ran
+          // on nothing at all.
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
           node('AnimationTree', {
             tree_root: 'SubResource("BlendTree_1")',
-            anim_player: 'NodePath("Player")',
+            anim_player: 'NodePath("../Player")',
             active: true,
             process_callback: 1,
             callback_mode_process: 1,
@@ -508,7 +512,7 @@ describe('AnimationTree Linter', () => {
             deterministic: false,
             reset_on_save: true,
             audio_max_polyphony: 32,
-          })
+          }, { parent: '.' })
         )
       );
       const errors = diagnostics.filter(d => d.severity === 'error');
@@ -558,12 +562,13 @@ describe('AnimationTree Linter', () => {
       const diagnostics = lint(
         scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_1"]',
-          node('AnimationPlayer', {}, { name: 'CharacterPlayer' }),
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'CharacterPlayer', parent: '.' }),
           node(
             'AnimationTree',
             {
               tree_root: 'SubResource("StateMachine_1")',
-              anim_player: 'NodePath("CharacterPlayer")',
+              anim_player: 'NodePath("../CharacterPlayer")',
               active: true,
               process_callback: 1,
               callback_mode_process: 1,
@@ -577,7 +582,7 @@ describe('AnimationTree Linter', () => {
               audio_max_polyphony: 32,
               advance_expression_base_node: 'NodePath("..")',
             },
-            { name: 'CharacterTree' }
+            { name: 'CharacterTree', parent: '.' }
           )
         )
       );
@@ -619,11 +624,16 @@ describe('AnimationTree Linter', () => {
       const diagnostics = lint(
         scene(
           blendTree,
-          node('AnimationPlayer', {}, { name: 'Player' }),
-          node('AnimationTree', {
-            tree_root: 'SubResource("BlendTree_1")',
-            anim_player: 'NodePath("Player")',
-          })
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
+          node(
+            'AnimationTree',
+            {
+              tree_root: 'SubResource("BlendTree_1")',
+              anim_player: 'NodePath("../Player")',
+            },
+            { parent: '.' }
+          )
         )
       );
       const errors = diagnostics.filter(d => d.severity === 'error');

@@ -278,8 +278,13 @@ describe('MeshInstance3D Linter', () => {
       );
       expectClean(
         scene(
-          node('Skeleton3D', {}, { name: 'MySkeleton' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("MySkeleton")' }, { name: 'MyMesh' })
+          node('Node3D', {}, { name: 'Root' }),
+          node('Skeleton3D', {}, { name: 'MySkeleton', parent: '.' }),
+          node(
+            'MeshInstance3D',
+            { skeleton: 'NodePath("../MySkeleton")' },
+            { name: 'MyMesh', parent: '.' }
+          )
         )
       );
       expectClean(
@@ -382,13 +387,13 @@ describe('MeshInstance3D Linter', () => {
 
 [node name="MySkeleton" type="Skeleton3D"]
 
-[node name="ComplexMesh" type="MeshInstance3D"]
+[node name="ComplexMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("mesh_1")
 material_override = SubResource("mat_1")
 material_overlay = SubResource("mat_2")
 surface_material_override/0 = SubResource("mat_1")
 skin = SubResource("skin_1")
-skeleton = NodePath("MySkeleton")
+skeleton = NodePath("..")
 cast_shadow = 2
 gi_mode = 1
 gi_lightmap_scale = 2

@@ -27,9 +27,19 @@
  * rasterized Control subtree.
  */
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { TscnNode } from '../../parser/types.js';
+import { uniqueNamePaths } from '../../utils/uniqueNames.js';
 import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
+import { useOptionalHierarchy } from './HierarchyContext.js';
 import type * as THREE from 'three';
 
 export interface ViewportTextureEntry {
@@ -65,6 +75,23 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
 }
 
 /**
+ * The scene's resolved `%Name` table, or undefined when no scene is in context.
+ *
+ * The flag on a node says it CLAIMED a name, not that it holds one — two nodes
+ * may claim the same one and only the first keeps it. Resolving that needs the
+ * whole authored tree, which the shell already has, so the answer is read from
+ * there rather than guessed per publisher. Undefined outside the shell, where
+ * there is no tree and the flag is all that is knowable.
+ */
+function useUniqueNameClaims(): ReadonlyMap<string, string> | undefined {
+  const graph = useOptionalHierarchy()?.sceneGraph;
+  return useMemo(() => {
+    const roots = graph?.scenes.get(graph.rootScene)?.nodes;
+    return roots ? uniqueNamePaths(roots) : undefined;
+  }, [graph]);
+}
+
+/**
  * Publish `entry` for `node` at `path`, and at its `%UniqueName` spelling when it
  * claims one — the two keys a `viewport_path` can name the same viewport by.
  *
@@ -80,7 +107,7 @@ export function usePublishViewportTexture(
   const register = useRegisterViewportTexture();
   // The derived key, not the node, so a re-parse that changes node identity
   // without changing the spelling does not withdraw and republish the target.
-  const alias = viewportTextureUniqueNameKey(node, path);
+  const alias = viewportTextureUniqueNameKey(node, path, useUniqueNameClaims());
   useEffect(() => {
     const withdraw = [register(path, entry)];
     if (alias) withdraw.push(register(alias, entry));

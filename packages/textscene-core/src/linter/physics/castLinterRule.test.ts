@@ -107,6 +107,23 @@ describe('the shape-only checks', () => {
     );
   });
 
+  it('cannot report a name its own instantiation does not declare', () => {
+    // `emits` and `check` read the SAME arm table, so the 2D shape cast has no
+    // concave arm to report through — a concave shape under it is simply not
+    // its business. Written as a scene rather than only against `emits`
+    // because this string IS producible by the file: widening the check half
+    // alone used to emit it here while every meta-guard stayed green, since the
+    // 3D sibling still declared `*-concave-shape` for the wildcard to match.
+    expect(emittedBy('ShapeCast2D')).not.toContain('shapecast2d-concave-shape');
+    expectNoDiagnostic(
+      scene(
+        '[sub_resource type="ConcavePolygonShape3D" id="Concave_1"]',
+        node('ShapeCast2D', { ...LIVE, shape: 'SubResource("Concave_1")' })
+      ),
+      { ruleName: 'shapecast2d-concave-shape' }
+    );
+  });
+
   it('declares exactly the rules each instantiation can produce', () => {
     // The negative half of every claim above. `toEqual`, not `toContain`: an
     // extra declared name would publish a rule into the type's generated sheet

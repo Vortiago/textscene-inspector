@@ -47,6 +47,7 @@ import {
 import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
 
 /**
  * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear
@@ -65,10 +66,42 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     dim === '2D' ? 'navigation_obstacle_2d.cpp:363' : 'navigation_obstacle_3d.cpp:443';
   const type = `NavigationObstacle${dim}`;
   const prefix = `navigationobstacle${dimSuffix(dim)}`;
-  const ruleName = `${prefix}-carve-without-affect`;
-  const scaleRuleName = `${prefix}-non-positive-global-scale`;
-  const nonUniformScaleRuleName = `${prefix}-non-uniform-global-scale`;
-  const skewRuleName = `${prefix}-global-skew-ignored`;
+
+  // Each arm, stated once: `emits` is derived from this record and `check`
+  // reports through it, so the three transform arms below cannot become
+  // reachable for the 3D instantiation without also being declared by it.
+  const arms: RuleArms<'carveWithoutAffect' | 'nonPositiveScale' | 'nonUniformScale' | 'skew'> = {
+    carveWithoutAffect: {
+      severity: 'warning',
+      ruleName: `${prefix}-carve-without-affect`,
+      grounding: {
+        kind: 'engine-inert',
+        at: CARVE_GATE_AT,
+        unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
+      },
+    },
+    // The global transform is a 2D concern only: `NavigationObstacle3D` has no
+    // equivalent guard, so the 3D instantiation carries none of these.
+    ...(dim === '2D'
+      ? {
+          nonPositiveScale: {
+            severity: 'warning' as const,
+            ruleName: `${prefix}-non-positive-global-scale`,
+            grounding: { kind: 'configuration-warning' } as const,
+          },
+          nonUniformScale: {
+            severity: 'warning' as const,
+            ruleName: `${prefix}-non-uniform-global-scale`,
+            grounding: { kind: 'configuration-warning' } as const,
+          },
+          skew: {
+            severity: 'warning' as const,
+            ruleName: `${prefix}-global-skew-ignored`,
+            grounding: { kind: 'configuration-warning' } as const,
+          },
+        }
+      : {}),
+  };
 
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;
@@ -77,29 +110,27 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     const props = node.properties;
 
     if (props.carve_navigation_mesh === 'true' && props.affect_navigation_mesh !== 'true') {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName,
-      });
+      reportArm(
+        diagnostics,
+        arms.carveWithoutAffect,
+        node,
+        `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`
+      );
     }
 
-    if (dim === '2D') {
+    if (arms.nonPositiveScale) {
       const verdict = resolveGlobalTransform2D(scene, node);
       if (verdict.kind === 'known') {
         const scale = globalScale(verdict.transform);
 
         // navigation_obstacle_2d.cpp:331-333
         if (scale.x < MIN_GLOBAL_SCALE || scale.y < MIN_GLOBAL_SCALE) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has global scale (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}). NavigationObstacle2D does not support negative or zero scaling.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: scaleRuleName,
-          });
+          reportArm(
+            diagnostics,
+            arms.nonPositiveScale,
+            node,
+            `${type} '${node.name}' has global scale (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}). NavigationObstacle2D does not support negative or zero scaling.`
+          );
         }
 
         // radius > 0.0 gate: navigation_obstacle_2d.h:46 defaults radius to
@@ -111,24 +142,22 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
         if (radius !== null && radius > 0) {
           // navigation_obstacle_2d.cpp:336-338
           if (!isConformal(verdict.transform)) {
-            diagnostics.push({
-              severity: 'warning',
-              message: `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`,
-              nodeName: node.name,
-              nodeType: node.type,
-              ruleName: nonUniformScaleRuleName,
-            });
+            reportArm(
+              diagnostics,
+              arms.nonUniformScale,
+              node,
+              `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`
+            );
           }
 
           // navigation_obstacle_2d.cpp:340-342
           if (!hasZeroGlobalSkew(verdict.transform)) {
-            diagnostics.push({
-              severity: 'warning',
-              message: `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`,
-              nodeName: node.name,
-              nodeType: node.type,
-              ruleName: skewRuleName,
-            });
+            reportArm(
+              diagnostics,
+              arms.skew,
+              node,
+              `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`
+            );
           }
         }
       }
@@ -143,37 +172,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
       description: `Warns when ${type}'s carve_navigation_mesh is enabled without affect_navigation_mesh, where it has no effect`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName,
-          severity: 'warning',
-          grounding: {
-            kind: 'engine-inert',
-            at: CARVE_GATE_AT,
-            unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
-          },
-        },
-        // 2D-only branch (dim === '2D'); never emitted by the 3D instantiation
-        ...(dim === '2D'
-          ? [
-              {
-                ruleName: scaleRuleName,
-                severity: 'warning' as const,
-                grounding: { kind: 'configuration-warning' } as const,
-              },
-              {
-                ruleName: nonUniformScaleRuleName,
-                severity: 'warning' as const,
-                grounding: { kind: 'configuration-warning' } as const,
-              },
-              {
-                ruleName: skewRuleName,
-                severity: 'warning' as const,
-                grounding: { kind: 'configuration-warning' } as const,
-              },
-            ]
-          : []),
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

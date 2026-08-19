@@ -13,6 +13,15 @@
  *     shared arm builder, or a physics factory names its diagnostics by
  *     interpolation in ANOTHER file, so its real names are absent here — those
  *     files are exempt from the reverse check rather than pretending coverage.
+ *   - An interpolated name is matched as a WILDCARD, so what these assertions
+ *     prove about one is that SOME registered rule declares a name of that
+ *     shape — never that the instance whose `check` can reach it does. A
+ *     dimension-parameterized factory has siblings, and a sibling's own
+ *     declaration satisfies the wildcard on behalf of an instance that omits
+ *     it: `ShapeCast2D` emitting `shapecast2d-concave-shape` while declaring
+ *     only the other four left all 24 assertions green, measured. Nothing here
+ *     closes that; `linter/ruleArms.ts` does, by making the two halves one
+ *     declaration so the state cannot be written.
  *
  * The scrape itself lives in `testing/emitsScrape.ts` and `testing/emitsReach.ts`;
  * the registration and validator halves of the same meta-guard are in
@@ -76,10 +85,17 @@ describe('rule emits meta-guard', () => {
    * nothing else did.
    */
   const allFiles = allSourceFiles();
-  // Neither is a rule emission: Linter.ts stamps `strict-parser` on Phase-1
-  // parse errors, which come from the validator side, and `legacy-format-version`
-  // on a whole FILE, which has no node slice to declare it.
-  const NON_RULE_NAMES = new Set(['strict-parser', 'legacy-format-version']);
+  // None of these is a rule emission. `Linter.ts` stamps `strict-parser` on
+  // Phase-1 parse errors, which come from the validator side, and
+  // `legacy-format-version` on a whole FILE, which has no node slice to declare
+  // it. The two orphan names report a heading that is ABSENT from the tree, so
+  // no `applicableNodeTypes` can ever reach it and no slice can own it.
+  const NON_RULE_NAMES = new Set([
+    'strict-parser',
+    'legacy-format-version',
+    'unresolved-parent-path',
+    'node-without-parent',
+  ]);
   const codePairs = allFiles
     .flatMap((f) => scrapePairs(f))
     .filter((p) => !NON_RULE_NAMES.has(p.name));
@@ -175,6 +191,12 @@ describe('rule emits meta-guard', () => {
     // pinned — their names come from a local, or from a helper call — so the
     // question becomes the one that is still answerable: is every template
     // they carry covered by a declared `emits` entry?
+    //
+    // Answerable, and weaker than it looks: the match is by wildcard against
+    // EVERY declared name, so one sibling instantiation declaring the shape
+    // answers for all of them. That is why the four dim-parameterized factories
+    // derive both halves from one arm table (`ruleArms.ts`) instead of relying
+    // on this.
     const declaredNames = ruleRegistry.getRules().flatMap((r) => (r.meta.emits ?? []).map((e) => e.ruleName));
     const uncovered = unresolvable
       .flatMap(({ builder, templates }) =>

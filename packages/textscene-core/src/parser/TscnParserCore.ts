@@ -23,7 +23,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree } from './sceneTreeBuilder.js';
+import { buildSceneTree, strandedNodes } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
@@ -87,11 +87,15 @@ export class TscnParserCore {
     const lines = content.split(/\r?\n/);
 
     const nodes: TscnNode[] = [];
+    // Heading line per node, kept out of `TscnNode` because only the orphan
+    // report below needs it and every node would otherwise carry the field.
+    const nodeLines = new Map<TscnNode, number>();
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
+    let currentHeadingLine = 0;
     // The type a standalone `.tres` declares once, in its file header. Its
     // `[resource]` body carries no type of its own — `res_type` comes from the
     // header (resource_format_text.cpp:1166) and is what
@@ -120,6 +124,7 @@ export class TscnParserCore {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
           nodes.push(node);
+          nodeLines.set(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);
@@ -203,6 +208,7 @@ export class TscnParserCore {
         currentHeading = parseHeading(line);
         if (currentHeading) {
           currentSection = this.identifySection(currentHeading);
+          currentHeadingLine = lineNumber;
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
@@ -276,6 +282,7 @@ export class TscnParserCore {
     finalizeSection();
 
     const sceneTree = buildSceneTree(nodes);
+    const orphanedNodes = strandedNodes(nodes, sceneTree, nodeLines);
 
     logger.info(`Parsing complete: ${nodes.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
 
@@ -283,6 +290,7 @@ export class TscnParserCore {
       nodes: sceneTree,
       externalResources,
       internalResources,
+      ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
     };
   }
 

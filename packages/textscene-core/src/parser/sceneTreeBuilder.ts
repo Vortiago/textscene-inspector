@@ -2,7 +2,7 @@
  * Builds hierarchical scene tree from flat TSCN node list.
  */
 
-import type { TscnNode } from './types';
+import type { OrphanedNode, TscnNode } from './types';
 import { warn } from '../logger';
 
 /**
@@ -33,8 +33,11 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   //
   // Requiring the anchor to be instance-bearing is what separates these from
   // genuinely malformed paths: a scene that says `parent="Level2"` when the
-  // root has no such child is a mistake Godot also drops, and re-rooting it
-  // under the nearest resolvable ancestor would hide that.
+  // root has no such child is a mistake, and re-rooting it under the nearest
+  // resolvable ancestor would hide it. Godot re-roots such a node to the SCENE
+  // root and renames it `Level2#Name` (`packed_scene.cpp:208-215`, `:561-563`);
+  // `strandedNodes` below is what carries the same fact to a caller, since a
+  // node absent from the tree is otherwise invisible to everything walking it.
   //
   // One node is deferred per pass, then the ordinary resolution above is
   // re-run, so a deferred node's own descendants resolve through their declared
@@ -55,7 +58,8 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
     );
   }
 
-  // Warn about any orphaned nodes
+  // Logged as well as reported: the render path consumes the tree only, and a
+  // dropped subtree is worth a line in the console there too.
   if (remaining.length > 0) {
     warn(`WARNING: ${remaining.length} orphaned nodes will be dropped from scene tree!`);
     for (const node of remaining) {
@@ -92,8 +96,10 @@ function placeResolvable(
 
     for (const node of remaining) {
       if (!node.parent) {
-        // No parent and not the root → drop it (handled by the orphan warning
-        // only if it never resolves; a parentless non-root is simply skipped).
+        // A second parentless node cannot be placed by path, so it never
+        // reaches `remaining` — `strandedNodes` finds it by walking the tree
+        // this returns, which is why that derivation is not a second copy of
+        // the resolution rules.
         continue;
       }
 
@@ -151,4 +157,36 @@ function findInstanceAnchor(
     }
   }
   return null;
+}
+
+/**
+ * The nodes {@link buildSceneTree} could not place, paired with their heading
+ * lines.
+ *
+ * Derived from the tree it actually returned rather than re-deciding
+ * resolvability: the deferral pass anchors a path descending into instanced
+ * content, and a second copy of that judgement would drift from this one. A
+ * node reachable from `roots` was placed; every other node was not.
+ *
+ * Two shapes end up here. One declares a `parent=` path that names nothing —
+ * Godot warns and re-roots it. One declares no `parent=` at all while not being
+ * the root, which `packed_scene.cpp:206` refuses outright.
+ */
+export function strandedNodes(
+  all: readonly TscnNode[],
+  roots: readonly TscnNode[],
+  lines: ReadonlyMap<TscnNode, number>
+): OrphanedNode[] {
+  const placed = new Set<TscnNode>();
+  const walk = (nodes: readonly TscnNode[]): void => {
+    for (const node of nodes) {
+      if (placed.has(node)) continue;
+      placed.add(node);
+      walk(node.children);
+    }
+  };
+  walk(roots);
+  return all
+    .filter((node) => !placed.has(node))
+    .map((node) => ({ node, line: lines.get(node) ?? 0 }));
 }

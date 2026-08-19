@@ -8,6 +8,23 @@ import type { ResourceLoader } from '../resources/ResourceLoader';
 /**
  * Represents a complete TSCN scene
  */
+/**
+ * A `[node]` heading `buildSceneTree` could not place, with the line it is on.
+ *
+ * It is absent from `TscnScene.nodes`, so anything walking the tree cannot see
+ * it at all — and its descendants resolve only through it, so they are stranded
+ * beside it. Godot does not drop it in silence: `SceneState::instantiate`
+ * warns `"Parent path '…' for node '…' has vanished when instantiating"` and
+ * re-parents the node to the scene root under `<path>#<name>`
+ * (`packed_scene.cpp:208-215`, `:561-563`). A node declaring no `parent=` at
+ * all is the harder case — `packed_scene.cpp:206` fails the whole load.
+ */
+export interface OrphanedNode {
+  readonly node: TscnNode;
+  /** 1-based line of the node's own heading. */
+  readonly line: number;
+}
+
 export interface TscnScene {
   /** Root nodes in the scene tree */
   nodes: TscnNode[];
@@ -15,6 +32,11 @@ export interface TscnScene {
   externalResources: TscnExternalResource[];
   /** Internal resource definitions */
   internalResources: TscnInternalResource[];
+  /**
+   * Headings whose `parent=` path resolved against nothing, so they are NOT in
+   * `nodes`. Absent rather than empty when nothing was stranded.
+   */
+  orphanedNodes?: readonly OrphanedNode[];
   /** Event-based resource loader (used by SceneGraph helpers). */
   resourceLoader?: ResourceLoader;
 }

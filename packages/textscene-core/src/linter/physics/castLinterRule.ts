@@ -15,6 +15,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
+import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
@@ -27,10 +28,6 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   const prefix = `${kind.toLowerCase()}cast${dimSuffix(dim)}`;
   const shapeType = `Shape${dim}`;
 
-  // ShapeCast3D sweeps a shape through the solver, which cannot handle a
-  // concave mesh — scene/3d/physics/shape_cast_3d.cpp:188 warns on it. The 2D
-  // solver has no equivalent restriction.
-  const rejectsConcave = kind === 'Shape' && dim === '3D';
 
   // `_can_collide_with` filters every space-state query result. Keyed on `dim`
   // alone, not on `kind`: one function serves the ray and the shape query in a
@@ -43,6 +40,61 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // Its first clause, the mask test against each candidate's collision_layer.
   const maskCite = dim === '2D' ? 'godot_space_2d.cpp:44' : 'godot_space_3d.cpp:44';
 
+  // Each arm's enabling condition, stated once. `emits` is derived from this
+  // and `check` reports THROUGH it, so an arm a ray cast does not have cannot
+  // be reported by one. ShapeCast3D sweeps its shape through the solver, which
+  // cannot handle a concave mesh (`shape_cast_3d.cpp:188` warns on it); the 2D
+  // solver has no equivalent restriction.
+  const arms: RuleArms<
+    'noCollideTarget' | 'zeroMask' | 'missingShape' | 'unresolvedShape' | 'concaveShape'
+  > = {
+    noCollideTarget: {
+      severity: 'warning',
+      ruleName: `${prefix}-no-collide-target`,
+      grounding: {
+        kind: 'engine-inert',
+        at: canCollideCite,
+        unused: 'both type clauses reject their category, so the query matches nothing',
+      },
+    },
+    zeroMask: {
+      severity: 'warning',
+      ruleName: `${prefix}-zero-mask`,
+      grounding: {
+        kind: 'engine-inert',
+        at: maskCite,
+        unused: 'the layer test fails for every object, so the cast reports no hit',
+      },
+    },
+    ...(kind === 'Shape'
+      ? {
+          missingShape: {
+            severity: 'warning' as const,
+            ruleName: `${prefix}-missing-shape`,
+            grounding: { kind: 'configuration-warning' } as const,
+          },
+          unresolvedShape: {
+            severity: 'error' as const,
+            ruleName: `${prefix}-unresolved-shape`,
+            grounding: {
+              kind: 'no-engine-counterpart',
+              scope: 'dangling-reference',
+              because: 'the shape id is not declared anywhere in this file',
+            } as const,
+          },
+        }
+      : {}),
+    ...(kind === 'Shape' && dim === '3D'
+      ? {
+          concaveShape: {
+            severity: 'warning' as const,
+            ruleName: `${prefix}-concave-shape`,
+            grounding: { kind: 'configuration-warning' } as const,
+          },
+        }
+      : {}),
+  };
+
   function check(context: RuleContext): Diagnostic[] {
     const { node } = context;
 
@@ -54,13 +106,12 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     const withAreas = (props.collide_with_areas ?? 'false') === 'true';
     const withBodies = (props.collide_with_bodies ?? 'true') === 'true';
     if (!withAreas && !withBodies) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-no-collide-target`,
-      });
+      reportArm(
+        diagnostics,
+        arms.noCollideTarget,
+        node,
+        `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`
+      );
     }
 
     // `ruleInt` reads the value Godot stores; `parseInt` stops at the
@@ -69,52 +120,44 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     // ray_cast_3d.h:100, shape_cast_3d.h:106).
     const mask = ruleInt(props.collision_mask ?? '', null, 'uint32');
     if (mask === 0) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-zero-mask`,
-      });
+      reportArm(
+        diagnostics,
+        arms.zeroMask,
+        node,
+        `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`
+      );
     }
 
-    if (kind === 'Shape') {
+    if (arms.missingShape) {
       // "This node cannot interact with other objects unless a Shape2D is
       // assigned." — scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
       const shape = resolveResourceSlot(context.scene, props.shape);
       if (shape.kind === 'empty') {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-missing-shape`,
-        });
+        reportArm(
+          diagnostics,
+          arms.missingShape,
+          node,
+          `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`
+        );
       } else if (shape.kind === 'dangling') {
         // An error, not advice, and the same severity `CollisionShape2D/3D`
         // already gives a dangling `shape` — the two nodes take the identical
         // property and a broken reference is equally fatal on either. A value
         // that is not a reference names no id, so the strict parser's format
         // diagnostic is the whole story and this stays silent.
-        diagnostics.push({
-          severity: 'error',
-          message: `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-unresolved-shape`,
-        });
-      } else if (
-        rejectsConcave &&
-        shape.kind === 'resolved' &&
-        shape.type === 'ConcavePolygonShape3D'
-      ) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-concave-shape`,
-        });
+        reportArm(
+          diagnostics,
+          arms.unresolvedShape,
+          node,
+          `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`
+        );
+      } else if (shape.kind === 'resolved' && shape.type === 'ConcavePolygonShape3D') {
+        reportArm(
+          diagnostics,
+          arms.concaveShape,
+          node,
+          `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`
+        );
       }
     }
 
@@ -127,53 +170,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       description: `Flags a ${type} configured so it can never report a collision`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        {
-          ruleName: `${prefix}-no-collide-target`,
-          severity: 'warning',
-          grounding: {
-            kind: 'engine-inert',
-            at: canCollideCite,
-            unused: 'both type clauses reject their category, so the query matches nothing',
-          },
-        },
-        {
-          ruleName: `${prefix}-zero-mask`,
-          severity: 'warning',
-          grounding: {
-            kind: 'engine-inert',
-            at: maskCite,
-            unused: 'the layer test fails for every object, so the cast reports no hit',
-          },
-        },
-        ...(kind === 'Shape'
-          ? [
-              {
-                ruleName: `${prefix}-missing-shape`,
-                severity: 'warning' as const,
-                grounding: { kind: 'configuration-warning' } as const,
-              },
-              {
-                ruleName: `${prefix}-unresolved-shape`,
-                severity: 'error' as const,
-                grounding: {
-                  kind: 'no-engine-counterpart',
-                  scope: 'dangling-reference',
-                  because: 'the shape id is not declared anywhere in this file',
-                } as const,
-              },
-            ]
-          : []),
-        ...(rejectsConcave
-          ? [
-              {
-                ruleName: `${prefix}-concave-shape`,
-                severity: 'warning' as const,
-                grounding: { kind: 'configuration-warning' } as const,
-              },
-            ]
-          : []),
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

@@ -38,6 +38,7 @@ export class Linter {
 
     // Phase 2: Semantic validation (only if parsing succeeded)
     if (parseResult.scene) {
+      for (const d of orphanDiagnostics(parseResult.scene)) diagnostics.push(d);
       for (const d of this.lintScene(parseResult.scene)) diagnostics.push(d);
     }
 
@@ -146,4 +147,54 @@ export class Linter {
   private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
     return diagnostics.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   }
+}
+
+/**
+ * Godot's own name for a re-parented orphan: the vanished path with `./`
+ * stripped and every `/` turned into `@`, then `#` and the node's own name
+ * (`packed_scene.cpp:212`, `:561-563`).
+ */
+function reparentedName(parentPath: string, name: string): string {
+  return `${parentPath.replace(/^\.\//, '').replaceAll('/', '@')}#${name}`;
+}
+
+/**
+ * One diagnostic per `[node]` heading the tree build could not place.
+ *
+ * Phase 2 walks the tree, so a node missing from it — together with every
+ * descendant, whose own path resolves only through it — is skipped by every
+ * semantic rule with nothing said. Phase 1 is unaffected: property validation
+ * happens during the scan, so the claim below is exactly that narrow.
+ *
+ * The two shapes earn different tiers. A `parent=` path naming nothing is a
+ * WARNING, because Godot warns and recovers — `"Parent path '…' for node '…'
+ * has vanished when instantiating"`, then re-parents the node to the scene
+ * root under a mangled name (`packed_scene.cpp:208-215`, `:561-563`). A
+ * heading with no `parent=` at all, which only the root may omit, is an ERROR:
+ * `packed_scene.cpp:206` fails the instantiation and returns nothing.
+ */
+function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
+  return (scene.orphanedNodes ?? []).map(({ node, line }) => {
+    const location = { line, column: 1 };
+    const shared = { nodeName: node.name, nodeType: node.type, location };
+    if (!node.parent) {
+      return {
+        ...shared,
+        severity: 'error' as const,
+        message:
+          `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
+          'Godot refuses to instantiate the scene at all.',
+        ruleName: 'node-without-parent',
+      };
+    }
+    return {
+      ...shared,
+      severity: 'warning' as const,
+      message:
+        `Node '${node.name}' declares parent="${node.parent}", a path this file never defines. ` +
+        `Godot re-parents it to the scene root and renames it "${reparentedName(node.parent, node.name)}". ` +
+        'No semantic rule ran on it or on anything parented below it.',
+      ruleName: 'unresolved-parent-path',
+    };
+  });
 }

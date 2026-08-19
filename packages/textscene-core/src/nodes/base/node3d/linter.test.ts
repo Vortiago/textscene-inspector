@@ -121,11 +121,19 @@ describe('Node3D Linter', () => {
       },
     ]);
 
-    it('should pass validation for valid visibility_parent with absolute path', () => {
+    it('should pass validation for a visibility_parent that names a sibling', () => {
+      // Every node below the root states `parent="."`. Without it the second
+      // heading is a second ROOT, which Godot refuses (packed_scene.cpp:206)
+      // and the tree build drops — so the rule under test never ran on it.
       expectClean(
         scene(
-          node('Node3D', {}, { name: 'ParentNode' }),
-          node('Node3D', { visibility_parent: 'NodePath("ParentNode")' }, { name: 'ValidNode' })
+          node('Node3D', {}, { name: 'Root' }),
+          node('Node3D', {}, { name: 'ParentNode', parent: '.' }),
+          node(
+            'Node3D',
+            { visibility_parent: 'NodePath("../ParentNode")' },
+            { name: 'ValidNode', parent: '.' }
+          )
         )
       );
     });
@@ -142,14 +150,12 @@ describe('Node3D Linter', () => {
 
   describe('Semantic Validation - Visibility Parent References', () => {
     it('should pass when visibility_parent node exists', () => {
+      // `parent="."`, not `parent="ParentNode"`: a child of the root names the
+      // root as `.`, and the longer spelling resolves against nothing.
       expectClean(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),
-          node(
-            'Node3D',
-            { visibility_parent: 'NodePath("ParentNode")' },
-            { name: 'ChildNode', parent: 'ParentNode' }
-          )
+          node('Node3D', { visibility_parent: 'NodePath("..")' }, { name: 'ChildNode', parent: '.' })
         )
       );
     });

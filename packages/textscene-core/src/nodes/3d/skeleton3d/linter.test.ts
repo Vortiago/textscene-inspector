@@ -551,17 +551,26 @@ describe('Skeleton3D Linter', () => {
     // overrides no get_configuration_warnings.
     describe('skeleton usage validation', () => {
       it('reports nothing when no MeshInstance3D references the skeleton', () => {
+        // Every mesh states `parent="."`. Without it the heading is a second
+        // ROOT, which the tree build drops — so "no MeshInstance3D references
+        // the skeleton" held because there was no MeshInstance3D in the tree.
         expectClean(
           scene(
-            node('Skeleton3D', {}, { name: 'UnusedSkeleton' }),
-            node('MeshInstance3D', {}, { name: 'SomeMesh' })
+            node('Node3D', {}, { name: 'Root' }),
+            node('Skeleton3D', {}, { name: 'UnusedSkeleton', parent: '.' }),
+            node('MeshInstance3D', {}, { name: 'SomeMesh', parent: '.' })
           )
         );
         expectClean(
           scene(
-            node('Skeleton3D', {}, { name: 'UnusedSkeleton' }),
-            node('Skeleton3D', {}, { name: 'OtherSkeleton' }),
-            node('MeshInstance3D', { skeleton: 'NodePath("OtherSkeleton")' }, { name: 'Mesh' })
+            node('Node3D', {}, { name: 'Root' }),
+            node('Skeleton3D', {}, { name: 'UnusedSkeleton', parent: '.' }),
+            node('Skeleton3D', {}, { name: 'OtherSkeleton', parent: '.' }),
+            node(
+              'MeshInstance3D',
+              { skeleton: 'NodePath("../OtherSkeleton")' },
+              { name: 'Mesh', parent: '.' }
+            )
           )
         );
       });
@@ -601,7 +610,11 @@ describe('Skeleton3D Linter', () => {
             'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
             'bones/0/scale': 'Vector3(1, 1, 1)',
           }, { name: 'CompleteSkeleton' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("CompleteSkeleton")' }, { name: 'CharacterMesh' })
+          node(
+            'MeshInstance3D',
+            { skeleton: 'NodePath("..")' },
+            { name: 'CharacterMesh', parent: '.' }
+          )
         )
       );
       // Should have no warnings or errors
