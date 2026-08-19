@@ -36,7 +36,7 @@ function glowOn(extra: Record<string, string> = {}): GlowParams {
 }
 
 /** `mainImage`'s body — above it sit the DEFINITIONS, not the call order. */
-function body(params: GlowParams, toneMapping = { mode: GodotToneMapper.FILMIC, white: 1 }) {
+function body(params: GlowParams | null, toneMapping = { mode: GodotToneMapper.FILMIC, white: 1 }) {
   const glsl = compositeGlsl(params, toneMapping);
   return glsl.slice(glsl.indexOf('void mainImage'));
 }
@@ -221,5 +221,32 @@ describe('compositeGlsl — the AgX contrast', () => {
   it('falls back to Godot’s default when the caller omits it (edge case)', () => {
     const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.AGX, white: 16.29 });
     expect(glsl).toContain('awp_contrast = 1.25;');
+  });
+});
+
+describe('compositeGlsl — with the glow flag clear', () => {
+  // `tonemap.glsl:859-899` guards every glow line on FLAG_USE_GLOW; with it clear
+  // the same pass reduces to exposure and the curve.
+  const tone = { mode: GodotToneMapper.FILMIC, white: 1 };
+
+  it('exposes the scene colour and applies the curve, in that order', () => {
+    expect(body(null, tone)).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+  });
+
+  it('gathers no glow and declares no buffer to gather from', () => {
+    const glsl = compositeGlsl(null, tone);
+    expect(glsl).not.toContain('godotGlowBuffer');
+    expect(glsl).not.toContain('godotGlowBlend');
+    expect(glsl).toContain('uniform float godotExposure;');
+  });
+
+  it('preserves the input alpha, as the glow arm does', () => {
+    expect(body(null, tone)).toContain('outputColor = vec4(color, inputColor.a);');
+  });
+
+  it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
+    const glsl = compositeGlsl(null, { mode: GodotToneMapper.LINEAR, white: 1 });
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('* godotExposure');
   });
 });

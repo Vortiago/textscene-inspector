@@ -1,12 +1,14 @@
 /**
- * `GodotGlowEffect` — Godot's glow, gather and blend and tone curve in one pass.
+ * `GodotToneMapEffect` — Godot's tonemap pass: the tone curve, plus the glow
+ * gather and blend when the environment has one.
  *
  * ONE effect rather than a bloom-then-tonemap pair, because that is Godot's own
  * shape: `tonemap.glsl` gathers the glow pyramid, blends it, and applies the tone
- * curve in a single shader. Mirroring that is what makes the two blend orderings
- * expressible at all — Godot composites SOFTLIGHT AFTER the tone curve (with the
- * glow buffer itself tonemapped) and every other mode into linear HDR BEFORE it,
- * and a fixed pass order can only ever be one of the two.
+ * curve in a single shader whose glow lines are guarded by `FLAG_USE_GLOW`.
+ * Mirroring that is what makes the two blend orderings expressible at all — Godot
+ * composites SOFTLIGHT AFTER the tone curve (with the glow buffer itself
+ * tonemapped) and every other mode into linear HDR BEFORE it, and a fixed pass
+ * order can only ever be one of the two.
  *
  * The pyramid is built in `update()` from buffers this effect owns, which is how
  * `BloomEffect` is built too. It cannot BE a `BloomEffect`: Godot weights its
@@ -31,8 +33,9 @@ import {
 import { compositeGlsl } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
 
-export interface GodotGlowOptions {
-  glow: GlowParams;
+export interface GodotToneMapOptions {
+  /** Null when the environment has no glow — `FLAG_USE_GLOW` clear. */
+  glow: GlowParams | null;
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   toneMapMode: number;
   /**
@@ -40,6 +43,11 @@ export interface GodotGlowOptions {
    * per-curve floor) the point SCREEN normalises the glow against.
    */
   toneMapWhite: number;
+  /**
+   * Godot `tonemap_exposure`, applied to the scene colour once at the top of
+   * `main()`. The bright pass has already applied the same value to the glow.
+   */
+  toneMapExposure: number;
   /**
    * Godot `tonemap_agx_contrast`. Only AgX reads it, but it is threaded here
    * rather than defaulted, because this path and the in-material one must draw
@@ -58,20 +66,25 @@ void main() {
 }
 `;
 
-export class GodotGlowEffect extends Effect {
-  private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
-  private readonly accumulationTargets: THREE.WebGLRenderTarget[] = [];
-  private readonly brightPassMaterial: THREE.ShaderMaterial;
-  private readonly downsampleMaterial: THREE.ShaderMaterial;
-  private readonly accumulateMaterial: THREE.ShaderMaterial;
-  private readonly screen: THREE.Mesh;
-  private readonly pyramidCamera: THREE.OrthographicCamera;
-  private readonly weights: number[];
-  private readonly maxLevel: number;
+export class GodotToneMapEffect extends Effect {
+  /** Null when the environment has no glow: nothing to gather, nothing to own. */
+  private readonly pyramid: GlowPyramid | null;
 
-  constructor({ glow, toneMapMode, toneMapWhite, toneMapAgxContrast }: GodotGlowOptions) {
+  constructor({
+    glow,
+    toneMapMode,
+    toneMapWhite,
+    toneMapExposure,
+    toneMapAgxContrast,
+  }: GodotToneMapOptions) {
+    const uniforms = new Map<string, THREE.Uniform>([
+      ['godotExposure', new THREE.Uniform(toneMapExposure)],
+    ]);
+    // Only the glow arm of the shader reads it.
+    if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
+
     super(
-      'GodotGlowEffect',
+      'GodotToneMapEffect',
       compositeGlsl(glow, {
         mode: toneMapMode,
         white: toneMapWhite,
@@ -82,13 +95,42 @@ export class GodotGlowEffect extends Effect {
         // curve are both already applied — so the composer must not blend it
         // into the scene a second time.
         blendFunction: BlendFunction.SRC,
-        uniforms: new Map<string, THREE.Uniform>([
-          ['godotGlowBuffer', new THREE.Uniform(null)],
-          ['godotExposure', new THREE.Uniform(glow.exposure)],
-        ]),
+        uniforms,
       }
     );
 
+    this.pyramid = glow ? new GlowPyramid(glow) : null;
+  }
+
+  override setSize(width: number, height: number): void {
+    this.pyramid?.setSize(width, height);
+  }
+
+  /** Builds the pyramid, then hands the composite shader the weighted sum. */
+  override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
+    if (!this.pyramid) return;
+    this.uniforms.get('godotGlowBuffer')!.value = this.pyramid.gather(renderer, inputBuffer);
+  }
+
+  override dispose(): void {
+    this.pyramid?.dispose();
+    super.dispose();
+  }
+}
+
+/** The glow buffers and the passes that fill them; a no-glow pass owns none of it. */
+class GlowPyramid {
+  private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
+  private readonly accumulationTargets: THREE.WebGLRenderTarget[] = [];
+  private readonly brightPassMaterial: THREE.ShaderMaterial;
+  private readonly downsampleMaterial: THREE.ShaderMaterial;
+  private readonly accumulateMaterial: THREE.ShaderMaterial;
+  private readonly screen: THREE.Mesh;
+  private readonly pyramidCamera: THREE.OrthographicCamera;
+  private readonly weights: number[];
+  private readonly maxLevel: number;
+
+  constructor(glow: GlowParams) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
@@ -133,7 +175,7 @@ export class GodotGlowEffect extends Effect {
     this.screen.frustumCulled = false;
   }
 
-  override setSize(width: number, height: number): void {
+  setSize(width: number, height: number): void {
     for (let level = 0; level < this.levelTargets.length; level++) {
       const size = glowLevelSize(width, height, level);
       this.levelTargets[level]!.setSize(size.width, size.height);
@@ -142,7 +184,7 @@ export class GodotGlowEffect extends Effect {
   }
 
   /**
-   * Builds the pyramid, then hands the composite shader the weighted sum.
+   * Builds the pyramid and returns the weighted sum the composite shader gathers.
    *
    * Godot's `gather_glow` reads every level at the SAME uv and sums
    * `weight[i] * level[i]`. Accumulating coarse-to-fine — upsample what is
@@ -150,7 +192,7 @@ export class GodotGlowEffect extends Effect {
    * sum while only ever holding two textures live, instead of binding all seven
    * as samplers at full resolution.
    */
-  override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
+  gather(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): THREE.Texture {
     const previousTarget = renderer.getRenderTarget();
 
     this.screen.material = this.brightPassMaterial;
@@ -186,7 +228,7 @@ export class GodotGlowEffect extends Effect {
     }
 
     renderer.setRenderTarget(previousTarget);
-    this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
+    return this.accumulationTargets[0]!.texture;
   }
 
   private renderTo(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
@@ -194,7 +236,7 @@ export class GodotGlowEffect extends Effect {
     renderer.render(this.screen, this.pyramidCamera);
   }
 
-  override dispose(): void {
+  dispose(): void {
     for (const target of [...this.levelTargets, ...this.accumulationTargets]) {
       target.dispose();
     }
@@ -202,7 +244,6 @@ export class GodotGlowEffect extends Effect {
     this.downsampleMaterial.dispose();
     this.accumulateMaterial.dispose();
     this.screen.geometry.dispose();
-    super.dispose();
   }
 }
 

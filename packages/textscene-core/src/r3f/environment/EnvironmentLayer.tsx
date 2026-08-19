@@ -20,14 +20,17 @@ import {
   unexposedBrightPassThreshold,
   glowNeedsEveryPixel,
   glowParamsFor,
+  type GlowParams,
 } from '../../resources/environment/godotGlow';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useOptionalHierarchy } from '../contexts/HierarchyContext';
+import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { sceneHasBloomableEmissive } from './bloomableScan';
+import { sceneHasBlendedSurface } from './alphaPassScan';
 import { SkyLayer } from '../sky/SkyLayer';
-import { GlowLayer } from './GlowLayer';
+import { ToneMapLayer } from './ToneMapLayer';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -43,17 +46,9 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Glow is a post-process, and the effect that runs it owns the tone curve too
-  // (Godot's own tonemap shader gathers, blends and tonemaps in one), so the
-  // in-material tonemap path is suppressed while it is mounted.
-  //
-  // But the composer is expensive (a mip-blurred HDR pass), and the preview
-  // environment enables glow GLOBALLY — so mounting it on every scene, including
-  // ones with nothing bright, is pure cost (crippling the headless golden gate
-  // under software rendering) for zero visual change: Godot renders a scene with
-  // no above-threshold pixels identically with or without glow. So the composer
-  // is gated on the scene actually having bloomable content. When it is NOT
-  // mounted the scene stays on the ordinary in-material tonemap path, unchanged.
+  // Blending and glow both need linear HDR ahead of the tone curve, so the
+  // compositor owns the curve when either is live. The HDR pass is not free, so
+  // each is gated on the scene being able to show it.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
   // null when scanning the scene cannot decide the question: either nothing could
   // glow, or the settings glow every pixel regardless of what the scene holds. One
@@ -64,12 +59,17 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
       ? unexposedBrightPassThreshold(glowParams)
       : null;
   const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
+  const hasBlended = useSceneHasBlendedSurface();
   const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
+  // ONE value decides the pass and the suppression, so they cannot disagree.
+  const composited = useComposedToneMapping(activeGlow, hasBlended);
 
   return (
     <>
-      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!activeGlow} />
-      {activeGlow && <GlowLayer glow={activeGlow} toneMapping={settings.toneMapping} />}
+      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!composited} />
+      {composited && (
+        <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />
+      )}
       {sky && (showsSky || skyAmbient) && (
         <>
           <SkyLayer
@@ -190,49 +190,81 @@ function SkyDiffuseReflectionSplit({
   return null;
 }
 
-/**
- * Whether the live scene has any material bright enough to bloom, and therefore
- * whether mounting the compositor is worth its cost. What counts as bright enough
- * is `sceneHasBloomableEmissive`'s to define; this owns only what that cannot know.
- *
- * Re-checked over a short window after each scene change so async content (GLB,
- * instanced sub-scenes) that mounts a beat later still turns the composer on;
- * it errs toward mounting (a false positive only costs a redundant pass, a false
- * negative would silently drop a real bloom), and having said so it LATCHES —
- * once something has bloomed, the answer stays true until the scene changes.
- *
- * A null threshold means the scan cannot decide and is skipped — there is no glow,
- * or the settings glow every pixel whatever the scene holds.
- */
+/** A null threshold means no glow, or one that catches every pixel: nothing to scan for. */
 function useSceneHasBloomableEmissive(threshold: number | null): boolean {
+  return useLatchedSceneScan(
+    useMemo(
+      () =>
+        threshold === null
+          ? null
+          : (scene: THREE.Object3D) => sceneHasBloomableEmissive(scene, threshold),
+      [threshold]
+    )
+  );
+}
+
+/** Whether the live scene draws anything through the blend equation. */
+function useSceneHasBlendedSurface(): boolean {
+  return useLatchedSceneScan(sceneHasBlendedSurface);
+}
+
+/**
+ * Re-runs a scene predicate over a short window, so async content (GLB, instanced
+ * sub-scenes) is still seen, and LATCHES: mounting the composer flips
+ * `gl.toneMapping`, which recompiles every tone-mapped material in the scene.
+ *
+ * A null predicate skips the scan.
+ */
+function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) | null): boolean {
   const scene = useThree((s) => s.scene);
   const hierarchy = useOptionalHierarchy();
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
-  const [bloomable, setBloomable] = useState(false);
+  const [found, setFound] = useState(false);
 
   useEffect(() => {
-    // Clear on every re-run, not just when the scan is switched off: the deps
-    // below include the scene and its root, so a different scene must start from
-    // "nothing bloomed yet" rather than inherit the previous scene's latch.
-    setBloomable(false);
-    if (threshold === null) return undefined;
+    // A different scene must not inherit the previous one's latch.
+    setFound(false);
+    if (scan === null) return undefined;
     const check = () => {
-      const found = sceneHasBloomableEmissive(scene, threshold);
-      // LATCHES, and only resets when the deps below change. Mounting the
-      // composer flips `gl.toneMapping` to `NoToneMapping`, which is part of
-      // three's program-cache key for every tone-mapped material — so each
-      // change of answer recompiles the whole scene's shaders. Content that
-      // settles across the probe window could otherwise flip this several times
-      // during one load. Latching caps that at one, and costs only a redundant
-      // pass in the case this hook already documents itself as erring toward.
-      if (found) setBloomable(true);
+      if (scan(scene)) setFound(true);
     };
     check();
     const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));
     return () => timers.forEach(clearTimeout);
-  }, [scene, rootKey, threshold]);
+  }, [scene, rootKey, scan]);
 
-  return bloomable;
+  return found;
+}
+
+/**
+ * The compositor's mount decision, and the glow it carries — null stays on three's
+ * in-material curve. The GL-context check belongs here, not in the layer: the same
+ * value suppresses the in-material tonemap, and `postprocessing` needs a real
+ * context at construction (there is none under test-renderer or headless DOM).
+ */
+function useComposedToneMapping(
+  glow: GlowParams | null,
+  hasBlendedSurface: boolean
+): { glow: GlowParams | null } | null {
+  const gl = useThree((s) => s.gl);
+  const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
+  // Godot composites canvas items into the viewport AFTER
+  // `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets no pass at all
+  // — and every canvas item blends, which would otherwise mount one on all of them.
+  const is2D = useCanvasWorkspace() === '2d';
+  return useMemo(
+    () => (glReady && !is2D && (glow || hasBlendedSurface) ? { glow } : null),
+    [glReady, is2D, glow, hasBlendedSurface]
+  );
+}
+
+function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
+  try {
+    const ctx = gl.getContext?.() as { getContextAttributes?: () => unknown } | null;
+    return !!ctx && typeof ctx.getContextAttributes === 'function' && !!ctx.getContextAttributes();
+  } catch {
+    return false;
+  }
 }
 
 interface EnvironmentApplierProps {
@@ -241,8 +273,8 @@ interface EnvironmentApplierProps {
   hasSky: boolean;
   /**
    * The composer forces the renderer to `NoToneMapping` while mounted, and
-   * `GodotGlowEffect` applies the same ported curve itself — so the in-material
-   * tonemap must NOT also be applied here.
+   * `GodotToneMapEffect` applies the same ported curve itself — so the
+   * in-material tonemap must NOT also be applied here.
    */
   suppressToneMapping: boolean;
 }

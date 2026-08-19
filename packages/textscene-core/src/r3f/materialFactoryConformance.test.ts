@@ -226,7 +226,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
   'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
     'one material per built text run, replaced and disposed together with the run geometry it was built with',
-  'packages/textscene-core/src/r3f/environment/GlowLayer.tsx':
+  'packages/textscene-core/src/r3f/environment/ToneMapLayer.tsx':
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
@@ -265,7 +265,7 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per built text run; the glyph atlas travels as a uniform, so re-laying-out a run moves no program input',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
-  'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
+  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
   'packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
@@ -345,7 +345,7 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
  * license the second.
  */
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
-  'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
+  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
     'the `.tres` arrival for a mesh inside a GLB: the resource pipeline hands over a material constructed complete, a re-resolve replaces the whole object, and unmount puts the loader’s own material back',
@@ -362,7 +362,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
   'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
     'the tile material is either the literal-only module constant or one the resource pipeline handed over complete, and the InstancedMesh is rebuilt whenever either moves',
-  'packages/textscene-core/src/r3f/environment/GodotGlowEffect.ts':
+  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',

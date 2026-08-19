@@ -35,7 +35,15 @@ decisive above it — at a linear input of 1.0 the two defaults differ by 21/255
 by 63/255, and a high clip of 2.0 saturates everything at or above it.
 
 `tonemap_agx_contrast` (default 1.25) is ported too, baked into the curve on both the
-in-material and the glow-composer path so the two cannot draw different AgX.
+in-material and the compositor path so the two cannot draw different AgX.
+
+Godot tonemaps the finished colour buffer as a pass, after the alpha pass has blended
+into it (`render_forward_clustered.cpp:2389` then `:2514`), so a blend meets its
+destination in linear HDR. three tonemaps and sRGB-encodes per fragment, which would
+blend two already-curved operands — darker everywhere the two differ, by 50/255 on a
+bright surface over a dark background. So the compositor carries the curve for any
+scene that glows or blends, and only a scene doing neither — where the two orders
+coincide — stays on three's in-material curve.
 
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
