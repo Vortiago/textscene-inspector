@@ -2,10 +2,10 @@
  * Skeleton3D strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * Bone properties (`bones/<idx>/<sub>`) keep a bespoke validator because the
- * sub-property name drives format choice (Vector3 for position/scale,
- * Quaternion for rotation), which `v`'s per-property combinators have no way
- * to key on.
+ * Bone properties (`bones/<idx>/<sub>`) keep a bespoke dispatcher: the index
+ * resolution, the leaf whitelist and the self-parent refusal all read parts of
+ * the KEY, which `v`'s per-property combinators never see. The per-leaf checks
+ * behind it are ordinary combinators, in `boneLeaves.ts`.
  */
 
 // The base chain. Registration happens on import, so a test that loads only
@@ -13,20 +13,12 @@
 // without this line just the full barrel ever registers it.
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import {
-  v,
-  VECTOR3_REGEX,
-  makeFloatTupleRegex,
-} from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import { indexedKeyRegex, toIntIndex, toUint32 } from '../../../godot/index.js';
+import { v, propertyError } from '../../../linter/validators/index.js';
+import { indexedKeyRegex, parseGodotInt, toIntIndex, toUint32 } from '../../../godot/index.js';
+import { BONE_LEAVES } from './boneLeaves.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
-
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
-// v.quaternion and the renderer.
-const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /**
  * `bones/<idx>/<sub>` — the index is a bare
@@ -39,9 +31,9 @@ const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
 
 /**
  * `bones/<idx>/<sub>` dispatcher. The malformed-key and Vector3/Quaternion
- * shape branches reject only format; the out-of-range branch is a real bound
- * (see the citation below), so the whole function is tagged `bounded` +
- * `grounding` rather than `formatOnly`.
+ * shape branches reject only format; the out-of-range index and the unknown
+ * leaf are both writes `_set` refuses, so the whole function is tagged
+ * `bounded` + `grounding` rather than `formatOnly`.
  */
 const bonesValidator: PropertyValidator = (key, value, line) => {
   const match = BONE_KEY_RE.exec(key);
@@ -75,15 +67,40 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
     };
   }
 
-  const propertyName = match[2]!;
+  // Slice 2 alone decides the arm, so everything below it is invisible to the
+  // dispatch: `bones/0/bone_meta/<key>` reaches the `bone_meta` arm with the
+  // key read separately at :105, and a trailing slice on any other leaf is
+  // ignored rather than refused — the same setter still gets the same value.
+  const what = match[2]!.split('/', 1)[0]!;
 
-  if (propertyName === 'position' || propertyName === 'scale') {
-    if (!VECTOR3_REGEX.test(value)) {
-      return propertyError(key, line, `Property '${key}' must be Vector3 format like Vector3(0, 0, 0), got: "${value}"`, 'INVALID_BONE_VECTOR3_FORMAT');
-    }
-  } else if (propertyName === 'rotation') {
-    if (!QUATERNION_REGEX.test(value)) {
-      return propertyError(key, line, `Property '${key}' must be Quaternion format like Quaternion(0, 0, 0, 1), got: "${value}"`, 'INVALID_BONE_QUATERNION_FORMAT');
+  // skeleton_3d.cpp:135: the chain closes `} else { return false; }`, so a leaf
+  // with no arm is a write Godot silently drops.
+  if (!Object.prototype.hasOwnProperty.call(BONE_LEAVES, what)) {
+    return propertyError(
+      key,
+      line,
+      `Unknown bone property: "${key}". Skeleton3D has no "${what}" bone property, so Godot drops the write.`,
+      'UNKNOWN_BONE_PROPERTY'
+    );
+  }
+
+  const leaf = BONE_LEAVES[what]!;
+  const verdict = leaf(key, value, line);
+  if (verdict) return verdict;
+
+  // skeleton_3d.cpp:722: `ERR_FAIL_COND(p_bone == p_parent)`. Both halves come
+  // off this one key — `which` from the path, the parent from the value — so it
+  // is the one sibling-free refusal the dispatcher can answer. Compared as
+  // NUMBERS, because `bones/03/parent = 3` names bone 3 twice.
+  if (what === 'parent') {
+    const parent = parseGodotInt(value);
+    if (parent !== null && parent === signedIndex) {
+      return propertyError(
+        key,
+        line,
+        `Bone ${signedIndex} cannot be its own parent; Godot refuses the write and the bone keeps its previous parent.`,
+        'SELF_PARENTED_BONE'
+      );
     }
   }
 
@@ -122,8 +139,15 @@ validatorRegistry.registerAll('Skeleton3D', {
   'bones/*': bonesValidator,
 });
 
-// Shown in the generated `## Linting` table of this node's sheet.
-bonesValidator.accepts = 'bone pose component (float, Vector3 or Quaternion)';
+// Shown in the generated `## Linting` table of this node's sheet. Spelled
+// without a `/`: `godotLiteralGrammar.guard.test.ts` reads a slash-delimited run
+// carrying a composite name as a hand-rolled literal grammar.
+bonesValidator.accepts =
+  'leaf `name` (non-empty, no colon or slash), `parent` (int from -1, never the bone itself), `rest` (Transform3D), `enabled` (bool), `position` and `scale` (Vector3), `rotation` (Quaternion), `bone_meta`, or the 3.x `pose` and `bound_children`';
 // Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
 // sees the out-of-range bound too.
 bonesValidator.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:90' };
+// The dispatcher's tag says nothing about the bounds behind it, so the sweep
+// has to recurse past it (`indexedFamilyValidator` exposes its leaves for the
+// same reason).
+bonesValidator.leaves = Object.values(BONE_LEAVES);

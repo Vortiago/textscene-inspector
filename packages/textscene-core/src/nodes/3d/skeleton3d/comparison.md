@@ -33,7 +33,7 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `animate_physical_bones` | true or false |  |
-| `bones/*` | bone pose component (float, Vector3 or Quaternion) |  |
+| `bones/*` | leaf `name` (non-empty, no colon or slash), `parent` (int from -1, never the bone itself), `rest` (Transform3D), `enabled` (bool), `position` and `scale` (Vector3), `rotation` (Quaternion), `bone_meta`, or the 3.x `pose` and `bound_children` |  |
 | `modifier_callback_mode_process` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
 | `motion_scale` | float >= 0.001 | error at or below 0, warning below 0.001 |
 | `show_rest_only` | true or false |  |
@@ -44,6 +44,9 @@ Strict parsing format-checks these `Skeleton3D` properties, plus 17 inherited fr
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeleton3d-usage` | `skeleton3d-debug-mode` | warning |
 |  | `skeleton3d-deprecated-feature` | warning |
+|  | `skeleton3d-deprecated-bone-pose` | warning |
+|  | `skeleton3d-bone-name-order` | error |
+|  | `skeleton3d-duplicate-bone-name` | error |
 <!-- lint:end -->
 
 Skeleton3D has no `parser.ts` of its own: it registers `parseNode3D` directly (index.ts),

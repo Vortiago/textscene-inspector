@@ -172,6 +172,192 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
+      // `_set` dispatches `what = path.get_slicec('/', 2)` through a whitelist
+      // and closes with `} else { return false; }` (skeleton_3d.cpp:135) — the
+      // write is dropped, which ADR-0032 grounds at the error tier.
+      it('rejects a bone leaf the _set chain has no arm for', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/nonsense': '5' })), {
+          prop: 'bones/0/nonsense',
+          severity: 'error',
+          contains: ['nonsense'],
+        });
+      });
+
+      // `bones/<i>/name` reaches `add_bone` (skeleton_3d.cpp:86), which opens
+      // `ERR_FAIL_COND_V_MSG(p_name.is_empty() || p_name.contains_char(':') ||
+      // p_name.contains_char('/'), -1, ...)` (:605) — the bone is never added.
+      describe('bone name refusals (skeleton_3d.cpp:605)', () => {
+        it('rejects an empty bone name', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '""' })), {
+            prop: 'bones/0/name',
+            severity: 'error',
+            contains: ['non-empty'],
+          });
+        });
+
+        it('rejects a bone name carrying a colon', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"spine:1"' })), {
+            prop: 'bones/0/name',
+            severity: 'error',
+            contains: ['carries ":"'],
+          });
+        });
+
+        it('rejects a bone name carrying a slash', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"arm/left"' })), {
+            prop: 'bones/0/name',
+            severity: 'error',
+            contains: ['carries "/"'],
+          });
+        });
+      });
+
+      // `bone_meta` is the whole arm name (skeleton_3d.cpp:104); a leaf that
+      // merely starts with it is a different `what` and reaches :135.
+      it('rejects a leaf that only looks like the bone_meta arm', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/bone_metadata': '"spine"' })), {
+          prop: 'bones/0/bone_metadata',
+          severity: 'error',
+          contains: ['bone_metadata'],
+        });
+      });
+
+      // skeleton_3d.cpp:721: `ERR_FAIL_COND(p_parent != -1 && (p_parent < 0))`
+      // — the setter REFUSES anything below -1. The hint on :196 states the
+      // same -1 floor, so it adds no second tier. The ceiling there is
+      // `bones.size() - 1`, sibling state no per-property validator can see.
+      describe('bone parent (skeleton_3d.cpp:721, :722)', () => {
+        it('accepts the -1 root sentinel and a real parent index', () => {
+          expectNoErrors(
+            scene(
+              node('Skeleton3D', { 'bones/0/parent': '-1', 'bones/1/parent': '0' })
+            ),
+            { ruleName: 'strict-parser' }
+          );
+        });
+
+        it('rejects a parent below the -1 sentinel', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/parent': '-2' })), {
+            prop: 'parent',
+            severity: 'error',
+            // The BOUND, not the format branch: `-2` parses perfectly well.
+            contains: ['integer >= -1'],
+          });
+        });
+
+        it('rejects a bone parented to itself', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/2/parent': '2' })), {
+            prop: 'own parent',
+            severity: 'error',
+            contains: ['Bone 2 cannot be its own parent'],
+          });
+        });
+
+        // The index is `to_int` of the whole segment, so `03` is bone 3 and the
+        // comparison has to be numeric rather than textual.
+        it('rejects a self-parent the index spelling hides', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/03/parent': '3' })), {
+            prop: 'own parent',
+            severity: 'error',
+            contains: ['Bone 3 cannot be its own parent'],
+          });
+        });
+
+        it('rejects a non-integer parent', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/parent': 'Root' })), {
+            prop: 'parent',
+            severity: 'error',
+            contains: ['must be an integer'],
+          });
+        });
+      });
+
+      // :197 Variant::TRANSFORM3D and :198 Variant::BOOL. Both setters (:774,
+      // :798) guard the bone index and nothing else, so these are format only.
+      describe('bone rest and enabled', () => {
+        it('rejects a rest that is not a Transform3D', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/rest': 'Vector3(0, 0, 0)' })), {
+            prop: 'rest',
+            severity: 'error',
+            contains: ['Transform3D'],
+          });
+        });
+
+        it('rejects an enabled that is not a bool', () => {
+          expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/enabled': '1' })), {
+            prop: 'enabled',
+            severity: 'error',
+            contains: ['true or false'],
+          });
+        });
+      });
+
+      // Fences, not red-first cases: every one of them passed before the
+      // whitelist existed, because the validator accepted every leaf. They
+      // exist to hold the whitelist to the arms `_set` actually has.
+      describe('leaves the _set chain does have an arm for (fences)', () => {
+        // skeleton_3d.cpp:85 (`name`, through add_bone), :92, :94, :96 — no
+        // format check is claimed for these, only that the key is recognised.
+        it('accepts the leaves written beside the pose components', () => {
+          expectNoErrors(
+            scene(
+              node('Skeleton3D', {
+                'bones/0/name': '"Root"',
+                'bones/0/parent': '-1',
+                'bones/0/rest': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+                'bones/0/enabled': 'true',
+              })
+            ),
+            { ruleName: 'strict-parser' }
+          );
+        });
+
+        // skeleton_3d.cpp:107, behind `#ifndef DISABLE_DEPRECATED` (:106).
+        // A default build leaves that undefined, so the 3.x pose format loads.
+        it('accepts the 3.x pose and bound_children arms', () => {
+          expectNoErrors(
+            scene(
+              node('Skeleton3D', {
+                'bones/0/pose': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+                'bones/0/bound_children': '[]',
+              })
+            ),
+            { ruleName: 'strict-parser' }
+          );
+        });
+
+        // The trap a `BONE_LEAVES.has(match[2])` whitelist springs: `_set`
+        // dispatches on `path.get_slicec('/', 2)` (skeleton_3d.cpp:83) and
+        // reads the meta key from slice 3 separately (:105), so the arm is
+        // `bone_meta` and the key below it is never part of the leaf name.
+        // `_get_property_list` writes exactly this shape (:204).
+        it('accepts a bone_meta key below the leaf', () => {
+          expectNoErrors(
+            scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })),
+            { ruleName: 'strict-parser' }
+          );
+        });
+
+        // Slice 3 of `bones/0/bone_meta` is empty, and `set_bone_meta`
+        // (skeleton_3d.cpp:686) guards only the bone index — never the key — so
+        // the write lands under an empty meta name.
+        it('accepts bone_meta with no key below it', () => {
+          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta': '"spine"' })), {
+            ruleName: 'strict-parser',
+          });
+        });
+
+        // Nothing reads past slice 2 on the other arms, so a trailing segment
+        // is ignored rather than refused: `set_bone_pose_position` still gets
+        // this Vector3 (skeleton_3d.cpp:99).
+        it('accepts a trailing segment the dispatch never reads', () => {
+          expectNoErrors(
+            scene(node('Skeleton3D', { 'bones/0/position/ignored': 'Vector3(0, 1, 0)' })),
+            { ruleName: 'strict-parser' }
+          );
+        });
+      });
+
       it('should reject invalid bone property key format', () => {
         expectDiagnostic(scene(node('Skeleton3D', { 'bones/invalid': 'Vector3(0, 0, 0)' })), {
           prop: 'bone property key format',
@@ -237,6 +423,109 @@ describe('Skeleton3D Linter', () => {
       it('should not warn when animate_physical_bones is false', () => {
         expectNoDiagnostic(scene(node('Skeleton3D', { animate_physical_bones: false })), {
           ruleName: 'skeleton3d-deprecated-feature',
+        });
+      });
+    });
+
+    // skeleton_3d.cpp:108-110 fires WARN_DEPRECATED_MSG on both 3.x arms
+    // before recomputing the pose. The engine warns, so the linter warns.
+    describe('3.x bone pose format', () => {
+      it('warns about a bones/<i>/pose key', () => {
+        expectDiagnostic(
+          scene(
+            node('Skeleton3D', {
+              'bones/0/name': '"Root"',
+              'bones/0/pose': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+            })
+          ),
+          {
+            ruleName: 'skeleton3d-deprecated-bone-pose',
+            severity: 'warning',
+            contains: ['deprecated', 're-save'],
+          }
+        );
+      });
+
+      it('warns about a bones/<i>/bound_children key', () => {
+        expectDiagnostic(
+          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/0/bound_children': '[]' })),
+          { ruleName: 'skeleton3d-deprecated-bone-pose', severity: 'warning' }
+        );
+      });
+
+      it('says nothing about the 4.x pose components', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Skeleton3D', {
+              'bones/0/name': '"Root"',
+              'bones/0/position': 'Vector3(0, 0, 0)',
+            })
+          ),
+          { ruleName: 'skeleton3d-deprecated-bone-pose' }
+        );
+      });
+    });
+
+    // `bones/<i>/name` reaches add_bone only while `which == bones.size()`
+    // (skeleton_3d.cpp:85), and `name` has no arm below the index guard at :90,
+    // so a name naming any other slot is a dropped write.
+    describe('bone name ordering', () => {
+      it('leaves a sequentially named skeleton clean', () => {
+        expectNoDiagnostic(
+          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/1/name': '"Head"' })),
+          { ruleName: 'skeleton3d-bone-name-order' }
+        );
+      });
+
+      it('reports a name that skips a bone slot', () => {
+        expectDiagnostic(
+          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/2/name': '"Head"' })),
+          {
+            ruleName: 'skeleton3d-bone-name-order',
+            severity: 'error',
+            contains: ['bones/2/name'],
+          }
+        );
+      });
+
+      it('reports a skeleton whose first bone is not bone 0', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/1/name': '"Root"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
+          severity: 'error',
+          contains: ['bones/1/name'],
+        });
+      });
+
+      // add_bone refuses a name already taken (skeleton_3d.cpp:606), so that
+      // bone is never added and every later slot shifts — the count has to
+      // model it or the next name reports a refusal that never happened.
+      it('reports a duplicate bone name', () => {
+        expectDiagnostic(
+          scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/1/name': '"Root"' })),
+          {
+            ruleName: 'skeleton3d-duplicate-bone-name',
+            severity: 'error',
+            contains: ['bones/1/name', 'Root'],
+          }
+        );
+      });
+
+      // Phase 1 already reports the :605 refusal on this key; the ordering rule
+      // must not report it a second time, only account for the missing bone.
+      it('reports the name refused by add_bone exactly once', () => {
+        const diagnostics = lint(
+          scene(node('Skeleton3D', { 'bones/0/name': '""', 'bones/1/name': '"Head"' }))
+        );
+        const onBone0 = diagnostics.filter((d) => d.message.includes('bones/0/name'));
+        expect(onBone0).toHaveLength(1);
+        expect(onBone0[0]?.message).toContain('non-empty');
+      });
+
+      // A negative index is phase 1's INVALID_BONE_INDEX; the rule leaves it be
+      // rather than reporting the same key under a second name.
+      it('leaves a negative bone index to the validator', () => {
+        expectNoDiagnostic(scene(node('Skeleton3D', { 'bones/-1/name': '"Root"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
         });
       });
     });
@@ -334,6 +623,36 @@ describe('Skeleton3D Linter', () => {
           node('MeshInstance3D', { skeleton: 'NodePath("ComplexSkeleton")' }, { name: 'Mesh' })
         ),
         { ruleName: 'strict-parser' }
+      );
+    });
+
+    // The whole bone block `scenes/fixtures/unit-bone-attachment-3d.tscn`
+    // carries, verbatim: the only skeleton in the corpus, and the shape Godot
+    // itself writes. Every leaf check added here has to leave it clean.
+    it('leaves a Godot-written bone block clean', () => {
+      expectClean(
+        scene(
+          node(
+            'Skeleton3D',
+            {
+              'bones/0/name': '"Root"',
+              'bones/0/parent': '-1',
+              'bones/0/rest': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+              'bones/0/enabled': 'true',
+              'bones/0/position': 'Vector3(0, 0, 0)',
+              'bones/0/rotation': 'Quaternion(0, 0, 0, 1)',
+              'bones/0/scale': 'Vector3(1, 1, 1)',
+              'bones/1/name': '"Head"',
+              'bones/1/parent': '0',
+              'bones/1/rest': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)',
+              'bones/1/enabled': 'true',
+              'bones/1/position': 'Vector3(0, 1, 0)',
+              'bones/1/rotation': 'Quaternion(0, 0, 0, 1)',
+              'bones/1/scale': 'Vector3(1, 1, 1)',
+            },
+            { name: 'Skeleton3D' }
+          )
+        )
       );
     });
 
