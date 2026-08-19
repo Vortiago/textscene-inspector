@@ -23,7 +23,15 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import type { MeshInstance3DProperties } from './types';
 import type {
   TscnExternalResource,
@@ -121,6 +129,13 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties, internalResources, externalResources]
   );
 
+  // NOT one of the overrides above: `material_overlay` never competes for a
+  // surface slot. It is resolved on its own because it is drawn on its own.
+  const overlaySource = useMemo(
+    () => resolveMaterialSource(properties.materialOverlay, internalResources, externalResources),
+    [properties.materialOverlay, internalResources, externalResources]
+  );
+
   const materialScalars = useMemo(
     () =>
       materialSubResource
@@ -183,13 +198,16 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     onBeforeShadow: shadowFlags.onBeforeShadow,
     godotLayers: properties.layers,
     subtree: children,
+    overlay: overlaySource ? (
+      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} />
+    ) : null,
   };
 
   // Unresolved mesh (no mesh, external GLB, missing SubResource): magenta
   // wireframe placeholder. An external ArrayMesh (`arrayMeshPath`) is NOT
   // unresolved — it loads asynchronously below.
   if (!meshResource && !arrayMeshPath) {
-    return <MeshShell {...shellProps}>{UNRESOLVED_MESH}</MeshShell>;
+    return <MeshShell {...shellProps} overlay={null}>{UNRESOLVED_MESH}</MeshShell>;
   }
 
   // External ArrayMesh: surface its load states. `unavailable` → the .tres
@@ -197,7 +215,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // nothing until the geometry arrives (the node still lives in the tree view).
   if (arrayMeshPath) {
     if (arrayMeshResult.status === 'unavailable') {
-      return <MeshShell {...shellProps}>{UNRESOLVED_MESH}</MeshShell>;
+      return <MeshShell {...shellProps} overlay={null}>{UNRESOLVED_MESH}</MeshShell>;
     }
     // Still loading: draw no geometry, but keep the shell so the node's own
     // descendants (which do not depend on the .tres) stay mounted meanwhile.
@@ -242,7 +260,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // placeholder branch trigger, alongside a cyclic ViewportTexture albedo.
   if (materialUnresolved) {
     return (
-      <MeshShell {...shellProps}>
+      <MeshShell {...shellProps} overlay={null}>
         {geometryElement}
         <meshStandardMaterial key={PLACEHOLDER_MATERIAL.key} {...PLACEHOLDER_MATERIAL.props} />
       </MeshShell>
@@ -283,6 +301,70 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
 }
 
+/**
+ * The overlay's draw-order key. Any value above the 3D default (0) puts it after
+ * its own surface; 1 keeps it as close to that surface as three allows, since
+ * every step also steps it past unrelated content at the same depth.
+ */
+const MATERIAL_OVERLAY_RENDER_ORDER = 1;
+
+/** Opt this mesh out of picking entirely — three calls `raycast` and collects nothing. */
+const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
+
+/**
+ * `material_overlay`'s own draw: the surface's geometry a second time, with the
+ * overlay material.
+ *
+ * A separate mesh rather than an extra entry in the base mesh's material array,
+ * because Godot's overlay covers EVERY surface — `_geometry_instance_add_surface`
+ * runs per surface and adds it to each — while a material array is indexed by
+ * surface. Handing three one material and a grouped geometry draws the whole
+ * index range once, which is the same pixels.
+ *
+ * The geometry comes off the base mesh at commit time rather than being built
+ * again: all four of this component's geometry branches attach it there, so
+ * reading it back is what keeps this one component instead of four, and the two
+ * meshes provably share a geometry rather than two equal ones. Re-read on every
+ * commit because a re-parse replaces it.
+ */
+function MaterialOverlayMesh({
+  meshRef,
+  source,
+}: {
+  meshRef: RefObject<THREE.Mesh | null>;
+  source: MaterialSource;
+}) {
+  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
+  // Deliberately dep-less: `[meshRef]` would run this once, and the geometry it
+  // read would then outlive the re-parse that replaced it — which is the case
+  // this exists for. It cannot loop, because the updater returns the SAME value
+  // when nothing moved and React bails out of the re-render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- every commit is the dependency.
+  useLayoutEffect(() => {
+    const attached = meshRef.current?.geometry ?? null;
+    setGeometry((previous) => (previous === attached ? previous : attached));
+  });
+
+  if (!geometry) return null;
+  return (
+    <mesh
+      geometry={geometry}
+      // Explicit, because three's own tie-breaks are creation order — object id
+      // in the transparent list, material id in the opaque one — and a re-parse
+      // that remounts one material and not the other would invert them, drawing
+      // the overlay UNDER the surface it covers. Godot has no such ambiguity:
+      // the overlay is appended after the surface's own material chain.
+      renderOrder={MATERIAL_OVERLAY_RENDER_ORDER}
+      // The base mesh is the node's pickable body and the one `bounds.ts`
+      // measures; a coincident second hit would report the same node twice.
+      raycast={NO_RAYCAST}
+      receiveShadow
+    >
+      <SurfaceMaterialSlot source={source} />
+    </mesh>
+  );
+}
+
 interface MeshShellProps {
   name: string;
   /** Ref to the underlying THREE.Mesh, so `useBillboard` can turn it per frame. */
@@ -300,6 +382,8 @@ interface MeshShellProps {
   godotLayers: number | undefined;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
+  /** `material_overlay`'s second draw of this same surface, if the node has one. */
+  overlay: ReactNode;
   children: ReactNode;
 }
 
@@ -328,6 +412,7 @@ function MeshShell({
   onBeforeShadow,
   godotLayers,
   subtree,
+  overlay,
   children,
 }: MeshShellProps) {
   return (
@@ -363,6 +448,11 @@ function MeshShell({
       {shadowsOnly && (
         <meshBasicMaterial key={SHADOWS_ONLY_MATERIAL.key} {...SHADOWS_ONLY_MATERIAL.props} />
       )}
+      {/* Inside this mesh, so the overlay inherits the transform `useBillboard`
+          may be turning per frame rather than tracking it separately. Skipped
+          under SHADOWS_ONLY, which draws no colour at all — the base's
+          `colorWrite: false` material would not suppress a second mesh's. */}
+      {!shadowsOnly && overlay}
       {subtree}
     </mesh>
   );

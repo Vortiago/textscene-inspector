@@ -1118,6 +1118,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Meshinstance3d Material Overlay",
+    "file": "unit-meshinstance3d-material-overlay.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Plane Mesh",
     "file": "unit-plane-mesh.tscn",
     "category": "Unit - Primitive Meshes"

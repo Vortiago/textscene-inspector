@@ -115,6 +115,16 @@ export const GOLDEN_SCENES = [
   // yield NaN positions, which NaNs the bounding sphere and the camera fit with
   // it, so the failure is a blank frame rather than a subtly wrong one.
   { name: 'arraymesh-compressed', file: 'unit-arraymesh-compressed.tscn' },
+  // `material_overlay` — a SECOND draw of the same surface, over the first
+  // (`render_forward_clustered.cpp:4228-4241`), which no corpus scene sets and
+  // no other fixture can therefore see. The right box carries one and the left
+  // does not, so the three ways this breaks are told apart by colour alone:
+  // green = the overlay never drew, opaque red = it replaced the surface rather
+  // than covering it, muddied red-over-green = it composited. The overlay is
+  // transparent on purpose — an opaque one looks the same whether it composited
+  // or replaced — which also puts it in the alpha pass, where its draw order
+  // relative to its own surface is the thing most likely to regress.
+  { name: 'meshinstance3d-material-overlay', file: 'unit-meshinstance3d-material-overlay.tscn' },
   // A surface material declared as a `[sub_resource]` of the MESH's own `.tres`
   // — the form Godot writes whenever a mesh carries its own materials, and the
   // one kind of material reference nothing else in the bag exercises. Both

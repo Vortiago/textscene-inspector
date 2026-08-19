@@ -97,6 +97,30 @@ is a `Ref<Material>` reduced to `->get_rid()` before the server sees it
 (`scene/3d/mesh_instance_3d.cpp:366`), so where the resource was loaded from is
 not represented past that call.
 
+## Material overlay
+
+`material_overlay` is not part of that precedence chain and never competes for a
+surface slot: `_geometry_instance_add_surface` resolves the surface's own chain
+first and then adds a SECOND surface for the overlay, for every surface
+(`render_forward_clustered.cpp:4228-4241`). So a node carrying both an override
+and an overlay draws the override AND the overlay, and the overlay covers a
+multi-surface mesh entirely rather than one slot of it.
+
+It renders as a second mesh sharing the surface's geometry. That mesh casts no
+shadow of its own — `cast_shadow` belongs to the instance, not to a surface, and
+the geometry is identical, so a second caster could only differ by acne — but it
+does receive, because Godot lights it like any other surface.
+
+Its draw order is pinned with an explicit `renderOrder` rather than left to
+three's sort. Both of three's tie-breaks between coincident draws are creation
+order (object id in the transparent list, material id in the opaque one), and a
+re-parse that remounts one material and not the other would invert them, drawing
+the overlay underneath the surface it covers. The cost is one divergence worth
+naming: a TRANSPARENT overlay therefore also sorts after unrelated transparent
+content at the same depth, where Godot would order the two by depth. Godot's own
+overlay carries no such ambiguity, since it is appended to the surface list
+immediately after the surface's own material chain.
+
 ## Render layers
 
 `layers` — Godot's `VisualInstance3D` render mask — reaches the rendered mesh as
@@ -108,6 +132,25 @@ non-zero, so a mesh on a layer the decal excludes takes no projection.
 The mask deliberately does not ride `THREE.Object3D.layers`: that is three's
 camera-cull state, already in use by the 2D lighting passes, and a mesh moved
 off the camera's layer would vanish outright rather than merely go undecalled.
+
+## Divergences
+
+| What | Fixture | Godot 4.6.3 | Ours |
+| --- | --- | --- | --- |
+| A TRANSPARENT material's bright lit face | `unit-meshinstance3d-material-overlay.tscn` @ 640,350 | `rgb(212, 57, 54)` | `rgb(162, 60, 55)` |
+| The same face, dim side | same @ 600,500 | `rgb(93, 33, 27)` | `rgb(88, 28, 21)` |
+| An OPAQUE face, as the control | same @ 340,260 | `rgb(62, 227, 94)` | `rgb(69, 226, 99)` |
+
+Measured with the red material as an ordinary `surface_material_override/0`, so
+`material_overlay` is not involved: an opaque surface agrees within ~7/255 while
+a transparent one's bright face is 50/255 darker here, and its dim face nearly
+agrees. That shape points at the tonemap/HDR end rather than at the blend
+factor. It reaches the overlay only because the overlay's own material is
+transparent.
+
+These numbers cannot be checked by hand — they are post-tonemap sRGB bytes, so
+decomposing a src-over blend from them is invalid arithmetic. An expected value
+has to come from Godot's own blend and tonemap source.
 
 ## Known limitations
 
