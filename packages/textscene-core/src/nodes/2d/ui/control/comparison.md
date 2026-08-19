@@ -93,9 +93,9 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `rotation` | float |  |
 | `scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `shortcut_context` | null or NodePath("path/to/node") |  |
-| `size_flags_horizontal` | integer |  |
+| `size_flags_horizontal` | bit mask of SIZE_FILL (1) | SIZE_EXPAND (2) | SIZE_SHRINK_CENTER (4) | SIZE_SHRINK_END (8) |  |
 | `size_flags_stretch_ratio` | float >= 0 | warning below |
-| `size_flags_vertical` | integer |  |
+| `size_flags_vertical` | bit mask of SIZE_FILL (1) | SIZE_EXPAND (2) | SIZE_SHRINK_CENTER (4) | SIZE_SHRINK_END (8) |  |
 | `theme` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_colors/*` | Color(r, g, b, a) |  |
 | `theme_override_constants/*` | integer -16384-16384 | warning |

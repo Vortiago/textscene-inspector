@@ -84,7 +84,7 @@ describe('CollisionShape2D Linter', () => {
               ruleName: 'strict-parser',
               contains: ['shape', 'resource reference'],
             },
-            { value: 'SubResource(rect shape)', contains: ['shape'] },
+            { value: 'SubResource(rect shape)', ruleName: 'strict-parser', contains: ['shape'] },
           ],
         },
         {
@@ -183,6 +183,24 @@ describe('CollisionShape2D Linter', () => {
         contains: ['Shape resource not found'],
       });
       expect(resourceError.nodeName).toBe('MissingResource');
+    });
+
+    it('reports nothing missing for a shape that is not a reference at all', () => {
+      // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
+      // `ExtResource` identifiers into the resource arm, so a quoted string
+      // names no id and nothing can be absent. Its format is the strict
+      // parser's diagnostic, and a second "not found" beside it names a
+      // resource nobody wrote — while a well-formed `SubResource("nonexistent")`
+      // still errors, per the case above.
+      const content = scene(
+        staticBody,
+        node('CollisionShape2D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'valid-collisionshape2d-resources' });
+      expectDiagnostic(content, {
+        ruleName: 'strict-parser',
+        contains: ['shape', 'resource reference'],
+      });
     });
 
     it('should pass when shape resource exists', () => {

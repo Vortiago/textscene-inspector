@@ -55,9 +55,29 @@ describe('Control Linter', () => {
       ],
     },
     {
+      // control.cpp:4275, PROPERTY_HINT_FLAGS "Fill:1,Expand:2,Shrink Center:4,
+      // Shrink End:8" — SIZE_FILL|SIZE_EXPAND|SIZE_SHRINK_CENTER|SIZE_SHRINK_END
+      // (control.h:80-83), so 15 is the widest reachable value and
+      // SIZE_SHRINK_BEGIN = 0 (control.h:79) is the empty set. set_h_size_flags
+      // bare-assigns at control.cpp:1845 with no mask and no ERR_FAIL, so bit 16
+      // is KEPT rather than dropped: a warning, never an error.
       prop: 'size_flags_horizontal',
-      valid: [0, 1, 3],
-      invalid: [{ value: 'fill', contains: ['must be a number'] }],
+      valid: [0, 1, 3, 4, 8, 15],
+      invalid: [
+        { value: 16, contains: ["inspector's flag list"], severity: 'warning' },
+        { value: -1, contains: ["inspector's flag list"], severity: 'warning' },
+        { value: 'fill', contains: ['must be an integer'] },
+      ],
+    },
+    {
+      // control.cpp:4276 states the same four bits as :4275 — the vertical hint
+      // is not the narrower one. The `get_allowed_size_flags_vertical()` filter
+      // (control.cpp:555-562) narrows nothing here: it is `is_editor_hint()`-gated
+      // and reads the live parent Container. set_v_size_flags bare-assigns at
+      // control.cpp:1859.
+      prop: 'size_flags_vertical',
+      valid: [0, 2, 15],
+      invalid: [{ value: 16, contains: ["inspector's flag list"], severity: 'warning' }],
     },
     {
       prop: 'modulate',

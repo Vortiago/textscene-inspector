@@ -5,7 +5,8 @@
  * unit under test is the validator, so a failure points at the validator
  * instead of at scene parsing, and no fixture text has to be maintained
  * alongside it. Rule-level behaviour belongs in linter.test.ts, through
- * `Linter`; this slice ships no `linter.ts` (see comparison.md).
+ * `Linter`: the item index's high end is a cross-property bound no validator
+ * can see.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -124,13 +125,23 @@ describe('PopupMenu strict validators', () => {
   });
 
   describe('system_menu_id', () => {
-    it('accepts every named NativeMenu::SystemMenus value', () => {
-      for (const value of ['0', '2', '3', '4', '5']) {
+    it('accepts every NativeMenu::SystemMenus value, 0-5 with no gap', () => {
+      // BIND_ENUM_CONSTANT INVALID_MENU_ID/MAIN_MENU_ID/APPLICATION_MENU_ID/
+      // WINDOW_MENU_ID/HELP_MENU_ID/DOCK_MENU_ID (native_menu.cpp:125-130),
+      // declared contiguously at native_menu.h:59-66.
+      for (const value of ['0', '1', '2', '3', '4', '5']) {
         expect(check('system_menu_id', value)).toBeNull();
       }
     });
-    it('accepts the gap value 1, which no NativeMenu::SystemMenus constant names: v.enumInt only range-checks 0-5', () => {
+    it('keeps 1 accepted: the inspector hint omits MAIN_MENU_ID, the enum declares it', () => {
+      // PopupMenu.xml:673 types the member as NativeMenu.SystemMenus and blesses
+      // the whole enum, so narrowing to the hint's named subset would reject a
+      // value set_system_menu assigns straight through.
       expect(check('system_menu_id', '1')).toBeNull();
+    });
+    it('lists 1=MAIN_MENU_ID among the valid values it names', () => {
+      // NativeMenu.xml:760, `<constant name="MAIN_MENU_ID" value="1">`.
+      expect(check('system_menu_id', '6')?.message).toContain('1=MAIN_MENU_ID');
     });
     it('rejects a non-numeric value', () => {
       expect(check('system_menu_id', 'dock')?.code).toBe('INVALID_SYSTEM_MENU_ID_FORMAT');

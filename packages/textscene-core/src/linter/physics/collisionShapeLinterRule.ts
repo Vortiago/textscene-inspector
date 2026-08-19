@@ -10,7 +10,7 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { referencedResourceType, resourceSlotIsEmpty } from '../resourceChecker.js';
+import { resolveResourceSlot } from '../resourceChecker.js';
 import { parentTypeVerdict, verdictParent } from '../parentType.js';
 import { descendsFrom } from '../nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
@@ -43,15 +43,11 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    // Resolved once. `referencedResourceType` and `checkResourceExists` both
-    // funnel through one linear scan of the scene's resource tables, so asking
-    // separately for existence and for type scanned the same tables twice on
-    // every shape-bearing node in the corpus.
-    const shapeEmpty = resourceSlotIsEmpty(rawProps.shape);
-    const shapeType = shapeEmpty ? undefined : referencedResourceType(scene, rawProps.shape);
+    // One scan of the scene's resource tables for every question below: the
+    // slot's state and, where it resolves, the shape class it names.
+    const shape = resolveResourceSlot(scene, rawProps.shape);
 
-    // ERROR: shape property is REQUIRED
-    if (shapeEmpty) {
+    if (shape.kind === 'empty') {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`,
@@ -59,8 +55,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         nodeType: node.type,
         ruleName: `${prefix}-requires-shape`,
       });
-    } else if (shapeType === undefined) {
-      // `undefined` from the single resolve above IS "resolves to nothing".
+    } else if (shape.kind === 'dangling') {
+      // Only a well-formed reference can be missing. A `not-a-reference` value
+      // names no id, and its format is the strict parser's diagnostic.
       diagnostics.push({
         severity: 'error',
         message: `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`,
@@ -104,10 +101,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // Godot's own message picks `body_type` from a nested VehicleBody3D cast.
     // The push is UNCONDITIONAL on freeze/freeze_mode — "except when frozen" in
     // Godot's own string is message prose, not part of the guard.
-    if (dim === '3D' && parent && rawProps.shape) {
+    if (dim === '3D' && parent && shape.kind === 'resolved') {
       if (descendsFrom(parent.type, 'RigidBody3D')) {
         const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
-        if (shapeType === 'ConcavePolygonShape3D') {
+        if (shape.type === 'ConcavePolygonShape3D') {
           diagnostics.push({
             severity: 'warning',
             message:
@@ -118,7 +115,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
             nodeType: node.type,
             ruleName: `${prefix}-concave-under-rigidbody`,
           });
-        } else if (shapeType === 'WorldBoundaryShape3D') {
+        } else if (shape.type === 'WorldBoundaryShape3D') {
           diagnostics.push({
             severity: 'warning',
             message:
@@ -129,7 +126,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
             ruleName: `${prefix}-worldboundary-under-rigidbody`,
           });
         }
-      } else if (descendsFrom(parent.type, 'CharacterBody3D') && shapeType === 'ConcavePolygonShape3D') {
+      } else if (descendsFrom(parent.type, 'CharacterBody3D') && shape.type === 'ConcavePolygonShape3D') {
         diagnostics.push({
           severity: 'warning',
           message:
@@ -182,11 +179,11 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
 
     // WARNING: shape resolves to a polygon-based Shape2D with limited editing
     // (2D only — collision_shape_2d.cpp:184-189).
-    if (dim === '2D' && rawProps.shape) {
-      if (shapeType === 'ConvexPolygonShape2D' || shapeType === 'ConcavePolygonShape2D') {
+    if (dim === '2D' && shape.kind === 'resolved') {
+      if (shape.type === 'ConvexPolygonShape2D' || shape.type === 'ConcavePolygonShape2D') {
         diagnostics.push({
           severity: 'warning',
-          message: `${type} '${node.name}' uses a ${shapeType}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`,
+          message: `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: `${prefix}-polygon-shape-limited-editing`,

@@ -15,7 +15,7 @@
  * NODE_BASE_TYPES base-walk, so re-declaring an inherited key shadows it and
  * duplicates the rule. Popup itself declares nothing.
  *
- * ## The per-item family cannot be reached through `findValidator` yet
+ * ## The per-item family is reached under the `item_#/*` pattern
  *
  * `PropertyListHelper::get_property_list` names each leaf
  * `vformat("%s%d/%s", prefix, i, name)` (property_list_helper.cpp:149), so a
@@ -25,24 +25,31 @@
  * `item_#/*` pattern rather than `item_/*` (ValidatorRegistry.findOwnValidator).
  *
  * The dispatcher parses the index itself and rejects a malformed one, mirroring
- * `PropertyListHelper::_get_property` (property_list_helper.cpp:47-55).
+ * `PropertyListHelper::_get_property` (property_list_helper.cpp:47-55). It sees
+ * one key at a time, so the high end of the index range — at or past
+ * `item_count` — is linter.ts's rule instead.
  */
 
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';import { ITEM_CHECKABLE_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
+import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
+import { ITEM_CHECKABLE_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
 
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-// popup_menu.cpp:3262, PROPERTY_HINT_ENUM "None:0,Application Menu:2,Window
-// Menu:3,Help Menu:4,Dock:5" (gap at 1: NativeMenu::SystemMenus has no value 1).
+// NativeMenu::SystemMenus, contiguous 0-5 (native_menu.h:59-66), each one bound
+// (native_menu.cpp:125-130) and documented (doc/classes/NativeMenu.xml:757-774).
+// popup_menu.cpp:3262's PROPERTY_HINT_ENUM "None:0,Application Menu:2,Window
+// Menu:3,Help Menu:4,Dock:5" omits MAIN_MENU_ID from the inspector dropdown, but
+// PopupMenu.xml:673 types the member as the whole enum, so 1 stays in range.
 const SYSTEM_MENU = {
-  0: 'NONE',
-  2: 'APPLICATION_MENU',
-  3: 'WINDOW_MENU',
-  4: 'HELP_MENU',
-  5: 'DOCK',
+  0: 'INVALID_MENU_ID',
+  1: 'MAIN_MENU_ID',
+  2: 'APPLICATION_MENU_ID',
+  3: 'WINDOW_MENU_ID',
+  4: 'HELP_MENU_ID',
+  5: 'DOCK_MENU_ID',
 };
 
 // popup_menu.h:65-67, Item::CHECKABLE_TYPE_NONE/CHECK_BOX/RADIO_BUTTON, in
@@ -130,9 +137,8 @@ validatorRegistry.registerAll('PopupMenu', {
   allow_search: v.boolean('allow_search'),
   // popup_menu.cpp:3262, hinted (see SYSTEM_MENU above). set_system_menu
   // (popup_menu.cpp:185-193) assigns unconditionally, so this is hinted, not
-  // enforced. `v.enumInt` only range-checks 0-5 (no membership-set
-  // combinator exists), so a scene author writing the gap value 1 passes
-  // here even though no NativeMenu::SystemMenus constant names it.
+  // enforced. The enum is contiguous, so a 0-5 range check is exactly its
+  // constant set.
   system_menu_id: v.enumInt('system_menu_id', 0, 5, SYSTEM_MENU, {
     hinted: 'popup_menu.cpp:3262',
   }),

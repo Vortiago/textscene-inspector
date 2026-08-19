@@ -1,13 +1,67 @@
 /**
- * `checkResourceExists` where the input is not a clean hit: text that is not a
- * reference at all, and an id that exists in one table but not the other.
+ * `resolveResourceSlot` and the `checkResourceExists` derived from it, where the
+ * input is not a clean hit: text that is not a reference at all, and an id that
+ * exists in one table but not the other.
  *
  * The happy paths are the sibling `resourceChecker.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkResourceExists } from './resourceChecker.js';
+import { checkResourceExists, resolveResourceSlot } from './resourceChecker.js';
 import type { TscnScene, TscnExternalResource } from '../parser/types.js';
+
+/** An empty scene: every reference against it dangles or is no reference at all. */
+const emptyScene: TscnScene = { nodes: [], externalResources: [], internalResources: [] };
+
+describe('resolveResourceSlot', () => {
+  it('reads every spelling of nothing as one empty slot', () => {
+    for (const spelling of [undefined, '', '   ', 'null', 'nil']) {
+      expect(resolveResourceSlot(emptyScene, spelling)).toEqual({ kind: 'empty' });
+    }
+  });
+
+  it('separates a value that is no reference from one that names nothing', () => {
+    // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
+    // `ExtResource` identifiers into the resource arm, so none of these asks
+    // for a resource. Collapsing them into the dangling arm is what reported a
+    // missing resource that nobody had named.
+    for (const value of ['mesh_1', 'SubResource(mesh_1)', 'InvalidResource("mesh_1")', 'SubResource("")']) {
+      expect(resolveResourceSlot(emptyScene, value)).toEqual({ kind: 'not-a-reference' });
+    }
+    // Well-formed, and the id is declared nowhere: `resource_format_text.cpp:113`
+    // fails the load on the sub-resource half, `:138` on the ext-resource one.
+    expect(resolveResourceSlot(emptyScene, 'SubResource("mesh_1")')).toEqual({ kind: 'dangling' });
+    expect(resolveResourceSlot(emptyScene, 'ExtResource("mesh_1")')).toEqual({ kind: 'dangling' });
+  });
+
+  it('carries the declared type of a reference that resolves', () => {
+    const scene: TscnScene = {
+      nodes: [],
+      externalResources: [
+        { id: 'tex_1', type: 'Texture2D', path: 'res://texture.png' },
+      ] as TscnExternalResource[],
+      internalResources: [{ id: '1', type: 'ConcavePolygonShape3D', data: { id: 'shape_1' } }],
+    };
+
+    expect(resolveResourceSlot(scene, 'SubResource("shape_1")')).toEqual({
+      kind: 'resolved',
+      type: 'ConcavePolygonShape3D',
+    });
+    expect(resolveResourceSlot(scene, 'ExtResource("tex_1")')).toEqual({
+      kind: 'resolved',
+      type: 'Texture2D',
+    });
+  });
+
+  it('is the one scan `checkResourceExists` answers from', () => {
+    // The boolean is derived, so the two cannot drift into disagreeing about
+    // which state owes a "resource not found".
+    for (const value of ['', 'null', 'mesh_1', 'SubResource(mesh_1)', 'SubResource("mesh_1")']) {
+      const dangling = resolveResourceSlot(emptyScene, value).kind === 'dangling';
+      expect(checkResourceExists(emptyScene, value)).toBe(!dangling);
+    }
+  });
+});
 
 describe('checkResourceExists', () => {
   // A value that is not a reference at all is TRUE: only a well-formed

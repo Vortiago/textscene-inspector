@@ -38,10 +38,11 @@ export const referenceCombinators = {
   /**
    * `NodePath("path/to/node")` format.
    *
-   * `orNull` is for the rare property that is declared `Variant::OBJECT` and
-   * merely SERIALISES as a NodePath, `Control.shortcut_context` being the only
-   * one here (control.cpp:4307; packed_scene.cpp:884-891 converts the live Node
-   * to `get_path_to(n)` on the way out). It is NOT a default, because
+   * `orNull` is for the property that is declared `Variant::OBJECT` and merely
+   * SERIALISES as a NodePath — `Control.shortcut_context` (control.cpp:4307)
+   * and `OpenXRCompositionLayer.layer_viewport`
+   * (openxr_composition_layer.cpp:151); packed_scene.cpp:884-891 converts the
+   * live Node to `get_path_to(n)` on the way out. It is NOT a default, because
    * `can_convert_strict` lets NIL become OBJECT and nothing else
    * (variant.cpp:543-545): a genuine `Variant::NODE_PATH` property does not take
    * `null`, so widening every call site would accept a value Godot refuses.

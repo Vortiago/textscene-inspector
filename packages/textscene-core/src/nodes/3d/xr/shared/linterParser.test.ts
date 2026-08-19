@@ -72,6 +72,17 @@ describe('OpenXRCompositionLayer shared validators', () => {
     it('rejects a bare node reference', () => {
       expect(check('OpenXRCompositionLayerQuad', 'layer_viewport', 'SubViewport')).not.toBeNull();
     });
+    // The loader is wider than the writer. `variant_parser.cpp:699` reads a
+    // bare `null`/`nil` as `Variant()`, `Variant::can_convert_strict` allows
+    // `NIL -> OBJECT` (variant.cpp:543-545), and `set_layer_viewport`
+    // (openxr_composition_layer.cpp:295-305) clears the slot with no ERR_FAIL:
+    // both of its guards read `p_viewport != nullptr`, and the engine itself
+    // passes `nullptr` at :345. Registered on the shared base, so one arm per
+    // leaf proves the fix reaches all three.
+    it.each(LEAVES)('accepts an explicitly cleared slot on %s', (nodeType) => {
+      expect(check(nodeType, 'layer_viewport', 'null')).toBeNull();
+      expect(check(nodeType, 'layer_viewport', 'nil')).toBeNull();
+    });
   });
 
   describe('android_surface_size / sort_order — format only, no bound', () => {

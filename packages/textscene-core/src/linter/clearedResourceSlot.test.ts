@@ -314,9 +314,9 @@ function shapeOf(content: string): string[] {
 
 /** Where the predicates live: its own calls are the definition, not a slot. */
 const PREDICATE_MODULE = 'linter/resourceChecker.ts';
-const HELPER_CALL_RE = /\b(?:resourceSlotIsEmpty|heldResource)\(([^()]*)\)/g;
+const HELPER_CALL_RE = /\b(?:resourceSlotIsEmpty|heldResource|resolveResourceSlot)\(([^()]*)\)/g;
 /** The same calls counted without their argument, so one the pair above cannot bracket is still seen. */
-const HELPER_OPENER_RE = /\b(?:resourceSlotIsEmpty|heldResource)\(/g;
+const HELPER_OPENER_RE = /\b(?:resourceSlotIsEmpty|heldResource|resolveResourceSlot)\(/g;
 const DOT_KEY_RE = /\.([A-Za-z_$][\w$]*)\s*$/;
 const QUOTED_KEY_RE = /\[\s*['"]([^'"]+)['"]\s*\]\s*$/;
 const COMPUTED_KEY_RE = /\[\s*([A-Za-z_$][\w$]*)\s*\]\s*$/;

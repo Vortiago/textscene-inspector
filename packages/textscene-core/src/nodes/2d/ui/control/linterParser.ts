@@ -16,7 +16,7 @@
 import '../../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { v, shape, propertyError } from '../../../../linter/validators/index.js';
+import { hintedBitField, v, shape, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import { dropTrailingComma, NODE_PATH_LITERAL_RE, splitTopLevel } from '../../../../godot/index.js';
 
@@ -55,6 +55,20 @@ function nodePathArray(name: string): PropertyValidator {
   }, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …]');
 }
 
+/**
+ * `Control::SizeFlags`, the bits the `size_flags_*` hint strings name
+ * (control.h:80-83, bound as `BIND_BITFIELD_FLAG` at control.cpp:4388-4392).
+ * `SIZE_SHRINK_BEGIN = 0` (control.h:79) is the empty set and `SIZE_EXPAND_FILL
+ * = 3` (control.h:85, bound at control.cpp:4390) is `SIZE_EXPAND | SIZE_FILL`,
+ * so neither is a bit of its own.
+ */
+const SIZE_FLAGS_LABELS = {
+  1: 'SIZE_FILL',
+  2: 'SIZE_EXPAND',
+  4: 'SIZE_SHRINK_CENTER',
+  8: 'SIZE_SHRINK_END',
+};
+
 validatorRegistry.registerAll('Control', {
   // Layout regime + anchors/offsets (the free/anchored path).
   // control.cpp:4210, ENUM "Position,Anchors,Container,Uncontrolled" (4 labels,
@@ -92,14 +106,23 @@ validatorRegistry.registerAll('Control', {
   pivot_offset_ratio: v.vector2('pivot_offset_ratio'),
 
   // Container-child sizing.
-  // control.cpp:4275/4276 hint PROPERTY_HINT_FLAGS, not a RANGE — "Fill:1,
-  // Expand:2,Shrink Center:4,Shrink End:8" only names the editor's checkbox
-  // bits. set_h_size_flags/set_v_size_flags (control.cpp:1840-1860) bare-assign
-  // the BitField with no clamp or ERR_FAIL, so no Godot statement backs a
-  // floor of 0 either — the previous `min: 0` was invented, not read from a
-  // hint, so it is deleted rather than grounded.
-  size_flags_horizontal: v.int('size_flags_horizontal'),
-  size_flags_vertical: v.int('size_flags_vertical'),
+  // control.cpp:4275/4276 hint PROPERTY_HINT_FLAGS, not a RANGE, and both state
+  // the same four bits: "Fill:1,Expand:2,Shrink Center:4,Shrink End:8". The
+  // vertical hint is not the narrower one — the per-parent filter at
+  // control.cpp:555-562 is `is_editor_hint()`-gated and reads the live parent
+  // Container, so it grounds nothing static.
+  // set_h_size_flags (control.cpp:1845) and set_v_size_flags (control.cpp:1859)
+  // bare-assign the BitField: no mask, no clamp, no ERR_FAIL. A bit outside the
+  // hint is therefore KEPT, merely unreachable from the inspector, which is
+  // `hintedBitField`'s warning tier and not `maskedBitField`'s error tier.
+  size_flags_horizontal: hintedBitField('size_flags_horizontal', {
+    hinted: 'control.cpp:4275',
+    labels: SIZE_FLAGS_LABELS,
+  }),
+  size_flags_vertical: hintedBitField('size_flags_vertical', {
+    hinted: 'control.cpp:4276',
+    labels: SIZE_FLAGS_LABELS,
+  }),
   // control.cpp:4277, "0,20,0.01,or_greater": only the 0 floor is closed.
   // set_stretch_ratio (control.cpp:1868-1875) assigns unconditionally.
   size_flags_stretch_ratio: v.nonNegativeFloat('size_flags_stretch_ratio', {

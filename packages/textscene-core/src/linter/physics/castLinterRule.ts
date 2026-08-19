@@ -16,7 +16,7 @@
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
-import { checkResourceExists, heldResource, referencedResourceType } from '../resourceChecker.js';
+import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
 
 /** Which of the two cast families — they differ only by the `shape` property. */
@@ -81,8 +81,8 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     if (kind === 'Shape') {
       // "This node cannot interact with other objects unless a Shape2D is
       // assigned." — scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
-      const shape = heldResource(props.shape);
-      if (shape === undefined) {
+      const shape = resolveResourceSlot(context.scene, props.shape);
+      if (shape.kind === 'empty') {
         diagnostics.push({
           severity: 'warning',
           message: `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`,
@@ -90,10 +90,12 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
           nodeType: node.type,
           ruleName: `${prefix}-missing-shape`,
         });
-      } else if (!checkResourceExists(context.scene, shape)) {
+      } else if (shape.kind === 'dangling') {
         // An error, not advice, and the same severity `CollisionShape2D/3D`
         // already gives a dangling `shape` — the two nodes take the identical
-        // property and a broken reference is equally fatal on either.
+        // property and a broken reference is equally fatal on either. A value
+        // that is not a reference names no id, so the strict parser's format
+        // diagnostic is the whole story and this stays silent.
         diagnostics.push({
           severity: 'error',
           message: `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`,
@@ -103,7 +105,8 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
         });
       } else if (
         rejectsConcave &&
-        referencedResourceType(context.scene, props.shape) === 'ConcavePolygonShape3D'
+        shape.kind === 'resolved' &&
+        shape.type === 'ConcavePolygonShape3D'
       ) {
         diagnostics.push({
           severity: 'warning',

@@ -12,12 +12,19 @@
  *
  * `layer_viewport` is declared `Variant::OBJECT` with `PROPERTY_HINT_NODE_TYPE`
  * (openxr_composition_layer.cpp:151), which reads as an Object-typed property —
- * but `PackedScene::_parse_node` (packed_scene.cpp:884-888) converts any
+ * but `PackedScene::_parse_node` (packed_scene.cpp:884-891) converts any
  * OBJECT+NODE_TYPE property whose value is a Node into a NodePath via
  * `p_node->get_path_to(n)` before writing it, and `continue`s (omits the key
- * entirely) when the value never got set. So the `.tscn` spelling is
- * `NodePath("...")`, not an ExtResource/SubResource, and the key is legitimately
- * absent on a layer with no viewport assigned.
+ * entirely) for anything that is still not a NodePath after that — a cleared
+ * slot included. So the written spelling is `NodePath("...")`, not an
+ * ExtResource/SubResource, and the key is legitimately absent on a layer with
+ * no viewport assigned.
+ *
+ * The loader is wider than the writer, which is what the validator answers to:
+ * `variant_parser.cpp:699` reads a bare `null`/`nil` as `Variant()`,
+ * `Variant::can_convert_strict` allows `NIL -> OBJECT` (variant.cpp:543-545),
+ * and `set_layer_viewport(nullptr)` clears the slot with no ERR_FAIL — so a
+ * hand-written `layer_viewport = null` loads and must not be reported.
  *
  * `OpenXRCompositionLayer` also owns a second, UNBOUNDED family: its
  * `_get_property_list` override (:705-719) appends `PropertyInfo`s supplied by
@@ -60,10 +67,14 @@ const SWIZZLE_LABELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'ZERO',
 validatorRegistry.registerAll('OpenXRCompositionLayer', {
   // openxr_composition_layer.cpp:151, OBJECT + PROPERTY_HINT_NODE_TYPE
   // "SubViewport" -> serialises as NodePath (see the docblock above). The
-  // NodePath's TARGET being a SubViewport is not checked: that needs
+  // loader also takes `null`, since NIL converts to OBJECT
+  // (variant.cpp:543-545) and set_layer_viewport clears the slot on a nullptr
+  // (openxr_composition_layer.cpp:295-305 — both guards read
+  // `p_viewport != nullptr`; the engine passes nullptr itself at :345).
+  // The NodePath's TARGET being a SubViewport is not checked: that needs
   // resolving the path against the tree and reading the target's own type,
   // which is a semantic-rule concern, not a per-key format one.
-  layer_viewport: v.nodePath('layer_viewport'),
+  layer_viewport: v.nodePath('layer_viewport', { orNull: true }),
   // :152-157, all BOOL/VECTOR2I/INT with PROPERTY_HINT_NONE, and every setter
   // (:337-432) either bare-assigns or early-returns on equality — no ERR_FAIL,
   // no CLAMP anywhere in this group.
