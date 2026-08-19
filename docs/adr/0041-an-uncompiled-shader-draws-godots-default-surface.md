@@ -8,8 +8,10 @@
 
 ## Context
 
-We compile no GLSL. A Godot `ShaderMaterial` therefore has no faithful render,
-and the previewer has to draw *something* for the surface wearing it.
+Some `ShaderMaterial`s will not be rendered as authored — today none are, since
+we compile no GLSL yet. Whatever the reason, the previewer has to draw
+*something* for the surface wearing one, and this ADR is about that surface
+alone. It takes no position on whether shaders are rendered: see Consequences.
 
 That decision had been made twice, differently, and neither answer knew about the
 other:
@@ -27,14 +29,18 @@ silent side of that split.
 
 The invented surface was also cited to **ADR-0004** — an ADR about CSG nodes
 rendering as their base primitive, superseded by ADR-0027 and silent on shaders.
-No ADR recorded the no-GLSL decision at all, which is how a diagnostic colour
-came to look like a settled one.
+Nothing recorded the substitution at all, which is how a diagnostic colour came
+to look like a settled decision.
 
 ## Decision
 
-**An uncompiled shader draws the surface Godot binds for a mesh with no usable
-material**, from either arrival, and the `logger.warn` carries the diagnosis
-instead of the pixels.
+**A shader we did not render draws the surface Godot binds for a mesh with no
+usable material**, from either arrival, and the `logger.warn` carries the
+diagnosis instead of the pixels.
+
+The load-bearing half is *from either arrival*. Which surface stands in is a
+judgement that can be revisited; that the two arrivals agree is not, because
+Godot does not model the difference between them.
 
 That surface is the hardcoded default shader — mid-grey `ALBEDO 0.6`, `ROUGHNESS
 0.8`, `METALLIC 0.2` — not a default-constructed `StandardMaterial3D`, which is
@@ -59,6 +65,14 @@ The cost is that an unrendered shader is no longer conspicuous in the picture. A
 user skimming a scene will not see that a surface was substituted unless they
 read the log. That is accepted: a distinctive stand-in is a second wrong answer
 layered over the first, and it is the one that misleads a screenshot.
+
+**A best-effort GLSL system later does not contradict this.** It would narrow
+what reaches this fallback — shaders it handles are rendered, the rest arrive
+here exactly as they do now — and the arrival-parity requirement applies to it
+unchanged: whatever a partially-supported shader ends up drawing, the `.tres` and
+`[sub_resource]` forms of it must draw the same thing. Nothing here should be
+read as a decision not to compile GLSL. That is a capability we do not have yet,
+not a position, and this ADR would survive acquiring it.
 
 This does not extend to 2D. `useCanvasItemMaterial` resolves an uncompiled shader
 to `null` on its own stated grounds, and the shapes are genuinely different: a

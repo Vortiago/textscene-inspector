@@ -780,7 +780,7 @@ describe('StandardMaterial3D arrival parity', () => {
 
 /**
  * The fourth arrival, which is not a StandardMaterial3D at all: a material whose
- * shader we do not compile. It reaches the renderer as a `.tres` or as a
+ * shader we do not render. It reaches the renderer as a `.tres` or as a
  * `[sub_resource]`, and Godot cannot tell those apart — so the surface must not
  * depend on which one it was (ADR-0041).
  */

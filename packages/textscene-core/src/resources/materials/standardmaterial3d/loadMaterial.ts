@@ -244,11 +244,11 @@ function defaultStandardMaterial(): THREE.Material {
 }
 
 /**
- * We compile no GLSL (ADR-0041), so a ShaderMaterial draws the surface Godot
- * itself binds when a mesh has no usable material. Same surface its
- * `[sub_resource]` arrival draws — the engine cannot tell the two apart, so
- * neither may we — and the warning below carries the diagnosis instead of the
- * pixels.
+ * A ShaderMaterial we did not render draws the surface Godot itself binds when a
+ * mesh has no usable material (ADR-0041) — the same one its `[sub_resource]`
+ * arrival draws, because the engine cannot tell the two apart. The warning below
+ * carries the diagnosis instead of the pixels. We compile no GLSL yet, so today
+ * that is every ShaderMaterial.
  */
 function uncompiledShaderMaterial(): THREE.Material {
   warn(
