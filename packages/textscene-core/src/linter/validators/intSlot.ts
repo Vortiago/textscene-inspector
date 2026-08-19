@@ -9,7 +9,13 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { INT32_MAX, parseGodotFloat, storedFromFloat, type IntWidth } from '../../godot/index.js';
+import {
+  INT32_MAX,
+  parseGodotFloat,
+  readerLimitedInt,
+  storedFromFloat,
+  type IntWidth,
+} from '../../godot/index.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`) — the conversion every int slot's write
@@ -25,6 +31,16 @@ const INT_SLOT_CITE = 'variant.h:360-377';
  * 3e9` stores -2147483648 where the INT literal `3000000000` stores
  * -1294967296 — so the ALTERATION is the portable claim and the message quotes
  * the literal instead.
+ *
+ * `width` separates two refusals `storedFromFloat` answers with the same NaN.
+ * At uint8/int32/uint32 the C++ type is narrower than a double, so NaN means
+ * the ENGINE alters the value and the error tier is earned. At int64 it is
+ * wider: past 2^53 the double stops being the integer the file states while
+ * `_to_int` carries it intact, so the limit is THIS reader's. Reporting that as
+ * an alteration told the author Godot cannot hold a value it holds exactly, at
+ * a severity that fails `lint:scenes` on a valid file. It stays a diagnostic
+ * rather than silence because the caller reads the NaN as "already reported"
+ * and would otherwise carry it into its own arithmetic.
  */
 export function unrepresentableInt(
   propertyName: string,
@@ -32,9 +48,21 @@ export function unrepresentableInt(
   value: string,
   line: number,
   errorCodeValue: string,
-  num: number | null
+  num: number | null,
+  width: IntWidth = 'int32'
 ): ParseError | null {
   if (num === null || !Number.isNaN(num)) return null;
+  const beyondReader = readerLimitedInt(parseGodotFloat(value) ?? NaN, width);
+  if (beyondReader) {
+    return propertyError(
+      key,
+      line,
+      `Property '${propertyName}' is outside the range this linter reads exactly, got: "${value}". ` +
+        `An int64 slot holds it and Godot stores what the file states; no bound on this value is checked here.`,
+      errorCodeValue,
+      'warning'
+    );
+  }
   return propertyError(
     key,
     line,

@@ -31,7 +31,15 @@
  */
 
 export { CMP_EPSILON, basisDeterminant, isZeroApprox, isEqualApprox, sign, smoothstep } from './math.js';
-export { IS_VALID_INT_RE, literalText, dropTrailingComma, splitTopLevel, stringToInt } from './string.js';
+export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
+export {
+  IS_VALID_INT_RE,
+  literalText,
+  dropTrailingComma,
+  splitTopLevel,
+  stringToInt,
+  toIntIndex,
+} from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
@@ -51,6 +59,7 @@ export {
   type IntWidth,
   parseGodotInt,
   ruleInt,
+  readerLimitedInt,
   storedFromFloat,
   storedInt,
   toInt16,

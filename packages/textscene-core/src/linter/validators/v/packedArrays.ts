@@ -5,15 +5,20 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
-import type { IntWidth } from '../../../godot/index.js';
+import { readerLimitedInt, type IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {
-  /** `unreadable` — the tokenizer refuses it. `unstorable` — it reads, the slot's width cannot hold it. */
-  kind: 'unreadable' | 'unstorable';
+  /**
+   * `unreadable` — the tokenizer refuses it. `unstorable` — it reads and the
+   * slot's C++ type alters it. `beyondReader` — an int64 element the engine
+   * carries intact and this reader cannot: past 2^53 the double stops being the
+   * integer the text states, which is a limit here rather than in Godot.
+   */
+  kind: 'unreadable' | 'unstorable' | 'beyondReader';
   text: string;
 }
 
@@ -83,7 +88,10 @@ function scanIntElements(
     const asFloat = parseGodotFloat(text);
     if (asFloat === null) return { error: { kind: 'unreadable', text }, truncated: null };
     const stored = storedFromFloat(asFloat, text, width);
-    if (Number.isNaN(stored)) return { error: { kind: 'unstorable', text }, truncated: null };
+    if (Number.isNaN(stored)) {
+      const kind = readerLimitedInt(asFloat, width) ? 'beyondReader' : 'unstorable';
+      return { error: { kind, text }, truncated: null };
+    }
     if (truncated === null && Number.isFinite(asFloat) && !Number.isInteger(asFloat)) {
       truncated = { text, stored };
     }
@@ -126,13 +134,22 @@ export function badIntElement(
               `Property '${propertyName}' contains a non-numeric value: "${error.text}"`,
               codes.format
             )
-          : propertyError(
-              key,
-              line,
-              `Property '${propertyName}' has an element no ${holder} can hold: "${error.text}"`,
-              codes.value,
-              'error'
-            ),
+          : error.kind === 'beyondReader'
+            ? propertyError(
+                key,
+                line,
+                `Property '${propertyName}' has an element outside the range this linter reads exactly: "${error.text}". ` +
+                  `An int64 element holds it and Godot stores what the file states; no bound on this element is checked here.`,
+                codes.value,
+                'warning'
+              )
+            : propertyError(
+                key,
+                line,
+                `Property '${propertyName}' has an element no ${holder} can hold: "${error.text}"`,
+                codes.value,
+                'error'
+              ),
     truncated:
       truncated === null
         ? null

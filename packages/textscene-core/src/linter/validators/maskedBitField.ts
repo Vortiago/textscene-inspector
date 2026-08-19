@@ -108,7 +108,7 @@ function bitField(
     }
     // A non-finite READS but does not FIT, and every bit test below is false
     // for NaN, so without this the slot said nothing at all.
-    const refused = unrepresentableInt(name, key, value, line, valueCode(name), num);
+    const refused = unrepresentableInt(name, key, value, line, valueCode(name), num, 'int64');
     if (refused) return refused;
     for (const arm of opts.arms) {
       // `num > arm.bits` first only as a cheap reject: a value whose bits all

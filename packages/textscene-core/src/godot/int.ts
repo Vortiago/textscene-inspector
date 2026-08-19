@@ -121,6 +121,37 @@ const ROUND_TRIPS: Record<IntWidth, readonly [number, number]> = {
   int64: [INT64_MIN, INT64_MAX],
 };
 
+/**
+ * `int64_t`'s OWN range, which is wider than any of the bounds above.
+ *
+ * `INT64_MIN`/`INT64_MAX` here are the READER's limit — the safe-integer band,
+ * past which a double stops being the integer the text states. The C++ type
+ * runs to 2^63, and the gap between the two is the band where Godot holds the
+ * value exactly and this module cannot. `-2^63` is spelled exactly by a double;
+ * `2^63 - 1` is not, so the top is an exclusive `< 2^63`.
+ */
+const INT64_TRUE_MIN = -(2 ** 63);
+const INT64_TRUE_LIMIT = 2 ** 63;
+
+/**
+ * Whether a refusal at this width is THIS reader's limit rather than an
+ * alteration by the engine.
+ *
+ * {@link storedFromFloat} answers both with the same NaN, and they carry
+ * opposite claims. At uint8/int32/uint32 the C++ type is narrower than a
+ * double, so NaN always means the engine altered the value. At int64 it is
+ * wider, and inside the type's own range `_to_int` carries the value intact —
+ * the file states exactly what Godot stores, and only the double loses it.
+ *
+ * False outside that range at every width: past 2^63 a FLOAT literal is
+ * undefined behaviour (`variant.h:369-370`) and an INT literal saturates
+ * (`ustring.cpp:2650-2658`), and both genuinely alter the value.
+ */
+export function readerLimitedInt(asFloat: number, width: IntWidth): boolean {
+  if (width !== 'int64') return false;
+  return Number.isFinite(asFloat) && asFloat >= INT64_TRUE_MIN && asFloat < INT64_TRUE_LIMIT;
+}
+
 /** `T(int64)`, the integral conversion — defined for every input, in both directions. */
 function wrapToWidth(value: number, width: IntWidth): number {
   if (width === 'int32') return toInt32(value);
