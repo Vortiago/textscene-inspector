@@ -275,8 +275,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'built once per sky, consumed by a single cube render, disposed with the environment',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
     'the imperative half of the resource pipeline: every texture is already resolved before it is called, so the material is constructed complete',
-  'packages/textscene-core/src/resources/materials/standardmaterial3d/loadMaterial.ts':
-    'the uncompiled-shader fallback, literal-only',
 };
 
 /**

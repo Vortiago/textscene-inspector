@@ -1,9 +1,9 @@
 /**
  * StandardMaterial3D resource slice — Godot's default 3D surface (ADR-0031).
  *
- * Claims `ShaderMaterial` too: we do not compile GLSL (ADR-0004), so a
- * ShaderMaterial resolves to this slice's translucent standard-material
- * fallback rather than to a permanent missing-resources row.
+ * Claims `ShaderMaterial` too: we compile no GLSL, so a ShaderMaterial resolves
+ * to Godot's own default 3D surface (ADR-0041) rather than to a permanent
+ * missing-resources row.
  *
  * No `extensions` claim. `.tres` is Godot's one text-resource container and
  * several slices read it (TileSet, MeshLibrary, SpriteFrames, ArrayMesh), so

@@ -99,7 +99,7 @@ export async function createMaterialFromContent(
     throw new Error(`Unsupported material type: ${body.type}`);
   }
 
-  if (body.type === 'ShaderMaterial') return shaderMaterialFallback();
+  if (body.type === 'ShaderMaterial') return uncompiledShaderMaterial();
 
   const scalars = parseStandardMaterial3DScalars(body.properties);
   const { textures, proceduralKeys } = await resolveTextureSlots(
@@ -244,22 +244,15 @@ function defaultStandardMaterial(): THREE.Material {
 }
 
 /**
- * ADR-0004: we do not compile GLSL. Approximate a ShaderMaterial as a
- * translucent, slightly-emissive standard material so the lenient render path
- * keeps going instead of throwing (e.g. a window-glass shader).
+ * We compile no GLSL (ADR-0041), so a ShaderMaterial draws the surface Godot
+ * itself binds when a mesh has no usable material. Same surface its
+ * `[sub_resource]` arrival draws — the engine cannot tell the two apart, so
+ * neither may we — and the warning below carries the diagnosis instead of the
+ * pixels.
  */
-function shaderMaterialFallback(): THREE.Material {
+function uncompiledShaderMaterial(): THREE.Material {
   warn(
-    '[material] ShaderMaterial is not compiled — rendering a translucent ' +
-      'standard-material fallback.'
+    "[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface."
   );
-  return new THREE.MeshStandardMaterial({
-    color: 0xaaccdd,
-    transparent: true,
-    opacity: 0.5,
-    metalness: 0.2,
-    roughness: 0.1,
-    emissive: 0x223344,
-    emissiveIntensity: 0.3,
-  });
+  return buildStandardMaterial(null);
 }

@@ -777,3 +777,61 @@ describe('StandardMaterial3D arrival parity', () => {
     ]);
   });
 });
+
+/**
+ * The fourth arrival, which is not a StandardMaterial3D at all: a material whose
+ * shader we do not compile. It reaches the renderer as a `.tres` or as a
+ * `[sub_resource]`, and Godot cannot tell those apart — so the surface must not
+ * depend on which one it was (ADR-0041).
+ */
+describe('uncompiled ShaderMaterial arrival parity', () => {
+  /** Godot's hardcoded default 3D shader, read off a built material. */
+  function surfaceOf(material: THREE.Material) {
+    const std = material as THREE.MeshStandardMaterial;
+    return {
+      albedoLinear: std.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace),
+      roughness: std.roughness,
+      metalness: std.metalness,
+      transparent: std.transparent,
+      opacity: std.opacity,
+    };
+  }
+
+  it('the .tres arrival lands on the surface the scene arrival renders', async () => {
+    const fromTres = await createMaterialFromContent(
+      '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
+    );
+    // The scene arrival: `resolveMaterialSource` declines the sub-resource, so
+    // the slot mounts with no scalars — the derivation's "no material" input.
+    const fromScene = buildStandardMaterial(null);
+    expect(surfaceOf(fromTres)).toEqual(surfaceOf(fromScene));
+  });
+
+  it('that surface is Godot’s default 3D shader, not a default StandardMaterial3D', async () => {
+    // The distinction the whole decision turns on: a default-CONSTRUCTED
+    // StandardMaterial3D is white and fully rough, which is a different surface
+    // and would look like a material that rendered.
+    const shader = surfaceOf(await createMaterialFromContent(
+      '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
+    ));
+    expect(shader.albedoLinear.r).toBeCloseTo(0.6, 5);
+    expect(shader.roughness).toBeCloseTo(0.8, 5);
+    expect(shader.metalness).toBeCloseTo(0.2, 5);
+
+    const defaultConstructed = surfaceOf(
+      buildStandardMaterial(parseStandardMaterial3DScalars({}))
+    );
+    expect(defaultConstructed.albedoLinear.r).not.toBeCloseTo(0.6, 2);
+  });
+
+  it('the reactive adapter mounts that same surface for a null material', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <StandardMaterialSlot scalars={null} />
+    );
+    const mounted = renderer.scene.findAllByType('MeshStandardMaterial')[0];
+    expect(mounted).toBeDefined();
+    const built = surfaceOf(buildStandardMaterial(null));
+    expect((mounted!.props as { roughness: number }).roughness).toBeCloseTo(built.roughness, 5);
+    expect((mounted!.props as { metalness: number }).metalness).toBeCloseTo(built.metalness, 5);
+  });
+});

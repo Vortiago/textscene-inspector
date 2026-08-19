@@ -32,9 +32,9 @@ describe('standardmaterial3d slice registration', () => {
   });
 
   it('claims ShaderMaterial too, so it reaches the uncompiled-shader fallback', () => {
-    // ADR-0004: no GLSL compilation. Without the claim, routing would find no
-    // slice and a shipped window-glass shader would sit in the
-    // missing-resources panel forever.
+    // ADR-0041: no GLSL compilation, so a shader draws Godot's default surface.
+    // Without the claim, routing would find no slice and a shipped window-glass
+    // shader would sit in the missing-resources panel forever.
     expect(resourceSliceRegistry.byTypeName('ShaderMaterial')?.slice).toBe(
       'standardmaterial3d'
     );

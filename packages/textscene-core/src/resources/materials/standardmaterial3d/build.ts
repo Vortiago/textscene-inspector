@@ -22,15 +22,36 @@ import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } fro
 /**
  * Build the material this decoded StandardMaterial3D describes.
  *
+ * `null` is the derivation's "no material" input — Godot's default 3D surface
+ * rather than a default-constructed StandardMaterial3D — and is accepted here
+ * because the reactive adapter accepts it: an adapter narrower than the
+ * derivation it wraps forces its callers to reinvent the case it dropped.
+ *
  * Textures are bound here rather than at load: what a slot needs of the texture
  * it samples is per-material and per-slot in Godot but lives on the
  * `THREE.Texture` in three, and the loader caches one texture per path — see
  * `textureBinding.ts` for the rule and for why that means cloning.
  */
 export function buildStandardMaterial(
-  scalars: StandardMaterial3DScalars,
+  scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {}
 ): THREE.Material {
+  const bag = standardMaterialBag(scalars, scalars ? boundTextures(scalars, textures) : {});
+  switch (bag.materialClass) {
+    case 'basic':
+      return new THREE.MeshBasicMaterial(bag.props);
+    case 'physical':
+      return new THREE.MeshPhysicalMaterial(bag.props);
+    default:
+      return new THREE.MeshStandardMaterial(bag.props);
+  }
+}
+
+/** Each populated slot's texture put through this material's own binding. */
+function boundTextures(
+  scalars: StandardMaterial3DScalars,
+  textures: ResolvedTextureSlots
+): ResolvedTextureSlots {
   const state = materialTextureState(scalars);
   const bound: ResolvedTextureSlots = {};
   for (const slot of Object.keys(textures) as TextureSlot[]) {
@@ -46,14 +67,5 @@ export function buildStandardMaterial(
     }
     bound[slot] = applied;
   }
-
-  const bag = standardMaterialBag(scalars, bound);
-  switch (bag.materialClass) {
-    case 'basic':
-      return new THREE.MeshBasicMaterial(bag.props);
-    case 'physical':
-      return new THREE.MeshPhysicalMaterial(bag.props);
-    default:
-      return new THREE.MeshStandardMaterial(bag.props);
-  }
+  return bound;
 }

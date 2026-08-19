@@ -4,7 +4,8 @@
  * is the derivation's, covered by the materialBag and meshinstance3d material
  * tests.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as logger from '../../logger';
 import { resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
@@ -55,6 +56,26 @@ describe('resolveMaterialSource', () => {
   it('returns undefined for a sub-resource that is not a StandardMaterial3D', () => {
     expect(resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL)).toBeUndefined();
     expect(resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL)).toBeUndefined();
+  });
+
+  it('says so when it declines a shader, as the .tres arrival does', () => {
+    // Both arrivals draw Godot's default surface, so the warning is the only
+    // thing telling the user a shader was skipped. Silent on one side and not
+    // the other is the asymmetry, in a different coat.
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    try {
+      resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toContain('ShaderMaterial');
+
+      // A sub-resource that is not a material at all names a defect in the
+      // scene, not a capability we lack — nothing to report from here.
+      warn.mockClear();
+      resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('returns undefined for an ExtResource that is not a .tres document', () => {

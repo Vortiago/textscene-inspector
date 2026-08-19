@@ -19,6 +19,7 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import { warn } from '../../logger';
 import { parseResourceReference } from '../../resources/SubResourceResolver';
 import { findSubResource } from '../SceneResourcesContext';
 
@@ -39,6 +40,18 @@ export function resolveMaterialSource(
 
   if (parsed.type === 'SubResource') {
     const resource = findSubResource(internalResources, parsed.id);
+    if (resource?.type === 'ShaderMaterial') {
+      // Declined rather than decoded: a ShaderMaterial's body has none of the
+      // keys the StandardMaterial3D decode reads, so parsing it would yield a
+      // default-constructed material — white and matte — where the surface
+      // should be the one Godot binds for a mesh with no usable material. The
+      // `.tres` arrival draws that same surface and says so; this is the other
+      // half of saying so (ADR-0041). Repeats per reparse, where the `.tres`
+      // side warns once — the loader caches what it built, and a scene body has
+      // no such cache.
+      warn("[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface.");
+      return undefined;
+    }
     if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
     return { kind: 'scene', resource };
   }

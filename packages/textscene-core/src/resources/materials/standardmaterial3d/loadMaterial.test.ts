@@ -1,6 +1,6 @@
 /**
  * The `.tres` arrival path: path detection, section selection (whole-file body
- * vs a named `[sub_resource]`), the ShaderMaterial and header-only fallbacks,
+ * vs a named `[sub_resource]`), the uncompiled-shader and header-only surfaces,
  * and texture-slot loading through the injected loader, resolved against the
  * owning file's own `[ext_resource]` headers.
  *
@@ -209,12 +209,23 @@ describe('createMaterialFromContent', () => {
     expect(texture.repeat.x).toBe(1);
   });
 
-  it('falls back to a translucent standard material for ShaderMaterial', async () => {
+  it('renders an uncompiled ShaderMaterial as Godot\u2019s default 3D surface', async () => {
+    // The same surface the sub-resource arrival of an uncompiled shader draws,
+    // and the same one an unmaterialed mesh draws. Not a default-CONSTRUCTED
+    // StandardMaterial3D (white, fully rough, non-metallic) \u2014 a ShaderMaterial
+    // is not one of those, so the honest substitute is the hardcoded default
+    // shader every backend binds when a surface has no usable material.
     const material = await createMaterialFromContent(tres('ShaderMaterial', ''));
     expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
     const std = material as THREE.MeshStandardMaterial;
-    expect(std.transparent).toBe(true);
-    expect(std.opacity).toBe(0.5);
+    expect(std.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace).r)
+      .toBeCloseTo(0.6, 5);
+    expect(std.roughness).toBeCloseTo(0.8, 5);
+    expect(std.metalness).toBeCloseTo(0.2, 5);
+    // Best-effort rendering: no invented transparency standing in for a shader
+    // nobody can see through.
+    expect(std.transparent).toBe(false);
+    expect(std.opacity).toBe(1);
   });
 
   it('rejects unsupported material types', async () => {
