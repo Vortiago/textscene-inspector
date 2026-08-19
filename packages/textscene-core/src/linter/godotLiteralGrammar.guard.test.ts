@@ -97,10 +97,29 @@ function withoutInterpolations(src: string): string {
   return src.replace(/\$\{[^}]*\}/g, '');
 }
 
+/**
+ * A quote inside the candidate, which makes it prose rather than a grammar.
+ *
+ * `REGEX_LITERAL` reads `/` as a delimiter wherever it stands, and a STRING may
+ * hold two of them: the `accepts` sentence on `skeleton3d`'s bone dispatcher
+ * says ``no `:` or `/`), … `rest` (Transform3D), … `position`/`scale``, whose
+ * two slashes bracket a span containing `Transform3D` and read as a hand-rolled
+ * Transform3D grammar.
+ *
+ * Blanking string literals first would trade this for the mirror-image bug,
+ * since a regex may itself contain a quote and would then be the thing hidden.
+ * Every name in {@link COMPOSITES} is a NUMERIC tuple — `Vector3(1, 2, 3)`,
+ * `Color(1, 1, 1, 1)` — so no grammar for one has any reason to spell a quote,
+ * while prose about them constantly does.
+ */
+const QUOTE = /['"`]/;
+
 /** The offending pattern text, or `null` when the file spells no composite in a regex. */
 function handRolledComposite(source: string): string | null {
   const src = withoutInterpolations(stripComments(source));
-  for (const m of src.matchAll(REGEX_LITERAL)) if (COMPOSITE_NAME.test(m[1]!)) return m[0];
+  for (const m of src.matchAll(REGEX_LITERAL)) {
+    if (COMPOSITE_NAME.test(m[1]!) && !QUOTE.test(m[1]!)) return m[0];
+  }
   for (const m of src.matchAll(REGEXP_CTOR)) if (COMPOSITE_NAME.test(m[2]!)) return m[0];
   return null;
 }
@@ -304,6 +323,19 @@ describe('Godot composite literal grammar', () => {
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
+  });
+
+  // The detector's own failure mode, pinned because no source file exercises it
+  // any more: `skeleton3d`'s `accepts` sentence tripped it, and rewording that
+  // one string would have left the next slice to rediscover it.
+  it('tells a grammar from prose that merely spells one', () => {
+    const prose =
+      "validator.accepts = 'leaf `name` (no `:` or `/`), `rest` (Transform3D), `position`/`scale` (Vector3)';";
+    expect(handRolledComposite(prose)).toBeNull();
+
+    // Still caught, so the quote rule narrows the detector rather than blunting it.
+    const grammar = 'const RE = /^Transform3D\\(\\s*(-?\\d+)\\s*\\)$/;';
+    expect(handRolledComposite(grammar)).not.toBeNull();
   });
 
   it('reads a matched component through the shared reader, never a raw parse', () => {
