@@ -1,9 +1,20 @@
+/**
+ * The resolution step alone — which of the two arrivals a material reference
+ * names, and when it names neither. What the resolved material then LOOKS like
+ * is the derivation's, covered by the materialBag and meshinstance3d material
+ * tests.
+ */
 import { describe, expect, it } from 'vitest';
 import { resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 const INTERNAL: TscnInternalResource[] = [
   { id: 'Mat_body', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
+  {
+    id: 'Mat_odd',
+    type: 'StandardMaterial3D',
+    data: { metallic: '0.75', metallic_specular: 'garbage-not-a-number', some_future_key: 'x' },
+  },
   { id: 'Shader_fx', type: 'ShaderMaterial', data: {} },
   { id: 'Mesh_box', type: 'BoxMesh', data: {} },
 ];
@@ -52,5 +63,28 @@ describe('resolveMaterialSource', () => {
 
   it('returns undefined for a value that is not a resource reference at all', () => {
     expect(resolveMaterialSource('Color(1, 0, 0, 1)', INTERNAL, EXTERNAL)).toBeUndefined();
+  });
+
+  it('returns undefined for a reference whose grammar is malformed', () => {
+    // Unterminated: the id inside reads as a plausible one, so a resolver
+    // matching loosely would resolve it.
+    expect(resolveMaterialSource('SubResource("Mat_body"', INTERNAL, EXTERNAL)).toBeUndefined();
+  });
+
+  it('returns undefined when the scene declares no resources at all', () => {
+    expect(resolveMaterialSource('SubResource("Mat_body")', [], [])).toBeUndefined();
+    expect(resolveMaterialSource('ExtResource("4")', [], [])).toBeUndefined();
+  });
+
+  it('hands back the sub-resource by identity, unknown and garbage values intact', () => {
+    // A lookup, not a validator: every property survives to the decode, which is
+    // the one place that decides what a value means.
+    const resolved = resolveMaterialSource('SubResource("Mat_odd")', INTERNAL, EXTERNAL);
+    expect(resolved).toEqual({ kind: 'scene', resource: INTERNAL[1] });
+    expect((resolved as { resource: TscnInternalResource }).resource.data).toEqual({
+      metallic: '0.75',
+      metallic_specular: 'garbage-not-a-number',
+      some_future_key: 'x',
+    });
   });
 });

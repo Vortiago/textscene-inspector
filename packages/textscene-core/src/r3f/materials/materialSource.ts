@@ -8,6 +8,12 @@
  * different slot components (`StandardMaterialSlot` vs `ExternalMaterialSlot`),
  * so the choice is made once here and the caller just switches on `kind`.
  *
+ * The ONE place that choice is made. Every node type holding a material
+ * reference — MeshInstance3D's own slot and its two override properties, the CSG
+ * primitives, a CSG root's per-surface slots — reads this, because Godot models
+ * none of them differently: every one of those setters takes a `Ref<Material>`,
+ * and where that resource was loaded from is not represented past the call.
+ *
  * An unresolvable reference comes back `undefined` — the same fall-through Godot
  * takes when the RID is invalid.
  */
@@ -38,8 +44,10 @@ export function resolveMaterialSource(
   }
 
   const ext = externalResources.find((r) => r.id === parsed.id);
-  // Only a `.tres` is a material document; an ExtResource material reference to
-  // anything else is a form the pipeline has no builder for.
+  // Only a `.tres` is a material document, which is exactly what the pipeline
+  // that would load it accepts (`standardmaterial3d/loadMaterial.ts`'s
+  // `isMaterialPath`). Minting an address it must refuse buys a guaranteed-failed
+  // load and the same default surface this returns.
   if (!ext?.path || !ext.path.endsWith('.tres')) return undefined;
   return { kind: 'path', path: ext.path };
 }

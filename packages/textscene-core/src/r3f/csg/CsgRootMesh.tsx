@@ -14,10 +14,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { resolveStandardMaterial } from '../materials/resolveStandardMaterial';
 import { SurfaceMaterialSlot } from '../materials/SurfaceMaterialSlot';
-import type { MaterialSource } from '../materials/materialSource';
-import { resolveExtResourcePath } from '../../resources/SubResourceResolver';
+import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useSceneResources } from '../SceneResourcesContext';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
@@ -98,13 +96,9 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
   // for any surface count.
   const surfaces = useMemo((): Array<MaterialSource | undefined> => {
     if (!evaluation) return [];
-    return evaluation.surfaceSlots.map((planSurface) => {
-      const reference = plan.surfaces[planSurface];
-      const sub = resolveStandardMaterial(reference, internalResources);
-      if (sub) return { kind: 'scene', resource: sub };
-      const path = resolveExtResourcePath(reference, externalResources);
-      return path === null ? undefined : { kind: 'path', path };
-    });
+    return evaluation.surfaceSlots.map((planSurface) =>
+      resolveMaterialSource(plan.surfaces[planSurface], internalResources, externalResources)
+    );
   }, [evaluation, plan.surfaces, internalResources, externalResources]);
 
   const drawable = evaluation !== null && evaluation.geometry.getAttribute('position')?.count !== 0;

@@ -1,10 +1,10 @@
 /**
- * CSG `material` accepts an ExtResource `.tres`, not just a SubResource.
+ * A CSG `material` reaches the same slot whichever way it arrives — an
+ * ExtResource `.tres` or an inline `[sub_resource]` — because the node holds only
+ * a `Ref<Material>` and cannot tell them apart.
  *
- * `resolveStandardMaterial` understands only `SubResource("id")`, so a CSG node
- * pointing at a `.tres` fell through to the default-material path instead. Every
- * CSG fixture in the golden bag declares its material inline as a sub-resource,
- * so no golden can see the external path at all — which is why it lives here.
+ * Every CSG fixture in the golden bag declares its material inline, so no golden
+ * can see the external arrival at all; this is the only thing that gates it.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

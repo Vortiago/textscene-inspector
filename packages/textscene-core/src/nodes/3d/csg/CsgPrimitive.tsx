@@ -26,10 +26,8 @@ import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../base/node3d/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
@@ -88,14 +86,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
-  // A CSG `material` path is as often an ExtResource `.tres` as an inline sub-resource; the
-  // slot renders either, textures included.
-  const materialSource = useMemo((): MaterialSource | undefined => {
-    const sub = resolveStandardMaterial(properties.materialPath, internalResources);
-    if (sub) return { kind: 'scene', resource: sub };
-    const path = resolveExtResourcePath(properties.materialPath, externalResources);
-    return path === null ? undefined : { kind: 'path', path };
-  }, [properties.materialPath, internalResources, externalResources]);
+  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a
+  // CSG primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`) — so
+  // both arrive at the same slot, which renders either, textures included.
+  const materialSource = useMemo(
+    () => resolveMaterialSource(properties.materialPath, internalResources, externalResources),
+    [properties.materialPath, internalResources, externalResources]
+  );
 
   // Absorbed while the ancestor's boolean is pending or ready; NOT while it has failed,
   // which is what makes every contributor start drawing itself again.
