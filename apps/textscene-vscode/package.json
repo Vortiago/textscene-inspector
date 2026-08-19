@@ -39,7 +39,8 @@
       {
         "id": "tscn",
         "extensions": [
-          ".tscn"
+          ".tscn",
+          ".tres"
         ],
         "aliases": [
           "TSCN"

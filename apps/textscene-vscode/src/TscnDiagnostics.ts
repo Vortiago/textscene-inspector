@@ -1,7 +1,8 @@
 /**
- * Surfaces core Linter diagnostics for .tscn documents in the editor.
+ * Surfaces core Linter diagnostics for Godot text documents in the editor —
+ * `.tscn` scenes and `.tres` resources alike.
  *
- * Owns a DiagnosticCollection: lints all open .tscn documents on
+ * Owns a DiagnosticCollection: lints all open Godot text documents on
  * activation, re-lints on open/save and on change (debounced), and
  * clears entries when a document closes.
  *
@@ -89,8 +90,14 @@ function rangeForDiagnostic(
   );
 }
 
+/**
+ * Both text formats the linter takes. The `tscn` language claims `.tres` as
+ * well, so the languageId arm already covers one; the filename arm is the
+ * fallback for a document whose association a user has overridden.
+ */
 function isTscnDocument(document: vscode.TextDocument): boolean {
-  return document.languageId === 'tscn' || document.fileName.endsWith('.tscn');
+  if (document.languageId === 'tscn') return true;
+  return document.fileName.endsWith('.tscn') || document.fileName.endsWith('.tres');
 }
 
 export class TscnDiagnostics implements vscode.Disposable {

@@ -26,7 +26,7 @@ import { parseExternalResource, parseInternalResource } from './resourceParsers.
 import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
-export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource';
+export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
 /**
  * Callback function to create a TscnNode from parsed heading and properties
@@ -50,9 +50,11 @@ export interface ParseObserver {
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
   /**
    * A property value completed (after any multiline accumulation). `line` is the
-   * property's STARTING line; `ownerType` is the heading's type attribute for
-   * node/sub_resource sections, undefined otherwise; `isMultiline` is true when
-   * the value spans multiple physical lines.
+   * property's STARTING line; `ownerType` is the type the section's properties
+   * belong to — the heading's own `type=` for node/sub_resource, the
+   * `[gd_resource type="…"]` header's for a `[resource]` body, undefined
+   * elsewhere; `isMultiline` is true when the value spans multiple physical
+   * lines.
    */
   onProperty?(
     section: SectionType,
@@ -90,6 +92,12 @@ export class TscnParserCore {
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
+    // The type a standalone `.tres` declares once, in its file header. Its
+    // `[resource]` body carries no type of its own — `res_type` comes from the
+    // header (resource_format_text.cpp:1166) and is what
+    // `ClassDB::instantiate(res_type)` builds when the `resource` tag opens
+    // (:741). A `.tscn` has no such header, so this stays undefined there.
+    let headerResourceType: string | undefined;
     let currentProperties: Record<string, string> = {};
     // Accumulator for a string value whose opening quote isn't closed on its
     // own line (Godot multi-line text). Subsequent raw lines are appended
@@ -129,12 +137,14 @@ export class TscnParserCore {
       currentProperties = {};
     };
 
-    // ownerType for the observer: the heading's type attribute, but only for
-    // sections whose body properties belong to a typed owner.
-    const currentOwnerType = (): string | undefined =>
-      currentSection === 'node' || currentSection === 'sub_resource'
-        ? currentHeading?.attributes.type
-        : undefined;
+    // ownerType for the observer: the type the current section's body
+    // properties belong to, or undefined where the section names none.
+    const currentOwnerType = (): string | undefined => {
+      if (currentSection === 'node' || currentSection === 'sub_resource') {
+        return currentHeading?.attributes.type;
+      }
+      return currentSection === 'resource' ? headerResourceType : undefined;
+    };
 
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
@@ -193,6 +203,9 @@ export class TscnParserCore {
         currentHeading = parseHeading(line);
         if (currentHeading) {
           currentSection = this.identifySection(currentHeading);
+          if (currentHeading.type === 'gd_resource') {
+            headerResourceType = currentHeading.attributes.type;
+          }
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -279,6 +292,7 @@ export class TscnParserCore {
     if (heading.type === 'node') return 'node';
     if (heading.type === 'ext_resource') return 'ext_resource';
     if (heading.type === 'sub_resource') return 'sub_resource';
+    if (heading.type === 'resource') return 'resource';
 
     return 'none';
   }

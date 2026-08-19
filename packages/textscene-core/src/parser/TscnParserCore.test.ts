@@ -370,7 +370,7 @@ visible = true
       expect(onProperty).toHaveBeenNthCalledWith(3, 'node', 'Label', 'visible', 'true', 9, false);
     });
 
-    it('passes ownerType=undefined outside node/sub_resource sections', () => {
+    it('passes ownerType=undefined where the section names no type', () => {
       const content = `[gd_scene format=3]
 config = 1
 
@@ -386,6 +386,92 @@ visible = true
       expect(onProperty).toHaveBeenNthCalledWith(1, 'none', undefined, 'config', '1', 2, false);
       // index= node has no type attribute: ownerType undefined
       expect(onProperty).toHaveBeenNthCalledWith(2, 'node', undefined, 'visible', 'true', 5, false);
+    });
+
+    it("takes a [resource] body's ownerType from the [gd_resource] header", () => {
+      const content = `[gd_resource type="Environment" load_steps=2 format=3]
+
+[sub_resource type="Sky" id="Sky_1"]
+radiance_size = 2
+
+[resource]
+background_mode = 1
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenNthCalledWith(
+        1,
+        'sub_resource',
+        'Sky',
+        'radiance_size',
+        '2',
+        4,
+        false
+      );
+      expect(onProperty).toHaveBeenNthCalledWith(
+        2,
+        'resource',
+        'Environment',
+        'background_mode',
+        '1',
+        7,
+        false
+      );
+    });
+
+    it("reports a [resource] heading's own section kind", () => {
+      const onSectionStart = vi.fn<NonNullable<ParseObserver['onSectionStart']>>();
+
+      parser.parse('[gd_resource type="Curve" format=3]\n\n[resource]\n', simpleCreator, {
+        onSectionStart,
+      });
+
+      expect(onSectionStart).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ type: 'resource' }),
+        'resource',
+        3
+      );
+    });
+
+    it('leaves ownerType undefined when the header declares no type', () => {
+      const content = `[gd_resource format=3]
+
+[resource]
+background_mode = 1
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledWith(
+        'resource',
+        undefined,
+        'background_mode',
+        '1',
+        4,
+        false
+      );
+    });
+
+    it('leaves ownerType undefined for a [resource] section with no header above it', () => {
+      const content = `[resource]
+background_mode = 1
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledWith(
+        'resource',
+        undefined,
+        'background_mode',
+        '1',
+        2,
+        false
+      );
     });
 
     it('fires onSectionStart for each section with its kind and line', () => {

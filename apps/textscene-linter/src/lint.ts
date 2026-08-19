@@ -84,6 +84,17 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
  * .isFile()` check, which follows symlinks) so a `.tscn` symlinked in from
  * elsewhere is still linted rather than silently dropped.
  */
+/**
+ * Both text formats Godot writes, and the linter's subject is both.
+ *
+ * A `.tres` is the same grammar with its type in the `[gd_resource]` header
+ * rather than a section heading; the validators a `[sub_resource]` block gets
+ * inside a scene are the ones a standalone resource file gets here.
+ */
+const LINTABLE_EXTENSIONS = new Set(['.tscn', '.tres']);
+
+const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(name));
+
 function collectTscnFiles(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = join(dir, entry.name);
@@ -94,11 +105,11 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
       } catch {
         continue; // broken symlink — skip rather than throw
       }
-      if (stats.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+      if (stats.isFile() && isLintable(entry.name)) found.push(fullPath);
       continue;
     }
     if (entry.isDirectory()) collectTscnFiles(fullPath, found);
-    else if (entry.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+    else if (entry.isFile() && isLintable(entry.name)) found.push(fullPath);
   }
   return found;
 }

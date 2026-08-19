@@ -117,9 +117,15 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 3;
 
+/**
+ * Both text formats Godot writes. A `.tres` carries its type in the
+ * `[gd_resource]` header rather than a section heading, and validates against
+ * the same registry a `[sub_resource]` block does — so leaving it out of this
+ * sweep left the resource slices' own fixtures ungated.
+ */
 function tscnFiles(dir: string): string[] {
   return readdirSync(dir)
-    .filter((f) => f.endsWith('.tscn'))
+    .filter((f) => f.endsWith('.tscn') || f.endsWith('.tres'))
     .sort();
 }
 

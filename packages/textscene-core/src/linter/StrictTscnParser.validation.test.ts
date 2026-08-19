@@ -5,6 +5,10 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StrictTscnParser } from './StrictTscnParser.js';
+// The barrel, so the slices have self-registered their validators: the
+// standalone-`.tres` cases below assert a real Environment bound fires, and a
+// direct `./StrictTscnParser.js` import lints every file into silence.
+import './index.js';
 
 describe('StrictTscnParser', () => {
   let parser: StrictTscnParser;
@@ -62,6 +66,71 @@ size = Vector3(1, 2, 3)
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       expect(result.scene!.internalResources).toHaveLength(1);
+    });
+  });
+
+  /**
+   * A standalone `.tres` puts its properties in a bare `[resource]` section and
+   * declares their type once, in the file header: `res_type = tag.fields["type"]`
+   * (resource_format_text.cpp:1166) is what `ClassDB::instantiate(res_type)`
+   * builds when the `resource` tag opens (:741).
+   */
+  describe('a standalone .tres [resource] body', () => {
+    it('validates against the type the [gd_resource] header names', () => {
+      const content = `[gd_resource type="Environment" format=3]
+
+[resource]
+background_mode = 99
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.code).toBe('INVALID_BACKGROUND_MODE_VALUE');
+      expect(result.errors[0]?.line).toBe(4);
+    });
+
+    it('inherits the header type\'s base validators', () => {
+      // `resource_local_to_scene` is Resource's, not Environment's.
+      const content = `[gd_resource type="Environment" format=3]
+
+[resource]
+resource_local_to_scene = 7
+`;
+
+      const result = parser.parse(content);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toContain('resource_local_to_scene');
+    });
+
+    it('validates nothing when the header names no type', () => {
+      // A typeless header is not loadable either ("Missing 'type' field in
+      // 'gd_resource' tag", resource_format_text.cpp:1153-1159), but nothing
+      // here knows what the body was meant to be, so it reports no bound.
+      const content = `[gd_resource format=3]
+
+[resource]
+background_mode = 99
+`;
+
+      expect(parser.parse(content).errors).toHaveLength(0);
+    });
+
+    it('validates nothing for a [resource] section with no header above it', () => {
+      expect(parser.parse('[resource]\nbackground_mode = 99\n').errors).toHaveLength(0);
+    });
+
+    it('leaves a scene file\'s own sections judged by their own headings', () => {
+      // A `[gd_scene]` header carries no `type=`, so nothing leaks into the
+      // nodes below it.
+      const content = `[gd_scene format=3]
+
+[node name="Root" index="0"]
+background_mode = 99
+`;
+
+      expect(parser.parse(content).errors).toHaveLength(0);
     });
   });
 });

@@ -9,8 +9,9 @@ TextScene Inspector parses the `.tscn` text directly and draws it with
 react-three-fiber over three.js — meshes, PBR materials, lights, cameras,
 environments, and instanced sub-scenes. There is no Godot install, no editor
 cache, and no import step. It ships as a VS Code extension (desktop and
-vscode.dev), a standalone web previewer, and a `.tscn` linter that runs both as
-a CLI and as in-editor diagnostics.
+vscode.dev), a standalone web previewer, and a linter for Godot's text formats
+— `.tscn` scenes and `.tres` resources — that runs both as a CLI and as
+in-editor diagnostics.
 
 Try it without installing anything: **[textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/)**.
 
@@ -161,7 +162,7 @@ Add to `.vscode/launch.json`:
 | `pnpm build:linter` | Build the standalone linter bundle |
 | `pnpm test` | Full unit suite |
 | `pnpm lint` | ESLint |
-| `pnpm lint:tscn <files>` | Lint `.tscn` scene files |
+| `pnpm lint:tscn <paths>` | Lint `.tscn` scenes and `.tres` resources (files or directories) |
 | `pnpm type-check` | Type check |
 | `pnpm clean` | Remove build artifacts |
 

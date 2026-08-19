@@ -58,6 +58,18 @@ describe('a legacy format header', () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.ruleName).toBe('legacy-format-version');
   });
+
+  it('suppresses the [resource] body a standalone .tres validates', () => {
+    // The body is validated against the header's type, so a legacy `.tres`
+    // has diagnostics of its own to withhold — an empty `[resource]` would
+    // pass this whether the suppression worked or not.
+    const body = '\n[resource]\nbackground_mode = 99\n';
+    expect(linter.lint(`[gd_resource type="Environment" format=3]\n${body}`)).toHaveLength(1);
+
+    const diagnostics = linter.lint(`[gd_resource type="Environment" format=2]\n${body}`);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.ruleName).toBe('legacy-format-version');
+  });
 });
 
 describe('a current format header', () => {
