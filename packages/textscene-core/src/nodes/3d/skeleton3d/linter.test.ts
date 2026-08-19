@@ -141,10 +141,34 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      it('should reject negative bone index', () => {
+      // skeleton_3d.cpp:82 reads the index with a bare
+      // `path.get_slicec('/', 1).to_int()` and no validity gate, and `to_int`
+      // SKIPS a character it cannot use (ustring.cpp:2280-2293), so `x` names
+      // bone 0 and Godot applies the write.
+      it('should accept a bone index to_int resolves out of non-numeric text', () => {
+        expectNoErrors(scene(node('Skeleton3D', { 'bones/x/position': 'Vector3(0, 0, 0)' })), {
+          ruleName: 'strict-parser',
+        });
+      });
+
+      // `uint32_t which` (:82) holds -1 as 4294967295, which
+      // `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` (:90) then
+      // refuses: bones grows one at a time through `which == bones.size()` (:85),
+      // so no file reaches a count that would admit it.
+      it('should reject a negative bone index', () => {
         expectDiagnostic(scene(node('Skeleton3D', { 'bones/-1/position': 'Vector3(0, 0, 0)' })), {
           prop: 'Bone index',
-          contains: ['non-negative'],
+          contains: ['4294967295'],
+        });
+      });
+
+      // `to_int` flips the sign on a `-` seen while the total is still 0
+      // (ustring.cpp:2291-2292), so `a-1` is -1 — the same refusal, and a
+      // `-\d+` spelling never saw it.
+      it('should reject a bone index to_int resolves negative', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/a-1/position': 'Vector3(0, 0, 0)' })), {
+          prop: 'Bone index',
+          contains: ['4294967295'],
         });
       });
 

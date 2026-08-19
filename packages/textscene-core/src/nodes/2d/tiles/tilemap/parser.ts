@@ -9,11 +9,10 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { boolOr, intOr } from '../../../../parser/valueParsers';
+import { indexedElements } from '../../../../godot/index.js';
 import { parseColor } from '../../../../utils/colorParser';
 import { decodeLegacyTileData } from '../shared/tileData';
 import type { TileMapLayerData, TileMapProperties } from './types';
-
-const LAYER_KEY_RE = /^layer_(\d+)\/(.+)$/;
 
 export function parseTileMap(
   heading: ParsedHeading,
@@ -22,18 +21,12 @@ export function parseTileMap(
   const baseProperties = parseNode2D(heading, properties);
   const format = intOr(properties.format, 0);
 
-  const layerProps = new Map<number, Record<string, string>>();
-  for (const [key, value] of Object.entries(properties)) {
-    const m = LAYER_KEY_RE.exec(key);
-    if (!m) continue;
-    const index = Number(m[1]);
-    let layer = layerProps.get(index);
-    if (!layer) {
-      layer = {};
-      layerProps.set(index, layer);
-    }
-    layer[m[2]!] = value;
-  }
+  // `TileMap::_set` routes the family through
+  // `property_helper.is_property_valid` (tile_map.cpp:700), which gates the
+  // index on `String::is_valid_int()` (property_list_helper.cpp:126) and so
+  // reads a leading sign; `property_set_value` then drops a negative one at
+  // `_get_property`'s `index < 0` (:58).
+  const layerProps = indexedElements(properties, 'layer_', 'is_valid_int');
 
   const layers: TileMapLayerData[] = [...layerProps.entries()]
     .sort(([a], [b]) => a - b)

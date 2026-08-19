@@ -19,6 +19,7 @@ import {
   makeFloatTupleRegex,
 } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/index.js';
+import { indexedKeyRegex, toIntIndex, toUint32 } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
@@ -28,27 +29,23 @@ const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /**
+ * `bones/<idx>/<sub>` — the index is a bare
+ * `path.get_slicec('/', 1).to_int()` with no validity gate
+ * (skeleton_3d.cpp:82), so the grammar is the whole path segment and
+ * `toIntIndex` decides the number: `bones/x/position` names bone 0 and Godot
+ * applies it.
+ */
+const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
+
+/**
  * `bones/<idx>/<sub>` dispatcher. The malformed-key and Vector3/Quaternion
- * shape branches reject only format; the negative-index branch is a real
- * bound (see the citation below), so the whole function is tagged `bounded`
- * + `grounding` rather than `formatOnly`.
+ * shape branches reject only format; the out-of-range branch is a real bound
+ * (see the citation below), so the whole function is tagged `bounded` +
+ * `grounding` rather than `formatOnly`.
  */
 const bonesValidator: PropertyValidator = (key, value, line) => {
-  const match = key.match(/^bones\/(\d+)\/(.+)$/);
-  if (!match || !match[1] || !match[2]) {
-    const negativeMatch = key.match(/^bones\/(-\d+)\//);
-    if (negativeMatch) {
-      // skeleton_3d.cpp:82, `path.get_slicec('/', 1).to_int()` assigned into a
-      // `uint32_t which`: a negative index wraps to a huge value, and :90
-      // `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` then refuses it.
-      return {
-        severity: 'error',
-        message: `Bone index must be non-negative, got: ${negativeMatch[1]}`,
-        line,
-        column: 1,
-        code: 'INVALID_BONE_INDEX',
-      };
-    }
+  const match = BONE_KEY_RE.exec(key);
+  if (!match) {
     return {
       severity: 'error',
       message: `Invalid bone property key format: "${key}". Expected: bones/<number>/<property>`,
@@ -58,7 +55,27 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
     };
   }
 
-  const propertyName = match[2];
+  // The index lands in a `uint32_t which` (:82), so a negative `to_int` result
+  // is held as a value past 2^31. `bones` only ever grows one at a time,
+  // through `which == bones.size() && what == "name"` (:85), so no file reaches
+  // a count that would satisfy `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(),
+  // false)` (:90) — the write is refused.
+  const signedIndex = toIntIndex(match[1]!);
+  if (!(signedIndex >= 0)) {
+    // NaN is the other arm: `to_int` saturates at INT64_MAX for a magnitude no
+    // double names (ustring.cpp:2283-2284), and `(uint32_t)INT64_MAX` is the
+    // same all-ones value a -1 gives.
+    const which = toUint32(Number.isNaN(signedIndex) ? -1 : signedIndex);
+    return {
+      severity: 'error',
+      message: `Bone index "${match[1]}" is held as uint32 ${which} — past any bone count, so Godot drops the write.`,
+      line,
+      column: 1,
+      code: 'INVALID_BONE_INDEX',
+    };
+  }
+
+  const propertyName = match[2]!;
 
   if (propertyName === 'position' || propertyName === 'scale') {
     if (!VECTOR3_REGEX.test(value)) {
@@ -108,5 +125,5 @@ validatorRegistry.registerAll('Skeleton3D', {
 // Shown in the generated `## Linting` table of this node's sheet.
 bonesValidator.accepts = 'bone pose component (float, Vector3 or Quaternion)';
 // Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
-// sees the negative-index bound too.
+// sees the out-of-range bound too.
 bonesValidator.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:90' };

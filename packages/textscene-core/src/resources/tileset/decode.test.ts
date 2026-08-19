@@ -85,6 +85,56 @@ describe('tileSetFromScene', () => {
     expect(source.tiles.get('1:3')!.sizeInAtlas).toEqual({ x: 2, y: 2 });
   });
 
+  // Every index here is gated on `String::is_valid_int()`, which skips ONE
+  // leading sign, `+` as readily as `-` (ustring.cpp:4752): the source id at
+  // tile_set.cpp:3961, the two coordinate components at :4754, the alternative
+  // id at :4797.
+  it('resolves source, coordinate and alternative indices the way is_valid_int does', () => {
+    const signedInternals: TscnInternalResource[] = [
+      {
+        id: 'atlas1',
+        type: 'TileSetAtlasSource',
+        data: {
+          id: 'atlas1',
+          texture: 'ExtResource("2")',
+          '+0:+0/+1/flip_v': 'true',
+          '-1:2/0/texture_origin': 'Vector2i(4, 4)',
+          // -1 is INVALID_TILE_ALTERNATIVE and `_set` refuses it (:4799).
+          '+0:+0/-1/flip_h': 'true',
+        },
+      },
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/+3': 'SubResource("atlas1")' } },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', signedInternals, externals);
+    const source = model!.sources.get(3)!;
+
+    expect(source).toBeDefined();
+    expect(source.tiles.get('0:0')!.alternatives.get(1)!.flipV).toBe(true);
+    expect(source.tiles.get('0:0')!.alternatives.has(-1)).toBe(false);
+    expect(source.tiles.get('-1:2')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 4, y: 4 });
+  });
+
+  // `add_source` re-seats a `-1` override at the auto-assigned `next_source_id`
+  // (tile_set.cpp:481-482) and refuses anything below it (:480), so neither
+  // spelling names source -1 and this decode cannot know which id the first one
+  // landed on.
+  it('drops a negative source id rather than seating one', () => {
+    const negativeInternals: TscnInternalResource[] = [
+      internals[0]!,
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/-1': 'SubResource("atlas1")' } },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', negativeInternals, externals);
+
+    expect(model!.sources.size).toBe(0);
+    expect(model!.sourceOrder).toEqual([]);
+    // The key reaches the reader now that the grammar is the engine's, so the
+    // drop is reported rather than being a grammar miss nobody sees.
+    const idWarns = warnSpy.mock.calls.filter((c: unknown[]) =>
+      String(c[0]).includes('negative source id')
+    );
+    expect(idWarns).toHaveLength(1);
+  });
+
   it('reads the grid surface: tile_shape, tile_layout, tile_offset_axis, tile_size', () => {
     const isoInternals: TscnInternalResource[] = [
       internals[0]!,

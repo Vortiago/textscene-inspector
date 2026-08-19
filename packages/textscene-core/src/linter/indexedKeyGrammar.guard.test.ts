@@ -24,11 +24,26 @@
  * Eleven rule files each owned a copy, and no two of them were wrong the same
  * way.
  *
- * The population is every file that registers a rule, and there is no exemption
- * list: `indexedKeyRegex` takes a shape string with `#` at each index position,
- * so there is no key shape it cannot express — including a nested index
- * (`settings/#/joints/#/twist_amount`) and an index with no leaf below it
- * (`collisions/#`).
+ * There is no exemption list at either population below: `indexedKeyRegex` takes
+ * a shape string with `#` at each index position, so there is no key shape it
+ * cannot express — a nested index (`settings/#/joints/#/twist_amount`), an index
+ * with no leaf below it (`collisions/#`) and a `:`-joined coordinate pair
+ * (`(#):(#)/…`) all spell directly.
+ *
+ * ## Two populations, two bans
+ *
+ * A rule file may spell NO digit class in a regex at all, and 120 of them
+ * currently spell none: the linter's value grammars go through `v` and
+ * `slotTupleRegex`, so any digit class left in one is a key grammar.
+ *
+ * Package-wide that ban would be false. A parser or a resource decoder reads
+ * VALUES as well as keys, and two of them legitimately spell a digit class in
+ * one: `arraymesh/surfaceFields.ts` pulls an int field out of a serialised
+ * `_surfaces` block, `animationtree/treeResources.ts` tokenises a
+ * `node_connections` array. So the wider sweep bans the digit class in a KEY,
+ * identified by the path separator beside it, and the two bans live here
+ * together because the difference between them is the whole point — a sibling
+ * file would state half the rule twice.
  *
  * ## What source text cannot see
  *
@@ -87,11 +102,46 @@ const DIGIT_CLASS = /\\d|\[0-9]|\\p\{Nd\}/;
  */
 const withoutInterpolations = (src: string): string => src.replace(/\$\{[^}]*\}/g, '');
 
+/**
+ * A Godot property path's separator, in either extraction's output.
+ *
+ * A regex LITERAL cannot hold a bare `/` — {@link REGEX_LITERAL}'s body admits
+ * one only as `\/`, or inside a character class — and a `new RegExp` string
+ * holds either, so testing for the character alone finds both spellings.
+ */
+const PATH_SEPARATOR = /\//;
+
 /** The offending pattern text, or `null` when the file spells no digit class in a regex. */
 function handRolledIndexGrammar(source: string): string | null {
   const src = withoutInterpolations(stripComments(source));
   for (const m of src.matchAll(REGEX_LITERAL)) if (DIGIT_CLASS.test(m[1]!)) return m[0];
   for (const m of src.matchAll(REGEXP_CTOR)) if (DIGIT_CLASS.test(m[2]!)) return m[0];
+  return null;
+}
+
+/**
+ * The same offence at the parser/decoder layer, narrowed to a KEY grammar.
+ *
+ * A Godot property key is `/`-separated — `get_slicec('/', n)`,
+ * `split("/", true, 2)`, `rsplit("/", true, 1)` are the three readers the engine
+ * uses — so a pattern spelling both a separator and a digit class is describing
+ * an index position, whatever file it sits in. Every value grammar in the
+ * package spells no separator at all, so the two sets do not overlap and this
+ * needs no allowlist either.
+ *
+ * Two edges, stated rather than contorted around. A `res://` grammar that
+ * spelled a digit class would land here wrongly — none does, and the answer then
+ * is a named path builder, never an exemption. And a family whose whole key is
+ * the index with no `/` at all (`TileSet`'s `pattern_5`, tile_set.cpp:3995)
+ * carries no separator to find; widening the term to catch a `_`-glued index
+ * would pull in every identifier character class instead.
+ */
+function handRolledKeyGrammar(source: string): string | null {
+  const src = withoutInterpolations(stripComments(source));
+  for (const m of src.matchAll(REGEX_LITERAL))
+    if (DIGIT_CLASS.test(m[1]!) && PATH_SEPARATOR.test(m[1]!)) return m[0];
+  for (const m of src.matchAll(REGEXP_CTOR))
+    if (DIGIT_CLASS.test(m[2]!) && PATH_SEPARATOR.test(m[2]!)) return m[0];
   return null;
 }
 
@@ -120,9 +170,11 @@ const NAMES_TO_INT = /'to_int'/;
 const RAW_INDEX_READ = /\bNumber\(/;
 
 describe('Godot indexed-key grammar', () => {
-  const rules = allSourceFiles()
-    .map((file) => ({ rel: label(file), src: readFileSync(file, 'utf8') }))
-    .filter(({ src }) => DECLARES_A_RULE.test(src));
+  const files = allSourceFiles().map((file) => ({
+    rel: label(file),
+    src: readFileSync(file, 'utf8'),
+  }));
+  const rules = files.filter(({ src }) => DECLARES_A_RULE.test(src));
 
   it('finds the rules, so the sweep cannot pass vacuously', () => {
     // Far below the real count: this catches a scrape that BROKE, not a tree
@@ -138,12 +190,44 @@ describe('Godot indexed-key grammar', () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * The same ban at the layer where a too-narrow grammar costs a wrong SCENE
+   * GRAPH rather than a wrong diagnostic: a `layer_+1/tile_data` the engine
+   * applies dropped a whole TileMap layer out of the render tree, and an
+   * `item/+7/mesh` dropped a GridMap cell's mesh.
+   *
+   * Every source module, not a roster of the slices that resolve a key today: a
+   * node parser, a resource decoder and a validator all do it, and which files
+   * those are changes with every slice.
+   */
+  it('spells no indexed key grammar of its own, anywhere in the package', () => {
+    const offenders = files
+      .filter(({ src }) => handRolledKeyGrammar(src) !== null)
+      .map(({ rel, src }) => `${rel}: ${handRolledKeyGrammar(src)}`)
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A FENCE, not a regression test: it passes on either side of the sweep above.
+   * It states the one thing an empty offender list cannot — that the extractor
+   * still extracts, and that the separator is what separates a key grammar from
+   * a value one.
+   */
+  it('the key-grammar extractor recognises a key, and leaves a value grammar alone', () => {
+    expect(handRolledKeyGrammar(String.raw`const RE = /^layer_(\d+)\/(.+)$/;`)).not.toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/(\\d+)/name$');`)).not
+      .toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = /^\d+$/;`)).toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = /\.(cpp|h|glsl):\d+/;`)).toBeNull();
+  });
+
   it('reads a to_int index through toIntIndex, never Number', () => {
-    const population = rules
+    const population = files
       .map(({ rel, src }) => ({ rel, bare: stripComments(src) }))
       .filter(({ bare }) => COMPOSES_BUILDER.test(bare) && NAMES_TO_INT.test(bare));
     // Anti-vacuity, and the term is builder-derived: a rename that stopped every
-    // rule naming the parse would empty this and leave it trivially green.
+    // caller naming the parse would empty this and leave it trivially green.
     expect(population.length).toBeGreaterThan(5);
 
     const offenders = population

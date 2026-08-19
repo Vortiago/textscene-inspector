@@ -16,7 +16,7 @@
  */
 
 import { warn } from '../../logger';
-import { slotTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
+import { indexedKeyRegex, slotTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -39,7 +39,12 @@ export interface TileSetSourceData {
   resolveTexturePath(ref: string): string | null;
 }
 
-const SOURCE_KEY_RE = /^sources\/(\d+)$/;
+/**
+ * `TileSet::_set` gates the source id on `components[1].is_valid_int()`
+ * (tile_set.cpp:3961), which skips ONE leading sign (ustring.cpp:4752), so
+ * `sources/+3` is source 3. `Number` is the reader the gate has already vetted.
+ */
+const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
 export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
@@ -49,6 +54,14 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
     const sourceId = Number(sourceMatch[1]);
+    // A negative override never names itself: `add_source` re-seats -1 at the
+    // auto-assigned `next_source_id` (tile_set.cpp:481) and refuses anything
+    // below it (:479). Which id -1 landed on depends on every other source in
+    // the file, so the source is dropped rather than misplaced.
+    if (sourceId < 0) {
+      warn(`[TileSet] source ${key}: Godot re-assigns a negative source id — skipped`);
+      continue;
+    }
 
     const ref = typeof value === 'string' ? parseResourceReference(value) : null;
     const sub = ref?.type === 'SubResource' ? data.findSubResource(ref.id) : undefined;
@@ -142,8 +155,20 @@ function resolveAtlasSource(
  *   `x:y/<altId>`       — declares an alternative tile (0 = base)
  *   `x:y/<altId>/prop`  — alternative properties (flip_h/flip_v/transpose/texture_origin)
  * Everything else (next_alternative_id, physics/custom-data layers, …) is ignored.
+ *
+ * `x` and `y` are a Vector2i atlas COORDINATE, not a family index, but the
+ * spelling is the same fact: `TileSetAtlasSource::_set` splits `components[0]`
+ * on `:` and gates each half on `is_valid_int()` (tile_set.cpp:4754), which
+ * skips one leading sign either way (ustring.cpp:4752).
  */
-const TILE_KEY_RE = /^(-?\d+):(-?\d+)\/(.+)$/;
+const TILE_KEY_RE = indexedKeyRegex('^(#):(#)/(.+)$', 'is_valid_int');
+
+/**
+ * The alternative id below a tile coordinate, gated on `components[1]`'s
+ * `is_valid_int()` (tile_set.cpp:4797). Matched after the fixed leaf names, so
+ * `size_in_atlas` and `animation_frame_0/duration` never reach it.
+ */
+const ALT_KEY_RE = indexedKeyRegex('^(#)(?:/(.+))?$', 'is_valid_int');
 
 function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileModel> {
   const tiles = new Map<string, AtlasTileModel>();
@@ -176,9 +201,14 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
       continue;
     }
 
-    const alt = /^(\d+)(?:\/(.+))?$/.exec(rest);
+    const alt = ALT_KEY_RE.exec(rest);
     if (!alt) continue;
     const altId = Number(alt[1]);
+    // -1 is `INVALID_TILE_ALTERNATIVE` and `_set` refuses it outright
+    // (tile_set.cpp:4799); below that `create_alternative_tile` re-seats the
+    // entry at the auto-assigned `next_alternative_id`. Neither names an
+    // alternative a cell can address.
+    if (altId < 0) continue;
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
     if (prop === 'flip_h') alternative.flipH = value === 'true';

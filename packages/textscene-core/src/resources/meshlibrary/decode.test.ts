@@ -36,6 +36,29 @@ describe('meshLibraryFromTres', () => {
     expect(wall.meshTransform).toBeNull(); // no mesh_transform line
   });
 
+  // `MeshLibrary::_set` reads the index with a bare
+  // `prop_name.get_slicec('/', 1).to_int()` and no validity gate
+  // (mesh_library.cpp:40), and `to_int` SKIPS a character it cannot use
+  // (ustring.cpp:2280-2293), so `+7` is item 7 and `x` is item 0. A negative one
+  // dies in `create_item`'s `ERR_FAIL_COND(p_item < 0)` (:159) and the
+  // `set_item_*` that follows finds no item.
+  it('resolves an item index the way to_int does', () => {
+    const model = meshLibraryFromTres(
+      parseTresFile(`[gd_resource type="MeshLibrary" format=3]
+
+[resource]
+item/+7/name = "Floor"
+item/x/name = "Zero"
+item/-1/name = "Dropped"
+`),
+      'res://stage/tiles.tres'
+    );
+
+    expect([...model.keys()].sort((a, b) => a - b)).toEqual([0, 7]);
+    expect(model.get(7)!.name).toBe('Floor');
+    expect(model.get(0)!.name).toBe('Zero');
+  });
+
   it('returns an empty model for a library with no items', () => {
     const model = meshLibraryFromTres(
       parseTresFile('[gd_resource type="MeshLibrary" format=3]\n\n[resource]\n'),

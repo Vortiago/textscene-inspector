@@ -29,6 +29,25 @@ describe('parseTileMap', () => {
     ]);
   });
 
+  // `TileMap::_set` routes the family through `property_helper.is_property_valid`
+  // (tile_map.cpp:700), which gates the index on `String::is_valid_int()`
+  // (property_list_helper.cpp:125) — one optional sign, `+` as readily as `-`
+  // (ustring.cpp:4752). `property_set_value` then refuses a negative index at
+  // `_get_property`'s `if (index < 0 …) return nullptr` (:58).
+  it('resolves a layer index the way is_valid_int does', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
+      'layer_0/name': '"Ground"',
+      'layer_+0/z_index': '3',
+      'layer_+1/name': '"Walls"',
+      'layer_-1/name': '"Dropped"',
+      'layer_x/name': '"Dropped"',
+    });
+
+    expect(result.layers).toHaveLength(2);
+    expect(result.layers[0]).toMatchObject({ name: 'Ground', zIndex: 3 });
+    expect(result.layers[1]).toMatchObject({ name: 'Walls' });
+  });
+
   it('handles a TileMap without layers or tile_set (edge case)', () => {
     const result = parseTileMap({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');

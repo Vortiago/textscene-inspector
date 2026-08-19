@@ -286,13 +286,36 @@ describe('MeshInstance3D Parser', () => {
       expect(result.surfaceMaterialOverrides.has(2)).toBe(false);
     });
 
+    // `MeshInstance3D::_set` reads the index with a bare
+    // `get_slicec('/', 1).to_int()` and no validity gate
+    // (mesh_instance_3d.cpp:66). `to_int` SKIPS a character it cannot use
+    // (ustring.cpp:2280-2293), so `+2` names surface 2 and `abc` names surface
+    // 0; `:68` returns false for a negative index.
+    it('resolves a surface index the way to_int does', () => {
+      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
+
+      const result = parseMeshInstance3D(h, {
+        'surface_material_override/+2': 'SubResource("Material_2")',
+        'surface_material_override/abc': 'SubResource("Material_0")',
+        'surface_material_override/-1': 'SubResource("Material_neg")',
+      });
+
+      expect(result.surfaceMaterialOverrides.size).toBe(2);
+      expect(result.surfaceMaterialOverrides.get(2)).toBe('SubResource("Material_2")');
+      expect(result.surfaceMaterialOverrides.get(0)).toBe('SubResource("Material_0")');
+      expect(result.surfaceMaterialOverrides.has(-1)).toBe(false);
+    });
+
     it('should ignore properties with invalid surface_material_override format', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 
       const properties = {
-        'surface_material_override': 'SubResource("Material_invalid")', // Missing index
-        'surface_material_override/': 'SubResource("Material_empty")', // Empty index
-        'surface_material_override/abc': 'SubResource("Material_text")', // Non-numeric index
+        // `begins_with("surface_material_override/")` (mesh_instance_3d.cpp:65)
+        // never sees this one.
+        'surface_material_override': 'SubResource("Material_invalid")',
+        // An empty index segment: the shared grammar requires a non-empty one,
+        // so this reaches no reader here (`godot/indexedKey.ts`).
+        'surface_material_override/': 'SubResource("Material_empty")',
       };
 
       const result = parseMeshInstance3D(h, properties);
