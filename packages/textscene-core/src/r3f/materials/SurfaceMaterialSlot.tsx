@@ -53,18 +53,10 @@ import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScal
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 import { ExternalMaterialSlot } from './ExternalMaterialSlot';
 import type { MaterialSource } from './materialSource';
+import type { MaterialTextureMaps } from './materialTextureMaps';
 
-/** The three-side map props one Godot material contributes to its slot. */
-export interface MaterialTextureMaps {
-  albedoMap?: THREE.Texture;
-  normalMap?: THREE.Texture;
-  roughnessMap?: THREE.Texture;
-  metalnessMap?: THREE.Texture;
-  emissiveMap?: THREE.Texture;
-  aoMap?: THREE.Texture;
-  displacementMap?: THREE.Texture;
-  anisotropyMap?: THREE.Texture;
-}
+export type { MaterialTextureMaps };
+
 
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;

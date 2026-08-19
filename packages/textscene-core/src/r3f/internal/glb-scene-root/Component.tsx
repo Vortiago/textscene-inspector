@@ -51,7 +51,7 @@ import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 
 /**
@@ -253,7 +253,7 @@ function useGlbMaterialOverrides(
   entries: readonly GlbObjectEntry[],
   overrides: readonly TscnNode[]
 ): ReactNode {
-  const { externalResources } = useSceneResources();
+  const { internalResources, externalResources } = useSceneResources();
 
   return useMemo(() => {
     if (!object) return null;
@@ -265,8 +265,15 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the scene that AUTHORED it, which is
       // the outer one — not the sub-scene whose provider it now renders under.
-      const path = resolveExtResourcePath(ref, override.authoredResources ?? externalResources);
-      if (!path) continue;
+      // Only its ExtResource table travels that way today, so a SubResource id
+      // still resolves against the ambient pool (which does inherit the outer
+      // scene's, own-scene-first) — see `AuthoredResourceScope`.
+      const source = resolveMaterialSource(
+        ref,
+        internalResources,
+        override.authoredResources ?? externalResources
+      );
+      if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
@@ -275,10 +282,10 @@ function useGlbMaterialOverrides(
         <GlbSurfaceMaterialOverride
           key={joinPath(override.instanceSubPath ?? '', override.name)}
           target={target}
-          path={path}
+          source={source}
         />
       );
     }
     return slots.length > 0 ? <>{slots}</> : null;
-  }, [object, entries, overrides, externalResources]);
+  }, [object, entries, overrides, internalResources, externalResources]);
 }

@@ -15,36 +15,20 @@
  * via `useResource` (the async path lives in the node component, not here).
  */
 
-import type * as THREE from 'three';
 import { standardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
+import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
 
 /**
- * Every texture prop below must arrive ALREADY BOUND — put through
- * `bindSlotTexture` for its Godot slot by whoever resolved it
- * (`resources/materials/standardmaterial3d/textureBinding.ts`). That is what
- * carries the material's UV transform, sampler filter, wrapping and colour
- * space. This component re-decides none of it: the imperative adapter binds at
- * the same seam, and a slot that corrected textures on arrival would be a second
- * copy of the rule for the two to drift apart on.
- *
- * Spelled with three's own map names because that is what a node component
- * hands over; the derivation is addressed by Godot SLOT, so the two are paired
- * once, below.
+ * The texture props are `MaterialTextureMaps`' — already bound, and paired to
+ * their Godot slots by the one function that does that. This component
+ * re-decides neither: the imperative adapter binds at the same seam, and a slot
+ * that corrected textures on arrival would be a second copy of the rule for the
+ * two to drift apart on.
  */
-export interface StandardMaterialSlotProps {
+export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   scalars: StandardMaterial3DScalars | null;
-  albedoMap?: THREE.Texture;
-  normalMap?: THREE.Texture;
-  roughnessMap?: THREE.Texture;
-  metalnessMap?: THREE.Texture;
-  emissiveMap?: THREE.Texture;
-  aoMap?: THREE.Texture;
-  /** Godot `heightmap_texture` → three.js displacementMap (height mapping). */
-  displacementMap?: THREE.Texture;
-  /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
-  anisotropyMap?: THREE.Texture;
   /**
    * The underlying mesh type (PlaneMesh, BoxMesh, etc.). Reserved for
    * per-mesh-type culling defaults; currently unused (see git history for the
@@ -70,16 +54,19 @@ export function StandardMaterialSlot({
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case — Godot's own
   // default 3D surface, not a default-constructed StandardMaterial3D.
-  const bag = standardMaterialBag(scalars, {
-    albedo_texture: albedoMap ?? null,
-    normal_texture: normalMap ?? null,
-    roughness_texture: roughnessMap ?? null,
-    metallic_texture: metalnessMap ?? null,
-    emission_texture: emissiveMap ?? null,
-    ao_texture: aoMap ?? null,
-    heightmap_texture: displacementMap ?? null,
-    anisotropy_flowmap: anisotropyMap ?? null,
-  });
+  const bag = standardMaterialBag(
+    scalars,
+    textureSlotsFromMaps({
+      albedoMap,
+      normalMap,
+      roughnessMap,
+      metalnessMap,
+      emissiveMap,
+      aoMap,
+      displacementMap,
+      anisotropyMap,
+    })
+  );
 
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the SAME merged bag it travels with (ADR-0038) —

@@ -15,7 +15,7 @@
 
 import * as THREE from 'three';
 import { info } from '../../../logger';
-import { standardMaterialBag } from './materialBag';
+import { standardMaterialBag, type StandardMaterialBag } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 
@@ -36,7 +36,17 @@ export function buildStandardMaterial(
   scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {}
 ): THREE.Material {
-  const bag = standardMaterialBag(scalars, scalars ? boundTextures(scalars, textures) : {});
+  return materialFromBag(standardMaterialBag(scalars, scalars ? boundTextures(scalars, textures) : {}));
+}
+
+/**
+ * A derived bag's material class as a constructed `THREE.Material`. Exported for
+ * the callers that already hold bound textures and so cannot go through
+ * `buildStandardMaterial`, which binds — the GLB surface-material override is
+ * the one. Keeps the class→constructor mapping in one place; `<StandardMaterialSlot>`
+ * is the same mapping onto JSX tags (ADR-0039).
+ */
+export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
   switch (bag.materialClass) {
     case 'basic':
       return new THREE.MeshBasicMaterial(bag.props);
