@@ -63,7 +63,12 @@ validatorRegistry.registerAll('Area2D', {
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
     hinted: 'area_2d.cpp:666',
   }),
-  priority: v.float('priority'),
+  // `Variant::INT` with `set_priority(int)` (area_2d.cpp:650); both hint ends are
+  // opened by `or_greater,or_less`, so the slot itself is the only authority.
+  // Modelled as a float, it was the one key in the tree outside the int-slot
+  // population, so neither the truncation warning nor the unstorable-value
+  // error ever fired on it.
+  priority: v.strictInt('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   // area_2d.cpp:670 declares Variant::STRING_NAME, and the getter returns
   // StringName (area_2d.cpp:534), so the serialised form is &"Master" or the

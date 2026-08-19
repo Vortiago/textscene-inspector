@@ -23,13 +23,14 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { packedArrayLiteral } from '../../../../godot/index.js';
 
 /** soft_body_3d.cpp:395: PROPERTY_HINT_ENUM "Remove,KeepActive"; soft_body_3d.cpp:397-398 BIND_ENUM_CONSTANT x2. */
 const DISABLE_MODE = { 0: 'REMOVE', 1: 'KEEP_ACTIVE' };
 
 const PINNED_POINTS_FORMS: readonly RegExp[] = [
   /^\s*\[([\s\S]*)\]\s*$/,
-  /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/,
+  packedArrayLiteral('PackedInt32Array'),
 ];
 
 /**

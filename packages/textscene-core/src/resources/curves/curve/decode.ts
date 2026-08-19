@@ -25,7 +25,7 @@ import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { slotTupleRegex, matchedFloat, parseGodotFloat } from '../../../godot/number.js';
 import { ruleInt } from '../../../godot/int.js';
-import { splitTopLevel } from '../../../godot/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
 const ELEMS_PER_POINT = 5;
@@ -116,12 +116,18 @@ function parseFloatArray(value: string | undefined): number[] | null {
  *
  * The split itself is `splitTopLevel`: the local copy tracked bracket depth but
  * not quotes, so a quoted entry holding a comma split into two.
+ *
+ * `dropTrailingComma` because `_parse_array` closes on `TK_BRACKET_CLOSE`
+ * before it demands another value (variant_parser.cpp:1658-1662), so `[…, ]`
+ * holds one fewer element than the commas suggest. Without it a single legal
+ * trailing comma made `_data` fail the `% 5` arity gate and discarded every
+ * point in the curve.
  */
 function splitArrayLiteral(value: string | undefined): string[] | null {
   if (value === undefined) return null;
   const trimmed = value.trim();
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return null;
-  return splitTopLevel(trimmed.slice(1, -1));
+  return dropTrailingComma(splitTopLevel(trimmed.slice(1, -1)));
 }
 
 /**

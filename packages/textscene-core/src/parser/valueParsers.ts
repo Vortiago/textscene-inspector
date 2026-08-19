@@ -39,7 +39,7 @@
 
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
-import { slotTupleRegex, matchedFloat, parseGodotFloat } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat, parseGodotFloat, allFinite } from '../godot/number.js';
 import { storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
 
@@ -98,12 +98,13 @@ export function parseOptionalRect2(
     warn(`${context}: invalid Rect2 "${value}", treating as unset`);
     return undefined;
   }
-  return {
-    x: matchedFloat(m[1]!),
-    y: matchedFloat(m[2]!),
-    width: matchedFloat(m[3]!),
-    height: matchedFloat(m[4]!),
-  };
+  const c = [matchedFloat(m[1]!), matchedFloat(m[2]!), matchedFloat(m[3]!), matchedFloat(m[4]!)];
+  // `1e999` is inside the finite grammar and outside what a viewport can draw.
+  if (!allFinite(c)) {
+    warn(`${context}: non-finite Rect2 "${value}"`);
+    return undefined;
+  }
+  return { x: c[0]!, y: c[1]!, width: c[2]!, height: c[3]! };
 }
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {

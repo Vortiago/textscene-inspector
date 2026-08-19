@@ -105,10 +105,7 @@ const DEBUG_DRAW = {
 
 /**
  * scene/main/viewport.h:188-193. LINEAR_WITH_MIPMAPS is 2 and
- * NEAREST_WITH_MIPMAPS is 3, which is the opposite of the order the two names
- * suggest and the opposite of what this map used to say. The numeric range was
- * right, so nothing rejected a legal value: the labels simply told a reader the
- * wrong thing about their own scene.
+ * NEAREST_WITH_MIPMAPS is 3, the opposite of the order the two names suggest.
  */
 const TEXTURE_FILTER = {
   0: 'NEAREST',

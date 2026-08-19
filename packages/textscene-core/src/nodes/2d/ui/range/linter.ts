@@ -3,8 +3,8 @@
  *
  * 1. An authored max_value below min_value.
  *
- * Advisory (WARNING, never error): this is legal Godot. `Range::set_max`
- * clamps rather than rejects (scene/gui/range.cpp:229:
+ * ERROR: the setter ALTERS the value. `Range::set_max`
+ * clamps rather than honours it (scene/gui/range.cpp:229:
  * `double max_validated = MAX(p_max, shared->min);`), and `Range::set_min`
  * clamps the opposite direction the same way (range.cpp:216:
  * `shared->max = MAX(shared->max, shared->min);`) — so regardless of which
@@ -52,7 +52,7 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && max < min) {
       diagnostics.push({
         severity: 'error',
-        message: `Range 'max_value = ${maxRaw}' is below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
+        message: `${node.type} '${node.name}' has 'max_value = ${maxRaw}' below 'min_value = ${minRaw}'. Godot's Range::set_max clamps max_value up to min_value rather than honouring the inverted pair, so the range collapses to a single point at ${minRaw} instead of spanning what's authored.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'range-max-below-min',
@@ -65,7 +65,7 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     if (min !== null && !Number.isNaN(min) && min < 0) {
       diagnostics.push({
         severity: 'warning',
-        message: `Range '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`,
+        message: `${node.type} '${node.name}' has 'exp_edit' enabled with 'min_value = ${minRaw}'. Exp Edit requires Min Value to be greater than or equal to 0.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'range-exp-edit-negative-min',

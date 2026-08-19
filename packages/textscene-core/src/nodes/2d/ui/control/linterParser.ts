@@ -18,7 +18,12 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v, shape, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
-import { dropTrailingComma, NODE_PATH_LITERAL_RE, splitTopLevel } from '../../../../godot/index.js';
+import {
+  ARRAY_LITERAL_RE,
+  dropTrailingComma,
+  NODE_PATH_LITERAL_RE,
+  splitTopLevel,
+} from '../../../../godot/index.js';
 
 /**
  * `Array[NodePath]([…])` — the four `accessibility_*_nodes` properties
@@ -44,7 +49,7 @@ function nodePathArray(name: string): PropertyValidator {
   return shape((key, value, line) => {
     const trimmed = value.trim();
     const typed = /^Array\s*\[\s*NodePath\s*\]\s*\(\s*\[([\s\S]*)\]\s*\)$/.exec(trimmed);
-    const match = typed ?? /^\[([\s\S]*)\]$/.exec(trimmed);
+    const match = typed ?? ARRAY_LITERAL_RE.exec(trimmed);
     if (!match) return reject(key, line, value);
     const body = match[1]!.trim();
     if (body === '') return null;

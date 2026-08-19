@@ -6,6 +6,7 @@ import { propertyError, shape, v } from '../../../../linter/validators/index.js'
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { packedArrayLiteral } from '../../../../godot/index.js';
 
 /**
  * tile_map_layer.h:341-345, DebugVisibilityMode. BIND_ENUM_CONSTANT count is 3
@@ -20,7 +21,7 @@ const DEBUG_VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' }
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
 // `PackedByteArray ( … )` loads, the same reasoning godot/variantParser.ts
 // states for the NodePath and resource-ref literals.
-const PACKED_BYTE_ARRAY_RE = /^\s*PackedByteArray\s*\(([\s\S]*)\)\s*$/;
+const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
 const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
 
 /**

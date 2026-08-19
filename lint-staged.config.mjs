@@ -26,7 +26,7 @@ const NEGATIVE_FIXTURES = new Set(
 /** @type {import('lint-staged').Configuration} */
 export default {
   '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'vitest related --run'],
-  '*.tscn': (files) => {
+  '*.{tscn,tres}': (files) => {
     const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(f.split('/').pop()));
     if (lintable.length === 0) return [];
     return [

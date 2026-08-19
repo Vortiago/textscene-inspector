@@ -7,6 +7,18 @@
  */
 
 import { warn } from '../../../logger.js';
+import { FLOAT_PATTERN_SOURCE, parseGodotFloat } from '../../../godot/number.js';
+import { parseGodotInt } from '../../../godot/int.js';
+
+/**
+ * A dict value that is a number, in the grammar Godot's own tokenizer reads.
+ *
+ * `-?\d+` stopped at the `e`, so `"vertex_count": 2e3` — one FLOAT token the
+ * engine converts to 2000 on the write — read as 2, and the decoder then walked
+ * two vertices out of a 2000-vertex buffer. `"format": 4.096e3` mis-read the
+ * whole surface's attribute layout the same way.
+ */
+const NUMBER_SOURCE = `(${FLOAT_PATTERN_SOURCE})`;
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)` — a compressed surface's position scale. */
 export interface SurfaceAabb {
@@ -23,8 +35,14 @@ export function* iterateSurfaceBlocks(surfacesRaw: string): Generator<string> {
 }
 
 export function readInt(block: string, key: string): number {
-  const match = new RegExp(`"${key}"\\s*:\\s*(-?\\d+)`).exec(block);
-  return match ? Number(match[1]) : 0;
+  const match = new RegExp(`"${key}"\\s*:\\s*${NUMBER_SOURCE}\\s*(?=[,}])`).exec(block);
+  if (!match) return 0;
+  // Read at int64, the Variant's own width: `format` is a
+  // `BitField<Mesh::ArrayFormat>` (mesh.cpp:244) and a compressed surface's
+  // value runs past 2^32 — narrowing it to int32 zeroes the whole attribute
+  // layout. The counts beside it are `int` and sit far inside that band.
+  const stored = parseGodotInt(match[1]!, 'int64');
+  return stored === null || Number.isNaN(stored) ? 0 : stored;
 }
 
 /**
@@ -40,9 +58,14 @@ function readFloatTuple(
 ): number[] | undefined {
   const match = new RegExp(`"${key}"\\s*:\\s*${type}\\(([^)]*)\\)`).exec(block);
   if (!match) return undefined;
-  const values = match[1]!.split(',').map((v) => Number(v.trim()));
-  if (values.length < count || values.some((v) => !Number.isFinite(v))) return undefined;
-  return values;
+  // `parseGodotFloat`, not `Number`: the latter reads `0x10` as 16 and an empty
+  // component as 0, neither of which Godot's tokenizer accepts, so a malformed
+  // scale decoded as a plausible one instead of degrading.
+  const values = match[1]!.split(',').map((v) => parseGodotFloat(v));
+  if (values.length < count || values.some((v) => v === null || !Number.isFinite(v))) {
+    return undefined;
+  }
+  return values as number[];
 }
 
 export function readAabb(block: string): SurfaceAabb | undefined {

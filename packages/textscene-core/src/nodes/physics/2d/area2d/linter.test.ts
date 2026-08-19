@@ -104,7 +104,13 @@ describe('Area2D Linter', () => {
         valid: [0, 0.5, 2.0, 15.0],
         invalid: [{ value: -2.0, contains: ['cannot be negative'] }],
       },
-      { prop: 'priority', valid: [0, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
+      {
+        prop: 'priority',
+        // An INT slot: `1.0` is whole and silent, `100.5` is truncated on the
+        // way in and says so.
+        valid: [0, 1.0, -1.0],
+        invalid: [{ value: '"high"' }, { value: 100.5, contains: ['fractional part'] }],
+      },
       {
         prop: 'audio_bus_override',
         valid: [true, false],

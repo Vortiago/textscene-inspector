@@ -48,6 +48,7 @@ export {
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
+  allFinite,
   FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_PATTERN_SOURCE,
   TSCN_FLOAT_RE,

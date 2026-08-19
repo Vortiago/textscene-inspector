@@ -27,9 +27,11 @@
  * untyped literal converts element-wise on the way into the setter and loads.
  */
 
+import { packedArrayLiteral } from '../../../../godot/index.js';
+
 /** `PackedStringArray("a")`, `Array[String](["a"])`, or `["a"]`. */
 export const STRING_ARRAY_FORMS: readonly RegExp[] = [
-  /^\s*PackedStringArray\s*\(([\s\S]*)\)\s*$/,
+  packedArrayLiteral('PackedStringArray'),
   /^\s*Array\s*\[\s*String\s*\]\s*\(\s*\[([\s\S]*)\]\s*\)\s*$/,
   /^\s*\[([\s\S]*)\]\s*$/,
 ];
@@ -45,7 +47,7 @@ export const STRING_ARRAY_FORMS: readonly RegExp[] = [
  * `[0, 1]` — so the element width is a per-SPELLING fact for this property, not
  * a per-slot one.
  */
-export const PACKED_INT32_ARRAY_RE = /^\s*PackedInt32Array\s*\(([\s\S]*)\)\s*$/;
+export const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
 
 /** `PackedInt32Array(24)`, `Array[int]([24])`, or `[24]`. */
 export const INT_ARRAY_FORMS: readonly RegExp[] = [

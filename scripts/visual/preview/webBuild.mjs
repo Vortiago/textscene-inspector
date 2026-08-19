@@ -46,7 +46,17 @@ export function assertWebBuildFresh() {
   }
   const builtAt = statSync(WEB_DIST_INDEX).mtimeMs;
   for (const dir of BUNDLED_SOURCE_DIRS) {
-    const { at, file } = newestMtime(join(REPO_ROOT, dir), isBundled);
+    // `testing/` is the test kit vite never bundles, excluded the way
+    // `distFreshness.mjs` excludes it — otherwise a kit-only edit demands a
+    // rebuild of two packages for work the guard cannot be measuring.
+    const { at, file, failed } = newestMtime(join(REPO_ROOT, dir), isBundled, (name) => name !== 'testing');
+    // A walk that could not complete reports a LOW mtime, so `at > builtAt` is
+    // false and the guard reads fresh over a directory it never saw — the one
+    // answer a freshness guard must never give.
+    if (failed) {
+      console.error(`[preview] could not read every source under ${dir}; freshness is unproven`);
+      process.exit(1);
+    }
     if (at > builtAt) {
       console.error(
         `[preview] dist/ predates ${relative(REPO_ROOT, file)} — this capture would ` +

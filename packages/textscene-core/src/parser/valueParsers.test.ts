@@ -369,3 +369,12 @@ describe('parseOptionalInt width', () => {
     expect(parseOptionalInt('2147483648')).toBe(-2147483648);
   });
 });
+
+describe('an overflowing exponent is inside the finite grammar', () => {
+  it('falls back rather than handing three.js an Infinity', () => {
+    expect(vec2Or('Vector2(1e999, 0)', { x: 9, y: 9 })).toEqual({ x: 9, y: 9 });
+    expect(vec2Or('Vector2(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 1.5, y: 2 });
+    expect(parseOptionalRect2('Rect2(0, 0, 1e999, 4)')).toBeUndefined();
+    expect(parseOptionalRect2('Rect2(0, 0, 3, 4)')).toEqual({ x: 0, y: 0, width: 3, height: 4 });
+  });
+});

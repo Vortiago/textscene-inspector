@@ -133,8 +133,8 @@ export function isDeprecatedPropertyName(nodeType: string | undefined, key: stri
  * type, and merged the two under different keys. The root's `sprite_frames`
  * then beat the host's `frames` override, which Godot applies.
  *
- * The canonical key wins when a bag somehow carries both, matching the
- * last-write-wins order `_setv` gives a file that spells both.
+ * A bag carrying BOTH spellings keeps the one written last, which is the order
+ * `_setv` applies them in.
  */
 export function canonicalisePropertyBag(
   nodeType: string | undefined,

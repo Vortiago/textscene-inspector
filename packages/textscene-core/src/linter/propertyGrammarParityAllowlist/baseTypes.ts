@@ -210,9 +210,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Node2D: {
     parserOnly: [
       // y_sort_origin only meaningful for TileMapLayer tiles; no linter
-      // validator needed (any number is valid). The CanvasItem tint and
-      // draw-order keys that used to sit here are validated now — they moved to
-      // the CanvasItem tier, which both families inherit.
+      // validator needed (any number is valid).
       'y_sort_origin',
     ],
     linterOnly: [
@@ -236,8 +234,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     renderGap: [
       // Sizes the button to its widest item, so it changes the control's width
-      // in a static frame. Previously grouped with allow_reselect under "nothing
-      // changes a pixel", which was simply wrong about this one.
+      // in a static frame.
       'fit_to_longest_item',
     ],
     reason: 'The item family is read through a computed key the scrape cannot match; allow_reselect is interaction-only, while fit_to_longest_item changes the rendered width and is not implemented yet.',
@@ -262,9 +259,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // is why they sit here on Control rather than on the shared tier.
       'z_index', 'z_as_relative', 'y_sort_enabled', 'show_behind_parent',
       'light_mask', 'material', 'use_parent_material',
-      // (`modulate`, `self_modulate`, `rotation`, `scale` and `pivot_offset`
-      // used to sit here as "not read by the parser for rendering"; they are
-      // all rendered now.)
       // Theme-override wildcard keys — validated by pattern match in the
       // linter; the parser uses a loop over `theme_override_*/*` keys and
       // there is no fixed per-key scraping surface to compare against.

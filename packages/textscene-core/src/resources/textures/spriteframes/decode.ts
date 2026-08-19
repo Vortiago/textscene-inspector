@@ -24,6 +24,23 @@
  */
 
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
+import { dictNumberField, dictRefField } from '../../../godot/variantParser.js';
+import { matchedFloat } from '../../../godot/number.js';
+
+/**
+ * The dict fields this decoder scrapes, in the grammar Godot's own tokenizer
+ * reads rather than a hand-rolled one.
+ *
+ * Both had drifted narrow. The texture arm spelled the reference without the
+ * padding `get_token` discards (variant_parser.cpp:415-417), so an authored
+ * `ExtResource( "2" )` went unmatched; `[0-9.]+` for the numbers refused the
+ * `1e-05` the writer emits for a small value and the `-` a hand-edited one may
+ * carry. Either miss desynchronises `durations` from `frames`, and the
+ * frame-count guard below then throws away EVERY authored duration.
+ */
+const TEXTURE_REF_RE = dictRefField('texture', true);
+const DURATION_RE = dictNumberField('duration', true);
+const SPEED_RE = dictNumberField('speed');
 
 /** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
 export const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
@@ -49,25 +66,25 @@ export function parseSpriteFramesAnimations(
   for (const block of splitTopLevelDicts(animationsValue)) {
     const nameMatch = block.match(/"name"\s*:\s*&?"([^"]*)"/);
     const name = nameMatch ? nameMatch[1]! : 'default';
-    const frames = [
-      ...block.matchAll(/"texture"\s*:\s*((?:Ext|Sub)Resource\("[^"]+"\))/g),
-    ].map((m) => m[1]!);
-    const durations = [...block.matchAll(/"duration"\s*:\s*([0-9.]+)/g)].map((m) => {
-      const d = Number(m[1]);
+    // `matchAll` clones the regex it is handed and leaves the original's
+    // `lastIndex` at 0, so these shared `g` instances stay stateless.
+    const frames = [...block.matchAll(TEXTURE_REF_RE)].map((m) => m[1]!);
+    const durations = [...block.matchAll(DURATION_RE)].map((m) => {
+      const d = matchedFloat(m[1]!);
       // Godot clamps a read duration to its minimum, so a `0.0` frame blinks
-      // rather than lingering. A malformed capture (e.g. "1.2.3" → NaN) has no
-      // Godot counterpart (the engine's parser would reject the file); fall back
-      // to the API default 1.0 so one bad value can't stall playback.
+      // rather than lingering. `1e999` overflows to infinity in Godot's reader
+      // too, and no frame can last that long here; fall back to the API default
+      // 1.0 so one such value can't stall playback.
       return Number.isFinite(d) ? Math.max(d, SPRITE_FRAME_MINIMUM_DURATION) : 1;
     });
-    const speedMatch = block.match(/"speed"\s*:\s*([0-9.]+)/);
+    const speedMatch = SPEED_RE.exec(block);
     const loopMatch = block.match(/"loop"\s*:\s*(true|false)/);
     result.set(name, {
       name,
       frames,
       // Per-frame durations only when one was captured per frame; else uniform.
       durations: durations.length === frames.length ? durations : frames.map(() => 1),
-      fps: speedMatch ? Number(speedMatch[1]) : 5,
+      fps: speedMatch ? matchedFloat(speedMatch[1]!) : 5,
       loop: loopMatch ? loopMatch[1] === 'true' : true,
     });
   }

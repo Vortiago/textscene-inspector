@@ -127,8 +127,17 @@ const ROUND_TRIPS: Record<IntWidth, readonly [number, number]> = {
  * `INT64_MIN`/`INT64_MAX` here are the READER's limit — the safe-integer band,
  * past which a double stops being the integer the text states. The C++ type
  * runs to 2^63, and the gap between the two is the band where Godot holds the
- * value exactly and this module cannot. `-2^63` is spelled exactly by a double;
- * `2^63 - 1` is not, so the top is an exclusive `< 2^63`.
+ * value exactly and this module cannot.
+ *
+ * The top is INCLUSIVE of the double `2^63`, which is not the type's own limit
+ * but the nearest double to it. Every one of the top ~1024 int64 values —
+ * `9223372036854775807` among them — rounds to exactly `2^63` when read, so an
+ * exclusive bound refused INT64_MAX itself as an engine alteration, at the
+ * error tier that fails `lint:scenes` on a value Godot stores exactly. The one
+ * spelling that genuinely saturates and now only warns (`9223372036854775808`)
+ * is indistinguishable from those after the read, and the warning's text — the
+ * value is outside what this linter reads exactly, so no bound is checked —
+ * is true of it either way.
  */
 const INT64_TRUE_MIN = -(2 ** 63);
 const INT64_TRUE_LIMIT = 2 ** 63;
@@ -149,7 +158,7 @@ const INT64_TRUE_LIMIT = 2 ** 63;
  */
 export function readerLimitedInt(asFloat: number, width: IntWidth): boolean {
   if (width !== 'int64') return false;
-  return Number.isFinite(asFloat) && asFloat >= INT64_TRUE_MIN && asFloat < INT64_TRUE_LIMIT;
+  return Number.isFinite(asFloat) && asFloat >= INT64_TRUE_MIN && asFloat <= INT64_TRUE_LIMIT;
 }
 
 /** `T(int64)`, the integral conversion — defined for every input, in both directions. */

@@ -26,6 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
+import { descendsFrom, isCatalogedType } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 // control.h:100-119, Control::CursorShape: CURSOR_ARROW = 0 .. CURSOR_HELP = 16.
@@ -37,12 +38,18 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
   const children = node.children ?? [];
-  const hasSubViewport = children.some((child) => child.type === 'SubViewport');
+  // `cast_to<SubViewport>` (subviewport_container.cpp:274), so a subclass
+  // counts; `descendsFrom` is reflexive and still matches a plain SubViewport.
+  const hasSubViewport = children.some((child) => descendsFrom(child.type, 'SubViewport'));
   // Instance-opaque linting (CONTEXT.md): a child whose type comes from another
   // scene may well be rooted at a SubViewport, so staying silent beats
   // false-positiving on a normal Godot idiom. Testing `instance` alone missed
-  // the override-heading case, which parses as a confident `'Node'`.
-  const hasOpaqueChild = children.some(isTypeUnknowable);
+  // the override-heading case, which parses as a confident `'Node'`; a class
+  // outside Godot's catalog is the same question, since `descendsFrom` answers
+  // false for "never heard of it" exactly as it does for "not a subclass".
+  const hasOpaqueChild = children.some(
+    (child) => isTypeUnknowable(child) || !isCatalogedType(child.type)
+  );
 
   if (!hasSubViewport && !hasOpaqueChild) {
     diagnostics.push({

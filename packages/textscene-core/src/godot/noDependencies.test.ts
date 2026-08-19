@@ -25,11 +25,22 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/godot
 
-/** Every non-test source file in this directory. */
-function sourceFiles(): string[] {
-  return readdirSync(here)
-    .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
-    .sort();
+/**
+ * Every non-test source file in this directory TREE.
+ *
+ * Recursive, because the flat listing filtered a subdirectory out as "not a
+ * `.ts`" and never opened it — so one file under `godot/tiles/` could import
+ * three and stay green while becoming the bridge that carries it into every
+ * bundle reading `CMP_EPSILON`.
+ */
+function sourceFiles(dir: string = here, prefix = ''): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const name = `${prefix}${entry.name}`;
+    if (entry.isDirectory()) found.push(...sourceFiles(resolve(dir, entry.name), `${name}/`));
+    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) found.push(name);
+  }
+  return found.sort();
 }
 
 /**

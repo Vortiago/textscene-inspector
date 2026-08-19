@@ -55,7 +55,7 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `linear_damp_space_override` | enum 0-4 (DISABLED/COMBINE/COMBINE_REPLACE/REPLACE/REPLACE_COMBINE) | warning |
 | `monitorable` | true or false |  |
 | `monitoring` | true or false |  |
-| `priority` | float |  |
+| `priority` | integer |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

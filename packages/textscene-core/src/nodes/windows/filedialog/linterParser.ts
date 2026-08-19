@@ -81,6 +81,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
 import { v, accepts, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { packedArrayLiteral } from '../../../godot/index.js';
 
 // file_dialog.cpp:2114, PROPERTY_HINT_ENUM, 5 labels ("Open File,Open Files,
 // Open Folder,Open Any,Save"). set_file_mode (:1362-1363) is
@@ -112,7 +113,7 @@ const ACCESS = { 0: 'RESOURCES', 1: 'USERDATA', 2: 'FILESYSTEM' };
  * through with no per-element check, so this rejects only what Godot's own
  * parser could not read either: format-only, no citation needed for a bound.
  */
-const FILTERS_WRAPPER_RE = /^\s*PackedStringArray\s*\(([\s\S]*)\)\s*$/;
+const FILTERS_WRAPPER_RE = packedArrayLiteral('PackedStringArray');
 const FILTERS_BODY_RE = /^\s*"(?:[^"\\]|\\.)*"\s*(?:,\s*"(?:[^"\\]|\\.)*"\s*)*$/;
 
 function packedStringArrayValidator(name: string): PropertyValidator {

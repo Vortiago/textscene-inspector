@@ -39,9 +39,12 @@ import { compositeSpellings } from './variantConversion.js';
  *
  * FINITE by choice, and therefore NARROWER than Godot's own tokenizer: `inf`,
  * `-inf`, `inf_neg` and `nan` are legal components that Godot writes, and this
- * pattern refuses them so the decoders warn-then-fall-back to a documented
- * default rather than handing three.js an `Infinity` it renders as NaN
- * geometry. The linter must NOT report those, so it has its own widened
+ * pattern refuses those SPELLINGS so the decoders warn-then-fall-back to a
+ * documented default rather than handing three.js an `Infinity` it renders as
+ * NaN geometry. A grammar cannot finish the job — `1e999` is ordinary digits
+ * and an exponent, and overflows to infinity in Godot's reader as in this one
+ * — so a decoder that must not see one tests {@link matchedFloat}'s RESULT,
+ * the way `parseVector2` and `parseOptionalRect2` do. The linter must NOT report those, so it has its own widened
  * pattern, derived from this one: {@link TSCN_FLOAT_PATTERN_SOURCE} below.
  */
 export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
@@ -213,8 +216,23 @@ export function parseGodotFloat(value: string): number | null {
  * carrying a roster of the places it happens to be safe.
  *
  * Non-finite input is the caller's mistake, not this function's: use
- * {@link parseGodotFloat} for anything a finite grammar has not already matched.
+ * {@link parseGodotFloat} for anything a finite grammar has not already
+ * matched. The RESULT can still be non-finite even so — an overflowing
+ * exponent is inside the finite grammar — so a caller feeding three.js checks
+ * it with {@link allFinite}.
  */
 export function matchedFloat(capture: string): number {
   return parseFloat(capture);
+}
+
+/**
+ * Whether every component read out of a matched composite is finite.
+ *
+ * The condition the finite grammar cannot express: `Vector2(1e999, 0)` matches
+ * it and reads as `Infinity`, which three.js renders as NaN geometry. The
+ * render decoders answer it here so they fall back the way they already do for
+ * a literal the grammar refuses outright.
+ */
+export function allFinite(values: readonly number[]): boolean {
+  return values.every((value) => Number.isFinite(value));
 }

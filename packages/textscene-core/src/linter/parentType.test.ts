@@ -185,3 +185,30 @@ describe('parentTypeVerdict', () => {
     );
   });
 });
+
+describe('an ancestor Godot\'s catalog does not know', () => {
+  const scene = parse(
+    `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Ext" type="JSkeleton2D" parent="."]
+
+[node name="Bone" type="Bone2D" parent="Ext"]
+`
+  );
+  const bone = byName(scene.nodes, 'Bone');
+
+  it('is unknowable at the walk, not a mismatch at each caller', () => {
+    // `descendsFrom` is false for "not a subclass" and "never heard of it"
+    // alike, so a GDExtension parent read as the former warns about a scene
+    // that is correct. The check lives in `knownParent` because four callers
+    // reading `ancestor.type` through `searchAncestors` never had it.
+    expect(knownParent(scene, bone).kind).toBe('unknowable');
+    expect(parentTypeVerdict(scene, bone, 'Skeleton2D').kind).toBe('unknowable');
+  });
+
+  it('still resolves as an identity, which reads no type', () => {
+    expect(parentIdentity(scene, bone)?.name).toBe('Ext');
+  });
+});

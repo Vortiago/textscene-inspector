@@ -5,7 +5,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
-import { readerLimitedInt, type IntWidth } from '../../../godot/index.js';
+import { packedArrayLiteral, readerLimitedInt, type IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
@@ -212,7 +212,7 @@ function packedTupleArray(
   example: string = Array(groupSize).fill('0').join(', ')
 ): PropertyValidator {
   const formatErr = formatCode(name);
-  const WRAPPER_RE = new RegExp(`^\\s*${wrapper}\\s*\\(([\\s\\S]*)\\)\\s*$`);
+  const WRAPPER_RE = packedArrayLiteral(wrapper);
   return shape((key, value, line) => {
     const match = WRAPPER_RE.exec(value);
     if (!match) {

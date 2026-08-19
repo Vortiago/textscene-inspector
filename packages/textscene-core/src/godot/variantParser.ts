@@ -18,6 +18,8 @@
  * parsers then dropped on the floor. Derivation makes that divergence unrepresentable
  * instead of merely discouraged.
  */
+import { FLOAT_PATTERN_SOURCE } from './number.js';
+
 const WS = '\\s*';
 
 /**
@@ -97,6 +99,37 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
  */
 export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
   return new RegExp(`${typeName}${WS}\\(([^)]*)\\)`, global ? 'g' : '');
+}
+
+/**
+ * A field of a serialised Dictionary whose value is a NUMBER; `[1]` is the
+ * literal. Pass `global` for a repeated scan — a `g`-flagged RegExp carries
+ * `lastIndex`, so each caller needs its own instance.
+ *
+ * The value runs to its `,`/`}` delimiter rather than stopping wherever the
+ * number grammar stops, so a malformed `1.2.3` matches nothing and the caller
+ * falls back — instead of reading the prefix `1.2`, which is the
+ * stop-at-the-first-bad-character defect this whole grammar exists to end.
+ *
+ * Here rather than at the call site because the scalar grammar may not be
+ * rebuilt outside this module: a second reader of it is exactly what
+ * `godotLiteralGrammar.guard.test.ts` forbids.
+ */
+export function dictNumberField(key: string, global = false): RegExp {
+  return new RegExp(
+    `"${key}"${WS}:${WS}(${FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
+    global ? 'g' : ''
+  );
+}
+
+/**
+ * A field of a serialised Dictionary whose value is a resource reference;
+ * `[1]` is the whole reference. Same padding tolerance as every other builder
+ * here — a hand-rolled copy dropped it and a SpriteFrames animation lost half
+ * its frames.
+ */
+export function dictRefField(key: string, global = false): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}(${RESOURCE_REF_BODY})`, global ? 'g' : '');
 }
 
 /**

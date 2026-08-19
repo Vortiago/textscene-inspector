@@ -135,7 +135,16 @@ function stripQuotes(value: string): string {
  * ({@link unquoteString}).
  */
 function unquoteHeadingValue(value: string): string {
-  if (!value.startsWith('"') || !value.endsWith('"')) return value;
+  // An opening quote and nothing else carries no content, and the empty string
+  // is what says so: `name` has to stay falsy for the strict parser to go on
+  // reporting it missing.
+  if (value === '"') return '';
+  // `scanQuoted`, not `endsWith('"')`: a trailing quote can be an ESCAPED one,
+  // so `"a\"b\"` ends in a quote while its string never closes. Unwrapping it
+  // decoded the `\"` that keeps the raw text re-parseable and handed back
+  // `a"b\`. The scanner is the same rule the value was captured with, so the
+  // two cannot disagree about where the string ends.
+  if (value[0] !== '"' || scanQuoted(value, 0) !== value.length) return value;
   const inner = value.slice(1, -1);
   return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
 }

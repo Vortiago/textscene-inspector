@@ -16,6 +16,10 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../resources/SubResourceResolver';
 import {
+  ARRAY_LITERAL_RE,
+  dropTrailingComma,
+  ruleInt,
+  splitTopLevel,
   SUB_RESOURCE_REF_ANYWHERE_RE,
   SUB_RESOURCE_REF_BODY,
 } from '../../../godot/index.js';
@@ -217,12 +221,21 @@ function parseBlendTreeNodes(data: Record<string, unknown>): Map<string, string>
  * `"toNode:port" → fromNode` map.
  */
 function parseConnections(raw: string): Map<string, string> {
-  const tokens = raw.match(/&"[^"]*"|-?\d+/g) ?? [];
+  // Split the array, don't scavenge tokens out of it. A `&"…"|-?\d+` scan read
+  // the port `1e1` as the two tokens `1` and `1` — shifting every triple after
+  // it — and skipped a plain `"Blend"`, which `Variant::operator StringName()`
+  // converts and Godot therefore wires.
+  const body = ARRAY_LITERAL_RE.exec(raw.trim());
+  if (!body) return new Map();
+  const tokens = dropTrailingComma(splitTopLevel(body[1]!));
   const out = new Map<string, string>();
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const to = stripStringName(tokens[i]!);
-    const port = tokens[i + 1]!;
+    // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), so
+    // it reads the way every other int slot does.
+    const port = ruleInt(tokens[i + 1]!);
     const from = stripStringName(tokens[i + 2]!);
+    if (port === null) continue;
     out.set(`${to}:${port}`, from);
   }
   return out;

@@ -31,11 +31,11 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError } from '../../../linter/validators/index.js';
-import { RESOURCE_REF_RE, packedArrayLiteral } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, RESOURCE_REF_RE, packedArrayLiteral } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 
-const OUTER_RE = /^\[([\s\S]*)\]$/;
+const OUTER_RE = ARRAY_LITERAL_RE;
 const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
 const QUOTED_NAME_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
 const FORMAT_CODE = 'INVALID_RESOURCES_FORMAT';
@@ -71,7 +71,8 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
   // (variant.cpp:2183-2189) — so a hand-written bare `["a", "b"]` loads too.
   // Accepting only the canonical spelling would reject a value the engine
   // itself converts.
-  const namesMatch = PACKED_STRING_ARRAY_RE.exec(topParts[0]!) ?? OUTER_RE.exec(topParts[0]!);
+  const packedNames = PACKED_STRING_ARRAY_RE.exec(topParts[0]!);
+  const namesMatch = packedNames ?? OUTER_RE.exec(topParts[0]!);
   if (!namesMatch) {
     return propertyError(
       key,
@@ -90,7 +91,13 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
 
-  const names = splitTopLevel(namesMatch[1]!);
+  // A trailing comma is legal only in the bare `[…]` spelling: `_parse_array`
+  // closes on `TK_BRACKET_CLOSE` before it demands another value
+  // (variant_parser.cpp:1658-1662), while `_parse_construct` (:551-596) demands
+  // one after every comma, so `PackedStringArray("a", "b",)` really is a format
+  // error and keeps its empty element.
+  const rawNames = splitTopLevel(namesMatch[1]!);
+  const names = packedNames ? rawNames : dropTrailingComma(rawNames);
   for (const name of names) {
     if (!QUOTED_NAME_RE.test(name)) {
       return propertyError(

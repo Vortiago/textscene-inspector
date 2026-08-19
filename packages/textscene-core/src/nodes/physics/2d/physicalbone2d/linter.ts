@@ -19,8 +19,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { isTypeUnknowable, parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
+import { descendsFrom, isCatalogedType } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */
@@ -49,11 +49,21 @@ function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
 }
 
 /**
- * Joint2D and its only three subclasses (doc/classes/*.xml: DampedSpringJoint2D,
- * GrooveJoint2D, PinJoint2D each `inherits="Joint2D"`) — the "Joint2D-based
- * child" physical_bone_2d.cpp:118-122 asks for.
+ * The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for.
+ *
+ * Derived, not rostered: Godot's own test is a `cast_to<Joint2D>`, so any
+ * subclass counts and a hand-listed set goes stale the day the engine or a
+ * GDExtension adds one. `descendsFrom` is reflexive, so a plain `Joint2D`
+ * still matches; a child whose class this build has never heard of MAY be one,
+ * so it counts as unseeable rather than as absent.
  */
-const JOINT2D_TYPES = new Set(['Joint2D', 'PinJoint2D', 'GrooveJoint2D', 'DampedSpringJoint2D']);
+function jointChildVerdict(children: readonly TscnNode[]): 'present' | 'absent' | 'unknowable' {
+  if (children.some((child) => descendsFrom(child.type, 'Joint2D'))) return 'present';
+  if (children.some((child) => isTypeUnknowable(child) || !isCatalogedType(child.type))) {
+    return 'unknowable';
+  }
+  return 'absent';
+}
 
 function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -90,8 +100,7 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   // `cast_to<PhysicalBone2D>(get_parent())` (physical_bone_2d.cpp:119), so
   // subclasses count and an unseeable parent decides nothing.
   if (parentTypeVerdict(scene, node, 'PhysicalBone2D').kind === 'satisfied') {
-    const hasJointChild = node.children.some((child) => JOINT2D_TYPES.has(child.type));
-    if (!hasJointChild) {
+    if (jointChildVerdict(node.children) === 'absent') {
       diagnostics.push({
         severity: 'warning',
         message: `PhysicalBone2D '${node.name}' is chained under another PhysicalBone2D but has no Joint2D-based child. A PhysicalBone2D node should have a Joint2D-based child node to keep bones connected.`,

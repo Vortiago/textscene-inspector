@@ -42,8 +42,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Viewport behaviour / editor aids: valid TSCN keys with no effect
       // on the static scene preview.
-      // (`limit_left/top/right/bottom` used to sit here; the Cameras panel
-      // clamps the framed view to them now.)
       'ignore_rotation', 'process_callback', 'limit_smoothed',
       'position_smoothing_enabled', 'position_smoothing_speed',
       'rotation_smoothing_enabled', 'rotation_smoothing_speed',
@@ -69,9 +67,7 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Polygon2D: {
     linterOnly: [
-      // Display tweak with no rendering parity requirement. (`invert_enabled`,
-      // `invert_border` and the whole texture transform used to sit here; all
-      // are rendered now.)
+      // Display tweak with no rendering parity requirement.
       'antialiased',
     ],
     renderGap: [
@@ -208,8 +204,7 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CollisionShape2D: {
     linterOnly: [
-      // Physics-behaviour properties with no visual counterpart. (`debug_color`
-      // used to sit here; the gizmo draws in it now.)
+      // Physics-behaviour properties with no visual counterpart.
       'one_way_collision', 'one_way_collision_margin',
     ],
     reason: 'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',

@@ -170,6 +170,14 @@ describe('parseHeading recovers from a malformed attribute', () => {
     expect(result!.attributes).toEqual({ name: '' });
   });
 
+  it('leaves a value whose closing quote is escaped verbatim', () => {
+    // Both quotes after the opener are escaped, so the string never closes.
+    // Unwrapping on a trailing `"` alone destroyed the `\\"` that keeps the raw
+    // text re-parseable.
+    const result = parseHeading(String.raw`[node name="a\"b\" index=5]`);
+    expect(result!.attributes).toEqual({ name: String.raw`"a\"b\"`, index: '5' });
+  });
+
   it('terminates on pathological input', () => {
     expect(parseHeading('[node = = =]')!.attributes).toEqual({});
     expect(parseHeading('[node ]]]')!.attributes).toEqual({});

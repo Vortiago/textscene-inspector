@@ -95,14 +95,6 @@ export function parentTypeVerdict(
   if (step.kind !== 'known') return step;
   const { parent } = step;
   if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
-  // A class outside Godot's catalog is a GDExtension or a build this linter
-  // does not have. Godot's own check is a runtime `cast_to` against a ClassDB
-  // with every extension registered (collision_shape_3d.cpp:125-128), so
-  // ancestry is undecidable from the file alone — and `descendsFrom` says
-  // false for "not a subclass" and "never heard of it" alike. The Mirror's
-  // Jolt `JBody3D` collected ten "is not a CollisionObject3D" warnings on
-  // scenes that are perfectly correct.
-  if (!isCatalogedType(parent.type)) return { kind: 'unknowable' };
   return { kind: 'mismatch', parent };
 }
 
@@ -112,7 +104,7 @@ export type ParentLookup =
   | { kind: 'known'; parent: TscnNode }
   /** No parent: this node is the scene root. */
   | { kind: 'root' }
-  /** There is a parent, but its type lives in a scene this linter never opens. */
+  /** There is a parent, but no type this linter may reason about: declared in a scene it never opens, or outside Godot's catalog. */
   | { kind: 'unknowable' };
 
 /**
@@ -125,11 +117,24 @@ export type ParentLookup =
  * warn about parents declared in another file. This one cannot be held without
  * the answer. {@link parentIdentity} is the second door, for the caller that
  * reads no type at all.
+ *
+ * Two ways a type goes unread, and both belong here rather than at a caller.
+ * `isTypeUnknowable` covers a type declared in a scene this linter never
+ * opens. A type outside Godot's catalog is the second: it is a GDExtension or
+ * a build this linter does not have, Godot's own check is a runtime `cast_to`
+ * against a ClassDB with every extension registered
+ * (collision_shape_3d.cpp:125-128), and `descendsFrom` says false for "not a
+ * subclass" and "never heard of it" alike. The Mirror's Jolt `JBody3D`
+ * collected ten "is not a CollisionObject3D" warnings on scenes that are
+ * perfectly correct. Held at one caller it stayed missing at four others —
+ * `Bone2D`, `PhysicalBone2D`, `Camera2D` and the Node2D global transform all
+ * warned on an extension ancestor — so the walk answers it once.
  */
 export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
   if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
+  if (!isCatalogedType(parent.type)) return { kind: 'unknowable' };
   return { kind: 'known', parent };
 }
 
@@ -161,11 +166,13 @@ export type AncestorSearch<T> =
 /**
  * Climb `node`'s ancestors, nearest first, until `visit` returns a value.
  *
- * `visit` is called ONLY with an ancestor whose type this file states: every
- * step goes through `knownParent`, so an instanced, override or typeless
- * ancestor ends the walk at `unknowable` before `visit` ever sees it. That
- * contract is what makes a bare `ancestor.type` read inside `visit` correct —
- * the check is in the walk, once, instead of at each caller's discretion.
+ * `visit` is called ONLY with an ancestor whose type this file states AND
+ * Godot's catalog knows: every step goes through `knownParent`, so an
+ * instanced, override, typeless or GDExtension ancestor ends the walk at
+ * `unknowable` before `visit` ever sees it. That contract is what makes a bare
+ * `ancestor.type` read inside `visit` correct — and a bare `descendsFrom` read
+ * too, which is the half four callers got wrong while the check sat at one of
+ * them. It is in the walk, once, instead of at each caller's discretion.
  *
  * A caller that wants to keep climbing returns `undefined`; a caller that wants
  * to stop returns anything else, and one that also wants to decline the whole

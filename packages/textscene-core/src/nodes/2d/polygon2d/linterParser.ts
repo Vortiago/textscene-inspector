@@ -13,13 +13,18 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import type { ParseError } from '../../../linter/types.js';
-import { dropTrailingComma, splitTopLevel } from '../../../godot/index.js';
+import {
+  ARRAY_LITERAL_RE,
+  dropTrailingComma,
+  packedArrayLiteral,
+  splitTopLevel,
+} from '../../../godot/index.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 
 const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
-const PACKED_INT32_ELEMENT_RE = /^PackedInt32Array\s*\(([\s\S]*)\)$/;
-const BARE_INT_ARRAY_ELEMENT_RE = /^\[([\s\S]*)\]$/;
+const PACKED_INT32_ELEMENT_RE = packedArrayLiteral('PackedInt32Array');
+const BARE_INT_ARRAY_ELEMENT_RE = ARRAY_LITERAL_RE;
 
 /**
  * `polygons`: an Array of PackedInt32Array index lists (polygon_2d.cpp:720,
