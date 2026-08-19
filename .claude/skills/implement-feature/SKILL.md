@@ -79,11 +79,13 @@ monorepo orientation lives in the `textscene-dev` skill; this skill is the per-f
 ## Guards — what goes RED if you forget a layer (and the gap)
 
 Meta-guards catch most forgotten layers: `linter/barrelCompleteness.test.ts` (linter barrel wiring),
-`linter/ruleCoverage.test.ts` (rule registered + tested), `core/registrationCollision.test.ts` (dup
-typeName), `nodes/_contracts/*-coverage*.test.ts` (dropped fixture / thin suite). **THE GAP: the render/parse
+`linter/ruleCoverage.test.ts` (rule registered), `core/registrationCollision.test.ts` (dup
+typeName), `nodes/_contracts/fixture-coverage.test.ts` (dropped fixture). **THE GAP: the render/parse
 barrels (`TscnParser.ts`, `r3f/nodes/index.ts`) have no completeness guard** — miss the `r3f/nodes/index.ts`
 import and the node renders a gray placeholder with green unit tests; only the visual golden or a manual run
-catches it. Verify these two barrels by hand.
+catches it. Verify these two barrels by hand. Nothing sizes a test SUITE either: a co-located
+`parser.test.ts` holding one empty `it` is invisible to every guard above, so suite depth is a
+/code-review question.
 
 ## Docs (the most-forgotten layer)
 

@@ -22,7 +22,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
@@ -37,7 +37,11 @@ function trackedSources(): string[] {
     maxBuffer: 32 * 1024 * 1024,
   })
     .split('\n')
-    .filter((f) => f !== '' && !f.includes('/dist/'));
+    .filter((f) => f !== '' && !f.includes('/dist/'))
+    // The index lists a file removed from the worktree, and a deleted file has
+    // no source to compare — `godot-source-decoupling.test.mjs` skips the same
+    // state. The corpus floor below is what stops this hiding a collapsed list.
+    .filter((f) => existsSync(resolve(REPO_ROOT, f)));
 }
 
 function scriptKind(file: string): ts.ScriptKind {

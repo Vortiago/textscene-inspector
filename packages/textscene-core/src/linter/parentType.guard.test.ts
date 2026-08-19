@@ -27,11 +27,17 @@
  * at all are four plausible copies with four different shapes — and the last
  * has nothing to recognise. All of them need a parent first, so matching that
  * one line catches every re-spelling without enumerating any.
+ *
+ * Every sweep here reads comment-stripped source, like its sibling guards: prose
+ * naming the accessor or the flag is not a use of either, and a docblock that
+ * explains why a rule must not hold a raw parent is the likeliest place for the
+ * words to appear.
  */
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, linterDir, nodesRoot, srcRoot } from './testing/ruleNameScrape.js';
 
 /** A file's `src/`-relative path, the form every list below is written in. */
@@ -74,6 +80,7 @@ const RAW_PARENT_ACCESS = /\bfindParentNode\b/;
  */
 const RAW_PARENT_ACCESS_ALL = new RegExp(RAW_PARENT_ACCESS.source, 'g');
 
+/** The files, minus the allowlist, whose CODE satisfies `predicate`. */
 function offenders(
   predicate: (source: string) => boolean,
   allowed: Set<string>,
@@ -82,7 +89,7 @@ function offenders(
   return files
     .map((file) => ({ label: label(file), file }))
     .filter((entry) => !allowed.has(entry.label))
-    .filter((entry) => predicate(readFileSync(entry.file, 'utf8')))
+    .filter((entry) => predicate(stripComments(readFileSync(entry.file, 'utf8'))))
     .map((entry) => entry.label)
     .sort();
 }
@@ -119,7 +126,9 @@ describe('only parentType.ts holds a raw parent', () => {
     // The weaker half of the allowlist, made checkable. A blanket exemption
     // would let a second caller appear inside the file that owns the
     // definition, which is the one place the invariant could rot unobserved.
-    const source = readFileSync(resolve(linterDir, 'linterUtils.ts'), 'utf8');
+    // Comment-stripped like the sweeps: the two constants are one spelling, so a
+    // control that counted prose would red on a mention the sweeps ignore.
+    const source = stripComments(readFileSync(resolve(linterDir, 'linterUtils.ts'), 'utf8'));
     expect(source.match(RAW_PARENT_ACCESS_ALL) ?? []).toHaveLength(1);
     expect(source).toContain('export function findParentNode(');
   });

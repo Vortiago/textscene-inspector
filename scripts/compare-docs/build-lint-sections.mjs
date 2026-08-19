@@ -6,7 +6,8 @@
  *   node scripts/compare-docs/build-lint-sections.mjs           # rewrite in place
  *   node scripts/compare-docs/build-lint-sections.mjs --check   # fail if stale
  *
- * Needs the built core (`pnpm --filter @textscene/core build`).
+ * Needs a CURRENT built core (`pnpm --filter @textscene/core build`); a stale one
+ * is refused rather than measured.
  *
  * Only the block BETWEEN the markers is generated; the prose beneath it — what
  * the lenient parser does with a value strict rejects — is hand-written and is
@@ -28,10 +29,12 @@ import {
 } from './sheetSources.mjs';
 import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
+import { requireFreshDist } from '../distFreshness.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const COVERAGE_OUT = join(here, 'lint-coverage.json');
 const CATALOG = join(here, 'node-catalog.json');
+const CORE = join(here, '../../packages/textscene-core');
 
 const BEGIN = (type) => `<!-- lint:begin ${type} -->`;
 const END = '<!-- lint:end -->';
@@ -68,6 +71,17 @@ function applyBlock(text, type, rendered) {
 }
 
 const check = process.argv.includes('--check');
+
+// Both modes, not just --check: generating from a stale dist writes a previous
+// revision's coverage into committed sheets, and --check then certifies it. The
+// message is printed rather than thrown so the remedy is the last line, not a
+// stack frame.
+try {
+  requireFreshDist(CORE, 'the generated lint sections');
+} catch (err) {
+  console.error(`[lint-sections] ${err.message}`);
+  process.exit(1);
+}
 
 const core = await loadCoreLinter();
 const baseTypes = await loadClassBaseTypes();
