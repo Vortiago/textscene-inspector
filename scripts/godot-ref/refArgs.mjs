@@ -87,6 +87,10 @@ export function parseArgs(argv) {
         // Optional node path: a scene may hold several Camera3Ds and "the first
         // one in tree order" is not a choice anyone made. Naming it is how both
         // harnesses provably look through the SAME camera.
+        //
+        // The peek cannot tell an omitted value from the next positional, so
+        // `--scene-camera <scene.tscn>` eats the scene. Rather than guess at the
+        // token's shape, the check after the loop reports it.
         if (argv[i + 1] && !String(argv[i + 1]).startsWith('--')) {
           args.sceneCameraPath = argv[++i];
         }
@@ -119,6 +123,16 @@ export function parseArgs(argv) {
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
         args.scene = arg;
     }
+  }
+
+  // `--scene-camera`'s optional value swallowed the ONE positional this CLI
+  // takes, and a scene of `null` is silence rather than an error: the engine
+  // renders nothing and both 300s spawn timeouts elapse first. Say so instead.
+  if (args.sceneCameraPath !== null && args.scene === null) {
+    throw new Error(
+      `--scene-camera took "${args.sceneCameraPath}" as its node path, leaving no scene. ` +
+        `Put the scene first: ref:godot <scene.tscn> --scene-camera [NodePath]`
+    );
   }
 
   return args;

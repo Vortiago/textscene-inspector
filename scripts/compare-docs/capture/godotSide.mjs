@@ -11,7 +11,12 @@ export async function captureGodot(fixtures, force) {
   const modes = new Map();
   for (const [i, fixture] of fixtures.entries()) {
     const out = imagePath(fixture, 'godot');
-    if (!force && existsSync(out)) {
+    // The sidecar is half the entry. Without it `resolveModes` has no
+    // workspace for the fixture, so `--ours` refuses it with "capture --godot
+    // first" while this pass answers "have it" — and the remedy it names could
+    // never run. Re-rendering is what that resolver asks for over guessing the
+    // mode from the image's own size.
+    if (!force && existsSync(out) && existsSync(modePath(out))) {
       console.log(`[godot] ${i + 1}/${fixtures.length} ${fixture} — have it`);
       continue;
     }
@@ -26,6 +31,11 @@ export async function captureGodot(fixtures, force) {
         // Beside the image, so a later run that reuses the cache still knows
         // which workspace it is — the image's own size no longer says.
         writeFileSync(modePath(out), `${mode}\n`);
+      } else {
+        // Written even with no answer, so the miss above does not re-render
+        // this scene on every run. `readRecordedMode` reads anything that is
+        // not `2d` or `3d` as no answer, which is what this is.
+        writeFileSync(modePath(out), 'unknown\n');
       }
       console.log(`ok (${mode ?? 'mode unknown'})`);
     } catch (error) {

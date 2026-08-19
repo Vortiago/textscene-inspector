@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { CANVAS_2D_CAPTURE } from '../visual/previewServer.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
 /**
  * The `res://` root for a scene: the nearest ancestor holding a `project.godot`
@@ -16,7 +17,7 @@ import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
  */
 export function resolveProjectRoot(scenePath) {
   let dir = dirname(resolve(scenePath));
-  const stop = resolve(join(import.meta.dirname, '..', '..'));
+  const stop = resolve(REPO_ROOT);
   const unmarkedRoots = FLATTENED_CORPUS_ROOTS.map((r) => resolve(join(stop, 'scenes', r)));
   while (dir.startsWith(stop) && dir !== stop) {
     if (existsSync(join(dir, 'project.godot'))) return dir;

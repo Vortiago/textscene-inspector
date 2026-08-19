@@ -35,6 +35,12 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
   // printing its plan — and the contract tests below name real Godot types, all
   // of which get scaffolded eventually.
   if (!dryRun && existsSync(sliceDir)) fail(`slice already exists: ${sliceDir}`);
+  // Beside it, not down at the write: bailing after the slice files land leaves
+  // a directory nothing wired, no fixture, and `generate:fixtures` never run —
+  // a half-scaffold the next invocation then refuses as "slice already exists".
+  const fixtureName = `unit-${kebabName}.tscn`;
+  const fixturePath = join(REPO_ROOT, 'scenes/fixtures', fixtureName);
+  if (!dryRun && existsSync(fixturePath)) fail(`fixture already exists: ${fixturePath}`);
 
   const catDepth = category.split('/').length;
   const toSrc = '../'.repeat(catDepth + 2); // slice dir → src/
@@ -65,8 +71,6 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
     }
   }
 
-  const fixtureName = `unit-${kebabName}.tscn`;
-  const fixturePath = join(REPO_ROOT, 'scenes/fixtures', fixtureName);
   const fixtureContent = fixtureFor(baseKey, typeName);
 
   const wirings = [
@@ -120,7 +124,6 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
 
   mkdirSync(sliceDir, { recursive: true });
   for (const [name, content] of files) writeFileSync(join(sliceDir, name), content);
-  if (existsSync(fixturePath)) fail(`fixture already exists: ${fixturePath}`);
   writeFileSync(fixturePath, fixtureContent);
   for (const w of wirings) {
     if (w.content) writeFileSync(w.filePath, w.content);

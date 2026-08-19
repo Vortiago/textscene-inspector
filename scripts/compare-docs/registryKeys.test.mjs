@@ -18,12 +18,34 @@ describe('keyMatcher', () => {
     expect(m('albedo')).toBe(false);
   });
 
-  it('lets `*` stand for one path segment, never for a separator', () => {
+  it('lets `<prefix>/*` reach any depth below the prefix, as the registry does', () => {
+    // `findOwnValidator` matches this shape with a bare `startsWith(prefix)`
+    // (linter/ValidatorRegistry.ts, kind 'path'), so a nested leaf resolves to
+    // the same validator. Read as one segment, `AudioEffectChorus`'s
+    // `voice/1/cutoff_hz` family counted as covered by nothing.
     const m = keyMatcher('glow_levels/*');
     expect(m('glow_levels/1')).toBe(true);
     expect(m('glow_levels/max')).toBe(true);
-    expect(m('glow_levels/a/b')).toBe(false);
+    expect(m('glow_levels/a/b')).toBe(true);
+    // Still a leaf, never the bare prefix.
     expect(m('glow_levels/')).toBe(false);
+    expect(m('glow_levels_extra/1')).toBe(false);
+  });
+
+  it('lets `#/**` reach a nested leaf under a glued index', () => {
+    // TileSet writes both depths of one family (tile_set.cpp:4190, :4193-4194).
+    const m = keyMatcher('terrain_set_#/**');
+    expect(m('terrain_set_0/mode')).toBe(true);
+    expect(m('terrain_set_0/terrain_1/name')).toBe(true);
+    expect(m('terrain_set_0/')).toBe(false);
+    expect(m('terrain_set_/mode')).toBe(false);
+  });
+
+  it('lets a terminal `#` stand for the whole key below the prefix', () => {
+    const m = keyMatcher('pattern_#');
+    expect(m('pattern_0')).toBe(true);
+    expect(m('pattern_')).toBe(false);
+    expect(m('pattern_0/tile')).toBe(false);
   });
 
   it('lets `#` stand for digits only, glued to the prefix', () => {

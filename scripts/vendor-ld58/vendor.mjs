@@ -14,12 +14,11 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { fetchShallow } from '../vendor-git.mjs';
 import { FILES } from './files.mjs';
 import { stripScripts } from './stripScripts.mjs';
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 export const TARGET = join(REPO_ROOT, 'scenes/ld58');
 const DEFAULT_URL = 'https://github.com/Vortiago/ld-58.git';
 

@@ -11,9 +11,12 @@ import { fail } from './paths.mjs';
 export function parseArgs(argv) {
   const positional = [];
   const opts = { base: 'node3d', intent: '', chain: '', linter: false, dryRun: false, tier: false, rule: false };
+  // `--base` carries a default, so its presence is tracked rather than read
+  // off `opts`: the tier branch below refuses flags that were PASSED.
+  let baseGiven = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--base') opts.base = argv[++i];
+    if (a === '--base') { opts.base = argv[++i]; baseGiven = true; }
     else if (a === '--intent') opts.intent = argv[++i];
     else if (a === '--chain') opts.chain = argv[++i];
     else if (a === '--transform-only') {
@@ -43,7 +46,11 @@ export function parseArgs(argv) {
     // A tier is a validator set for an abstract Godot class: no parser, no
     // component, no fixture, no sheet, because the class cannot appear in a
     // .tscn. So --intent, --base and --chain are all meaningless here.
-    for (const [flag, value] of [['--intent', opts.intent], ['--chain', opts.chain]]) {
+    for (const [flag, value] of [
+      ['--intent', opts.intent],
+      ['--chain', opts.chain],
+      ['--base', baseGiven],
+    ]) {
       if (value) fail(`${flag} does not apply to --tier: an abstract class has no slice shape and no leaf chain.`);
     }
     if (opts.linter) fail('--linter does not apply to --tier: a tier is validators by definition.');

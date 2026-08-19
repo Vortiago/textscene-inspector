@@ -94,6 +94,7 @@ const INVOCATIONS = {
   tierInstantiable: ['PinJoint2D', 'physics/2d', '--tier'],
   tierUnknown: ['Jiont2D', 'physics/2d', '--tier'],
   tierWithLeafFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--chain', 'Node3D'],
+  tierWithBaseFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--base', 'node2d'],
   ruleWithoutTier: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node3D', '--rule'],
 };
 
@@ -228,6 +229,10 @@ describe('new-node-slice tier mode', () => {
   it('refuses leaf flags on a tier, and --rule without one', () => {
     expect(results.tierWithLeafFlag.ok).toBe(false);
     expect(results.tierWithLeafFlag.out).toMatch(/--chain does not apply to --tier/);
+    // `--base` carries a default, so it is the one of the three that can be
+    // passed without changing `opts` in a way the branch could notice.
+    expect(results.tierWithBaseFlag.ok).toBe(false);
+    expect(results.tierWithBaseFlag.out).toMatch(/--base does not apply to --tier/);
     expect(results.ruleWithoutTier.ok).toBe(false);
     expect(results.ruleWithoutTier.out).toMatch(/--rule only applies with --tier/);
   });

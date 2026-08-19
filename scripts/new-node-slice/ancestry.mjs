@@ -8,10 +8,43 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { CORE_SRC, REPO_ROOT } from './paths.mjs';
 
+/**
+ * Every slice file of one basename, read once.
+ *
+ * The lookups below ask about one ancestor at a time and there are five to eight
+ * of them per scaffold, so a walk per question re-read all ~240 slices each
+ * time. The tree is a constant for the length of one invocation, so it is read
+ * once and both `ownerOf` lookups scan the same in-memory list.
+ */
+const sliceSources = new Map();
+function slicesNamed(basename) {
+  let found = sliceSources.get(basename);
+  if (found) return found;
+  found = [];
+  (function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === basename) found.push({ dir: dirname(full), src: readFileSync(full, 'utf8') });
+    }
+  })(join(CORE_SRC, 'nodes'));
+  sliceSources.set(basename, found);
+  return found;
+}
+
+/** The one directory whose `basename` holds any of `needles`, if exactly one does. */
+function soleOwner(basename, needles) {
+  const found = slicesNamed(basename).filter(({ src }) => needles.some((n) => src.includes(n)));
+  return found.length === 1 ? found[0].dir : undefined;
+}
+
 /** Godot's ancestry for a type, as `pnpm nodes:catalog` recorded it. */
+let catalogCache;
 function catalogChain(typeName, fallback = []) {
-  const catalog = JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
-  return catalog.nodes.find((n) => n.name === typeName)?.chain ?? fallback;
+  catalogCache ??= JSON.parse(
+    readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8')
+  );
+  return catalogCache.nodes.find((n) => n.name === typeName)?.chain ?? fallback;
 }
 
 /**
@@ -37,27 +70,8 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
    * exposes, calls ONLY that: matching `registerAll` alone stepped past it and
    * the generated slice never loaded the removal.
    */
-  const ownerOf = (type) => {
-    const needles = [`registerAll('${type}'`, `registerUnavailable('${type}'`];
-    // Read once per file, not once per needle: `some` over a callback that reads
-    // meant every file failing the first needle, which is most of them, got read
-    // a second time.
-    const matchesAnyNeedle = (file) => {
-      const src = readFileSync(file, 'utf8');
-      return needles.some((needle) => src.includes(needle));
-    };
-    const found = [];
-    (function walk(dir) {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const full = join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (entry.name === 'linterParser.ts' && matchesAnyNeedle(full)) {
-          found.push(dirname(full));
-        }
-      }
-    })(join(CORE_SRC, 'nodes'));
-    return found.length === 1 ? found[0] : undefined;
-  };
+  const ownerOf = (type) =>
+    soleOwner('linterParser.ts', [`registerAll('${type}'`, `registerUnavailable('${type}'`]);
 
   // Walk up Godot's chain to the NEAREST ancestor that registers something.
   // `PhysicsBody3D` and `Button` bind nothing and own no slice, so stopping at
@@ -101,16 +115,5 @@ export function parentParser(typeName, sliceDir, fallback) {
 
 /** Directory of the slice whose parser.ts exports `parse<Type>`, if one does. */
 export function ownerOfParser(type) {
-  const needle = `export function parse${type}(`;
-  const found = [];
-  (function walk(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.name === 'parser.ts' && readFileSync(full, 'utf8').includes(needle)) {
-        found.push(dirname(full));
-      }
-    }
-  })(join(CORE_SRC, 'nodes'));
-  return found.length === 1 ? found[0] : undefined;
+  return soleOwner('parser.ts', [`export function parse${type}(`]);
 }

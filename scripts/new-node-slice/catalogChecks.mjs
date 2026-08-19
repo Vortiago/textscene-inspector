@@ -8,9 +8,18 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT, fail } from './paths.mjs';
 
-/** The node catalog `pnpm nodes:catalog` derived from Godot's own ClassDB. */
+/**
+ * The node catalog `pnpm nodes:catalog` derived from Godot's own ClassDB.
+ *
+ * Read once: three checks below ask it questions and the file does not change
+ * inside one invocation.
+ */
+let cached;
 function loadCatalog() {
-  return JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  cached ??= JSON.parse(
+    readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8')
+  );
+  return cached;
 }
 
 /**
