@@ -19,7 +19,9 @@ describe('formatTileMapProperties', () => {
     expect(tileSection!.items).toContainEqual({ label: 'Tile Set', value: 'SubResource("ts")' });
     expect(tileSection!.items).toContainEqual({ label: 'Layers', value: '2' });
     expect(tileSection!.items).toContainEqual({ label: 'Ground', value: '2 cells' });
-    expect(tileSection!.items).toContainEqual({ label: 'Layer 1', value: '1 cell' });
+    // An unnamed layer answers to the name `_set` built it with,
+    // `vformat("Layer%d", index)` (tile_map.cpp:706).
+    expect(tileSection!.items).toContainEqual({ label: 'Layer1', value: '1 cell' });
   });
 
   it('appends the Node2D base sections', () => {

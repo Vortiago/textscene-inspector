@@ -4,7 +4,7 @@ import type { Color, Node2DProperties } from '../../../base/node2d/types';
 import type { PlacedCell } from '../shared/tileData';
 
 export interface TileMapLayerData {
-  /** Layer display name (`layer_N/name`), default "Layer N". */
+  /** Layer display name (`layer_N/name`); an unnamed layer answers to `LayerN`. */
   name: string;
   /** Whether the layer renders (`layer_N/enabled`, default true). */
   enabled: boolean;
@@ -19,6 +19,6 @@ export interface TileMapLayerData {
 export interface TileMapProperties extends Node2DProperties {
   /** TileSet reference — `SubResource("...")` or `ExtResource("...")`, verbatim. */
   tile_set?: string;
-  /** Layers in index order (`layer_0/*`, `layer_1/*`, …). */
+  /** Godot's layer vector: index 0 through the highest index the file writes. */
   layers: TileMapLayerData[];
 }
