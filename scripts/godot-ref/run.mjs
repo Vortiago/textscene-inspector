@@ -770,6 +770,7 @@ func _render_3d(target: Node) -> void:
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_apply_preview_lighting(target)
+	_build_csg(target)
 	_place_camera(target)
 	await _converge()
 	get_viewport().get_texture().get_image().save_png(OUT)
@@ -1011,6 +1012,22 @@ func _write_bounds(target: Node) -> void:
 		"size": [b.size.x, b.size.y, b.size.z],
 	}))
 	file.close()
+
+# modules/csg/csg_shape.cpp:222,507: node_aabb is written only by the DEFERRED
+# update_shape, so before the first frame every CSG node reports an empty box
+# and _place_camera frames the union of their ORIGINS instead of their solids.
+func _build_csg(node: Node) -> void:
+	# csg_shape.cpp:568-570 — a contributor's box is filled by its root's own recursive build.
+	if node is CSGShape3D and (node as CSGShape3D).is_root_shape():
+		# Bound behind DISABLE_DEPRECATED; refuse rather than render a camera placed
+		# from empty AABBs, which looks like an ordinary reference picture.
+		if not node.has_method("_update_shape"):
+			push_error("CSGShape3D._update_shape is unavailable; cannot build CSG before the camera")
+			get_tree().quit(1)
+			return
+		node.call("_update_shape")
+	for child in node.get_children():
+		_build_csg(child)
 
 # Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
 # with no regard for visibility.

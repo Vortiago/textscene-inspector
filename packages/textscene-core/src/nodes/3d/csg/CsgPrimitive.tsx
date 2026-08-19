@@ -40,12 +40,9 @@ import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMateri
 const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 
 /**
- * Marks the invisible bounds proxy.
- *
- * `frameSceneBounds` deliberately does NOT skip these. The CSG library loads
- * asynchronously and a combiner root has no solid of its own, so excluding proxies let
- * the auto-frame fit an empty scene. Including one can only frame too large, never too
- * small.
+ * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for
+ * a contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:507`). It is also
+ * all a combiner root has to frame on while the CSG library is still loading.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 

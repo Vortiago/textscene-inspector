@@ -98,3 +98,25 @@ describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor
     expect(actualDir.dot(expectedDir)).toBeGreaterThan(0.999);
   });
 });
+
+describe('frameSceneBounds — CSG contributor bounds proxies', () => {
+  it('frames a contributor solid the boolean subtracted away', () => {
+    // modules/csg/csg_shape.cpp:507 — every shape's node_aabb is its OWN brush,
+    // filled in by the root's recursive build, so the subtracted solid is inside
+    // Godot's scene AABB too. Skipping the proxy frames a smaller, different box.
+    const scene = new THREE.Scene();
+    const result = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.4), new THREE.MeshBasicMaterial());
+    scene.add(result);
+    const proxy = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 2), new THREE.MeshBasicMaterial());
+    proxy.visible = false;
+    proxy.position.z = 1;
+    proxy.userData = { tscnBoundsProxy: true };
+    scene.add(proxy);
+
+    const controls = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, makeCamera(), controls);
+
+    // z spans -0.2..2 with the contributor, -0.2..0.2 without it.
+    expect(controls.target.z).toBeCloseTo(0.9, 5);
+  });
+});

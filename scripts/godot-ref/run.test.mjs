@@ -588,6 +588,45 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   }, 180_000);
 
   /**
+   * `--frame` is only an arbitration tool if its camera is placed from the
+   * bounds `--emit-bounds` reports. A CSG shape builds its brush from a
+   * DEFERRED `update_shape()` (`modules/csg/csg_shape.cpp:221-226`) and sets
+   * `node_aabb` only there (`:507`), so a camera placed synchronously after
+   * `add_child()` sees `get_aabb()` return the default empty box for every
+   * CSG node and frames the union of their ORIGINS.
+   */
+  it('places --frame’s camera from the same bounds --emit-bounds reports, for CSG', async () => {
+    const dir = await scratchDir();
+    const scene = join(REPO_ROOT, 'scenes/fixtures/unit-csg-transparency.tscn');
+    const framed = join(dir, 'framed.png');
+    const boundsOut = join(dir, 'framed.bounds.json');
+    await renderReference({ scene, out: framed, boundsOut, width: 160, height: 120, frame: true });
+
+    // The same derivation `_place_camera` performs, from the emitted bounds.
+    const b = JSON.parse(await readFile(boundsOut, 'utf8'));
+    const span = Math.max(...b.size);
+    const distance = (span / 2 / Math.tan((EDITOR_FOV * Math.PI) / 180 / 2)) * FRAME_MARGIN;
+    const focus = b.position.map((p, i) => p + b.size[i] / 2);
+    const derived = join(dir, 'derived.png');
+    await renderReference({
+      scene,
+      out: derived,
+      width: 160,
+      height: 120,
+      camera: focus.map((f, i) => f + EDITOR_CAMERA_DIRECTION[i] * distance),
+      lookAt: focus,
+    });
+
+    const a = PNG.sync.read(await readFile(framed)).data;
+    const c = PNG.sync.read(await readFile(derived)).data;
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - c[i]);
+    // Two passes of the same engine at the same camera agree exactly; the
+    // allowance is the reference rasterizer's 1/255 blend-rounding floor.
+    expect(sum / a.length).toBeLessThan(1);
+  }, 360_000);
+
+  /**
    * The 2D path, end to end: a Node2D scene must come back as the PROJECT
    * VIEWPORT rectangle — the frame the previewer's 2D stage draws — with the
    * scene in it and no 3D camera anywhere near it. Rendered through the 3D
