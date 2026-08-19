@@ -123,4 +123,21 @@ describe('NavigationRegion3D strict validators', () => {
       expect(error!.severity).toBe('error');
     });
   });
+
+  describe('navmesh, the pre-4.0 spelling of navigation_mesh', () => {
+    it('takes the same references navigation_mesh takes', () => {
+      // navigation_region_3d.cpp:312 hands `p_value` straight to set_navigation_mesh, so the
+      // slot accepts exactly the same literals.
+      expect(check('navmesh', 'SubResource("Nav_1")')).toBeNull();
+      expect(check('navmesh', 'ExtResource("1_nav")')).toBeNull();
+      expect(check('navmesh', 'null')).toBeNull();
+    });
+
+    it('names the deprecated key, not the canonical one, when it rejects', () => {
+      const error = check('navmesh', 'res://nav.tres');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain("'navmesh'");
+      expect(error!.message).not.toContain('navigation_mesh');
+    });
+  });
 });

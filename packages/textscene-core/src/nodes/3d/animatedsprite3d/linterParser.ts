@@ -18,12 +18,12 @@
  * (object.h:132), so both DO serialise and both get a validator below.
  *
  * `AnimatedSprite3D::_set` (sprite_3d.cpp:1494-1500, `#ifndef DISABLE_DEPRECATED`)
- * accepts a legacy `frames` key and forwards it to `set_sprite_frames` — a 3.x
- * scene upgrade path. There is no matching `_get` branch, so Godot never WRITES
- * `frames` itself; it only reads one from an already-converted `.tscn`. No
- * validator here: `sprite_frames` already covers the format that key carries,
- * and `frames` isn't a key this class's own `ADD_PROPERTY`/`_bind_methods`
- * declares, so it is load-compatibility, not a property to strict-validate.
+ * accepts a legacy `frames` key and forwards `p_value` to `set_sprite_frames`
+ * untouched — a 3.x scene upgrade path. There is no matching `_get` branch, so
+ * Godot never WRITES `frames` itself; it only reads one from an
+ * already-converted `.tscn`. It gets a validator below under its own name, so
+ * a scene that carries the old spelling still has its reference format checked
+ * and the diagnostic quotes the key the file actually holds.
  */
 
 // The tier holding every SpriteBase3D member, which in turn pulls
@@ -81,4 +81,9 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // sprite_3d.cpp:1141, `if (speed == 0) { return; }`), both doc-documented
   // behaviour rather than a setter guard or a hint, so this stays unbounded.
   speed_scale: v.float('speed_scale'),
+
+  // -- Pre-4.0 spelling (sprite_3d.cpp:1494-1500) -----------------------------
+  // sprite_3d.cpp:1495, a pure rename onto set_sprite_frames, so the same
+  // reference formats as `sprite_frames` above.
+  frames: v.resourceReference('frames'),
 });

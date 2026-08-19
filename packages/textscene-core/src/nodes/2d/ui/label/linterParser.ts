@@ -31,6 +31,12 @@
  * shared `maskedBitField`, text_direction widens to -1..3, ellipsis_char and
  * structured_text_bidi_override_options follow the exact LinkButton/LineEdit
  * pattern for the identical properties).
+ *
+ * `align` and `valign` are two more keys, pushed by no `ADD_PROPERTY` and
+ * absent from the XML: `Label::_set` (label.cpp:1000-1011, `#ifndef
+ * DISABLE_DEPRECATED`) still accepts the pre-4.0 spellings of
+ * `horizontal_alignment` and `vertical_alignment`. They register at the bottom
+ * of the map under their own names.
  */
 
 import '../control/linterParser.js';
@@ -238,4 +244,14 @@ validatorRegistry.registerAll('Label', {
   // wrapped. set_structured_text_bidi_override_options (label.cpp:1164-1174)
   // assigns straight through, leaving only the literal shape to reject.
   structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
+
+  // -- Pre-4.0 spellings (`Label::_set`, label.cpp:1000-1011) -----------------
+  // Both are pure renames: `p_value.operator int()` is the same INT the
+  // canonical key's slot takes, so each shares its target's ERR_FAIL_INDEX and
+  // stays at the error tier. Named for the key the scene carries, so the
+  // diagnostic quotes something the author can find in the file.
+  // label.cpp:1005 -> set_horizontal_alignment, ERR_FAIL_INDEX at label.cpp:1065.
+  align: v.enumInt('align', 0, 3, HORIZONTAL_ALIGNMENT, { enforced: 'label.cpp:1065' }),
+  // label.cpp:1002 -> set_vertical_alignment, ERR_FAIL_INDEX at label.cpp:1085.
+  valign: v.enumInt('valign', 0, 3, VERTICAL_ALIGNMENT, { enforced: 'label.cpp:1085' }),
 });

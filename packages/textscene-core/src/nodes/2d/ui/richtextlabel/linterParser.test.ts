@@ -47,7 +47,7 @@ describe('RichTextLabel strict validators', () => {
     expect(validatorRegistry.getOwnKeys('RichTextLabel')).not.toEqual([]);
   });
 
-  it('registers exactly the 30 own members (doc/classes/RichTextLabel.xml minus clip_contents and focus_mode, both overrides="Control")', () => {
+  it('registers exactly the 30 own members (doc/classes/RichTextLabel.xml minus clip_contents and focus_mode, both overrides="Control") plus the pre-4.0 bbcode_text', () => {
     expect([...validatorRegistry.getOwnKeys('RichTextLabel')].sort()).toEqual(
       [
         'bbcode_enabled',
@@ -80,6 +80,8 @@ describe('RichTextLabel strict validators', () => {
         'language',
         'structured_text_bidi_override',
         'structured_text_bidi_override_options',
+        // rich_text_label.cpp:7563, the pre-4.0 spelling of `text`.
+        'bbcode_text',
       ].sort()
     );
   });
@@ -485,5 +487,19 @@ describe('RichTextLabel strict validators', () => {
 
   it('the unit fixture carries only values Godot accepts', () => {
     expectFixtureClean('unit-rich-text-label.tscn');
+  });
+
+  describe('bbcode_text, the pre-4.0 spelling of text', () => {
+    it('accepts the quoted strings text accepts', () => {
+      // rich_text_label.cpp:7563 forwards `p_value` to set_text untouched.
+      expect(check('bbcode_text', '"[b]bold[/b]"')).toBeNull();
+      expect(check('bbcode_text', '""')).toBeNull();
+    });
+
+    it('names the deprecated key when it rejects an unquoted literal', () => {
+      const error = check('bbcode_text', 'bold');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain("'bbcode_text'");
+    });
   });
 });

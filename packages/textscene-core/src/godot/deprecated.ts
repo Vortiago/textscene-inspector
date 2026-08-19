@@ -34,11 +34,17 @@
  * Applied to the PROPERTY BAG only, never to a validator lookup. Resolving it
  * in `findValidator` made every diagnostic name the canonical key — `align = 5`
  * reported "Property 'horizontal_alignment' must be 0-3", a name that appears
- * nowhere in the user's file and cannot be grepped for. A deprecated key
- * therefore gets no FORMAT validation, which is what it got before this table
- * existed; the rules, which read the bag, are what the aliases exist to fix.
- * `nodes/2d/bone2d/linterParser.ts:64-70` is the pattern for adding format
- * coverage back per key, under the name the scene carries.
+ * nowhere in the user's file and cannot be grepped for. Format coverage for a
+ * deprecated key is therefore the slice's own: each type below registers a
+ * validator under the old spelling beside the canonical one, so the bound is
+ * the same and the message names the key the scene carries.
+ * `nodes/2d/bone2d/linterParser.ts:64-70` is the pattern.
+ *
+ * The parity guard sees such a key as validated-but-unread, since the bag it
+ * would appear in has already been rewritten. `aliasedRead` in
+ * `linter/propertyGrammarParityAllowlist/types.ts` is the category for that,
+ * and it checks {@link isDeprecatedPropertyName} rather than taking the
+ * claim on trust.
  *
  * A slice that ALREADY handles its own alias is not listed here, because two
  * mechanisms for one alias is worse than either. `AnimationPlayer` reads

@@ -200,9 +200,9 @@ describe('PointLight2D linterParser validators', () => {
 });
 
 describe('PointLight2D keys hoisted to the Light2D tier', () => {
-  it("registers only its own 4 keys directly", () => {
+  it("registers only its own 4 keys directly, plus the pre-4.0 'mode' its own _set declares", () => {
     expect(validatorRegistry.getOwnKeys('PointLight2D').sort()).toEqual(
-      ['height', 'offset', 'texture', 'texture_scale'].sort()
+      ['height', 'offset', 'texture', 'texture_scale', 'mode'].sort()
     );
   });
 
@@ -229,5 +229,45 @@ describe('PointLight2D keys hoisted to the Light2D tier', () => {
     expect(owned, `Light2D does not declare '${key}'`).not.toBeNull();
     // The SAME function, not a shadowing copy that could drift from the tier's rule.
     expect(validatorRegistry.findValidator('PointLight2D', key)).toBe(owned);
+  });
+});
+
+describe('mode, the Godot-3 spelling of blend_mode', () => {
+  /** The error the validator returns for a value, or null when it accepts it. */
+  function check(value: string) {
+    const validator = validatorRegistry.findValidator('PointLight2D', 'mode');
+    expect(validator, "no validator registered for PointLight2D.mode").not.toBeNull();
+    return validator!('mode', value, 1);
+  }
+
+  it('accepts the three BlendMode constants', () => {
+    // light_2d.cpp:457 forwards `(BlendMode)(int)p_value` to set_blend_mode.
+    for (const value of ['0', '1', '2']) {
+      expect(check(value)).toBeNull();
+    }
+  });
+
+  it('warns past the enum, as blend_mode does (no ERR_FAIL_INDEX in the setter)', () => {
+    // light_2d.cpp:307 hints "Add,Subtract,Mix"; set_blend_mode
+    // (light_2d.cpp:190-192) assigns unconditionally.
+    const error = check('9');
+    expect(error).not.toBeNull();
+    expect(error!.severity).toBe('warning');
+  });
+
+  it('names the deprecated key, not the canonical one', () => {
+    const error = check('9');
+    expect(error!.message).toContain("'mode'");
+    expect(error!.message).not.toContain('blend_mode');
+  });
+
+  it('rejects a non-numeric literal, which _set never forwards', () => {
+    // light_2d.cpp:457 guards on `p_value.is_num()`.
+    expect(check('"add"')).not.toBeNull();
+  });
+
+  it('stays off Light2D and DirectionalLight2D, which declare no such _set', () => {
+    expect(validatorRegistry.getOwnKeys('Light2D')).not.toContain('mode');
+    expect(validatorRegistry.getOwnKeys('DirectionalLight2D')).not.toContain('mode');
   });
 });

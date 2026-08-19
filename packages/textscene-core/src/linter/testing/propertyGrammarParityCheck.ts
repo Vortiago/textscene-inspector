@@ -95,6 +95,7 @@ export function checkParity(): ParityViolation[] {
       // which is what a reader and the census below need.
       for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
       for (const k of e.renderGap ?? []) allowedLinterOnly.add(k);
+      for (const k of e.aliasedRead ?? []) allowedLinterOnly.add(k);
     }
 
     const parserOnlyNotAllowlisted = [...parserProps]

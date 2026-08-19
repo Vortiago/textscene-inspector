@@ -9,13 +9,12 @@
  * `enabled` and `bidirectional` are bare-assignment bools (navigation_link_3d.cpp:307-320,
  * :350-363): no ERR_FAIL, no PROPERTY_HINT, so `v.boolean` (format only).
  *
- * There IS a hand-rolled `_set`/`_get` (navigation_link_3d.cpp:220-232, both
- * `#ifndef DISABLE_DEPRECATED`) mapping the legacy keys `start_location`/`end_location`
- * to `start_position`/`end_position`. Neither has an `ADD_PROPERTY` of its own, neither
- * is in the current XML member list, and `parser.ts` (which reuses `parseNode3D`) never
- * reads them either — a load-time-only compat shim for scenes saved by an older Godot,
- * not a current property. Same shape as `ReflectionProbe`'s deprecated `extents` key:
- * no validator here.
+ * A hand-rolled `_set`/`_get` (navigation_link_3d.cpp:221-245, both `#ifndef
+ * DISABLE_DEPRECATED`) maps the legacy keys `start_location`/`end_location` to
+ * `start_position`/`end_position`, forwarding `p_value` untouched. Neither has
+ * an `ADD_PROPERTY` of its own and neither is in the current XML member list,
+ * but a scene saved by an older Godot still loads through them, so both
+ * register at the bottom of the map under their own names.
  */
 
 import '../../base/node3d/linterParser.js';
@@ -46,4 +45,11 @@ validatorRegistry.registerAll('NavigationLink3D', {
     message: "Property 'travel_cost' must be >= 0.",
     enforced: 'navigation_link_3d.cpp:484',
   }),
+
+  // -- Pre-4.0 spellings (navigation_link_3d.cpp:221-245) --------------------
+  // navigation_link_3d.cpp:223 / :227 (`_set`) hand `p_value` straight to
+  // set_start_position / set_end_position, so both take the same unconstrained
+  // Vector3 the modern keys take. Named for the key the scene carries.
+  start_location: v.vector3('start_location'),
+  end_location: v.vector3('end_location'),
 });

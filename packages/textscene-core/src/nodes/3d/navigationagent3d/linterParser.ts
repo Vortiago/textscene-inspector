@@ -23,16 +23,16 @@
  * `debug_path_custom_line_width` that NavigationAgent3D's Debug group
  * (:203-206, four members only) does not bind at all.
  *
- * Not registered: the `#ifndef DISABLE_DEPRECATED` compat shim (cpp:212-226)
- * hand-rolls `_set`/`_get` for three Godot-4.0-beta10-and-earlier names
- * (`time_horizon`, `target_location`, `agent_height_offset`), each forwarding
- * to a modern setter (`set_time_horizon_agents`, `set_target_position`,
- * `set_path_height_offset`). A `.tscn` carrying one of these legacy keys still
- * loads today, routed through whichever modern property's bound this file
- * already states — but the legacy key ITSELF reaches no validator here, same
- * as the 2D twin's identical shim (navigation_agent_2d.cpp:198-224). All three
- * are in the shared table in `godot/deprecated.ts`, which resolves them in the
- * property bag so the rules and the renderer read the modern field.
+ * Three more keys arrive through the `#ifndef DISABLE_DEPRECATED` compat shim
+ * (cpp:209-243), which hand-rolls `_set`/`_get` for the Godot-4.0-beta10-and-
+ * earlier names `time_horizon`, `target_location` and `agent_height_offset`.
+ * Each forwards `p_value` untouched to a modern setter
+ * (`set_time_horizon_agents`, `set_target_position`, `set_path_height_offset`),
+ * so each takes exactly what its modern twin takes and registers at the bottom
+ * of the map under the name the scene carries — the same shape the 2D twin's
+ * identical shim gets (navigation_agent_2d.cpp:198-224).
+ * `godot/deprecated.ts` separately resolves all three in the property bag, so
+ * the rules and the renderer read the modern field.
  */
 
 import '../../node/linterParser.js';
@@ -261,5 +261,28 @@ validatorRegistry.registerAll('NavigationAgent3D', {
     min: 0,
     message: "Property 'debug_path_custom_point_size' must be >= 0.",
     enforced: 'navigation_agent_3d.cpp:1121',
+  }),
+
+  // --- Pre-4.0-beta-1X spellings (navigation_agent_3d.cpp:209-243) ---
+
+  // navigation_agent_3d.cpp:217 hands `p_value` straight to set_target_position,
+  // so the slot takes the same unconstrained Vector3 `target_position` takes.
+  target_location: v.vector3('target_location'),
+  // navigation_agent_3d.cpp:213 hands `p_value` straight to
+  // set_time_horizon_agents, whose ERR_FAIL_COND_MSG (:666) refuses a negative
+  // value — the same enforced floor `time_horizon_agents` carries.
+  time_horizon: v.float('time_horizon', {
+    min: 0,
+    message: "Property 'time_horizon' must be >= 0.",
+    enforced: 'navigation_agent_3d.cpp:666',
+  }),
+  // navigation_agent_3d.cpp:221 hands `p_value` straight to
+  // set_path_height_offset, a bare assignment (:626-628), so the only bound is
+  // the hint `path_height_offset` carries (:157, "-100.0,100,0.01,or_greater"):
+  // a warning at the floor, ceiling opened by `or_greater`.
+  agent_height_offset: v.float('agent_height_offset', {
+    min: -100,
+    message: "Property 'agent_height_offset' must be >= -100.",
+    hinted: 'navigation_agent_3d.cpp:157',
   }),
 });

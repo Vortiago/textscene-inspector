@@ -193,6 +193,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   PointLight2D: {
+    aliasedRead: ['mode'],
     renderGap: [
       // The light's Z, and it is NOT inert in Godot: it reaches the canvas
       // shader as the third light-vector component on two paths — the
@@ -202,7 +203,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // which is a gap rather than deliberate scope.
       'height',
     ],
-    reason: 'height only alters the picture through normal mapping or a custom light shader, neither of which this previewer implements, so its cookie render never reads the key.',
+    reason:
+      'height only alters the picture through normal mapping or a custom light shader, neither of which this previewer implements, so its cookie render never reads the key.',
   },
 
   Node2D: {

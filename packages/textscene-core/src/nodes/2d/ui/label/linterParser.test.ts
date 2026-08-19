@@ -40,6 +40,9 @@ const OWN_KEYS = [
   'structured_text_bidi_override_options',
 ];
 
+/** The pre-4.0 spellings `Label::_set` still accepts (label.cpp:1002, :1005). */
+const DEPRECATED_KEYS = ['align', 'valign'];
+
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
   const validator = validatorRegistry.findValidator('Label', property);
@@ -48,8 +51,10 @@ function check(property: string, value: string) {
 }
 
 describe('Label strict validators', () => {
-  it('declares exactly its own 22 members', () => {
-    expect(validatorRegistry.getOwnKeys('Label').slice().sort()).toEqual(OWN_KEYS.slice().sort());
+  it('declares exactly its own 22 members plus the two pre-4.0 spellings', () => {
+    expect(validatorRegistry.getOwnKeys('Label').slice().sort()).toEqual(
+      [...OWN_KEYS, ...DEPRECATED_KEYS].sort()
+    );
   });
 
   it('rejects a malformed value on every property it validates', () => {
@@ -453,5 +458,50 @@ describe('Label strict validators', () => {
 
   it('accepts every value its own fixture carries', () => {
     expectFixtureClean('unit-label-2d.tscn');
+  });
+
+  describe('align, the pre-4.0 spelling of horizontal_alignment', () => {
+    it('accepts the four HorizontalAlignment constants', () => {
+      // label.cpp:1005 casts to int and calls set_horizontal_alignment, so the
+      // same four values reach the same setter.
+      for (const value of ['0', '1', '2', '3']) {
+        expect(check('align', value)).toBeNull();
+      }
+    });
+
+    it('errors past the enum, which ERR_FAIL_INDEX refuses', () => {
+      // label.cpp:1065, `ERR_FAIL_INDEX((int)p_alignment, 4)`.
+      const error = check('align', '5');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('error');
+    });
+
+    it('names the deprecated key, not the canonical one', () => {
+      const error = check('align', '5');
+      expect(error!.message).toContain("'align'");
+      expect(error!.message).not.toContain('horizontal_alignment');
+    });
+
+    it('rejects a non-integer literal', () => {
+      expect(check('align', '"left"')).not.toBeNull();
+    });
+  });
+
+  describe('valign, the pre-4.0 spelling of vertical_alignment', () => {
+    it('accepts the four VerticalAlignment constants', () => {
+      // label.cpp:1002 casts to int and calls set_vertical_alignment.
+      for (const value of ['0', '1', '2', '3']) {
+        expect(check('valign', value)).toBeNull();
+      }
+    });
+
+    it('errors past the enum, which ERR_FAIL_INDEX refuses', () => {
+      // label.cpp:1085, `ERR_FAIL_INDEX((int)p_alignment, 4)`.
+      const error = check('valign', '4');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('error');
+      expect(error!.message).toContain("'valign'");
+      expect(error!.message).not.toContain('vertical_alignment');
+    });
   });
 });

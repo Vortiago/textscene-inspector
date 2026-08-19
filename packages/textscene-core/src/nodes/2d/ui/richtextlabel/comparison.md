@@ -42,6 +42,7 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
 | `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128) |  |
 | `bbcode_enabled` | true or false |  |
+| `bbcode_text` | quoted string |  |
 | `context_menu_enabled` | true or false |  |
 | `custom_effects` | Array literal ([...] or Array[RichTextEffect]([...])) |  |
 | `deselect_on_focus_loss_enabled` | true or false |  |

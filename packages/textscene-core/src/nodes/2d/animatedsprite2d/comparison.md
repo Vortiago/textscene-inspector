@@ -37,21 +37,22 @@ Position, scale, and the played frames match at each moment of the clip.
 ## Linting
 
 <!-- lint:begin AnimatedSprite2D -->
-Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `AnimatedSprite2D` also REFUSES `playing`, which its base declares but this class cannot carry.
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `animation` | any value (no format constraint) |  |
-| `autoplay` | any value (no format constraint) |  |
+| `animation` | quoted string or &"name" |  |
+| `autoplay` | quoted string or &"name" |  |
 | `centered` | true or false |  |
 | `flip_h` | true or false |  |
 | `flip_v` | true or false |  |
 | `frame` | integer >= 0 | error below |
 | `frame_progress` | float |  |
+| `frames` | null, SubResource("id") or ExtResource("id") |  |
 | `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `playing` | true or false |  |
 | `speed_scale` | float |  |
 | `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |
+| `playing` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -63,7 +64,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 |  | `animatedsprite2d-animation-no-spriteframes` | error |
 <!-- lint:end -->
 
-`speed_scale`, `frame_progress`, `autoplay`, and `playing` are validated by strict but never
+`speed_scale`, `frame_progress`, and `autoplay` are validated by strict but never
 read by the lenient parser at all; playback is selection-driven (see above), so these fields
 have no lenient-side effect. `frame` uses `intOr` with a fallback of `0`: a non-numeric value
 warns and renders frame 0, but a negative frame, which strict rejects, parses as a valid int

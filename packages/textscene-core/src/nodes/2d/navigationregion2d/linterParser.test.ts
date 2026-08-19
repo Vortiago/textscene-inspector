@@ -122,4 +122,21 @@ describe('NavigationRegion2D strict validators', () => {
       expect(error!.severity).toBe('error');
     });
   });
+
+  describe('navpoly, the pre-4.0 spelling of navigation_polygon', () => {
+    it('takes the same references navigation_polygon takes', () => {
+      // navigation_region_2d.cpp:361 hands `p_value` straight to set_navigation_polygon, so the
+      // slot accepts exactly the same literals.
+      expect(check('navpoly', 'SubResource("Nav_1")')).toBeNull();
+      expect(check('navpoly', 'ExtResource("1_nav")')).toBeNull();
+      expect(check('navpoly', 'null')).toBeNull();
+    });
+
+    it('names the deprecated key, not the canonical one, when it rejects', () => {
+      const error = check('navpoly', 'res://nav.tres');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain("'navpoly'");
+      expect(error!.message).not.toContain('navigation_polygon');
+    });
+  });
 });

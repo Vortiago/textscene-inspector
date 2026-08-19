@@ -66,7 +66,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   NavigationRegion3D: {
     linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
     renderGap: ['enabled', 'use_edge_connections'],
-    reason: 'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
+    aliasedRead: ['navmesh'],
+    reason:
+      'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },
 
   Path3D: {
@@ -146,6 +148,7 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'simplify_path', 'time_horizon_agents', 'time_horizon_obstacles',
       'use_3d_avoidance', 'velocity',
     ],
+    aliasedRead: ['target_location', 'time_horizon', 'agent_height_offset'],
     reason:
       "NavigationAgent3D's pathfinding and avoidance parameters are simulation inputs to NavigationServer3D, and its debug_* set draws only under DEBUG_ENABLED; neither changes a still frame, so parser.ts reads none of them.",
   },

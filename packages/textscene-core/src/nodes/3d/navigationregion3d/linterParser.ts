@@ -33,4 +33,11 @@ validatorRegistry.registerAll('NavigationRegion3D', {
     message: "Property 'travel_cost' must be positive.",
     enforced: 'navigation_region_3d.cpp:147',
   }),
+
+  // -- Pre-release 4.0 spelling (navigation_region_3d.cpp:309-326) -----------
+  // navigation_region_3d.cpp:312 (`_set`) / :320 (`_get`) hand `p_value`
+  // straight to set_navigation_mesh, so the slot takes exactly the same
+  // reference formats. Named `navmesh` so the diagnostic quotes the key the
+  // scene carries.
+  navmesh: v.resourceReference('navmesh'),
 });

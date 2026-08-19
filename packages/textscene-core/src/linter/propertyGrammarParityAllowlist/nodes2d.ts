@@ -31,9 +31,11 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Playback-state properties: valid in TSCN but the renderer reads the
       // initial frame directly; runtime playback is not modelled.
-      'autoplay', 'playing', 'frame_progress', 'speed_scale',
+      'autoplay', 'frame_progress', 'speed_scale',
     ],
-    reason: 'AnimatedSprite2D linter validates runtime playback properties (autoplay, playing, speed_scale, frame_progress) that the static renderer ignores.',
+    aliasedRead: ['frames'],
+    reason:
+      'AnimatedSprite2D linter validates runtime playback properties (autoplay, speed_scale, frame_progress) that the static renderer ignores.',
   },
 
   Camera2D: {
@@ -149,7 +151,9 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   NavigationRegion2D: {
     linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
     renderGap: ['enabled', 'use_edge_connections'],
-    reason: 'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
+    aliasedRead: ['navpoly'],
+    reason:
+      'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },
 
   CanvasLayer: {

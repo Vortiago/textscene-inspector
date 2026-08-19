@@ -35,6 +35,10 @@ const KEYS: string[] = [
   'end_position',
   'enter_cost',
   'travel_cost',
+  // navigation_link_2d.cpp:84 and :88, the pre-4.0 spellings of
+  // `start_position` and `end_position`.
+  'start_location',
+  'end_location',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -208,6 +212,27 @@ describe('NavigationLink2D strict validators', () => {
       const result = check('travel_cost', '-inf');
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
+    });
+  });
+
+  describe('start_location and end_location, the pre-4.0 spellings', () => {
+    it('take the same Vector2 literals their modern names take', () => {
+      // navigation_link_2d.cpp:84 and :88 hand `p_value` straight to
+      // set_start_position / set_end_position.
+      expect(check('start_location', 'Vector2(1, 2)')).toBeNull();
+      expect(check('end_location', 'Vector2(1, 2)')).toBeNull();
+    });
+
+    it('accept inf/nan components, since neither setter carries a finite guard', () => {
+      expect(check('start_location', 'Vector2(inf, nan)')).toBeNull();
+      expect(check('end_location', 'Vector2(inf, nan)')).toBeNull();
+    });
+
+    it('name the deprecated key when they reject a malformed literal', () => {
+      const error = check('start_location', 'Vector2(1)');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain("'start_location'");
+      expect(error!.message).not.toContain('start_position');
     });
   });
 });

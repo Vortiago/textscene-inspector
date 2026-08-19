@@ -29,6 +29,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
     ],
+    aliasedRead: ['align', 'valign'],
     renderGap: [
       // A LabelSettings resource carries font, size, colour and outline, none of
       // which the overlay's CSS defaults reproduce.
@@ -40,7 +41,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'lines_skipped', 'max_lines_visible', 'paragraph_separator',
       'visible_characters', 'visible_characters_behavior', 'visible_ratio',
     ],
-    reason: 'The overlay renders the label as DOM text, so shaping, BiDi and locale are delegated; label_settings, the line window and the visible-character reveal all change the frozen frame and are not implemented yet.',
+    reason:
+      'The overlay renders the label as DOM text, so shaping, BiDi and locale are delegated; label_settings, the line window and the visible-character reveal all change the frozen frame and are not implemented yet.',
   },
 
   LineEdit: {
@@ -88,6 +90,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // about how the layout is computed, not what it looks like when done.
       'threaded', 'progress_bar_delay',
     ],
+    aliasedRead: ['bbcode_text'],
     renderGap: [
       // Alignment of the whole document within the control.
       'horizontal_alignment', 'vertical_alignment',
@@ -101,7 +104,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // The typewriter reveal, as on Label.
       'visible_characters', 'visible_characters_behavior', 'visible_ratio',
     ],
-    reason: 'Shaping, BiDi, selection and threaded layout have no frozen-frame surface; document alignment, span underlines, custom effects, scroll position and the visible-character reveal all change the frame and are not implemented yet.',
+    reason:
+      'Shaping, BiDi, selection and threaded layout have no frozen-frame surface; document alignment, span underlines, custom effects, scroll position and the visible-character reveal all change the frame and are not implemented yet.',
   },
 
   ScrollContainer: {

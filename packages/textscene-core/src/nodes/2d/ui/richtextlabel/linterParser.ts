@@ -12,12 +12,12 @@
  * uses: an ungrouped run of text/scroll/wrap/layout properties, then Markup,
  * Threading, Text Selection, Displayed Text, and BiDi.
  *
- * A pre-4.x compatibility alias, `bbcode_text`, is handled by RichTextLabel's own
+ * `bbcode_text` is a pre-4.x spelling of `text`, carried by RichTextLabel's own
  * `_set` override (rich_text_label.cpp:7562-7568, `#ifndef DISABLE_DEPRECATED`)
- * forwarding to `set_text`. It carries no `ADD_PROPERTY` and never appears in
- * `doc/classes/RichTextLabel.xml`, so it registers no validator here — the
- * shared table in `godot/deprecated.ts` resolves it to `text` in the property
- * bag instead, so every rule and the renderer see the one field.
+ * and forwarded to `set_text`. It has no `ADD_PROPERTY` and no XML `<member>`,
+ * so it registers at the bottom of the map under its own name, which is what
+ * the diagnostic then quotes. `godot/deprecated.ts` separately resolves it to
+ * `text` in the property bag, so every rule and the renderer see one field.
  */
 
 import '../control/linterParser.js';
@@ -233,4 +233,11 @@ validatorRegistry.registerAll('RichTextLabel', {
   // set_structured_text_bidi_override_options (rich_text_label.cpp:7334-7344)
   // is a bare assignment.
   structured_text_bidi_override_options: v.arrayLiteral('structured_text_bidi_override_options'),
+
+  // -- Pre-4.x spelling (rich_text_label.cpp:7562-7568) -----------------------
+  // rich_text_label.cpp:7563 forwards `p_value` to set_text untouched, so the
+  // same literal shape as `text` above. The forward is guarded on the string
+  // being non-empty, so `bbcode_text = ""` reaches no setter at all — still a
+  // legal literal, which is all this tier checks.
+  bbcode_text: v.quotedString('bbcode_text'),
 });

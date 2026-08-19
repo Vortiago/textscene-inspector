@@ -69,7 +69,8 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   // `speed_scale` and `frame_progress` get no diagnostic: both are
   // PROPERTY_HINT_NONE behind a bare setter, so no value is out of range (0
   // speed_scale is a legal paused state, and frame_progress is not clamped).
-  // `playing` gets none either: AnimatedSprite2D declares no such property.
+  // `playing` is not a property at all, so it is a key verdict in
+  // linterParser.ts rather than a value rule here.
 
   return diagnostics;
 }

@@ -99,12 +99,6 @@ describe('AnimatedSprite2D Linter', () => {
           invalid: [{ value: 'yes', contains: ['flip_v', 'boolean'] }],
         },
         { prop: 'autoplay', valid: ['"idle"', '""'] },
-        {
-          prop: 'playing',
-          valid: [true, false],
-          invalid: [{ value: 1, contains: ['playing', 'boolean'] }],
-          acceptMode: 'no-error',
-        },
       ]
     );
 
