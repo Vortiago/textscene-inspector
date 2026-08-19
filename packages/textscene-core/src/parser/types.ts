@@ -69,13 +69,13 @@ export interface TscnNode {
    */
   overridesExistingNode?: boolean;
   /**
-   * The ExtResource table this node's subtree must resolve against, set when the
+   * The resource scope this node's subtree must resolve against, set when the
    * node has been grafted into content loaded from ANOTHER scene. It was
-   * authored in the outer scene, so its `ExtResource("3")` means whatever the
-   * OUTER table says — under the sub-scene's table the same id is a different
-   * resource, or absent entirely.
+   * authored in the outer scene, so its `ExtResource("3")` and its
+   * `SubResource("1")` alike mean whatever the OUTER tables say — under the
+   * sub-scene's tables the same id is a different resource, or absent entirely.
    */
-  authoredResources?: readonly TscnExternalResource[];
+  authoredScope?: SceneScope;
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
 }
@@ -88,6 +88,27 @@ export interface TscnExternalResource {
   path: string;
   type: string;
 }
+
+/**
+ * The resource scope a subtree resolves its ids against — BOTH pools, always
+ * together.
+ *
+ * They travel as one value rather than two parameters because a `.tscn`'s ids
+ * are per-file and per-KIND: a node can name `ExtResource("2")` and
+ * `SubResource("1")` in the same property block, and both mean "in the scene I
+ * was authored in". Splitting them lets a caller pass one and forget the other,
+ * which resolves half the ids against the right scene and half against nothing
+ * — a StyleBox that silently comes back `undefined` while the textures beside
+ * it load fine. That is not hypothetical: while these were separate parameters
+ * (one required, one optional), BOTH consumers that needed the SubResource pool
+ * shipped call sites that compiled, ran, and passed their full suites with it
+ * omitted. One type makes the omission unrepresentable instead of untested.
+ */
+export interface SceneScope {
+  readonly externalResources: readonly TscnExternalResource[];
+  readonly internalResources: readonly TscnInternalResource[];
+}
+
 
 /**
  * Represents an internal resource

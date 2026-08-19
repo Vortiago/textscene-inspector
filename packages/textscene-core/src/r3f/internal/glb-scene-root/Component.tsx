@@ -265,13 +265,13 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the scene that AUTHORED it, which is
       // the outer one — not the sub-scene whose provider it now renders under.
-      // Only its ExtResource table travels that way today, so a SubResource id
-      // still resolves against the ambient pool (which does inherit the outer
-      // scene's, own-scene-first) — see `AuthoredResourceScope`.
+      // Both pools travel together, so a SubResource material override resolves
+      // there too rather than against whatever the ambient scope happens to
+      // hold — see `AuthoredResourceScope`.
       const source = resolveMaterialSource(
         ref,
-        internalResources,
-        override.authoredResources ?? externalResources
+        override.authoredScope?.internalResources ?? internalResources,
+        override.authoredScope?.externalResources ?? externalResources
       );
       if (!source) continue;
 

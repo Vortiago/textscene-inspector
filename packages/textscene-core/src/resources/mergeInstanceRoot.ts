@@ -8,7 +8,7 @@
  * inspector reads via `useLiveNode`), so node paths stay consistent —
  * load-bearing for the selection-driven Animation tab (ADR-0012).
  */
-import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import { graftInstanceChildren } from './graftInstanceChildren.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import type { ParsedHeading } from '../parser/utils.js';
@@ -69,7 +69,7 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
 export function mergeInstanceRoot(
   instanceNode: TscnNode,
   loadedScene: { nodes: readonly TscnNode[] },
-  outerResources?: readonly TscnExternalResource[]
+  outerScope?: SceneScope
 ): TscnNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
@@ -126,6 +126,6 @@ export function mergeInstanceRoot(
     // A host child whose parent path descended INTO this instance is grafted at
     // the sub-path it named rather than appended at the root — see
     // `graftInstanceChildren`. Direct children still append, as before.
-    children: graftInstanceChildren(root.children, instanceNode.children, outerResources),
+    children: graftInstanceChildren(root.children, instanceNode.children, outerScope),
   };
 }

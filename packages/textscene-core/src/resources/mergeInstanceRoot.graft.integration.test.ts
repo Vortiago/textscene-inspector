@@ -79,10 +79,16 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const host = parse('demos/2d/role_playing_game/combat/combatants/opponent.tscn');
     const sub = parse('demos/2d/role_playing_game/combat/combatants/combatant.tscn');
 
-    const merged = mergeInstanceRoot(host.nodes[0]!, sub, host.externalResources)!;
+    const scope = {
+      externalResources: host.externalResources,
+      internalResources: host.internalResources,
+    };
+    const merged = mergeInstanceRoot(host.nodes[0]!, sub, scope)!;
     const body = find([merged], 'Body')!;
 
-    // Its `texture = ExtResource(...)` id belongs to the OUTER table.
-    expect(body.authoredResources).toBe(host.externalResources);
+    // Its `texture = ExtResource(...)` id belongs to the OUTER table — and so
+    // would a `SubResource(...)` beside it, which is why the whole scope rides
+    // along rather than one pool of it.
+    expect(body.authoredScope).toBe(scope);
   });
 });

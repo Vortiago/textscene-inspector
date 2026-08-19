@@ -187,18 +187,18 @@ describe('collapseLiveNode — identity contract', () => {
 
   it('returns the SAME node reference for a non-instance node', () => {
     const node = makeNode('Plain', 'Node3D');
-    expect(collapseLiveNode(node, [], cacheOf({}))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf([]), cacheOf({}))).toBe(node);
   });
 
   it('returns the SAME node reference when the instance ref is unresolvable', () => {
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("missing")' });
-    expect(collapseLiveNode(node, [ext('1', 'res://a.tscn')], cacheOf({}))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf([ext('1', 'res://a.tscn')]), cacheOf({}))).toBe(node);
   });
 
   it('returns the SAME node reference while the sub-scene is not yet cached', () => {
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
     const res = [ext('1', 'res://a.tscn')];
-    expect(collapseLiveNode(node, res, cacheOf({}))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf(res), cacheOf({}))).toBe(node);
   });
 
   it('returns the SAME node reference for a multi-root sub-scene (fallback)', () => {
@@ -209,19 +209,19 @@ describe('collapseLiveNode — identity contract', () => {
       externalResources: [],
       internalResources: [],
     };
-    expect(collapseLiveNode(node, res, cacheOf({ 'res://multi.tscn': multi }))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://multi.tscn': multi }))).toBe(node);
   });
 
   it('returns the SAME node reference for a lone GLBSceneRoot sub-scene (fallback)', () => {
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
     const res = [ext('1', 'res://m.glb')];
-    expect(collapseLiveNode(node, res, cacheOf({ 'res://m.glb': single('GLBSceneRoot') }))).toBe(node);
+    expect(collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://m.glb': single('GLBSceneRoot') }))).toBe(node);
   });
 
   it('returns a FRESH merged node (adopting the root type) for a single-root .tscn instance', () => {
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("1")' });
     const res = [ext('1', 'res://player.tscn')];
-    const merged = collapseLiveNode(node, res, cacheOf({ 'res://player.tscn': single('CharacterBody3D') }));
+    const merged = collapseLiveNode(node, scopeOf(res), cacheOf({ 'res://player.tscn': single('CharacterBody3D') }));
     expect(merged).not.toBe(node);
     expect(merged.type).toBe('CharacterBody3D');
     expect(merged.name).toBe('Player');
@@ -496,7 +496,7 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
     const cache = singleSceneCache('res://a.tscn', null);
     expect(cache.getCached('res://a.tscn')).toBeUndefined();
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
-    expect(collapseLiveNode(node, [ext('1', 'res://a.tscn')], cache)).toBe(node);
+    expect(collapseLiveNode(node, scopeOf([ext('1', 'res://a.tscn')]), cache)).toBe(node);
   });
 
   it('answers for no path when keyed by null (a non-instance row)', () => {
@@ -520,7 +520,7 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
     const outer = [ext('p', 'res://player.tscn')];
     const cache = singleSceneCache('res://player.tscn', sub);
 
-    expect(collapseLiveNode(node, outer, cache).type).toBe('CharacterBody3D');
+    expect(collapseLiveNode(node, scopeOf(outer), cache).type).toBe('CharacterBody3D');
 
     const groups = liveChildGroups(node, scopeOf(outer), cache);
     // Single-root collapse → one merged group carrying the sub-scene's children.

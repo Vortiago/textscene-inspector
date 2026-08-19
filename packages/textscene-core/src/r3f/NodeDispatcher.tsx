@@ -32,7 +32,7 @@
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
-import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types.js';
+import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocatePaintRange,
@@ -174,37 +174,40 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     <PlainNode node={node} path={path} />
   );
 
-  return node.authoredResources ? (
-    <AuthoredResourceScope resources={node.authoredResources}>{dispatched}</AuthoredResourceScope>
+  return node.authoredScope ? (
+    <AuthoredResourceScope scope={node.authoredScope}>{dispatched}</AuthoredResourceScope>
   ) : (
     dispatched
   );
 }
 
 /**
- * Restore the ExtResource table a grafted node was authored against.
+ * Restore the resource scope a grafted node was authored against — BOTH pools.
  *
  * A node grafted into content loaded from ANOTHER scene keeps rendering under
  * that scene's provider, where its `ExtResource("3")` is a different resource or
  * absent entirely — a failure that shows up as something plausible rather than
- * as nothing, which is the worse kind.
+ * as nothing, which is the worse kind. Its `SubResource("1")` is the same
+ * question asked of the other pool, which is why one `SceneScope` travels rather
+ * than a table: carrying half resolves half the ids against the right scene.
  *
- * `internalResources` is carried through untouched rather than reset: the
- * provider would default it to empty, and a grafted node's `SubResource(...)`
- * would then resolve to nothing. Those ids belong to the outer scene too, so
- * this is not yet exactly right — but no corpus scene puts a SubResource in a
- * deep override, and keeping what is in scope beats wiping it.
+ * The provider PREPENDS onto the ambient pool, so restoring the authoring
+ * scene's tables makes them win a collision rather than wiping what the
+ * sub-scene contributes — which is what an id present in both scenes needs, and
+ * the only case where carrying the outer pool changes an answer at all.
  */
 function AuthoredResourceScope({
-  resources,
+  scope,
   children,
 }: {
-  resources: readonly TscnExternalResource[];
+  scope: SceneScope;
   children: ReactNode;
 }): ReactNode {
-  const { internalResources } = useSceneResources();
   return (
-    <SceneResourcesProvider externalResources={resources} internalResources={internalResources}>
+    <SceneResourcesProvider
+      externalResources={scope.externalResources}
+      internalResources={scope.internalResources}
+    >
       {children}
     </SceneResourcesProvider>
   );
@@ -413,7 +416,8 @@ function PlainNode({
  * lookups inside the instanced subtree resolve against the loaded pool.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
-  const { externalResources } = useSceneResources();
+  const ambientScope = useSceneResources();
+  const { externalResources } = ambientScope;
   const loader = useResourceLoader();
   const paintRange = usePaintRange();
   const instanceRef = node.instance ?? '';
@@ -461,9 +465,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const effective = useMemo(
     () =>
       loadedScene
-        ? collapseLiveNode(node, externalResources, singleSceneCache(scenePath, loadedScene))
+        ? collapseLiveNode(node, ambientScope, singleSceneCache(scenePath, loadedScene))
         : node,
-    [node, externalResources, scenePath, loadedScene]
+    [node, ambientScope, scenePath, loadedScene]
   );
 
   // Memoized because `withoutDeepChildren` allocates a new node whenever there
