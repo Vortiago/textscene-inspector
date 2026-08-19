@@ -166,6 +166,27 @@ describe('buildCsgPlan', () => {
       const root = node('CSGBox3D', 'Root', { visible: false });
       expect([...buildCsgPlan(root, 'Root', OPTS)!.invisiblePaths]).toEqual([]);
     });
+
+    it('resolves an INVISIBLE root\'s subtree exactly as a visible one\'s', () => {
+      // The root's own visibility never reaches _get_brush(): it recurses into the
+      // visible children and skips the invisible ones either way. Stopping the walk at
+      // an invisible root would leave its invisible children their full box.
+      const children = () => [
+        node('CSGBox3D', 'Kept'),
+        node('CSGBox3D', 'Hidden', { visible: false }, [node('CSGSphere3D', 'Inner')]),
+      ];
+      const shown = buildCsgPlan(node('CSGCombiner3D', 'Comb', {}, children()), 'Comb', OPTS)!;
+      const hidden = buildCsgPlan(
+        node('CSGCombiner3D', 'Comb', { visible: false }, children()),
+        'Comb',
+        OPTS
+      )!;
+
+      expect([...hidden.invisiblePaths]).toEqual(['Comb/Hidden', 'Comb/Hidden/Inner']);
+      expect([...hidden.invisiblePaths]).toEqual([...shown.invisiblePaths]);
+      expect(hidden.contributions.map((c) => c.path)).toEqual(shown.contributions.map((c) => c.path));
+      expect([...hidden.absorbedPaths]).toEqual([...shown.absorbedPaths]);
+    });
   });
 
   describe('surfaces', () => {

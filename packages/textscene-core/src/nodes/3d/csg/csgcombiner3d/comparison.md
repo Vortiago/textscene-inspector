@@ -18,12 +18,16 @@ all of them Godot's:
   produces a drawn mesh; every CSG descendant becomes a transform-only group that
   contributes its solid and its `operation`.
 - Contributions fold bottom-up in child order.
-- Invisible children are skipped entirely.
+- Invisible children are skipped by the boolean, but not by the BOUNDS: `_get_brush()`
+  skips one before writing its `node_aabb`, so the editor still merges a POINT at its
+  origin. A root builds whatever its OWN visibility — `update_shape()` is gated on
+  `is_root_shape()` alone — so an invisible root keeps its full box.
 - A root's own `operation` is inert — it has nothing to combine into.
 
 Because only the root has a mesh, clicking the result selects the root, exactly
-as in Godot's editor. Tree-selecting a contributor still gives it a correct
-selection box: each one keeps an invisible bounds proxy.
+as in Godot's editor. Tree-selecting a contributor still gives it a selection box:
+each one keeps an invisible bounds proxy, sized to its own brush — or, for an
+invisible contributor, to the point Godot has for it.
 
 ## Grouping and visibility
 <!-- compare: image=unit-csg-combiner status=done fixture=unit-csg-combiner.tscn -->

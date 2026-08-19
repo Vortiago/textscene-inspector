@@ -40,7 +40,8 @@ const CsgSubtreeContext = createContext<CsgSubtreeValue | null>(null);
 CsgSubtreeContext.displayName = 'CsgSubtreeContext';
 
 export interface CsgSubtreeProviderProps {
-  value: CsgSubtreeValue;
+  /** Null re-publishes "outside a CSG root", which is what a node with no plan passes on. */
+  value: CsgSubtreeValue | null;
   children: ReactNode;
 }
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=1 format=3]
+[gd_scene format=3]
 
 ; ONE VARIABLE: what an INVISIBLE CSG contributor contributes to the scene bounds.
 ;

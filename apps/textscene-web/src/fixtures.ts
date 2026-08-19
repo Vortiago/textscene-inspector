@@ -1453,6 +1453,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Invisible Contributor",
+    "file": "unit-csg-invisible-contributor.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Mesh",
     "file": "unit-csg-mesh.tscn",
     "category": "Unit - CSG Primitives"

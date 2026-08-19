@@ -87,6 +87,22 @@ function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): 
   return !hidden?.has(path);
 }
 
+/**
+ * The CSG children of `node`, with their paths. Descending ONLY into CSG-typed children is
+ * the rule the header explains, so both walks below read it from here.
+ */
+function csgChildren(
+  node: TscnNode,
+  path: string,
+  lookup: BuildOptions['lookup']
+): [TscnNode, string][] {
+  const out: [TscnNode, string][] = [];
+  for (const child of node.children) {
+    if (lookup(child.type) !== null) out.push([child, joinPath(path, child.name)]);
+  }
+  return out;
+}
+
 /** NaN or Infinity anywhere in a matrix would propagate into the BVH builder. */
 function isFinite4(m: THREE.Matrix4): boolean {
   return m.elements.every((n) => Number.isFinite(n));
@@ -115,10 +131,7 @@ export function buildCsgPlan(
   /** The skipped node and every CSG node under it — the recursion stopped at all of them. */
   const markInvisible = (node: TscnNode, path: string): void => {
     invisiblePaths.add(path);
-    for (const child of node.children) {
-      if (lookup(child.type) === null) continue;
-      markInvisible(child, joinPath(path, child.name));
-    }
+    for (const [child, childPath] of csgChildren(node, path, lookup)) markInvisible(child, childPath);
   };
   const keyParts: string[] = [`root:${root.type}`];
 
@@ -130,8 +143,11 @@ export function buildCsgPlan(
   };
 
   const visit = (node: TscnNode, path: string, parentMatrix: THREE.Matrix4, isRoot: boolean): void => {
-    if (!isVisible(node, path, hiddenPaths)) {
-      if (!isRoot) markInvisible(node, path);
+    // A ROOT builds whatever its own visibility — update_shape() is gated on
+    // is_root_shape() alone (csg_shape.cpp:568-570) — so only a CHILD stops the walk, and
+    // an invisible root's subtree resolves exactly as a visible one's does.
+    if (!isRoot && !isVisible(node, path, hiddenPaths)) {
+      markInvisible(node, path);
       return;
     }
 
@@ -170,9 +186,8 @@ export function buildCsgPlan(
       }
     }
 
-    for (const child of node.children) {
-      if (lookup(child.type) === null) continue;
-      visit(child, joinPath(path, child.name), matrix, false);
+    for (const [child, childPath] of csgChildren(node, path, lookup)) {
+      visit(child, childPath, matrix, false);
     }
   };
 

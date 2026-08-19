@@ -102,6 +102,52 @@ describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor
   });
 });
 
+describe('frameSceneBounds — a bounds union with no extent', () => {
+  /** A node Godot never sized: the zero-size proxy CSG and Label3D both mount. */
+  function pointProxy(x: number): THREE.Mesh {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0, 0, 0), new THREE.MeshBasicMaterial());
+    mesh.visible = false;
+    mesh.position.x = x;
+    mesh.userData = { tscnBoundsProxy: true };
+    return mesh;
+  }
+
+  it('does not let a point mesh defeat the gizmo fallback', () => {
+    // A point is not a mesh to frame FROM, so the light-only fallback still applies —
+    // otherwise a scene whose only CSG content is invisible frames nothing at all.
+    const scene = new THREE.Scene();
+    scene.add(pointProxy(0));
+    const gizmo = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(3, 3, 3),
+        new THREE.Vector3(5, 5, 5),
+      ])
+    );
+    scene.add(gizmo);
+
+    const controls = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, makeCamera(), controls);
+
+    expect(controls.target.x).toBeCloseTo(4, 5);
+    expect(controls.target.y).toBeCloseTo(4, 5);
+  });
+
+  it('re-points a point-only scene instead of leaving the camera where it was', () => {
+    // Node3DEditorViewport::focus_selection moves the orbit cursor onto the centre and
+    // keeps its distance; there is no size here to derive a new one from.
+    const scene = new THREE.Scene();
+    scene.add(pointProxy(8));
+
+    const camera = makeCamera();
+    camera.position.set(0, 0, 10);
+    const controls = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, camera, controls);
+
+    expect(controls.target.x).toBeCloseTo(8, 5);
+    expect(camera.position.toArray()).toEqual([8, 0, 10]);
+  });
+});
+
 describe('frameSceneBounds — CSG contributor bounds proxies', () => {
   it('frames a contributor solid the boolean subtracted away', () => {
     // modules/csg/csg_shape.cpp:507 — every shape's node_aabb is its OWN brush,

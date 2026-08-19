@@ -16,6 +16,12 @@ import { computeWorldBoundingBox } from './bounds.js';
  */
 export const FRAME_MARGIN = 1.6;
 
+/** Largest side of a box — 0 for a point, which a bounds proxy legitimately is. */
+function maxExtent(box: THREE.Box3): number {
+  const size = box.getSize(new THREE.Vector3());
+  return Math.max(size.x, size.y, size.z);
+}
+
 /** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
   target?: THREE.Vector3;
@@ -66,13 +72,26 @@ export function frameSceneBounds(
       hasGizmo = true;
     }
   });
-  const box = hasMesh ? meshBox : hasGizmo ? gizmoBox : null;
+  // A POINT union is reachable: a bounds proxy stands in for a node Godot never sized,
+  // and every mesh in the scene can be one. Such a union is not a mesh to frame FROM, so
+  // it must not win over the gizmo box and defeat the fallback above.
+  const box = hasMesh && maxExtent(meshBox) > 0 ? meshBox : hasGizmo ? gizmoBox : hasMesh ? meshBox : null;
   if (!box) return;
 
-  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
+  const maxDim = maxExtent(box);
+  if (!Number.isFinite(maxDim)) return;
+  if (maxDim <= 0) {
+    // Nothing to derive a distance from, so keep the one we have and re-point, which is
+    // what Node3DEditorViewport::focus_selection does with the orbit cursor.
+    if (controls?.target) {
+      camera.position.add(center.clone().sub(controls.target));
+      controls.target.copy(center);
+      controls.update?.();
+    }
+    camera.lookAt(center);
+    return;
+  }
 
   // The only orthographic camera framing ever sees is the editor camera in its
   // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field

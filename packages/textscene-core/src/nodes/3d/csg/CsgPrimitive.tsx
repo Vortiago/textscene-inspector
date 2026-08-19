@@ -2,7 +2,7 @@
  * <CsgPrimitive> — the shared render scaffold for every CSG slice, and the seam where
  * boolean evaluation happens.
  *
- * A CSG node takes exactly one of three shapes, decided by where it sits:
+ * A CSG node takes exactly one of four shapes, decided by where it sits:
  *
  *   A. CONTRIBUTOR. Its solid belongs to an ancestor's boolean. It draws no mesh, but
  *      stays mounted and carries an INVISIBLE bounds proxy so selection and F-to-frame
@@ -39,13 +39,13 @@ import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMaterial';
 
-const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 const NO_PATHS: ReadonlySet<string> = new Set();
 
 /**
- * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for
- * a contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). It is also
- * all a combiner root has to frame on while the CSG library is still loading.
+ * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for a
+ * VISIBLE contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). An
+ * invisible one the recursion never reached gets a ZERO-SIZE proxy instead — the point
+ * Godot has for it. It is also all a combiner root has to frame on while the library loads.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
@@ -61,7 +61,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const subtree = useCsgSubtree();
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
-  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? EMPTY_HIDDEN;
+  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
+
+  // `_get_brush()` skips an invisible child (csg_shape.cpp:469) BEFORE writing its
+  // node_aabb, so Godot has only a point at its origin — a root, whose own build runs
+  // whatever its visibility, still has its full box. Decided before the work below, which
+  // a skipped node would only throw away.
+  const skipped = subtree !== null && path !== null && subtree.invisiblePaths.has(path);
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
@@ -80,9 +86,9 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   const ownGeometry = useMemo(
-    () => registration?.geometry?.(builderProps, ctx) ?? null,
+    () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` IS the builder's inputs.
-    [ownKey]
+    [ownKey, skipped]
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
@@ -100,7 +106,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     subtree !== null && subtree.status !== 'failed' && path !== null && subtree.absorbedPaths.has(path);
 
   const plan = useMemo(() => {
-    if (absorbed || path === null) return null;
+    if (absorbed || skipped || path === null) return null;
     return buildCsgPlan(node, path, {
       hiddenPaths: hiddenNodePaths,
       lookup: (type) => {
@@ -112,12 +118,20 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
         };
       },
     });
-  }, [absorbed, node, path, hiddenNodePaths, ctx]);
+  }, [absorbed, skipped, node, path, hiddenNodePaths, ctx]);
 
-  // `_get_brush()` skips an invisible child (csg_shape.cpp:469) BEFORE writing its
-  // node_aabb, so Godot has only a point at its origin — a root, whose own build runs
-  // whatever its visibility, still has its full box.
-  const skipped = subtree !== null && path !== null && subtree.invisiblePaths.has(path);
+  // A node with no plan of its own passes the enclosing root's value straight through:
+  // what its descendants are is that root's answer, not its own. Mounted by every branch
+  // that owns no evaluator, so crossing between them reconciles rather than remounting;
+  // a combining root publishes the same value through CsgRootMesh, which owns the status.
+  const publishedSubtree = useMemo(
+    () =>
+      plan === null
+        ? subtree
+        : { status: 'ready' as const, absorbedPaths: NO_PATHS, invisiblePaths: plan.invisiblePaths },
+    [plan, subtree]
+  );
+  const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
 
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.contributions.length > 1;
@@ -125,34 +139,27 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 
-  // ---- A. Contributor -------------------------------------------------------------
-  if (absorbed) {
+  // ---- A. Contributor / D. Skipped for invisibility ---------------------------------
+  // Neither draws a solid, and both stay mounted so tree-selection, highlighting and the
+  // hidden-eye toggle keep working. The proxy is invisible, so THREE's raycaster skips it
+  // and clicks resolve to the root exactly as they do in Godot's editor, but `bounds.ts`
+  // keys on `.geometry` alone and never consults `visible`. Only its SIZE differs: a
+  // contributor's own brush, against the point Godot never wrote for a skipped one.
+  if (absorbed || skipped) {
     return (
       <group {...transform}>
-        {/*
-          Invisible, so THREE's raycaster skips it and clicks resolve to the root exactly
-          as they do in Godot's editor. But `bounds.ts` keys on `.geometry` alone and
-          never consults `visible`, so per-node selection boxes and F-to-frame keep
-          working for a node that draws nothing.
-        */}
-        {geometry && (
+        {skipped ? (
           <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-            {geometry}
+            <boxGeometry args={[0, 0, 0]} />
           </mesh>
+        ) : (
+          geometry && (
+            <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
+              {geometry}
+            </mesh>
+          )
         )}
-        {children}
-      </group>
-    );
-  }
-
-  // ---- D. Skipped for invisibility -------------------------------------------------
-  if (skipped) {
-    return (
-      <group {...transform}>
-        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-          <boxGeometry args={[0, 0, 0]} />
-        </mesh>
-        {children}
+        {scope}
       </group>
     );
   }
@@ -189,19 +196,12 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   }
 
   // ---- B. Lone root ----------------------------------------------------------------
-  // No evaluator, no dynamic import, no cost. This is the path every existing CSG
-  // fixture takes, which is why their goldens are unchanged. It still publishes what it
-  // skipped — absorbing nothing is not the same as skipping nothing.
+  // No evaluator, no dynamic import, no cost. It still publishes what it skipped —
+  // absorbing nothing is not the same as skipping nothing.
   return (
     <group {...transform}>
       {ownSolid}
-      {plan === null ? (
-        children
-      ) : (
-        <CsgSubtreeProvider value={{ status: 'ready', absorbedPaths: NO_PATHS, invisiblePaths: plan.invisiblePaths }}>
-          {children}
-        </CsgSubtreeProvider>
-      )}
+      {scope}
     </group>
   );
 }
