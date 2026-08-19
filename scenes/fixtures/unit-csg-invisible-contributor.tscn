@@ -1,0 +1,25 @@
+[gd_scene load_steps=1 format=3]
+
+; ONE VARIABLE: what an INVISIBLE CSG contributor contributes to the scene bounds.
+;
+; `_get_brush()` skips an invisible child before recursing into it
+; (`modules/csg/csg_shape.cpp:469`), so the skipped node's `node_aabb` is never
+; written and Godot frames a POINT at its origin. `--emit-bounds` on this scene:
+; position (-0.5, -0.5, -0.5), size (8.5, 1, 1).
+;
+; The hidden box is far off-axis and four times the visible one, so counting its
+; solid moves the framing centre from x = 3.75 to x = 4.75. No other fixture can
+; see this: bounds deliberately ignore `visible`, because Godot's `get_aabb()`
+; reports an invisible MeshInstance3D's FULL box and agreeing there is what keeps
+; every other node type framed identically. CSG is the one type whose AABB is
+; built rather than read, so it is the one type where hiding changes the answer.
+
+[node name="InvisibleContributor" type="CSGCombiner3D"]
+
+[node name="Kept" type="CSGBox3D" parent="."]
+size = Vector3(1, 1, 1)
+
+[node name="Hidden" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
+visible = false
+size = Vector3(4, 4, 4)

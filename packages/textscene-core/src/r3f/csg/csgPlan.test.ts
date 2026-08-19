@@ -135,6 +135,36 @@ describe('buildCsgPlan', () => {
       const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'Cut', { operation: 2 })]);
       const plan = buildCsgPlan(root, 'Root', { ...OPTS, hiddenPaths: new Set(['Root/Cut']) })!;
       expect(plan.contributions.map((c) => c.path)).toEqual(['Root']);
+      expect([...plan.invisiblePaths]).toEqual(['Root/Cut']);
+    });
+
+    it('reports the skipped subtree, so each node can bound to a point', () => {
+      // _get_brush() never reaches them, so their node_aabb is never written.
+      const root = node('CSGCombiner3D', 'Comb', {}, [
+        node('CSGBox3D', 'Shown'),
+        node('CSGCombiner3D', 'Hidden', { visible: false }, [node('CSGSphere3D', 'Inner')]),
+      ]);
+      expect([...buildCsgPlan(root, 'Comb', OPTS)!.invisiblePaths]).toEqual([
+        'Comb/Hidden',
+        'Comb/Hidden/Inner',
+      ]);
+    });
+
+    it('leaves a CSG node under a non-CSG child of the skipped one alone', () => {
+      // parent_shape is set for a DIRECT CSG parent only, so it is its own root:
+      // its update_shape runs and it keeps a full box however its ancestors draw.
+      const root = node('CSGCombiner3D', 'Comb', {}, [
+        node('CSGBox3D', 'Hidden', { visible: false }, [
+          node('Node3D', 'Pivot', {}, [node('CSGSphere3D', 'Own')]),
+        ]),
+      ]);
+      expect([...buildCsgPlan(root, 'Comb', OPTS)!.invisiblePaths]).toEqual(['Comb/Hidden']);
+    });
+
+    it('never marks the root itself, whose own build runs regardless', () => {
+      // update_shape() is gated on is_root_shape() alone (csg_shape.cpp:568-570).
+      const root = node('CSGBox3D', 'Root', { visible: false });
+      expect([...buildCsgPlan(root, 'Root', OPTS)!.invisiblePaths]).toEqual([]);
     });
   });
 

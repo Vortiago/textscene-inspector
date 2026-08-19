@@ -29,6 +29,11 @@ export interface CsgSubtreeValue {
   status: CsgSubtreeStatus;
   /** Node paths whose solids this root has taken over. */
   absorbedPaths: ReadonlySet<string>;
+  /**
+   * Node paths this root skipped for invisibility, which contribute a POINT at their
+   * origin instead of their solid — `CsgPlan.invisiblePaths` has the Godot rule.
+   */
+  invisiblePaths: ReadonlySet<string>;
 }
 
 const CsgSubtreeContext = createContext<CsgSubtreeValue | null>(null);

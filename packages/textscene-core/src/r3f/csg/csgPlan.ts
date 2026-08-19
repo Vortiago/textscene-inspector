@@ -53,6 +53,12 @@ export interface CsgPlan {
   surfaces: (string | undefined)[];
   /** Node paths the root absorbs, so those components render no mesh of their own. */
   absorbedPaths: Set<string>;
+  /**
+   * CSG paths skipped for invisibility, and their CSG descendants. `_get_brush()` never
+   * reaches them (`modules/csg/csg_shape.cpp:469`), so their `node_aabb` is never written
+   * and Godot frames a POINT at each origin rather than its solid.
+   */
+  invisiblePaths: Set<string>;
   /** Stable over everything the evaluation depends on. */
   cacheKey: string;
 }
@@ -104,6 +110,16 @@ export function buildCsgPlan(
   const contributions: CsgContribution[] = [];
   const surfaces: (string | undefined)[] = [];
   const absorbedPaths = new Set<string>();
+  const invisiblePaths = new Set<string>();
+
+  /** The skipped node and every CSG node under it — the recursion stopped at all of them. */
+  const markInvisible = (node: TscnNode, path: string): void => {
+    invisiblePaths.add(path);
+    for (const child of node.children) {
+      if (lookup(child.type) === null) continue;
+      markInvisible(child, joinPath(path, child.name));
+    }
+  };
   const keyParts: string[] = [`root:${root.type}`];
 
   const surfaceIndex = (materialPath: string | undefined): number => {
@@ -114,7 +130,10 @@ export function buildCsgPlan(
   };
 
   const visit = (node: TscnNode, path: string, parentMatrix: THREE.Matrix4, isRoot: boolean): void => {
-    if (!isVisible(node, path, hiddenPaths)) return;
+    if (!isVisible(node, path, hiddenPaths)) {
+      if (!isRoot) markInvisible(node, path);
+      return;
+    }
 
     // The root's own transform is NOT baked in: the result mesh is mounted inside the
     // root's own transform group, so including it here would apply it twice.
@@ -164,6 +183,7 @@ export function buildCsgPlan(
     contributions,
     surfaces,
     absorbedPaths,
+    invisiblePaths,
     cacheKey: keyParts.join('\n'),
   };
 }

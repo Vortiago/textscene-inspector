@@ -87,8 +87,8 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
         : 'ready';
 
   const subtree = useMemo(
-    () => ({ status, absorbedPaths: plan.absorbedPaths }),
-    [status, plan.absorbedPaths]
+    () => ({ status, absorbedPaths: plan.absorbedPaths, invisiblePaths: plan.invisiblePaths }),
+    [status, plan.absorbedPaths, plan.invisiblePaths]
   );
 
   // Resolve each output surface to a material slot. One component per slot keeps

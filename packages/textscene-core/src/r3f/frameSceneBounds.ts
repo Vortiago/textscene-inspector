@@ -50,9 +50,10 @@ export function frameSceneBounds(
     // `LABEL3D_BOUNDS_PROXY`) ALONE, matching what Godot's own reference
     // camera is placed from.
     if (obj.userData?.tscnFrameExcluded) return;
-    // CSG contributor bounds proxies are INCLUDED: Godot counts a VISIBLE contributor's
-    // own unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively),
-    // so a subtracted solid enlarges its bounds on both sides.
+    // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
+    // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
+    // subtracted solid enlarges its bounds on both sides. An invisible one the recursion
+    // never reached carries a zero-size proxy, so it lands here as the point Godot has.
     const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
     if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());

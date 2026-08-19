@@ -37,6 +37,7 @@ function plan(contributions: CsgContribution[], surfaces: (string | undefined)[]
     contributions,
     surfaces,
     absorbedPaths: new Set(),
+    invisiblePaths: new Set(),
     cacheKey: 'test',
   };
 }

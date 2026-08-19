@@ -11,6 +11,8 @@
  *      directly, touching neither the evaluator nor the CSG library.
  *   C. COMBINING ROOT. Two or more contributions. Draws the evaluated result and tells
  *      its subtree, through CsgSubtreeContext, that their solids are spoken for.
+ *   D. SKIPPED. Invisible, so its CSG parent's boolean never reached it. Draws nothing
+ *      and bounds to a POINT, which is all Godot has for it either.
  *
  * The seam is here rather than in NodeDispatcher for two hard reasons. `PlainNode` is the
  * only caller of `registerNodeObject`, so a dispatcher that skipped CSG children would
@@ -30,7 +32,7 @@ import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot'
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
+import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
@@ -38,11 +40,12 @@ import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMaterial';
 
 const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
+const NO_PATHS: ReadonlySet<string> = new Set();
 
 /**
  * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for
- * a VISIBLE contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). It
- * is also all a combiner root has to frame on while the CSG library is still loading.
+ * a contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). It is also
+ * all a combiner root has to frame on while the CSG library is still loading.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
@@ -111,6 +114,11 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     });
   }, [absorbed, node, path, hiddenNodePaths, ctx]);
 
+  // `_get_brush()` skips an invisible child (csg_shape.cpp:469) BEFORE writing its
+  // node_aabb, so Godot has only a point at its origin — a root, whose own build runs
+  // whatever its visibility, still has its full box.
+  const skipped = subtree !== null && path !== null && subtree.invisiblePaths.has(path);
+
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.contributions.length > 1;
   const shadow = shadowCastingEffects(properties.castShadow);
@@ -132,6 +140,18 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
             {geometry}
           </mesh>
         )}
+        {children}
+      </group>
+    );
+  }
+
+  // ---- D. Skipped for invisibility -------------------------------------------------
+  if (skipped) {
+    return (
+      <group {...transform}>
+        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
+          <boxGeometry args={[0, 0, 0]} />
+        </mesh>
         {children}
       </group>
     );
@@ -170,11 +190,18 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   // ---- B. Lone root ----------------------------------------------------------------
   // No evaluator, no dynamic import, no cost. This is the path every existing CSG
-  // fixture takes, which is why their goldens are unchanged.
+  // fixture takes, which is why their goldens are unchanged. It still publishes what it
+  // skipped — absorbing nothing is not the same as skipping nothing.
   return (
     <group {...transform}>
       {ownSolid}
-      {children}
+      {plan === null ? (
+        children
+      ) : (
+        <CsgSubtreeProvider value={{ status: 'ready', absorbedPaths: NO_PATHS, invisiblePaths: plan.invisiblePaths }}>
+          {children}
+        </CsgSubtreeProvider>
+      )}
     </group>
   );
 }
