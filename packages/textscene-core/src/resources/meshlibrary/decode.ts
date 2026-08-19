@@ -23,12 +23,16 @@ import { unquoteString } from '../../parser/utils';
 import type { MeshLibraryModel, MeshLibraryItem } from './types';
 
 /**
- * `MeshLibrary::_set` reads the index with a bare
- * `prop_name.get_slicec('/', 1).to_int()` and no validity gate
- * (mesh_library.cpp:40), so the grammar is the whole path segment and
- * {@link toIntIndex} decides the number: `+7` is item 7 and `x` is item 0.
+ * `MeshLibrary::_set` reads FIXED slices — `get_slicec('/', 1)` for the index
+ * and `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — with no
+ * validity gate on either.
+ *
+ * So the index grammar is the whole path segment and {@link toIntIndex} decides
+ * the number (`+7` is item 7, `x` is item 0); the leaf is one segment and
+ * anything below it is ignored, because `get_slicec` returns that slice alone
+ * (ustring.cpp:941-964) — `item/7/name/extra` sets item 7's name.
  */
-const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/(name|mesh|mesh_transform)$', 'to_int');
+const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
 
 /**
  * @param selfPath - the `res://` path the library was loaded from. An item mesh

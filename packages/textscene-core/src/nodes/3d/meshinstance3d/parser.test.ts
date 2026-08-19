@@ -85,6 +85,20 @@ describe('MeshInstance3D Parser', () => {
       expect(result.surfaceMaterialOverrides.get(2)).toBe('SubResource("Material_2")');
     });
 
+    // `_set` reads a FIXED slice for the index — `get_slicec('/', 1)`
+    // (mesh_instance_3d.cpp:66) — and `get_slicec` returns that slice alone
+    // (ustring.cpp:941-964), so `surface_material_override/0/extra` names
+    // surface 0 and the override lands on it.
+    it('parses an override key carrying a trailing segment', () => {
+      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
+
+      const result = parseMeshInstance3D(h, {
+        'surface_material_override/0/extra': 'SubResource("Material_0")',
+      });
+
+      expect(result.surfaceMaterialOverrides.get(0)).toBe('SubResource("Material_0")');
+    });
+
     it('should parse cast_shadow property', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 

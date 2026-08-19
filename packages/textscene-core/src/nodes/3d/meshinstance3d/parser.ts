@@ -13,8 +13,12 @@ import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
  * `get_slicec('/', 1).to_int()` and no validity gate
  * (mesh_instance_3d.cpp:66), so the grammar is the whole path segment and
  * {@link toIntIndex} decides the number: `+2` is surface 2, `abc` is surface 0.
+ *
+ * Unanchored, because `get_slicec` returns that one slice and ignores the rest
+ * (ustring.cpp:941-964): `surface_material_override/0/extra` names surface 0
+ * and the override lands on it.
  */
-const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)$', 'to_int');
+const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
 /** Assign only when the decoded value is present (the optional readers already drop absent/garbage). */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {

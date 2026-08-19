@@ -37,8 +37,12 @@ export function ownKeyRegistrations(
  * reduced wildcard from ever colliding with a literal key of the same text.
  */
 function shadowIdentity(key: string): string {
+  if (key.endsWith('#/**')) return `*:${key.slice(0, -'#/**'.length)}`;
   if (key.endsWith('#/*')) return `*:${key.slice(0, -'#/*'.length)}`;
   if (key.endsWith('*')) return `*:${key.slice(0, -1)}`;
+  // `pattern_#`: a glued index that ends the key, so the prefix alone is what it
+  // matches on.
+  if (key.endsWith('#')) return `*:${key.slice(0, -1)}`;
   return key;
 }
 

@@ -227,6 +227,26 @@ describe('MeshInstance3D Linter', () => {
         }
       );
     });
+
+    // `_set` reads a FIXED slice for the index — `get_slicec('/', 1)`
+    // (mesh_instance_3d.cpp:66) — and `get_slicec` returns that slice alone
+    // (ustring.cpp:941-964), so the override lands on surface 0 and its
+    // reference is as dangling as any other.
+    it('follows a trailing segment to the surface Godot writes', () => {
+      expectDiagnostic(
+        scene(
+          node(
+            'MeshInstance3D',
+            { 'surface_material_override/0/extra': 'SubResource("nonexistent_surface")' },
+            { name: 'TrailingSurfaceMat' }
+          )
+        ),
+        {
+          prop: 'Surface material override resource not found',
+          contains: ['for surface 0'],
+        }
+      );
+    });
   });
 
   // The real condition (visual_instance_3d.cpp: `!is_zero_approx(end) && end <=

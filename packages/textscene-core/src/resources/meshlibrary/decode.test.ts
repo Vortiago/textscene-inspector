@@ -59,6 +59,27 @@ item/-1/name = "Dropped"
     expect(model.get(0)!.name).toBe('Zero');
   });
 
+  // `_set` reads FIXED slices — `get_slicec('/', 1)` for the index and
+  // `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — and
+  // `get_slicec` returns that slice alone (ustring.cpp:941-964), so
+  // `item/7/name/extra` sets item 7's name.
+  it('applies a leaf carrying a trailing segment', () => {
+    const model = meshLibraryFromTres(
+      parseTresFile(`[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="ArrayMesh" path="res://stage/meshes/floor.tres" id="8_floor"]
+
+[resource]
+item/7/name/extra = "Floor"
+item/7/mesh/0 = ExtResource("8_floor")
+`),
+      'res://stage/tiles.tres'
+    );
+
+    expect(model.get(7)!.name).toBe('Floor');
+    expect(model.get(7)!.meshPath).toBe('res://stage/meshes/floor.tres');
+  });
+
   it('returns an empty model for a library with no items', () => {
     const model = meshLibraryFromTres(
       parseTresFile('[gd_resource type="MeshLibrary" format=3]\n\n[resource]\n'),

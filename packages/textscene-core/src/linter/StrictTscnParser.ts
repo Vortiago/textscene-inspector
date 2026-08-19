@@ -14,6 +14,7 @@ import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
+import { ownsNilMessage } from './propertyValidator.js';
 import { isNilLiteral } from '../godot/index.js';
 
 /**
@@ -146,19 +147,24 @@ export class StrictTscnParser {
         // `texture_filter = null` stores 0 and `visible = null` stores FALSE.
         //
         // The message does NOT contrast with the property's default, which a
-        // validator does not carry and this seam cannot look up. It said "rather
-        // than the property's default" and was wrong wherever the two coincide:
+        // validator does not carry and this seam cannot look up:
         // `CanvasItem::texture_filter` defaults to TEXTURE_FILTER_PARENT_NODE,
         // which IS 0 (canvas_item.h:123), so the stored value there is the
-        // default. What holds for every slot is the part now stated — `null` is
-        // not what ends up in the property.
-        // Not for a key-level verdict: those reject every value because the KEY
-        // is wrong, so "this slot stores zero instead" describes a slot the
-        // class does not have and hides the removal's own reason.
+        // default.
+        //
+        // The claim is about a slot whose CONVERSION discards the null, and it
+        // is exactly as narrow as that. Two kinds of validator answer for the
+        // null themselves and keep their message, which is what
+        // `ownsNilMessage` asks: a key-level verdict rejects every value
+        // because the class has no such slot, so "this slot stores zero
+        // instead" describes a slot that does not exist and hides the removal's
+        // own reason; and a `nilVerdict` slot is an OBJECT one whose setter
+        // refuses the null with an `ERR_FAIL_COND(...is_null())`, so nothing is
+        // stored at all and only that validator carries the guard's `file:line`.
         //
         // Only the message is rewritten: severity, line, column and code stay
         // the validator's, so the diagnostic keeps anchoring on the value.
-        if (isNilLiteral(value) && !validator.keyVerdict) {
+        if (isNilLiteral(value) && !ownsNilMessage(validator)) {
           errors.push({
             ...error,
             message:

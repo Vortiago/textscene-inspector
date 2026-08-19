@@ -48,6 +48,23 @@ export type PropertyValidator = ((
   keyVerdict?: true;
 
   /**
+   * True when this validator refuses a bare `null` on its OWN authority — the
+   * setter opens with an `ERR_FAIL_COND(...is_null())`, so the write is refused
+   * and nothing is stored.
+   *
+   * `TileSet.sources/<id>` (`add_source`, tile_set.cpp:477) and
+   * `TileSet.pattern_<n>` (`add_pattern`, :1359) are the two. Both are OBJECT
+   * slots, which is exactly where the strict parser's nil rewrite has nothing
+   * true to say: `NIL -> OBJECT` is the one conversion `can_convert_strict`
+   * allows, so no zero value is stored in place of the null — the add is simply
+   * refused. Only this validator holds the `file:line` that says so.
+   *
+   * Separate from {@link keyVerdict}, which answers the same seam question for a
+   * different reason: there the class has no such slot at all.
+   */
+  nilVerdict?: true;
+
+  /**
    * True when the ONLY thing this validator rejects is a value that never
    * reaches the property — `Color(1, 1)`, `not-a-float`, an unquoted string.
    * Such a rejection needs no citation, because no `.tscn` the engine loads
@@ -136,3 +153,16 @@ export type PropertyValidator = ((
     enforcedMax?: { at: number; exclusive?: boolean };
   };
 };
+
+/**
+ * Whether this validator's own message already accounts for a bare `null`, so
+ * the strict parser must not restate what the slot does with one.
+ *
+ * ONE question with two answers — the class has no such slot
+ * ({@link PropertyValidator.keyVerdict}), or the setter refuses the null
+ * ({@link PropertyValidator.nilVerdict}) — asked once here rather than spelled
+ * as a growing list of exemptions at the seam.
+ */
+export function ownsNilMessage(validator: PropertyValidator): boolean {
+  return validator.keyVerdict === true || validator.nilVerdict === true;
+}

@@ -11,7 +11,13 @@
 import { CLASS_BASE_TYPES } from './classBaseTypes.js';
 import { MAX_BASE_CHAIN_HOPS } from './nodeBaseTypes.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import { buildWildcardIndex, matchesIndexedKey, type WildcardEntry } from './wildcardIndex.js';
+import {
+  buildWildcardIndex,
+  matchesIndexedKey,
+  matchesIndexedSubtree,
+  matchesTerminalIndex,
+  type WildcardEntry,
+} from './wildcardIndex.js';
 import { unavailableValidator, type Removal } from './unavailableKey.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
@@ -181,14 +187,9 @@ export class ValidatorRegistry {
   /**
    * Exact-then-wildcard lookup among a single type's own validators.
    *
-   * Two wildcard shapes, because Godot writes two:
-   *
-   * - `bones/*` matches `bones/0/position`. A literal `/` follows the prefix.
-   * - `item_#/*` matches `item_0/text`. Godot's `PropertyListHelper` builds these
-   *   as `vformat("%s%d/%s", prefix, i, name)` (`property_list_helper.cpp:149`),
-   *   gluing the index straight onto the prefix with no separator, so the first
-   *   shape can never match one. `PopupMenu`, `ItemList`, `OptionButton`,
-   *   `MenuButton` and `TabBar` all use it.
+   * Four wildcard shapes, spelled out in `wildcardIndex.ts`. Which one a
+   * registration is is settled at registration time and read here as
+   * `entry.kind`, so a miss walks a short array and allocates nothing.
    */
   private findOwnValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
     const nodeValidators = this.validators.get(nodeType);
@@ -211,9 +212,20 @@ export class ValidatorRegistry {
     const wildcards = this.wildcards.get(nodeType);
     if (wildcards === undefined) return null;
     for (const entry of wildcards) {
-      const matches = entry.indexed
-        ? matchesIndexedKey(propertyKey, entry.prefix)
-        : propertyKey.startsWith(entry.prefix);
+      let matches: boolean;
+      switch (entry.kind) {
+        case 'path':
+          matches = propertyKey.startsWith(entry.prefix);
+          break;
+        case 'indexedLeaf':
+          matches = matchesIndexedKey(propertyKey, entry.prefix);
+          break;
+        case 'indexedSubtree':
+          matches = matchesIndexedSubtree(propertyKey, entry.prefix);
+          break;
+        default:
+          matches = matchesTerminalIndex(propertyKey, entry.prefix);
+      }
       if (matches) return entry.validator;
     }
 

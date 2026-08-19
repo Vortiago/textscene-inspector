@@ -164,6 +164,8 @@ import '../nodes/paths/pathfollow3d/index.linter.js';
 // Import resource validators
 import '../resources/materials/basematerial3d/linterValidators.js';
 import '../resources/environment/index.linter.js';
+import '../resources/meshlibrary/index.linter.js';
+import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/mesh/linterValidators.js';
 import '../resources/meshes/primitivemesh/linterValidators.js';

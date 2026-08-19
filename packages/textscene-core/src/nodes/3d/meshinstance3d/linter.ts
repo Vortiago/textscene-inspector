@@ -18,8 +18,12 @@ import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
  * it with a bare `p_name.get_slicec('/', 1).to_int()` and no validity gate
  * (mesh_instance_3d.cpp:66), so the grammar is the whole segment and
  * {@link toIntIndex} is what turns it into a number.
+ *
+ * Unanchored, because `get_slicec` returns that one slice and ignores the rest
+ * (ustring.cpp:941-964): `surface_material_override/0/extra` names surface 0,
+ * so its reference is as dangling as any other.
  */
-const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)$', 'to_int');
+const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
 /**
  * Check if properties are valid MeshInstance3D properties
