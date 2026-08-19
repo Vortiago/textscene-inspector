@@ -57,8 +57,11 @@ function storedStrictInt(
       error: propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, codes.format),
     };
   }
-  const stored = storedFromFloat(parsed, value, width ?? slotWidth(max));
-  const unfit = unrepresentableInt(name, key, value, line, codes.value, stored);
+  const slot = width ?? slotWidth(max);
+  const stored = storedFromFloat(parsed, value, slot);
+  // Classified at the width it was READ at: the default int32 would report an
+  // int64 slot's reader limit as an alteration Godot never made.
+  const unfit = unrepresentableInt(name, key, value, line, codes.value, stored, slot);
   // The float goes back out with the int: the truncation check needs the value
   // the narrowing started from, and re-reading the text for it parsed every
   // clean literal twice.

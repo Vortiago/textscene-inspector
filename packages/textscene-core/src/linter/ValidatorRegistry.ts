@@ -223,8 +223,11 @@ export class ValidatorRegistry {
         case 'indexedSubtree':
           matches = matchesIndexedSubtree(propertyKey, entry.prefix);
           break;
-        default:
+        // Named rather than defaulted, so a fifth `WildcardKind` fails to
+        // compile here instead of silently inheriting terminal-index matching.
+        case 'indexedTerminal':
           matches = matchesTerminalIndex(propertyKey, entry.prefix);
+          break;
       }
       if (matches) return entry.validator;
     }

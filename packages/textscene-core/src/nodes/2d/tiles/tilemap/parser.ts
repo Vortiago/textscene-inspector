@@ -2,9 +2,11 @@
  * TileMap parser — the Node2D base plus the legacy multi-layer surface:
  * `layer_N/...` property groups rebuilt into the layer VECTOR Godot loads,
  * which reaches every index up to the highest one written and is never empty.
- * Each layer's `tile_data` is decoded through the shared legacy decoder (TSCN
- * `format` property selects the encoding; only format 2 =
- * TILE_MAP_DATA_FORMAT_3 renders, see tileData.ts).
+ * Past {@link LAYER_FILL_CEILING} only the written layers are kept, in index
+ * order, and both of those claims narrow to the written set. Each layer's
+ * `tile_data` is decoded through the shared legacy decoder (TSCN `format`
+ * property selects the encoding; only format 2 = TILE_MAP_DATA_FORMAT_3
+ * renders, see tileData.ts).
  */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
@@ -66,7 +68,10 @@ export function parseTileMap(
     Object.keys(leaves).some((leaf) => LAYER_LEAVES.has(leaf))
   );
   // One layer is the floor: the constructor pushes a "Layer0" before any
-  // property is applied (tile_map.cpp:1014-1021).
+  // property is applied (tile_map.cpp:1014-1021). It governs the fill branch
+  // only — the fallback below keeps the written set, so a file whose lowest
+  // written index is past the ceiling has no Layer0 in it. Nothing is drawn
+  // either way: a layer no property named carries no `tile_data`.
   const layerCount = written.reduce((count, [index]) => Math.max(count, index + 1), 1);
   const layers =
     layerCount <= LAYER_FILL_CEILING

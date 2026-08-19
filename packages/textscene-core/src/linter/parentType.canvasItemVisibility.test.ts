@@ -127,5 +127,26 @@ visible = false
         )
       ).toBe('unknowable');
     });
+
+    it('cannot rule out a hidden Window behind an uncataloged ancestor', () => {
+      // `descendsFrom` is false for "not a Window" and for a class this build
+      // has never heard of alike, so the search has to decline on the second.
+      // A GDExtension type in this position may BE a Window, and then its own
+      // `visible` is what decides.
+      expect(
+        verdictOf(
+          `[gd_scene format=3]
+
+[node name="Custom" type="MyDialogWindow"]
+visible = false
+
+[node name="Plain" type="Node" parent="."]
+
+[node name="Region" type="NavigationRegion2D" parent="Plain"]
+`,
+          'Region'
+        )
+      ).toBe('unknowable');
+    });
   });
 });

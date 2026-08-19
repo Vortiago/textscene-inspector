@@ -88,7 +88,7 @@
       "commandPalette": [
         {
           "command": "textscene.openPreviewToSide",
-          "when": "editorLangId == tscn || resourceExtname == .tscn"
+          "when": "resourceExtname == .tscn"
         }
       ]
     },
@@ -97,7 +97,7 @@
         "command": "textscene.openPreviewToSide",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
-        "when": "editorLangId == tscn"
+        "when": "resourceExtname == .tscn"
       }
     ],
     "configuration": {

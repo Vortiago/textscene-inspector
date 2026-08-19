@@ -45,7 +45,7 @@ describe('parseGodotFloat', () => {
     expect(parseGodotFloat('  inf  ')).toBe(Infinity);
   });
 
-  it.each(['', 'abc', 'Infinity', '-Infinity', 'NaN', 'inf inf'])(
+  it.each(['', 'abc', 'Infinity', '-Infinity', '+Infinity', 'NaN', 'inf inf'])(
     'returns null for %o',
     (text) => {
       // `Infinity`/`NaN` are JavaScript spellings; Godot's tokenizer matches

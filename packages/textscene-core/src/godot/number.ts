@@ -182,13 +182,6 @@ export function parseGodotFloat(value: string): number | null {
   if (Object.prototype.hasOwnProperty.call(NON_FINITE_FLOATS, trimmed)) {
     return NON_FINITE_FLOATS[trimmed]!;
   }
-  // `parseFloat` also reads JavaScript's own spellings, which Godot's tokenizer
-  // does not: it matches the four above and nothing else. Rejected by exact
-  // name rather than by testing the result for non-finiteness, because
-  // `1e999` overflows to infinity in Godot too and is a legal literal.
-  if (trimmed === 'Infinity' || trimmed === '-Infinity' || trimmed === '+Infinity') {
-    return null;
-  }
   // The anchored grammar, for the same reason `parseGodotInt` applies it:
   // `parseFloat` stops at the first character it cannot use, so `75abc` read as
   // 75 and a bound then reported a number the file does not contain — or, where
@@ -196,6 +189,13 @@ export function parseGodotFloat(value: string): number | null {
   // cannot read. Godot stops the number at `a` (variant_parser.cpp:450) and
   // glues the rest onto the NEXT assignment's name (:1948), so the line is not
   // merely unreadable, it corrupts its successor.
+  //
+  // It is also what refuses JavaScript's own `Infinity` spellings, which
+  // Godot's tokenizer does not read. Refused by the GRAMMAR rather than by
+  // testing the result for non-finiteness, because `1e999` overflows to
+  // infinity in Godot too and is a legal literal; and the grammar is derived
+  // from the four keys above, so a spelling this function reads and the
+  // pattern rejects cannot come to exist.
   if (!TSCN_FLOAT_RE.test(trimmed)) return null;
   const num = parseFloat(trimmed);
   return Number.isNaN(num) ? null : num;

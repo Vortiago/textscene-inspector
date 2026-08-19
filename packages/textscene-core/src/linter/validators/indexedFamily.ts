@@ -191,7 +191,10 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
     }
     // A non-negative index resolves to SOME setting and the write lands, so the
-    // leaf below is the only thing left that Godot can refuse.
+    // leaf below is the only thing left that Godot can refuse. A magnitude past
+    // 2^53 is not that case: a clean spelling reads through `Number` and keeps
+    // its sign. NaN reaches here only for text `IS_VALID_INT_RE` rejects whose
+    // digit run also overruns the bound, and the sign is lost with it.
 
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.

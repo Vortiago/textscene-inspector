@@ -341,6 +341,10 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
   // Viewport, so an unknowable ancestor here still matters: it could be a Window.
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
+    // Same reason the CanvasItem run declines on one: `descendsFrom` is false
+    // for "not a Window" and for "never heard of it" alike, and a GDExtension
+    // class in this position may well BE a Window whose own `visible` decides.
+    if (!isCatalogedType(current.type)) return 'unknowable';
     if (descendsFrom(current.type, 'Window')) {
       return ownVisibleKeyIsFalse(current) ? 'hidden' : 'visible';
     }

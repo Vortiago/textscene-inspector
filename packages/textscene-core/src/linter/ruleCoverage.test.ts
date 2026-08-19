@@ -12,22 +12,26 @@
  *      in a `linterParser.ts` is live in `validatorRegistry` after importing
  *      the linter barrel — catching a linterParser.ts whose registration
  *      never runs.
+ *   3. Every slice `linter.ts` has a sibling `linter.test.ts`, and every
+ *      registering `linterParser.ts` sits in a directory holding at least one
+ *      test file.
  *
- * REGISTERED, not tested: nothing here asks whether a rule or validator HAS a
- * test. A sibling `linter.test.ts` merely existing, and a sibling test merely
- * containing `./linterParser` or `/Linter`, are both paid by a file holding one
- * empty `it` and a comment — so a slice whose whole suite is gutted reads as
- * covered either way. Suite quality is judged at /code-review. The floors that
- * stop these sweeps passing over an empty walk are unaffected: `ruleFiles()`
- * throws below 100 inside the scrape, and each sweep pins its own count again.
+ * 3 asks EXISTENCE, and deliberately nothing else. Reading those test files
+ * for a token was the gameable half — a name in a comment paid for it — but a
+ * file being absent is not gameable, and it is the state `pnpm new:node`
+ * leaves behind: a scaffolded slice registers, wires up, and every other gate
+ * here reads it as covered. Suite quality is judged at /code-review. The floors
+ * that stop any of these sweeps passing over an empty walk are inline:
+ * `ruleFiles()` throws below 100 inside the scrape, and each sweep pins its own
+ * count again.
  *
  * The `meta.emits` drift guard, which reads the same declarations, is the
  * sibling `ruleCoverage.emits.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import {
@@ -44,6 +48,16 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 describe('lint rule coverage meta-guard', () => {
   const files = ruleFiles();
+
+  it('every slice linter.ts has a sibling linter.test.ts', () => {
+    // The floor is what stops a broken walk reporting "nothing untested" about
+    // a population of zero. 121 slices declare a rule.
+    expect(files.length).toBeGreaterThan(100);
+    const untested = files
+      .filter((f) => !existsSync(join(dirname(f), 'linter.test.ts')))
+      .map((f) => f.slice(nodesRoot.length + 1));
+    expect(untested).toEqual([]);
+  });
 
   it('declared rule names match the live ruleRegistry exactly', () => {
     const declared = new Set(files.flatMap(declaredRuleNames));
@@ -78,7 +92,7 @@ describe('validator coverage meta-guard', () => {
   });
 
   it('every registered node type is live in validatorRegistry', () => {
-    // 241 linterParser.ts files register today; a walk that found none would
+    // 248 linterParser.ts files register today; a walk that found none would
     // otherwise report an empty `dead` list and pass.
     expect(registering.length).toBeGreaterThan(200);
     // Removals are registered separately from validators: a fixed-orientation
@@ -95,6 +109,18 @@ describe('validator coverage meta-guard', () => {
     // A type here means the linterParser.ts exists but its registration
     // never runs — missing index.linter.ts wiring.
     expect(dead).toEqual([]);
+  });
+
+  it('every registering linterParser.ts sits beside at least one test', () => {
+    expect(registering.length).toBeGreaterThan(200);
+    // Any test file, not a `linterParser.test.ts` by name: 19 slices exercise
+    // their registration from `linter.test.ts` or a shared slice test instead,
+    // and a name rule would have to carry all 19 as exemptions to say less.
+    const untested = registering
+      .map((e) => dirname(e.file))
+      .filter((dir) => !readdirSync(dir).some((t) => /\.test\.tsx?$/.test(t)))
+      .map((dir) => dir.slice(nodesRoot.length + 1));
+    expect(untested).toEqual([]);
   });
 
   it('every exact-class exemption cites an engine guard and needs no matcher', () => {

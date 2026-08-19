@@ -3,7 +3,7 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { readIntSlot, truncatedInt, unrepresentableInt } from './intSlot.js';
+import { readIntSlot, slotWidth, truncatedInt, unrepresentableInt } from './intSlot.js';
 import { parseGodotFloat, type IntWidth } from '../../godot/index.js';
 
 /**
@@ -226,7 +226,12 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the
     // whole difference between the two, and it is the engine's own.
     if (parseAsInt) {
-      const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
+      // The SAME width the read used. Classifying at the default int32 while
+      // reading at the declared width is what makes an int64 slot's reader
+      // limit report as an engine alteration, at the error tier.
+      const refused = unrepresentableInt(
+        propertyName, key, value, line, errorCodeValue, num, spec.width ?? slotWidth(max)
+      );
       if (refused) return refused;
     }
     if (num === null) {
