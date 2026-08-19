@@ -387,6 +387,8 @@ describe('MeshInstance3D Linter', () => {
 
 [node name="MySkeleton" type="Skeleton3D"]
 
+; parent="." and a relative skeleton path: without them ComplexMesh is a second
+; root, dropped from the tree, and every property below went unchecked.
 [node name="ComplexMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("mesh_1")
 material_override = SubResource("mat_1")

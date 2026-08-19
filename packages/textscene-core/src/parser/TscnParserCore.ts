@@ -9,7 +9,13 @@
  */
 
 import { canonicalPropertyName } from '../godot/deprecated.js';
-import type { TscnScene, TscnNode, TscnExternalResource, TscnInternalResource } from './types.js';
+import type {
+  TscnScene,
+  TscnNode,
+  TscnExternalResource,
+  TscnInternalResource,
+  OrphanedNode,
+} from './types.js';
 import {
   parseHeading,
   parseProperty,
@@ -87,9 +93,10 @@ export class TscnParserCore {
     const lines = content.split(/\r?\n/);
 
     const nodes: TscnNode[] = [];
-    // Heading line per node, kept out of `TscnNode` because only the orphan
-    // report below needs it and every node would otherwise carry the field.
-    const nodeLines = new Map<TscnNode, number>();
+    // Every node beside the line its heading is on. Kept here rather than on
+    // `TscnNode` because only the orphan report below reads it, and every node
+    // in the tree would otherwise carry a field nothing else uses.
+    const origins: OrphanedNode[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
 
@@ -124,7 +131,7 @@ export class TscnParserCore {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
           nodes.push(node);
-          nodeLines.set(node, currentHeadingLine);
+          origins.push({ node, line: currentHeadingLine });
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);
@@ -282,7 +289,7 @@ export class TscnParserCore {
     finalizeSection();
 
     const sceneTree = buildSceneTree(nodes);
-    const orphanedNodes = strandedNodes(nodes, sceneTree, nodeLines);
+    const orphanedNodes = strandedNodes(origins, sceneTree);
 
     logger.info(`Parsing complete: ${nodes.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
 

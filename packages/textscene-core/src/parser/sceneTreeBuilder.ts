@@ -160,8 +160,8 @@ function findInstanceAnchor(
 }
 
 /**
- * The nodes {@link buildSceneTree} could not place, paired with their heading
- * lines.
+ * The entries {@link buildSceneTree} could not place, out of every node the
+ * scan produced.
  *
  * Derived from the tree it actually returned rather than re-deciding
  * resolvability: the deferral pass anchors a path descending into instanced
@@ -173,9 +173,8 @@ function findInstanceAnchor(
  * the root, which `packed_scene.cpp:206` refuses outright.
  */
 export function strandedNodes(
-  all: readonly TscnNode[],
-  roots: readonly TscnNode[],
-  lines: ReadonlyMap<TscnNode, number>
+  all: readonly OrphanedNode[],
+  roots: readonly TscnNode[]
 ): OrphanedNode[] {
   const placed = new Set<TscnNode>();
   const walk = (nodes: readonly TscnNode[]): void => {
@@ -186,7 +185,8 @@ export function strandedNodes(
     }
   };
   walk(roots);
-  return all
-    .filter((node) => !placed.has(node))
-    .map((node) => ({ node, line: lines.get(node) ?? 0 }));
+  // Every node arrives with its line already attached rather than being looked
+  // up here: a lookup needs a fallback, and there is no honest one — a
+  // diagnostic pointing at line 0 reads as a real location in an editor gutter.
+  return all.filter(({ node }) => !placed.has(node));
 }

@@ -171,7 +171,10 @@ function reparentedName(parentPath: string, name: string): string {
  * has vanished when instantiating"`, then re-parents the node to the scene
  * root under a mangled name (`packed_scene.cpp:208-215`, `:561-563`). A
  * heading with no `parent=` at all, which only the root may omit, is an ERROR:
- * `packed_scene.cpp:206` fails the instantiation and returns nothing.
+ * the text loader stores it without complaint (`resource_format_text.cpp:273`
+ * — the `parent == -1` branch above it is scene INHERITANCE, not this), and
+ * `packed_scene.cpp:206` then fails the instantiation and returns nothing. So
+ * the resource loads and the scene cannot be built from it.
  */
 function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
   return (scene.orphanedNodes ?? []).map(({ node, line }) => {
@@ -183,7 +186,7 @@ function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
         severity: 'error' as const,
         message:
           `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
-          'Godot refuses to instantiate the scene at all.',
+          'The file loads, but Godot cannot instantiate the scene from it at all.',
         ruleName: 'node-without-parent',
       };
     }

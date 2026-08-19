@@ -562,6 +562,10 @@ describe('AnimationTree Linter', () => {
       const diagnostics = lint(
         scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_1"]',
+          // A real root, and `parent="."` on both children: as two parentless
+          // headings the tree kept only the player and the AnimationTree under
+          // test was never linted. `anim_player` is a path FROM the tree, so
+          // reaching a sibling spells `../`.
           node('Node3D', {}, { name: 'Root' }),
           node('AnimationPlayer', {}, { name: 'CharacterPlayer', parent: '.' }),
           node(
