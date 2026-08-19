@@ -3,7 +3,6 @@
  */
 
 import type { OrphanedNode, TscnNode } from './types';
-import { warn } from '../logger';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -38,6 +37,9 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // root and renames it `Level2#Name` (`packed_scene.cpp:208-215`, `:561-563`);
   // `strandedNodes` below is what carries the same fact to a caller, since a
   // node absent from the tree is otherwise invisible to everything walking it.
+  // It is also the ONLY report: this used to log `remaining` from here, which
+  // is the narrower set — a second parentless heading never reaches it, so the
+  // console said nothing about a node the linter now names.
   //
   // One node is deferred per pass, then the ordinary resolution above is
   // re-run, so a deferred node's own descendants resolve through their declared
@@ -56,15 +58,6 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
       rootNode,
       pathMap
     );
-  }
-
-  // Logged as well as reported: the render path consumes the tree only, and a
-  // dropped subtree is worth a line in the console there too.
-  if (remaining.length > 0) {
-    warn(`WARNING: ${remaining.length} orphaned nodes will be dropped from scene tree!`);
-    for (const node of remaining) {
-      warn(`  Orphaned: "${node.name}" (type: ${node.type}, parent: "${node.parent}", instance: ${node.instance || 'none'})`);
-    }
   }
 
   return [rootNode];

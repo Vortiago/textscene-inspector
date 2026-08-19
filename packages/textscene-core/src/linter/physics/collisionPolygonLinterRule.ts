@@ -23,7 +23,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { ruleInt } from '../validators/commonValidators.js';
 import { polygonPointCount } from '../polygonPoints.js';
 
@@ -35,11 +35,8 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     `${type} only serves to provide a collision shape to a ${collisionObject} derived node. ` +
     `Please only use it as a child of Area${dim}, StaticBody${dim}, RigidBody${dim}, CharacterBody${dim}, etc. to give them a shape.`;
 
-  // Every arm, stated once. `emits` is derived from this record and `check`
-  // reports through it, so a dimension-specific arm cannot become reachable for
-  // the sibling instantiation without also being declared by it — a divergence
-  // no emits guard can see, since the sibling's declaration satisfies the
-  // wildcard cross-checks on its behalf.
+  // Each arm's enabling condition, stated once (see `ruleArms.ts`).
+  const is2D = dim === '2D';
   const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     | 'noParent'
@@ -62,31 +59,25 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     },
     // 2D only: `collision_polygon_2d.cpp` carries the build-mode vertex count
     // and the one-way check, and the 3D file has neither property.
-    ...(dim === '2D'
+    insufficientPoints: is2D
       ? {
-          insufficientPoints: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-insufficient-points`,
-            grounding: configWarning,
-          },
-          oneWayIgnored: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-one-way-ignored`,
-            grounding: configWarning,
-          },
+          severity: 'warning',
+          ruleName: `${prefix}-insufficient-points`,
+          grounding: configWarning,
         }
-      : {}),
+      : undefined,
+    oneWayIgnored: is2D
+      ? {
+          severity: 'warning',
+          ruleName: `${prefix}-one-way-ignored`,
+          grounding: configWarning,
+        }
+      : undefined,
     // 3D only: `collision_polygon_2d.cpp`'s configuration warnings carry no
     // scale check at all.
-    ...(dim === '3D'
-      ? {
-          nonUniformScale: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-non-uniform-scale`,
-            grounding: configWarning,
-          },
-        }
-      : {}),
+    nonUniformScale: is2D
+      ? undefined
+      : { severity: 'warning', ruleName: `${prefix}-non-uniform-scale`, grounding: configWarning },
   };
 
   function check(context: RuleContext): Diagnostic[] {
@@ -94,6 +85,8 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const { node, scene } = context;
     if (!isValidProperties(node.properties)) return diagnostics;
     const rawProps = node.properties;
+    const report = (arm: RuleArm | undefined, message: string) =>
+      reportArm(diagnostics, arm, node, message);
 
     // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240 —
     // `!Object::cast_to<CollisionObject<dim>>(get_parent())`. The `unknowable`
@@ -104,19 +97,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const placement = parentTypeVerdict(scene, node, collisionObject);
     const parent = verdictParent(placement);
     if (placement.kind === 'root') {
-      reportArm(
-        diagnostics,
-        arms.noParent,
-        node,
-        `${type} '${node.name}' has no parent node. ${advice}`
-      );
+      report(arms.noParent, `${type} '${node.name}' has no parent node. ${advice}`);
     } else if (placement.kind === 'mismatch') {
-      reportArm(
-        diagnostics,
-        arms.invalidParent,
-        node,
-        `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`
-      );
+      report(arms.invalidParent, `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`);
     }
 
     // collision_polygon_2d.cpp:239-250 / collision_polygon_3d.cpp:242-244 —
@@ -127,11 +110,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const pointCount = polygonPointCount(rawProps.polygon);
     if (pointCount !== null) {
       if (pointCount === 0) {
-        reportArm(
-          diagnostics,
+        report(
           arms.emptyPolygon,
-          node,
-          dim === '2D'
+          is2D
             ? `${type} '${node.name}' has an empty polygon, which has no effect on collision.`
             : `${type} '${node.name}' has an empty polygon. An empty ${type} has no effect on collision.`
         );
@@ -145,19 +126,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
         // non-finite passes both of them, naming a mode the file never states.
         if (buildMode !== null) {
           if (buildMode === 0 && pointCount < 3) {
-            reportArm(
-              diagnostics,
-              arms.insufficientPoints,
-              node,
-              `${type} '${node.name}' has an invalid polygon: at least 3 points are needed in 'Solids' build mode, got ${pointCount}.`
-            );
+            report(arms.insufficientPoints, `${type} '${node.name}' has an invalid polygon: at least 3 points are needed in 'Solids' build mode, got ${pointCount}.`);
           } else if (buildMode !== 0 && pointCount < 2) {
-            reportArm(
-              diagnostics,
-              arms.insufficientPoints,
-              node,
-              `${type} '${node.name}' has an invalid polygon: at least 2 points are needed in 'Segments' build mode, got ${pointCount}.`
-            );
+            report(arms.insufficientPoints, `${type} '${node.name}' has an invalid polygon: at least 2 points are needed in 'Segments' build mode, got ${pointCount}.`);
           }
         }
       }
@@ -165,17 +136,8 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
 
     // collision_polygon_2d.cpp:252-254 — `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
     // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
-    if (
-      rawProps.one_way_collision === 'true' &&
-      parent &&
-      descendsFrom(parent.type, 'Area2D')
-    ) {
-      reportArm(
-        diagnostics,
-        arms.oneWayIgnored,
-        node,
-        `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`
-      );
+    if (rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+      report(arms.oneWayIgnored, `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`);
     }
 
     // collision_polygon_3d.cpp:246-249 — non-uniform transform scale. No 2D
@@ -186,10 +148,8 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
       if (scales) {
         const [sx, sy, sz] = scales;
         if (!(isZeroApprox(sx - sy) && isZeroApprox(sy - sz))) {
-          reportArm(
-            diagnostics,
+          report(
             arms.nonUniformScale,
-            node,
             `${type} '${node.name}' has a non-uniformly scaled transform ` +
               `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
               "function as expected. Keep its scale uniform and adjust the polygon's vertices instead."

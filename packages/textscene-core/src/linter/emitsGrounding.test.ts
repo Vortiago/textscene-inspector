@@ -25,6 +25,7 @@
 import { describe, it, expect } from 'vitest';
 import { ruleRegistry } from './RuleRegistry.js';
 import { WARNINGS } from './configurationWarningCensus.js';
+import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import type { EmitGrounding, Severity } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
@@ -50,11 +51,21 @@ interface Entry {
   readonly grounding: EmitGrounding;
 }
 
-/** Every emits entry in the live registry, tagged with the rule declaring it. */
+/**
+ * Every emits entry in the live registry, tagged with the rule declaring it —
+ * plus the file-level diagnostics, which no rule can own.
+ *
+ * `Linter` stamps those directly, so they reach no `RuleMeta.emits` and would
+ * otherwise be the one place a citation lives in a prose comment and nothing
+ * checks it. They carry the same shape, so they sweep with everything else.
+ */
 function entries(): Entry[] {
-  return ruleRegistry
-    .getRules()
-    .flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e })));
+  return [
+    ...ruleRegistry
+      .getRules()
+      .flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e }))),
+    ...Object.values(FILE_DIAGNOSTICS).map((d) => ({ rule: 'Linter', ...d })),
+  ];
 }
 
 /**

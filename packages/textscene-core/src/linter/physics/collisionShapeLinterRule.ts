@@ -17,7 +17,7 @@ import { isZeroApprox } from '../../godot/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
@@ -36,12 +36,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     .join(', ');
   const advice = `${type} only gives a shape to a ${collisionObject}: use it under ${examples} or another subclass.`;
 
-  // Every arm, stated once, in the order the generated sheet lists them.
-  // `emits` is derived from this record and `check` reports through it, so a
-  // dimension-specific arm cannot become reachable for the sibling
-  // instantiation without also being declared by it — a divergence no emits
-  // guard can see, because the sibling's own declaration satisfies the
-  // wildcard cross-checks on its behalf.
+  // Each arm's enabling condition, stated once (see `ruleArms.ts`), in the
+  // order the generated sheet lists them.
+  const is2D = dim === '2D';
   const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     | 'requiresShape'
@@ -78,61 +75,64 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     noParent: { severity: 'warning', ruleName: `${prefix}-no-parent`, grounding: configWarning },
     // 2D only: `CollisionShape3D` declares neither one-way property, and the
     // polygon-editing advice is `collision_shape_2d.cpp:184-189`.
-    ...(dim === '2D'
+    unusedOneWayMargin: is2D
       ? {
-          unusedOneWayMargin: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-unused-one-way-margin`,
-            grounding: {
-              kind: 'engine-inert',
-              at: ONE_WAY_GROUP_AT,
-              unused:
-                'the group-enable toggle gates the margin, which is read only while it is on',
-            } as const,
-          },
-          oneWayIgnoredUnderArea2D: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-one-way-ignored-under-area2d`,
-            grounding: configWarning,
-          },
-          polygonShapeLimitedEditing: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-polygon-shape-limited-editing`,
-            grounding: configWarning,
+          severity: 'warning',
+          ruleName: `${prefix}-unused-one-way-margin`,
+          grounding: {
+            kind: 'engine-inert',
+            at: ONE_WAY_GROUP_AT,
+            unused: 'the group-enable toggle gates the margin, which is read only while it is on',
           },
         }
-      : {}),
+      : undefined,
+    oneWayIgnoredUnderArea2D: is2D
+      ? {
+          severity: 'warning',
+          ruleName: `${prefix}-one-way-ignored-under-area2d`,
+          grounding: configWarning,
+        }
+      : undefined,
+    polygonShapeLimitedEditing: is2D
+      ? {
+          severity: 'warning',
+          ruleName: `${prefix}-polygon-shape-limited-editing`,
+          grounding: configWarning,
+        }
+      : undefined,
     // 3D only: `collision_shape_2d.cpp`'s configuration warnings carry neither
     // the scale check nor the shape-under-body pair.
-    ...(dim === '3D'
-      ? {
-          nonUniformScale: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-non-uniform-scale`,
-            grounding: configWarning,
-          },
-          concaveUnderRigidBody: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-concave-under-rigidbody`,
-            grounding: configWarning,
-          },
-          worldBoundaryUnderRigidBody: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-worldboundary-under-rigidbody`,
-            grounding: configWarning,
-          },
-          concaveUnderCharacterBody: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-concave-under-characterbody`,
-            grounding: configWarning,
-          },
-        }
-      : {}),
+    nonUniformScale: is2D
+      ? undefined
+      : { severity: 'warning', ruleName: `${prefix}-non-uniform-scale`, grounding: configWarning },
+    concaveUnderRigidBody: is2D
+      ? undefined
+      : {
+          severity: 'warning',
+          ruleName: `${prefix}-concave-under-rigidbody`,
+          grounding: configWarning,
+        },
+    worldBoundaryUnderRigidBody: is2D
+      ? undefined
+      : {
+          severity: 'warning',
+          ruleName: `${prefix}-worldboundary-under-rigidbody`,
+          grounding: configWarning,
+        },
+    concaveUnderCharacterBody: is2D
+      ? undefined
+      : {
+          severity: 'warning',
+          ruleName: `${prefix}-concave-under-characterbody`,
+          grounding: configWarning,
+        },
   };
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
+    const report = (arm: RuleArm | undefined, message: string) =>
+      reportArm(diagnostics, arm, node, message);
 
 
     // Access raw properties from the node (Record<string, string>)
@@ -143,21 +143,11 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const shape = resolveResourceSlot(scene, rawProps.shape);
 
     if (shape.kind === 'empty') {
-      reportArm(
-        diagnostics,
-        arms.requiresShape,
-        node,
-        `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`
-      );
+      report(arms.requiresShape, `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`);
     } else if (shape.kind === 'dangling') {
       // Only a well-formed reference can be missing. A `not-a-reference` value
       // names no id, and its format is the strict parser's diagnostic.
-      reportArm(
-        diagnostics,
-        arms.danglingShape,
-        node,
-        `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`
-      );
+      report(arms.danglingShape, `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`);
     }
 
     // WARNING: Check if parent is a valid physics body type. Through the
@@ -169,19 +159,9 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const placement = parentTypeVerdict(scene, node, collisionObject);
     const parent = verdictParent(placement);
     if (placement.kind === 'mismatch') {
-      reportArm(
-        diagnostics,
-        arms.invalidParent,
-        node,
-        `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`
-      );
+      report(arms.invalidParent, `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`);
     } else if (placement.kind === 'root') {
-      reportArm(
-        diagnostics,
-        arms.noParent,
-        node,
-        `${type} '${node.name}' has no parent node. ${advice}`
-      );
+      report(arms.noParent, `${type} '${node.name}' has no parent node. ${advice}`);
     }
 
     // WARNING: ConcavePolygonShape3D / WorldBoundaryShape3D under a body they
@@ -195,20 +175,12 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       if (descendsFrom(parent.type, 'RigidBody3D')) {
         const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
         if (shape.type === 'ConcavePolygonShape3D') {
-          reportArm(
-            diagnostics,
-            arms.concaveUnderRigidBody,
-            node,
-            `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
+          report(arms.concaveUnderRigidBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
               `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
               `behave well for a ${bodyType}, except when frozen with freeze_mode set to Static.`
           );
         } else if (shape.type === 'WorldBoundaryShape3D') {
-          reportArm(
-            diagnostics,
-            arms.worldBoundaryUnderRigidBody,
-            node,
-            `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
+          report(arms.worldBoundaryUnderRigidBody, `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
               `WorldBoundaryShape3D doesn't support ${bodyType} in a non-static mode.`
           );
         }
@@ -216,11 +188,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
         descendsFrom(parent.type, 'CharacterBody3D') &&
         shape.type === 'ConcavePolygonShape3D'
       ) {
-        reportArm(
-          diagnostics,
-          arms.concaveUnderCharacterBody,
-          node,
-          `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
+        report(arms.concaveUnderCharacterBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
             `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
             `behave well for a CharacterBody3D.`
         );
@@ -234,11 +202,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       if (scales) {
         const [sx, sy, sz] = scales;
         if (!(isZeroApprox(sx - sy) && isZeroApprox(sy - sz))) {
-          reportArm(
-            diagnostics,
-            arms.nonUniformScale,
-            node,
-            `${type} '${node.name}' has a non-uniformly scaled transform ` +
+          report(arms.nonUniformScale, `${type} '${node.name}' has a non-uniformly scaled transform ` +
               `(${sx.toFixed(3)}, ${sy.toFixed(3)}, ${sz.toFixed(3)}), which will probably not ` +
               'function as expected. Keep its scale uniform and change the size of its shape resource instead.'
           );
@@ -252,30 +216,17 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // regardless of parent type when the margin is set without the flag; this
     // one fires on the flag itself, gated on the PARENT being an Area2D, which
     // ignores one-way collision entirely (it has no solid faces to be one-way about).
-    if (
-      rawProps.one_way_collision === 'true' &&
-      parent &&
-      descendsFrom(parent.type, 'Area2D')
-    ) {
-      reportArm(
-        diagnostics,
-        arms.oneWayIgnoredUnderArea2D,
-        node,
-        `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`
-      );
+    if (rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+      report(arms.oneWayIgnoredUnderArea2D, `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`);
     }
 
     // WARNING: shape resolves to a polygon-based Shape2D with limited editing
     // (2D only — collision_shape_2d.cpp:184-189).
-    if (shape.kind === 'resolved') {
-      if (shape.type === 'ConvexPolygonShape2D' || shape.type === 'ConcavePolygonShape2D') {
-        reportArm(
-          diagnostics,
-          arms.polygonShapeLimitedEditing,
-          node,
-          `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`
-        );
-      }
+    if (
+      shape.kind === 'resolved' &&
+      (shape.type === 'ConvexPolygonShape2D' || shape.type === 'ConcavePolygonShape2D')
+    ) {
+      report(arms.polygonShapeLimitedEditing, `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`);
     }
 
     // WARNING: one_way_collision_margin set but one_way_collision is false (2D only)
@@ -283,12 +234,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       const margin = parseGodotFloat(rawProps.one_way_collision_margin);
       // Only warn if margin is non-zero and one_way_collision is explicitly false or not set
       if (margin !== null && margin > 0) {
-        reportArm(
-          diagnostics,
-          arms.unusedOneWayMargin,
-          node,
-          `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`
-        );
+        report(arms.unusedOneWayMargin, `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`);
       }
     }
 

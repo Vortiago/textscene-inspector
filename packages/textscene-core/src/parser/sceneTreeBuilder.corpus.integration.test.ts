@@ -7,16 +7,17 @@
  * overrides and a player's coin counter with it, and announcing it only through
  * a warning nobody read.
  *
- * So the assertion is on the warning itself: no corpus scene may orphan a node,
- * except the one fixture that exists to orphan one.
+ * So the assertion is on `orphanedNodes`, the scene's own report: no corpus
+ * scene may orphan a node, except the one fixture that exists to orphan one.
+ * It used to read the console warning instead, which is the channel this test's
+ * own opening paragraph calls "a warning nobody read".
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { TscnParser } from './TscnParser';
-import * as logger from '../logger';
 
 // `import.meta.dirname`, never `process.cwd()` — hooks and CI run from the repo
 // root while vitest resolves this file's own URL through its dev server.
@@ -45,20 +46,15 @@ describe('buildSceneTree over the whole corpus', () => {
 
     for (const file of scenes) {
       const rel = relative(SCENES, file);
-      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+      let orphaned: boolean;
       try {
-        new TscnParser().parse(readFileSync(file, 'utf8'));
+        orphaned = (new TscnParser().parse(readFileSync(file, 'utf8')).orphanedNodes ?? []).length > 0;
       } catch {
         // A scene this parser cannot read at all is a different concern; the
         // orphan question only applies to one it can.
         continue;
-      } finally {
-        const orphaned = warnSpy.mock.calls.some((c) =>
-          String(c[0]).includes('orphaned nodes will be dropped')
-        );
-        warnSpy.mockRestore();
-        if (orphaned) (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
       }
+      if (orphaned) (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 
     expect(offenders.sort()).toEqual([]);

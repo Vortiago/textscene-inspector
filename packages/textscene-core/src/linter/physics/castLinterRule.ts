@@ -15,7 +15,7 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { armEmits, reportArm, type RuleArms } from '../ruleArms.js';
+import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
@@ -28,7 +28,6 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   const prefix = `${kind.toLowerCase()}cast${dimSuffix(dim)}`;
   const shapeType = `Shape${dim}`;
 
-
   // `_can_collide_with` filters every space-state query result. Keyed on `dim`
   // alone, not on `kind`: one function serves the ray and the shape query in a
   // dimension, and the two dimensions have their own copy of it.
@@ -40,11 +39,11 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // Its first clause, the mask test against each candidate's collision_layer.
   const maskCite = dim === '2D' ? 'godot_space_2d.cpp:44' : 'godot_space_3d.cpp:44';
 
-  // Each arm's enabling condition, stated once. `emits` is derived from this
-  // and `check` reports THROUGH it, so an arm a ray cast does not have cannot
-  // be reported by one. ShapeCast3D sweeps its shape through the solver, which
-  // cannot handle a concave mesh (`shape_cast_3d.cpp:188` warns on it); the 2D
-  // solver has no equivalent restriction.
+  // Each arm's enabling condition, stated once (see `ruleArms.ts`). ShapeCast3D
+  // sweeps its shape through the solver, which cannot handle a concave mesh
+  // (`shape_cast_3d.cpp:188` warns on it); the 2D solver has no such limit.
+  const hasShape = kind === 'Shape';
+  const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     'noCollideTarget' | 'zeroMask' | 'missingShape' | 'unresolvedShape' | 'concaveShape'
   > = {
@@ -66,33 +65,32 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
         unused: 'the layer test fails for every object, so the cast reports no hit',
       },
     },
-    ...(kind === 'Shape'
+    missingShape: hasShape
       ? {
-          missingShape: {
-            severity: 'warning' as const,
-            ruleName: `${prefix}-missing-shape`,
-            grounding: { kind: 'configuration-warning' } as const,
-          },
-          unresolvedShape: {
-            severity: 'error' as const,
-            ruleName: `${prefix}-unresolved-shape`,
-            grounding: {
-              kind: 'no-engine-counterpart',
-              scope: 'dangling-reference',
-              because: 'the shape id is not declared anywhere in this file',
-            } as const,
+          severity: 'warning',
+          ruleName: `${prefix}-missing-shape`,
+          grounding: configWarning,
+        }
+      : undefined,
+    unresolvedShape: hasShape
+      ? {
+          severity: 'error',
+          ruleName: `${prefix}-unresolved-shape`,
+          grounding: {
+            kind: 'no-engine-counterpart',
+            scope: 'dangling-reference',
+            because: 'the shape id is not declared anywhere in this file',
           },
         }
-      : {}),
-    ...(kind === 'Shape' && dim === '3D'
-      ? {
-          concaveShape: {
-            severity: 'warning' as const,
+      : undefined,
+    concaveShape:
+      hasShape && dim === '3D'
+        ? {
+            severity: 'warning',
             ruleName: `${prefix}-concave-shape`,
-            grounding: { kind: 'configuration-warning' } as const,
-          },
-        }
-      : {}),
+            grounding: configWarning,
+          }
+        : undefined,
   };
 
   function check(context: RuleContext): Diagnostic[] {
@@ -100,18 +98,15 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
 
     const props = node.properties as Record<string, string>;
     const diagnostics: Diagnostic[] = [];
+    const report = (arm: RuleArm | undefined, message: string) =>
+      reportArm(diagnostics, arm, node, message);
 
     // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml — identical across all
     // four: collide_with_areas false, collide_with_bodies true.
     const withAreas = (props.collide_with_areas ?? 'false') === 'true';
     const withBodies = (props.collide_with_bodies ?? 'true') === 'true';
     if (!withAreas && !withBodies) {
-      reportArm(
-        diagnostics,
-        arms.noCollideTarget,
-        node,
-        `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`
-      );
+      report(arms.noCollideTarget, `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`);
     }
 
     // `ruleInt` reads the value Godot stores; `parseInt` stops at the
@@ -120,12 +115,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     // ray_cast_3d.h:100, shape_cast_3d.h:106).
     const mask = ruleInt(props.collision_mask ?? '', null, 'uint32');
     if (mask === 0) {
-      reportArm(
-        diagnostics,
-        arms.zeroMask,
-        node,
-        `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`
-      );
+      report(arms.zeroMask, `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`);
     }
 
     if (arms.missingShape) {
@@ -133,31 +123,16 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       // assigned." — scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
       const shape = resolveResourceSlot(context.scene, props.shape);
       if (shape.kind === 'empty') {
-        reportArm(
-          diagnostics,
-          arms.missingShape,
-          node,
-          `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`
-        );
+        report(arms.missingShape, `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`);
       } else if (shape.kind === 'dangling') {
         // An error, not advice, and the same severity `CollisionShape2D/3D`
         // already gives a dangling `shape` — the two nodes take the identical
         // property and a broken reference is equally fatal on either. A value
         // that is not a reference names no id, so the strict parser's format
         // diagnostic is the whole story and this stays silent.
-        reportArm(
-          diagnostics,
-          arms.unresolvedShape,
-          node,
-          `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`
-        );
+        report(arms.unresolvedShape, `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`);
       } else if (shape.kind === 'resolved' && shape.type === 'ConcavePolygonShape3D') {
-        reportArm(
-          diagnostics,
-          arms.concaveShape,
-          node,
-          `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`
-        );
+        report(arms.concaveShape, `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`);
       }
     }
 

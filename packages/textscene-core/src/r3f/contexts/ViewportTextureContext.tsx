@@ -105,9 +105,10 @@ export function usePublishViewportTexture(
   entry: ViewportTextureEntry
 ): void {
   const register = useRegisterViewportTexture();
+  const claims = useUniqueNameClaims();
   // The derived key, not the node, so a re-parse that changes node identity
   // without changing the spelling does not withdraw and republish the target.
-  const alias = viewportTextureUniqueNameKey(node, path, useUniqueNameClaims());
+  const alias = viewportTextureUniqueNameKey(node, path, claims);
   useEffect(() => {
     const withdraw = [register(path, entry)];
     if (alias) withdraw.push(register(alias, entry));

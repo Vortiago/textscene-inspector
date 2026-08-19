@@ -92,10 +92,12 @@ export class TscnParserCore {
     // multi-line string values).
     const lines = content.split(/\r?\n/);
 
-    const nodes: TscnNode[] = [];
-    // Every node beside the line its heading is on. Kept here rather than on
-    // `TscnNode` because only the orphan report below reads it, and every node
-    // in the tree would otherwise carry a field nothing else uses.
+    // Every node beside the line its heading is on, in scan order. The line
+    // lives here rather than on `TscnNode` because only the orphan report below
+    // reads it, and every node in the tree would otherwise carry a field
+    // nothing else uses. One array, not two: a parallel `nodes` list is an
+    // invariant two push sites have to keep, and a missed push yields an orphan
+    // with no line.
     const origins: OrphanedNode[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
@@ -130,7 +132,6 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          nodes.push(node);
           origins.push({ node, line: currentHeadingLine });
         }
       } else if (currentSection === 'ext_resource') {
@@ -288,10 +289,15 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
-    const sceneTree = buildSceneTree(nodes);
+    const sceneTree = buildSceneTree(origins.map((o) => o.node));
     const orphanedNodes = strandedNodes(origins, sceneTree);
+    for (const { node } of orphanedNodes) {
+      logger.warn(
+        `Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+      );
+    }
 
-    logger.info(`Parsing complete: ${nodes.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
+    logger.info(`Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
 
     return {
       nodes: sceneTree,

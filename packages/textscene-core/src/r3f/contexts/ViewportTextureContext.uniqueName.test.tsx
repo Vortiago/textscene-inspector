@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
-import type { SceneGraph } from '../../core/SceneGraph.js';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.js';
 import type { TscnNode } from '../../parser/types.js';
 import { HierarchyProvider } from './HierarchyContext.js';
 import {
@@ -44,22 +44,10 @@ const roots: TscnNode[] = (() => {
   return [root];
 })();
 
-const graph = {
-  rootScene: 'res://main.tscn',
-  scenes: new Map([
-    [
-      'res://main.tscn',
-      {
-        path: 'res://main.tscn',
-        nodes: roots,
-        externalScenes: [],
-        internalResources: [],
-        externalResources: [],
-      },
-    ],
-  ]),
-  flattenedNodes: [],
-} as unknown as SceneGraph;
+// Built by the real builder, not a literal behind a cast: a hand-shaped graph
+// keeps compiling after `SceneGraph` gains a field, and stops matching what
+// `useUniqueNameClaims` reads.
+const graph = createSceneGraphFromTscnScene({ nodes: roots });
 
 const entry = (id: string): ViewportTextureEntry => ({
   texture: { name: id } as THREE.Texture,

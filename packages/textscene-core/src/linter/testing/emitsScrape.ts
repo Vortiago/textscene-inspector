@@ -60,26 +60,62 @@ function endOfArray(src: string, open: number): number {
 }
 
 /**
+ * Every `emits: [ … ]` array body in `src`, bracket-matched.
+ *
+ * Shared by {@link stripEmits} and by the conditional-spread guard, which asks
+ * of the same text the opposite question: one removes these before scraping,
+ * the other reads what is inside them.
+ */
+export function emitsArrays(src: string): string[] {
+  const out: string[] = [];
+  forEachEmitsArray(src, (open, close) => out.push(src.slice(open + 1, close)));
+  return out;
+}
+
+/**
  * Remove every `emits: [ … ]` array before scraping, else the guard validates
  * its own declarations. Bracket-matched rather than regex'd: an emits array may
  * be one line (`emits: [{ ruleName, severity: 'error' }]`) or many, and may
- * contain nested brackets (the conditional entry in collisionShapeLinterRule).
+ * contain nested brackets.
  */
 export function stripEmits(src: string): string {
   // Anchored to a property position (line start or after `{`/`,`) and required to
   // be followed by `[`. A bare indexOf also matched `emits:` inside a comment or
   // string and then cut everything up to the next `]`, silently deleting real
   // diagnostics from the scrape and disabling the guard for them.
-  const opener = /(?:^|[{,])\s*emits:\s*\[/gm;
   let out = '';
+  let index = 0;
+  forEachEmitsArray(src, (_open, close, at) => {
+    out += src.slice(index, at);
+    index = close + 1;
+  });
+  return out + src.slice(index);
+}
+
+/**
+ * Call `visit(open, close, at)` for each `emits: [ … ]` array: the `[` index,
+ * its matching `]`, and the index of `emits:` itself.
+ *
+ * Anchored to a property position (line start or after `{`/`,`) and required to
+ * be followed by `[`. A bare indexOf also matched `emits:` inside a comment or
+ * string and then cut everything up to the next `]`, silently deleting real
+ * diagnostics from the scrape and disabling the guard for them.
+ */
+function forEachEmitsArray(
+  src: string,
+  visit: (open: number, close: number, at: number) => void
+): void {
+  const opener = /(?:^|[{,])\s*emits:\s*\[/gm;
   let index = 0;
   for (;;) {
     opener.lastIndex = index;
     const match = opener.exec(src);
-    if (!match) return out + src.slice(index);
+    if (!match) return;
     const at = match.index + match[0].indexOf('emits:');
-    out += src.slice(index, at);
-    index = endOfArray(src, src.indexOf('[', at)) + 1;
+    const open = src.indexOf('[', at);
+    const close = endOfArray(src, open);
+    visit(open, close, at);
+    index = close + 1;
   }
 }
 

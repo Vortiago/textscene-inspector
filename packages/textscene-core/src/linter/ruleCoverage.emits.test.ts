@@ -38,7 +38,8 @@ import {
   nodesRoot,
   ruleFiles,
 } from './testing/ruleNameScrape.js';
-import { pairMatches, scrapePairs } from './testing/emitsScrape.js';
+import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
+import { emitsArrays, pairMatches, scrapePairs } from './testing/emitsScrape.js';
 import { armBuilders, balancedGroup, topLevelParts, reachablePairs } from './testing/emitsReach.js';
 import './index.js';
 
@@ -85,17 +86,11 @@ describe('rule emits meta-guard', () => {
    * nothing else did.
    */
   const allFiles = allSourceFiles();
-  // None of these is a rule emission. `Linter.ts` stamps `strict-parser` on
-  // Phase-1 parse errors, which come from the validator side, and
-  // `legacy-format-version` on a whole FILE, which has no node slice to declare
-  // it. The two orphan names report a heading that is ABSENT from the tree, so
-  // no `applicableNodeTypes` can ever reach it and no slice can own it.
-  const NON_RULE_NAMES = new Set([
-    'strict-parser',
-    'legacy-format-version',
-    'unresolved-parent-path',
-    'node-without-parent',
-  ]);
+  // Derived, never typed out here: every one of these is a claim about the FILE
+  // that no `applicableNodeTypes` can reach, and `fileDiagnostics.ts` is where
+  // each declares its own severity and citation. A roster kept in this file
+  // instead would be the second one to maintain.
+  const NON_RULE_NAMES = FILE_DIAGNOSTIC_NAMES;
   const codePairs = allFiles
     .flatMap((f) => scrapePairs(f))
     .filter((p) => !NON_RULE_NAMES.has(p.name));
@@ -209,6 +204,28 @@ describe('rule emits meta-guard', () => {
     expect(unresolvable.length).toBeGreaterThan(0);
     expect([...new Set(uncovered)]).toEqual([]);
     expect([...new Set(missing)].sort()).toEqual([]);
+  });
+
+  it('gates no emits entry on a condition `check` would have to repeat', () => {
+    // The hole the wildcard cross-checks above cannot see, closed at the source
+    // instead of asserted around: a `...(cond ? […] : [])` inside an `emits`
+    // array is a condition `check` must spell a second time, and a name a
+    // SIBLING instantiation still declares answers the wildcard on behalf of
+    // the instance that omits it. Measured before `ruleArms.ts`: ShapeCast2D
+    // emitting `shapecast2d-concave-shape` undeclared left all of the above
+    // green. A parameterized rule declares its arms once and derives both
+    // halves — see `linter/ruleArms.ts`.
+    expect(allFiles.length).toBeGreaterThan(1000);
+    const arrays = allFiles.flatMap((f) =>
+      emitsArrays(stripComments(readFileSync(f, 'utf8'))).map((body) => ({ file: f, body }))
+    );
+    // The floor: 100-odd files declare one. Without it a scrape that stopped
+    // matching would report "no conditional spread anywhere" about nothing.
+    expect(arrays.length).toBeGreaterThan(80);
+    const gated = arrays
+      .filter(({ body }) => body.includes('...('))
+      .map(({ file }) => file.slice(nodesRoot.length + 1));
+    expect([...new Set(gated)].sort()).toEqual([]);
   });
 
   it('registers exactly one rule per slice linter.ts', () => {

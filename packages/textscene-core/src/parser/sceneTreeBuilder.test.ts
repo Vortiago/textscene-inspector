@@ -3,9 +3,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { buildSceneTree } from './sceneTreeBuilder';
+import { buildSceneTree, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
-import * as logger from '../logger';
 
 describe('buildSceneTree', () => {
   describe('empty and basic cases', () => {
@@ -311,23 +310,17 @@ describe('buildSceneTree', () => {
       // A malformed authored path, not an instance override. Godot drops these
       // too, and so must we — otherwise a fixture named "deep" would silently
       // re-root fifteen levels as siblings and stop testing depth.
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
       const nodes = [node('Level0'), node('Level1', { parent: '.' }), node('Level3', { parent: 'Level2' })];
 
       const [root] = buildSceneTree(nodes);
 
       expect(root!.children.map((c) => c.name)).toEqual(['Level1']);
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      loggerWarnSpy.mockRestore();
     });
 
     it('does not anchor at a plain node that merely shares the path prefix', () => {
       // `Player` here is an ordinary node, not an instance — so nothing inside
       // it can be addressed that we cannot already see, and an unresolvable
       // path is a mistake rather than an override.
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
       const nodes = [
         node('Main'),
         node('Player', { parent: '.' }),
@@ -337,10 +330,6 @@ describe('buildSceneTree', () => {
       const [root] = buildSceneTree(nodes);
 
       expect(root!.children[0]!.children).toEqual([]);
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      loggerWarnSpy.mockRestore();
     });
 
     it('prefers the DEEPEST instance on the path', () => {
@@ -363,9 +352,7 @@ describe('buildSceneTree', () => {
   });
 
   describe('error handling', () => {
-    it('should warn and treat node as root when parent not found', () => {
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
+    it('drops a node whose parent is not found, and reports it', () => {
       const nodes: TscnNode[] = [
         {
           type: 'Node3D',
@@ -382,20 +369,14 @@ describe('buildSceneTree', () => {
         },
       ];
 
+      const origins = nodes.map((node, i) => ({ node, line: i + 1 }));
       const result = buildSceneTree(nodes);
 
-      // New behavior: warns about orphaned nodes being dropped
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        '  Orphaned: "Orphan" (type: Node3D, parent: "NonExistentParent", instance: none)'
-      );
-      // Orphaned nodes are dropped (not added as roots)
-      expect(result).toHaveLength(1);
-      expect(result[0]!.name).toBe('Root');
-
-      loggerWarnSpy.mockRestore();
+      // Dropped from the tree, and named by the report rather than by a log
+      // line: `strandedNodes` is the single derivation, and it is what the
+      // linter and the console both read.
+      expect(result.map((r) => r.name)).toEqual(['Root']);
+      expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Orphan']);
     });
 
     it('should handle all nodes having parent attributes (no explicit root)', () => {

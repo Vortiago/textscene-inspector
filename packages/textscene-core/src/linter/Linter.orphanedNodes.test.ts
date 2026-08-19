@@ -10,28 +10,30 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Linter } from './Linter.js';
+import {
+  expectNoDiagnostic,
+  instanced,
+  lint,
+  node,
+  packedScene,
+  scene,
+} from './testing/testkit.js';
 import './index.js';
-
-const linter = new Linter();
 
 /** A StaticBody2D with no shape — the rule that proves Phase 2 reached a node. */
 const NEEDS_SHAPE = 'staticbody2d-needs-collision-shape';
+const ORPHAN = 'unresolved-parent-path';
 
-function lint(source: string) {
-  return linter.lint(source);
-}
+const dangling = scene(
+  node('Node2D', {}, { name: 'Root' }),
+  node('StaticBody2D', {}, { name: 'Body', parent: 'NoSuchNode' })
+);
+
+const orphansIn = (source: string) => lint(source).filter((d) => d.ruleName === ORPHAN);
 
 describe('a parent path this file never defines', () => {
-  const dangling = `[gd_scene format=3]
-
-[node name="Root" type="Node2D"]
-
-[node name="Body" type="StaticBody2D" parent="NoSuchNode"]
-`;
-
   it('reports the node, its path, and the line its heading is on', () => {
-    const orphans = lint(dangling).filter((d) => d.ruleName === 'unresolved-parent-path');
+    const orphans = orphansIn(dangling);
     expect(orphans).toHaveLength(1);
     expect(orphans[0]?.severity).toBe('warning');
     expect(orphans[0]?.nodeName).toBe('Body');
@@ -43,48 +45,34 @@ describe('a parent path this file never defines', () => {
     // The claim has to be this narrow: property validation happens during the
     // scan, so Phase 1 still covered the node's own values.
     expect(lint(dangling).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(false);
-    const placed = dangling.replace('NoSuchNode', '.');
+    const placed = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: '.' })
+    );
     expect(lint(placed).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
   });
 
   it('reports every node in the stranded subtree, as Godot warns per node', () => {
     // `Child`'s own path resolves only THROUGH `Body`, which was never placed,
     // so Godot re-roots and renames both — one warning each.
-    const names = lint(`${dangling}
-[node name="Child" type="StaticBody2D" parent="NoSuchNode/Body"]
-`)
-      .filter((d) => d.ruleName === 'unresolved-parent-path')
+    const names = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('StaticBody2D', {}, { name: 'Body', parent: 'NoSuchNode' }),
+        node('StaticBody2D', {}, { name: 'Child', parent: 'NoSuchNode/Body' })
+      )
+    )
       .map((d) => d.nodeName)
       .sort();
     expect(names).toEqual(['Body', 'Child']);
   });
 
-  it('leaves a path that descends into instanced content alone', () => {
-    // The intermediate names live in the sub-scene, not here, so the node is
-    // anchored to the instance rather than stranded.
-    const instanced = `[gd_scene load_steps=2 format=3]
-
-[ext_resource type="PackedScene" path="res://player.tscn" id="1_a"]
-
-[node name="Root" type="Node2D"]
-
-[node name="Player" parent="." instance=ExtResource("1_a")]
-
-[node name="Hat" type="Sprite2D" parent="Player/Head"]
-`;
-    expect(lint(instanced).filter((d) => d.ruleName === 'unresolved-parent-path')).toEqual([]);
-  });
-
   it('errors on a second heading that declares no parent at all', () => {
     // `packed_scene.cpp:206` returns nullptr for the whole scene, so this one
     // does not load at all — a tier above the vanished-path case beside it.
-    const twoRoots = `[gd_scene format=3]
-
-[node name="Root" type="Node2D"]
-
-[node name="Stray" type="Node2D"]
-`;
-    const errors = lint(twoRoots).filter((d) => d.ruleName === 'node-without-parent');
+    const errors = lint(
+      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Stray' }))
+    ).filter((d) => d.ruleName === 'node-without-parent');
     expect(errors).toHaveLength(1);
     expect(errors[0]?.severity).toBe('error');
     expect(errors[0]?.nodeName).toBe('Stray');
@@ -92,24 +80,35 @@ describe('a parent path this file never defines', () => {
 
   it('spells the re-parented name the way Godot does', () => {
     // `./` stripped, every `/` to `@`, then `#` and the node's own name.
-    const nested = `[gd_scene format=3]
+    const nested = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('Node2D', {}, { name: 'Leaf', parent: 'Gone/Deeper' })
+    );
+    expect(orphansIn(nested)[0]?.message).toContain('"Gone@Deeper#Leaf"');
+  });
 
-[node name="Root" type="Node2D"]
-
-[node name="Leaf" type="Node2D" parent="Gone/Deeper"]
-`;
-    expect(lint(nested)[0]?.message).toContain('"Gone@Deeper#Leaf"');
+  it('leaves a path that descends into instanced content alone', () => {
+    // The intermediate names live in the sub-scene, not here, so the node is
+    // anchored to the instance rather than stranded.
+    expectNoDiagnostic(
+      scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Player', { parent: '.' }),
+        node('Sprite2D', {}, { name: 'Hat', parent: 'Player/Head' })
+      ),
+      { ruleName: ORPHAN }
+    );
   });
 
   it('says nothing about a scene whose every parent path resolves', () => {
-    const sound = `[gd_scene format=3]
-
-[node name="Root" type="Node2D"]
-
-[node name="Mid" type="Node2D" parent="."]
-
-[node name="Leaf" type="Sprite2D" parent="Mid"]
-`;
-    expect(lint(sound).filter((d) => d.ruleName === 'unresolved-parent-path')).toEqual([]);
+    expectNoDiagnostic(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', {}, { name: 'Mid', parent: '.' }),
+        node('Sprite2D', {}, { name: 'Leaf', parent: 'Mid' })
+      ),
+      { ruleName: ORPHAN }
+    );
   });
 });
