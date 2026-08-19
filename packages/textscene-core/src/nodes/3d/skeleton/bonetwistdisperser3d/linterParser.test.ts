@@ -133,6 +133,25 @@ describe('the settings/<i>/ family shape', () => {
     expect(error?.severity).toBe('error');
   });
 
+  it('rejects a nested setting index to_int resolves as negative', () => {
+    // The nested shape is parsed here rather than by the shared dispatcher, and
+    // `_to_int` flips the sign on a `-` seen while the total is still 0
+    // (ustring.cpp:2291-2292), so :37 reads `a-1` as -1 and :39 refuses it.
+    const error = check('settings/a-1/joints/0/twist_amount', '0.5');
+    expect(error?.code).toBe('INVALID_SETTING_INDEX');
+    expect(error?.message).toContain('-1');
+    // Both `-` flip, because a `0` digit leaves the total at 0, so this one is
+    // setting 1 and the write lands.
+    expect(check('settings/-0-1/joints/0/twist_amount', '0.5')).toBeNull();
+  });
+
+  it('rejects a joint index to_int resolves as negative', () => {
+    // The joint index is read with the same bare `to_int` (:66).
+    const error = check('settings/0/joints/a-2/twist_amount', '0.5');
+    expect(error?.code).toBe('INVALID_JOINT_INDEX');
+    expect(error?.message).toContain('-2');
+  });
+
   it('leaves a non-numeric setting index alone, because the write lands', () => {
     // `to_int` skips non-digits (ustring.cpp:2268-2298), so `x` resolves to
     // setting 0 and Godot applies the value. Reporting it is a false positive.

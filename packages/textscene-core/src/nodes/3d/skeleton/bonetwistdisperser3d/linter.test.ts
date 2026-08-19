@@ -219,3 +219,26 @@ describe('BoneTwistDisperser3D semantic rules', () => {
     expect(lint(readFixture('unit-bone-twist-disperser-3d.tscn'))).toEqual([]);
   });
 });
+
+describe('BoneTwistDisperser3D index grammar', () => {
+  it('errors on a setting written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and
+    // no validity gate (bone_twist_disperser_3d.cpp:37), and `to_int` skips a
+    // character it cannot use rather than stopping at it
+    // (ustring.cpp:2280-2293), so `settings/x1/…` is setting 1 — past a
+    // setting_count of 1, and dropped by the ERR_FAIL_INDEX_V at :39.
+    expectDiagnostic(
+      scene(
+        node('BoneTwistDisperser3D', {
+          setting_count: 1,
+          'settings/x1/root_bone_name': '"UpperArm"',
+        })
+      ),
+      {
+        ruleName: 'bonetwistdisperser3d-setting-index-out-of-range',
+        severity: 'error',
+        contains: ['1', 'setting_count (1)'],
+      }
+    );
+  });
+});

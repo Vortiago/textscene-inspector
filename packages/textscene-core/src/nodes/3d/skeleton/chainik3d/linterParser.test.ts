@@ -89,13 +89,31 @@ describe('ChainIK3D settings index', () => {
     expect(check('settings/12/root_bone_name', '"Head"')).toBeNull();
   });
 
-  it('says nothing about a non-integer index, which Godot reads as 0', () => {
+  it('reads a non-integer index as the setting to_int resolves it to', () => {
     // `_to_int` skips non-digits rather than stopping at them
     // (ustring.cpp:2278-2294), so chain_ik_3d.cpp:37 resolves "x" to setting 0
-    // and does not refuse the key. A deliberate gap: the leaf bound is not
-    // applied either, since no serialiser writes an index like this.
+    // and the write LANDS there. The key is not refused, and the leaf bound
+    // still applies to the value that lands.
     expect(check('settings/x/root_bone_name', '"Head"')).toBeNull();
-    expect(check('settings/x/root_bone', '-5')).toBeNull();
+    expect(check('settings/x/root_bone', '-5')?.severity).toBe('error');
+  });
+
+  it('rejects an index to_int resolves as negative, however it is spelled', () => {
+    // Not "no index at all": `_to_int` flips the sign on a `-` seen while the
+    // total is still 0 (ustring.cpp:2291-2292), so chain_ik_3d.cpp:37 reads
+    // `a-1` as -1 and the ERR_FAIL_INDEX_V at :39 refuses it.
+    const error = check('settings/a-1/root_bone_name', '"Head"');
+    expect(error?.severity).toBe('error');
+    expect(error?.code).toBe('INVALID_SETTINGS_INDEX');
+  });
+
+  it('reads `-0-1` as index 1, since a `0` digit leaves the total at 0', () => {
+    // Both `-` flip (ustring.cpp:2291-2292), so the index is positive and the
+    // write lands: only the leaf bound is left to refuse the value.
+    expect(check('settings/-0-1/root_bone_name', '"Head"')).toBeNull();
+    const error = check('settings/-0-1/root_bone', '-5');
+    expect(error?.severity).toBe('error');
+    expect(error?.code).not.toBe('INVALID_SETTINGS_INDEX');
   });
 
   it('says nothing about a leaf ChainIK3D does not own, which a subclass adds', () => {
@@ -212,6 +230,15 @@ describe('ChainIK3D derived joint leaves', () => {
       expect(error?.message).toContain('read-only');
     }
   );
+
+  it('errors whatever the joint index is spelled as', () => {
+    // `_set` has no `joints` branch at all, so every one of these keys falls to
+    // `return false` (chain_ik_3d.cpp:62-63) and the index text decides
+    // nothing.
+    const error = check('settings/0/joints/x/bone', '"Head"');
+    expect(error?.severity).toBe('error');
+    expect(error?.message).toContain('read-only');
+  });
 
   it('says nothing about a joint leaf a subclass adds', () => {
     // IterateIK3D's joints/<j>/rotation_axis (iterate_ik_3d.cpp:117).

@@ -48,12 +48,18 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { toIntIndex } from '../../../../godot/index.js';
 
 const SETTINGS_PREFIX = 'settings/';
 
-/** `joints/<j>/bone` and `joints/<j>/bone_name`, at any index. */
-const JOINT_BONE_RE = /^joints\/[+-]?\d+\/(?:bone|bone_name)$/;
+/**
+ * `joints/<j>/bone` and `joints/<j>/bone_name`, at any index.
+ *
+ * The index is `[^/]+`, not digits: `_set` has no `joints` branch at all, so
+ * every spelling falls to the same `return false` (chain_ik_3d.cpp:62-63) and
+ * the index text decides nothing here. Only the two leaf names do.
+ */
+const JOINT_BONE_RE = /^joints\/[^/]+\/(?:bone|bone_name)$/;
 
 /**
  * The joint list is DERIVED, never written.
@@ -140,17 +146,20 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 /**
  * The `settings/<i>/` dispatcher.
  *
- * The index is parsed the way `_set` does (`path.get_slicec('/', 1).to_int()`,
- * chain_ik_3d.cpp:37): a negative one is refused by the following
- * `ERR_FAIL_INDEX_V` (:39) and the write never lands.
+ * The index is read the way `_set` reads it — `path.get_slicec('/', 1).to_int()`
+ * with no validity gate, chain_ik_3d.cpp:37 — so {@link toIntIndex} is the
+ * parse and a negative result is refused by the following `ERR_FAIL_INDEX_V`
+ * (:39), the write never landing.
  *
- * A non-numeric index is NOT an error and is left entirely alone. `_to_int`
- * skips non-digits instead of stopping at them (ustring.cpp:2278-2294), so
- * `settings/x/...` resolves to setting 0 and `settings/a1b2/...` to setting 12:
- * behaviour no serialiser ever produces, and reporting a bound "at index 0"
- * for a key spelled `x` would point at the wrong thing. The high end (an index
- * at or past the live `setting_count`) is left alone too, being a bound against
- * a sibling count no per-property validator can see.
+ * A non-numeric spelling is therefore an index like any other rather than no
+ * index: `_to_int` skips non-digits instead of stopping at them
+ * (ustring.cpp:2278-2294), so `settings/x/...` resolves to setting 0 and
+ * `settings/a1b2/...` to setting 12, and the leaf below decides the value. A
+ * `-` seen while the total is still 0 flips the sign (:2291-2292), which is how
+ * `settings/a-1/...` reaches the negative-index refusal.
+ *
+ * The high end (an index at or past the live `setting_count`) is left alone,
+ * being a bound against a sibling count no per-property validator can see.
  */
 const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   if (!key.startsWith(SETTINGS_PREFIX)) return null;
@@ -158,13 +167,12 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   const slash = rest.indexOf('/');
   if (slash <= 0) return null;
 
-  const indexText = rest.slice(0, slash);
-  if (!IS_VALID_INT_RE.test(indexText)) return null;
-  if (Number(indexText) < 0) {
+  const index = toIntIndex(rest.slice(0, slash));
+  if (index < 0) {
     return propertyError(
       key,
       line,
-      `Setting index ${indexText} is out of range: Godot refuses a negative index and drops the write`,
+      `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`,
       'INVALID_SETTINGS_INDEX'
     );
   }

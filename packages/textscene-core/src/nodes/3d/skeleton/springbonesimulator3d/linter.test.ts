@@ -295,3 +295,24 @@ describe('SpringBoneSimulator3D semantic rules', () => {
     expect(diagnostics).toEqual([]);
   });
 });
+
+describe('SpringBoneSimulator3D index grammar', () => {
+  it('reads individual_config from the setting the engine resolves, not the index text', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+    // (spring_bone_simulator_3d.cpp:42), so `settings/00/…` and `settings/0/…`
+    // are ONE setting: the shared radius below is written while that setting is
+    // individual, and `set_radius` returns before assigning (:644). Keying the
+    // sibling lookup on the index TEXT found no individual_config and read the
+    // default false instead.
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings/0/individual_config': true,
+          'settings/00/radius/value': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored', severity: 'error' }
+    );
+  });
+});

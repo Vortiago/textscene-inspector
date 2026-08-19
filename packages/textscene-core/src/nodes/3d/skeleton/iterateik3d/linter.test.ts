@@ -108,3 +108,16 @@ describe('IterateIK3D target-node rule', () => {
     expect(warningsOf(linter.lint(readFixture('unit-ccdik-3d.tscn')))).toEqual([]);
   });
 });
+
+describe('IterateIK3D index grammar', () => {
+  it('credits a target written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and
+    // no validity gate (iterate_ik_3d.cpp:37), and `to_int` skips a character it
+    // cannot use rather than stopping at it (ustring.cpp:2280-2293), so
+    // `settings/x0/target_node` sets setting 0's target. Walking `0..count` and
+    // reading `settings/0/target_node` found nothing and reported the setting
+    // target-less.
+    const content = scene('CCDIK3D', 'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n');
+    expect(warningsOf(new Linter().lint(content))).toEqual([]);
+  });
+});

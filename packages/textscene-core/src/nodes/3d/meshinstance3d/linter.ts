@@ -11,6 +11,15 @@ import type { MeshInstance3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
+
+/**
+ * `surface_material_override/<i>`, an index with no leaf below it. `_set` reads
+ * it with a bare `p_name.get_slicec('/', 1).to_int()` and no validity gate
+ * (mesh_instance_3d.cpp:66), so the grammar is the whole segment and
+ * {@link toIntIndex} is what turns it into a number.
+ */
+const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)$', 'to_int');
 
 /**
  * Check if properties are valid MeshInstance3D properties
@@ -96,9 +105,12 @@ function checkMeshInstance3D(context: RuleContext): Diagnostic[] {
   // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()), so the ceiling
   // is the mesh's own surface count, which is not knowable from the .tscn.
   for (const [key, value] of Object.entries(rawProps)) {
-    const match = key.match(/^surface_material_override\/(\d+)$/);
+    const match = SURFACE_OVERRIDE_KEY_RE.exec(key);
     if (match) {
-      const surfaceIndex = Number(match[1]!);
+      const surfaceIndex = toIntIndex(match[1]!);
+      // `_set` returns false for `idx < 0` (mesh_instance_3d.cpp:68), so the
+      // override never lands and there is no surface to miss a material.
+      if (!(surfaceIndex >= 0)) continue;
 
       // Check if resource exists
       const resourceExists = checkResourceExists(scene, value);

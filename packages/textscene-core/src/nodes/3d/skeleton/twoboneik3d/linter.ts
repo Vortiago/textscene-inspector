@@ -58,21 +58,25 @@ import { isValidProperties, extractNodePath } from '../../../../linter/linterUti
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices } from '../../../../linter/reportedIndices.js';
-
-/** Any `settings/<i>/…` leaf, whatever its depth. */
-const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
-/** The one leaf whose write depends on a sibling. */
-const POLE_VECTOR_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction_vector$/;
-/** `target_node`, indexed canonically like `POLE_DIRECTION_KEY_RE` below. */
-const TARGET_NODE_KEY_RE = /^settings\/([+-]?\d+)\/target_node$/;
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
- * The sibling a `pole_direction_vector` write depends on. The sign class matches
- * the two regexes above deliberately: `is_valid_int` accepts a leading `+`, so
- * `settings/+0/…` is a real spelling, and admitting it in one regex but not the
- * other put the key in the map under no index its sibling could look up.
+ * Any `settings/<i>/…` leaf, whatever its depth.
+ *
+ * `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and no
+ * validity gate (two_bone_ik_3d.cpp:37), so the grammar is the whole segment
+ * and {@link toIntIndex} is what turns it into a number. All four shapes here
+ * share it deliberately: a key admitted by one and refused by another enters
+ * the map under no index its sibling can look up.
  */
-const POLE_DIRECTION_KEY_RE = /^settings\/([+-]?\d+)\/pole_direction$/;
+const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
+/** The one leaf whose write depends on a sibling. */
+const POLE_VECTOR_KEY_RE = indexedKeyRegex('^settings/(#)/pole_direction_vector$', 'to_int');
+/** `target_node`, indexed canonically like `POLE_DIRECTION_KEY_RE` below. */
+const TARGET_NODE_KEY_RE = indexedKeyRegex('^settings/(#)/target_node$', 'to_int');
+
+/** The sibling a `pole_direction_vector` write depends on. */
+const POLE_DIRECTION_KEY_RE = indexedKeyRegex('^settings/(#)/pole_direction$', 'to_int');
 
 /** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
 const SECONDARY_DIRECTION_CUSTOM = 7;
@@ -104,7 +108,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const m = TARGET_NODE_KEY_RE.exec(key);
     if (!m) continue;
-    const at = Number(m[1]);
+    const at = toIntIndex(m[1]!);
     if (Number.isFinite(at)) targetNodes.set(at, rawProps[key]!);
   }
   // Absence is the trigger too — `target_node` is empty by default
@@ -125,14 +129,14 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const m = POLE_DIRECTION_KEY_RE.exec(key);
     if (!m) continue;
-    const at = Number(m[1]);
+    const at = toIntIndex(m[1]!);
     if (Number.isFinite(at)) poleDirections.set(at, rawProps[key]!);
   }
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
-    const index = Number(indexed[1]);
+    const index = toIntIndex(indexed[1]!);
     // A negative index is the validator's error, against the same
     // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
     if (index < 0) continue;

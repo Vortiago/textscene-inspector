@@ -65,7 +65,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { toIntIndex } from '../../../../godot/index.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
@@ -247,7 +247,16 @@ const flatFamily = indexedFamilyValidator({
  */
 const JOINT_KEY_RE = /^settings\/([^/]+)\/joints\/([^/]+)\/(.+)$/;
 
-/** The negative-index error for an index that is syntactically an integer. */
+/**
+ * The negative-index error for an index `to_int` resolves below zero.
+ *
+ * Both index halves are read the way `_set` reads them, with a bare
+ * `get_slicec(...).to_int()` and no validity gate (:37, :66), so a spelling
+ * `is_valid_int` rejects still names a setting or a joint: `a-1` is -1
+ * (ustring.cpp:2291-2292) and the `ERR_FAIL_INDEX_V` beside each parse refuses
+ * it. A NaN index — a spelling neither reader can name — fails the comparison
+ * and is left alone.
+ */
 function negativeIndexError(
   indexText: string,
   key: string,
@@ -255,10 +264,9 @@ function negativeIndexError(
   message: (index: number) => string,
   code: string
 ) {
-  if (!IS_VALID_INT_RE.test(indexText)) return null;
-  const index = Number(indexText);
-  if (index >= 0) return null;
-  return propertyError(key, line, message(index), code);
+  const index = toIntIndex(indexText);
+  if (index < 0) return propertyError(key, line, message(index), code);
+  return null;
 }
 
 /**

@@ -44,11 +44,18 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
-/** `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent leaves. */
-const RANGE_KEY_RE = /^settings\/([+-]?\d+)\/(apply|reference)\/(range_min|range_max)$/;
+/**
+ * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent
+ * leaves. `_set` reads the index with a bare
+ * `path.get_slicec('/', 1).to_int()` and no validity gate
+ * (convert_transform_modifier_3d.cpp:41), so the grammar is the whole segment
+ * and {@link toIntIndex} is what turns it into a number.
+ */
+const RANGE_KEY_RE = indexedKeyRegex('^settings/(#)/(apply|reference)/(range_min|range_max)$', 'to_int');
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
 const TRANSFORM_MODE_POSITION = 0;
@@ -101,17 +108,22 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
   const props = node.properties as Record<string, string>;
 
+  // Grouped by the setting `_set` RESOLVES each key to, so `settings/00/…` and
+  // `settings/0/…` are one setting and a range finds the mode written beside it
+  // under either spelling. Keying on the index TEXT split them in two and read
+  // the default Position for a mode the file states.
+  const settings = indexedElements(props, 'settings/', 'to_int');
+
   const table: Record<string, RangeArm[]> = {};
   for (const key of Object.keys(props)) {
     const match = RANGE_KEY_RE.exec(key);
     if (!match) continue;
+    const index = toIntIndex(match[1]!);
     // A negative index is the validator's error, against the ERR_FAIL_INDEX_V
     // in `_set`; reporting it again here would double up on one defect.
-    if (Number(match[1]) < 0) continue;
+    if (!(index >= 0)) continue;
 
-    // Read the sibling back through the index TEXT, so `settings/00/…` finds its
-    // own group rather than `settings/0/…`.
-    const modeRaw = props[`settings/${match[1]}/${match[2]}/transform_mode`];
+    const modeRaw = settings.get(index)?.[`${match[2]!}/transform_mode`];
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);

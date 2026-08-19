@@ -193,6 +193,19 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/-2/collisions/0', 'NodePath("A")')?.severity).toBe('error');
     });
 
+    it('rejects a nested index to_int resolves as negative, however it is spelled', () => {
+      // The nested shapes are parsed here rather than by the shared dispatcher.
+      // `_to_int` flips the sign on a `-` seen while the total is still 0
+      // (ustring.cpp:2291-2292), so :42 reads `a-1` as -1 and :44 refuses it.
+      expect(check('settings/a-1/joints/0/radius', '0.5')?.code).toBe('INVALID_SETTING_INDEX');
+      expect(check('settings/a-1/collisions/0', 'NodePath("A")')?.code).toBe(
+        'INVALID_SETTING_INDEX'
+      );
+      // Both `-` flip, because a `0` digit leaves the total at 0, so this one
+      // is setting 1 and the write lands.
+      expect(check('settings/-0-1/joints/0/radius', '0.5')).toBeNull();
+    });
+
     it('rejects an unrecognised top-level leaf, since no subclass extends this family', () => {
       const error = check('settings/0/not_a_leaf', '1');
       expect(error?.severity).toBe('error');

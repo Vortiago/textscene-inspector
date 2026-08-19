@@ -6,7 +6,7 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
-import { IS_VALID_INT_RE } from '../../../../godot/index.js';
+import { toIntIndex } from '../../../../godot/index.js';
 import { JOINT_LEAVES } from './jointLeaves.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
 
@@ -51,14 +51,21 @@ const COLLISION_KEY = /^settings\/([^/]+)\/(?:exclude_)?collisions\/[^/]+$/;
 
 /**
  * The negative-setting-index branch every level shares, or null when the index
- * is not a negative integer. A non-numeric index is left alone: `_to_int`
- * resolves it to some setting and the write lands.
+ * `to_int` resolves is not negative.
+ *
+ * The index is read the way `_set` reads it, with a bare
+ * `get_slicec('/', 1).to_int()` and no validity gate (:42), so a spelling
+ * `is_valid_int` rejects still names a setting: `x` is 0 and the write lands
+ * there, while `a-1` is -1 (ustring.cpp:2291-2292) and :44 refuses it. A NaN
+ * index — a spelling neither reader can name — fails the comparison and is
+ * left alone.
  */
 function negativeIndexError(indexText: string, key: string, line: number) {
-  if (!IS_VALID_INT_RE.test(indexText)) return null;
-  const index = Number(indexText);
-  if (index >= 0) return null;
-  return propertyError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');
+  const index = toIntIndex(indexText);
+  if (index < 0) {
+    return propertyError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');
+  }
+  return null;
 }
 
 /**

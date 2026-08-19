@@ -188,3 +188,23 @@ describe('ConvertTransformModifier3D range-versus-mode rule', () => {
     expectClean(readFixture('unit-convert-transform-modifier-3d.tscn'));
   });
 });
+
+describe('ConvertTransformModifier3D index grammar', () => {
+  it('reads transform_mode from the setting the engine resolves, not the index text', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+    // (convert_transform_modifier_3d.cpp:41), so `settings/00/…` and
+    // `settings/0/…` are ONE setting: the mode below is Rotation and the range
+    // above PI belongs to it. Keying the sibling lookup on the index TEXT
+    // found no mode and read the default Position instead.
+    expectDiagnostic(
+      scene(
+        node('ConvertTransformModifier3D', {
+          setting_count: 1,
+          'settings/0/apply/transform_mode': 1,
+          'settings/00/apply/range_max': 4.0,
+        })
+      ),
+      { ruleName: RULE, severity: 'warning' }
+    );
+  });
+});

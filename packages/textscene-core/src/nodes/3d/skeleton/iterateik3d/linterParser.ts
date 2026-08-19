@@ -26,6 +26,7 @@ import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
+import { toIntIndex } from '../../../../godot/index.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
@@ -93,8 +94,14 @@ const settingLeafValidator = indexedFamilyValidator({
  * `settings/0/joints/1/rotation_axis` it reads an index of `0/joints/1` and
  * gives up. One more level of nesting is one more level than the shape it
  * mirrors ever has.
+ *
+ * Both index halves are `[^/]+`, not digits: `_set` reads each with a bare
+ * `get_slicec(...).to_int()` and no validity gate (:37, :44), so a spelling
+ * `is_valid_int` rejects still resolves to a setting and a joint and the write
+ * lands there. Demanding digits handed those keys back to ChainIK3D, which
+ * knows none of these leaves and accepted every value on them.
  */
-const JOINT_KEY = /^settings\/([+-]?\d+)\/joints\/[+-]?\d+\/(.+)$/;
+const JOINT_KEY = /^settings\/([^/]+)\/joints\/[^/]+\/(.+)$/;
 
 /**
  * `settings/…` on IterateIK3D, which is HALF of a family ChainIK3D also builds.
@@ -117,7 +124,7 @@ const settingsValidator = accepts((key, value, line) => {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
-      const settingIndex = Number(joint[1]!);
+      const settingIndex = toIntIndex(joint[1]!);
       if (settingIndex < 0) {
         return propertyError(
           key,

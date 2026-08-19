@@ -45,6 +45,7 @@ Strict parsing format-checks these `MenuButton` properties, plus 13 inherited fr
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
+| `valid-menubutton-properties` (type-family match) | `menubutton-item-index-out-of-range` | error |
 <!-- lint:end -->
 
 The lenient parser reuses `parseButton` unchanged: it reads Button's own fields

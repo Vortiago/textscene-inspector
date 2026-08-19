@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt } from './string.js';
+import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex } from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -161,4 +161,43 @@ describe('stringToInt', () => {
       expect(stringToInt(raw)).toBeNaN();
     }
   );
+});
+
+describe('toIntIndex', () => {
+  // A hand-rolled `_set` reads its family's index with a bare
+  // `path.get_slicec('/', 1).to_int()` (chain_ik_3d.cpp:37,
+  // bone_twist_disperser_3d.cpp:37, spring_bone_simulator_3d.cpp:42), so the
+  // index it acts on is whatever `to_int` resolves.
+  it.each([
+    ['x', 0],
+    ['a1b2', 12],
+    ['a-1', -1],
+    ['-0-1', 1],
+    ['12.9', 12],
+  ])('resolves a non-integer spelling the way to_int does: %s', (raw, expected) => {
+    expect(toIntIndex(raw)).toBe(expected);
+  });
+
+  it.each([
+    ['0', 0],
+    ['+7', 7],
+    ['007', 7],
+    ['-3', -3],
+  ])('reads a clean is_valid_int spelling as itself: %s', (raw, expected) => {
+    expect(toIntIndex(raw)).toBe(expected);
+  });
+
+  // Past 2^53 no double IS the int64 the text states, so this is not an
+  // exactness claim: the SIGN is the only thing a negative-index guard asks,
+  // and it survives here where `stringToInt` gives up.
+  it('keeps the sign of an integer no double spells', () => {
+    expect(toIntIndex('-9223372036854775808')).toBeLessThan(0);
+    expect(toIntIndex('9223372036854775807')).toBeGreaterThan(0);
+  });
+
+  // Neither reader can name it — `is_valid_int` refuses the spelling and
+  // `stringToInt` refuses the magnitude — so every comparison stays false.
+  it('reads text that is neither as NaN', () => {
+    expect(toIntIndex('a-9223372036854775808')).toBeNaN();
+  });
 });

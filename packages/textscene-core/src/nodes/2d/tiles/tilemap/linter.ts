@@ -37,14 +37,11 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedElements } from '../../../../godot/index.js';
 
-const LAYER_DATA_KEY_RE = /^layer_(\d+)\/tile_data$/;
-const LAYER_KEY_RE = /^layer_(\d+)\//;
-
-/** Every layer index that has AT LEAST ONE `layer_<i>/...` key present, ascending. */
 /**
- * Every layer index the loaded TileMap has, which is NOT the same as every index
- * the file mentions.
+ * Every layer the loaded TileMap has, keyed by the index Godot resolves, which
+ * is NOT the same as every index the file mentions.
  *
  * Index 0 is seeded unconditionally: `TileMap::TileMap()` builds a "Layer0"
  * TileMapLayer and pushes it into `layers` before any property is applied
@@ -52,14 +49,19 @@ const LAYER_KEY_RE = /^layer_(\d+)\//;
  * with TWO layers, and `get_configuration_warnings` iterates that real vector
  * (:848), so Layer0's defaults — not y-sorted, z_index 0 — take part in the
  * comparison. Scraping keys alone made the rule silent on exactly that scene.
+ *
+ * The index resolves through the `is_valid_int` gate: `TileMap::_set` routes
+ * the key through `property_helper.is_property_valid` (tile_map.cpp:700), whose
+ * gate is `String::is_valid_int()` (property_list_helper.cpp:126), so
+ * `layer_+1/…` is layer 1. A NEGATIVE index builds nothing — `:701`'s grow loop
+ * never runs for one, and `_get_property` then returns null for `index < 0`
+ * (property_list_helper.cpp:58) so `property_set_value` refuses the write.
+ * `indexedElements` drops those.
  */
-function layerIndices(rawProps: Record<string, string>): number[] {
-  const indices = new Set<number>([0]);
-  for (const key of Object.keys(rawProps)) {
-    const match = LAYER_KEY_RE.exec(key);
-    if (match) indices.add(Number(match[1]!));
-  }
-  return [...indices].sort((a, b) => a - b);
+function layerElements(rawProps: Record<string, string>): Map<number, Record<string, string>> {
+  const layers = indexedElements(rawProps, 'layer_', 'is_valid_int');
+  if (!layers.has(0)) layers.set(0, {});
+  return layers;
 }
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
@@ -67,7 +69,15 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
-  const layerData = Object.entries(rawProps).filter(([key]) => LAYER_DATA_KEY_RE.test(key));
+  const layers = layerElements(rawProps);
+  // Keyed by the resolved index, so a layer the engine never builds carries no
+  // tile data here either, and the key a message names is the one the loaded
+  // layer answers to.
+  const layerData: Array<[string, string]> = [];
+  for (const [index, leaves] of layers) {
+    const tileData = leaves.tile_data;
+    if (tileData !== undefined) layerData.push([`layer_${index}/tile_data`, tileData]);
+  }
   // Absent means the current format, not the oldest one: the member initialises
   // to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). Defaulting to 0 read
   // an unversioned TileMap as Godot 3 data and reported a format the file never
@@ -84,9 +94,9 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     ruleName: 'tilemap-deprecated',
   });
 
-  const indices = layerIndices(rawProps);
-  const isLayerYSorted = (i: number) => rawProps[`layer_${i}/y_sort_enabled`] === 'true';
-  const layerZIndex = (i: number) => ruleInt(rawProps[`layer_${i}/z_index`], 0) || 0;
+  const indices = [...layers.keys()].sort((a, b) => a - b);
+  const isLayerYSorted = (i: number) => layers.get(i)?.y_sort_enabled === 'true';
+  const layerZIndex = (i: number) => ruleInt(layers.get(i)?.z_index, 0) || 0;
   const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858

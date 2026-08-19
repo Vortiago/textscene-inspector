@@ -25,9 +25,9 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedElements } from '../../../../godot/index.js';
 
 const SETTING_PREFIX = 'settings/';
-const SETTING_INDEX_RE = /^\d+$/;
 
 // aim_modifier_3d.h:40-44, the AimModifier3DSetting field initialisers: a key a
 // scene omits carries these, and neither pair of defaults is parallel
@@ -37,38 +37,34 @@ const DEFAULT_FORWARD_AXIS = 2; // BONE_AXIS_PLUS_Y
 const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
 
 /**
- * Settings the scene actually declares, in ascending order.
+ * Every setting the scene declares, keyed by the index `_set` RESOLVES it to.
+ *
+ * `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and no
+ * validity gate (aim_modifier_3d.cpp:38), so `settings/x/…` and
+ * `settings/00/…` both land on setting 0. Requiring the index to be spelled in
+ * digits missed those keys entirely, and reading a leaf back as
+ * `settings/${index}/${leaf}` would miss them again.
  *
  * Bounded by `setting_count`, which defaults to 0: `_set` refuses an index at
  * or past `settings.size()` (aim_modifier_3d.cpp:40), so keys beyond the count
  * never land and the condition cannot arise for them.
  */
-function declaredSettingIndices(properties: Record<string, string>): number[] {
-  const declaredCount = ruleInt(properties.setting_count, 0);
-  const settingCount =
-    declaredCount ?? 0;
-
-  const indices = new Set<number>();
-  for (const key of Object.keys(properties)) {
-    if (!key.startsWith(SETTING_PREFIX)) continue;
-    const slash = key.indexOf('/', SETTING_PREFIX.length);
-    if (slash < 0) continue;
-    const indexText = key.slice(SETTING_PREFIX.length, slash);
-    if (!SETTING_INDEX_RE.test(indexText)) continue;
-    const index = Number(indexText);
-    if (index < settingCount) indices.add(index);
+function declaredSettings(properties: Record<string, string>): Map<number, Record<string, string>> {
+  const settingCount = ruleInt(properties.setting_count, 0) ?? 0;
+  const settings = indexedElements(properties, SETTING_PREFIX, 'to_int');
+  for (const index of [...settings.keys()]) {
+    if (index >= settingCount) settings.delete(index);
   }
-  return [...indices].sort((a, b) => a - b);
+  return settings;
 }
 
 /** A setting's value for `leaf`, or the engine default when the scene omits it. */
 function settingNumber(
-  properties: Record<string, string>,
-  index: number,
+  leaves: Record<string, string>,
   leaf: string,
   fallback: number
 ): number {
-  const raw = properties[`${SETTING_PREFIX}${index}/${leaf}`];
+  const raw = leaves[leaf];
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
@@ -82,13 +78,13 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
   const properties = node.properties;
 
   const diagnostics: Diagnostic[] = [];
-  for (const index of declaredSettingIndices(properties)) {
-    if (properties[`${SETTING_PREFIX}${index}/use_euler`]?.trim() !== 'true') continue;
+  const settings = [...declaredSettings(properties)].sort(([a], [b]) => a - b);
+  for (const [index, leaves] of settings) {
+    if (leaves.use_euler?.trim() !== 'true') continue;
 
-    const forwardAxis = settingNumber(properties, index, 'forward_axis', DEFAULT_FORWARD_AXIS);
+    const forwardAxis = settingNumber(leaves, 'forward_axis', DEFAULT_FORWARD_AXIS);
     const primaryAxis = settingNumber(
-      properties,
-      index,
+      leaves,
       'primary_rotation_axis',
       DEFAULT_PRIMARY_ROTATION_AXIS
     );

@@ -49,13 +49,21 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
-/** Any `settings/<i>/…` leaf, whatever its depth, with the index text captured. */
-const SETTING_KEY_RE = /^settings\/([+-]?\d+)\//;
+/**
+ * Any `settings/<i>/…` leaf, whatever its depth, with the index text captured.
+ *
+ * `_set` reads both index positions with a bare
+ * `path.get_slicec('/', n).to_int()` and no validity gate
+ * (bone_twist_disperser_3d.cpp:37, :66), so the grammar is the whole segment
+ * and {@link toIntIndex} is what turns it into a number.
+ */
+const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
 /** The one nested leaf a scene can write, with both index texts captured. */
-const JOINT_AMOUNT_KEY_RE = /^settings\/([+-]?\d+)\/joints\/([+-]?\d+)\/twist_amount$/;
+const JOINT_AMOUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/twist_amount$', 'to_int');
 /** The per-setting joint array size, which every joint index is measured against. */
-const JOINT_COUNT_KEY_RE = /^settings\/([+-]?\d+)\/joint_count$/;
+const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int');
 
 /**
  * Which setting each `joint_count` key actually sizes, keyed by the RESOLVED
@@ -64,8 +72,7 @@ const JOINT_COUNT_KEY_RE = /^settings\/([+-]?\d+)\/joint_count$/;
  * `_set` resolves the index with `to_int` (bone_twist_disperser_3d.cpp:37), so
  * `settings/00/joint_count` and `settings/0/joint_count` size the same vector.
  * Matching on the text instead read a ceiling of zero for a key spelled `00`
- * and warned that a write Godot applies had been dropped. `Number` and `to_int`
- * agree on every form the regex above admits, digits with an optional sign.
+ * and warned that a write Godot applies had been dropped.
  *
  * A later key wins, because `Object.keys` keeps insertion order and Godot
  * applies the properties in file order too.
@@ -75,7 +82,7 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
   for (const key of Object.keys(properties)) {
     const match = JOINT_COUNT_KEY_RE.exec(key);
     if (!match) continue;
-    const settingIndex = Number(match[1]);
+    const settingIndex = toIntIndex(match[1]!);
     // A negative index is refused before the count is read at all.
     if (settingIndex < 0) continue;
     // A malformed count is its own validator's error; ignoring it here leaves
@@ -109,7 +116,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
-    const settingIndex = Number(indexed[1]);
+    const settingIndex = toIntIndex(indexed[1]!);
     // A negative index is the validator's error, against the same
     // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
     if (settingIndex < 0) continue;
@@ -121,7 +128,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
 
     const joint = JOINT_AMOUNT_KEY_RE.exec(key);
     if (!joint) continue;
-    const jointIndex = Number(joint[2]);
+    const jointIndex = toIntIndex(joint[2]!);
     if (jointIndex < 0) continue;
     // Absent means zero: `LocalVector<DisperseJointSetting> joints`
     // (bone_twist_disperser_3d.h:69) starts empty, so nothing is addressable

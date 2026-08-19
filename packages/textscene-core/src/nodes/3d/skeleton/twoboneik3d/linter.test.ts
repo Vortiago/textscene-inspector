@@ -273,3 +273,21 @@ describe('TwoBoneIK3D semantic rules', () => {
     expect(diagnostics).toEqual([]);
   });
 });
+
+describe('TwoBoneIK3D index grammar', () => {
+  it('credits a target written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and
+    // no validity gate (two_bone_ik_3d.cpp:37), and `to_int` skips what it
+    // cannot use (ustring.cpp:2280-2293), so `settings/x0/target_node` is
+    // setting 0's target.
+    expectNoDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/x0/target_node': 'NodePath("../Target")',
+        })
+      ),
+      { ruleName: 'twoboneik3d-setting-missing-target-node' }
+    );
+  });
+});

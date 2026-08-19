@@ -388,3 +388,18 @@ layers = 1023
     });
   });
 });
+
+describe('MeshInstance3D surface-override index grammar', () => {
+  it('checks an override written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare
+    // `p_name.get_slicec('/', 1).to_int()` and no validity gate
+    // (mesh_instance_3d.cpp:66), and `to_int` skips a character it cannot use
+    // rather than stopping at it (ustring.cpp:2280-2293), so
+    // `surface_material_override/x1` overrides surface 1 and its dangling
+    // reference is a real one.
+    expectDiagnostic(
+      scene(node('MeshInstance3D', { 'surface_material_override/x1': 'SubResource("mat_missing")' })),
+      { ruleName: 'valid-meshinstance3d-resources', severity: 'error', contains: ['surface 1'] }
+    );
+  });
+});

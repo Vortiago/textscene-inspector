@@ -49,11 +49,19 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
-/** Any `settings/<i>/…` leaf, whatever its depth. */
-const SETTING_KEY_RE = /^settings\/([+-]?\d+)\/(.+)$/;
+/**
+ * Any `settings/<i>/…` leaf, whatever its depth.
+ *
+ * Every index position here — the setting, the joint, the collision — is read
+ * with a bare `path.get_slicec('/', n).to_int()` and no validity gate
+ * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so the grammar is the
+ * whole segment and {@link toIntIndex} is what turns it into a number.
+ */
+const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
 /** `<leaf>` below a joint index, for the individual-mode check. */
-const JOINT_KEY_RE = /^joints\/[+-]?\d+\/(.+)$/;
+const JOINT_KEY_RE = indexedKeyRegex('^joints/#/(.+)$', 'to_int');
 
 /**
  * The first segment below the setting index for every leaf the SHARED block
@@ -85,9 +93,12 @@ const JOINT_CONFIG_LEAVES: ReadonlySet<string> = new Set([
 ]);
 
 /** Leaves that only land while `enable_all_child_collisions` is false. */
-const EXPLICIT_COLLISION_RE = /^collisions\/[+-]?\d+$|^collision_count$/;
+const EXPLICIT_COLLISION_RE = indexedKeyRegex('^collisions/#$|^collision_count$', 'to_int');
 /** Leaves that only land while `enable_all_child_collisions` is true. */
-const EXCLUDE_COLLISION_RE = /^exclude_collisions\/[+-]?\d+$|^exclude_collision_count$/;
+const EXCLUDE_COLLISION_RE = indexedKeyRegex(
+  '^exclude_collisions/#$|^exclude_collision_count$',
+  'to_int'
+);
 
 /** A `.tscn` boolean, or the C++ default when the key is absent. */
 function readBool(raw: string | undefined, fallback: boolean): boolean {
@@ -120,24 +131,25 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   const collisionIgnored = new Set<number>();
   const excludeIgnored = new Set<number>();
 
+  // Grouped by the setting `_set` RESOLVES each key to, so `settings/00/…` and
+  // `settings/0/…` are one setting and every leaf finds the siblings written
+  // beside it under either spelling. Keying on the index TEXT split them in two
+  // and read a default for a value the file states.
+  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
-    const indexText = indexed[1]!;
     const leaf = indexed[2]!;
-    const index = Number(indexText);
+    const index = toIntIndex(indexed[1]!);
     // A negative index is the validator's error, against the same
     // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
-    if (index < 0) continue;
+    if (!(index >= 0)) continue;
     if (index >= count) outOfRange.add(index);
 
-    // Read every sibling back through the index TEXT, so `settings/00/…` finds
-    // its own siblings rather than `settings/0/…`.
-    const individual = readBool(rawProps[`settings/${indexText}/individual_config`], false);
-    const allChildCollisions = readBool(
-      rawProps[`settings/${indexText}/enable_all_child_collisions`],
-      true,
-    );
+    const siblings = settings.get(index);
+    const individual = readBool(siblings?.individual_config, false);
+    const allChildCollisions = readBool(siblings?.enable_all_child_collisions, true);
 
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {

@@ -123,3 +123,22 @@ describe('ItemList semantic rules', () => {
     }
   });
 });
+
+describe('ItemList index grammar', () => {
+  it('errors on a `+`-signed index past item_count', () => {
+    // `PropertyListHelper::_get_property` gates on `String::is_valid_int()`
+    // (property_list_helper.cpp:53), which skips ONE leading sign, `+` as
+    // readily as `-` (ustring.cpp:4752). `item_+2/text` therefore resolves to
+    // item 2 and is dropped for being past the count, exactly as `item_2/text`
+    // would be.
+    expectDiagnostic(
+      scene(node('ItemList', { item_count: 1, 'item_+2/text': '"Autosave"' })),
+      {
+        ruleName: 'itemlist-item-index-out-of-range',
+        severity: 'error',
+        nodeType: 'ItemList',
+        contains: ['2', 'item_count (1)'],
+      }
+    );
+  });
+});

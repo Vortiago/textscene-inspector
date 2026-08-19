@@ -28,6 +28,7 @@ import { isValidProperties, extractNodePath } from '../../../../linter/linterUti
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices } from '../../../../linter/reportedIndices.js';
+import { indexedElements } from '../../../../godot/index.js';
 
 const RULE_NAME = 'iterateik3d-setting-missing-target-node';
 
@@ -44,9 +45,16 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // non-finite one is altered at parse.
   if (count === null) return [];
 
+  // Grouped by the setting `_set` RESOLVES each key to, not by the text the file
+  // spells: `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+  // and no validity gate (iterate_ik_3d.cpp:37), so `settings/x0/target_node`
+  // sets setting 0's target. Reading `settings/${index}/target_node` forward
+  // found nothing there and reported a target the engine had applied as missing.
+  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+
   const missing: number[] = [];
   for (let index = 0; index < count; index++) {
-    const raw = rawProps[`settings/${index}/target_node`];
+    const raw = settings.get(index)?.target_node;
     if (raw === undefined || extractNodePath(raw) === null) missing.push(index);
   }
   if (missing.length === 0) return [];

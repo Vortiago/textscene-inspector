@@ -38,8 +38,14 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { indexedKeyRegex } from '../../../godot/index.js';
 
-const OPTION_KEY_RE = /^option_(-?\d+)\//;
+/**
+ * `option_<idx>/`, with the index captured. FileDialog serves the family
+ * through a `PropertyListHelper` (file_dialog.cpp), whose `_get_property`
+ * gates on `String::is_valid_int()` (property_list_helper.cpp:53).
+ */
+const OPTION_KEY_RE = indexedKeyRegex('^option_(#)/', 'is_valid_int');
 
 function checkFileDialog(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

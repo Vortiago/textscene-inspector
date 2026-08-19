@@ -51,9 +51,9 @@
  *    index with different messages and different codes. One block cannot carry
  *    both.
  *
- * Also worth settling first: `chainik3d` matches its joint index with `\d`, while
- * the other three use `[^/]+` because `to_int` resolves a non-numeric index. That
- * is the same reasoning reaching two answers inside one family.
+ * All four match every index position with `[^/]+`, and read it with the same
+ * {@link toIntIndex} this dispatcher does, because `to_int` resolves a
+ * non-numeric index to a real element rather than to no index at all.
  *
  * Citations stay at the CALL SITE, passed in rather than written here, for two
  * reasons: each class enforces at its own `file:line`, and
@@ -64,7 +64,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE, stringToInt } from '../../godot/index.js';
+import { IS_VALID_INT_RE, toIntIndex } from '../../godot/index.js';
 
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
@@ -176,16 +176,14 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       return unknown(key, line);
     }
 
-    // The index Godot resolves. The strict parse takes a clean integer only;
-    // `to_int` skips non-digits rather than stopping at them and flips the sign
-    // on a `-` seen while the total is still 0 (ustring.cpp:2303-2311), so
-    // `settings/a-1/…` resolves to -1 rather than to no index at all.
-    const index = IS_VALID_INT_RE.test(indexText)
-      ? Number(indexText)
-      : gatesOnValidInt
-        ? null
-        : stringToInt(indexText);
-    if (index === null) return unknown(key, line);
+    // A class that gates on `is_valid_int` has no index at all for text the
+    // regex rejects, so the key is unrecognised before an index is ever read.
+    if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
+    // The index Godot resolves: `to_int` skips non-digits rather than stopping
+    // at them and flips the sign on a `-` seen while the total is still 0
+    // (ustring.cpp:2303-2311), so `settings/a-1/…` resolves to -1 rather than
+    // to no index at all.
+    const index = toIntIndex(indexText);
     if (index < 0) {
       // Godot refuses to RESOLVE a negative index under either parse, so
       // `_set` treats the key as unrecognised and the write never lands.

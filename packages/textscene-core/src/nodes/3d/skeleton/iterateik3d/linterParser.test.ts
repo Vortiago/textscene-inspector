@@ -229,6 +229,22 @@ describe('the settings/ family IterateIK3D adds', () => {
     expect(diagnostic?.severity).toBe('error');
   });
 
+  it('errors on a setting index to_int resolves as negative, however it is spelled', () => {
+    // `_set` reads the index with a bare `to_int` (iterate_ik_3d.cpp:37) and
+    // `_to_int` flips the sign on a `-` seen while the total is still 0
+    // (ustring.cpp:2291-2292), so `a-1` is -1 and :39 refuses it.
+    expect(check('settings/a-1/joints/0/rotation_axis', '2')?.code).toBe('INVALID_SETTING_INDEX');
+    // Both `-` flip, because a `0` digit leaves the total at 0, so this one is
+    // setting 1 and the write lands.
+    expect(check('settings/-0-1/joints/0/rotation_axis', '2')).toBeNull();
+  });
+
+  it('applies the joint leaf under an index to_int resolves', () => {
+    // The joint index is read with the same bare `to_int` (:44), so
+    // `joints/x/` is joint 0 and the value lands on it.
+    expect(check('settings/x/joints/y/rotation_axis', '9')?.severity).toBe('warning');
+  });
+
   it('reaches the family through the base-walk on a real leaf type', () => {
     expect(check('settings/0/joints/1/rotation_axis', '9', 'FABRIK3D')?.severity).toBe('warning');
   });

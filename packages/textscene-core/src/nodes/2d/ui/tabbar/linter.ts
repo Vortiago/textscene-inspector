@@ -46,13 +46,18 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
 
 /**
  * A `tab_<idx>/` key. The index run is required, which is what keeps the
  * scalars sharing the bare `tab_` prefix (`tab_alignment`, `tab_count`,
  * `tab_close_display_policy`) out: none of them carries a `/`.
+ *
+ * TabBar serves the family through a `PropertyListHelper` (tab_bar.cpp), whose
+ * `_get_property` gates on `String::is_valid_int()`
+ * (property_list_helper.cpp:53).
  */
-const TAB_KEY_RE = /^tab_(-?\d+)\//;
+const TAB_KEY_RE = indexedKeyRegex('^tab_(#)/', 'is_valid_int');
 
 function checkTabBar(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

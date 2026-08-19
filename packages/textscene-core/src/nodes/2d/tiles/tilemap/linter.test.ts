@@ -137,3 +137,35 @@ describe('TileMap lint rules', () => {
     });
   });
 });
+
+describe('TileMap index grammar', () => {
+  it('counts a `+`-signed layer index, which TileMap resolves', () => {
+    // `TileMap::_set` gates on `property_helper.is_property_valid`
+    // (tile_map.cpp:700), whose index gate is `String::is_valid_int()`
+    // (property_list_helper.cpp:126) — one leading sign allowed, `+` as
+    // readily as `-` (ustring.cpp:4752). `layer_+1/y_sort_enabled` therefore
+    // Y-sorts layer 1.
+    expectDiagnostic(scene(`layer_+1/y_sort_enabled = true`), {
+      ruleName: 'tilemap-layer-y-sort-without-node',
+      severity: 'warning',
+    });
+  });
+
+  it('builds no layer for a negative index', () => {
+    // Re-narrowing fence, not a red-green test: widening the grammar to admit
+    // a sign is what first let `layer_-1/…` through the match. `_get_property`
+    // returns null for `index < 0` (property_list_helper.cpp:58), so
+    // `property_set_value` refuses the write and no such layer exists.
+    //
+    // Asserted through the node-Y-sort warning, which is the one that
+    // DISTINGUISHES a dropped index from the constructor's Layer0: a leaked
+    // layer -1 would be a Y-sorted layer and silence it, while Layer0's
+    // defaults leave it firing.
+    expectDiagnostic(scene(`y_sort_enabled = true\nlayer_-1/y_sort_enabled = true`), {
+      ruleName: 'tilemap-node-y-sort-without-layer',
+      severity: 'warning',
+    });
+    const diagnostics = lint(scene(`layer_-1/y_sort_enabled = true`));
+    expect(diagnostics.filter((d) => d.ruleName === 'tilemap-layer-y-sort-without-node')).toEqual([]);
+  });
+});

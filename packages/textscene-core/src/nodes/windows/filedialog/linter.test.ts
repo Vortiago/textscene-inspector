@@ -79,3 +79,21 @@ describe('FileDialog semantic rules', () => {
     expectClean(scene(node('FileDialog', { option_count: 0 })));
   });
 });
+
+describe('FileDialog index grammar', () => {
+  it('errors on a `+`-signed index past option_count', () => {
+    // `is_valid_int` skips ONE leading sign, `+` as readily as `-`
+    // (ustring.cpp:4752), so `option_+2/name` resolves to option 2 and
+    // `_get_property` drops it for being past the count
+    // (property_list_helper.cpp:58).
+    expectDiagnostic(
+      scene(node('FileDialog', { option_count: 1, 'option_+2/name': '"Quality"' })),
+      {
+        ruleName: 'filedialog-option-index-out-of-range',
+        severity: 'error',
+        nodeType: 'FileDialog',
+        contains: ['2', 'option_count (1)'],
+      }
+    );
+  });
+});

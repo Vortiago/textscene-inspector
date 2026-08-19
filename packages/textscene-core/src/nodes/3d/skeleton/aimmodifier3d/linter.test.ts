@@ -173,3 +173,21 @@ settings/0/primary_rotation_axis = 0
     expect(warningsFor(readFixture('unit-aim-modifier-3d.tscn'))).toEqual([]);
   });
 });
+
+describe('AimModifier3D index grammar', () => {
+  it('reads a setting written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+    // (aim_modifier_3d.cpp:38) and `to_int` skips what it cannot use
+    // (ustring.cpp:2280-2293), so every `settings/x/…` key below lands on
+    // setting 0 — +Z (4) maps to AXIS_Z (2), the parallel pair
+    // aim_modifier_3d.cpp:102 warns about.
+    const warnings = warningsFor(
+      scene(`setting_count = 1
+settings/x/forward_axis = 4
+settings/x/use_euler = true
+settings/x/primary_rotation_axis = 2
+`)
+    );
+    expect(warnings).toHaveLength(1);
+  });
+});

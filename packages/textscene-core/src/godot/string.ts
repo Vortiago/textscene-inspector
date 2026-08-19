@@ -18,8 +18,13 @@
  * `indexParse` option.
  *
  * No `g` flag, so `.test()` on the shared instance is stateless.
+ *
+ * The source is separate because an indexed property key embeds this spelling
+ * mid-pattern (`godot/indexedKey.ts`), and a second copy of it there is the
+ * drift this whole grammar exists to prevent.
  */
-export const IS_VALID_INT_RE = /^[+-]?\d+$/;
+export const IS_VALID_INT_SOURCE = String.raw`[+-]?\d+`;
+export const IS_VALID_INT_RE = new RegExp(`^${IS_VALID_INT_SOURCE}$`);
 
 /**
  * The text inside a serialised `String`, `StringName` or `NodePath` literal.
@@ -163,4 +168,33 @@ export function stringToInt(text: string): number {
   // Negated as a BigInt, not as a double: `-Number(0n)` is `-0`, and the engine
   // holds one zero.
   return Number(positive ? integer : -integer);
+}
+
+/**
+ * The index a hand-rolled `_set` resolves from the text between a property
+ * path's prefix and the next `/`.
+ *
+ * Godot's indexed families that build their own property list read the index
+ * with a bare `path.get_slicec('/', n).to_int()` and no validity gate —
+ * `chain_ik_3d.cpp:37`, `bone_twist_disperser_3d.cpp:37`,
+ * `spring_bone_simulator_3d.cpp:42` — so {@link stringToInt} is the reader, and
+ * `settings/a-1/…` names index -1 rather than no index at all.
+ *
+ * A clean {@link IS_VALID_INT_RE} spelling goes through `Number` instead, and
+ * that is NOT an exactness claim: past 2^53 neither reader is the int64 the
+ * text states (`Number('9007199254740993')` is off by one). It buys the SIGN,
+ * which is the only thing the `ERR_FAIL_INDEX_V` guard beside each of those
+ * parses asks, and which `stringToInt` surrenders to NaN at its own bound.
+ *
+ * Text that is neither — a non-integer spelling whose digits also overrun
+ * {@link stringToInt} — reads NaN, so every comparison against it stays false
+ * and no wrong index travels.
+ *
+ * A class that gates on `String::is_valid_int()` before using the index
+ * (`PropertyListHelper::_get_property`, `property_list_helper.cpp:53-55`) has
+ * no index at all for text this returns a number for, so it must test the
+ * regex itself rather than call this.
+ */
+export function toIntIndex(text: string): number {
+  return IS_VALID_INT_RE.test(text) ? Number(text) : stringToInt(text);
 }

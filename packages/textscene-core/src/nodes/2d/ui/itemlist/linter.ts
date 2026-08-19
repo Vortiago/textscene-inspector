@@ -40,8 +40,14 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
 
-const ITEM_KEY_RE = /^item_(-?\d+)\//;
+/**
+ * `item_<idx>/`, with the index captured. ItemList serves the family through a
+ * `PropertyListHelper` (item_list.cpp), whose `_get_property` gates on
+ * `String::is_valid_int()` (property_list_helper.cpp:53).
+ */
+const ITEM_KEY_RE = indexedKeyRegex('^item_(#)/', 'is_valid_int');
 
 function checkItemList(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

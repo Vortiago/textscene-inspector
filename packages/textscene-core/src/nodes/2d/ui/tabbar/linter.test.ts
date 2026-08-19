@@ -144,3 +144,25 @@ describe('TabBar cross-field rule', () => {
     expect(lintContent(readFixture('unit-tab-bar.tscn'))).toEqual([]);
   });
 });
+
+describe('TabBar index grammar', () => {
+  /** Only the out-of-range diagnostics, the way the block above filters. */
+  const only = (props: Record<string, string | number>): Diagnostic[] =>
+    lintContent(
+      `[gd_scene format=3]\n\n[node name="Bar" type="TabBar"]\n` +
+        Object.entries(props)
+          .map(([key, value]) => `${key} = ${value}`)
+          .join('\n') +
+        '\n'
+    ).filter((d) => d.ruleName === 'tabbar-tab-index-out-of-range');
+
+  it('errors on a `+`-signed index past tab_count', () => {
+    // `is_valid_int` skips ONE leading sign, `+` as readily as `-`
+    // (ustring.cpp:4752), so `tab_+2/title` resolves to tab 2 and
+    // `_get_property` drops it for being past the count
+    // (property_list_helper.cpp:58).
+    const found = only({ tab_count: 1, 'tab_+2/title': '"Three"' });
+    expect(found).toHaveLength(1);
+    expect(found[0]?.message).toContain('2');
+  });
+});
