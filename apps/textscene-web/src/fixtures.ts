@@ -253,6 +253,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Surface Material Override",
+    "file": "unit-glb-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Agx",
     "file": "unit-glow-agx.tscn",
     "category": "Other"

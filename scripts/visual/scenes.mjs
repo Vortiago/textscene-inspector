@@ -125,6 +125,16 @@ export const GOLDEN_SCENES = [
   // or replaced — which also puts it in the alpha pass, where its draw order
   // relative to its own surface is the thing most likely to regress.
   { name: 'meshinstance3d-material-overlay', file: 'unit-meshinstance3d-material-overlay.tscn' },
+  // A `surface_material_override/0` authored as a scene `[sub_resource]` on a
+  // mesh INSIDE an instanced `.glb` — the one material arrival the GLB override
+  // path resolved not at all, and the only .glb scene in the bag. `unit-cube.glb`
+  // ships no glTF material, so a dropped override draws Godot's plain default
+  // grey and an applied one draws this scene's orange; neither can be read as a
+  // missing mesh, since the cube is there either way.
+  {
+    name: 'glb-surface-material-override',
+    file: 'unit-glb-surface-material-override.tscn',
+  },
   // A surface material declared as a `[sub_resource]` of the MESH's own `.tres`
   // — the form Godot writes whenever a mesh carries its own materials, and the
   // one kind of material reference nothing else in the bag exercises. Both
