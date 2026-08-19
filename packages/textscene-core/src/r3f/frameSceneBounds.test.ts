@@ -1,6 +1,9 @@
 /**
- * `frameSceneBounds`'s `tscnEmptyState`-tag exclusion (shared by
- * `EmptySceneIndicator` and the opt-in `ContentGroundGrid`, TscnCanvas.tsx).
+ * `frameSceneBounds` — which objects reach the bounds union, and from which
+ * direction it then frames them.
+ *
+ * The `tscnEmptyState`-tag exclusion (shared by `EmptySceneIndicator` and the
+ * opt-in `ContentGroundGrid`, TscnCanvas.tsx) is the first of them.
  *
  * `THREE.Object3D.traverse()` always recurses into every descendant
  * regardless of what the visitor callback does for an ancestor, so a tag on
@@ -116,7 +119,13 @@ describe('frameSceneBounds — CSG contributor bounds proxies', () => {
     const controls = { target: new THREE.Vector3(), update: () => {} };
     frameSceneBounds(scene, makeCamera(), controls);
 
-    // z spans -0.2..2 with the contributor, -0.2..0.2 without it.
+    // z spans -0.2..2 with the contributor.
     expect(controls.target.z).toBeCloseTo(0.9, 5);
+
+    // The counterfactual: without the proxy the same scene frames -0.2..0.2.
+    scene.remove(proxy);
+    const without = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, makeCamera(), without);
+    expect(without.target.z).toBeCloseTo(0, 5);
   });
 });

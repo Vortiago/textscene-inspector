@@ -722,6 +722,10 @@ const PARTICLES_PROCESS := ${particles}
 const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 
+# Set by a refusal inside the render, so the ONE quit() below carries a non-zero
+# exit code. A mid-walk quit() would be reset to 0 by that same call.
+var _refused := false
+
 func _ready() -> void:
 	# This is where the settle contract is honoured. SETTLE_SIM_SECONDS is 0, and
 	# pausing BEFORE the scene is instantiated is how the reference advances
@@ -756,7 +760,7 @@ func _ready() -> void:
 			await _render_2d(target)
 	else:
 		await _render_3d(target)
-	get_tree().quit()
+	get_tree().quit(1 if _refused else 0)
 
 # Godot's CanvasItemEditor claims a CanvasItem root, which is the rule
 # workspaceForScene.ts mirrors — plus CanvasLayer, which is a plain Node that
@@ -770,7 +774,9 @@ func _render_3d(target: Node) -> void:
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_apply_preview_lighting(target)
-	_build_csg(target)
+	# A refusal must not reach _place_camera: rendering nothing is the whole point.
+	if not _build_csg(target):
+		return
 	_place_camera(target)
 	await _converge()
 	get_viewport().get_texture().get_image().save_png(OUT)
@@ -1016,18 +1022,23 @@ func _write_bounds(target: Node) -> void:
 # modules/csg/csg_shape.cpp:222,507: node_aabb is written only by the DEFERRED
 # update_shape, so before the first frame every CSG node reports an empty box
 # and _place_camera frames the union of their ORIGINS instead of their solids.
-func _build_csg(node: Node) -> void:
-	# csg_shape.cpp:568-570 — a contributor's box is filled by its root's own recursive build.
+# False is a refusal: the caller must render nothing.
+func _build_csg(node: Node) -> bool:
+	# csg_shape.cpp:470,507 — _get_brush() recurses into every visible child and
+	# writes its node_aabb, so the ROOT's build is what fills a contributor's box;
+	# update_shape() returns immediately off the root (:568-570).
 	if node is CSGShape3D and (node as CSGShape3D).is_root_shape():
 		# Bound behind DISABLE_DEPRECATED; refuse rather than render a camera placed
 		# from empty AABBs, which looks like an ordinary reference picture.
 		if not node.has_method("_update_shape"):
 			push_error("CSGShape3D._update_shape is unavailable; cannot build CSG before the camera")
-			get_tree().quit(1)
-			return
+			_refused = true
+			return false
 		node.call("_update_shape")
 	for child in node.get_children():
-		_build_csg(child)
+		if not _build_csg(child):
+			return false
+	return true
 
 # Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
 # with no regard for visibility.

@@ -41,8 +41,8 @@ const EMPTY_HIDDEN: ReadonlySet<string> = new Set();
 
 /**
  * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for
- * a contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:507`). It is also
- * all a combiner root has to frame on while the CSG library is still loading.
+ * a VISIBLE contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). It
+ * is also all a combiner root has to frame on while the CSG library is still loading.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 

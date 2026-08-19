@@ -619,11 +619,13 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
 
     const a = PNG.sync.read(await readFile(framed)).data;
     const c = PNG.sync.read(await readFile(derived)).data;
-    let sum = 0;
-    for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - c[i]);
-    // Two passes of the same engine at the same camera agree exactly; the
-    // allowance is the reference rasterizer's 1/255 blend-rounding floor.
-    expect(sum / a.length).toBeLessThan(1);
+    expect(c.length).toBe(a.length);
+    let worst = 0;
+    for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - c[i]));
+    // Per CHANNEL, not a mean: a mean under 1 still passes with thousands of
+    // channels off by 200 — a camera placed from the wrong bounds. The allowance
+    // is the rasterizer's 1/255 blend-rounding floor; measured here it is 0.
+    expect(worst).toBeLessThanOrEqual(1);
   }, 360_000);
 
   /**
