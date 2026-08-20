@@ -6,9 +6,6 @@ import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 /**
- * Represents a complete TSCN scene
- */
-/**
  * A `[node]` heading `buildSceneTree` could not place, with the line it is on.
  *
  * It is absent from `TscnScene.nodes`, so anything walking the tree cannot see
@@ -23,8 +20,21 @@ export interface OrphanedNode {
   readonly node: TscnNode;
   /** 1-based line of the node's own heading. */
   readonly line: number;
+  /**
+   * The heading's `parent=` value as written, or undefined where it declares
+   * none.
+   *
+   * Not `node.parent`, which both parsers leave unset for an empty one. The two
+   * are different diagnostics: `add_node_path` never returns `-1`
+   * (`packed_scene.cpp:2307-2311`), so a heading spelling `parent=""` cannot
+   * reach the `n.parent == -1` refusal at all.
+   */
+  readonly declaredParent: string | undefined;
 }
 
+/**
+ * Represents a complete TSCN scene
+ */
 export interface TscnScene {
   /** Root nodes in the scene tree */
   nodes: TscnNode[];

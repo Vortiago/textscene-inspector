@@ -65,7 +65,6 @@ Every property above format-checks as a plain float or boolean literal —
 `scene/gui/range.cpp`'s `ADD_PROPERTY` list carries no `PROPERTY_HINT_RANGE` on
 any of Range's own members except `ratio`, which Godot never serializes
 (`PROPERTY_USAGE_NONE`) and which therefore has no validator at all. A
-`max_value` authored below `min_value` is legal Godot — `Range::set_max`
-clamps it up to `min_value` rather than rejecting it — so `linter.ts` reports
-that combination as an advisory warning rather than the strict parser
-rejecting it as an error.
+`max_value` authored below `min_value` is an error tier: `Range::set_max`
+clamps it up to `min_value` (`range.cpp`), so the value the file states is not
+the value Godot stores.

@@ -1,7 +1,8 @@
 /** Shared "does this body have a shape provider?" check for the physics linters. */
 
 import type { TscnNode } from '../../parser/types.js';
-import { isTypeUnknowable } from '../parentType.js';
+import { isTypeOpaque } from '../parentType.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
 
 /**
  * The node types that give a `CollisionObject` its shapes, for one dimension.
@@ -55,7 +56,14 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  */
 export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
   const providers = collisionShapeTypes(dim);
-  return node.children.some((child) => isTypeUnknowable(child) || providers.includes(child.type));
+  // `isTypeOpaque`, not `isTypeUnknowable` alone: a GDExtension shape provider
+  // is in no catalog here, and reading it as a confident non-match warned about
+  // a scene Godot gives a shape. `descendsFrom` rather than an exact name,
+  // because the shape owner is created from `CollisionShape2D::_notification`,
+  // which a subclass inherits.
+  return node.children.some(
+    (child) => isTypeOpaque(child) || providers.some((type) => descendsFrom(child.type, type))
+  );
 }
 
 /** `CollisionShape2D or CollisionPolygon2D`, for a diagnostic message. */

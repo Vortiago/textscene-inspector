@@ -3,7 +3,7 @@
  */
 
 import { COLOR_RE } from '../parser/vectors';
-import { matchedFloat } from '../godot/number.js';
+import { matchedFloat, allFinite } from '../godot/number.js';
 
 export interface Color {
   r: number;
@@ -29,12 +29,14 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
     return undefined;
   }
 
-  return {
-    r: matchedFloat(match[1]),
-    g: matchedFloat(match[2]),
-    b: matchedFloat(match[3]),
-    a: matchedFloat(match[4]),
-  };
+  const [r, g, b, a] = [match[1], match[2], match[3], match[4]].map((c) => matchedFloat(c)) as [
+    number, number, number, number,
+  ];
+  // An overflowing exponent is inside the finite grammar and outside anything a
+  // channel can hold, so it takes the same path as a literal the grammar
+  // refuses outright.
+  if (!allFinite([r, g, b, a])) return undefined;
+  return { r, g, b, a };
 }
 
 /**

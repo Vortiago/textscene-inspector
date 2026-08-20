@@ -152,7 +152,22 @@ export class GodotGlowEffect extends Effect {
    */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     const previousTarget = renderer.getRenderTarget();
+    try {
+      this.renderPyramid(renderer, inputBuffer);
+    } finally {
+      // In a `finally`, as in every other pass that binds an offscreen target: a
+      // throw out of any of the sixteen renders below would otherwise leave the
+      // renderer bound to a glow target at a fraction of the canvas resolution,
+      // and r3f's own render then draws the whole scene into it.
+      renderer.setRenderTarget(previousTarget);
+    }
+    this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
+  }
 
+  private renderPyramid(
+    renderer: THREE.WebGLRenderer,
+    inputBuffer: THREE.WebGLRenderTarget
+  ): void {
     this.screen.material = this.brightPassMaterial;
     const brightUniforms = this.brightPassMaterial.uniforms;
     brightUniforms['inputBuffer']!.value = inputBuffer.texture;
@@ -184,9 +199,6 @@ export class GodotGlowEffect extends Effect {
       setTexelSize(uniforms, source);
       this.renderTo(renderer, this.accumulationTargets[level]!);
     }
-
-    renderer.setRenderTarget(previousTarget);
-    this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
   }
 
   private renderTo(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {

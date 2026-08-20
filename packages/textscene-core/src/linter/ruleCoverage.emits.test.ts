@@ -37,6 +37,7 @@ import {
   declaredRuleNames,
   nodesRoot,
   ruleFiles,
+  srcRoot,
 } from './testing/ruleNameScrape.js';
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import { emitsArrays, pairMatches, scrapePairs } from './testing/emitsScrape.js';
@@ -224,8 +225,32 @@ describe('rule emits meta-guard', () => {
     expect(arrays.length).toBeGreaterThan(80);
     const gated = arrays
       .filter(({ body }) => body.includes('...('))
-      .map(({ file }) => file.slice(nodesRoot.length + 1));
+      // `srcRoot`, not `nodesRoot`: this sweep walks all of `src`, and the four
+      // factories it polices live under `src/linter/physics`, so a nodes-rooted
+      // slice rendered a path that does not exist.
+      .map(({ file }) => file.slice(srcRoot.length + 1));
     expect([...new Set(gated)].sort()).toEqual([]);
+  });
+
+  it('spells every `emits` as an array literal or `armEmits`', () => {
+    // The scrape reads `emits: [ … ]` and strips it so the guard does not
+    // validate its own declarations. Any OTHER shape is invisible to both
+    // halves: `stripEmits` leaves it in the scraped text and `emitsArrays` never
+    // sees inside it, so the cross-checks above pass on whatever it holds. Two
+    // spellings are admitted — the array literal they read, and `armEmits`,
+    // which derives `emits` from the same table `check` reports through and so
+    // makes the divergence they hunt unrepresentable (`linter/ruleArms.ts`). A
+    // third would silently take a rule out of the guard's reach.
+    const offenders: string[] = [];
+    for (const file of allFiles) {
+      const src = stripComments(readFileSync(file, 'utf8'));
+      for (const match of src.matchAll(/(?:^|[{,])\s*emits:\s*/gm)) {
+        const tail = src.slice(match.index + match[0].length);
+        if (tail.startsWith('[') || tail.startsWith('armEmits(')) continue;
+        offenders.push(`${file.slice(srcRoot.length + 1)}: emits: ${tail.slice(0, 40)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it('registers exactly one rule per slice linter.ts', () => {

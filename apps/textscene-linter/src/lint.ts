@@ -73,6 +73,17 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
 }
 
 /**
+ * Both text formats Godot writes, and the linter's subject is both.
+ *
+ * A `.tres` is the same grammar with its type in the `[gd_resource]` header
+ * rather than a section heading; the validators a `[sub_resource]` block gets
+ * inside a scene are the ones a standalone resource file gets here.
+ */
+const LINTABLE_EXTENSIONS = new Set(['.tscn', '.tres']);
+
+const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(name));
+
+/**
  * Recursively collect the `.tscn` FILES under `dir`, appending into `found`
  * (threaded through the recursion so nested results are never re-copied at
  * each ancestor level). Dirent-based so the file/directory distinction comes
@@ -84,17 +95,6 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
  * .isFile()` check, which follows symlinks) so a `.tscn` symlinked in from
  * elsewhere is still linted rather than silently dropped.
  */
-/**
- * Both text formats Godot writes, and the linter's subject is both.
- *
- * A `.tres` is the same grammar with its type in the `[gd_resource]` header
- * rather than a section heading; the validators a `[sub_resource]` block gets
- * inside a scene are the ones a standalone resource file gets here.
- */
-const LINTABLE_EXTENSIONS = new Set(['.tscn', '.tres']);
-
-const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(name));
-
 function collectTscnFiles(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = join(dir, entry.name);

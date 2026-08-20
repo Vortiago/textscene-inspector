@@ -69,7 +69,13 @@ export function indexedKeyRegex(shape: string, indexParse: IndexParse): RegExp {
  * lookup misses a value the engine applied and a text-keyed one splits one
  * element into two.
  *
- * The leaf is EVERYTHING below the index, so a nested family
+ * The split follows the parse, because the two engine mechanisms cut the key at
+ * opposite ends. `PropertyListHelper` does `p_property.rsplit("/", true, 1)`
+ * (`property_list_helper.cpp:47`), so the leaf is ONE segment and everything
+ * above it has to pass `is_valid_int` — `layer_9/tile_data/x` yields the index
+ * text `9/tile_data`, which fails the gate, and `_set` builds no layer 9. A
+ * hand-rolled `_set` reads its index with `get_slicec('/', n)` counting from the
+ * left, so there the leaf is EVERYTHING below the index and a nested family
  * (`settings/0/joints/1/bone`) comes back under `joints/1/bone` for the caller
  * to resolve in turn, exactly as `indexedFamilyValidator` splits it.
  *
@@ -87,8 +93,9 @@ export function indexedElements(
   const elements = new Map<number, Record<string, string>>();
   for (const [key, value] of Object.entries(properties)) {
     if (!key.startsWith(prefix)) continue;
-    const slash = key.indexOf('/', prefix.length);
-    if (slash < 0) continue;
+    const slash =
+      indexParse === 'is_valid_int' ? key.lastIndexOf('/') : key.indexOf('/', prefix.length);
+    if (slash < prefix.length) continue;
     const indexText = key.slice(prefix.length, slash);
     const leaf = key.slice(slash + 1);
     if (indexText === '' || leaf === '') continue;

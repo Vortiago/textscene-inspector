@@ -216,9 +216,9 @@ export interface HintedBitFieldOptions {
  * through the two values a reader most needs told about.
  */
 export function hintedBitField(name: string, opts: HintedBitFieldOptions): PropertyValidator {
-  // Summed, not OR-ed: `|` is an int32 operation, and this file's slot is
-  // int64, so a label at or past bit 31 turned the whole set negative and every
-  // legal value then failed the subset test. The keys are distinct bits.
+  // OR-ed as BigInt: JS `|` coerces to int32, and this file's slot is int64, so
+  // a label at or past bit 31 turned the whole set negative and every legal
+  // value then failed the subset test.
   const hintedBits = Number(
     Object.keys(opts.labels).reduce((acc, bit) => acc | BigInt(bit), 0n)
   );

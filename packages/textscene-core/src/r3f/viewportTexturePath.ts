@@ -13,7 +13,11 @@
 
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
 import type { TscnNode } from '../parser/types.js';
-import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
+import {
+  UNIQUE_NODE_PREFIX,
+  isUniqueNameInOwner,
+  type UniqueNameClaim,
+} from '../utils/uniqueNames.js';
 
 /**
  * `NodePath("FogOfWar/CombinedViewport")` → `'FogOfWar/CombinedViewport'`.
@@ -66,8 +70,15 @@ export function viewportTextureRegistryKey(
  * with the same name, and `_acquire_unique_name_in_owner` refuses to overwrite
  * an existing entry — the first registers and the later node has its own flag
  * cleared (node.cpp:2225-2231). `claims` is that resolved table, `%Name` to the
- * winning path, and a loser publishing the alias anyway meant the registry kept
+ * winning NODE, and a loser publishing the alias anyway meant the registry kept
  * whichever mounted LAST: a consumer quad sampling the wrong sub-viewport.
+ *
+ * Matched on node identity, not on the path spelling: the table is built from
+ * the AUTHORED tree, where a heading whose `parent=` descends into instanced
+ * content hangs off the instance node itself, while the render path this
+ * publisher carries has the grafted segments in it. Comparing the two strings
+ * read the sole claimant of a `%Name` inside instanced content as a loser and
+ * withheld its alias.
  *
  * Absent from the table is not the same as losing. Content composed in from an
  * instanced sub-scene never appears in the authored roots the table is built
@@ -78,12 +89,12 @@ export function viewportTextureRegistryKey(
 export function viewportTextureUniqueNameKey(
   node: TscnNode,
   path: string,
-  claims?: ReadonlyMap<string, string>
+  claims?: ReadonlyMap<string, UniqueNameClaim>
 ): string | null {
   if (!isUniqueNameInOwner(node)) return null;
   const key = `${UNIQUE_NODE_PREFIX}${node.name}`;
   const winner = claims?.get(key);
-  if (winner !== undefined && winner !== path) return null;
+  if (winner !== undefined && winner.node !== node) return null;
   const root = path.split('/')[0];
   return root ? `${root}/${key}` : null;
 }

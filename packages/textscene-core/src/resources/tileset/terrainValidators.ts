@@ -35,6 +35,9 @@ const TERRAIN_MODE = {
  */
 const TERRAIN_KEY = indexedKeyRegex('^terrain_set_(#)/terrain_(#)/(.+)$', 'is_valid_int');
 
+/** `terrain_set_<i>/mode` carrying a segment below the leaf, which `_set` ignores. */
+const MODE_TRAILING_RE = indexedKeyRegex('^terrain_set_(#)/mode/', 'is_valid_int');
+
 const TERRAIN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // tile_set.cpp:4193, Variant::STRING; :3907 refuses a non-string.
   name: v.quotedString('name'),
@@ -70,7 +73,21 @@ const terrainSetLeaves = indexedFamilyValidator({
  */
 export const terrainSetValidator: PropertyValidator = accepts((key, value, line) => {
   const nested = TERRAIN_KEY.exec(key);
-  if (!nested) return terrainSetLeaves(key, value, line);
+  if (!nested) {
+    // `_set` splits with `split("/", true, 2)` (:3666), so `components[1]` is
+    // ONE segment and anything below it rides along unread: `terrain_set_0/mode/x`
+    // reaches `components[1] == "mode"` (:3897) and the write lands. The
+    // dispatcher takes the leaf as everything below the index, so the segment is
+    // trimmed before it sees the key.
+    const trailing = MODE_TRAILING_RE.exec(key);
+    if (trailing) {
+      const error = terrainSetLeaves(`terrain_set_${trailing[1]}/mode`, value, line);
+      // `propertyError` puts the column at `key.length + 3`, the value's own
+      // position, so a trimmed key would point left of it.
+      return error && { ...error, column: key.length + 3 };
+    }
+    return terrainSetLeaves(key, value, line);
+  }
 
   // `_set` tests the terrain-set index BEFORE it looks at `components[1]`
   // (:3896 against :3904), so the outer guard is the one that reports.

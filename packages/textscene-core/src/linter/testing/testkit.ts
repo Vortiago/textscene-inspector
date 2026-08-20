@@ -77,7 +77,10 @@ function heading(
   props: Record<string, PropValue>,
   options: NodeOptions
 ): string {
-  const parentAttr = options.parent ? ` parent="${options.parent}"` : '';
+  // `!== undefined`, not truthiness: an EMPTY `parent=""` is a heading Godot
+  // reads differently from one carrying no `parent` at all, and a kit that
+  // cannot spell it leaves that case untestable.
+  const parentAttr = options.parent !== undefined ? ` parent="${options.parent}"` : '';
   const lines = Object.entries(props).map(([key, value]) => `${key} = ${renderValue(value)}`);
   return [`[node ${attributes}${parentAttr}]`, ...lines].join('\n');
 }

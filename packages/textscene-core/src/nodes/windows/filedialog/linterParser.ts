@@ -114,7 +114,10 @@ const ACCESS = { 0: 'RESOURCES', 1: 'USERDATA', 2: 'FILESYSTEM' };
  * parser could not read either: format-only, no citation needed for a bound.
  */
 const FILTERS_WRAPPER_RE = packedArrayLiteral('PackedStringArray');
-const FILTERS_BODY_RE = /^\s*"(?:[^"\\]|\\.)*"\s*(?:,\s*"(?:[^"\\]|\\.)*"\s*)*$/;
+// The trailing comma is legal here: this branch's close is ungated —
+// `if (token.type == TK_PARENTHESIS_CLOSE) break;` (variant_parser.cpp:1524-1525)
+// — unlike `_parse_construct`'s `first &&` at :575.
+const FILTERS_BODY_RE = /^\s*"(?:[^"\\]|\\.)*"\s*(?:,\s*"(?:[^"\\]|\\.)*"\s*)*,?\s*$/;
 
 function packedStringArrayValidator(name: string): PropertyValidator {
   const code = `INVALID_${name.toUpperCase()}_FORMAT`;

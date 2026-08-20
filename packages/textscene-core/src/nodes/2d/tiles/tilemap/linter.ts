@@ -37,39 +37,19 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements } from '../../../../godot/index.js';
-
-/**
- * Every layer the loaded TileMap has, keyed by the index Godot resolves, which
- * is NOT the same as every index the file mentions.
- *
- * Index 0 is seeded unconditionally: `TileMap::TileMap()` builds a "Layer0"
- * TileMapLayer and pushes it into `layers` before any property is applied
- * (tile_map.cpp:1014-1021). A file that only writes `layer_1/…` therefore loads
- * with TWO layers, and `get_configuration_warnings` iterates that real vector
- * (:848), so Layer0's defaults — not y-sorted, z_index 0 — take part in the
- * comparison. Scraping keys alone made the rule silent on exactly that scene.
- *
- * The index resolves through the `is_valid_int` gate: `TileMap::_set` routes
- * the key through `property_helper.is_property_valid` (tile_map.cpp:700), whose
- * gate is `String::is_valid_int()` (property_list_helper.cpp:126), so
- * `layer_+1/…` is layer 1. A NEGATIVE index builds nothing — `:701`'s grow loop
- * never runs for one, and `_get_property` then returns null for `index < 0`
- * (property_list_helper.cpp:58) so `property_set_value` refuses the write.
- * `indexedElements` drops those.
- */
-function layerElements(rawProps: Record<string, string>): Map<number, Record<string, string>> {
-  const layers = indexedElements(rawProps, 'layer_', 'is_valid_int');
-  if (!layers.has(0)) layers.set(0, {});
-  return layers;
-}
+import { tileMapLayerVector } from '../shared/layerVector';
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
-  const layers = layerElements(rawProps);
+  // The loaded vector, not the written keys: `get_configuration_warnings`
+  // iterates the real `layers` (tile_map.cpp:848), which the constructor seeds
+  // with a "Layer0" (:1014-1021) and `_set`'s grow loop fills up to the highest
+  // index written (:701-710). A gap layer sits at TileMapLayer's own defaults —
+  // not y-sorted, z_index 0 — and takes part in the comparison below.
+  const layers = tileMapLayerVector(rawProps);
   // Keyed by the resolved index, so a layer the engine never builds carries no
   // tile data here either, and the key a message names is the one the loaded
   // layer answers to.
@@ -94,14 +74,14 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     ruleName: 'tilemap-deprecated',
   });
 
-  const indices = [...layers.keys()].sort((a, b) => a - b);
-  const isLayerYSorted = (i: number) => layers.get(i)?.y_sort_enabled === 'true';
-  const layerZIndex = (i: number) => ruleInt(layers.get(i)?.z_index, 0) || 0;
+  type Layer = (typeof layers)[number];
+  const isLayerYSorted = ([, leaves]: Layer) => leaves.y_sort_enabled === 'true';
+  const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.z_index, 0) || 0;
   const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858
-  const ySortedZIndices = new Set(indices.filter(isLayerYSorted).map(layerZIndex));
-  if (indices.some((i) => !isLayerYSorted(i) && ySortedZIndices.has(layerZIndex(i)))) {
+  const ySortedZIndices = new Set(layers.filter(isLayerYSorted).map(layerZIndex));
+  if (layers.some((layer) => !isLayerYSorted(layer) && ySortedZIndices.has(layerZIndex(layer)))) {
     diagnostics.push({
       severity: 'warning',
       message: `TileMap '${node.name}' has a Y-sorted layer sharing a Z-index with a non-Y-sorted layer. The non-Y-sorted layer will be Y-sorted as a whole alongside tiles from the Y-sorted layer.`,
@@ -113,7 +93,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   // tile_map.cpp:860-882
   if (!nodeYSorted) {
-    if (indices.some(isLayerYSorted)) {
+    if (layers.some(isLayerYSorted)) {
       diagnostics.push({
         severity: 'warning',
         message: `TileMap '${node.name}' has a layer with y_sort_enabled, but y_sort_enabled is not set on the TileMap node itself.`,
@@ -122,7 +102,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
         ruleName: 'tilemap-layer-y-sort-without-node',
       });
     }
-  } else if (!indices.some(isLayerYSorted)) {
+  } else if (!layers.some(isLayerYSorted)) {
     diagnostics.push({
       severity: 'warning',
       message: `TileMap '${node.name}' has y_sort_enabled set, but no layer has y_sort_enabled.`,

@@ -218,6 +218,13 @@ describe('CodeEdit strict validators', () => {
       expect(check('code_completion_prefixes', 'Array[String]([])')).toBeNull();
     });
 
+    it('counts a \\uXXXX escape as the one character the tokenizer decodes it to', () => {
+      // `get_token` resolves the escape before any setter runs, so the prefix IS
+      // one code point. Collapsing `\\u00ab` to the letters `u00ab` made the
+      // element read as five characters and errored on a file Godot loads.
+      expect(check('code_completion_prefixes', 'Array[String](["\\u00ab"])')).toBeNull();
+    });
+
     it('still applies the per-element rule inside the typed form', () => {
       // A multi-character prefix is truncated by the setter (code_edit.cpp:2218),
       // so the new spelling must not become an escape hatch from the check.

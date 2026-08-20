@@ -84,11 +84,25 @@ export function parseSpriteFramesAnimations(
       frames,
       // Per-frame durations only when one was captured per frame; else uniform.
       durations: durations.length === frames.length ? durations : frames.map(() => 1),
-      fps: speedMatch ? matchedFloat(speedMatch[1]!) : 5,
+      fps: finiteFps(speedMatch),
       loop: loopMatch ? loopMatch[1] === 'true' : true,
     });
   }
   return result;
+}
+
+/**
+ * `"speed"` as a playable rate, or the API default 5 when the key is absent or
+ * overflows.
+ *
+ * `1e999` is inside the finite grammar and reads as infinity, which makes the
+ * frame index NaN — the same reason `duration` above falls back rather than
+ * carrying the value through.
+ */
+function finiteFps(speedMatch: RegExpExecArray | null): number {
+  if (!speedMatch) return 5;
+  const speed = matchedFloat(speedMatch[1]!);
+  return Number.isFinite(speed) ? speed : 5;
 }
 
 /** The substrings of each `{…}` opened at array-depth 1 (the animation dicts). */

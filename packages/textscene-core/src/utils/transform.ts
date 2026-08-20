@@ -5,7 +5,7 @@
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 import { basisDeterminant, isEqualApprox } from '../godot/math.js';
-import { slotTupleRegex, matchedFloat } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat, allFinite } from '../godot/number.js';
 
 const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';
@@ -31,9 +31,15 @@ export function parseTransform3D(transformString: string): Transform3D {
     throw new Error(`Invalid Transform3D format: ${transformString}`);
   }
 
-  const [bx_x, bx_y, bx_z, by_x, by_y, by_z, bz_x, bz_y, bz_z, o_x, o_y, o_z] = match
-    .slice(1)
-    .map((v) => matchedFloat(v)) as [
+  const components = match.slice(1).map((v) => matchedFloat(v));
+  // An overflowing exponent is inside the finite grammar, and an Infinity here
+  // decomposes to a NaN rotation and scale — a three.js matrix that drops the
+  // node and every descendant. Same warn-then-fall-back path as a literal the
+  // grammar refuses outright.
+  if (!allFinite(components)) {
+    throw new Error(`Non-finite Transform3D: ${transformString}`);
+  }
+  const [bx_x, bx_y, bx_z, by_x, by_y, by_z, bz_x, bz_y, bz_z, o_x, o_y, o_z] = components as [
     number, number, number, number, number, number, number, number, number, number, number, number,
   ];
 

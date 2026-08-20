@@ -132,7 +132,11 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          origins.push({ node, line: currentHeadingLine });
+          origins.push({
+            node,
+            line: currentHeadingLine,
+            declaredParent: currentHeading.attributes.parent,
+          });
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);

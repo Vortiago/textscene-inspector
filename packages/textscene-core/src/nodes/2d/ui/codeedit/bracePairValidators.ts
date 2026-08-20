@@ -6,6 +6,7 @@
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { isGodotSymbol } from './symbolChars.js';
+import { unquoteString } from '../../../../parser/utils.js';
 
 const DICT_WRAPPER_RE = /^\s*\{([\s\S]*)\}\s*$/;
 const DICT_PAIR_BODY_RE =
@@ -31,7 +32,7 @@ function parseStringDictionary(value: string): Array<[string, string]> | null {
   if (!DICT_PAIR_BODY_RE.test(body)) return null;
   const pairs: Array<[string, string]> = [];
   for (const m of body.matchAll(DICT_PAIR_CAPTURE_RE)) {
-    pairs.push([(m[1] ?? '').replace(/\\(.)/g, '$1'), (m[2] ?? '').replace(/\\(.)/g, '$1')]);
+    pairs.push([unquoteString(m[1] ?? ''), unquoteString(m[2] ?? '')]);
   }
   return pairs;
 }

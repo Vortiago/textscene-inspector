@@ -115,4 +115,10 @@ describe('TileSet terrain sets', () => {
       }
     });
   }
+
+  it('accepts a segment below the mode leaf, which _set never reads', () => {
+    // `_set` splits with `split("/", true, 2)` (tile_set.cpp:3666), so
+    // `components[1]` is `mode` and `set_terrain_set_mode` runs (:3897).
+    expectClean(tileSetKey('terrain_set_0/mode/x', '1'));
+  });
 });

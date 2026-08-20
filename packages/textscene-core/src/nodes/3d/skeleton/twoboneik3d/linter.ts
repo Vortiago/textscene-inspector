@@ -57,7 +57,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
@@ -99,7 +99,6 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
 
   const outOfRange = new Set<number>();
   const ignoredVectors = new Set<number>();
-  const missingTargets = new Set<number>();
 
   // `target_node`, indexed canonically for the same reason `poleDirections`
   // below is: `_set`'s bare `to_int` (two_bone_ik_3d.cpp:37) resolves
@@ -112,12 +111,15 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     if (Number.isFinite(at)) targetNodes.set(at, rawProps[key]!);
   }
   // Absence is the trigger too — `target_node` is empty by default
-  // (two_bone_ik_3d.h) — so this walks every setting IN RANGE rather than
-  // only the keys a scene happens to write.
-  for (let i = 0; i < count; i++) {
-    const raw = targetNodes.get(i);
-    if (raw === undefined || extractNodePath(raw) === null) missingTargets.add(i);
+  // (two_bone_ik_3d.h) — so every setting IN RANGE counts, not only the keys a
+  // scene happens to write. Derived rather than walked: `setting_count` is an
+  // INT slot with no ceiling, so `0..count` really can be two billion
+  // iterations. See `reportedIndices.ts`.
+  const targeted = new Set<number>();
+  for (const [at, raw] of targetNodes) {
+    if (at < count && extractNodePath(raw) !== null) targeted.add(at);
   }
+  const missingTargets = unsatisfiedIndices(count, targeted);
 
   // `pole_direction` indexed CANONICALLY, by the number `_set` resolves the
   // index to, not by its text. `_set` reads it with a bare `to_int`
@@ -139,7 +141,10 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     const index = toIntIndex(indexed[1]!);
     // A negative index is the validator's error, against the same
     // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
-    if (index < 0) continue;
+    // Spelled against NaN too — `toIntIndex` surrenders a magnitude no double
+    // names to it, and `NaN < 0` is false, so `index < 0` let one through into
+    // the reported set.
+    if (!(index >= 0)) continue;
     if (index >= count) outOfRange.add(index);
 
     const vector = POLE_VECTOR_KEY_RE.exec(key);
@@ -166,8 +171,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (missingTargets.size > 0) {
-    const indices = listIndices([...missingTargets].sort((a, b) => a - b));
+  if (missingTargets.total > 0) {
+    const indices = listIndices(missingTargets.listed, missingTargets.total);
     diagnostics.push({
       severity: 'warning',
       message:

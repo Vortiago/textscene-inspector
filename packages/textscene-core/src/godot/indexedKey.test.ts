@@ -81,4 +81,19 @@ describe('indexedElements', () => {
     );
     expect(elements.get(0)?.bone).toBe('"Second"');
   });
+
+  it('seats no element for a multi-slash key under is_valid_int', () => {
+    // `_get_property` rsplits at the LAST `/` and gates everything above it on
+    // `is_valid_int` (property_list_helper.cpp:47-53), so the index text here is
+    // `9/tile_data` and no layer 9 is ever built.
+    expect([...indexedElements({ 'layer_9/tile_data/x': '1' }, 'layer_', 'is_valid_int')]).toEqual(
+      []
+    );
+  });
+
+  it('still nests a to_int family, whose leaf is everything below the index', () => {
+    expect(
+      indexedElements({ 'settings/0/joints/1/bone': '2' }, 'settings/', 'to_int').get(0)
+    ).toEqual({ 'joints/1/bone': '2' });
+  });
 });

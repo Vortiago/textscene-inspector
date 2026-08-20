@@ -64,7 +64,7 @@
 import { propertyError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE, toIntIndex } from '../../godot/index.js';
+import { IS_VALID_INT_RE, toIntIndex, type IndexParse } from '../../godot/index.js';
 
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
@@ -115,7 +115,7 @@ export interface IndexedFamilyOptions {
    * matcher declined to route a non-numeric index, and the day it routed one the
    * slice would have rejected a write Godot applies.
    */
-  indexParse?: 'is_valid_int' | 'to_int';
+  indexParse?: IndexParse;
   /**
    * The family's noun, spliced into `Unknown <describes> property: "…"`. Keep it
    * a bare singular noun (`setting`, `item`, `filter`) — it reads as prose.

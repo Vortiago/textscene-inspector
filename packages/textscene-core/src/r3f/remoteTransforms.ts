@@ -50,7 +50,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties, Vector2 } from '../nodes/base/node2d/types.js';
 import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
-import { uniqueNamePaths } from '../utils/uniqueNames.js';
+import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
@@ -78,19 +78,26 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
   const nodeByPath = new Map<string, TscnNode>();
   const relays: Array<{ node: TscnNode; path: string }> = [];
 
+  // `remote_path = NodePath("%Target")` addresses the owner's claim table rather
+  // than a child, so the table has to be in hand before any relay resolves. It
+  // is collected in THIS walk: the claim is first-one-wins in the same
+  // depth-first order, and a second traversal rebuilt every path string only to
+  // keep a handful of them.
+  const uniquePaths = new Map<string, string>();
+
   const walk = (node: TscnNode, parentPath: string): void => {
     const path = joinPath(parentPath, node.name);
     nodeByPath.set(path, node);
     if (REMOTE_TRANSFORM_TYPES.has(node.type)) relays.push({ node, path });
+    if (isUniqueNameInOwner(node)) {
+      const key = UNIQUE_NODE_PREFIX + node.name;
+      if (!uniquePaths.has(key)) uniquePaths.set(key, path);
+    }
     for (const child of node.children) walk(child, path);
   };
   for (const node of nodes) walk(node, '');
 
   if (relays.length === 0) return nodes;
-
-  // `remote_path = NodePath("%Target")` addresses the owner's claim table rather
-  // than a child, so the table has to be in hand before any relay resolves.
-  const uniquePaths = uniqueNamePaths(nodes);
 
   for (const { node, path } of relays) {
     if (node.type === 'RemoteTransform3D') applyRelay3D(node, path, nodeByPath, uniquePaths);

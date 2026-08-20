@@ -49,7 +49,9 @@ describe('hasCollisionShapeChild', () => {
   // the shape off this body entirely and Godot's `shapes.is_empty()` warning
   // (`collision_object_2d.cpp:587`) still fires.
   it.each(['2D', '3D'] as const)('does NOT count a shape one level deeper (%s)', (dim) => {
-    const tree = node('Body', [node('Pivot', [node(`CollisionPolygon${dim}`)])]);
+    // A CATALOGED intervening type: an unreadable one is declined outright, the
+    // same call `knownParent` makes on the parent side.
+    const tree = node('Body', [node(`Node${dim}`, [node(`CollisionPolygon${dim}`)])]);
     expect(hasCollisionShapeChild(tree, dim)).toBe(false);
   });
 

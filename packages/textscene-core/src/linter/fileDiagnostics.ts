@@ -48,12 +48,14 @@ export const FILE_DIAGNOSTICS = {
    * A heading declaring no `parent=` while not being the root. The text loader
    * stores it without complaint (`resource_format_text.cpp:273`); the
    * instantiate below refuses, so the resource loads and the scene cannot be
-   * built from it.
+   * built from it. `parent=""` is a different case and not this one: the loader
+   * calls `add_node_path` for any value the field carries, which never returns
+   * `-1` (`packed_scene.cpp:2307-2311`).
    */
   nodeWithoutParent: {
     severity: 'error',
     ruleName: 'node-without-parent',
-    grounding: { kind: 'engine', at: 'packed_scene.cpp:206' },
+    grounding: { kind: 'engine', at: 'packed_scene.cpp:206-207' },
   },
 } as const satisfies Record<string, RuleArm>;
 

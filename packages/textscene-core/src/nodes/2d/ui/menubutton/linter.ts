@@ -41,6 +41,7 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements } from '../../../../godot/index.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 
 const RULE_NAME = 'menubutton-item-index-out-of-range';
 
@@ -73,7 +74,7 @@ function checkMenuButton(context: RuleContext): Diagnostic[] {
     {
       severity: 'error',
       message:
-        `MenuButton item index(es) ${offending.join(', ')} fall outside item_count (${count}). ` +
+        `MenuButton item index(es) ${listIndices(offending)} fall outside item_count (${count}). ` +
         'MenuButton forwards the write to its popup child (menu_button.cpp:178), whose ' +
         'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
         'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +

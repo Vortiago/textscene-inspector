@@ -133,9 +133,20 @@ export type ParentLookup =
 export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
   const parent = findParentNode(scene.nodes, node);
   if (!parent) return { kind: 'root' };
-  if (isTypeUnknowable(parent)) return { kind: 'unknowable' };
-  if (!isCatalogedType(parent.type)) return { kind: 'unknowable' };
+  if (isTypeOpaque(parent)) return { kind: 'unknowable' };
   return { kind: 'known', parent };
+}
+
+/**
+ * Whether this node's class is one no verdict may be drawn from — the same two
+ * ways {@link knownParent} declines, asked of any node rather than of a parent.
+ *
+ * A child-side check needs it just as much: `hasCollisionShapeChild` reads a
+ * GDExtension shape provider as absent and warns about a correct scene, the
+ * mirror of the parent-side false positives above.
+ */
+export function isTypeOpaque(node: TscnNode): boolean {
+  return isTypeUnknowable(node) || !isCatalogedType(node.type);
 }
 
 /**

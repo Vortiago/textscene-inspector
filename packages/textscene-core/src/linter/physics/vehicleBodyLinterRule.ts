@@ -25,6 +25,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { isTypeOpaque } from '../parentType.js';
+import { descendsFrom } from '../nodeBaseTypes.js';
 
 /**
  * `_update_friction` returns before any suspension or traction impulse is
@@ -50,7 +52,14 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
     // wheel under an intermediate node is never attached. Counting descendants
     // here would call a vehicle whose wheels are all nested "fine" when Godot
     // gives it no working wheels at all.
-    if (!node.children.some((child) => child.type === wheelType)) {
+    // `isTypeOpaque` declines on a child whose class this file cannot read — an
+    // instanced sub-scene rooted at a wheel, or a GDExtension one — the way
+    // every other child-presence check in the linter does. `descendsFrom`
+    // because `VehicleWheel3D` registers itself from its own inherited
+    // `_notification`, so a subclass attaches too.
+    if (
+      !node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))
+    ) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has no direct ${wheelType} children. A vehicle body is driven by its wheels, and Godot only attaches wheels that are its immediate children; without them engine_force and steering have no effect.`,

@@ -369,7 +369,7 @@ describe('buildSceneTree', () => {
         },
       ];
 
-      const origins = nodes.map((node, i) => ({ node, line: i + 1 }));
+      const origins = nodes.map((node, i) => ({ node, line: i + 1, declaredParent: node.parent }));
       const result = buildSceneTree(nodes);
 
       // Dropped from the tree, and named by the report rather than by a log

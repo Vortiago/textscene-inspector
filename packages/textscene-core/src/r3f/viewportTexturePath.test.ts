@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { TscnNode } from '../parser/types.js';
 import { TscnParser } from '../parser/TscnParser.js';
-import { uniqueNamePaths } from '../utils/uniqueNames.js';
+import { uniqueNameClaims } from '../utils/uniqueNames.js';
 import { viewportTextureRegistryKey, viewportTextureUniqueNameKey } from './viewportTexturePath';
 
 describe('viewportTextureRegistryKey', () => {
@@ -83,7 +83,7 @@ unique_name_in_owner = true
 [node name="Plain" type="SubViewport" parent="."]
 `).nodes;
 
-  const claims = uniqueNamePaths(roots);
+  const claims = uniqueNameClaims(roots);
 
   /** The node at a dispatcher-absolute path. By path, since two are named `View`. */
   function at(path: string): TscnNode {

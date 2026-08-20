@@ -91,13 +91,12 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
 
-  // A trailing comma is legal only in the bare `[…]` spelling: `_parse_array`
-  // closes on `TK_BRACKET_CLOSE` before it demands another value
-  // (variant_parser.cpp:1658-1662), while `_parse_construct` (:551-596) demands
-  // one after every comma, so `PackedStringArray("a", "b",)` really is a format
-  // error and keeps its empty element.
-  const rawNames = splitTopLevel(namesMatch[1]!);
-  const names = packedNames ? rawNames : dropTrailingComma(rawNames);
+  // A trailing comma closes both spellings. `_parse_array` closes on
+  // `TK_BRACKET_CLOSE` before it demands another value
+  // (variant_parser.cpp:1658-1662), and PackedStringArray has its OWN reader
+  // whose close is ungated — `if (token.type == TK_PARENTHESIS_CLOSE) break;`
+  // (:1524-1525), unlike `_parse_construct`'s `first &&` at :575.
+  const names = dropTrailingComma(splitTopLevel(namesMatch[1]!));
   for (const name of names) {
     if (!QUOTED_NAME_RE.test(name)) {
       return propertyError(

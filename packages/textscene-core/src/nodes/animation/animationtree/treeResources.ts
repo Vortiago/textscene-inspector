@@ -232,8 +232,12 @@ function parseConnections(raw: string): Map<string, string> {
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const to = stripStringName(tokens[i]!);
     // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), so
-    // it reads the way every other int slot does.
-    const port = ruleInt(tokens[i + 1]!);
+    // it reads the way every other int slot does — including a STRING, which
+    // `Variant::_to_int` routes through `String::to_int()` (variant.h:372), the
+    // same conversion that lets a plain `"Blend"` reach the StringName slots
+    // beside it. Reading `"0"` as unreadable dropped the whole triple and left
+    // the tree with no root.
+    const port = ruleInt(stripStringName(tokens[i + 1]!));
     const from = stripStringName(tokens[i + 2]!);
     if (port === null) continue;
     out.set(`${to}:${port}`, from);

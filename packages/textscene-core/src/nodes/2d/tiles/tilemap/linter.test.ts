@@ -168,4 +168,28 @@ describe('TileMap index grammar', () => {
     const diagnostics = lint(scene(`layer_-1/y_sort_enabled = true`));
     expect(diagnostics.filter((d) => d.ruleName === 'tilemap-layer-y-sort-without-node')).toEqual([]);
   });
+
+  it('counts the layer Godot builds for a skipped index in the y-sort conflict', () => {
+    // `_set`'s grow loop builds layer 1 at TileMapLayer's defaults — not
+    // y-sorted, z_index 0 — and `get_configuration_warnings` iterates that real
+    // vector (tile_map.cpp:848), so it shares a z-index with the sorted layers.
+    expectDiagnostic(
+      scene(`y_sort_enabled = true
+layer_0/y_sort_enabled = true
+layer_2/y_sort_enabled = true`),
+      { ruleName: 'tilemap-y-sort-z-index-conflict' }
+    );
+  });
+
+  it('seats no layer for a key whose index text carries a slash', () => {
+    // `layer_9/tile_data/x` rsplits to the index text `9/tile_data`, which fails
+    // `is_valid_int`, so `_set` builds nothing (property_list_helper.cpp:47-53).
+    expect(
+      lint(
+        scene(`y_sort_enabled = true
+layer_0/y_sort_enabled = true
+layer_9/tile_data/x = 1`)
+      ).filter((d) => d.ruleName === 'tilemap-y-sort-z-index-conflict')
+    ).toEqual([]);
+  });
 });

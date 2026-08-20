@@ -11,7 +11,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { slotTupleRegex, matchedFloat } from '../../../godot/number.js';
+import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 
@@ -83,12 +83,15 @@ export function decomposeTransform2D(
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
     return null;
   }
-  const xx = matchedFloat(m[1]!);
-  const xy = matchedFloat(m[2]!);
-  const yx = matchedFloat(m[3]!);
-  const yy = matchedFloat(m[4]!);
-  const ox = matchedFloat(m[5]!);
-  const oy = matchedFloat(m[6]!);
+  const [xx, xy, yx, yy, ox, oy] = m.slice(1, 7).map((v) => matchedFloat(v)) as [
+    number, number, number, number, number, number,
+  ];
+  // An overflowing exponent is inside the finite grammar; the decomposition
+  // below turns it into a NaN skew and a canvas transform nothing draws under.
+  if (!allFinite([xx, xy, yx, yy, ox, oy])) {
+    warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: non-finite Transform2D "${value}"`);
+    return null;
+  }
 
   const rotation = Math.atan2(xy, xx);
   const det = xx * yy - xy * yx;

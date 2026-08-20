@@ -27,7 +27,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements } from '../../../../godot/index.js';
 
 const RULE_NAME = 'iterateik3d-setting-missing-target-node';
@@ -52,18 +52,23 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // found nothing there and reported a target the engine had applied as missing.
   const settings = indexedElements(rawProps, 'settings/', 'to_int');
 
-  const missing: number[] = [];
-  for (let index = 0; index < count; index++) {
-    const raw = settings.get(index)?.target_node;
-    if (raw === undefined || extractNodePath(raw) === null) missing.push(index);
+  // The walk is bounded as well as the message: `setting_count` is an INT slot
+  // with no ceiling, so `0..count` really can be two billion iterations. See
+  // `reportedIndices.ts`.
+  const targeted = new Set<number>();
+  for (const [index, leaves] of settings) {
+    if (index >= count) continue;
+    const raw = leaves.target_node;
+    if (raw !== undefined && extractNodePath(raw) !== null) targeted.add(index);
   }
-  if (missing.length === 0) return [];
+  const { listed: missing, total } = unsatisfiedIndices(count, targeted);
+  if (total === 0) return [];
 
   return [
     {
       severity: 'warning',
       message:
-        `${node.type} '${node.name}' setting(s) ${listIndices(missing)} have no target_node. ` +
+        `${node.type} '${node.name}' setting(s) ${listIndices(missing, total)} have no target_node. ` +
         "IterateIK3D resolves 'settings/<i>/target_node' during IK solving and skips a setting " +
         'with none (iterate_ik_3d.cpp:511), so this chain of bones is never posed.',
       nodeName: node.name,

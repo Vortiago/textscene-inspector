@@ -142,4 +142,23 @@ describe('parseTileMap', () => {
     ]);
     expect(result.tile_set).toBeUndefined();
   });
+
+  it('reads an absent format as the current one, not as Godot 3 data', () => {
+    // `mutable TileMapDataFormat format = TILE_MAP_DATA_FORMAT_3` (tile_map.h:64),
+    // which is 2. Defaulting to 0 dropped every cell of an unversioned TileMap.
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
+      'layer_0/tile_data': 'PackedInt32Array(0, 0, 0, 1, 65536, 0)',
+    });
+    expect(result.layers[0]?.cells).toHaveLength(2);
+  });
+
+  it('fills the layers Godot builds for a skipped index', () => {
+    // `_set` grows `layers` one at a time up to the written index
+    // (tile_map.cpp:701-710), so layer 1 exists at TileMapLayer's own defaults.
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
+      'layer_0/name': '"Ground"',
+      'layer_2/name': '"Sky"',
+    });
+    expect(result.layers.map((l) => l.name)).toEqual(['Ground', 'Layer1', 'Sky']);
+  });
 });

@@ -29,6 +29,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { arrayBody, STRING_ARRAY_FORMS } from './arrayForms.js';
+import { unquoteString } from '../../../../parser/utils.js';
 
 const QUOTED_ELEMENT_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"/g;
 
@@ -46,7 +47,7 @@ function startKeysOf(raw: string | undefined): Set<string> {
   const body = arrayBody(raw, STRING_ARRAY_FORMS);
   if (body === undefined || body === '') return keys;
   for (const m of body.matchAll(QUOTED_ELEMENT_CAPTURE_RE)) {
-    const element = (m[1] ?? '').replace(/\\(.)/g, '$1');
+    const element = unquoteString(m[1] ?? '');
     if (element === '') continue;
     const firstSpace = element.indexOf(' ');
     const startKey = firstSpace === -1 ? element : element.slice(0, firstSpace);

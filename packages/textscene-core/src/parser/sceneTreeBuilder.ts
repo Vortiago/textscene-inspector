@@ -11,11 +11,13 @@ import type { OrphanedNode, TscnNode } from './types';
 export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   if (nodes.length === 0) return [];
 
-  // Find root node (has no parent)
-  const rootNode = nodes.find(n => !n.parent);
-  if (!rootNode) {
-    return nodes;
-  }
+  // Heading 0 is the root when nothing declares itself parentless: `packed_scene.cpp:218-219`
+  // makes `i == 0` the root and fails the instantiate outright when it names a
+  // parent, so there is no reading under which the later headings are roots too.
+  // Handing the flat list back as roots made every node reachable, which is the
+  // set `strandedNodes` derives its answer from — the report went silent on
+  // exactly the file the engine refuses.
+  const rootNode = nodes.find((n) => !n.parent) ?? nodes[0]!;
 
   // Map from relative path to node (paths don't include root name)
   const pathMap = new Map<string, TscnNode>();

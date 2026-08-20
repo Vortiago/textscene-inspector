@@ -177,19 +177,25 @@ function reparentedName(parentPath: string, name: string): string {
  * error. The rename spelling is `:561-563`, one line below the re-root.
  */
 function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
-  return (scene.orphanedNodes ?? []).map(({ node, line }) => {
-    const { severity, ruleName } = node.parent
-      ? FILE_DIAGNOSTICS.unresolvedParentPath
-      : FILE_DIAGNOSTICS.nodeWithoutParent;
+  return (scene.orphanedNodes ?? []).map(({ node, line, declaredParent }) => {
+    // The heading's own attribute, not `node.parent`: both parsers drop an empty
+    // `parent=""`, while the loader keeps it — `add_node_path` returns an index
+    // for any value the field carries (`packed_scene.cpp:2307-2311`), so
+    // `n.parent` is never `-1` for one and the refusal below cannot apply to it.
+    const { severity, ruleName } =
+      declaredParent === undefined
+        ? FILE_DIAGNOSTICS.nodeWithoutParent
+        : FILE_DIAGNOSTICS.unresolvedParentPath;
     return {
       severity,
       ruleName,
-      message: node.parent
-        ? `Node '${node.name}' declares parent="${node.parent}", a path this file never defines. ` +
-          `Godot re-parents it to the scene root and renames it "${reparentedName(node.parent, node.name)}". ` +
-          'No semantic rule ran on it or on anything parented below it.'
-        : `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
-          'The file loads, but Godot cannot instantiate the scene from it at all.',
+      message:
+        declaredParent === undefined
+          ? `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
+            'The file loads, but Godot cannot instantiate the scene from it at all.'
+          : `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
+            `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent, node.name)}". ` +
+            'No semantic rule ran on it or on anything parented below it.',
       nodeName: node.name,
       nodeType: node.type,
       location: { line, column: 1 },

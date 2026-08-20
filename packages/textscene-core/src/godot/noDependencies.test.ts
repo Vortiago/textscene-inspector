@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/godot
@@ -100,10 +100,15 @@ describe('src/godot is a dependency-free leaf', () => {
     const violations: string[] = [];
     for (const name of sourceFiles()) {
       for (const spec of specifiersIn(readFileSync(resolve(here, name), 'utf8'))) {
-        // A sibling inside this directory is the one legal specifier: `index.ts`
-        // re-exports `./math.js`, and the module is allowed its own shape.
-        const isLocalSibling = /^\.\/[\w.-]+\.js$/.test(spec);
-        if (!isLocalSibling) violations.push(`${name} imports '${spec}'`);
+        // A specifier that stays inside this DIRECTORY TREE is the one legal
+        // one: `index.ts` re-exports `./math.js`, a file in a subdirectory
+        // reaches its own root as `../math.js`, and the module is allowed its
+        // own shape. Resolved rather than pattern-matched, so `../../logger.js`
+        // is caught however many hops it takes.
+        const resolved = resolve(dirname(resolve(here, name)), spec);
+        if (!spec.startsWith('.') || relative(here, resolved).startsWith('..')) {
+          violations.push(`${name} imports '${spec}'`);
+        }
       }
     }
     expect(

@@ -7,18 +7,9 @@
  */
 
 import { warn } from '../../../logger.js';
-import { FLOAT_PATTERN_SOURCE, parseGodotFloat } from '../../../godot/number.js';
+import { parseGodotFloat } from '../../../godot/number.js';
+import { dictNumberField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
-
-/**
- * A dict value that is a number, in the grammar Godot's own tokenizer reads.
- *
- * `-?\d+` stopped at the `e`, so `"vertex_count": 2e3` — one FLOAT token the
- * engine converts to 2000 on the write — read as 2, and the decoder then walked
- * two vertices out of a 2000-vertex buffer. `"format": 4.096e3` mis-read the
- * whole surface's attribute layout the same way.
- */
-const NUMBER_SOURCE = `(${FLOAT_PATTERN_SOURCE})`;
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)` — a compressed surface's position scale. */
 export interface SurfaceAabb {
@@ -26,16 +17,21 @@ export interface SurfaceAabb {
   size: [number, number, number];
 }
 
+/**
+ * The `{…}` surface dicts, braces INCLUDED: the field readers below run to a
+ * `,`/`}` delimiter, so a brace-stripped body gave the last key in a dict no
+ * terminator and read it as absent.
+ */
 export function* iterateSurfaceBlocks(surfacesRaw: string): Generator<string> {
-  const re = /\{([^{}]*)\}/g;
+  const re = /\{[^{}]*\}/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(surfacesRaw)) !== null) {
-    yield match[1]!;
+    yield match[0];
   }
 }
 
 export function readInt(block: string, key: string): number {
-  const match = new RegExp(`"${key}"\\s*:\\s*${NUMBER_SOURCE}\\s*(?=[,}])`).exec(block);
+  const match = dictNumberField(key).exec(block);
   if (!match) return 0;
   // Read at int64, the Variant's own width: `format` is a
   // `BitField<Mesh::ArrayFormat>` (mesh.cpp:244) and a compressed surface's

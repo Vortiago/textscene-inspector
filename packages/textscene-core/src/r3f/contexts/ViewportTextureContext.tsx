@@ -37,7 +37,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { TscnNode } from '../../parser/types.js';
-import { uniqueNamePaths } from '../../utils/uniqueNames.js';
+import { uniqueNameClaims, type UniqueNameClaim } from '../../utils/uniqueNames.js';
 import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import type * as THREE from 'three';
@@ -83,11 +83,11 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
  * there rather than guessed per publisher. Undefined outside the shell, where
  * there is no tree and the flag is all that is knowable.
  */
-function useUniqueNameClaims(): ReadonlyMap<string, string> | undefined {
+function useUniqueNameClaims(): ReadonlyMap<string, UniqueNameClaim> | undefined {
   const graph = useOptionalHierarchy()?.sceneGraph;
   return useMemo(() => {
     const roots = graph?.scenes.get(graph.rootScene)?.nodes;
-    return roots ? uniqueNamePaths(roots) : undefined;
+    return roots ? uniqueNameClaims(roots) : undefined;
   }, [graph]);
 }
 

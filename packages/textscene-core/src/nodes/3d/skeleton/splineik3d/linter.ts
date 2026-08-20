@@ -25,9 +25,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { nodePathLiteral } from '../../../../godot/index.js';
+import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { cappedIndices, omittedIndexCount } from '../../../../linter/reportedIndices.js';
+import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {
@@ -43,16 +43,23 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const count = ruleInt(properties['setting_count'] ?? '');
   if (count === null || count <= 0) return [];
 
-  const missing: number[] = [];
-  for (let index = 0; index < count; index++) {
-    const path = properties[`settings/${index}/path_3d`];
-    if (path !== undefined && !isUnsetPath(path.trim())) continue;
-    missing.push(index);
+  // Grouped by the setting `_set` RESOLVES each key to, not by the text the file
+  // spells: `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
+  // and no validity gate (spline_ik_3d.cpp:37), so `settings/00/path_3d` sets
+  // setting 0's path. Reading `settings/${index}/path_3d` forward found nothing
+  // there and reported a path the engine had applied as missing.
+  const settings = indexedElements(properties, 'settings/', 'to_int');
+  const posed = new Set<number>();
+  for (const [index, leaves] of settings) {
+    if (index >= count) continue;
+    const path = leaves.path_3d;
+    if (path !== undefined && !isUnsetPath(path.trim())) posed.add(index);
   }
-  // Capped: `setting_count` has no ceiling, and one diagnostic per index threw
-  // the whole lint away past ~130,000 of them. See `reportedIndices.ts`.
-  const omitted = omittedIndexCount(missing);
-  const diagnostics: Diagnostic[] = cappedIndices(missing).map((index) => ({
+  // Capped at both ends: `setting_count` has no ceiling, so the WALK is bounded
+  // as well as the message. See `reportedIndices.ts`.
+  const { listed: missing, total } = unsatisfiedIndices(count, posed);
+  const omitted = total - missing.length;
+  const diagnostics: Diagnostic[] = missing.map((index) => ({
     severity: 'warning' as const,
     message: `SplineIK3D '${node.name}' setting ${index} has no Path3D. Godot resolves 'settings/${index}/path_3d' before it reads the curve and skips the setting when nothing comes back, so this chain of bones is never posed.`,
     nodeName: node.name,

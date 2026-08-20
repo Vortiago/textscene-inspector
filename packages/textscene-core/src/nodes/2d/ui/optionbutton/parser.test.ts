@@ -81,4 +81,14 @@ describe('a Variant int Godot reads differently from `parseInt`', () => {
 
     expect(p.items?.[0]?.id).toBe(20);
   });
+
+  it('reads an item key spelled the way _get_property resolves it', () => {
+    // The gate is `is_valid_int()` and the read is `to_int()`
+    // (property_list_helper.cpp:53-55), so `item_00` and `item_+0` are item 0.
+    const result = parseOptionButton(h({ name: 'Menu', type: 'OptionButton' }), {
+      item_count: '1',
+      'popup/item_00/text': '"Play"',
+    });
+    expect(result.items?.[0]?.text).toBe('Play');
+  });
 });

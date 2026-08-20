@@ -101,6 +101,31 @@ describe('a parent path this file never defines', () => {
     );
   });
 
+  it('reads an empty parent= as a vanished PATH, not as a missing field', () => {
+    // The loader calls `add_node_path` for any value the field carries and it
+    // never returns -1 (`packed_scene.cpp:2307-2311`), so `n.parent == -1` — the
+    // refusal `node-without-parent` cites — cannot apply to this heading.
+    const empty = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('Node2D', {}, { name: 'B', parent: '' })
+    );
+    const orphans = orphansIn(empty);
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0]?.severity).toBe('warning');
+    expect(lint(empty).filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
+  });
+
+  it('still names the headings a file with no root heading strands', () => {
+    // `packed_scene.cpp:218-219` makes heading 0 the root and fails the
+    // instantiate when it declares a parent, so handing the flat list back as
+    // roots made every node reachable and the report said nothing at all.
+    const rootless = scene(
+      node('Node2D', {}, { name: 'A', parent: '.' }),
+      node('Node2D', {}, { name: 'B', parent: 'A' })
+    );
+    expect(orphansIn(rootless).map((d) => d.nodeName)).toEqual(['B']);
+  });
+
   it('says nothing about a scene whose every parent path resolves', () => {
     expectNoDiagnostic(
       scene(

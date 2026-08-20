@@ -42,14 +42,15 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex } from '../../../godot/index.js';
+import { indexedElements } from '../../../godot/index.js';
+import { listIndices } from '../../../linter/reportedIndices.js';
 
 /**
- * `item_<idx>/`, with the index captured. The family is a
- * `PropertyListHelper` one (popup_menu.cpp:3319-3328), whose `_get_property`
- * gates on `String::is_valid_int()` (property_list_helper.cpp:53).
+ * The family's prefix. It is a `PropertyListHelper` one
+ * (popup_menu.cpp:3319-3328), whose `_get_property` gates the index on
+ * `String::is_valid_int()` (property_list_helper.cpp:53).
  */
-const ITEM_KEY_RE = indexedKeyRegex('^item_(#)/', 'is_valid_int');
+const ITEM_PREFIX = 'item_';
 
 function checkPopupMenu(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -67,17 +68,17 @@ function checkPopupMenu(context: RuleContext): Diagnostic[] {
   // neither is a count this rule can name in a message.
   if (count === null) return diagnostics;
 
-  const offending = new Set<number>();
-  for (const key of Object.keys(rawProps)) {
-    const match = ITEM_KEY_RE.exec(key);
-    if (!match) continue;
-    const index = Number(match[1]);
-    // Negative indices belong to the dispatcher; see the header.
-    if (index >= 0 && index >= count) offending.add(index);
-  }
-  if (offending.size === 0) return diagnostics;
+  // `indexedElements`, not a hand-rolled key scan: it resolves the index the way
+  // `_get_property` does and skips a key with no leaf, which `item_3/` is. The
+  // twin rule on MenuButton already reads its family through it, and the two
+  // disagreed on exactly that shape. Negative indices belong to the dispatcher;
+  // see the header.
+  const offending = [...indexedElements(rawProps, ITEM_PREFIX, 'is_valid_int').keys()]
+    .filter((index) => index >= count)
+    .sort((a, b) => a - b);
+  if (offending.length === 0) return diagnostics;
 
-  const indices = [...offending].sort((a, b) => a - b).join(', ');
+  const indices = listIndices(offending);
   diagnostics.push({
     severity: 'error',
     message:

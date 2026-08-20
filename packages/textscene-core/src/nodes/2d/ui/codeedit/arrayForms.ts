@@ -28,6 +28,7 @@
  */
 
 import { packedArrayLiteral } from '../../../../godot/index.js';
+import { unquoteString } from '../../../../parser/utils.js';
 
 /** `PackedStringArray("a")`, `Array[String](["a"])`, or `["a"]`. */
 export const STRING_ARRAY_FORMS: readonly RegExp[] = [
@@ -88,7 +89,10 @@ export function parsePackedStringArray(value: string): string[] | null {
   if (!PACKED_STRING_ARRAY_BODY_RE.test(body)) return null;
   const elements: string[] = [];
   for (const m of body.matchAll(QUOTED_ELEMENT_CAPTURE_RE)) {
-    elements.push((m[1] ?? '').replace(/\\(.)/g, '$1'));
+    // `unquoteString`, not a `\\(.)` collapse: the tokenizer resolves `\\uXXXX`
+    // and `\\n`/`\\r`/`\\t` before any setter runs, so a one-code-point prefix
+    // spelled `\\u00ab` reached the length checks as the five letters `u00ab`.
+    elements.push(unquoteString(m[1] ?? ''));
   }
   return elements;
 }
