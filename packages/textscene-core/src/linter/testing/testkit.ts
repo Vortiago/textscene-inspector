@@ -168,8 +168,32 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
 }
 
 /** Assert no diagnostic matching `where` is present (other diagnostics may exist). */
+/**
+ * The three diagnostics that mean a heading never entered the tree.
+ *
+ * A NEGATIVE assertion over a scene carrying one proves nothing: Phase 2 walks
+ * the tree, so no rule ran on the stranded node and the silence is the fixture's
+ * doing rather than the rule's answer. {@link node} omits `parent=` unless asked
+ * — which is how a scene's SECOND heading gets stranded without anyone spelling
+ * it — and a first heading naming a path resolves against the root's `.`, not
+ * against the root's own name.
+ *
+ * The positive helpers need no such check: they name the diagnostic they expect,
+ * and a stranded subject simply fails to produce it.
+ */
+const STRANDED_RULES = ['node-without-parent', 'unresolved-parent-path', 'root-declares-parent'];
+
+function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
+  const stranded = diagnostics
+    .filter(d => STRANDED_RULES.includes(d.ruleName))
+    .map(d => `${d.ruleName}: ${d.nodeName}`);
+  expect(stranded).toEqual([]);
+}
+
 export function expectNoDiagnostic(content: string, where: DiagnosticExpectation): void {
-  expect(locate(lint(content), where)).toBeUndefined();
+  const diagnostics = lint(content);
+  expectEveryHeadingPlaced(diagnostics);
+  expect(locate(diagnostics, where)).toBeUndefined();
 }
 
 /**
@@ -178,7 +202,9 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
  * (e.g. `{ ruleName: 'strict-parser' }` for "no strict-parser format errors").
  */
 export function expectNoErrors(content: string, where: DiagnosticExpectation = {}): void {
-  const errors = lint(content).filter(
+  const diagnostics = lint(content);
+  expectEveryHeadingPlaced(diagnostics);
+  const errors = diagnostics.filter(
     d =>
       d.severity === 'error' &&
       (where.prop === undefined || d.message.includes(where.prop)) &&

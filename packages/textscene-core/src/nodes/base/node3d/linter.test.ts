@@ -174,15 +174,16 @@ describe('Node3D Linter', () => {
     // `%Name` resolves through the owner's `owned_unique_nodes`
     // (node.cpp:1931-1933), not by tree position, and it is what the inspector's
     // node picker writes. Comparing it against a position-keyed path map called a
-    // working reference "not found", at error tier.
+    // working reference "not found", at error tier. The flag is what puts the
+    // name in the table (node.cpp:2222), so the target must carry it.
     it('should report nothing for a %unique-name visibility_parent', () => {
       expectNoDiagnostic(
         scene(
-          node('Node3D', {}, { name: 'ParentNode' }),
+          node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode' }),
           node(
             'Node3D',
             { visibility_parent: 'NodePath("%ParentNode")' },
-            { name: 'ChildNode', parent: 'ParentNode' }
+            { name: 'ChildNode', parent: '.' }
           )
         ),
         { ruleName: 'valid-node3d-visibility' }
@@ -190,14 +191,17 @@ describe('Node3D Linter', () => {
     });
 
     it('should report nothing for a relative visibility_parent path', () => {
-      // A relative path is legal; this rule resolves only absolute ones.
+      // `..` walks to the parent and the next segment reads ITS children, so a
+      // relative path resolves like any other — the rule declines only the
+      // absolute form, whose root is the live SceneTree's and not this file's.
       expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),
+          node('Node3D', {}, { name: 'OtherNode', parent: '.' }),
           node(
             'Node3D',
             { visibility_parent: 'NodePath("../OtherNode")' },
-            { name: 'ChildNode', parent: 'ParentNode' }
+            { name: 'ChildNode', parent: '.' }
           )
         ),
         { ruleName: 'valid-node3d-visibility' }

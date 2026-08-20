@@ -307,7 +307,7 @@ shape = SubResource("capsule_shape")
       const content = scene(
         rectShape,
         node('PhysicalBone2D', {}, { name: 'Bone' }),
-        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Bone' })
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })
       );
       expectNoDiagnostic(content, { ruleName: 'collisionshape2d-invalid-parent' });
     });

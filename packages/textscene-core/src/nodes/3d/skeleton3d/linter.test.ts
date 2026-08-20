@@ -633,7 +633,7 @@ describe('Skeleton3D Linter', () => {
             'bones/2/rotation': 'Quaternion(0, 0, 0, 1)',
             'bones/2/scale': 'Vector3(0.5, 0.5, 0.5)',
           }, { name: 'ComplexSkeleton' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("ComplexSkeleton")' }, { name: 'Mesh' })
+          node('MeshInstance3D', { skeleton: 'NodePath("..")' }, { name: 'Mesh', parent: '.' })
         ),
         { ruleName: 'strict-parser' }
       );

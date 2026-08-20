@@ -8,40 +8,10 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { nodePathLiteral } from '../../../godot/index.js';
-
-/**
- * Node3D properties interface for type checking
- */
-interface Node3DProperties {
-  name: string;
-  parent?: string;
-  transform?: unknown;
-  visible?: boolean;
-  top_level?: boolean;
-  visibility_parent?: string;
-  position?: unknown;
-  rotation?: unknown;
-  rotation_degrees?: unknown;
-  scale?: unknown;
-  quaternion?: unknown;
-  basis?: unknown;
-  global_position?: unknown;
-  global_rotation?: unknown;
-  global_rotation_degrees?: unknown;
-  global_basis?: unknown;
-  global_transform?: unknown;
-  rotation_order?: number;
-}
-
-/**
- * Check if properties contain Node3D properties
- */
-function hasNode3DProperties(props: unknown): props is Node3DProperties {
-  return typeof props === 'object' && props !== null;
-}
 
 /**
  * Parse NodePath value to extract the actual path
@@ -55,33 +25,41 @@ function parseNodePath(nodePathValue: string): string | null {
 /**
  * Validate Node3D semantic rules (visibility_parent exists, etc.)
  */
+/**
+ * One arm, reported with two messages: the format is a fallback for what
+ * `linterParser` already rejects, and both say the same thing about the same
+ * property at the same tier, so a second `ruleName` would name a distinction
+ * nothing downstream makes.
+ */
+const arms = {
+  visibilityParent: {
+    severity: 'error',
+    ruleName: 'valid-node3d-visibility',
+    grounding: { kind: 'engine', at: 'node_3d.cpp:1312' },
+  },
+} as const satisfies RuleArms<'visibilityParent'>;
+
 function checkNode3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
   // Applicability is enforced by the rule's applicableNodeTypeMatcher (every
   // *3D subclass), so no per-type guard is needed here.
+  //
+  // Read off the bag rather than through a local interface: the slice's own
+  // `Node3DProperties` is what the parser publishes and does not model this
+  // key, so a second one declaring it narrowed to a union that has it on
+  // neither arm — and its `name`/`parent` members are heading attributes the
+  // strict parser never puts in `properties`, which is how every diagnostic
+  // below came out naming `undefined`.
+  const raw = (node.properties as Record<string, unknown>).visibility_parent;
 
-  // Type guard for properties
-  if (!hasNode3DProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const props = node.properties;
-
-  // Check if visibility_parent NodePath exists (if specified)
-  if (props.visibility_parent) {
-    const visibilityPath: string | null = parseNodePath(props.visibility_parent);
+  if (typeof raw === 'string' && raw !== '') {
+    const visibilityPath: string | null = parseNodePath(raw);
 
     if (visibilityPath === null) {
       // Should be caught by linterParser, but double-check
-      diagnostics.push({
-        severity: 'error',
-        message: `Invalid visibility_parent format: ${props.visibility_parent}`,
-        nodeName: props.name,
-        nodeType: node.type,
-        ruleName: 'valid-node3d-visibility',
-      });
+      reportArm(diagnostics, arms.visibilityParent, node, `Invalid visibility_parent format: ${raw}`);
     } else if (visibilityPath !== '') {
       // Empty path is valid — it means no visibility parent
       // (`_update_visibility_parent` clears the RID and returns).
@@ -97,13 +75,12 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
       // the same mismatch; the port handles it (node.cpp:1930-1937) with none.
       const target = resolveNodePath(scene, node, visibilityPath);
       if (target.status === 'missing') {
-        diagnostics.push({
-          severity: 'error',
-          message: `Visibility parent node not found: "${visibilityPath}". Node does not exist in scene tree.`,
-          nodeName: props.name,
-          nodeType: node.type,
-          ruleName: 'valid-node3d-visibility',
-        });
+        reportArm(
+          diagnostics,
+          arms.visibilityParent,
+          node,
+          `Visibility parent node not found: "${visibilityPath}". Node does not exist in scene tree.`
+        );
       }
     }
   }
@@ -126,13 +103,7 @@ const node3DValidationRule: LintRule = {
     // NavigationAgent3D, which descends from plain Node, and missed the 16
     // spatial types Godot did not suffix (GridMap, Decal, ReflectionProbe, …).
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Node3D'),
-    emits: [
-      {
-        ruleName: 'valid-node3d-visibility',
-        severity: 'error',
-        grounding: { kind: 'engine', at: 'node_3d.cpp:1312' },
-      },
-    ],
+    emits: armEmits(arms),
   },
   check: checkNode3D,
 };

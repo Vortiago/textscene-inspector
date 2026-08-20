@@ -303,7 +303,7 @@ shape = SubResource("shape_1")
 
 [node name="Bone" type="PhysicalBone3D"]
 
-[node name="Collision" type="CollisionShape3D" parent="Bone"]
+[node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 `;
       expectNoDiagnostic(content, { ruleName: 'collisionshape3d-invalid-parent' });

@@ -260,11 +260,11 @@ describe('AnimationTree Linter', () => {
         expectNoDiagnostic(
           scene(
             blendTree,
-            node('AnimationPlayer', {}, { name: 'Player' }),
             node('AnimationTree', {
               tree_root: 'SubResource("BlendTree_1")',
               anim_player: 'NodePath("Player")',
-            })
+            }),
+            node('AnimationPlayer', {}, { name: 'Player', parent: '.' })
           ),
           { ruleName: 'animationtree-anim-player-wrong-type' }
         );

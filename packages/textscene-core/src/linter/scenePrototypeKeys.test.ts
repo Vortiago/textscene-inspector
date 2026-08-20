@@ -65,7 +65,7 @@ describe('the node-type table answers only for types it declares', () => {
 
 describe('a scene spelling a prototype name lints without throwing', () => {
   it.each(PROTOTYPE_KEYS)('survives a node typed %s', (key) => {
-    const content = scene(node(key, {}), node('CollisionShape3D', {}, { parent: key }));
+    const content = scene(node(key, {}), node('CollisionShape3D', {}, { parent: '.' }));
     expect(() => lint(content)).not.toThrow();
   });
 
