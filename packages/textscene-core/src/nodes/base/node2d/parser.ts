@@ -10,7 +10,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
-import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
@@ -50,7 +50,7 @@ export function parseNode2D(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? Number(heading.attributes.index) : undefined,
+    index: parseHeadingIndex(heading.attributes.index),
     visible,
     position,
     rotation,

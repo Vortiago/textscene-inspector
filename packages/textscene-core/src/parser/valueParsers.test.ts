@@ -21,6 +21,7 @@ import {
   nonNegativeOr,
   nonNegativeSizeOr,
   parseOptionalRect2,
+  parseHeadingIndex,
 } from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -376,5 +377,39 @@ describe('an overflowing exponent is inside the finite grammar', () => {
     expect(vec2Or('Vector2(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 1.5, y: 2 });
     expect(parseOptionalRect2('Rect2(0, 0, 1e999, 4)')).toBeUndefined();
     expect(parseOptionalRect2('Rect2(0, 0, 3, 4)')).toEqual({ x: 0, y: 0, width: 3, height: 4 });
+  });
+});
+
+/**
+ * `resource_format_text.cpp:269-270` assigns the `index=` tag field into an
+ * `int`, so it goes through `Variant::_to_int`, whose STRING arm is
+ * `String::to_int()` — a leading-integer reader that never fails.
+ */
+describe('parseHeadingIndex', () => {
+  it('reads a plain index', () => {
+    expect(parseHeadingIndex('3')).toBe(3);
+    expect(parseHeadingIndex('0')).toBe(0);
+    expect(parseHeadingIndex('-2')).toBe(-2);
+  });
+
+  it('takes the leading integer of trailing text rather than storing NaN', () => {
+    expect(parseHeadingIndex('3px')).toBe(3);
+  });
+
+  it('reads text with no leading digits as index 0, the way to_int does', () => {
+    expect(parseHeadingIndex(' ')).toBe(0);
+    expect(parseHeadingIndex('abc')).toBe(0);
+  });
+
+  it('has no index for an absent or empty attribute', () => {
+    expect(parseHeadingIndex(undefined)).toBeUndefined();
+    expect(parseHeadingIndex('')).toBeUndefined();
+  });
+
+  it('declines a non-integer spelling whose digits overrun the to_int reader', () => {
+    // A clean integer spelling goes through `Number` for its SIGN and keeps a
+    // value past 2^53; only the `String::to_int` path surrenders to NaN.
+    expect(parseHeadingIndex(`${'9'.repeat(40)}px`)).toBeUndefined();
+    expect(parseHeadingIndex('9'.repeat(40))).toBe(Number('9'.repeat(40)));
   });
 });

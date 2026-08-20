@@ -124,6 +124,25 @@ describe('parseHeading recovers from a malformed attribute', () => {
     expect(result!.attributes).toEqual({ name: 'X', parent: 'Foo', index: '2' });
   });
 
+  // `resource_format_text.cpp:2127` stores `" binds= " + vars`, so every
+  // connection carrying bound arguments puts a space between the `=` and the
+  // array. Reading that as an empty value dropped the binds from scenes Godot
+  // itself wrote, and the array is the ONLY form allowed to open across the
+  // space — the test above still pins that a bare token does not.
+  it('reads a bound-argument array across the space Godot writes after "binds="', () => {
+    const result = parseHeading(
+      '[connection signal="pressed" from="B" to="." method="_on" binds= [1, 2]]'
+    );
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({
+      signal: 'pressed',
+      from: 'B',
+      to: '.',
+      method: '_on',
+      binds: '[1, 2]',
+    });
+  });
+
   it('keeps an explicitly empty quoted value', () => {
     const result = parseHeading('[node name="" parent="."]');
     expect(result).not.toBeNull();

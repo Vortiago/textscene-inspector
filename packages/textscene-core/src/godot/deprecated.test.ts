@@ -14,26 +14,26 @@ import {
 
 describe('canonicalPropertyName', () => {
   it('maps `frames` to the sprite_frames setter, both dimensions', () => {
-    expect(canonicalPropertyName('AnimatedSprite2D', 'frames')).toBe('sprite_frames');
-    expect(canonicalPropertyName('AnimatedSprite3D', 'frames')).toBe('sprite_frames');
+    expect(canonicalPropertyName('AnimatedSprite2D', 'frames', '1')).toBe('sprite_frames');
+    expect(canonicalPropertyName('AnimatedSprite3D', 'frames', '1')).toBe('sprite_frames');
   });
 
   it("maps Label's align pair to the alignment setters", () => {
-    expect(canonicalPropertyName('Label', 'align')).toBe('horizontal_alignment');
-    expect(canonicalPropertyName('Label', 'valign')).toBe('vertical_alignment');
+    expect(canonicalPropertyName('Label', 'align', '1')).toBe('horizontal_alignment');
+    expect(canonicalPropertyName('Label', 'valign', '1')).toBe('vertical_alignment');
   });
 
   it('leaves a current name alone', () => {
-    expect(canonicalPropertyName('AnimatedSprite2D', 'sprite_frames')).toBe('sprite_frames');
-    expect(canonicalPropertyName('Sprite2D', 'texture')).toBe('texture');
+    expect(canonicalPropertyName('AnimatedSprite2D', 'sprite_frames', '1')).toBe('sprite_frames');
+    expect(canonicalPropertyName('Sprite2D', 'texture', '1')).toBe('texture');
   });
 
   it('does not apply one type’s alias to another', () => {
     // `_set` is a virtual on the declaring class, so `Label.align` says nothing
     // about any other Control — and `frames` is a real, current property name
     // on SpriteFrames-adjacent types that do not alias it.
-    expect(canonicalPropertyName('Button', 'align')).toBe('align');
-    expect(canonicalPropertyName('Sprite2D', 'frames')).toBe('frames');
+    expect(canonicalPropertyName('Button', 'align', '1')).toBe('align');
+    expect(canonicalPropertyName('Sprite2D', 'frames', '1')).toBe('frames');
   });
 
   it('reports which spellings are deprecated', () => {
@@ -50,13 +50,13 @@ describe('a property key that collides with Object.prototype', () => {
   it.each(['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'])(
     'returns %s unchanged rather than a prototype member',
     (key) => {
-      expect(canonicalPropertyName('Label', key)).toBe(key);
+      expect(canonicalPropertyName('Label', key, '1')).toBe(key);
     }
   );
 
   it('is not fooled by a node type that collides either', () => {
-    expect(canonicalPropertyName('constructor', 'frames')).toBe('frames');
-    expect(canonicalPropertyName('__proto__', 'align')).toBe('align');
+    expect(canonicalPropertyName('constructor', 'frames', '1')).toBe('frames');
+    expect(canonicalPropertyName('__proto__', 'align', '1')).toBe('align');
   });
 
   it('reports such a key as not deprecated', () => {
@@ -80,7 +80,7 @@ describe('the Godot-3 navigation vocabulary', () => {
     ['RichTextLabel', 'bbcode_text', 'text'],
     ['PointLight2D', 'mode', 'blend_mode'],
   ])('%s.%s resolves to %s', (type, old, canonical) => {
-    expect(canonicalPropertyName(type, old)).toBe(canonical);
+    expect(canonicalPropertyName(type, old, '1')).toBe(canonical);
   });
 });
 
@@ -92,7 +92,7 @@ describe('an alias a slice already handles is deliberately absent', () => {
   it.each([['playback_active'], ['method_call_mode'], ['playback_process_mode']])(
     'AnimationPlayer.%s is left to the slice',
     (key) => {
-      expect(canonicalPropertyName('AnimationPlayer', key)).toBe(key);
+      expect(canonicalPropertyName('AnimationPlayer', key, '1')).toBe(key);
     }
   );
 });
@@ -109,7 +109,7 @@ describe('an alias that TRANSFORMS the value is deliberately absent', () => {
     ['StandardMaterial3D', 'flags_transparent'],
     ['GeometryInstance3D', 'use_in_baked_light'],
   ])('%s.%s is left alone', (type, key) => {
-    expect(canonicalPropertyName(type, key)).toBe(key);
+    expect(canonicalPropertyName(type, key, '1')).toBe(key);
   });
 });
 
@@ -128,5 +128,32 @@ describe('canonicalisePropertyBag', () => {
 
   it('does not invent keys from Object.prototype', () => {
     expect(canonicalisePropertyBag('Label', { constructor: '5' })).toEqual({ constructor: '5' });
+  });
+});
+
+/**
+ * Two `_set` arms gate on the VALUE and return false for the rest. `_setv` then
+ * finds no property under the deprecated name, so Godot drops the write — it
+ * does not apply it to the canonical slot.
+ */
+describe('an alias whose _set arm refuses the value', () => {
+  it('keeps an empty bbcode_text off RichTextLabel.text', () => {
+    // rich_text_label.cpp:7563 — `!((String)p_value).is_empty()`.
+    expect(canonicalPropertyName('RichTextLabel', 'bbcode_text', '""')).toBe('bbcode_text');
+    expect(canonicalPropertyName('RichTextLabel', 'bbcode_text', '"Hello"')).toBe('text');
+  });
+
+  it('keeps a non-numeric PointLight2D.mode off blend_mode', () => {
+    // light_2d.cpp:456-458 — `p_value.is_num()`. A quoted value is a STRING and
+    // `true` is a BOOL; neither is num.
+    expect(canonicalPropertyName('PointLight2D', 'mode', '"add"')).toBe('mode');
+    expect(canonicalPropertyName('PointLight2D', 'mode', 'true')).toBe('mode');
+    expect(canonicalPropertyName('PointLight2D', 'mode', '1')).toBe('blend_mode');
+    expect(canonicalPropertyName('PointLight2D', 'mode', '1.0')).toBe('blend_mode');
+  });
+
+  it('does not let a refused value clear the canonical key beside it', () => {
+    const bag = canonicalisePropertyBag('RichTextLabel', { text: '"Hello"', bbcode_text: '""' });
+    expect(bag.text).toBe('"Hello"');
   });
 });

@@ -39,11 +39,11 @@
 
 import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
-import { slotTupleRegex, matchedFloat, parseGodotFloat, allFinite } from '../godot/number.js';
-import { storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
+import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
+import { slotComponents, storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
 
-import { nodePathLiteral } from '../godot/index.js';
+import { nodePathLiteral, toIntIndex } from '../godot/index.js';
 
 /**
  * A finite scalar in the tokenizer's grammar, or `null`.
@@ -98,7 +98,9 @@ export function parseOptionalRect2(
     warn(`${context}: invalid Rect2 "${value}", treating as unset`);
     return undefined;
   }
-  const c = [matchedFloat(m[1]!), matchedFloat(m[2]!), matchedFloat(m[3]!), matchedFloat(m[4]!)];
+  // A `Rect2i` spelling narrows every component to int32 before the widening
+  // conversion runs, so the two spellings do not carry the same numbers.
+  const c = slotComponents(value, 'Rect2', [m[1], m[2], m[3], m[4]]);
   // `1e999` is inside the finite grammar and outside what a viewport can draw.
   if (!allFinite(c)) {
     warn(`${context}: non-finite Rect2 "${value}"`);
@@ -375,4 +377,25 @@ export function parseOptionalVector2(value: string | undefined): Vector2 | undef
 export function parseNodePathLiteral(value: string | undefined): string | null {
   if (value === undefined) return null;
   return nodePathLiteral(value);
+}
+
+/**
+ * The sibling index a `[node …]` heading's `index=` attribute names.
+ *
+ * `resource_format_text.cpp:269-270` assigns the tag field straight into an
+ * `int`, so the value goes through `Variant::_to_int` (`variant.h`), whose
+ * STRING arm is `String::to_int()`. That reader takes a leading integer and
+ * stops: `index="3px"` is index 3 and `index=" "` is index 0, neither an error
+ * nor an absent index. {@link toIntIndex} is that model.
+ *
+ * One reader for one attribute: six slices spelled this four ways, and the two
+ * that used a bare `Number` stored `NaN`, which poisons every sibling-ordering
+ * comparison it reaches.
+ */
+export function parseHeadingIndex(value: string | undefined): number | undefined {
+  if (value === undefined || value === '') return undefined;
+  const index = toIntIndex(value);
+  // Past `String::to_int`'s own bound this reader cannot name the int64 Godot
+  // holds, so it declines rather than letting a wrong number travel.
+  return Number.isNaN(index) ? undefined : index;
 }

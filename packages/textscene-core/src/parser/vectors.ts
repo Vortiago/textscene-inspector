@@ -6,7 +6,8 @@
  * types. Anything here that a second domain would want belongs there instead.
  */
 
-import { slotTupleRegex, matchedFloat, allFinite } from '../godot/number.js';
+import { slotTupleRegex, allFinite } from '../godot/number.js';
+import { slotComponents } from '../godot/int.js';
 
 export interface Vector2 {
   x: number;
@@ -39,8 +40,8 @@ export function parseVector2(value: string): Vector2 {
 
   // An overflowing exponent is inside the finite grammar but not inside what a
   // viewport can draw, so it takes the same warn-then-fall-back path as a
-  // literal the grammar refuses.
-  const components = [matchedFloat(match[1]), matchedFloat(match[2])];
+  // literal the grammar refuses. A `Vector2i` spelling narrows to int32 first.
+  const components = slotComponents(value, 'Vector2', [match[1], match[2]]);
   if (!allFinite(components)) throw new Error(`Non-finite Vector2: ${value}`);
   return { x: components[0]!, y: components[1]! };
 }
@@ -52,7 +53,7 @@ export function parseVector3(value: string): Vector3 {
     throw new Error(`Invalid Vector3 format: ${value}`);
   }
 
-  const components = [matchedFloat(match[1]), matchedFloat(match[2]), matchedFloat(match[3])];
+  const components = slotComponents(value, 'Vector3', [match[1], match[2], match[3]]);
   if (!allFinite(components)) throw new Error(`Non-finite Vector3: ${value}`);
   return { x: components[0]!, y: components[1]!, z: components[2]! };
 }

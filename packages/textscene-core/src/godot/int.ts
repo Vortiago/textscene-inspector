@@ -26,7 +26,8 @@
  * range and said nothing at all.
  */
 
-import { parseGodotFloat } from './number.js';
+import { matchedFloat, parseGodotFloat } from './number.js';
+import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
 
 /** `(int32_t)` of an integer Variant (`variant.h:436`, `variant.cpp:1495-1497`). */
 export function toInt32(value: number): number {
@@ -359,4 +360,32 @@ export function storedInt(
   if (!Number.isFinite(num)) return null;
   const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
+}
+
+/**
+ * The matched components of a composite in a FLOAT-typed slot, each read the
+ * way the SPELLING stores it.
+ *
+ * `slotTupleRegex` admits the `i`-suffixed spelling because
+ * `can_convert_strict` converts it, but the two spellings do not store the same
+ * numbers. `Vector2i(...)` arguments go through `_parse_construct<int32_t>`
+ * (`variant_parser.cpp:721-733`), so each is narrowed to int32 BEFORE the
+ * widening into the float slot runs: `Vector2i(4294967295, 0)` reaches a
+ * `Vector2` slot as `(-1, 0)`, and `Vector2i(1.5, 0)` as `(1, 0)`. Reading
+ * those captures as plain floats placed the node 4.29e9 units away.
+ *
+ * An unstorable component comes back NaN, so the caller's existing `allFinite`
+ * check takes the warn-then-fall-back path it already has for a literal the
+ * grammar refuses.
+ */
+export function slotComponents(
+  literal: string,
+  /** The slot's own type name, e.g. `Vector2` — NOT the spelling in the file. */
+  floatTypeName: string,
+  captures: readonly (string | undefined)[]
+): number[] {
+  const asInt = isConvertedSpelling(floatTypeName, compositeTypeName(literal));
+  return captures.map((capture) =>
+    asInt ? (storedInt(capture) ?? NaN) : matchedFloat(capture ?? '')
+  );
 }

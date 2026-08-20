@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
+import { parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
 
 /** Collect `theme_override_<category>/<name> = value` into the four typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
@@ -56,10 +56,8 @@ export function parseControl(
 
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
   if (heading.attributes.instance) result.instance = heading.attributes.instance;
-  if (heading.attributes.index) {
-    const idx = Number(heading.attributes.index);
-    if (!Number.isNaN(idx)) result.index = idx;
-  }
+  const index = parseHeadingIndex(heading.attributes.index);
+  if (index !== undefined) result.index = index;
   if (properties.visible !== undefined) result.visible = properties.visible !== 'false';
 
   result.layoutMode = parseOptionalFloat(properties.layout_mode);

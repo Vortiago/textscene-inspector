@@ -168,7 +168,7 @@ export class TscnParserCore {
         // Join happens exactly once per value, here — O(total length), not
         // per appended line.
         const value = pendingMultiline.lines.join('\n');
-        currentProperties[canonicalPropertyName(currentOwnerType(), pendingMultiline.key)] =
+        currentProperties[canonicalPropertyName(currentOwnerType(), pendingMultiline.key, value)] =
           value;
         observer?.onProperty?.(
           currentSection,
@@ -275,8 +275,9 @@ export class TscnParserCore {
             // every reader downstream — typed parser, render component and
             // rule alike — sees one key. The observer still receives the key as
             // written, because a diagnostic must name what is in the file.
-            currentProperties[canonicalPropertyName(currentOwnerType(), property.key)] =
-              property.value;
+            currentProperties[
+              canonicalPropertyName(currentOwnerType(), property.key, property.value)
+            ] = property.value;
             observer?.onProperty?.(
               currentSection,
               currentOwnerType(),

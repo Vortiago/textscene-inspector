@@ -97,23 +97,33 @@ function scanBalanced(str: string, start: number, open: string, close: string): 
  */
 function scanHeadingValue(str: string, pos: number): { value: string; nextPos: number } {
   const len = str.length;
-  const first = str[pos];
+
+  // A connection's bound arguments are the one heading value Godot writes with
+  // a space after the `=`: `resource_format_text.cpp:2127` stores
+  // `" binds= " + vars`. Only an array may open across that space — for every
+  // other form a space means the value is missing and the token behind it
+  // belongs to the next attribute, which is what `type= parent="Foo"` pins.
+  let start = pos;
+  while (start < len && isSpaceCode(str.charCodeAt(start))) start++;
+  if (str[start] !== '[') start = pos;
+
+  const first = str[start];
   let end = -1;
 
   if (first === '"') {
-    end = scanQuoted(str, pos);
+    end = scanQuoted(str, start);
   } else if (first === '[') {
-    end = scanBalanced(str, pos, '[', ']');
+    end = scanBalanced(str, start, '[', ']');
   } else {
     // A constructor is an identifier IMMEDIATELY followed by `(` — a space
     // before the paren belongs to the next attribute, not to this value.
-    let i = pos;
+    let i = start;
     while (i < len && isIdentCode(str.charCodeAt(i))) i++;
     if (str[i] === '(') end = scanBalanced(str, i, '(', ')');
   }
 
-  if (end === -1) end = skipToSpace(str, pos);
-  return { value: str.slice(pos, end), nextPos: end };
+  if (end === -1) end = skipToSpace(str, start);
+  return { value: str.slice(start, end), nextPos: end };
 }
 
 /**

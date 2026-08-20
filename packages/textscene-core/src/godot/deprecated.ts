@@ -7,13 +7,21 @@
  * `frames` straight to `set_sprite_frames`. To every reader in this codebase
  * the old spelling is simply the same field under another name.
  *
- * PURE RENAMES ONLY. Many `_set` overrides also TRANSFORM the value —
+ * NO VALUE TRANSFORMS. Many `_set` overrides also TRANSFORM the value —
  * `Decal`/`RectangleShape2D`/`BoxShape3D`/`VoxelGI` and six
  * `GPUParticlesCollision*` types all map `extents` to `set_size(p_value * 2)`,
  * and `StandardMaterial3D` maps a Godot-3 boolean onto an enum setter. Renaming
  * the key would make the linter validate the right slot while the RENDERER read
  * a value twice the size it should be, so those need a transform, not a table
  * row, and are deliberately absent.
+ *
+ * An arm may still GATE on the value without transforming it, and two here do:
+ * `RichTextLabel::bbcode_text` forwards only a non-empty string and
+ * `PointLight2D::mode` only a number. `_set` returns false for the rest, so
+ * `_setv` finds nothing under the deprecated name and the write is dropped —
+ * renaming it unconditionally applied a value Godot discards, and an empty
+ * `bbcode_text` wiped the `text` beside it. That is why the lookup takes the
+ * value.
  *
  * The first version of this table was built by grepping for
  * `p_name == SNAME("...")` and found four entries. Most overrides compare
@@ -59,6 +67,9 @@
  * projects precisely because its rule read the canonical key alone.
  */
 
+import { IS_VALID_INT_RE, literalText } from './string.js';
+import { TSCN_FLOAT_RE } from './number.js';
+
 /**
  * `Type.deprecated` to the property the setter actually writes.
  *
@@ -73,8 +84,16 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
   AnimatedSprite3D: { frames: 'sprite_frames' }, // sprite_3d.cpp:1495
   // set_horizontal_alignment / set_vertical_alignment.
   Label: { align: 'horizontal_alignment', valign: 'vertical_alignment' }, // label.cpp:1002-1007
-  RichTextLabel: { bbcode_text: 'text' }, // rich_text_label.cpp:7563
-  PointLight2D: { mode: 'blend_mode' }, // light_2d.cpp:457
+  // `_set` is `p_name == "bbcode_text" && !((String)p_value).is_empty()`, so an
+  // EMPTY bbcode_text is refused and must not clear `text`.
+  RichTextLabel: {
+    bbcode_text: { to: 'text', applies: (raw) => literalText(raw) !== '' }, // rich_text_label.cpp:7563
+  },
+  // `_set` is `p_name == "mode" && p_value.is_num()`: only an INT or FLOAT
+  // variant forwards, so a quoted or boolean mode is dropped, not converted.
+  PointLight2D: {
+    mode: { to: 'blend_mode', applies: isNumericLiteral }, // light_2d.cpp:456-458
+  },
   // The Godot-3 navigation vocabulary, renamed wholesale in 4.0. Every one of
   // these passes `p_value` through untouched.
   NavigationRegion2D: { navpoly: 'navigation_polygon' }, // navigation_region_2d.cpp:361
@@ -98,8 +117,28 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
   },
 });
 
+/**
+ * What one deprecated spelling forwards to.
+ *
+ * A bare string is a PURE rename. The object form carries the value test a
+ * `_set` arm applies before forwarding: Godot returns false for the rest, and
+ * `_setv` then finds no property under the deprecated name, so the write is
+ * DROPPED rather than landing on the canonical slot.
+ */
+type AliasRow = string | { readonly to: string; readonly applies: (raw: string) => boolean };
+
+/**
+ * Whether a serialised value is the INT or FLOAT variant `Variant::is_num()`
+ * accepts. A quoted `"1"` is a STRING and a `true` is a BOOL; neither is num,
+ * so neither forwards.
+ */
+function isNumericLiteral(raw: string): boolean {
+  const bare = raw.trim();
+  return IS_VALID_INT_RE.test(bare) || TSCN_FLOAT_RE.test(bare);
+}
+
 /** Nested plain literals to nested Maps, so no lookup can reach a prototype. */
-function toLookup(table: Record<string, Record<string, string>>): Map<string, Map<string, string>> {
+function toLookup(table: Record<string, Record<string, AliasRow>>): Map<string, Map<string, AliasRow>> {
   return new Map(Object.entries(table).map(([type, keys]) => [type, new Map(Object.entries(keys))]));
 }
 
@@ -111,11 +150,22 @@ function toLookup(table: Record<string, Record<string, string>>): Map<string, Ma
  * virtual on the declaring class, so `Label`'s `align` says nothing about any
  * other Control.
  */
-export function canonicalPropertyName(nodeType: string | undefined, key: string): string {
+export function canonicalPropertyName(
+  nodeType: string | undefined,
+  key: string,
+  /** The serialised value, because two `_set` arms forward only some of them. */
+  rawValue: string
+): string {
   // A section with no type — `[resource]`, or a heading whose `type=` is absent
   // because the node is instantiated — declares no class, so it aliases nothing.
   if (nodeType === undefined) return key;
-  return DEPRECATED_PROPERTY_NAMES.get(nodeType)?.get(key) ?? key;
+  const row = DEPRECATED_PROPERTY_NAMES.get(nodeType)?.get(key);
+  if (row === undefined) return key;
+  if (typeof row === 'string') return row;
+  // `_set` returned false, so nothing claims the key and Godot drops the write.
+  // Leaving it under its own spelling keeps it out of the canonical slot while
+  // the linter still sees the text the scene carries.
+  return row.applies(rawValue) ? row.to : key;
 }
 
 /** Whether `key` is a deprecated spelling on `nodeType`. */
@@ -143,7 +193,7 @@ export function canonicalisePropertyBag(
   if (nodeType === undefined || DEPRECATED_PROPERTY_NAMES.get(nodeType) === undefined) return raw;
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
-    out[canonicalPropertyName(nodeType, key)] = value;
+    out[canonicalPropertyName(nodeType, key, value)] = value;
   }
   return out;
 }

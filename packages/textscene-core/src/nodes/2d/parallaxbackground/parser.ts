@@ -16,7 +16,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { decomposeTransform2D } from '../../base/node2d/parser';
 import type { Vector2 } from '../../base/node2d/types';
 import type { ParallaxBackgroundProperties } from './types';
@@ -49,7 +49,7 @@ export function parseParallaxBackground(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? Number(heading.attributes.index) : undefined,
+    index: parseHeadingIndex(heading.attributes.index),
     visible: properties.visible === undefined ? undefined : properties.visible !== 'false',
     layer: intOr(properties.layer, PARALLAX_BACKGROUND_LAYER, context),
     offset,
