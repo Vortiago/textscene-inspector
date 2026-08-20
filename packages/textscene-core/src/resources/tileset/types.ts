@@ -36,7 +36,11 @@ export interface TileGrid {
 export interface TileSetModel extends TileGrid {
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
-  /** Source ids in appearance order — deterministic within-layer draw order. */
+  /**
+   * Source ids in first-appearance order, each once — the deterministic
+   * within-layer draw order. One entry per `sources` key, never per written
+   * spelling of one.
+   */
   sourceOrder: number[];
 }
 

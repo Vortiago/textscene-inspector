@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { curveFromResource, decodeCurve, resolveCurve } from './decode';
+import { MAX_PADDED_POINTS } from './pointCount';
+import { sampleCurve } from './sample';
 import { CurveTangentMode, EMPTY_CURVE } from './types';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -68,6 +70,16 @@ describe('decodeCurve', () => {
     expect(decodeCurve({ _data: 'not an array' }).points).toEqual([]);
   });
 
+  it('drops a point whose component overflows to Infinity (error path)', () => {
+    // `1e999` is ordinary digits and an exponent, so it is inside the finite
+    // grammar and only the result betrays it. Reaching `sampleCurve`, it
+    // multiplies Infinity/NaN into the particle geometry that samples the curve.
+    const curve = decodeCurve({ _data: '[Vector2(0, 1e999), 0.0, 0.0, 0, 0]' });
+
+    expect(curve.points).toEqual([]);
+    expect(sampleCurve(curve, 0.5)).toBe(0);
+  });
+
   it('returns Godot resource defaults for an empty resource body (edge case)', () => {
     const curve = decodeCurve({});
     expect(curve).toEqual({
@@ -83,6 +95,75 @@ describe('decodeCurve', () => {
     const curve = decodeCurve({ _data: '[\n  Vector2( 0 , 0.5 ),\n  1.0,\n  2.0,\n  0,\n  0\n]' });
     expect(curve.points[0]!.position).toEqual({ x: 0, y: 0.5 });
     expect(curve.points[0]!.rightTangent).toBe(2);
+  });
+});
+
+describe('`point_count` resizes the decoded point list', () => {
+  /** The default point `Curve::_add_point` appends: `Vector2()`, no tangents, Free. */
+  const DEFAULT_POINT = {
+    position: { x: 0, y: 0 },
+    leftTangent: 0,
+    rightTangent: 0,
+    leftMode: CurveTangentMode.Free,
+    rightMode: CurveTangentMode.Free,
+  };
+
+  it('pads with Godot’s default point when the count exceeds `_data`', () => {
+    const curve = decodeCurve({ _data: '[Vector2(1, 1), 0.5, 0.5, 1, 1]', point_count: '3' });
+
+    expect(curve.points).toHaveLength(3);
+    expect(curve.points[0]).toEqual(DEFAULT_POINT);
+    expect(curve.points[1]).toEqual(DEFAULT_POINT);
+    expect(curve.points[2]).toEqual({
+      position: { x: 1, y: 1 },
+      leftTangent: 0.5,
+      rightTangent: 0.5,
+      leftMode: CurveTangentMode.Linear,
+      rightMode: CurveTangentMode.Linear,
+    });
+  });
+
+  it('seats a padded point in offset order, so sampling interpolates', () => {
+    // One point makes `sampleCurve` answer a constant; the padded point at the
+    // domain start gives it a span to interpolate across.
+    const curve = decodeCurve({ _data: '[Vector2(1, 1), 0.0, 0.0, 0, 0]', point_count: '2' });
+
+    expect(curve.points.map((p) => p.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ]);
+    expect(sampleCurve(curve, 0)).toBe(0);
+    expect(sampleCurve(curve, 0.5)).toBeCloseTo(0.5, 5);
+    expect(sampleCurve(curve, 1)).toBe(1);
+  });
+
+  it('seats the pad ahead of a LONE point of equal offset', () => {
+    // `_add_point`'s one-point branch inserts at 0 unless the new offset is
+    // strictly greater; its general branch seats an equal offset after instead.
+    const curve = decodeCurve({ _data: '[Vector2(0, 0.5), 0.0, 0.0, 0, 0]', point_count: '3' });
+
+    expect(curve.points.map((p) => p.position.y)).toEqual([0, 0, 0.5]);
+  });
+
+  it('clamps the padded position into the curve’s own ranges', () => {
+    const curve = decodeCurve({
+      _limits: '[2.0, 5.0, 1.0, 3.0]',
+      _data: '[Vector2(3, 4), 0.0, 0.0, 0, 0]',
+      point_count: '2',
+    });
+
+    expect(curve.points[0]!.position).toEqual({ x: 1, y: 2 });
+  });
+
+  it('keeps every decoded point when the count is negative (error path)', () => {
+    // `ERR_FAIL_COND(p_count < 0)` returns before touching the point list.
+    expect(decodeCurve({ ...CANDLE_SPARKLE, point_count: '-1' }).points).toHaveLength(3);
+  });
+
+  it('stops padding at `MAX_PADDED_POINTS` (edge case)', () => {
+    const curve = decodeCurve({ ...CANDLE_SPARKLE, point_count: '100000' });
+
+    expect(curve.points).toHaveLength(MAX_PADDED_POINTS);
   });
 });
 
@@ -162,11 +243,11 @@ describe('a Variant number Godot reads differently from `parseInt`', () => {
   });
 
   it('reads an exponent-typed `point_count` as the integer Godot stores', () => {
-    // `2e1` is 20 to Godot's tokenizer and 2 to `parseInt`, and the smaller
-    // number silently sliced the point list down to two.
+    // `2e1` is 20 to Godot's tokenizer and 2 to `parseInt`: the smaller number
+    // slices the three-point list down to two, the larger pads it out to 20.
     const curve = decodeCurve({ ...CANDLE_SPARKLE, point_count: '2e1' });
 
-    expect(curve.points).toHaveLength(3);
+    expect(curve.points).toHaveLength(20);
   });
 
   it('does not read a tangent mode out of text the tokenizer refuses', () => {

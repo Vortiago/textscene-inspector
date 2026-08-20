@@ -4,9 +4,8 @@
  * `ViewportTexture` consumer), never by the parent's own walker (ADR-0030).
  *
  * Lives here, next to the slice that defines the behaviour, rather than in a
- * central set: it is consulted by the Control overlay walker, the workspace
- * rule, and the linter, and a leaf module keeps the **React-free linter
- * boundary** intact (no THREE, no React, no registry).
+ * central set: it is consulted by the Control overlay walker and the workspace
+ * rule, and a leaf module keeps it free of THREE, React and the registry.
  *
  * Note this is NOT the same question as "does the 3D canvas skip it". The 3D
  * canvas deliberately passes a sub-viewport through, because Godot shares the

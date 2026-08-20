@@ -50,6 +50,15 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
   const sourceOrder: number[] = [];
 
+  // Two spellings of one id (`sources/1`, `sources/01`, `sources/+1`) are one
+  // source: `_set` drops whatever sits at the id before re-adding
+  // (tile_set.cpp:3965-3968), so the last spelling's value wins — what
+  // `Map.set` already does. The id keeps its first-seen place in the order.
+  const seat = (id: number, source: AtlasSourceModel): void => {
+    if (!sources.has(id)) sourceOrder.push(id);
+    sources.set(id, source);
+  };
+
   for (const [key, value] of Object.entries(data.properties)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
@@ -74,8 +83,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    sources.set(sourceId, resolveAtlasSource(sub.data, data));
-    sourceOrder.push(sourceId);
+    seat(sourceId, resolveAtlasSource(sub.data, data));
   }
 
   const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');

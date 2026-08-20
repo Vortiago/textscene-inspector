@@ -115,7 +115,7 @@ describe('tileSetFromScene', () => {
   });
 
   // `add_source` re-seats a `-1` override at the auto-assigned `next_source_id`
-  // (tile_set.cpp:481-482) and refuses anything below it (:480), so neither
+  // (tile_set.cpp:481-482) and refuses anything below it (:479), so neither
   // spelling names source -1 and this decode cannot know which id the first one
   // landed on.
   it('drops a negative source id rather than seating one', () => {
@@ -133,6 +133,90 @@ describe('tileSetFromScene', () => {
       String(c[0]).includes('negative source id')
     );
     expect(idWarns).toHaveLength(1);
+  });
+
+  // `is_valid_int()` reads `sources/1`, `sources/01` and `sources/+1` as the
+  // same source, and `_set` drops whatever sits at the id before re-adding
+  // (tile_set.cpp:3965-3968). `sourceOrder` seats the id once, so `drawnSources`
+  // cannot batch and draw one source several times over.
+  it('collapses several spellings of one source id to a single order entry, last value winning', () => {
+    const dupInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'atlas2',
+        type: 'TileSetAtlasSource',
+        data: { id: 'atlas2', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
+      },
+      {
+        id: 'atlas3',
+        type: 'TileSetAtlasSource',
+        data: { id: 'atlas3', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(4, 4)' },
+      },
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          'sources/1': 'SubResource("atlas1")',
+          'sources/01': 'SubResource("atlas2")',
+          'sources/+1': 'SubResource("atlas3")',
+        },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', dupInternals, externals);
+
+    expect(model!.sourceOrder).toEqual([1]);
+    expect(model!.sources.size).toBe(1);
+    expect(model!.sources.get(1)!.textureRegionSize).toEqual({ x: 4, y: 4 });
+  });
+
+  it('keeps a re-spelled id in its first-seen place among distinct sources', () => {
+    const mixedInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'atlas2',
+        type: 'TileSetAtlasSource',
+        data: { id: 'atlas2', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
+      },
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          'sources/7': 'SubResource("atlas1")',
+          'sources/2': 'SubResource("atlas1")',
+          'sources/07': 'SubResource("atlas2")',
+        },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', mixedInternals, externals);
+
+    expect(model!.sourceOrder).toEqual([7, 2]);
+    expect(model!.sources.get(7)!.textureRegionSize).toEqual({ x: 8, y: 8 });
+  });
+
+  it('keeps distinct sources in file order, one entry each', () => {
+    const manyInternals: TscnInternalResource[] = [
+      internals[0]!,
+      {
+        id: 'ts',
+        type: 'TileSet',
+        data: {
+          id: 'ts',
+          'sources/5': 'SubResource("atlas1")',
+          'sources/0': 'SubResource("atlas1")',
+          'sources/3': 'SubResource("atlas1")',
+        },
+      },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', manyInternals, externals);
+
+    expect(model!.sourceOrder).toEqual([5, 0, 3]);
+  });
+
+  it('seats a lone source once', () => {
+    const model = tileSetFromScene('SubResource("ts")', internals, externals);
+    expect(model!.sourceOrder).toEqual([0]);
   });
 
   it('reads the grid surface: tile_shape, tile_layout, tile_offset_axis, tile_size', () => {

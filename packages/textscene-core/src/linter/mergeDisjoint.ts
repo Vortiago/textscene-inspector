@@ -18,7 +18,12 @@ export function mergeDisjoint<T>(
   const merged: Record<string, T> = {};
   for (const part of parts) {
     for (const [key, value] of Object.entries(part)) {
-      if (key in merged) throw new Error(`${key} has ${what} in two parts`);
+      // `Object.hasOwn`, not `in`: the two sides must be the same set. Both
+      // keys come from a table keyed by a Godot name, and `in` walks the
+      // prototype, so `toString`/`valueOf`/`constructor` collided with
+      // `Object.prototype` on their FIRST and only declaration and threw at
+      // import time, taking the linter barrel down with them.
+      if (Object.hasOwn(merged, key)) throw new Error(`${key} has ${what} in two parts`);
       merged[key] = value;
     }
   }

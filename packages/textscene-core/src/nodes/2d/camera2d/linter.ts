@@ -9,28 +9,37 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { isViewportBoundary } from '../../viewport/subviewport/viewportBoundary.js';
+import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
 import { searchAncestors } from '../../../linter/parentType.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /**
- * The SubViewport a node draws into, or null for the scene's own viewport.
+ * The Viewport a node draws into, or null for the scene's own viewport.
  *
- * Godot's current-camera slot is per-viewport: `Camera2D` joins
- * `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:349) and `make_current` is
- * gated on `!viewport->get_camera_2d()` (:354), where `camera_2d` is a member of
- * Viewport itself (viewport.h:764). Two enabled cameras in different
- * sub-viewports each become current in their own and never contend.
+ * Godot's current-camera slot is per-viewport: `Camera2D` takes
+ * `viewport = get_viewport()` (camera_2d.cpp:342), joins
+ * `"__cameras_" + itos(vp.get_id())` (:349), and `make_current` is gated on
+ * `!viewport->get_camera_2d()` (:354), where `camera_2d` is a member of
+ * Viewport itself (viewport.h:764). Two enabled cameras in different viewports
+ * each become current in their own and never contend.
+ *
+ * The scope is therefore the nearest Viewport ANCESTOR (`node.cpp:345-347`),
+ * every subclass included: `Window` is a Viewport (`window.h:43`), so a camera
+ * inside a window, popup or dialog is scoped exactly as one inside a
+ * SubViewport. Read off the base chain rather than a type list, so a subclass
+ * needs no edit here.
  *
  * `undefined` rather than `null` for an ancestor whose class this file does not
- * declare: an instanced sub-scene may be rooted at a SubViewport, and reading it
+ * declare: an instanced sub-scene may be rooted at a Viewport, and reading it
  * as an ordinary node pools its cameras into the outer viewport's scope — the
- * very false positive the scoping was added to remove. Distinct from `null`,
+ * very false positive this scoping exists to prevent. Distinct from `null`,
  * which is the real scene-root viewport, so two such cameras never compare equal.
  */
 function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
+  // `searchAncestors` hands `visit` only ancestors whose type this file states
+  // and the catalog knows, which is what makes a bare `descendsFrom` correct.
   const search = searchAncestors(scene, node, (ancestor) =>
-    isViewportBoundary(ancestor.type) ? ancestor : undefined
+    descendsFrom(ancestor.type, 'Viewport') ? ancestor : undefined
   );
   if (search.kind === 'unknowable') return undefined;
   return search.kind === 'found' ? search.value : null;

@@ -217,6 +217,21 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(error?.code).toBe('INVALID_SPRING_BONE_JOINT_KEY');
       expect(error?.message).toContain('spring_bone_simulator_3d.cpp:138-139');
     });
+
+    it('ignores whatever follows the joints dispatch segment', () => {
+      // `prop = path.get_slicec('/', 4)` (:123) takes ONE segment, so a tail
+      // below it never reaches the comparison and `set_joint_radius` runs.
+      expect(check('settings/0/joints/0/radius/extra', '0.5')).toBeNull();
+      expect(check('settings/0/joints/0/rotation_axis/x/y', '3')).toBeNull();
+      // The joint index stays a whole segment under either shape: `to_int`
+      // resolves `x` to joint 0 and the write lands there (:122).
+      expect(check('settings/0/joints/x/radius/extra', '0.5')).toBeNull();
+      // The segment itself still decides, and its value is still checked.
+      expect(check('settings/0/joints/0/not_a_leaf/extra', '1')?.code).toBe(
+        'INVALID_SPRING_BONE_JOINT_KEY'
+      );
+      expect(check('settings/0/joints/0/radius/extra', '-1')?.severity).toBe('warning');
+    });
   });
 
   describe('the bone-index leaves', () => {
@@ -362,6 +377,14 @@ describe('SpringBoneSimulator3D strict validators', () => {
 
     it('rejects a non-NodePath', () => {
       expect(check('settings/0/collisions/0', '"Sphere"')?.severity).toBe('error');
+    });
+
+    it('ignores whatever follows a collision index', () => {
+      // Both branches read the index and nothing below it (:143-145, :148-150),
+      // then hand the value straight to the setter.
+      expect(check('settings/0/collisions/0/extra', 'NodePath("Sphere")')).toBeNull();
+      expect(check('settings/0/exclude_collisions/0/extra', 'NodePath("Sphere")')).toBeNull();
+      expect(check('settings/0/collisions/0/extra', '"Sphere"')?.severity).toBe('error');
     });
 
     it('claims no floor on either count, since neither setter guards one', () => {

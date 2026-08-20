@@ -14,9 +14,9 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { variantTupleRegex, parseGodotFloat } from '../../../godot/number.js';
+import { variantTupleRegex, parseGodotFloat, allFinite } from '../../../godot/number.js';
 import { storedInt } from '../../../godot/int.js';
-import { warn } from '../../../logger';
+import { info, warn } from '../../../logger';
 import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
@@ -239,6 +239,7 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
     transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
 
   const values = parseValueArray(keysStr);
+  if (values === null) return [];
 
   return times.map((time, i) => ({
     time,
@@ -281,8 +282,7 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
  * `parseFloat` turned the `inf`/`-inf`/`inf_neg`/`nan` that `rtos_fix` writes
  * into a packed float array (variant_parser.cpp:2504) into a silent NaN, and
  * read the trailing garbage in `1abc` as 1. An unreadable element warns and
- * lands as NaN, which is what every downstream comparison already treats as
- * "no keyframe here".
+ * lands as NaN.
  */
 function parseFloatList(raw: string): number[] {
   const trimmed = raw.trim();
@@ -297,8 +297,18 @@ function parseFloatList(raw: string): number[] {
   });
 }
 
-/** Extracts and decodes the `"values": [...]` bracketed array (paren-aware). */
-function parseValueArray(keysStr: string): GodotKeyframeValue[] {
+/**
+ * The decoded `"values": [...]` array (paren-aware), or `null` when one of its
+ * keys is not a value this renderer can key — which drops the whole track,
+ * since there is nothing to interpolate through at that key's time.
+ *
+ * `info` rather than `warn`: the common causes — an unmodelled Variant
+ * (`Transform3D`, a dict) and a non-finite component — are both legal in a
+ * sound scene, so only the preview is short a track. Text Godot's own tokenizer
+ * cannot read lands here too; `parseFloatList` below reports that class at
+ * `warn` where it appears in a packed array.
+ */
+function parseValueArray(keysStr: string): GodotKeyframeValue[] | null {
   const start = keysStr.indexOf('"values":');
   if (start === -1) return [];
   const open = keysStr.indexOf('[', start);
@@ -319,7 +329,16 @@ function parseValueArray(keysStr: string): GodotKeyframeValue[] {
   }
   if (end === -1) return [];
 
-  return splitKeyframeParts(keysStr.slice(open + 1, end)).map(decodeValue);
+  const values: GodotKeyframeValue[] = [];
+  for (const part of splitKeyframeParts(keysStr.slice(open + 1, end))) {
+    const value = decodeValue(part);
+    if (value === null) {
+      info(`[AnimationPlayer] keyframe value "${part}" is not one this renderer can key — dropping the track`);
+      return null;
+    }
+    values.push(value);
+  }
+  return values;
 }
 
 /** Splits a comma list while ignoring commas nested in parentheses/brackets. */
@@ -382,17 +401,29 @@ const COMPOSITE_KEYS: ReadonlyArray<{
   },
 ];
 
-function decodeValue(raw: string): GodotKeyframeValue {
+/**
+ * One keyframe value, or `null` when the text is not one this renderer can key.
+ *
+ * `null` and not NaN: NaN IS a `number`, so it passes every `typeof value ===
+ * 'number'` shape check in `clipBuilder`/`valueTracks` and becomes a keyframe
+ * that samples NaN for the rest of the clip.
+ *
+ * A non-finite READ is `null` too — `Color(1e999, 0, 0, 1)` is inside the
+ * finite grammar and overflows — since three.js draws an Infinity as NaN
+ * geometry. `inf` stays a legal literal; it is simply not renderable here.
+ */
+function decodeValue(raw: string): GodotKeyframeValue | null {
   if (raw === 'true') return true;
   if (raw === 'false') return false;
   for (const { re, read } of COMPOSITE_KEYS) {
     const match = re.exec(raw);
-    if (match) return read(match);
+    if (match) {
+      const components = read(match);
+      return allFinite(components) ? components : null;
+    }
   }
-  // A composite this does not know reads as NaN, which `clipBuilder` already
-  // treats as no keyframe rather than as a value. Text the tokenizer refuses
-  // reads as NaN too, rather than as the prefix `parseFloat` stopped at.
-  return parseGodotFloat(raw) ?? NaN;
+  const scalar = parseGodotFloat(raw);
+  return scalar !== null && Number.isFinite(scalar) ? scalar : null;
 }
 
 function findById(

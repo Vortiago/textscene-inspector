@@ -171,6 +171,62 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
   });
 
+  // `inf` is a legal float literal Godot writes and reloads
+  // (variant_parser.cpp:150-155), outside the finite grammar the render
+  // decoders read. Such a key has no value to interpolate, so the track goes
+  // rather than becoming one that samples NaN for the rest of the clip.
+  it('drops a value track whose FIRST key holds a non-finite component', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:modulate")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, inf), Color(1, 1, 1, 0)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose non-finite component is in a LATER key', () => {
+    // Every downstream shape check reads key 0, so a good first key is exactly
+    // the case that reached a KeyframeTrack.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:modulate")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 0.5, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0.5), Color(1, 1, 1, inf)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose key overflows the finite grammar to Infinity', () => {
+    // `1e999` is ordinary digits and an exponent, so no grammar refuses it —
+    // only the read result is non-finite.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 1e999, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
   it('returns the animation with no tracks when a track type is unsupported', () => {
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),

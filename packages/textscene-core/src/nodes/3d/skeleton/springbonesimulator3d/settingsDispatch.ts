@@ -6,7 +6,7 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
-import { toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 import { JOINT_LEAVES } from './jointLeaves.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
 
@@ -40,14 +40,18 @@ const settingLeafValidator = indexedFamilyValidator({
  * The two sub-arrays the shared dispatcher cannot reach, because their own path
  * carries a second index.
  *
- * The index halves are `[^/]+` rather than `\d+` on purpose: under `to_int` a
- * non-numeric index still resolves, so `settings/x/joints/y/radius` is a write
- * Godot applies and must route to the same leaf rather than fall through and be
- * reported as an unknown key.
+ * `_set` dispatches on ONE slice: the joint branch reads `get_slicec('/', 4)`
+ * (:121-123), and neither collision branch reads anything below its index
+ * (:143-145, :148-150). Whatever follows that segment is ignored, so
+ * `settings/0/joints/0/radius/extra` reaches `set_joint_radius` and
+ * `settings/0/exclude_collisions/0/extra` reaches `set_exclude_collision_path`.
  */
-const JOINT_KEY = /^settings\/([^/]+)\/joints\/[^/]+\/(.+)$/;
-/** `settings/<i>/collisions/<j>` and `settings/<i>/exclude_collisions/<j>`, :332-338. */
-const COLLISION_KEY = /^settings\/([^/]+)\/(?:exclude_)?collisions\/[^/]+$/;
+const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/([^/]+)(?:/.*)?$', 'to_int');
+/** `settings/<i>/collisions/<j>` and `settings/<i>/exclude_collisions/<j>`. */
+const COLLISION_KEY = indexedKeyRegex(
+  '^settings/(#)/(?:exclude_)?collisions/#(?:/.*)?$',
+  'to_int'
+);
 
 /**
  * The negative-setting-index branch every level shares, or null when the index

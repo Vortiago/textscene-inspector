@@ -23,9 +23,15 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import { slotTupleRegex, matchedFloat, parseGodotFloat } from '../../../godot/number.js';
+import {
+  slotTupleRegex,
+  matchedFloat,
+  parseGodotFloat,
+  allFinite,
+} from '../../../godot/number.js';
 import { ruleInt } from '../../../godot/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
+import { resizePoints } from './pointCount';
 
 /** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
 const ELEMS_PER_POINT = 5;
@@ -46,12 +52,12 @@ export function decodeCurve(data: Record<string, string>): Curve {
   };
 
   // `point_count` is written after `_data`, and Godot's setter resizes the point
-  // list to it. Honouring it keeps a hand-edited file from sampling points the
-  // resource claims not to have.
+  // list to it (curve.cpp:41-57): a smaller count drops the tail, a larger one
+  // pads with default points, and a negative one is refused, leaving `_data`
+  // alone. Honouring it keeps a hand-edited file from sampling a point list the
+  // resource does not claim.
   const declared = ruleInt(data.point_count);
-  if (declared !== null && declared < curve.points.length) {
-    curve.points = curve.points.slice(0, Math.max(0, declared));
-  }
+  if (declared !== null && declared >= 0) curve.points = resizePoints(curve, declared);
 
   return curve;
 }
@@ -142,10 +148,21 @@ function splitArrayLiteral(value: string | undefined): string[] | null {
  */
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 
+/**
+ * The position of one `_data` entry, or null when it is not a finite `Vector2`.
+ *
+ * The RESULT is tested, not just the grammar: an overflowing exponent —
+ * `Vector2(0, 1e999)` — is inside the finite pattern and reads as `Infinity`,
+ * which `sampleCurve` hands on as Infinity/NaN to the particle geometry that
+ * multiplies by it. Both spellings take the one exit the call site already has
+ * for a position it cannot read.
+ */
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);
   if (!match) return null;
-  return { x: matchedFloat(match[1]!), y: matchedFloat(match[2]!) };
+  const components = [matchedFloat(match[1]!), matchedFloat(match[2]!)];
+  if (!allFinite(components)) return null;
+  return { x: components[0]!, y: components[1]! };
 }
 
 function numberOr(entry: string, fallback: number): number {

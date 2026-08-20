@@ -256,7 +256,7 @@ describe('Camera2D Linter', () => {
       });
 
       // The current-camera slot belongs to the Viewport (viewport.h:764) and the
-      // group name carries its id (camera_2d.cpp:348), so each of these becomes
+      // group name carries its id (camera_2d.cpp:349), so each of these becomes
       // current in its own sub-viewport and neither displaces the other.
       it('should not warn across a SubViewport boundary, which has its own camera slot', () => {
         expectNoDiagnostic(
@@ -267,6 +267,49 @@ describe('Camera2D Linter', () => {
             node('Camera2D', { enabled: true }, { name: 'InsetCamera', parent: 'Inset' })
           ),
           { ruleName: 'camera2d-multiple-enabled' }
+        );
+      });
+
+      // A camera's scope is `get_viewport()`, the nearest Viewport ancestor
+      // (camera_2d.cpp:342, node.cpp:345-347), and Window is a Viewport
+      // (window.h:43), so a window's cameras have their own current-camera slot.
+      it('should not warn across a Window boundary, a Viewport like any other', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', {}, { name: 'Root' }),
+            node('Camera2D', { enabled: true }, { name: 'MainCamera', parent: '.' }),
+            node('Window', {}, { name: 'Overlay', parent: '.' }),
+            node('Camera2D', { enabled: true }, { name: 'OverlayCamera', parent: 'Overlay' })
+          ),
+          { ruleName: 'camera2d-multiple-enabled' }
+        );
+      });
+
+      // ConfirmationDialog -> AcceptDialog -> Window -> Viewport: the scope comes
+      // off the base chain, so a subclass three hops down scopes without being
+      // named. Its own cameras still contend, which is what tells this apart from
+      // a type the walk declined to classify.
+      it('should not warn across a ConfirmationDialog, three hops below Viewport', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node2D', {}, { name: 'Root' }),
+            node('Camera2D', { enabled: true }, { name: 'MainCamera', parent: '.' }),
+            node('ConfirmationDialog', {}, { name: 'Dialog', parent: '.' }),
+            node('Camera2D', { enabled: true }, { name: 'DialogCamera', parent: 'Dialog' })
+          ),
+          { ruleName: 'camera2d-multiple-enabled' }
+        );
+      });
+
+      it('should warn for two cameras inside the SAME ConfirmationDialog', () => {
+        expectDiagnostic(
+          scene(
+            node('Node2D', {}, { name: 'Root' }),
+            node('ConfirmationDialog', {}, { name: 'Dialog', parent: '.' }),
+            node('Camera2D', { enabled: true }, { name: 'CameraA', parent: 'Dialog' }),
+            node('Camera2D', { enabled: true }, { name: 'CameraB', parent: 'Dialog' })
+          ),
+          { ruleName: 'camera2d-multiple-enabled', severity: 'warning' }
         );
       });
 
