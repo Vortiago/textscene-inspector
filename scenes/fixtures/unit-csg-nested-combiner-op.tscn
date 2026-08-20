@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+; ONE VARIABLE: whether a nested CSGCombiner3D's own `operation` applies to its
+; whole fold. The parent calls `child->_get_brush()` — the child's entire subtree
+; folded to one brush — then combines THAT by `child->get_operation()`
+; (`modules/csg/csg_shape.cpp:472,481`).
+;
+; A flat left-to-right fold drops the combiner's operation, because a combiner
+; carries no solid to attach it to, and unions its child in at root level: the
+; notch becomes a bump. No other fixture nests an operation-bearing combiner.
+
+[node name="NestedCombinerOp" type="CSGBox3D"]
+size = Vector3(2, 2, 2)
+
+[node name="Cutter" type="CSGCombiner3D" parent="."]
+operation = 2
+
+[node name="Blade" type="CSGBox3D" parent="Cutter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0.9, 0.9)
+size = Vector3(1.2, 1.2, 1.2)

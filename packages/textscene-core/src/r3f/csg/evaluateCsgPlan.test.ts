@@ -28,13 +28,26 @@ function contribution(
   surface: number,
   matrix = new THREE.Matrix4()
 ): CsgContribution {
-  return { path, type: 'CSGBox3D', operation, matrix, surface, node: dummyNode };
+  return {
+    path,
+    type: 'CSGBox3D',
+    operation,
+    matrix,
+    surface,
+    node: dummyNode,
+    hasGeometry: true,
+    children: [],
+  };
 }
 
 function plan(contributions: CsgContribution[], surfaces: (string | undefined)[] = [undefined]): CsgPlan {
+  // The flat list these cases were written against is the root plus its children, which
+  // is what a subtree of same-level contributions folds to.
+  const [first, ...rest] = contributions;
   return {
     rootPath: 'Root',
-    contributions,
+    root: first ? { ...first, children: rest } : null,
+    geometryCount: contributions.length,
     surfaces,
     absorbedPaths: new Set(),
     invisiblePaths: new Set(),

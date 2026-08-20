@@ -1468,6 +1468,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Nested Combiner Op",
+    "file": "unit-csg-nested-combiner-op.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Polygon Depth",
     "file": "unit-csg-polygon-depth.tscn",
     "category": "Unit - CSG Primitives"

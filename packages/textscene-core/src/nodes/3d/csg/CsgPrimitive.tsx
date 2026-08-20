@@ -134,7 +134,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
 
   const visible = properties.visible !== false;
-  const combining = plan !== null && plan.contributions.length > 1;
+  const combining = plan !== null && plan.geometryCount > 1;
   const shadow = shadowCastingEffects(properties.castShadow);
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
