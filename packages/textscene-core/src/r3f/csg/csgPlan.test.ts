@@ -151,6 +151,32 @@ describe('buildCsgPlan', () => {
       expect([...plan.invisiblePaths]).toEqual(['Root/Cut']);
     });
 
+    it('carries the eye toggle down the subtree, as the local flag does', () => {
+      // _get_brush() tests child->is_visible(), the LOCAL flag — hiding a node does not
+      // mark its descendants, the recursion simply never reaches them, so their
+      // node_aabb goes unwritten too. Same set either way.
+      const tree = () => [
+        node('CSGBox3D', 'Kept'),
+        node('CSGBox3D', 'Off', {}, [node('CSGSphere3D', 'Under')]),
+      ];
+      const eye = buildCsgPlan(node('CSGCombiner3D', 'Comb', {}, tree()), 'Comb', {
+        ...OPTS,
+        hiddenPaths: new Set(['Comb/Off']),
+      })!;
+      const flag = buildCsgPlan(
+        node('CSGCombiner3D', 'Comb', {}, [
+          node('CSGBox3D', 'Kept'),
+          node('CSGBox3D', 'Off', { visible: false }, [node('CSGSphere3D', 'Under')]),
+        ]),
+        'Comb',
+        OPTS
+      )!;
+
+      expect([...eye.invisiblePaths]).toEqual(['Comb/Off', 'Comb/Off/Under']);
+      expect([...eye.invisiblePaths]).toEqual([...flag.invisiblePaths]);
+      expect(solids(eye).map((c) => c.path)).toEqual(solids(flag).map((c) => c.path));
+    });
+
     it('reports the skipped subtree, so each node can bound to a point', () => {
       // _get_brush() never reaches them, so their node_aabb is never written.
       const root = node('CSGCombiner3D', 'Comb', {}, [
