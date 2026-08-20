@@ -58,7 +58,7 @@ describe('reportArm', () => {
 });
 
 /**
- * Every arm a factory declares must have a report site in the same file.
+ * Every arm a table declares must be reported somewhere.
  *
  * This is the direction `ruleCoverage.emits.test.ts` loses for the `armEmits`
  * form. Its "declares no ruleName its own code cannot emit" test reads the
@@ -67,46 +67,89 @@ describe('reportArm', () => {
  * reports it. Measured: deleting the `concaveShape` report site left all 26 of
  * those assertions green.
  *
- * Keyed on the table's own binding rather than the identifier `arms`, and
- * floored, because a guard that matches no file passes.
+ * BOTH spellings of a table are read. A factory annotates its record
+ * `RuleArms<K>`; `FILE_DIAGNOSTICS` states the same contract as a trailing
+ * `satisfies Record<string, RuleArm>`, and reading only the annotated form left
+ * the file diagnostics swept for their cites by `emitsGrounding` and checked by
+ * nothing for having a report site at all.
+ *
+ * A module-private table must be reported in its own file; an EXPORTED one may
+ * be reported by an importer, which is where `FILE_DIAGNOSTICS` is used. The
+ * reference is looked for anywhere in a report call's argument list rather than
+ * directly after the paren, since one call may pick its arm with a ternary.
  */
-const DECLARATION = /const\s+([A-Za-z_$][\w$]*)\s*:\s*RuleArms<[^>]*>\s*=\s*\{/g;
+const TYPED_TABLE = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:\s*RuleArms<[^>]*>\s*=\s*\{/g;
+const SATISFIES_TABLE = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*\{/g;
+const SATISFIES_TAIL = /^\s*as\s+const\s+satisfies\s+Record<\s*string\s*,\s*RuleArm\s*>/;
+const REPORT_CALL = /\b(?:report|reportArm|armDiagnostic)\s*\(/g;
 
 interface ArmTable {
   readonly file: string;
   readonly binding: string;
+  readonly exported: boolean;
   readonly keys: string[];
+}
+
+/** `binding` and `key` reach a RegExp, and both grammars admit `$`. */
+function escapeRe(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function keysIn(body: string): string[] {
+  return topLevelParts(body)
+    .map((part) => /^\s*([A-Za-z_$][\w$]*)\s*:/.exec(part)?.[1])
+    .filter((key) => key !== undefined);
+}
+
+const stripped = new Map<string, string>();
+function sourceOf(file: string): string {
+  let src = stripped.get(file);
+  if (src === undefined) stripped.set(file, (src = stripComments(readFileSync(file, 'utf8'))));
+  return src;
+}
+
+/** Every argument list handed to a report call in `file`. */
+const callArgs = new Map<string, string[]>();
+function reportCallArgs(file: string): string[] {
+  let args = callArgs.get(file);
+  if (args === undefined) {
+    const src = sourceOf(file);
+    args = [...src.matchAll(REPORT_CALL)].map((m) =>
+      balancedGroup(src, m.index + m[0].length - 1)
+    );
+    callArgs.set(file, args);
+  }
+  return args;
 }
 
 function armTables(): ArmTable[] {
   const tables: ArmTable[] = [];
   for (const file of allSourceFiles()) {
-    const src = stripComments(readFileSync(file, 'utf8'));
-    for (const match of src.matchAll(DECLARATION)) {
+    const src = sourceOf(file);
+    for (const match of src.matchAll(TYPED_TABLE)) {
       const open = match.index + match[0].length - 1;
-      const keys = topLevelParts(balancedGroup(src, open))
-        .map((part) => /^\s*([A-Za-z_$][\w$]*)\s*:/.exec(part)?.[1])
-        .filter((key) => key !== undefined);
-      tables.push({ file, binding: match[1]!, keys });
+      const keys = keysIn(balancedGroup(src, open));
+      tables.push({ file, binding: match[2]!, exported: match[1] !== undefined, keys });
+    }
+    for (const match of src.matchAll(SATISFIES_TABLE)) {
+      const open = match.index + match[0].length - 1;
+      const body = balancedGroup(src, open);
+      if (!SATISFIES_TAIL.test(src.slice(open + body.length + 2))) continue;
+      tables.push({ file, binding: match[2]!, exported: match[1] !== undefined, keys: keysIn(body) });
     }
   }
-  return atLeast(tables, 4, 'armTables');
+  return atLeast(tables, 5, 'armTables');
 }
 
 describe('an arm table', () => {
   it('reports every arm it declares', () => {
     const unreported: string[] = [];
-    for (const { file, binding, keys } of armTables()) {
-      const src = stripComments(readFileSync(file, 'utf8'));
+    for (const { file, binding, exported, keys } of armTables()) {
+      const scope = exported ? allSourceFiles() : [file];
       for (const key of keys) {
-        // The two call shapes the facility offers: the direct `reportArm`, and
-        // the one-line closure over it each factory opens. A THIRD shape is a
-        // failure here rather than a silent pass — the guard cannot vouch for a
-        // reference it does not recognise.
-        const site = new RegExp(
-          String.raw`\breport\(\s*${binding}\.${key}\b|\breportArm\(\s*\w+\s*,\s*${binding}\.${key}\b`
-        );
-        if (!site.test(src)) unreported.push(`${file.slice(srcRoot.length + 1)}: ${binding}.${key}`);
+        const ref = new RegExp(String.raw`\b${escapeRe(binding)}\.${escapeRe(key)}\b`);
+        const reported = scope.some((f) => reportCallArgs(f).some((args) => ref.test(args)));
+        if (!reported) unreported.push(`${file.slice(srcRoot.length + 1)}: ${binding}.${key}`);
       }
     }
     expect(unreported.sort()).toEqual([]);

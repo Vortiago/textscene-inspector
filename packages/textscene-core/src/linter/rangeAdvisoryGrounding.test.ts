@@ -63,9 +63,10 @@ function node(properties: Record<string, string>): TscnNode {
 describe('range advisory grounding', () => {
   it('finds the arms it is meant to be checking', () => {
     // A scrape that silently matches nothing passes every assertion below it,
-    // so the floor is near the real count (34 at the time of writing) rather
-    // than at 1: a broken regex or a moved directory has to fail here.
-    expect(citeLiterals().length).toBeGreaterThan(30);
+    // so the floor is near the real count (65) rather than at 1: a broken
+    // regex, a moved directory, or a subtree that switches to double-quoted
+    // cites has to fail here rather than shrink the subject list in silence.
+    expect(citeLiterals().length).toBeGreaterThan(55);
   });
 
   it('cites a real source location on every arm', () => {

@@ -125,8 +125,17 @@ unique_name_in_owner = true
     // Content composed in from an INSTANCED sub-scene is not in the authored
     // roots the table is built from, and its own owner is that sub-scene's
     // root — absent from the table is not the same as losing the claim.
-    expect(viewportTextureUniqueNameKey(at('Root/Ui/View'), 'Root/Ui/View', new Map())).toBe(
-      'Root/%View'
-    );
+    //
+    // The table has to be the POPULATED one and the node absent FROM it: an
+    // empty table reaches `winner === undefined` by the same route a missing
+    // one does, so passing `new Map()` restates the test above it and leaves
+    // `claims.size > 0 && !claims.has(key)` free to return null here.
+    const [inner] = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Inner" type="SubViewport"]
+unique_name_in_owner = true
+`).nodes;
+    expect(claims.has('%Inner')).toBe(false);
+    expect(viewportTextureUniqueNameKey(inner!, 'Root/Player/Inner', claims)).toBe('Root/%Inner');
   });
 });

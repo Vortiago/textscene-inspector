@@ -110,7 +110,12 @@ function expectedSpecifier(entryPoint: string): string {
 
 describe('linter barrel completeness', () => {
   it('finds the slice lint entry points (sanity: the walk is not empty)', () => {
-    expect(findLinterEntryPoints(nodesRoot).length).toBeGreaterThan(0);
+    // Near the real counts, not at 1: `missing` below is computed over this
+    // population, so a walk that respells or relocates the entry point and
+    // matches a handful reports [] over the slices it stopped seeing. 242
+    // under nodes/ and 12 under resources/ today.
+    expect(findLinterEntryPoints(nodesRoot).length).toBeGreaterThan(200);
+    expect(requiredSpecifiers().length).toBeGreaterThan(200);
   });
 
   it('covers the Resource half of the barrel, not just nodes/', () => {
