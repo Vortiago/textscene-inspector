@@ -3,7 +3,7 @@
  * the one sidecar in the corpus whose parameters change what is drawn.
  */
 import { describe, expect, it } from 'vitest';
-import { parseImportFile, importRootScale } from './importParser';
+import { parseImportFile, importRootScale, importExternalMaterials } from './importParser';
 
 const TREE_IMPORT = `[remap]
 
@@ -41,6 +41,43 @@ type="Mesh"
 generate_tangents=true
 scale_mesh=Vector3(1, 1, 1)
 offset_mesh=Vector3(0, 0, 0)
+`;
+
+/**
+ * `scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import`, the one sidecar
+ * in the corpus that repoints a glTF material at an external `.tres`.
+ */
+const MANNEQUINY_IMPORT = `[remap]
+
+importer="scene"
+importer_version=1
+type="PackedScene"
+uid="uid://c0cfb2j48lp2b"
+
+[params]
+
+nodes/root_type=""
+materials/extract=0
+_subresources={
+"materials": {
+"Azul_COLOR_0": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://materials/blue.tres",
+"use_external/path": "uid://ctlvxueekphcu"
+},
+"Blanco_COLOR_0": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://materials/white.tres",
+"use_external/path": "uid://dw85jibvfqqnm"
+},
+"Negro_COLOR_0": {
+"use_external/enabled": false,
+"use_external/fallback_path": "res://materials/black.tres",
+"use_external/path": "uid://d33e11pbpppvj"
+}
+}
+}
+gltf/naming_version=2
 `;
 
 describe('parseImportFile', () => {
@@ -122,5 +159,38 @@ describe('importRootScale', () => {
       scale: 0.5,
       bake: true,
     });
+  });
+});
+
+describe('importExternalMaterials', () => {
+  it('reads the glTF material name -> external .tres table', () => {
+    const remaps = importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT));
+    // resource_importer_scene.cpp:1625-1633 — the uid is tried first, the res:// fallback second.
+    expect(remaps.get('Azul_COLOR_0')).toBe('res://materials/blue.tres');
+    expect(remaps.get('Blanco_COLOR_0')).toBe('res://materials/white.tres');
+  });
+
+  it('skips a material whose use_external/enabled is false', () => {
+    // resource_importer_scene.cpp:1621 gates on the flag, not on the path being present.
+    expect(importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT)).has('Negro_COLOR_0')).toBe(
+      false
+    );
+  });
+
+  it('keeps the multi-line _subresources value out of params as a truncated string', () => {
+    const parsed = parseImportFile(MANNEQUINY_IMPORT)!;
+    expect(parsed.params['_subresources']).toContain('"materials"');
+    expect(parsed.params['gltf/naming_version']).toBe('2');
+  });
+
+  it('is empty for a sidecar with no material remaps at all', () => {
+    expect(importExternalMaterials(parseImportFile(TREE_IMPORT)).size).toBe(0);
+    expect(importExternalMaterials(parseImportFile(OBJ_IMPORT)).size).toBe(0);
+    expect(importExternalMaterials(null).size).toBe(0);
+  });
+
+  it('is empty when _subresources is not parseable, rather than throwing', () => {
+    const parsed = parseImportFile('[params]\n\n_subresources={\n"materials": Vector3(1, 1, 1)\n}\n');
+    expect(importExternalMaterials(parsed).size).toBe(0);
   });
 });

@@ -2,10 +2,10 @@
  * Guards the `.import` parameter allowlist against the corpus (ADR-0028).
  *
  * The previewer performs an **asset re-import**: it loads the source `.gltf`/`.glb`/
- * `.obj` and re-derives the scene, honouring `nodes/root_scale` and
- * `nodes/apply_root_scale` and nothing else. Every other parameter is either something
- * three's GLTFLoader already does, or a bake/performance concern with no visual
- * consequence in a preview.
+ * `.obj` and re-derives the scene, honouring `nodes/root_scale`, `nodes/apply_root_scale`
+ * and `_subresources`' per-material `use_external` remaps, and nothing else. Every other
+ * parameter is either something three's GLTFLoader already does, or a bake/performance
+ * concern with no visual consequence in a preview.
  *
  * That is a fine boundary right up until someone vendors a demo whose sidecar needs a
  * parameter we ignore — at which point the scene renders wrong with nothing to say so.
@@ -27,8 +27,11 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SCENES = join(REPO_ROOT, 'scenes');
 const SKIP_DIRS = new Set(['node_modules', '.git', 'games']);
 
-/** The two parameters we honour, at any value. */
-const HONOURED = new Set(['nodes/root_scale', 'nodes/apply_root_scale']);
+/**
+ * The parameters we honour. `_subresources` only in part — its material remaps — which is
+ * why each non-empty block is still named individually below.
+ */
+const HONOURED = new Set(['nodes/root_scale', 'nodes/apply_root_scale', '_subresources']);
 
 /**
  * Reviewed and inert AT ANY VALUE, so their presence needs no per-file check.
@@ -100,19 +103,18 @@ const MUST_BE_DEFAULT = new Map([
  * what it does and whether it matters. The guard asserts this exact set: a newly
  * vendored sidecar with overrides fails rather than joining the list silently.
  *
- * Two of these are real, unhandled divergences. They are narrow, pre-existing, and out
- * of scope for ADR-0028 (which is about root scale), but they are now WRITTEN DOWN
- * rather than undiscovered — which is the whole point of the guard.
+ * One of these is a real, unhandled divergence. It is narrow and out of scope for
+ * ADR-0028, but it is WRITTEN DOWN rather than undiscovered — which is the whole point
+ * of the guard.
  */
 const KNOWN_SUBRESOURCE_OVERRIDES = {
   'scenes/demos/3d/material_testers/models/godot_ball.glb.import':
     'meshes: lods/shadow/lightmap off + save_to_file. Bake concerns only — inert here.',
   'scenes/demos/3d/platformer/player/player.glb.import':
-    'animations: clip slicing and loop modes. Affects playback, not the static render.',
+    'materials use_external → res://player/player_{gray,glow}.tres, honoured. animations: ' +
+    'clip slicing and loop modes, which affect playback rather than the static render.',
   'scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import':
-    'UNHANDLED: materials use_external/enabled swaps the glTF embedded materials for ' +
-    'res://materials/{blue,white,black}.tres. Godot draws the external ones, we draw ' +
-    'the embedded ones.',
+    'materials use_external → res://materials/{blue,white,black}.tres, honoured.',
   'scenes/demos/3d/truck_town/town/lamp/scene.gltf.import':
     'UNHANDLED: nodes mesh_instance/layers = 2 puts one lamp mesh on render layer 2.',
 };
@@ -185,7 +187,6 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
     for (const file of sidecars) {
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (key === '_subresources') continue;
         unknown.push(`${rel(file)}: ${key}`);
       }
     }

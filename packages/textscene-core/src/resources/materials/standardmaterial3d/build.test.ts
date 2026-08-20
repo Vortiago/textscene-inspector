@@ -605,3 +605,23 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
     expect(material.roughness).toBe(0.2);
   });
 });
+
+describe('buildStandardMaterial — vertex colours', () => {
+  /** three declares the slot on ShaderMaterial only, so its type is not on the base. */
+  function colorDefault(material: THREE.Material): number[] | undefined {
+    return (material as { defaultAttributeValues?: Record<string, number[]> })
+      .defaultAttributeValues?.color;
+  }
+
+  it('reads COLOR as white on a mesh that supplies none', () => {
+    // Godot's default COLOR vertex buffer is (1,1,1,1) — mesh_storage.cpp:86-97.
+    const material = build({ vertex_color_use_as_albedo: 'true' });
+    expect(material.vertexColors).toBe(true);
+    expect(colorDefault(material)).toEqual([1, 1, 1]);
+  });
+
+  it('keeps that default through the per-consumer clone', () => {
+    // Every GLB instance clones its materials (glbProcessing.cloneWithMaterials).
+    expect(colorDefault(build({ vertex_color_use_as_albedo: 'true' }).clone())).toEqual([1, 1, 1]);
+  });
+});

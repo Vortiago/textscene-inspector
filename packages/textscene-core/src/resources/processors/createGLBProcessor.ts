@@ -15,8 +15,16 @@ import {
   isGLBPath,
 } from '../formats/glb/glbProcessing';
 import { applyRootScale } from '../formats/glb/rootScale';
-import { importRootScale, parseImportFile } from '../../parser/importParser';
+import {
+  importExternalMaterials,
+  importRootScale,
+  parseImportFile,
+  type ParsedImportFile,
+} from '../../parser/importParser';
 import * as logger from '../../logger';
+
+/** Loads a material by its `res://` path; null when it cannot be had. */
+export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
 
 /**
  * Dispose of a GLB mesh and all its resources. Unlike a per-consumer clone
@@ -33,27 +41,41 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 }
 
 /**
- * Correct a freshly loaded asset by its **Import sidecar**'s root scale (ADR-0028).
+ * Correct a freshly loaded asset by its **Import sidecar** (ADR-0028).
  *
  * Done HERE, once per path, rather than in a consumer: the processor owns the cached
  * template, so every downstream reader — render, bounds, selection, the scene tree —
- * sees one already-correct object, and none of them can disagree about its size.
+ * sees one already-correct object, and none of them can disagree about it. It is also
+ * where Godot does it: the importer writes both corrections into the ImporterMesh before
+ * the scene is serialised, so they belong to the ASSET, not to a scene instancing it.
  *
  * A sidecar is found by convention (`scene.gltf` → `scene.gltf.import`), never declared
  * by a scene, so it is read with `tryLoad`: absent is the common case and means "Godot's
  * import defaults", not a **Missing resource**.
  */
-async function applySidecarRootScale(
+async function applyImportSidecar(
   object: THREE.Object3D,
   path: string,
-  fileEventBus: FileEventBus | undefined
+  fileEventBus: FileEventBus | undefined,
+  loadMaterial: MaterialLoaderFn | undefined
 ): Promise<void> {
   if (!fileEventBus) return;
 
   const raw = await fileEventBus.tryLoad(`${path}.import`, 'ImportSidecar');
   if (typeof raw !== 'string') return;
 
-  const rootScale = importRootScale(parseImportFile(raw));
+  const parsed = parseImportFile(raw);
+  applySidecarRootScale(object, path, parsed);
+  await applySidecarMaterials(object, path, parsed, loadMaterial);
+}
+
+/** `nodes/root_scale`, applied to the asset the way `nodes/apply_root_scale` asks. */
+function applySidecarRootScale(
+  object: THREE.Object3D,
+  path: string,
+  parsed: ParsedImportFile | null
+): void {
+  const rootScale = importRootScale(parsed);
   if (!rootScale) return;
 
   logger.info(
@@ -64,11 +86,88 @@ async function applySidecarRootScale(
 }
 
 /**
+ * `_subresources`' external materials, matched to surfaces by glTF material name —
+ * Godot's `mat->get_meta("import_id", mat->get_name())` key
+ * (`editor/import/3d/resource_importer_scene.cpp:1583`), which for glTF is the name.
+ *
+ * The replaced material is CLONED: the material processor owns and caches the original,
+ * while `disposeGLBMesh` frees whatever sits on the template's surfaces. An unresolvable
+ * `.tres` leaves the glTF's own material, which is what Godot's null `external_mat`
+ * branch does (`:1622-1636`).
+ */
+async function applySidecarMaterials(
+  object: THREE.Object3D,
+  path: string,
+  parsed: ParsedImportFile | null,
+  loadMaterial: MaterialLoaderFn | undefined
+): Promise<void> {
+  if (!loadMaterial) return;
+  const remaps = importExternalMaterials(parsed);
+  if (remaps.size === 0) return;
+
+  const wanted = new Map<string, string>();
+  forEachSurfaceMaterial(object, (material) => {
+    const external = remaps.get(material.name);
+    if (external !== undefined) wanted.set(material.name, external);
+  });
+  if (wanted.size === 0) return;
+
+  const built = new Map<string, THREE.Material>();
+  await Promise.all(
+    [...wanted].map(async ([name, external]) => {
+      const material = await loadMaterial(external);
+      if (material) built.set(name, material.clone());
+      else logger.warn(`[GLBProcessor] ${path}: external material ${external} did not load`);
+    })
+  );
+  if (built.size === 0) return;
+
+  const replaced = new Set<THREE.Material>();
+  forEachSurfaceMaterial(object, (material, assign) => {
+    const external = built.get(material.name);
+    if (!external) return;
+    replaced.add(material);
+    assign(external);
+  });
+  // Nothing else can reference these: every surface carrying the name was just reassigned.
+  for (const material of replaced) material.dispose();
+
+  logger.info(
+    `[GLBProcessor] ${path}: import sidecar external materials ` +
+      [...built.keys()].map((name) => `${name} -> ${wanted.get(name)}`).join(', ')
+  );
+}
+
+/** Visit every surface material under `object`, with the setter for its own slot. */
+function forEachSurfaceMaterial(
+  object: THREE.Object3D,
+  visit: (material: THREE.Material, assign: (replacement: THREE.Material) => void) => void
+): void {
+  object.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    if (Array.isArray(mesh.material)) {
+      const slots = mesh.material;
+      slots.forEach((material, index) => {
+        visit(material, (replacement) => {
+          slots[index] = replacement;
+        });
+      });
+    } else if (mesh.material) {
+      visit(mesh.material, (replacement) => {
+        mesh.material = replacement;
+      });
+    }
+  });
+}
+
+/**
  * Create a GLB mesh processor that handles loading and caching GLB/GLTF meshes.
  */
 export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
-  eventBus: ResourceEventBus
+  eventBus: ResourceEventBus,
+  loadMaterial?: MaterialLoaderFn
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
     fileEventBus,
@@ -83,7 +182,7 @@ export function createGLBProcessor(
         gltfResourceDir(path),
         eventBus.getThreeManager()
       );
-      await applySidecarRootScale(object, path, fileEventBus);
+      await applyImportSidecar(object, path, fileEventBus, loadMaterial);
       return object;
     },
     dispose: disposeGLBMesh,

@@ -153,7 +153,21 @@ export class ResourceLoader {
     };
 
     this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture);
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus);
+
+    // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
+    // which resolves through the MATERIAL processor — same shape as `loadTexture` above.
+    const loadMaterialForGLB = async (path: string): Promise<THREE.Material | null> => {
+      const cached = this.materials.getCached(path);
+      if (cached !== undefined) return cached;
+      this.materials.request(path);
+      try {
+        return await this.eventBus.once<THREE.Material>('material', 'loaded', path);
+      } catch {
+        return null;
+      }
+    };
+
+    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, loadMaterialForGLB);
 
     // PackedScene processor — the former standalone SceneLoader collapsed
     // into the same machinery via direct-load mode (`createResourceProcessor`'s

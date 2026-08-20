@@ -7,10 +7,10 @@
  * `[params]` describes the import — `[remap]` and `[deps]` address the baked artifact
  * under `.godot/imported/`, which this previewer never reads (ADR-0028).
  *
- * Values stay raw strings. `importRootScale` is the only typed reader, because
- * `nodes/root_scale` and `nodes/apply_root_scale` are the only parameters we honour;
- * everything else is either something three's GLTFLoader already does or a bake concern
- * with no visual consequence in a preview.
+ * Values stay raw strings; `importRootScale` and `importExternalMaterials` are the typed
+ * readers, because `nodes/root_scale`, `nodes/apply_root_scale` and `_subresources`'
+ * material remaps are the only parameters we honour; everything else is either something
+ * three's GLTFLoader already does or a bake concern with no visual consequence.
  *
  * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031): a
  * sidecar is found by path convention beside its asset, never named by a
@@ -40,9 +40,26 @@ export function parseImportFile(content: string): ParsedImportFile | null {
   let importer: string | null = null;
   const params: Record<string, string> = {};
   let sawSection = false;
+  let pendingKey: string | null = null;
+  let pending = '';
+  let depth = 0;
 
   for (const rawLine of content.split('\n')) {
     const line = rawLine.trim();
+
+    // A `{`/`[` value spans lines until its brackets balance, so nothing inside it is
+    // read as a section heading or a key of its own.
+    if (pendingKey !== null) {
+      pending += `\n${line}`;
+      depth += bracketDepth(line);
+      if (depth <= 0) {
+        if (section === 'params') params[pendingKey] = pending;
+        pendingKey = null;
+        pending = '';
+      }
+      continue;
+    }
+
     if (line === '' || line.startsWith(';')) continue;
 
     const heading = SECTION.exec(line);
@@ -55,13 +72,39 @@ export function parseImportFile(content: string): ParsedImportFile | null {
     const pair = KEY_VALUE.exec(line);
     if (!pair) continue;
     const [, key, rawValue] = pair;
-    const value = unquote(rawValue!.trim());
+    const raw = rawValue!.trim();
 
+    depth = bracketDepth(raw);
+    if (depth > 0) {
+      pendingKey = key!;
+      pending = raw;
+      continue;
+    }
+
+    const value = unquote(raw);
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
   }
 
   return sawSection ? { importer, params } : null;
+}
+
+/** Net `{`/`[` nesting a line opens, ignoring bracket characters inside strings. */
+function bracketDepth(line: string): number {
+  let depth = 0;
+  let inString = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inString) {
+      if (char === '\\') i++;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === '{' || char === '[') depth++;
+    else if (char === '}' || char === ']') depth--;
+  }
+  return depth;
 }
 
 /** Godot writes strings quoted; every other value form is left verbatim. */
@@ -95,4 +138,55 @@ export function importRootScale(
   if (scale === 1) return null;
 
   return { scale, bake: parsed!.params['nodes/apply_root_scale'] !== 'false' };
+}
+
+/**
+ * The sidecar's per-material **external material** remaps: glTF material name → the
+ * `res://` `.tres` that replaces it.
+ *
+ * Godot bakes this into the imported asset itself
+ * (`editor/import/3d/resource_importer_scene.cpp:1620-1645`), which is why it belongs to
+ * the GLB template rather than to any scene instancing it. The uid form is tried first
+ * and the `res://` fallback second (`:1625-1633`); nothing here resolves `uid://`, so the
+ * fallback is what a remap resolves to in practice.
+ */
+export function importExternalMaterials(
+  parsed: ParsedImportFile | null
+): ReadonlyMap<string, string> {
+  const remaps = new Map<string, string>();
+  const materials = subResourceCategory(parsed, 'materials');
+  if (!materials) return remaps;
+
+  for (const [name, settings] of Object.entries(materials)) {
+    if (typeof settings !== 'object' || settings === null) continue;
+    const entry = settings as Record<string, unknown>;
+    if (entry['use_external/enabled'] !== true) continue;
+
+    const path = [entry['use_external/path'], entry['use_external/fallback_path']].find(
+      (candidate): candidate is string =>
+        typeof candidate === 'string' && candidate.startsWith('res://')
+    );
+    if (path) remaps.set(name, path);
+  }
+  return remaps;
+}
+
+/**
+ * One category of the `_subresources` dictionary. Godot writes it as a Variant, which is
+ * JSON for the scalar-valued import options these categories hold — a category carrying
+ * anything else is unreadable here and reads as absent, per this module's contract.
+ */
+function subResourceCategory(
+  parsed: ParsedImportFile | null,
+  category: string
+): Record<string, unknown> | null {
+  const raw = parsed?.params['_subresources'];
+  if (raw === undefined) return null;
+  try {
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    const found = value[category];
+    return typeof found === 'object' && found !== null ? (found as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
 }

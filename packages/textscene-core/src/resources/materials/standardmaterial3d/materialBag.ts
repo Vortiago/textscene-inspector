@@ -30,6 +30,13 @@ import type {
   TextureSlot,
 } from './types';
 
+// Godot's default COLOR buffer is white (`mesh_storage.cpp:86-97`); three declares that
+// default on ShaderMaterial alone, so any other class reads the WebGL generic attribute
+// — (0,0,0) — and blacks out albedo. On the prototype because `copy` drops it and every
+// GLB instance clones.
+(THREE.Material.prototype as { defaultAttributeValues?: Record<string, number[]> }
+).defaultAttributeValues = { color: [1, 1, 1] };
+
 /** Which three material class a feature set needs. */
 export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
 

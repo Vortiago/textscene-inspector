@@ -351,6 +351,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the `.tres` arrival for a mesh inside a GLB: the resource pipeline hands over a material constructed complete, a re-resolve replaces the whole object, and unmount puts the loader’s own material back',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'gives each GLB clone its own copy of the loader’s materials; a `.clone()` carries every program input of the original, so nothing about the material changes',
+  'packages/textscene-core/src/resources/processors/createGLBProcessor.ts':
+    'bakes the import sidecar’s external materials into the template once per load, each handed over complete by the material processor, so no input of theirs can move afterwards',
 };
 
 /**
