@@ -31,6 +31,14 @@ const dangling = scene(
 
 const orphansIn = (source: string) => lint(source).filter((d) => d.ruleName === ORPHAN);
 
+/**
+ * No heading omits `parent=`, so heading 0 becomes the root while declaring one.
+ */
+const ROOTLESS = scene(
+  node('Node2D', {}, { name: 'A', parent: '.' }),
+  node('Node2D', {}, { name: 'B', parent: 'A' })
+);
+
 describe('a parent path this file never defines', () => {
   it('reports the node, its path, and the line its heading is on', () => {
     const orphans = orphansIn(dangling);
@@ -118,12 +126,10 @@ describe('a parent path this file never defines', () => {
   it('still names the headings a file with no root heading strands', () => {
     // `packed_scene.cpp:218-219` makes heading 0 the root and fails the
     // instantiate when it declares a parent, so handing the flat list back as
-    // roots made every node reachable and the report said nothing at all.
-    const rootless = scene(
-      node('Node2D', {}, { name: 'A', parent: '.' }),
-      node('Node2D', {}, { name: 'B', parent: 'A' })
-    );
-    expect(orphansIn(rootless).map((d) => d.nodeName)).toEqual(['B']);
+    // roots made every node reachable and the report said nothing at all. B
+    // keeps its own warning beside the root's error: the two name different
+    // headings, and the root's refusal is not a restatement of B's path.
+    expect(orphansIn(ROOTLESS).map((d) => d.nodeName)).toEqual(['B']);
   });
 
   it('says nothing about a scene whose every parent path resolves', () => {
@@ -135,5 +141,43 @@ describe('a parent path this file never defines', () => {
       ),
       { ruleName: ORPHAN }
     );
+  });
+});
+
+describe('a root heading that declares a parent', () => {
+  const rootErrors = (source: string) =>
+    lint(source).filter((d) => d.ruleName === 'root-declares-parent');
+
+  it('is an error naming the heading and the parent it declares', () => {
+    const errors = rootErrors(ROOTLESS);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.severity).toBe('error');
+    expect(errors[0]?.nodeName).toBe('A');
+    expect(errors[0]?.message).toContain('parent="."');
+    expect(errors[0]?.location?.line).toBe(3);
+  });
+
+  it('reports an empty parent= on the root, which no heading omits', () => {
+    // `add_node_path` returns an index for a value the field carries, so this
+    // heading reaches `:219` with `n.parent != -1` exactly as `parent="."` does
+    // — even though both parsers leave `node.parent` unset for it.
+    expect(
+      rootErrors(scene(node('Node2D', {}, { name: 'A', parent: '' }))).map((d) => d.severity)
+    ).toEqual(['error']);
+  });
+
+  it('names the FIRST heading, not whichever one the tree build rooted at', () => {
+    // `buildSceneTree` prefers a parentless heading wherever it sits, so here it
+    // roots at `Root` and seats `A` beneath it — a tree with nothing wrong in
+    // it. Godot's root is `i == 0` regardless, so `A` is still the refusal.
+    const errors = rootErrors(
+      scene(node('Node2D', {}, { name: 'A', parent: '.' }), node('Node2D', {}, { name: 'Root' }))
+    );
+    expect(errors.map((d) => d.nodeName)).toEqual(['A']);
+  });
+
+  it('says nothing about a root heading that declares none', () => {
+    expect(rootErrors(scene(node('Node2D', {}, { name: 'Root' })))).toEqual([]);
+    expect(rootErrors(dangling)).toEqual([]);
   });
 });

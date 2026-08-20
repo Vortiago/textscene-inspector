@@ -177,7 +177,23 @@ function reparentedName(parentPath: string, name: string): string {
  * error. The rename spelling is `:561-563`, one line below the re-root.
  */
 function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
-  return (scene.orphanedNodes ?? []).map(({ node, line, declaredParent }) => {
+  const { node: root, line: rootLine, declaredParent: rootParent } = scene.rootWithParent ?? {};
+  const rootRefusal: Diagnostic[] =
+    root === undefined
+      ? []
+      : [
+          {
+            ...FILE_DIAGNOSTICS.rootDeclaresParent,
+            message:
+              `Root node '${root.name}' declares parent="${rootParent}", which only a non-root heading may do. ` +
+              'The file loads, but Godot refuses to instantiate the scene from it at all.',
+            nodeName: root.name,
+            nodeType: root.type,
+            location: { line: rootLine!, column: 1 },
+          },
+        ];
+
+  return rootRefusal.concat((scene.orphanedNodes ?? []).map(({ node, line, declaredParent }) => {
     // The heading's own attribute, not `node.parent`: both parsers drop an empty
     // `parent=""`, while the loader keeps it — `add_node_path` returns an index
     // for any value the field carries (`packed_scene.cpp:2307-2311`), so
@@ -200,5 +216,5 @@ function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
       nodeType: node.type,
       location: { line, column: 1 },
     };
-  });
+  }));
 }

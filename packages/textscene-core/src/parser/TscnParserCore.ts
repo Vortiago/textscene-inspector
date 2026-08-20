@@ -14,7 +14,7 @@ import type {
   TscnNode,
   TscnExternalResource,
   TscnInternalResource,
-  OrphanedNode,
+  NodeOrigin,
 } from './types.js';
 import {
   parseHeading,
@@ -29,7 +29,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree, strandedNodes } from './sceneTreeBuilder.js';
+import { buildSceneTree, rootDeclaringParent, strandedNodes } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
@@ -98,7 +98,7 @@ export class TscnParserCore {
     // nothing else uses. One array, not two: a parallel `nodes` list is an
     // invariant two push sites have to keep, and a missed push yields an orphan
     // with no line.
-    const origins: OrphanedNode[] = [];
+    const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
 
@@ -295,6 +295,7 @@ export class TscnParserCore {
 
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
     const orphanedNodes = strandedNodes(origins, sceneTree);
+    const rootWithParent = rootDeclaringParent(origins);
     for (const { node } of orphanedNodes) {
       logger.warn(
         `Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
@@ -308,6 +309,7 @@ export class TscnParserCore {
       externalResources,
       internalResources,
       ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
+      ...(rootWithParent ? { rootWithParent } : {}),
     };
   }
 

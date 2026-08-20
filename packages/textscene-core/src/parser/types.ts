@@ -6,17 +6,16 @@ import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 /**
- * A `[node]` heading `buildSceneTree` could not place, with the line it is on.
+ * One `[node]` heading as the scan saw it, before `buildSceneTree` decided what
+ * to do with it.
  *
- * It is absent from `TscnScene.nodes`, so anything walking the tree cannot see
- * it at all — and its descendants resolve only through it, so they are stranded
- * beside it. Godot does not drop it in silence: `SceneState::instantiate`
- * warns `"Parent path '…' for node '…' has vanished when instantiating"` and
- * re-parents the node to the scene root under `<path>#<name>`
- * (`packed_scene.cpp:208-215`, `:561-563`). A node declaring no `parent=` at
- * all is the harder case — `packed_scene.cpp:206` fails the whole load.
+ * Kept off `TscnNode` because only the two diagnostics below read it, and every
+ * node in the tree would otherwise carry fields nothing else uses. Two
+ * derivations consume it, both against the tree that was actually returned:
+ * `strandedNodes` for the headings absent from it, and `rootDeclaringParent`
+ * for the one that became its root.
  */
-export interface OrphanedNode {
+export interface NodeOrigin {
   readonly node: TscnNode;
   /** 1-based line of the node's own heading. */
   readonly line: number;
@@ -46,7 +45,16 @@ export interface TscnScene {
    * Headings whose `parent=` path resolved against nothing, so they are NOT in
    * `nodes`. Absent rather than empty when nothing was stranded.
    */
-  orphanedNodes?: readonly OrphanedNode[];
+  orphanedNodes?: readonly NodeOrigin[];
+  /**
+   * The root heading, when it declares a `parent=` — the one shape of it Godot
+   * refuses (`packed_scene.cpp:218-219`).
+   *
+   * Absent otherwise, like `orphanedNodes`: the render path takes the tree as
+   * it is built either way, and a key present-but-empty would change the object
+   * shape it sees for every well-formed scene.
+   */
+  rootWithParent?: NodeOrigin;
   /** Event-based resource loader (used by SceneGraph helpers). */
   resourceLoader?: ResourceLoader;
 }

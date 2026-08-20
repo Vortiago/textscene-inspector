@@ -20,8 +20,10 @@
  *     declaration satisfies the wildcard on behalf of an instance that omits
  *     it: `ShapeCast2D` emitting `shapecast2d-concave-shape` while declaring
  *     only the other four left all 24 assertions green, measured. Nothing here
- *     closes that; `linter/ruleArms.ts` does, by making the two halves one
- *     declaration so the state cannot be written.
+ *     closes that. `linter/ruleArms.ts` derives both halves from one table, so
+ *     `emits` cannot name an arm the table lacks — but an arm whose report site
+ *     is gone is still declared and still scraped as reachable, which is what
+ *     `ruleArms.test.ts` asks instead.
  *
  * The scrape itself lives in `testing/emitsScrape.ts` and `testing/emitsReach.ts`;
  * the registration and validator halves of the same meta-guard are in
@@ -238,9 +240,9 @@ describe('rule emits meta-guard', () => {
     // halves: `stripEmits` leaves it in the scraped text and `emitsArrays` never
     // sees inside it, so the cross-checks above pass on whatever it holds. Two
     // spellings are admitted — the array literal they read, and `armEmits`,
-    // which derives `emits` from the same table `check` reports through and so
-    // makes the divergence they hunt unrepresentable (`linter/ruleArms.ts`). A
-    // third would silently take a rule out of the guard's reach.
+    // whose table `ruleArms.test.ts` reads instead, arm by arm, since an arm
+    // table spells its names where `stripEmits` does not reach. A third
+    // spelling is checked by neither.
     const offenders: string[] = [];
     for (const file of allFiles) {
       const src = stripComments(readFileSync(file, 'utf8'));

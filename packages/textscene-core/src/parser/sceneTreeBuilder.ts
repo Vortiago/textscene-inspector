@@ -2,7 +2,7 @@
  * Builds hierarchical scene tree from flat TSCN node list.
  */
 
-import type { OrphanedNode, TscnNode } from './types';
+import type { NodeOrigin, TscnNode } from './types';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -168,9 +168,9 @@ function findInstanceAnchor(
  * the root, which `packed_scene.cpp:206` refuses outright.
  */
 export function strandedNodes(
-  all: readonly OrphanedNode[],
+  all: readonly NodeOrigin[],
   roots: readonly TscnNode[]
-): OrphanedNode[] {
+): NodeOrigin[] {
   const placed = new Set<TscnNode>();
   const walk = (nodes: readonly TscnNode[]): void => {
     for (const node of nodes) {
@@ -184,4 +184,27 @@ export function strandedNodes(
   // up here: a lookup needs a fallback, and there is no honest one — a
   // diagnostic pointing at line 0 reads as a real location in an editor gutter.
   return all.filter(({ node }) => !placed.has(node));
+}
+
+/**
+ * The FIRST heading, when it declares a `parent=`.
+ *
+ * `packed_scene.cpp:219` refuses exactly that — "root node %s cannot specify a
+ * parent node" — so the file loads and no scene can be built from it.
+ *
+ * Positional, unlike {@link strandedNodes}, and deliberately not "the heading
+ * that became our root": the engine's root is `i == 0` and nothing else, while
+ * `buildSceneTree` above prefers a parentless heading wherever it sits. Given
+ * `[node name="A" parent="."]` followed by a parentless `Root`, the two answer
+ * differently — the builder roots at `Root` and seats `A` beneath it, and only
+ * the positional reading still names the heading Godot refuses.
+ *
+ * The test is the DECLARED attribute, not `node.parent`: both parsers leave the
+ * latter unset for `parent=""`, and `add_node_path` returns an index for any
+ * value the field carries (`packed_scene.cpp:2307-2311`), so an empty one still
+ * reaches the refusal.
+ */
+export function rootDeclaringParent(all: readonly NodeOrigin[]): NodeOrigin | undefined {
+  const first = all[0];
+  return first?.declaredParent === undefined ? undefined : first;
 }

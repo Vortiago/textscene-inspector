@@ -57,6 +57,17 @@ export const FILE_DIAGNOSTICS = {
     ruleName: 'node-without-parent',
     grounding: { kind: 'engine', at: 'packed_scene.cpp:206-207' },
   },
+  /**
+   * The mirror of the above, on the one heading the rule is inverted for: the
+   * root may not declare a `parent=`, and any value refuses the instantiate.
+   * `parent="."` reads as harmless and is not — it is the spelling a file
+   * missing its root heading falls into, since every other heading declares one.
+   */
+  rootDeclaresParent: {
+    severity: 'error',
+    ruleName: 'root-declares-parent',
+    grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
+  },
 } as const satisfies Record<string, RuleArm>;
 
 /**

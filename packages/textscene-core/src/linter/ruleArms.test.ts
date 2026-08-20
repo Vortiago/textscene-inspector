@@ -3,7 +3,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from './ruleArms.js';
+import { allSourceFiles, atLeast, srcRoot } from './testing/ruleNameScrape.js';
+import { balancedGroup, topLevelParts } from './testing/emitsReach.js';
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
@@ -50,5 +54,61 @@ describe('reportArm', () => {
     const into: Diagnostic[] = [];
     reportArm(into, undefined, node, 'the mask is zero');
     expect(into).toEqual([]);
+  });
+});
+
+/**
+ * Every arm a factory declares must have a report site in the same file.
+ *
+ * This is the direction `ruleCoverage.emits.test.ts` loses for the `armEmits`
+ * form. Its "declares no ruleName its own code cannot emit" test reads the
+ * names back off the source, and an arm table spells them where `stripEmits`
+ * does not reach — so the name is scraped as reachable whether or not anything
+ * reports it. Measured: deleting the `concaveShape` report site left all 26 of
+ * those assertions green.
+ *
+ * Keyed on the table's own binding rather than the identifier `arms`, and
+ * floored, because a guard that matches no file passes.
+ */
+const DECLARATION = /const\s+([A-Za-z_$][\w$]*)\s*:\s*RuleArms<[^>]*>\s*=\s*\{/g;
+
+interface ArmTable {
+  readonly file: string;
+  readonly binding: string;
+  readonly keys: string[];
+}
+
+function armTables(): ArmTable[] {
+  const tables: ArmTable[] = [];
+  for (const file of allSourceFiles()) {
+    const src = stripComments(readFileSync(file, 'utf8'));
+    for (const match of src.matchAll(DECLARATION)) {
+      const open = match.index + match[0].length - 1;
+      const keys = topLevelParts(balancedGroup(src, open))
+        .map((part) => /^\s*([A-Za-z_$][\w$]*)\s*:/.exec(part)?.[1])
+        .filter((key) => key !== undefined);
+      tables.push({ file, binding: match[1]!, keys });
+    }
+  }
+  return atLeast(tables, 4, 'armTables');
+}
+
+describe('an arm table', () => {
+  it('reports every arm it declares', () => {
+    const unreported: string[] = [];
+    for (const { file, binding, keys } of armTables()) {
+      const src = stripComments(readFileSync(file, 'utf8'));
+      for (const key of keys) {
+        // The two call shapes the facility offers: the direct `reportArm`, and
+        // the one-line closure over it each factory opens. A THIRD shape is a
+        // failure here rather than a silent pass — the guard cannot vouch for a
+        // reference it does not recognise.
+        const site = new RegExp(
+          String.raw`\breport\(\s*${binding}\.${key}\b|\breportArm\(\s*\w+\s*,\s*${binding}\.${key}\b`
+        );
+        if (!site.test(src)) unreported.push(`${file.slice(srcRoot.length + 1)}: ${binding}.${key}`);
+      }
+    }
+    expect(unreported.sort()).toEqual([]);
   });
 });
