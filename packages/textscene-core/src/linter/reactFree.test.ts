@@ -51,6 +51,16 @@ describe('React-free boundary (ADR-0001)', () => {
     expect(parserClosure.unresolved).toEqual([]);
   });
 
+  // The other failure mode, which `unresolved` cannot see: a walk that follows
+  // NOTHING reports no unresolved specifier either, so a closure of the entry
+  // file alone satisfies every assertion below. 749 and 475 files today; the
+  // floors sit near half that, low enough to survive a real refactor and far
+  // enough above 1 to redden on a collapse.
+  it('walked both closures rather than stopping at the entry file', () => {
+    expect(linterClosure.files.size).toBeGreaterThan(400);
+    expect(parserClosure.files.size).toBeGreaterThan(250);
+  });
+
   it('linter entry point reaches no .tsx render component', () => {
     expect(tsxFiles(linterClosure)).toEqual([]);
   });
