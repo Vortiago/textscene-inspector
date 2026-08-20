@@ -41,6 +41,35 @@ export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleM
 }
 
 /**
+ * `arm`'s diagnostic for `node` — the one conversion from a declared arm to a
+ * reported value.
+ *
+ * The fields are named rather than spread because an arm carries more than a
+ * diagnostic does: `grounding` exists so `emitsGrounding` can check the cite,
+ * and a spread ships that authoring-time record to every caller. `Diagnostic`
+ * is not a closed type at a spread site, so the compiler allows it.
+ *
+ * `location` is optional because only the file diagnostics have one: a rule
+ * reaches its subject through the tree, which no longer carries the heading's
+ * line.
+ */
+export function armDiagnostic(
+  arm: RuleArm,
+  node: Pick<TscnNode, 'name' | 'type'>,
+  message: string,
+  location?: Diagnostic['location']
+): Diagnostic {
+  return {
+    severity: arm.severity,
+    message,
+    nodeName: node.name,
+    nodeType: node.type,
+    ruleName: arm.ruleName,
+    ...(location ? { location } : {}),
+  };
+}
+
+/**
  * Append `arm`'s diagnostic for `node`, or nothing when this instance has no
  * such arm.
  *
@@ -54,11 +83,5 @@ export function reportArm(
   message: string
 ): void {
   if (!arm) return;
-  into.push({
-    severity: arm.severity,
-    message,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: arm.ruleName,
-  });
+  into.push(armDiagnostic(arm, node, message));
 }

@@ -176,6 +176,19 @@ describe('a root heading that declares a parent', () => {
     expect(errors.map((d) => d.nodeName)).toEqual(['A']);
   });
 
+  it('leaves the vanished-path warning off heading 0, which never reaches it', () => {
+    // `packed_scene.cpp:200-219` is `if (i > 0) { … } else { … }`, and the
+    // WARN_PRINT with its `nparent = ret_nodes[0]` re-root sits in the `i > 0`
+    // arm alone. Heading 0 is refused at `:219` instead, so a warning naming a
+    // rename Godot never performs on it describes nothing the engine does.
+    const vanished = scene(
+      node('Node2D', {}, { name: 'A', parent: 'Nope' }),
+      node('Node2D', {}, { name: 'Root' })
+    );
+    expect(orphansIn(vanished)).toEqual([]);
+    expect(rootErrors(vanished).map((d) => d.nodeName)).toEqual(['A']);
+  });
+
   it('says nothing about a root heading that declares none', () => {
     expect(rootErrors(scene(node('Node2D', {}, { name: 'Root' })))).toEqual([]);
     expect(rootErrors(dangling)).toEqual([]);

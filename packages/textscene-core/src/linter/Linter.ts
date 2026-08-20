@@ -11,6 +11,7 @@ import {
   FILE_DIAGNOSTICS,
   STRICT_PARSER_RULE_NAME,
 } from './fileDiagnostics.js';
+import { armDiagnostic } from './ruleArms.js';
 
 export class Linter {
   private parser = new StrictTscnParser();
@@ -69,19 +70,16 @@ export class Linter {
   private legacyFormatDiagnostic(content: string): Diagnostic | null {
     const header = readHeaderFormat(content);
     if (!header || header.format === null || header.format > LEGACY_FORMAT_CEILING) return null;
-    return {
-      severity: FILE_DIAGNOSTICS.legacyFormat.severity,
+    return armDiagnostic(
+      FILE_DIAGNOSTICS.legacyFormat,
+      { name: '<unknown>', type: '<unknown>' },
       // "3 or 4" rather than one number: one 4.6.3 saver writes both, choosing
       // per file (`resource_format_text.cpp:1798`).
-      message:
-        `Header format=${header.format} predates the text format Godot writes today (3 or 4). ` +
+      `Header format=${header.format} predates the text format Godot writes today (3 or 4). ` +
         'Lint rules target the current format, so nothing else in this file is reported. ' +
         'Open and re-save the file in Godot to migrate it.',
-      nodeName: '<unknown>',
-      nodeType: '<unknown>',
-      ruleName: FILE_DIAGNOSTICS.legacyFormat.ruleName,
-      location: { line: header.line, column: 1 },
-    };
+      { line: header.line, column: 1 }
+    );
   }
 
   /**
@@ -177,44 +175,48 @@ function reparentedName(parentPath: string, name: string): string {
  * error. The rename spelling is `:561-563`, one line below the re-root.
  */
 function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
-  const { node: root, line: rootLine, declaredParent: rootParent } = scene.rootWithParent ?? {};
-  const rootRefusal: Diagnostic[] =
-    root === undefined
-      ? []
-      : [
-          {
-            ...FILE_DIAGNOSTICS.rootDeclaresParent,
-            message:
-              `Root node '${root.name}' declares parent="${rootParent}", which only a non-root heading may do. ` +
-              'The file loads, but Godot refuses to instantiate the scene from it at all.',
-            nodeName: root.name,
-            nodeType: root.type,
-            location: { line: rootLine!, column: 1 },
-          },
-        ];
+  const rootOrigin = scene.rootWithParent;
+  const rootRefusal: Diagnostic[] = rootOrigin
+    ? [
+        armDiagnostic(
+          FILE_DIAGNOSTICS.rootDeclaresParent,
+          rootOrigin.node,
+          `Root node '${rootOrigin.node.name}' declares parent="${rootOrigin.declaredParent}", ` +
+            'which only a non-root heading may do. The file loads, but Godot refuses to ' +
+            'instantiate the scene from it at all.',
+          { line: rootOrigin.line, column: 1 }
+        ),
+      ]
+    : [];
 
-  return rootRefusal.concat((scene.orphanedNodes ?? []).map(({ node, line, declaredParent }) => {
-    // The heading's own attribute, not `node.parent`: both parsers drop an empty
-    // `parent=""`, while the loader keeps it — `add_node_path` returns an index
-    // for any value the field carries (`packed_scene.cpp:2307-2311`), so
-    // `n.parent` is never `-1` for one and the refusal below cannot apply to it.
-    const { severity, ruleName } =
-      declaredParent === undefined
-        ? FILE_DIAGNOSTICS.nodeWithoutParent
-        : FILE_DIAGNOSTICS.unresolvedParentPath;
-    return {
-      severity,
-      ruleName,
-      message:
-        declaredParent === undefined
+  // Heading 0 is dropped here rather than reported twice: `packed_scene.cpp`
+  // reads `if (i > 0) { … } else { … }`, and BOTH claims below live in the
+  // `i > 0` arm — the missing-parent refusal at `:207`, and the vanished-path
+  // warning with its `nparent = ret_nodes[0]` re-root at `:208-215`. Heading 0
+  // takes the `else`, so it is refused outright by the diagnostic above and no
+  // rename is performed on it to describe. It is stranded only when its own
+  // path resolves against nothing AND a later heading is parentless, which is
+  // the case that reported both.
+  const stranded = (scene.orphanedNodes ?? []).filter((origin) => origin !== rootOrigin);
+
+  return rootRefusal.concat(
+    stranded.map(({ node, line, declaredParent }) => {
+      // The heading's own attribute, not `node.parent`: both parsers drop an
+      // empty `parent=""`, while the loader keeps it — `add_node_path` returns
+      // an index for any value the field carries (`packed_scene.cpp:2307-2311`),
+      // so `n.parent` is never `-1` for one and the refusal cannot apply to it.
+      const missing = declaredParent === undefined;
+      return armDiagnostic(
+        missing ? FILE_DIAGNOSTICS.nodeWithoutParent : FILE_DIAGNOSTICS.unresolvedParentPath,
+        node,
+        missing
           ? `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
-            'The file loads, but Godot cannot instantiate the scene from it at all.'
+              'The file loads, but Godot cannot instantiate the scene from it at all.'
           : `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
-            `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent, node.name)}". ` +
-            'No semantic rule ran on it or on anything parented below it.',
-      nodeName: node.name,
-      nodeType: node.type,
-      location: { line, column: 1 },
-    };
-  }));
+              `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent, node.name)}". ` +
+              'No semantic rule ran on it or on anything parented below it.',
+        { line, column: 1 }
+      );
+    })
+  );
 }
