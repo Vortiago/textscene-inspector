@@ -116,7 +116,8 @@ const KNOWN_SUBRESOURCE_OVERRIDES = {
   'scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import':
     'materials use_external → res://materials/{blue,white,black}.tres, honoured.',
   'scenes/demos/3d/truck_town/town/lamp/scene.gltf.import':
-    'UNHANDLED: nodes mesh_instance/layers = 2 puts one lamp mesh on render layer 2.',
+    'nodes mesh_instance/layers = 2 puts one lamp mesh on render layer 2, honoured — ' +
+    'the vehicles\' decals cull_mask 1048573 clears exactly that bit.',
 };
 
 function walk(dir, out = []) {

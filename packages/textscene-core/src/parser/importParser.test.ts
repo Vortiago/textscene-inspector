@@ -3,7 +3,7 @@
  * the one sidecar in the corpus whose parameters change what is drawn.
  */
 import { describe, expect, it } from 'vitest';
-import { parseImportFile, importRootScale, importExternalMaterials } from './importParser';
+import { importNodeLayers, parseImportFile, importRootScale, importExternalMaterials } from './importParser';
 
 const TREE_IMPORT = `[remap]
 
@@ -193,4 +193,28 @@ describe('importExternalMaterials', () => {
     const parsed = parseImportFile('[params]\n\n_subresources={\n"materials": Vector3(1, 1, 1)\n}\n');
     expect(importExternalMaterials(parsed).size).toBe(0);
   });
+
+describe('importNodeLayers', () => {
+  const sidecar = (body: string) => parseImportFile(`[params]\n\n_subresources={\n${body}\n}\n`);
+
+  it('strips the PATH: prefix Godot writes the key with', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:root/Object_4": {\n"mesh_instance/layers": 2\n}\n}');
+    expect([...importNodeLayers(parsed)]).toEqual([['root/Object_4', 2]]);
+  });
+
+  it('ignores a node entry carrying no layer mask', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:a": {\n"mesh_instance/cast_shadow": 1\n}\n}');
+    expect(importNodeLayers(parsed).size).toBe(0);
+  });
+
+  it('ignores a non-integer mask', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:a": {\n"mesh_instance/layers": "2"\n}\n}');
+    expect(importNodeLayers(parsed).size).toBe(0);
+  });
+
+  it('is empty without a sidecar or a nodes block', () => {
+    expect(importNodeLayers(null).size).toBe(0);
+    expect(importNodeLayers(parseImportFile('[params]\n\nnodes/root_scale=1.0\n')).size).toBe(0);
+  });
+});
 });

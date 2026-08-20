@@ -5,8 +5,8 @@ the `.import` sidecar into a pre-baked PackedScene under `.godot/imported/`, and
 artifact is what a running game loads. The artifact is gitignored, binary and
 hash-named, so it is not an input this previewer can have. We therefore perform an
 **asset re-import**: load the source asset and re-derive the scene, honouring
-`nodes/root_scale`, `nodes/apply_root_scale` and `_subresources`' per-material
-`use_external` remaps from the sidecar, and nothing else.
+`nodes/root_scale`, `nodes/apply_root_scale` and, from `_subresources`, the per-material
+`use_external` remaps and per-node `mesh_instance/layers` — and nothing else.
 
 ## Why this became necessary
 
@@ -22,9 +22,11 @@ the two renderers is only evidence when they are fed the same inputs the engine 
 
 ## Why the allowlist is short
 
-All 25 scene `.import` files in the corpus were fetched and read. Two things across all
-of them have a visual consequence: the tree's root scale, and the `_subresources`
-material remaps that repoint a glTF's embedded materials at a `.tres`
+All 25 scene `.import` files in the corpus were fetched and read. Three things across all
+of them have a visual consequence: the tree's root scale, the `_subresources`
+material remaps that repoint a glTF's embedded materials at a `.tres`, and a per-node
+render-layer mask (`resource_importer_scene.cpp:1836`) that a decal's `cull_mask`
+then filters on
 (`editor/import/3d/resource_importer_scene.cpp:1620-1645`, which Godot bakes into the
 imported scene). Every other non-default value is either something three's `GLTFLoader`
 already does (`meshes/ensure_tangents`), or a bake/performance concern with no bearing
@@ -32,9 +34,9 @@ on a preview (`meshes/generate_lods`, `create_shadow_meshes`, `light_baking`,
 `lightmap_texel_size`, `force_disable_compression`). The three `.obj` sidecars are
 identity (`scale_mesh=Vector3(1, 1, 1)`, `offset_mesh=Vector3(0, 0, 0)`).
 
-`_subresources` is honoured only in part: its `nodes` and `meshes` and `animations`
-categories are per-node bake and playback settings, and the guard names each non-empty
-block individually so a new one is a decision rather than a silent inclusion.
+`_subresources` is honoured only in part: `meshes` and `animations` are bake and playback
+settings, and `nodes` carries much more than the layer mask. The guard names each
+non-empty block individually, so a new one is a decision rather than a silent inclusion.
 
 What is left unread is inert or a bake concern, not a deferred decision. But an unread
 parameter is exactly the failure this ADR exists to prevent, so the boundary is guarded

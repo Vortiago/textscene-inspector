@@ -7,7 +7,8 @@
  * `[params]` describes the import — `[remap]` and `[deps]` address the baked artifact
  * under `.godot/imported/`, which this previewer never reads (ADR-0028).
  *
- * Values stay raw strings; `importRootScale` and `importExternalMaterials` are the typed
+ * Values stay raw strings; `importRootScale`, `importExternalMaterials` and
+ * `importNodeLayers` are the typed
  * readers, because `nodes/root_scale`, `nodes/apply_root_scale` and `_subresources`'
  * material remaps are the only parameters we honour; everything else is either something
  * three's GLTFLoader already does or a bake concern with no visual consequence.
@@ -169,6 +170,24 @@ export function importExternalMaterials(
     if (path) remaps.set(name, path);
   }
   return remaps;
+}
+
+/**
+ * Per-node render-layer masks, keyed by the node path Godot writes as `PATH:a/b/c`.
+ * `resource_importer_scene.cpp:1836` sets the mask on the imported mesh instance.
+ */
+export function importNodeLayers(parsed: ParsedImportFile | null): ReadonlyMap<string, number> {
+  const masks = new Map<string, number>();
+  const nodes = subResourceCategory(parsed, 'nodes');
+  if (!nodes) return masks;
+
+  for (const [key, settings] of Object.entries(nodes)) {
+    if (typeof settings !== 'object' || settings === null) continue;
+    const mask = (settings as Record<string, unknown>)['mesh_instance/layers'];
+    if (typeof mask !== 'number' || !Number.isInteger(mask)) continue;
+    masks.set(key.startsWith('PATH:') ? key.slice('PATH:'.length) : key, mask);
+  }
+  return masks;
 }
 
 /**

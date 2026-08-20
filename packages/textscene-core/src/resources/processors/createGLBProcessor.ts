@@ -15,8 +15,10 @@ import {
   isGLBPath,
 } from '../formats/glb/glbProcessing';
 import { applyRootScale } from '../formats/glb/rootScale';
+import { stampVisualLayers } from '../../r3f/visualLayers';
 import {
   importExternalMaterials,
+  importNodeLayers,
   importRootScale,
   parseImportFile,
   type ParsedImportFile,
@@ -66,6 +68,7 @@ async function applyImportSidecar(
 
   const parsed = parseImportFile(raw);
   applySidecarRootScale(object, path, parsed);
+  applySidecarNodeLayers(object, path, parsed);
   await applySidecarMaterials(object, path, parsed, loadMaterial);
 }
 
@@ -83,6 +86,43 @@ function applySidecarRootScale(
       `(${rootScale.bake ? 'baked into the asset' : 'on the root node'})`
   );
   applyRootScale(object, rootScale);
+}
+
+/**
+ * `_subresources`' per-node `mesh_instance/layers`, matched by node path
+ * (`resource_importer_scene.cpp:1836`). Godot's path holds the raw glTF names, which
+ * three's loader has already sanitized on the object graph, so the lookup sanitizes each
+ * segment the same way rather than comparing raw to cooked.
+ */
+function applySidecarNodeLayers(
+  object: THREE.Object3D,
+  path: string,
+  parsed: ParsedImportFile | null
+): void {
+  const masks = importNodeLayers(parsed);
+  if (masks.size === 0) return;
+
+  for (const [nodePath, mask] of masks) {
+    const target = resolveSanitizedPath(object, nodePath);
+    if (!target) {
+      logger.warn(`[GLBProcessor] ${path}: import sidecar layers path '${nodePath}' matched no node`);
+      continue;
+    }
+    logger.info(`[GLBProcessor] ${path}: import sidecar layers ${mask} on '${nodePath}'`);
+    stampVisualLayers(target, mask);
+  }
+}
+
+/** Walk `a/b/c` from the asset root, comparing three's sanitized names. */
+function resolveSanitizedPath(root: THREE.Object3D, nodePath: string): THREE.Object3D | null {
+  let current: THREE.Object3D | null = null;
+  for (const segment of nodePath.split('/')) {
+    const wanted = THREE.PropertyBinding.sanitizeNodeName(segment);
+    const pool: THREE.Object3D[] = current ? current.children : [root, ...root.children];
+    current = pool.find((child) => child.name === wanted) ?? null;
+    if (!current) return null;
+  }
+  return current;
 }
 
 /**
