@@ -27,7 +27,12 @@ const NEGATIVE_FIXTURES = new Set(
 export default {
   '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'vitest related --run'],
   '*.{tscn,tres}': (files) => {
-    const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(f.split('/').pop()));
+    // Split on BOTH separators: lint-staged hands the hook absolute paths, and
+    // on Windows those are backslash-separated, so a `/`-only split returned the
+    // whole path and matched no basename — every negative fixture then reached
+    // the linter that is meant to skip it, failing the commit with the error the
+    // fixture exists to carry.
+    const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(f.split(/[/\\]/).pop()));
     if (lintable.length === 0) return [];
     return [
       'pnpm build:linter',
