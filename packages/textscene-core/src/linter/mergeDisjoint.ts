@@ -15,14 +15,16 @@ export function mergeDisjoint<T>(
   parts: readonly Readonly<Record<string, T>>[],
   what: string
 ): Readonly<Record<string, T>> {
-  const merged: Record<string, T> = {};
+  // A null prototype, so the accumulator carries only what was merged into it:
+  // the keys are Godot names, and on a `{}` a name that also lives on
+  // `Object.prototype` reads as already-declared, while `__proto__` assigns
+  // through the setter and lands as no own key at all — silently dropped and
+  // never reported as a duplicate. The membership test below is then the same
+  // set as the `Object.entries` it is compared against, and so is every
+  // consumer's bare-index read of the table.
+  const merged: Record<string, T> = Object.create(null) as Record<string, T>;
   for (const part of parts) {
     for (const [key, value] of Object.entries(part)) {
-      // `Object.hasOwn`, not `in`: the two sides must be the same set. Both
-      // keys come from a table keyed by a Godot name, and `in` walks the
-      // prototype, so `toString`/`valueOf`/`constructor` collided with
-      // `Object.prototype` on their FIRST and only declaration and threw at
-      // import time, taking the linter barrel down with them.
       if (Object.hasOwn(merged, key)) throw new Error(`${key} has ${what} in two parts`);
       merged[key] = value;
     }

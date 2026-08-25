@@ -47,6 +47,16 @@ export function isEqualApprox(a: number, b: number): boolean {
 }
 
 /**
+ * `CLAMP` (typedefs.h:138-141): `m_a < m_min ? m_min : (m_a > m_max ? m_max : m_a)`.
+ *
+ * Not `Math.min(Math.max(...))`: that answers `min` for a NaN input where the
+ * macro's two comparisons both fail and hand the value straight back.
+ */
+export function clamp(value: number, min: number, max: number): number {
+  return value < min ? min : value > max ? max : value;
+}
+
+/**
  * `SIGN` (typedefs.h:123-126): `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)`.
  *
  * Not `Math.sign`, and the gap is NaN. Both of the engine's comparisons are

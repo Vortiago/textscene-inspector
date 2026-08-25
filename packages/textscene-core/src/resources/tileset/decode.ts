@@ -53,7 +53,8 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   // Two spellings of one id (`sources/1`, `sources/01`, `sources/+1`) are one
   // source: `_set` drops whatever sits at the id before re-adding
   // (tile_set.cpp:3965-3968), so the last spelling's value wins — what
-  // `Map.set` already does. The id keeps its first-seen place in the order.
+  // `Map.set` already does. The id keeps its first-seen place, which is this
+  // previewer's batching order rather than the engine's; see `types.ts`.
   const seat = (id: number, source: AtlasSourceModel): void => {
     if (!sources.has(id)) sourceOrder.push(id);
     sources.set(id, source);

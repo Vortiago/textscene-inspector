@@ -227,6 +227,110 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
   });
 
+  // `times`, `transitions` and a transform track's flat array are the same
+  // channel as `values`: a non-finite one reaches a THREE `KeyframeTrack`, whose
+  // interpolant divides by the span, so every sample after it is NaN.
+  it('drops a value track whose TIME is non-finite', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, inf),\n"values": [Vector3(0, 0, 0), Vector3(0, 1, 0)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose TRANSITION is non-finite', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"transitions": PackedFloat32Array(1, nan),\n"values": [Vector3(0, 0, 0), Vector3(0, 1, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a 3D transform track whose flat array holds a non-finite component', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("N")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, inf, 0, 1, 1, 0, 1, 0)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track whose TIME is non-finite on a transform track too', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"rotation_3d"',
+        'tracks/0/path': 'NodePath("N")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1, 1e999, 1, 0, 0, 0, 1)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  // `values[i] ?? 0` minted a keyframe AT ZERO for every time the array did not
+  // reach, which for a scalar property pins the node there for the whole clip.
+  it('drops a value track whose keys dict carries no `values` at all', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:rotation")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0, 1)\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track with fewer values than times', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 0.5, 1),\n"values": [Vector2(0, 0), Vector2(1, 1)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track whose int component is unstorable, rather than keying 0', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0),\n"values": [Vector3i(99999999999999999999, 0, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
   it('returns the animation with no tracks when a track type is unsupported', () => {
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),

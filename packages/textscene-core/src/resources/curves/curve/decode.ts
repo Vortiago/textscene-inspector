@@ -23,13 +23,8 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import {
-  slotTupleRegex,
-  matchedFloat,
-  parseGodotFloat,
-  allFinite,
-} from '../../../godot/number.js';
-import { ruleInt } from '../../../godot/int.js';
+import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/number.js';
+import { ruleInt, slotComponents } from '../../../godot/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { resizePoints } from './pointCount';
 
@@ -92,8 +87,11 @@ function parsePoints(value: string | undefined): CurvePoint[] {
 
   const points: CurvePoint[] = [];
   for (let i = 0; i < entries.length; i += ELEMS_PER_POINT) {
+    // The unreadable POINT goes, not the curve: the `% 5` gate above already
+    // vetted the array's shape, and dropping all of them left `point_count` to
+    // pad the empty list back up to a flat curve the file never contained.
     const position = parseVector2Entry(entries[i]!);
-    if (!position) return [];
+    if (!position) continue;
     points.push({
       position,
       leftTangent: numberOr(entries[i + 1]!, 0),
@@ -111,8 +109,10 @@ function parseFloatArray(value: string | undefined): number[] | null {
   if (!entries) return null;
   // `parseGodotFloat`, not `parseFloat`: the latter reads `5abc` as 5, and the
   // curve was then scaled by a maximum the file does not contain.
+  // Finite, for the same reason `_data`'s components are: a non-finite limit
+  // clamps every padded point onto Infinity and scales every sample by it.
   const numbers = entries.map((e) => parseGodotFloat(e));
-  return numbers.some((n) => n === null) ? null : (numbers as number[]);
+  return numbers.some((n) => n === null || !Number.isFinite(n)) ? null : (numbers as number[]);
 }
 
 /**
@@ -143,8 +143,6 @@ function splitArrayLiteral(value: string | undefined): string[] | null {
  * `Vector2(1.2.3, 4)` decoded to `{x: 1.2, y: 4}` and `Vector2(8abc, 4)` to
  * `{x: 8, y: 4}` — a control point the file does not contain, which is the
  * accident `parser/vectors.ts` says the anchored grammar exists to prevent.
- * `Vector2(inf, 0)` was worse than a wrong point: `parsePoints` drops the whole
- * curve on a null, so one non-finite component discarded EVERY point.
  */
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 
@@ -160,13 +158,25 @@ const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);
   if (!match) return null;
-  const components = [matchedFloat(match[1]!), matchedFloat(match[2]!)];
+  // `slotComponents`, not bare `matchedFloat`: the slot grammar admits the
+  // `Vector2i` spelling, whose arguments Godot narrows to int32 BEFORE widening
+  // into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
+  const components = slotComponents(entry, 'Vector2', [match[1], match[2]]);
   if (!allFinite(components)) return null;
   return { x: components[0]!, y: components[1]! };
 }
 
+/**
+ * One tangent slot, or `fallback` when the text is not a finite float.
+ *
+ * Non-finite is a MISS, not a value: `inf` and `nan` are literals
+ * `parseGodotFloat` reads, and `sample`'s `y + d * tangent` hands either on to
+ * the particle geometry that multiplies by the sample — the same exit the
+ * position beside it takes.
+ */
 function numberOr(entry: string, fallback: number): number {
-  return parseGodotFloat(entry) ?? fallback;
+  const num = parseGodotFloat(entry);
+  return num !== null && Number.isFinite(num) ? num : fallback;
 }
 
 function tangentMode(entry: string): CurveTangentMode {

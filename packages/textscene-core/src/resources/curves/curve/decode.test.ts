@@ -80,6 +80,44 @@ describe('decodeCurve', () => {
     expect(sampleCurve(curve, 0.5)).toBe(0);
   });
 
+  it('drops only the unreadable point, keeping the ones it read (error path)', () => {
+    // Dropping all of them left `point_count` free to pad the empty list back
+    // up, turning a rejected curve into a confident flat one.
+    const curve = decodeCurve({
+      _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
+    });
+
+    expect(curve.points.map((p) => p.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ]);
+  });
+
+  it('falls back on a non-finite TANGENT, as it does on a non-finite position', () => {
+    const curve = decodeCurve({
+      _data: '[Vector2(0, 0), 0.0, inf, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
+    });
+
+    expect(curve.points[0]!.rightTangent).toBe(0);
+    expect(sampleCurve(curve, 0.5)).toBeCloseTo(0.5, 6);
+  });
+
+  it('declines a non-finite `_limits` rather than clamping every point onto it', () => {
+    const curve = decodeCurve({ _limits: '[inf, 2.0, 0.0, 3.0]', _data: '[Vector2(1, 1), 0.0, 0.0, 0, 0]' });
+
+    expect(curve.minValue).toBe(EMPTY_CURVE.minValue);
+    expect(curve.maxValue).toBe(EMPTY_CURVE.maxValue);
+  });
+
+  it('narrows a `Vector2i` position to int32, the way the slot conversion does', () => {
+    // `slotTupleRegex` admits the spelling on purpose; `_parse_construct<int32_t>`
+    // narrows each argument before it widens into the float slot.
+    expect(decodeCurve({ _data: '[Vector2i(4294967295, 0), 0.0, 0.0, 0, 0]' }).points[0]!.position).toEqual({
+      x: -1,
+      y: 0,
+    });
+  });
+
   it('returns Godot resource defaults for an empty resource body (edge case)', () => {
     const curve = decodeCurve({});
     expect(curve).toEqual({
@@ -114,13 +152,29 @@ describe('`point_count` resizes the decoded point list', () => {
     expect(curve.points).toHaveLength(3);
     expect(curve.points[0]).toEqual(DEFAULT_POINT);
     expect(curve.points[1]).toEqual(DEFAULT_POINT);
+    // `leftTangent` is 1, not the written 0.5: `_add_point` ends in
+    // `update_auto_tangents` (curve.cpp:100), and a LINEAR endpoint re-aims at
+    // the neighbour that just arrived — here the slope from (0,0) to (1,1).
     expect(curve.points[2]).toEqual({
       position: { x: 1, y: 1 },
-      leftTangent: 0.5,
+      leftTangent: 1,
       rightTangent: 0.5,
       leftMode: CurveTangentMode.Linear,
       rightMode: CurveTangentMode.Linear,
     });
+  });
+
+  it('re-aims only a LINEAR endpoint, leaving a Free neighbour’s tangent alone', () => {
+    const curve = decodeCurve({ _data: '[Vector2(1, 1), 0.5, 0.5, 0, 0]', point_count: '2' });
+
+    expect(curve.points[1]!.leftTangent).toBe(0.5);
+    expect(curve.points[1]!.rightTangent).toBe(0.5);
+  });
+
+  it('samples the curve Godot samples once the pad has re-aimed the tangent', () => {
+    const curve = decodeCurve({ _data: '[Vector2(1, 1), 0.5, 0.5, 1, 1]', point_count: '2' });
+
+    expect(sampleCurve(curve, 0.5)).toBeCloseTo(0.375, 6);
   });
 
   it('seats a padded point in offset order, so sampling interpolates', () => {

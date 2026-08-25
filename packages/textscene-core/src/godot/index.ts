@@ -30,7 +30,7 @@
  * small and topical. Add a new file rather than a new section.
  */
 
-export { CMP_EPSILON, basisDeterminant, isZeroApprox, isEqualApprox, sign, smoothstep } from './math.js';
+export { CMP_EPSILON, basisDeterminant, clamp, isZeroApprox, isEqualApprox, sign, smoothstep } from './math.js';
 export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
 export {
   IS_VALID_INT_RE,

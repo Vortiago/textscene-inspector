@@ -20,11 +20,13 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
   vitest + tsc but fail CI.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed a linter rule or validator: `pnpm lint:scenes`, in `validate` and in CI. It
-  sweeps `scenes/examples` and `scenes/demos` and fails on any ERROR. The directories
-  live in that script and the CI step beside it, never inside the linter or the core
-  package: the tool takes paths, the caller chooses them. `scenes/demos` is 220 scenes
-  vendored from Godot's own demo projects, so an error there is a false positive in a
-  rule rather than a broken scene, and warnings are expected and do not fail.
+  sweeps `scenes/examples`, `scenes/demos`, `scenes/isometric` and `scenes/materials`
+  — every shipped directory under `scenes/` but `fixtures` — and fails on any ERROR.
+  The directories live in `lint:scenes:only`, which CI runs too, never inside the
+  linter or the core package: the tool takes paths, the caller chooses them.
+  `scenes/demos` and `scenes/isometric` are vendored from Godot's own demo projects,
+  so an error there is a false positive in a rule rather than a broken scene, and
+  warnings are expected and do not fail.
   `fixtureLint.test.ts` separately covers `scenes/fixtures`, this package's own corpus,
   including the negative `edge-*` files that MUST error.
 - Changed rendering: `pnpm test:visual` (golden images); `pnpm test:visual:update`

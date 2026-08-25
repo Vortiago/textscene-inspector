@@ -17,26 +17,35 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { basename } from 'node:path';
 
 const NEGATIVE_FIXTURES = new Set(
   JSON.parse(readFileSync(new URL('./scenes/fixtures/negative-fixtures.json', import.meta.url), 'utf8'))
     .files
 );
 
+/**
+ * One argument for the command string lint-staged parses.
+ *
+ * Plain double quotes rather than `JSON.stringify`: lint-staged splits the
+ * returned string with `string-argv`, which strips quotes without unescaping,
+ * so JSON's doubled backslashes reached the CLI as part of the path and no
+ * Windows path resolved.
+ */
+const quote = (f) => `"${f}"`;
+
 /** @type {import('lint-staged').Configuration} */
 export default {
   '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'vitest related --run'],
   '*.{tscn,tres}': (files) => {
-    // Split on BOTH separators: lint-staged hands the hook absolute paths, and
-    // on Windows those are backslash-separated, so a `/`-only split returned the
-    // whole path and matched no basename — every negative fixture then reached
-    // the linter that is meant to skip it, failing the commit with the error the
-    // fixture exists to carry.
-    const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(f.split(/[/\\]/).pop()));
+    // `basename`, not a split: lint-staged hands the hook absolute paths, and
+    // `node:path` is `path.win32` on Windows, so it cuts a backslash path there
+    // and leaves a backslash in a POSIX filename alone.
+    const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(basename(f)));
     if (lintable.length === 0) return [];
     return [
       'pnpm build:linter',
-      `node apps/textscene-linter/dist/cli.js ${lintable.map((f) => JSON.stringify(f)).join(' ')}`,
+      `node apps/textscene-linter/dist/cli.js ${lintable.map(quote).join(' ')}`,
     ];
   },
 };
