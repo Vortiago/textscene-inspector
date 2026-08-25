@@ -783,6 +783,20 @@ export const GOLDEN_SCENES = [
     file: 'unit-texturerect-atlastexture.tscn',
     mode: '2d',
   },
+  // Three TextureRects on one 8x8 checkerboard magnified 25x, none of them
+  // naming a texture_filter: the left two must inherit NEAREST from an
+  // ancestor (one from its parent, one from its grandparent past a node left
+  // on PARENT_NODE), the right one has no naming ancestor and stays on the
+  // viewport-default LINEAR. The variable is the ancestor WALK, not the
+  // sampler mapping — a regression that resolves PARENT_NODE straight to the
+  // viewport default leaves all three soft, and every other TextureRect scene
+  // stays exact because none of them puts a naming ancestor above an
+  // inheriting one. Hard vs soft checker edges, so the diff is unmistakable.
+  {
+    name: 'texturerect-filter-inherit',
+    file: 'unit-texture-rect-filter-inherit.tscn',
+    mode: '2d',
+  },
   // The same atlas decode reached through SpriteFrames instead of a plain
   // Texture2D slot. The two share the decode but not the resource pools it
   // resolves against, so the entry above can be exact while this one draws
