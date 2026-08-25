@@ -224,16 +224,17 @@ export type TextureRectFilter = 'nearest' | 'linear';
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`) → three.js's
- * two magnification/minification filter families. `TEXTURE_FILTER_PARENT_NODE`
- * (0, the property default, `:123`) resolves to the CanvasItem root default,
- * `CANVAS_ITEM_TEXTURE_FILTER_LINEAR` (`:121`'s `texture_filter_cache` initial
- * value) — this codebase doesn't walk the Control ancestor chain for this
- * property (no context for it exists, unlike `modulate`'s
- * `Modulate2DContext`), so PARENT_NODE is resolved directly to that root
- * default rather than an intermediate ancestor's own setting. The mipmapped
- * and anisotropic variants collapse to their base filter — three.js's
- * anisotropy/mipmap knobs are separate texture properties this mapping
- * doesn't reach for, per the task's own ask (filter → Nearest/LinearFilter).
+ * two magnification/minification filter families. Takes an ALREADY-RESOLVED
+ * ordinal: `useInheritedTextureSampler` (`r3f/canvasItemTextureSampler.ts`)
+ * walks PARENT_NODE (0) up the Control ancestor chain to the nearest node
+ * that names one, leaving `undefined` when none does — which this function's
+ * `default` branch maps to `LINEAR`, the class default of the property a
+ * parentless CanvasItem's cache ultimately falls back to,
+ * `Viewport::default_canvas_item_texture_filter`
+ * (`scene/main/viewport.h:419`). The mipmapped and anisotropic variants
+ * collapse to their base filter — three.js's anisotropy/mipmap knobs are
+ * separate texture properties this mapping doesn't reach for, per the task's
+ * own ask (filter → Nearest/LinearFilter).
  */
 export function resolveTextureRectFilter(filter: number | undefined): TextureRectFilter {
   switch (filter) {
@@ -256,12 +257,13 @@ export type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
 
 /**
  * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`) → three.js
- * wrap modes. `TEXTURE_REPEAT_PARENT_NODE` (0, the property default, `:124`)
- * resolves to the CanvasItem root default, `CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
- * (`:122`) — 'clamp', the SAME root default `r3f/spriteFrame.ts`'s `'clamp'`
- * `SpriteWrapMode` already models for the 2D canvas, for the identical reason:
- * no ancestor-chain context exists for this property, so PARENT_NODE resolves
- * straight to the root default rather than an intermediate ancestor's value.
+ * wrap modes. Takes an ALREADY-RESOLVED ordinal, same as `resolveTextureRectFilter`
+ * above — `useInheritedTextureSampler` walks PARENT_NODE (0) up the ancestor
+ * chain, leaving `undefined` when no ancestor ever names one, which this
+ * function's `default` branch maps to `'clamp'`: `Viewport::
+ * default_canvas_item_texture_repeat`'s class default, `DISABLED`
+ * (`scene/main/viewport.h:420`) — the SAME root default `r3f/spriteFrame.ts`'s
+ * `'clamp'` `SpriteWrapMode` already models for the 2D canvas.
  */
 export function resolveTextureRectRepeat(repeat: number | undefined): TextureRectRepeat {
   switch (repeat) {

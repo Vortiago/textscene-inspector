@@ -247,4 +247,68 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
 
     controlComponentRegistry.clear();
   });
+
+  it("inherits texture_filter from the nearest ancestor that names one, past a PARENT_NODE ancestor in between", async () => {
+    controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
+    controlSolverRegistry.clear();
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeTexture());
+
+    // This TextureRect names NO texture_filter of its own (PARENT_NODE, the
+    // parsed default) — same leaf node reused under three different ancestors.
+    const leaf = textureRectNode();
+    function ancestorSolveNode(
+      path: string,
+      type: string,
+      properties: Record<string, unknown>,
+      children: SolveNode[]
+    ): SolveNode {
+      const name = path.split('/').pop()!;
+      const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+      return { ...emptySolveNode(), path, node: tscnNode, children };
+    }
+    function leafSolveNode(path: string): SolveNode {
+      return { ...emptySolveNode(), path, node: leaf, children: [] };
+    }
+    const fullRect = { anchorLeft: 0, anchorTop: 0, anchorRight: 1, anchorBottom: 1 };
+
+    // Grandparent NAMES NearestFilter (1) AND repeat ENABLED (2); the
+    // intermediate parent re-states PARENT_NODE (0) explicitly for both
+    // rather than omitting them, so a walk that stops at the immediate
+    // parent (instead of continuing past a non-naming one) would still fail
+    // this, for either property.
+    const parent = ancestorSolveNode(
+      'Grandparent/Parent',
+      'Control',
+      { ...fullRect, textureFilter: 0, textureRepeat: 0 },
+      [leafSolveNode('Grandparent/Parent/Leaf')]
+    );
+    const grandparent = ancestorSolveNode(
+      'Grandparent',
+      'Control',
+      { ...fullRect, textureFilter: 1, textureRepeat: 2 },
+      [parent]
+    );
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+          <ControlCanvasWalker
+            tree={[grandparent]}
+            generation={0}
+            viewport={VIEWPORT}
+            theme={THEME}
+            measurer={null}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.magFilter).toBe(THREE.NearestFilter);
+    expect(material.map!.minFilter).toBe(THREE.NearestFilter);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+
+    controlComponentRegistry.clear();
+  });
 });

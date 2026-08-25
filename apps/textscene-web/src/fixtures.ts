@@ -1368,6 +1368,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Filter Inherit",
+    "file": "unit-texture-rect-filter-inherit.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
     "category": "Unit - 2D UI Controls"

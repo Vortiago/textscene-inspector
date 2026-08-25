@@ -34,6 +34,29 @@ canvas's atlas texture is sampled `NoColorSpace` so the filter blends raw sRGB
 bytes, matching Godot's own canvas). The letterbox boundaries, the drawn rect
 and the fill colour agree.
 
+`texture_filter`/`texture_repeat` resolve `PARENT_NODE` through the Control
+ancestor chain to the nearest node that names one
+(`r3f/canvasItemTextureSampler.ts`), not straight to the viewport default.
+`unit-texture-rect-filter-inherit.tscn` isolates this: three TextureRects
+sample the same 8x8 checkerboard 25x magnified, none naming its own filter —
+one inherits NEAREST from its immediate parent, one inherits NEAREST from its
+GRANDPARENT past an explicit PARENT_NODE ancestor in between, and one has no
+naming ancestor at all (the viewport-default LINEAR baseline). `pnpm
+ref:godot scenes/fixtures/unit-texture-rect-filter-inherit.tscn --mode 2d
+--probe 45,25 --probe 295,25 --probe 545,25` against `pnpm ref:ours
+unit-texture-rect-filter-inherit.tscn --2d --probe 45,25 --probe 295,25
+--probe 545,25`, probed at a checker-cell boundary on each quad:
+
+| Probe | Case | Godot | Ours |
+| --- | --- | --- | --- |
+| `45,25` | immediate-parent NEAREST | `rgb(16, 16, 16)` | `rgb(16, 16, 16)` |
+| `295,25` | grandparent NEAREST, past PARENT_NODE | `rgb(16, 16, 16)` | `rgb(16, 16, 16)` |
+| `545,25` | no naming ancestor (LINEAR baseline) | `rgb(93, 93, 93)` | `rgb(92, 92, 92)` |
+
+The two inherited-NEAREST probes match exactly; the LINEAR baseline's 1/255
+gap is the same hardware bilinear-filter rounding tie `unit-texture-rect.tscn`'s
+own Divergences measures — not a colour-space or inheritance defect.
+
 ## Linting
 
 <!-- lint:begin TextureRect -->
@@ -51,10 +74,6 @@ absent or unparseable value becomes `undefined` and each falls through its own
 switch's default case at render time. `flip_h` / `flip_v` behave differently: a
 present-but-unparseable value collapses to `false` rather than `undefined`, since
 `parseOptionalBool` only checks for the literal string `true`.
-
-## Known limitations
-
-- **`texture_filter` / `texture_repeat` resolve `PARENT_NODE` to the viewport default, not to the nearest ancestor that names one.** Both properties are read and mapped (the section below), but there is no ancestor-chain context to walk. Also not re-measurable here: the only Control in the vendored corpus that sets either is an invisible `Panel`, which draws a StyleBox and samples no texture.
 
 ## Native (WebGL canvas) painter
 
@@ -103,13 +122,21 @@ the worked numbers.
 `NearestFilter`/`LinearFilter` and `RepeatWrapping`/`ClampToEdgeWrapping`/
 `MirroredRepeatWrapping`. Both default to `*_PARENT_NODE` (0) — a Control
 inherits its EFFECTIVE filter/repeat from the nearest ancestor that names one,
-falling back to the viewport. This codebase has no ancestor-chain context for
-either property (unlike `modulate`'s `Modulate2DContext`), so `PARENT_NODE`
-resolves directly to the CanvasItem ROOT default instead of walking ancestors:
-`CANVAS_ITEM_TEXTURE_FILTER_LINEAR` / `CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
-(`canvas_item.h:121-122`'s cache-field initializers) — `linear` / `clamp`,
-matching the SAME root default `r3f/spriteFrame.ts`'s `'clamp'` `SpriteWrapMode`
-already models for the 2D canvas.
+falling back to the viewport when none does. `useInheritedTextureSampler`
+(`r3f/canvasItemTextureSampler.ts`) walks that chain — the same
+own-or-ambient shape `modulate`'s `Modulate2DContext` uses, minus the
+multiplicative fold, since neither property has a self-only layer. `undefined`
+(no naming ancestor) is what the mapping functions below resolve to the
+CanvasItem ROOT default — a CanvasItem with no `parent_item` falls back to the
+RenderingServer's own `CANVAS_ITEM_TEXTURE_FILTER_DEFAULT`/`_REPEAT_DEFAULT`
+sentinel, which resolves through to the OWNING VIEWPORT's own
+`default_canvas_item_texture_filter`/`_repeat` (`scene/main/viewport.h:418-419`),
+whose class defaults are `LINEAR`/`DISABLED` — `linear` / `clamp`, matching
+the SAME root default `r3f/spriteFrame.ts`'s `'clamp'` `SpriteWrapMode`
+already models for the 2D canvas. A `CanvasLayer` boundary resets the ambient
+back to that same root default (`canvasLayerScope.tsx`), matching
+`get_parent_item()` returning null there for the identical reason `modulate`
+resets to white.
 
 STRETCH_TILE forces repeat wrapping for that one draw regardless of
 `texture_repeat` (`draw_texture_rect(texture, rect, tile=true)` is a per-call

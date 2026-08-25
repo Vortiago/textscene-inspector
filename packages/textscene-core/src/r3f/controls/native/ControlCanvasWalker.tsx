@@ -45,6 +45,7 @@ import { createSolveContext, solveControlTree, type SolvedControl } from './cont
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext } from '../../canvasItemModulate';
+import { TextureSampler2DContext, useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { useControlOwnTint, useInheritedModulate } from './controlTint';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { canvasRenderOrder } from '../../canvasPaintOrder';
@@ -157,6 +158,11 @@ function ControlNodeGroup({
   // and a painter reading it back from the provider is sixteen re-entries into
   // one composition (`NativeControlComponentProps.tint`).
   const tint = useControlOwnTint(inheritedModulate, solveNode);
+  // Same shape as `inheritedModulate` above, but "own-or-ambient" rather than
+  // multiplicative: neither property has a self-only layer, so the ONE fold
+  // is both what this node's own painter samples with and what its
+  // descendants inherit.
+  const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
   const isVisible = !hiddenNodePaths.has(solveNode.path) && props.visible !== false;
 
   // Structurally guaranteed present (the solve walks this exact tree); the
@@ -319,17 +325,19 @@ function ControlNodeGroup({
     >
       <CanvasItemKeyProvider value={renderOrder}>
         <Modulate2DContext.Provider value={inheritedModulate}>
-          {hasOwnTransform ? (
-            <CanvasItemGroup
-              position={[pivotX, -pivotY, 0]}
-              rotation={[0, 0, 0 - rotation]}
-              scale={[scaleX, scaleY, 1]}
-            >
-              <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
-            </CanvasItemGroup>
-          ) : (
-            content
-          )}
+          <TextureSampler2DContext.Provider value={sampler}>
+            {hasOwnTransform ? (
+              <CanvasItemGroup
+                position={[pivotX, -pivotY, 0]}
+                rotation={[0, 0, 0 - rotation]}
+                scale={[scaleX, scaleY, 1]}
+              >
+                <CanvasItemGroup position={[-pivotX, pivotY, 0]}>{content}</CanvasItemGroup>
+              </CanvasItemGroup>
+            ) : (
+              content
+            )}
+          </TextureSampler2DContext.Provider>
         </Modulate2DContext.Provider>
       </CanvasItemKeyProvider>
     </group>

@@ -12,6 +12,10 @@
  * inherited `modulate`. Used as-is: unlike ColorRect, TextureRect has no
  * `color` property of its own to fold in before the one sRGB→linear conversion.
  *
+ * Sampler: `texture_filter`/`texture_repeat` resolve through
+ * `useInheritedTextureSampler` (`r3f/canvasItemTextureSampler.ts`) — PARENT_NODE
+ * walks the ancestor chain to the nearest one naming a concrete value.
+ *
  * The free-Control rotate/scale-about-`pivot_offset` transform is the
  * walker's job (`ControlCanvasWalker.tsx`, gated on
  * `controlSolverRegistry.containerLayout(type) === undefined`), applied
@@ -25,6 +29,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
+import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
@@ -48,6 +53,10 @@ interface ImageLike {
 
 export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureRectProperties>(solveNode);
+  // Own-or-ambient. The walker folds the same way before providing the context,
+  // but the fold is idempotent (unlike modulate's), so repeating it costs
+  // nothing and keeps this painter correct mounted on its own.
+  const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
   const { externalResources, internalResources } = useSceneResources();
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline
@@ -77,7 +86,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     // otherwise silently overwrite on commit — see that function's doc.
     pinNoColorSpace(cloned);
 
-    const filter = FILTER[resolveTextureRectFilter(props.textureFilter)];
+    const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
     cloned.magFilter = filter;
     cloned.minFilter = filter;
 
@@ -97,7 +106,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
       // applies for a crop. `u` needs no equivalent: it is not flipped.
       offset = { x: 0, y: 1 - repeat.y };
     } else {
-      cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(props.textureRepeat)];
+      cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];
       if (draw.region) {
         // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
         // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left —
@@ -115,7 +124,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     cloned.offset.set(flipped.offset.x, flipped.offset.y);
     cloned.needsUpdate = true;
     return cloned;
-  }, [rawTexture, draw, props.textureFilter, props.textureRepeat, props.flipH, props.flipV]);
+  }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
 
   useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
 
