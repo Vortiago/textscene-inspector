@@ -52,6 +52,7 @@ import { resolveInlineThemeResource } from '../../../resources/styles/theme/deco
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -113,12 +114,16 @@ interface ForestResult {
  * stays trivially testable and reusable if a future non-React consumer needs
  * the same walk (e.g. a headless render-to-texture pass).
  */
+/** No provider (a headless/raster walk) hides nothing. */
+const NO_HIDDEN: ReadonlySet<string> = new Set();
+
 function buildForest(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   loader: ResourceLoader | null,
-  projectThemeRef: string | undefined
+  projectThemeRef: string | undefined,
+  hiddenNodePaths: ReadonlySet<string>
 ): ForestResult {
   const pendingScenes = new Set<string>();
   const pendingTextures = new Set<string>();
@@ -341,6 +346,7 @@ function buildForest(
           children,
           paintRange,
           paintSequence: allocated.self,
+          hidden: hiddenNodePaths.has(path),
           styleBoxes: resolveStyleBoxes(collapsed, ownScope.internalResources),
           textureSize: resolveTextureSize(
             collapsed,
@@ -382,6 +388,7 @@ export function useBuildSolveTree(
   internalResources: readonly TscnInternalResource[]
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
+  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   const [generation, setGeneration] = useState(0);
   // `gui/theme/custom` — the project's default theme, the last rung of the
   // ancestor walk before the built-in default (`ProjectSettingsContext`'s
@@ -419,14 +426,22 @@ export function useBuildSolveTree(
   }, [loader]);
 
   const { tree, pendingScenes, pendingTextures, pendingThemes, pendingFonts } = useMemo(
-    () => buildForest(nodes, externalResources, internalResources, loader, projectThemeRef),
+    () =>
+      buildForest(
+        nodes,
+        externalResources,
+        internalResources,
+        loader,
+        projectThemeRef,
+        hiddenNodePaths
+      ),
     // `generation` is an intentional cache-buster: it increments each time a
     // scene/texture/theme/font load or failure lands so the walk re-derives
     // against the loader's now-different cache snapshot. Its value is not
     // read inside the callback — mirrors `useLiveSceneTree.ts`'s identical
     // `version` pattern.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, externalResources, internalResources, loader, projectThemeRef, generation]
+    [nodes, externalResources, internalResources, loader, projectThemeRef, hiddenNodePaths, generation]
   );
 
   // Kick off loads for anything the walk found uncached — after render, not

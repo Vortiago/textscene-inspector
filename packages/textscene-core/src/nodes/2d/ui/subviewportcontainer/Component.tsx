@@ -162,6 +162,8 @@ function ViewportSurfaceNative({
       // against the enclosing canvas — it starts a fresh range of its own.
       paintRange: WHOLE_CANVAS_RANGE,
       paintSequence: WHOLE_CANVAS_RANGE.base,
+      // The SubViewport itself, not a scene node the outliner can hide.
+      hidden: false,
       styleBoxes: {},
       textureSize: null,
       // This synthetic root stands in for the SubViewport itself (never a

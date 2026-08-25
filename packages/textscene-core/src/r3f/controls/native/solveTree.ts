@@ -53,6 +53,16 @@ export interface SolveNode {
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vec2 | null;
   /**
+   * The scene-tree eye toggle for this path (`SelectionContext.hiddenNodePaths`).
+   *
+   * Carried on the node rather than consulted at paint time because it stands in
+   * for clearing `visible` in the editor, and `visible` reaches the SOLVE:
+   * `Container::_sort_children` skips a child `as_sortable_control` rejects, so
+   * a hidden one leaves no slot. Hiding it only in the emitted group would keep
+   * the slot and paint a permanent hole in every container above it.
+   */
+  hidden: boolean;
+  /**
    * This node's OWN `theme_override_fonts/*`, resolved in ITS scope. Presence
    * of a key means it was AUTHORED (`Control::get_theme_font`'s local-override
    * branch has no validity check) — the value is `null` when the ref failed to

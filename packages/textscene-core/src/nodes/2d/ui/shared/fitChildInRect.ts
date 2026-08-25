@@ -87,7 +87,10 @@ export function fitChildInRect(
  * Approximates Godot's `is_visible_in_tree()` with this node's own `visible`
  * flag: a `SolveNode` carries no parent pointer, and an invisible ancestor's
  * whole subtree is skipped upstream anyway, so the two agree in practice.
+ *
+ * `hidden` is the scene-tree eye toggle, which stands in for clearing `visible`
+ * in the editor and so has to reach the same rule.
  */
 export function isSortableControl(node: SolveNode): boolean {
-  return (node.node.properties as ControlProperties).visible !== false;
+  return !node.hidden && (node.node.properties as ControlProperties).visible !== false;
 }

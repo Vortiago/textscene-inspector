@@ -278,3 +278,60 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
     expect(found[0]!.size).toEqual({ x: 560, y: 360 });
   });
 });
+
+/**
+ * `viewportContentKind` classifies a PARSED subtree, where an `instance=` child
+ * is an untyped childless `Node` — its `sawUntypedInstance` arm then reads the
+ * viewport as 3D. `resolveViewportSubtree` exists to close that gap, and both
+ * owners of a viewport's registry key have to cross it or they disagree: the
+ * SubViewport component classifies the resolved subtree, so a walk classifying
+ * the raw one leaves a key nobody publishes and a consumer permanently blank.
+ */
+describe('collectControlRasterViewports — an instanced Control sub-scene', () => {
+  const PANEL_SCENE = 'res://control_panel.tscn';
+
+  it('claims a sub-viewport whose only child is an instance of a Control-only scene', () => {
+    const scene = parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="${PANEL_SCENE}" id="1_panel"]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(320, 240)
+
+[node name="Gui" parent="SubViewport" instance=ExtResource("1_panel")]
+`);
+    const panel = parse(`[gd_scene format=3]
+
+[node name="Panel" type="Panel"]
+
+[node name="Label" type="Label" parent="."]
+text = "hi"
+`);
+
+    const found = collect(scene, cache({ [PANEL_SCENE]: panel }));
+    expect(found.map((v) => v.path)).toEqual(['Root/SubViewport']);
+  });
+
+  it('still leaves an instanced 3D sub-scene to the WebGL publisher', () => {
+    const scene = parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="${PANEL_SCENE}" id="1_panel"]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+
+[node name="World" parent="SubViewport" instance=ExtResource("1_panel")]
+`);
+    const world = parse(`[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+`);
+
+    expect(collect(scene, cache({ [PANEL_SCENE]: world }))).toHaveLength(0);
+  });
+});

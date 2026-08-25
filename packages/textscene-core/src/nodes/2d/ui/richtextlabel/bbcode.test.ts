@@ -93,6 +93,45 @@ describe('parseBBCodeRuns', () => {
   it('returns no runs for empty text', () => {
     expect(parseBBCodeRuns('')).toEqual([]);
   });
+
+  // `rich_text_label.cpp:5623-5680,5743-5745,5955`: these arms `add_text(...)`
+  // and set `pos = brk_end + 1` WITHOUT reaching `tag_stack.push_front(tag)`,
+  // so they never become an open tag and never need a close.
+  describe('self-closing tags', () => {
+    it('leaves the stack untouched, so a later close still matches its opener', () => {
+      expect(parseBBCodeRuns('[b]bold[br]more[/b]')).toEqual([
+        { text: 'bold\r' + 'more', tags: [{ name: 'b', value: undefined }] },
+      ]);
+    });
+
+    it('emits a bare CR for [br] — `add_text("\\r")` (`:5744`), a linebreak to TextServer', () => {
+      expect(parseBBCodeRuns('a[br]b')).toEqual([{ text: 'a\rb', tags: [] }]);
+    });
+
+    it('emits literal brackets for [lb] and [rb] (`:5627-5632`)', () => {
+      expect(parseBBCodeRuns('[lb]b[rb]')).toEqual([{ text: '[b]', tags: [] }]);
+    });
+
+    it('emits the code point [char=hex] names (`:5623-5626`, `hex_to_int`)', () => {
+      expect(parseBBCodeRuns('[char=2764]')).toEqual([{ text: '\u2764', tags: [] }]);
+    });
+
+    it('emits the Unicode control character each direction tag names (`:5633-5680`)', () => {
+      expect(parseBBCodeRuns('[lrm][rlm][zwnj][shy]')).toEqual([
+        { text: '\u200e\u200f\u200c\u00ad', tags: [] },
+      ]);
+    });
+
+    it('consumes [hr] without opening it — `:5955` draws a rule and never pushes', () => {
+      expect(parseBBCodeRuns('a[hr]b')).toEqual([{ text: 'ab', tags: [] }]);
+    });
+
+    it('still opens [p] and [img], which DO push (`:5746`, `:5992`)', () => {
+      expect(parseBBCodeRuns('[p]x[/p]')).toEqual([
+        { text: 'x', tags: [{ name: 'p', value: undefined }] },
+      ]);
+    });
+  });
 });
 
 describe('hasOpenTag', () => {

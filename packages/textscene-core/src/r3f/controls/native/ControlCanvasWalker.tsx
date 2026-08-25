@@ -47,7 +47,6 @@ import { ControlFallback } from './ControlFallback';
 import { Modulate2DContext } from '../../canvasItemModulate';
 import { TextureSampler2DContext, useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { useControlOwnTint, useInheritedModulate } from './controlTint';
-import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { canvasRenderOrder } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
 import { useLayerRank } from '../../contexts/PaintOrderContext';
@@ -76,7 +75,6 @@ export interface ControlCanvasWalkerProps {
   snapToPixels?: boolean;
 }
 
-const NO_HIDDEN: ReadonlySet<string> = new Set();
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 export function ControlCanvasWalker({
@@ -87,7 +85,6 @@ export function ControlCanvasWalker({
   measurer,
   snapToPixels,
 }: ControlCanvasWalkerProps) {
-  const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
   // Resolved once for the whole tree: the flag is per-VIEWPORT in Godot
   // (`Viewport::snap_controls_to_pixels`, `scene/main/viewport.h`), not
   // per-node, so every node below answers to the same value.
@@ -119,7 +116,6 @@ export function ControlCanvasWalker({
           key={n.path}
           solveNode={n}
           solved={solved}
-          hiddenNodePaths={hiddenNodePaths}
           isFreeParent
           theme={theme}
           measureText={measurer}
@@ -133,7 +129,6 @@ export function ControlCanvasWalker({
 interface ControlNodeGroupProps {
   solveNode: SolveNode;
   solved: ReadonlyMap<string, SolvedControl>;
-  hiddenNodePaths: ReadonlySet<string>;
   /** Whether THIS node's parent imposes no container layout — see module doc. */
   isFreeParent: boolean;
   theme: NativeTheme;
@@ -145,7 +140,6 @@ interface ControlNodeGroupProps {
 function ControlNodeGroup({
   solveNode,
   solved,
-  hiddenNodePaths,
   isFreeParent,
   theme,
   measureText,
@@ -163,7 +157,10 @@ function ControlNodeGroup({
   // is both what this node's own painter samples with and what its
   // descendants inherit.
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
-  const isVisible = !hiddenNodePaths.has(solveNode.path) && props.visible !== false;
+  // `solveNode.hidden` rather than a second read of `hiddenNodePaths`: the
+  // SOLVE already consulted it (`buildSolveTree.ts`), and two reads of one
+  // toggle could disagree about which node the container laid out.
+  const isVisible = !solveNode.hidden && props.visible !== false;
 
   // Structurally guaranteed present (the solve walks this exact tree); the
   // fallback only guards a mismatched tree/solved pair from ever crashing.
@@ -249,7 +246,6 @@ function ControlNodeGroup({
           key={child.path}
           solveNode={child}
           solved={solved}
-          hiddenNodePaths={hiddenNodePaths}
           isFreeParent={childIsFreeParent}
           theme={theme}
           measureText={measureText}

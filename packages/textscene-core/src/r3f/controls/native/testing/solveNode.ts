@@ -55,6 +55,7 @@ export function solveNode(): Pick<
   | 'children'
   | 'styleBoxes'
   | 'textureSize'
+  | 'hidden'
   | 'fontOverrides'
   | 'themeChain'
   | 'projectTheme'
@@ -65,6 +66,7 @@ export function solveNode(): Pick<
     children: [],
     styleBoxes: NO_STYLE_BOXES,
     textureSize: null,
+    hidden: false,
     fontOverrides: NO_FONT_OVERRIDES,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,

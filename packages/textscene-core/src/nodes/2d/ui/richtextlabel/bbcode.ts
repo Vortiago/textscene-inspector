@@ -60,6 +60,61 @@ const RECOGNISED_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The identifiers whose `append_text` arm `add_text(...)`s and sets
+ * `pos = brk_end + 1` WITHOUT ever reaching `tag_stack.push_front(tag)`
+ * (`rich_text_label.cpp:5623-5680,5743-5745,5955`): they are complete in
+ * themselves, so they take no close tag — and pushing one would make the NEXT
+ * close tag miss the innermost-only match at `:5386` and turn literal.
+ *
+ * The value is what the arm adds to the text, verbatim. `[br]` really is a bare
+ * CR: `is_linebreak()` (`char_utils.h:124`) covers 0x0A-0x0D, so TextServer
+ * breaks the line on it. `[hr]` draws a rule instead of adding text, and
+ * `[char=hex]` computes its own, so both sit outside this table.
+ */
+const SELF_CLOSING_TEXT: ReadonlyMap<string, string> = new Map([
+  ['lb', '['],
+  ['rb', ']'],
+  ['br', '\r'],
+  ['lrm', '\u200e'],
+  ['rlm', '\u200f'],
+  ['lre', '\u202a'],
+  ['rle', '\u202b'],
+  ['lro', '\u202d'],
+  ['rlo', '\u202e'],
+  ['pdf', '\u202c'],
+  ['alm', '\u061c'],
+  ['lri', '\u2066'],
+  // 0x2027 HYPHENATION POINT, not the 0x2067 RLI this tag names — Godot's own
+  // constant, ported as written rather than as intended.
+  ['rli', '\u2027'],
+  ['fsi', '\u2068'],
+  ['pdi', '\u2069'],
+  ['zwj', '\u200d'],
+  ['zwnj', '\u200c'],
+  ['wj', '\u2060'],
+  ['shy', '\u00ad'],
+]);
+
+/** `[hr]`: consumed and drawn, contributing no text and no open tag. */
+const SELF_CLOSING_SILENT: ReadonlySet<string> = new Set(['hr']);
+
+/**
+ * What a self-closing tag contributes to the surrounding run, or `null` when
+ * `name` is not one. `[char=hex]` is `String::chr(value.hex_to_int())`
+ * (`:5623-5626`); an unparseable or out-of-range value contributes nothing
+ * rather than a lone surrogate the layout would then have to survive.
+ */
+function selfClosingText(name: string, value: string | undefined): string | null {
+  const fixed = SELF_CLOSING_TEXT.get(name);
+  if (fixed !== undefined) return fixed;
+  if (SELF_CLOSING_SILENT.has(name)) return '';
+  if (name !== 'char') return null;
+  const codePoint = parseInt(value ?? '', 16);
+  if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return '';
+  return String.fromCodePoint(codePoint);
+}
+
+/**
  * Tokenizes `text` into runs, each carrying the FULL stack of tags open at
  * that point (outermost first, innermost/most-recently-opened last).
  *
@@ -114,8 +169,17 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
 
     const open = close ? null : OPEN.exec(token);
     if (open && RECOGNISED_TAGS.has(open[1]!.toLowerCase())) {
+      const name = open[1]!.toLowerCase();
+      const emitted = selfClosingText(name, open[2]);
+      if (emitted !== null) {
+        // Part of the surrounding run, so no `flush()`: it carries the same
+        // stack as the text either side of it.
+        pending += emitted;
+        pos = brkEnd + 1;
+        continue;
+      }
       flush();
-      stack.push({ name: open[1]!.toLowerCase(), value: open[2] });
+      stack.push({ name, value: open[2] });
       pos = brkEnd + 1;
       continue;
     }

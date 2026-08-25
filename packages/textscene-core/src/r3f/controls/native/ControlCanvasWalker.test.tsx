@@ -10,14 +10,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useEffect } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import type { Rect2 } from './rect';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
-import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { withPaintRanges } from './testing/solveNode';
@@ -64,14 +62,6 @@ function solveNode(
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
   return { ...emptySolveNode(), path, node: tscnNode, children };
-}
-
-function HiddenPathSeeder({ paths }: { paths: readonly string[] }) {
-  const { toggleHidden } = useSelection();
-  useEffect(() => {
-    for (const p of paths) toggleHidden(p);
-  }, [paths, toggleHidden]);
-  return null;
 }
 
 interface WrapperInstance {
@@ -146,15 +136,16 @@ describe('<ControlCanvasWalker>', () => {
     expect(namedGroup(renderer.scene, 'TestType:Shown')!.visible).toBe(true);
   });
 
-  it('skips a node whose path is in SelectionContext.hiddenNodePaths', async () => {
-    const child = solveNode('Root/Box', 'TestType', { anchorsPreset: 15 });
+  it('skips a node the tree marks hidden', async () => {
+    // The eye toggle reaches this walk as `SolveNode.hidden`, stamped by
+    // `buildSolveTree` so the SOLVE sees the same value — a second read of
+    // `SelectionContext` here could disagree with the rect the container laid
+    // out. `buildSolveTree.test.tsx` covers the stamping itself.
+    const child = { ...solveNode('Root/Box', 'TestType', { anchorsPreset: 15 }), hidden: true };
     const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
 
     const renderer = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <HiddenPathSeeder paths={['Root/Box']} />
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      </SelectionProvider>
+      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
     expect(namedGroup(renderer.scene, 'TestType:Root')!.visible).toBe(true);

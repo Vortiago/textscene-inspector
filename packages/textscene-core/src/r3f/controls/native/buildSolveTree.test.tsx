@@ -16,6 +16,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types';
@@ -25,6 +26,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
+import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { resolveSceneFontMetrics } from './text/sceneFontLoader';
@@ -66,6 +68,15 @@ function scene(
 
 function instanceOf(name: string, id: string, type = 'Node'): TscnNode {
   return node(name, type, { instance: `ExtResource("${id}")` });
+}
+
+/** Seeds `SelectionContext.hiddenNodePaths` from inside the provider. */
+function HiddenPathSeeder({ paths }: { paths: readonly string[] }) {
+  const { toggleHidden } = useSelection();
+  useEffect(() => {
+    for (const p of paths) toggleHidden(p);
+  }, [paths, toggleHidden]);
+  return null;
 }
 
 function wrapperFor(loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
@@ -893,5 +904,89 @@ color = Color(0.95, 0.85, 0.1, 1)
     // Button would be 16 px tall and `Below` would start at y = 100.
     expect(solved.get('Root/Column/Below')?.rect.h).toBe(40);
     expect(absoluteTop(solved, 'Root/Column/Below')).toBe(196);
+  });
+});
+
+/**
+ * The scene-tree eye toggle (`SelectionContext.hiddenNodePaths`) is the
+ * previewer's stand-in for clearing a node's `visible` in the editor, so it has
+ * to reach the SOLVE the same way `visible` does: `Container::_sort_children`
+ * skips a child that `as_sortable_control` rejects
+ * (`scene/gui/container.cpp::Container::_sort_children`), leaving no slot
+ * behind. Setting only the emitted group's `visible` would keep the slot and
+ * paint a permanent hole in the container.
+ */
+describe('useBuildSolveTree — hiddenNodePaths reaches the solve', () => {
+  const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
+
+  const COLUMN = `[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_right = 320.0
+offset_bottom = 600.0
+
+[node name="First" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+
+[node name="Second" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+
+[node name="Third" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+`;
+
+  function solveWithHidden(hidden: readonly string[]): ReadonlyMap<string, SolvedControl> {
+    const scene = new TscnParser().parse(COLUMN);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      {
+        wrapper: ({ children }) => (
+          <ResourceLoaderProvider loader={loader.loader}>
+            <SelectionProvider>
+              <HiddenPathSeeder paths={hidden} />
+              {children}
+            </SelectionProvider>
+          </ResourceLoaderProvider>
+        ),
+      }
+    );
+    return solveControlTree(result.current.tree, VIEWPORT, createSolveContext(nativeTheme(1)));
+  }
+
+  it('stamps `hidden` on the matching node and on nothing else', () => {
+    const scene = new TscnParser().parse(COLUMN);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      {
+        wrapper: ({ children }) => (
+          <ResourceLoaderProvider loader={loader.loader}>
+            <SelectionProvider>
+              <HiddenPathSeeder paths={['Root/Column/Second']} />
+              {children}
+            </SelectionProvider>
+          </ResourceLoaderProvider>
+        ),
+      }
+    );
+    const column = result.current.tree[0]!.children[0]!;
+    expect(column.children.map((c) => c.hidden)).toEqual([false, true, false]);
+  });
+
+  it('closes the gap a hidden child leaves, rather than laying out an empty slot', () => {
+    // `default_theme.cpp`'s BoxContainer `separation` is 4, so three 40 px rows
+    // sit at 0 / 44 / 88.
+    const all = solveWithHidden([]);
+    expect(all.get('Root/Column/Third')?.rect.y).toBe(88);
+
+    const hidden = solveWithHidden(['Root/Column/Second']);
+    expect(hidden.get('Root/Column/Third')?.rect.y).toBe(44);
+    expect(hidden.get('Root/Column/First')?.rect.y).toBe(0);
   });
 });

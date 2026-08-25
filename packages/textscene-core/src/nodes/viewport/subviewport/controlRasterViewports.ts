@@ -33,7 +33,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
-import { viewportContentKind } from './viewportContent.js';
+import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
 
 /**
@@ -98,9 +98,20 @@ export function collectControlRasterViewports(
       const mergedGroup = groups.find((group) => group.origin === 'merged');
       const effective = mergedGroup?.mergedNode ?? node;
 
-      if (isViewportBoundary(effective.type) && viewportContentKind(effective) === 'dom') {
+      const effectiveScope: SceneScope = mergedGroup ? mergedGroup.scope : current;
+
+      // Classified on the RESOLVED subtree, the same input the SubViewport
+      // component's own `useViewportContentKind` uses: an `instance=` child is
+      // an untyped childless `Node` until its sub-scene lands, which
+      // `viewportContentKind` reads as 3D. Classifying the raw children here
+      // would let both owners of this key decline and leave the consumer blank.
+      if (
+        isViewportBoundary(effective.type) &&
+        viewportContentKind(
+          resolveViewportSubtree(effective, effectiveScope.externalResources, sceneCache)
+        ) === 'dom'
+      ) {
         const properties = effective.properties as SubViewportProperties;
-        const effectiveScope: SceneScope = mergedGroup ? mergedGroup.scope : current;
         found.push({
           path,
           node: effective,
