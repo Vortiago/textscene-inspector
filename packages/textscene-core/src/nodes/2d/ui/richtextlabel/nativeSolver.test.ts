@@ -130,6 +130,31 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
   });
 
+  it('fit_content + autowrap ON: the height is the text WRAPPED at the width a completed pass resolved', () => {
+    // `_validate_line_caches` resizes every line at
+    // `text_rect.get_size().width - scroll_w` and then calls
+    // `update_minimum_size()` when `fit_content` is set
+    // (`rich_text_label.cpp:3873,3880`), so the reported height is the wrapped
+    // one — the same width self-reference Label closes through
+    // `SolveContext.tentativeRect`. 'AB AB' at 22px of shaped width per 'AB'
+    // wraps to two lines in a 30px box.
+    const wrapped = size(
+      richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), {
+        ...ctx(),
+        tentativeRect: () => ({ x: 0, y: 0, w: 30, h: 400 }),
+      })
+    );
+    expect(wrapped.y).toBe(2 * OWN_LINE_PITCH);
+    expect(wrapped.x).toBe(1);
+  });
+
+  it('fit_content + autowrap ON: the FIRST pass, with no resolved width yet, reports the unwrapped height', () => {
+    // No `tentativeRect` answer means no completed pass — exactly Godot's own
+    // pre-resize state, and what keeps the exchange non-circular.
+    const first = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), ctx()));
+    expect(first.y).toBe(OWN_LINE_PITCH);
+  });
+
   it('treats an absent measurer as no contribution once past the always-known fit_content/empty-text branches', () => {
     expect(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx(false))).toEqual({
       x: 0,

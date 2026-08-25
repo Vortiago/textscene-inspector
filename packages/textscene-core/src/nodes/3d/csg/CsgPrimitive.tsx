@@ -173,13 +173,16 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} />
-      {/* SHADOWS_ONLY: mounted last, so it is the material R3F attaches. */}
-      {shadow.shadowsOnly && (
+      {/* SHADOWS_ONLY draws nothing into the colour buffer, so no surface
+          material is mounted at all — see `CsgRootMesh.tsx` for why mounting
+          one and relying on attach order is not the same thing. */}
+      {shadow.shadowsOnly ? (
         <meshBasicMaterial
           key={CSG_SHADOWS_ONLY_MATERIAL.key}
           {...CSG_SHADOWS_ONLY_MATERIAL.props}
         />
+      ) : (
+        <SurfaceMaterialSlot source={materialSource} />
       )}
     </mesh>
   );

@@ -10,5 +10,9 @@ controlComponentRegistry.register({
   Component: RichTextLabel,
 });
 controlSolverRegistry.registerMinimumSize('RichTextLabel', richTextLabelMinimumSize);
+// With `fit_content` and autowrap ON the minimum HEIGHT is the text wrapped at
+// this control's own width, which only a completed pass knows — read through
+// `SolveContext.tentativeRect`, exactly as Label does.
+controlSolverRegistry.registerSizeDependentMinimum('RichTextLabel');
 
 export { RichTextLabel };

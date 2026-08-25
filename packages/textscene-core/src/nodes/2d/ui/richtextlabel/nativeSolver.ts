@@ -133,12 +133,22 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (!ctx.measureText) return { x: 0, y: 0 };
 
   const fontMetrics = resolveNodeFontMetrics(n, RICH_TEXT_LABEL_THEME_FONT_KEY);
+  // Wrapped at the control's OWN width, the same self-reference Label carries:
+  // `_validate_line_caches` resizes every line at `text_rect.get_size().width -
+  // scroll_w` and only then calls `update_minimum_size()` under `fit_content`
+  // (`rich_text_label.cpp:3873,3880`), so `get_content_height` reports the
+  // WRAPPED height. `SolveContext.tentativeRect` hands back the width a
+  // COMPLETED prior pass resolved — `undefined` on the first, where the
+  // unwrapped shape stands in exactly as Godot's pre-resize state does. The
+  // default `normal` StyleBox is `make_empty_stylebox(0, 0, 0, 0)`
+  // (`default_theme.cpp:1186`), so the text rect IS the control rect.
+  const wrapWidthPx = wraps ? ctx.tentativeRect?.(n)?.w : undefined;
   // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`) —
   // NOT Label's 3, which is why `lineSpacingPx` is stated rather than defaulted.
   const layout = shapeText(text, {
     fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    boxWidthPx: wrapWidthPx ?? 0,
+    autowrapMode: wrapWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(runs),
     fontMetrics,
@@ -833,8 +843,15 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
+  // The same sum `get_content_height` takes and `richTextLabelMinimumSize`
+  // reports — each line's OWN ascent+descent, never a count times one pitch,
+  // which a `[b]`/`[i]` span at a size of its own makes wrong by a pixel per
+  // size change. `layout.heightPx` is that count-times-pitch, so a paragraph
+  // carrying mixed sizes was centred against a height it does not have.
+  const lastLine = lineMetrics[lineMetrics.length - 1];
+  const contentHeightPx = lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    layout.heightPx,
+    contentHeightPx,
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
     layout.lines.length

@@ -112,18 +112,23 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          {surfaces.map((surface, index) => {
-            // A single-surface mesh keeps the SINGULAR attach key, so `mesh.material`
-            // stays one material rather than a length-1 array.
-            const attach = surfaces.length > 1 ? `material-${index}` : 'material';
-            return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
-          })}
-          {/* SHADOWS_ONLY: mounted last, so it is the material R3F attaches. */}
-          {shadow.shadowsOnly && (
+          {/* SHADOWS_ONLY draws nothing into the colour buffer, so there is no
+              surface material to mount — and mounting one anyway would leave
+              this substitution resting on r3f's attach ORDER, which a surface
+              slot remounting later (an external `.tres` landing, a program key
+              moving) is free to undo. */}
+          {shadow.shadowsOnly ? (
             <meshBasicMaterial
               key={CSG_SHADOWS_ONLY_MATERIAL.key}
               {...CSG_SHADOWS_ONLY_MATERIAL.props}
             />
+          ) : (
+            surfaces.map((surface, index) => {
+              // A single-surface mesh keeps the SINGULAR attach key, so `mesh.material`
+              // stays one material rather than a length-1 array.
+              const attach = surfaces.length > 1 ? `material-${index}` : 'material';
+              return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;
+            })
           )}
         </mesh>
       )}

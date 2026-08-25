@@ -20,6 +20,8 @@ import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
 /** three's shadow pass: the side, then the per-object hook (`WebGLShadowMap.js:477,535,549`). */
 function depthSideAfterPass(mesh: THREE.Mesh): THREE.Side {
@@ -143,6 +145,41 @@ describe('CSG cast_shadow', () => {
     const mesh = await renderSubtraction('cast_shadow = 3');
     expect(mesh.castShadow).toBe(true);
     const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
+    expect(material.colorWrite).toBe(false);
+  });
+
+  it('keeps SHADOWS_ONLY once the node’s own material RESOLVES, not only at first mount', async () => {
+    // r3f's `attach` records the slot's previous value and restores it on
+    // detach, so a surface slot that REMOUNTS after this material was attached
+    // takes `mesh.material` back — and an external `.tres` slot remounts by
+    // construction, swapping its fallback for a `<primitive>` when the file
+    // lands. Mounting no surface material at all is what makes the substitution
+    // hold: Godot's SHADOWS_ONLY draws nothing into the colour buffer, so there
+    // is nothing for a surface material to be.
+    const parsed = parseBox({ cast_shadow: '3', material: 'ExtResource("1_mat")' });
+    const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
+    const fake = createFakeResourceLoader();
+    const tree = (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[]}
+          externalResources={[{ id: '1_mat', path: 'res://paint.tres', type: 'StandardMaterial3D' }]}
+        >
+          <CsgPrimitive node={node} properties={parsed} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree);
+
+    const arrived = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    await ReactThreeTestRenderer.act(async () => {
+      fake.materials.seed('res://paint.tres', arrived);
+      await renderer.update(tree);
+    });
+
+    const mesh = findMesh(renderer.scene) as unknown as THREE.Mesh;
+    const material = (Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material)!;
+    expect(material).not.toBe(arrived);
     expect(material.colorWrite).toBe(false);
   });
 });
