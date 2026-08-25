@@ -88,6 +88,18 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(color.getW(0)).toBeCloseTo(0.3, 5);
   });
 
+  it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
+    // `OptionButton : Button`, and the DRAW branch that paints the stylebox is
+    // Button's own `if (!flat)` (`button.cpp:216`); everything OptionButton
+    // draws on top of it is unaffected. The MINIMUM size still carries the
+    // stylebox's margins either way (`button.cpp:525`), so nothing moves.
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton {...painterEnv()} solveNode={solveNode({ flat: true })} rect={RECT} renderOrder={0} />
+    );
+    expect(findChromeMesh(renderer.scene)).toBeUndefined();
+    expect(findArrowMesh(renderer.scene)).toBeDefined();
+  });
+
   it('always draws the chevron arrow, even with zero items (has_theme_icon is unconditional)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />

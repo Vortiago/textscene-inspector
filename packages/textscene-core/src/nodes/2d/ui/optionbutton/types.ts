@@ -16,4 +16,6 @@ export interface OptionButtonProperties extends ControlProperties {
   selected?: number;
   /** Disabled OptionButtons render dimmed and non-interactive. */
   disabled?: boolean;
+  /** `Button::flat` — inherited: the chrome StyleBox is not drawn (`button.cpp:216`). */
+  flat?: boolean;
 }

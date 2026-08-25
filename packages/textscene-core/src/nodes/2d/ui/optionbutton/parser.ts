@@ -1,4 +1,4 @@
-/** OptionButton parser — Control + items array (popup/item_N/…) + selected/disabled flags. */
+/** OptionButton parser — Control + items array (popup/item_N/…) + selected/disabled/flat flags. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
@@ -26,5 +26,6 @@ export function parseOptionButton(
   if (items.length > 0) result.items = items;
   result.selected = parseOptionalInt(properties.selected);
   result.disabled = properties.disabled === 'true';
+  result.flat = properties.flat === 'true';
   return result;
 }

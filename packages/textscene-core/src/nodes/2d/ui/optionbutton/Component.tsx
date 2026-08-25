@@ -102,7 +102,12 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
 
   return (
     <>
-      <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {/* `Button::_notification`'s `if (!flat)` (`button.cpp:216`) — inherited,
+          and the only thing `flat` changes: the minimum size still carries the
+          stylebox's margins (`:525`). */}
+      {!props.flat && (
+        <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      )}
       <CanvasItemGroup position={[content.arrowRect.x, -content.arrowRect.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}

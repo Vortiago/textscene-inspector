@@ -27,6 +27,11 @@ describe('parseOptionButton', () => {
     expect(p.disabled).toBe(true);
   });
 
+  it('parses `flat`, inherited from Button (button.cpp:811), defaulting to false', () => {
+    expect(parseOptionButton(h({ name: 'O' }), { flat: 'true' }).flat).toBe(true);
+    expect(parseOptionButton(h({ name: 'O' }), {}).flat).toBe(false);
+  });
+
   it('defaults to no items and not-disabled when absent', () => {
     const p = parseOptionButton(h({ name: 'Empty', type: 'OptionButton' }), {});
     expect(p.items ?? []).toEqual([]);
