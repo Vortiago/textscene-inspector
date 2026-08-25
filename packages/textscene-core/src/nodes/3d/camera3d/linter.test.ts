@@ -211,10 +211,14 @@ describe('Camera3D Linter', () => {
     // a different tier:
     //
     //   frustum      `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367)
-    //                refuses BOTH cells.
+    //                refuses BOTH cells, and 4.6.3 prints that condition once
+    //                per frame on such a scene — an error.
     //   perspective  returns at projection.cpp:263 when `deltaZ == 0`, BEFORE
     //                the `set_identity()` at :268 — a dropped write, and only at
     //                that cell. `near > far` merely inverts a written matrix.
+    //                Rendering it prints NOTHING, and both properties keep the
+    //                value written, so this is the warning tier, not the error
+    //                one.
     //   orthogonal   projection.cpp:344 has no guard at all: it writes inf at
     //                :351 and says nothing. No ERR_FAIL, no clamp, no dropped
     //                write, and both hints end in `or_greater`
@@ -281,10 +285,10 @@ describe('Camera3D Linter', () => {
         // camera_3d.cpp:341 assigns `mode` only for 0/1/2, so an out-of-enum
         // value is dropped and the camera stays on its camera_3d.h:66 default.
         ['an out-of-enum projection, dropped back to perspective', { projection: 5, fov: 75.0 }],
-      ])('errors on near == far under %s', (_label, props) => {
+      ])('warns on near == far under %s', (_label, props) => {
         expectDiagnostic(scene(node('Camera3D', { ...props, near: 100.0, far: 100.0 })), {
           prop: 'clipping',
-          severity: 'error',
+          severity: 'warning',
           nodeType: 'Camera3D',
           ruleName: 'camera3d-zero-depth-range',
           contains: ['100', 'perspective'],
@@ -333,19 +337,19 @@ describe('Camera3D Linter', () => {
       // An absent plane is Godot's default, not an absent value: camera_3d.h:72
       // is `_near = 0.05` and :73 is `_far = 4000.0`, and the serialiser omits a
       // property sitting at its default. The pair is still a pair.
-      it('errors when the written far meets the defaulted near', () => {
+      it('warns when the written far meets the defaulted near', () => {
         expectDiagnostic(scene(node('Camera3D', { projection: 0, fov: 75.0, far: 0.05 })), {
           prop: 'clipping',
-          severity: 'error',
+          severity: 'warning',
           ruleName: 'camera3d-zero-depth-range',
           contains: ['0.05'],
         });
       });
 
-      it('errors when the written near meets the defaulted far', () => {
+      it('warns when the written near meets the defaulted far', () => {
         expectDiagnostic(scene(node('Camera3D', { projection: 0, fov: 75.0, near: 4000 })), {
           prop: 'clipping',
-          severity: 'error',
+          severity: 'warning',
           ruleName: 'camera3d-zero-depth-range',
           contains: ['4000'],
         });

@@ -39,7 +39,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex } from '../../../../godot/index.js';
 
 /**
@@ -58,7 +58,7 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   const countRaw = rawProps.item_count;
   // Absent means the default 0 (doc/classes/ItemList.xml), which the serialiser
   // omits: an empty `Vector<Item> items`, so every item key is out of range.
-  const count = ruleInt(countRaw, 0);
+  const count = ruleCount(countRaw);
   // A malformed item_count already draws its own validator's diagnostic, and a
   // non-finite one is altered at parse to a number the file does not state, so
   // neither is a count this rule can name in a message.

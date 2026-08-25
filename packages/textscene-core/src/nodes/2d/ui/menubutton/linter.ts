@@ -39,7 +39,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements } from '../../../../godot/index.js';
 import { listIndices } from '../../../../linter/reportedIndices.js';
 
@@ -59,7 +59,7 @@ function checkMenuButton(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: the popup starts with an empty `Vector<Item> items`, which
   // is doc/classes/MenuButton.xml's default="0" and what the serialiser omits.
-  const count = ruleInt(rawProps.item_count, 0);
+  const count = ruleCount(rawProps.item_count);
   // A malformed item_count already draws its own validator's diagnostic, and a
   // non-finite one is altered at parse to a number the file does not state, so
   // neither is a count this rule can name in a message.

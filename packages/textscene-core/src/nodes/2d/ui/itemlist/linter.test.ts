@@ -56,6 +56,18 @@ describe('ItemList semantic rules', () => {
     );
   });
 
+  it('names the count Godot stores when the written one is refused', () => {
+    // `set_item_count` opens `ERR_FAIL_COND(p_count < 0)` (item_list.cpp:527),
+    // so a negative count is never stored and the array keeps its default 0.
+    // Reporting `(-1)` names a value the engine refused, beside the validator
+    // that already reported it.
+    const diagnostics = lint(
+      scene(node('ItemList', { item_count: -1, 'item_0/text': '"Sword"' }))
+    ).filter((d) => d.ruleName === 'itemlist-item-index-out-of-range');
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]!.message).toContain('item_count (0)');
+  });
+
   it('leaves a negative index to the per-property validator', () => {
     // The dispatcher in linterParser.ts already errors on a negative index, so
     // reporting it here too would double the diagnostic for one mistake.

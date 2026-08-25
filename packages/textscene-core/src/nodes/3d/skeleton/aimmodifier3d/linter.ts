@@ -24,7 +24,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements } from '../../../../godot/index.js';
 
 const SETTING_PREFIX = 'settings/';
@@ -50,7 +50,7 @@ const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
  * never land and the condition cannot arise for them.
  */
 function declaredSettings(properties: Record<string, string>): Map<number, Record<string, string>> {
-  const settingCount = ruleInt(properties.setting_count, 0) ?? 0;
+  const settingCount = ruleCount(properties.setting_count) ?? 0;
   const settings = indexedElements(properties, SETTING_PREFIX, 'to_int');
   for (const index of [...settings.keys()]) {
     if (index >= settingCount) settings.delete(index);

@@ -26,7 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements } from '../../../../godot/index.js';
 
@@ -40,7 +40,7 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: the setting array starts empty (ik_modifier_3d.h:69),
   // which is the XML's default="0" for setting_count.
   const countRaw = rawProps.setting_count;
-  const count = ruleInt(countRaw, 0);
+  const count = ruleCount(countRaw);
   // A malformed setting_count is the validator's own diagnostic, and a
   // non-finite one is altered at parse.
   if (count === null) return [];

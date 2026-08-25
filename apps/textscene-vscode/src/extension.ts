@@ -35,10 +35,15 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('textscene.openPreviewToSide', () => {
-      const activeEditor = vscode.window.activeTextEditor;
-      if (activeEditor && activeEditor.document.fileName.endsWith('.tscn')) {
-        getOrCreatePanel(activeEditor.document.uri);
+    // Every contribution is gated on `resourceExtname`, so VS Code hands the
+    // clicked file's URI — the explorer, the editor title and the tab context
+    // menus all address a file that need not be the one the active editor
+    // holds. The active editor is the fallback for the palette entry, which
+    // passes nothing.
+    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
+      const target = resource ?? vscode.window.activeTextEditor?.document.uri;
+      if (target?.fsPath.endsWith('.tscn')) {
+        getOrCreatePanel(target);
       } else {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');
       }

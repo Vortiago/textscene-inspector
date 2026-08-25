@@ -114,6 +114,16 @@ describe('parseSpriteFramesAnimations', () => {
     expect(map.get('x')!.durations).toEqual([1]);
   });
 
+  it('keeps its neighbours when one duration is written `inf`', () => {
+    // `add_frame` has no is_finite guard (sprite_frames.cpp:39) and `rtos_fix`
+    // spells infinity `inf`, so Godot writes this file. The scan must consume
+    // the literal to stay paired with the frames; only the VALUE falls back.
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [{"duration": 3.0, "texture": ExtResource("1")}, {"duration": inf, "texture": ExtResource("2")}, {"duration": 2.0, "texture": ExtResource("3")}], "name": &"x", "speed": 4.0}]'
+    );
+    expect(map.get('x')!.durations).toEqual([3, 1, 2]);
+  });
+
   it('uses uniform durations when the captured count does not match the frames', () => {
     // Godot always writes a duration per frame (sprite_frames.cpp:185) and its
     // reader drops a frame that lacks one; the preview keeps the frame instead

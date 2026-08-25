@@ -175,6 +175,36 @@ describe('Extension', () => {
       );
     });
 
+    it('previews the resource it is handed, not the active editor', () => {
+      // Every contribution is gated on `resourceExtname`, so the explorer,
+      // editor title and tab context menus all pass the clicked file's URI —
+      // which is not the file the active editor holds.
+      (vscode.window.activeTextEditor as any) = {
+        document: {
+          uri: createMockUri('/workspace/other.tscn'),
+          fileName: '/workspace/other.tscn'
+        }
+      };
+      const clicked = createMockUri('/workspace/level.tscn');
+
+      activate(mockContext);
+      commandHandlers.get('textscene.openPreviewToSide')?.(clicked);
+
+      expect(TscnPreviewPanel.create).toHaveBeenCalledWith(mockContext.extensionUri, clicked);
+    });
+
+    it('previews nothing when handed a resource it does not accept', () => {
+      (vscode.window.activeTextEditor as any) = undefined;
+
+      activate(mockContext);
+      commandHandlers.get('textscene.openPreviewToSide')?.(createMockUri('/workspace/a.tres'));
+
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+        'Open a .tscn file to preview it.'
+      );
+      expect(TscnPreviewPanel.create).not.toHaveBeenCalled();
+    });
+
     it('should show info message when no active editor', () => {
       (vscode.window.activeTextEditor as any) = undefined;
 

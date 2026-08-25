@@ -99,9 +99,16 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     // `far - near`, not `near === far`: projection.cpp:260 forms deltaZ and
     // :263 tests it against zero, so two infinities give nan and do NOT return
     // early the way two equal finite planes do.
+    //
+    // A warning, not an error, and the two are separated by measurement rather
+    // than by reading: rendering this pair on 4.6.3 prints nothing at all,
+    // where the frustum pair above prints `Condition "p_far <= p_near" is true`
+    // once per frame. The early return drops the matrix write silently and
+    // leaves both properties stored as written, which is neither of the error
+    // row's two forms.
     if (mode === PROJECTION_PERSPECTIVE && far - near === 0) {
       diagnostics.push({
-        severity: 'error',
+        severity: 'warning',
         message: `Camera3D 'near' and 'far' clipping planes are both ${near}. Under the perspective projection Godot returns on the zero depth range before it writes the matrix, so the pair is dropped and no projection is built from it.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -131,8 +138,9 @@ const camera3DValidationRule: LintRule = {
       },
       {
         ruleName: 'camera3d-zero-depth-range',
-        severity: 'error',
-        // The perspective early return on `deltaZ == 0`, before set_identity.
+        severity: 'warning',
+        // The perspective early return on `deltaZ == 0`, before set_identity:
+        // the write is dropped in silence, so the engine reports nothing.
         grounding: { kind: 'engine', at: 'projection.cpp:263' },
       },
     ],

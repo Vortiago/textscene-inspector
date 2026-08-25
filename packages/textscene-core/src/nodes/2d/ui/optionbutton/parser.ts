@@ -16,7 +16,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
-import { ruleInt } from '../../../../godot/int.js';
+import { ruleCount, ruleInt } from '../../../../godot/int.js';
 import { indexedElements } from '../../../../godot/index.js';
 
 export function parseOptionButton(
@@ -28,7 +28,7 @@ export function parseOptionButton(
   // Build a DENSE array — one slot per index 0..item_count-1 — so `selected` (the raw
   // Godot index) aligns with items[selected] even when an item omits its text key. A
   // filtered/compacted array would shift selection past any text-less item.
-  const itemCount = ruleInt(properties.item_count, 0) ?? 0;
+  const itemCount = ruleCount(properties.item_count) ?? 0;
   // Grouped by the item `_get_property` RESOLVES each key to, not by the text
   // the file spells: the gate is `is_valid_int()` and the read is `to_int()`
   // (property_list_helper.cpp:53-55), so `popup/item_00/text` and

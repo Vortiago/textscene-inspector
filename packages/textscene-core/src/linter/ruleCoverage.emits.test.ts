@@ -44,6 +44,7 @@ import {
 import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import { emitsArrays, pairMatches, scrapePairs } from './testing/emitsScrape.js';
 import { armBuilders, balancedGroup, topLevelParts, reachablePairs } from './testing/emitsReach.js';
+import { dataOnlyNames, reportedNames } from './testing/emitsReport.js';
 import './index.js';
 
 describe('rule emits meta-guard', () => {
@@ -275,6 +276,24 @@ describe('rule emits meta-guard', () => {
       .filter((f) => declaredRuleNames(f).length === 0)
       .map((f) => f.slice(nodesRoot.length + 1));
     expect(invisible).toEqual([]);
+  });
+
+  it('reads every lookup-table ruleName at a report site', () => {
+    // A name in DATA position vouches for nothing on its own: the scrape reads
+    // it whether or not any code pushes it, so the two directions above agree
+    // with each other while the diagnostic is unreachable. Measured: deleting
+    // the whole reporting loop in `pointlight2d/linter.ts` left all four of
+    // those assertions green.
+    const stranded: string[] = [];
+    for (const file of allFiles) {
+      const declared = dataOnlyNames(file);
+      if (declared.size === 0) continue;
+      const reported = reportedNames(file);
+      for (const name of declared) {
+        if (!reported.has(name)) stranded.push(`${file.slice(srcRoot.length + 1)}: ${name}`);
+      }
+    }
+    expect(stranded.sort()).toEqual([]);
   });
 
   it('declares each emitted ruleName once per severity', () => {

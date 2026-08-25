@@ -339,6 +339,30 @@ export function ruleInt(
 }
 
 /**
+ * The array COUNT a rule may compare against, or `null` for text it must not.
+ *
+ * Every serialised array count in Godot opens its setter with
+ * `ERR_FAIL_COND(p_count < 0)` — `ItemList` (item_list.cpp:527), `PopupMenu`
+ * (popup_menu.cpp:2698), `FileDialog` (file_dialog.cpp:2039), `TabBar`
+ * (tab_bar.cpp:745), `OptionButton` (option_button.cpp:310), `MenuButton`
+ * (menu_button.cpp:124), and the skeleton modifiers through
+ * `_set_setting_count` (ik_modifier_3d.h:98). The write is refused outright, so
+ * the array keeps the length it already had — at load, the class default.
+ *
+ * A rule that compares indices against the AUTHORED number instead names a
+ * length the engine never stored, and does it beside the `enforced:` validator
+ * that already reported the same value.
+ */
+export function ruleCount(raw: string | undefined, whenAbsent = 0): number | null {
+  const count = ruleInt(raw, whenAbsent);
+  // `null` still means unreadable, and still travels: phase 1 has already
+  // reported that text, and a rule owes silence rather than a second
+  // diagnostic naming a number it had to invent.
+  if (count === null) return null;
+  return count < 0 ? whenAbsent : count;
+}
+
+/**
  * One matched component of an `i`-suffixed composite, as the integer Godot
  * stores — or `null` when no int32 can hold it.
  *

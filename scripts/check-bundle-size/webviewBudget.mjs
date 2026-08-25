@@ -55,12 +55,34 @@ function findStaticImports(content) {
 }
 
 /**
- * BFS the static-import closure starting at `entry`. Returns the set
- * of file names (relative to the webview dir) that load on the critical
- * canvas-paint path.
+ * Where an import specifier lands on disk, or `null` when nothing does.
+ *
+ * The bundler's layout is a convention this walker reproduces rather than
+ * reads, so both spellings are tried: a chunk under `chunks/`, and a sibling
+ * beside the entry. Returning `null` rather than guessing is what lets an
+ * unreachable file FAIL the gate instead of shrinking the closure.
+ */
+function resolveImport(dir, from, spec) {
+  const bare = spec.split('/').pop();
+  for (const candidate of [`chunks/${from === ENTRY ? spec : bare}`, bare, spec]) {
+    if (existsSync(join(dir, candidate))) return candidate;
+  }
+  return null;
+}
+
+/**
+ * BFS the static-import closure starting at `entry`. Returns the set of file
+ * names (relative to the webview dir) that load on the critical canvas-paint
+ * path, and every specifier that resolved to nothing.
+ *
+ * An unresolvable import is reported, never skipped. Skipping made the walk
+ * degrade quietly: a layout change the convention above stopped matching would
+ * shrink the closure to the entry file alone and leave `--enforce` passing on a
+ * measurement that had stopped covering the bundle.
  */
 function staticClosure(dir, entry) {
   const visited = new Set();
+  const unresolved = new Set();
   const queue = [entry];
   while (queue.length > 0) {
     const f = queue.shift();
@@ -70,11 +92,12 @@ function staticClosure(dir, entry) {
     if (!existsSync(fp)) continue;
     const content = readFileSync(fp, 'utf8');
     for (const imp of findStaticImports(content)) {
-      const target = f === entry ? `chunks/${imp}` : `chunks/${imp.split('/').pop()}`;
-      queue.push(target);
+      const target = resolveImport(dir, f, imp);
+      if (target === null) unresolved.add(`${f} -> ${imp}`);
+      else queue.push(target);
     }
   }
-  return visited;
+  return { visited, unresolved };
 }
 
 /**
@@ -84,7 +107,7 @@ function staticClosure(dir, entry) {
  * only `main()` sees both halves.
  *
  * @param {boolean} enforce whether an over-budget closure is an error or a warning
- * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks'}
+ * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports'}
  */
 export function checkWebviewBudget(enforce) {
   if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
@@ -107,7 +130,17 @@ export function checkWebviewBudget(enforce) {
     return 'dead-chunks';
   }
 
-  const closure = staticClosure(WEBVIEW_DIR, ENTRY);
+  const { visited: closure, unresolved } = staticClosure(WEBVIEW_DIR, ENTRY);
+  if (unresolved.size > 0) {
+    console.error(
+      `[bundle-size] FAIL: ${unresolved.size} import(s) resolved to no file on disk:`
+    );
+    for (const miss of unresolved) console.error(`  ${miss}`);
+    console.error(
+      '[bundle-size] the closure walk reproduces the bundler\'s output layout; update it before trusting the number.'
+    );
+    return 'unresolved-imports';
+  }
   const buffers = [];
   let totalRaw = 0;
   for (const f of [...closure].sort()) {

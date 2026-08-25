@@ -18,7 +18,7 @@ import { drawnSources, tileSourceZ } from './tileSourceZ.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import { useTileSetModel } from './useTileSetModel.js';
 import { TileSourceMesh } from './TileSourceMesh.js';
-import type { YSortItem } from './ySortItems.js';
+import { ySortItemId, type YSortItem } from './ySortItems.js';
 
 /** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
 export function TileGroupRenderer({ item, z, band, node }: {
@@ -73,17 +73,17 @@ export function TileGroupRenderer({ item, z, band, node }: {
   if (!drawable || !model || !cellsBySource) {
     return (
       <group
-        name={`TileGroup_${node.name}_${item.treeOrder}`}
+        name={`TileGroup_${node.name}_${ySortItemId(item)}`}
         position={[originX, originY, z]}
       />
     );
   }
 
   return (
-    <group name={`TileGroup_${node.name}_${item.treeOrder}`} position={[originX, originY, z]}>
+    <group name={`TileGroup_${node.name}_${ySortItemId(item)}`} position={[originX, originY, z]}>
       {cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
         <TileSourceMesh
-          key={`${sourceId}_${item.treeOrder}`}
+          key={`${sourceId}_${ySortItemId(item)}`}
           source={source}
           cells={sourceCells}
           grid={model}

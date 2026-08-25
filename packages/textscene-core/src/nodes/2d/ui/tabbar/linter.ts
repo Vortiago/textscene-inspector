@@ -45,7 +45,7 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex } from '../../../../godot/index.js';
 
 /**
@@ -67,7 +67,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const count = ruleInt(props.tab_count, 0);
+  const count = ruleCount(props.tab_count);
   // A malformed tab_count is already reported by its own validator, and a
   // non-finite one is altered at parse to a number the file does not state;
   // neither is a count this rule can name in a message.

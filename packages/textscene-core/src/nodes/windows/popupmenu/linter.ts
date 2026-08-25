@@ -41,7 +41,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indexedElements } from '../../../godot/index.js';
 import { listIndices } from '../../../linter/reportedIndices.js';
 
@@ -62,7 +62,7 @@ function checkPopupMenu(context: RuleContext): Diagnostic[] {
   // Absent means the default 0 (doc/classes/PopupMenu.xml), which the
   // serialiser omits: an empty `Vector<Item> items`, so every item key is out
   // of range.
-  const count = ruleInt(countRaw, 0);
+  const count = ruleCount(countRaw);
   // A malformed item_count already draws its own validator's diagnostic, and a
   // non-finite one is altered at parse to a number the file does not state, so
   // neither is a count this rule can name in a message.

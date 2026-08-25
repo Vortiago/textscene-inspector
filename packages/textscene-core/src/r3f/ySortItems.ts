@@ -45,6 +45,23 @@ export interface YSortItem {
    * transforms and path segments have to be restored around the item.
    */
   liftedPast: readonly TscnNode[];
+  /**
+   * Which Y-group of an expanded TileMapLayer this item carries. A Y-group is
+   * not a tree position, so it rides here rather than being folded into
+   * `treeOrder`: two same-named layers may share a name legally (Godot makes a
+   * name unique among its own siblings only), and folding put both on the same
+   * identity.
+   */
+  groupIndex?: number;
+}
+
+/**
+ * An item's identity within one flat sort — what React keys and THREE object
+ * names are built from. Distinct for every item, so a duplicate node name
+ * cannot make two of them the same.
+ */
+export function ySortItemId(item: Pick<YSortItem, 'treeOrder' | 'groupIndex'>): string {
+  return item.groupIndex === undefined ? `${item.treeOrder}` : `${item.treeOrder}_${item.groupIndex}`;
 }
 
 /**

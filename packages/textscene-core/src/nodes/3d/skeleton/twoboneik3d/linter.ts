@@ -56,7 +56,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
@@ -92,7 +92,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<IKModifier3DSetting *> settings`
   // (ik_modifier_3d.h:69) starts empty, which is the XML's default="0".
   const countRaw = rawProps.setting_count;
-  const count = ruleInt(countRaw, 0);
+  const count = ruleCount(countRaw);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
   if (count === null) return diagnostics;

@@ -26,7 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
 import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
@@ -40,7 +40,7 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
 
   // `_set_setting_count` refuses a negative count and the validator reports it,
   // so a count that is absent, unparseable or negative allocates nothing here.
-  const count = ruleInt(properties['setting_count'] ?? '');
+  const count = ruleCount(properties['setting_count'] ?? '');
   if (count === null || count <= 0) return [];
 
   // Grouped by the setting `_set` RESOLVES each key to, not by the text the file

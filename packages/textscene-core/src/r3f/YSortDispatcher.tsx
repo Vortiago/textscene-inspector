@@ -25,7 +25,7 @@ import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/type
 import { useTileSetModel } from './useTileSetModel.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
-import { collectYSortedItems, type YSortItem } from './ySortItems.js';
+import { collectYSortedItems, ySortItemId, type YSortItem } from './ySortItems.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { TileGroupRenderer } from './TileGroupRenderer.js';
 import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
@@ -89,7 +89,8 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
             expanded.push({
               sortY: group.sortY,
               effectiveZ: item.effectiveZ,
-              treeOrder: item.treeOrder + g,
+              treeOrder: item.treeOrder,
+              groupIndex: g,
               kind: 'tileGroup',
               tileData: { ...item.tileData!, cells: group.cells },
               node: item.node,
@@ -143,10 +144,9 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
         if (item.kind === 'tileGroup' && item.node) {
           // The Y-group's whole draw position (z-index bucket + rank) rides the group;
           // its meshes sit at their own per-source sub-step RELATIVE to it (see the
-          // group's `position` below), so the rank is applied ONCE. Key on the layer's
-          // name so sibling y-sort TileMapLayers can't collide on a shared treeOrder.
+          // group's `position` below), so the rank is applied ONCE.
           return (
-            <Fragment key={`tg-${item.node.name}-${item.treeOrder}`}>
+            <Fragment key={`tg-${item.node.name}-${ySortItemId(item)}`}>
               <LiftedAncestors liftedPast={item.liftedPast}>
                 <TileGroupRenderer
                   item={item}

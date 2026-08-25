@@ -67,20 +67,25 @@ describe('reportArm', () => {
  * reports it. Measured: deleting the `concaveShape` report site left all 26 of
  * those assertions green.
  *
- * BOTH spellings of a table are read. A factory annotates its record
- * `RuleArms<K>`; `FILE_DIAGNOSTICS` states the same contract as a trailing
- * `satisfies Record<string, RuleArm>`, and reading only the annotated form left
- * the file diagnostics swept for their cites by `emitsGrounding` and checked by
- * nothing for having a report site at all.
+ * A table is recognised by the TYPE it claims, not by the syntax that claims
+ * it. TypeScript spells the same contract four ways — an annotation, a
+ * `satisfies` tail, either with or without `as const` — and enumerating
+ * spellings meant each new one silently left its table unguarded: reading only
+ * the annotation missed `FILE_DIAGNOSTICS`, and adding
+ * `satisfies Record<string, RuleArm>` for it still missed
+ * `satisfies RuleArms<…>`. Measured on the one that slipped through: replacing
+ * both report sites in `node3d/linter.ts` with no-ops left all four emits
+ * guards green while no Node3D descendant reported its visibility parent.
  *
  * A module-private table must be reported in its own file; an EXPORTED one may
  * be reported by an importer, which is where `FILE_DIAGNOSTICS` is used. The
  * reference is looked for anywhere in a report call's argument list rather than
  * directly after the paren, since one call may pick its arm with a ternary.
  */
-const TYPED_TABLE = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:\s*RuleArms<[^>]*>\s*=\s*\{/g;
-const SATISFIES_TABLE = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*\{/g;
-const SATISFIES_TAIL = /^\s*as\s+const\s+satisfies\s+Record<\s*string\s*,\s*RuleArm\s*>/;
+const OBJECT_LITERAL = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::([^=]*?))?=\s*\{/g;
+/** The contract, in either place TypeScript lets it be stated. */
+const ARM_CONTRACT = /RuleArms<|Record<\s*string\s*,\s*RuleArm\s*>/;
+const SATISFIES_TAIL = /^\s*(?:as\s+const\s+)?satisfies\s+([^;]*)/;
 const REPORT_CALL = /\b(?:report|reportArm|armDiagnostic)\s*\(/g;
 
 interface ArmTable {
@@ -126,19 +131,16 @@ function armTables(): ArmTable[] {
   const tables: ArmTable[] = [];
   for (const file of allSourceFiles()) {
     const src = sourceOf(file);
-    for (const match of src.matchAll(TYPED_TABLE)) {
-      const open = match.index + match[0].length - 1;
-      const keys = keysIn(balancedGroup(src, open));
-      tables.push({ file, binding: match[2]!, exported: match[1] !== undefined, keys });
-    }
-    for (const match of src.matchAll(SATISFIES_TABLE)) {
+    for (const match of src.matchAll(OBJECT_LITERAL)) {
       const open = match.index + match[0].length - 1;
       const body = balancedGroup(src, open);
-      if (!SATISFIES_TAIL.test(src.slice(open + body.length + 2))) continue;
+      const annotation = match[3] ?? '';
+      const tail = SATISFIES_TAIL.exec(src.slice(open + body.length + 2))?.[1] ?? '';
+      if (!ARM_CONTRACT.test(annotation) && !ARM_CONTRACT.test(tail)) continue;
       tables.push({ file, binding: match[2]!, exported: match[1] !== undefined, keys: keysIn(body) });
     }
   }
-  return atLeast(tables, 5, 'armTables');
+  return atLeast(tables, 6, 'armTables');
 }
 
 describe('an arm table', () => {

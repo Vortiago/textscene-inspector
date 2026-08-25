@@ -18,7 +18,7 @@
  * parsers then dropped on the floor. Derivation makes that divergence unrepresentable
  * instead of merely discouraged.
  */
-import { FLOAT_PATTERN_SOURCE } from './number.js';
+import { TSCN_FLOAT_PATTERN_SOURCE } from './number.js';
 
 const WS = '\\s*';
 
@@ -111,13 +111,19 @@ export function packedArrayCallAnywhere(typeName: string, global = false): RegEx
  * falls back — instead of reading the prefix `1.2`, which is the
  * stop-at-the-first-bad-character defect this whole grammar exists to end.
  *
+ * The grammar is the WRITER's, non-finite spellings included, because this only
+ * decides which text is the field's value. A caller that cannot use `inf`
+ * rejects the number it read; one that stops MATCHING at `inf` loses the field
+ * itself, and a dict scanned field-by-field then pairs its values against the
+ * wrong keys.
+ *
  * Here rather than at the call site because the scalar grammar may not be
  * rebuilt outside this module: a second reader of it is exactly what
  * `godotLiteralGrammar.guard.test.ts` forbids.
  */
 export function dictNumberField(key: string, global = false): RegExp {
   return new RegExp(
-    `"${key}"${WS}:${WS}(${FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
+    `"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
     global ? 'g' : ''
   );
 }

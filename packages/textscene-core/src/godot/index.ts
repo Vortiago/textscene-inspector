@@ -59,6 +59,7 @@ export {
   INT32_MAX,
   type IntWidth,
   parseGodotInt,
+  ruleCount,
   ruleInt,
   readerLimitedInt,
   storedFromFloat,

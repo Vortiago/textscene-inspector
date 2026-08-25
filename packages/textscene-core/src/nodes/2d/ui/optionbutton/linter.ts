@@ -38,7 +38,7 @@
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -53,7 +53,7 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   // places on the number line and which the message must never print.
   if (selected === null || selected < 0) return [];
 
-  const itemCount = ruleInt(props.item_count, 0);
+  const itemCount = ruleCount(props.item_count);
   if (itemCount === null) return [];
 
   if (selected < itemCount) return [];

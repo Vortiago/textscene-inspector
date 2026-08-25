@@ -41,7 +41,7 @@ function main() {
   // failure — nothing was measured — but --enforce callers expect a built
   // webview, so it fails for them.
   if (webview === 'missing-entry') process.exit(!hostOk || enforce ? 1 : 0);
-  if (webview === 'dead-chunks') process.exit(1);
+  if (webview === 'dead-chunks' || webview === 'unresolved-imports') process.exit(1);
   if (!hostOk || (webview === 'over-budget' && enforce)) process.exit(1);
 }
 
