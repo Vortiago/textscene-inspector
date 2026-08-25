@@ -4,6 +4,9 @@
  * Godot walks every surface of the mesh and falls back per surface — an
  * unpopulated slot gets the SAME hardcoded default shader surface 0 would get,
  * not a lighter or darker stand-in.
+ *
+ * On a real multi-surface mesh, because a PrimitiveMesh has exactly one surface
+ * and Godot drops every higher override (`testing/twoSurfaceMesh.ts`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -13,9 +16,10 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 
 const INTERNALS: TscnInternalResource[] = [
-  { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
+  inlineTwoSurfaceMesh('Mesh_1', [null, null, null]),
   { id: 'Mat_0', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
   { id: 'Mat_2', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
 ];
@@ -24,7 +28,7 @@ const INTERNALS: TscnInternalResource[] = [
 function makeNode(): TscnNode {
   const properties: MeshInstance3DProperties = {
     name: 'M',
-    mesh: 'SubResource("Box_1")',
+    mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: new Map([
       [0, 'SubResource("Mat_0")'],
       [2, 'SubResource("Mat_2")'],

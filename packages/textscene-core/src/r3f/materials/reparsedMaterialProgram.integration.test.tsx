@@ -35,6 +35,7 @@ import { TscnParser } from '../../parser/TscnParser';
 import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
 
 import '../nodes/index';
+import { inlineTwoSurfaceMeshTscn } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 
 const SPRITE_TEXTURE = 'res://textures/sprite.png';
 
@@ -93,11 +94,12 @@ mesh = SubResource("Box_1")
 material_override = SubResource("Mat_1")
 `;
 
+// A real two-surface mesh: `MeshInstance3D::_set`
+// (`scene/3d/mesh_instance_3d.cpp:65-73`) drops an override past a
+// PrimitiveMesh's single surface, so a BoxMesh has no `material-1` to rebuild.
 const secondarySurfaceScene = (transparency: string) => `[gd_scene load_steps=3 format=3]
 
-[sub_resource type="BoxMesh" id="Box_1"]
-size = Vector3(1, 1, 1)
-
+${inlineTwoSurfaceMeshTscn('Mesh_1')}
 [sub_resource type="StandardMaterial3D" id="Mat_1"]
 cull_mode = 0
 transparency = ${transparency}
@@ -106,7 +108,7 @@ albedo_color = Color(1, 1, 1, 0.25)
 [node name="Root" type="Node3D"]
 
 [node name="Panel" type="MeshInstance3D" parent="."]
-mesh = SubResource("Box_1")
+mesh = SubResource("Mesh_1")
 surface_material_override/1 = SubResource("Mat_1")
 `;
 

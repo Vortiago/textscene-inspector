@@ -17,6 +17,13 @@
  * Only a node setting BOTH of the top two can tell the difference, which is why
  * ranking them the other way round survived: the far commoner scenes that set
  * exactly one resolve identically under either order.
+ *
+ * Surface 0 is the whole of it here: a PrimitiveMesh has one surface, so
+ * `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses every
+ * higher `surface_material_override/N` against the array `_mesh_changed`
+ * (`:407`) sized to `get_surface_count()`. The per-surface half of the same
+ * order is asserted on a real multi-surface mesh in
+ * `Component.arraymesh-override.test.tsx`.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -72,23 +79,6 @@ describe('<MeshInstance3D> primitive-mesh material precedence', () => {
       })
     );
     expect(whichMaterial(materials[0]!)).toBe('node');
-  });
-
-  it('applies material_override to EVERY surface, not only slot 0', async () => {
-    // `_geometry_instance_add_surface` runs per surface, so a node-level
-    // override replaces a secondary slot's own override too.
-    const materials = await materialsOf(
-      makeNode({
-        surfaceMaterialOverrides: new Map([
-          [0, 'SubResource("Mat_surface")'],
-          [1, 'SubResource("Mat_surface")'],
-        ]),
-        materialOverride: 'SubResource("Mat_node")',
-      })
-    );
-    expect(materials).toHaveLength(2);
-    expect(whichMaterial(materials[0]!)).toBe('node');
-    expect(whichMaterial(materials[1]!)).toBe('node');
   });
 
   it('falls back to surface_material_override/N when there is no material_override', async () => {

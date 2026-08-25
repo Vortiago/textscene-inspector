@@ -105,11 +105,10 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     externalResources
   );
 
-  // One entry per surface: when several `surface_material_override/N` slots are
-  // populated (a GLB or multi-surface mesh) each surface gets its own material
-  // slot. Single-surface meshes return a length-1 array.
-  const materialSources = useMemo(
-    () => resolveMaterialSources(properties, internalResources, externalResources),
+  // Surface 0's, and a primitive mesh's only one — every multi-surface mesh
+  // kind is an ArrayMesh, which returns from its own branch below.
+  const primarySource = useMemo(
+    () => resolvePrimitiveMaterialSource(properties, internalResources, externalResources),
     [properties, internalResources, externalResources]
   );
   // Surface 0's material WHEN IT LIVES IN THE SCENE: that is the one whose scalars
@@ -117,7 +116,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // path has none of that here — the material pipeline builds it whole, behind
   // `<ExternalMaterialSlot>` — so it reads as "no sub-resource material", exactly
   // as an absent one does.
-  const primarySource = materialSources[0];
   const materialSubResource = primarySource?.kind === 'scene' ? primarySource.resource : undefined;
 
   // The same two override properties as an ArrayMesh sees them. A baked mesh's
@@ -267,36 +265,21 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // Multi-surface meshes (slot N>0 populated): attach the primary material at
-  // `material-0` so R3F builds an array and the secondary slots can land at
-  // `material-N`. Single-surface meshes omit `attach` to keep `mesh.material` a
-  // singular Material.
-  const primaryAttach = materialSources.length > 1 ? 'material-0' : undefined;
-
+  // No `attach`: `mesh.material` stays a singular Material, which is what one
+  // surface means. Handing three an ARRAY here would make it skip every draw
+  // group past the last defined entry — a BoxGeometry declares six.
   return (
     <MeshShell {...shellProps}>
       {geometryElement}
       {primarySource?.kind === 'path' ? (
-        <ExternalMaterialSlot
-          path={primarySource.path}
-          attach={primaryAttach}
-        />
+        <ExternalMaterialSlot path={primarySource.path} />
       ) : (
         <StandardMaterialSlot
           scalars={materialScalars}
           {...maps}
           meshType={meshResource?.type}
-          attach={primaryAttach}
         />
       )}
-      {materialSources.slice(1).map((source, i) => (
-        <SurfaceMaterialSlot
-          key={`mat-${i + 1}`}
-          source={source}
-          attach={`material-${i + 1}`}
-          triplanarMesh={meshResource}
-        />
-      ))}
     </MeshShell>
   );
 }
@@ -673,29 +656,25 @@ function resolveExtArrayMeshPath(
  * that order from its inverse. The mesh's own material is surface 0's alone —
  * a primitive mesh has exactly one surface to carry it.
  */
-function resolveMaterialSources(
+function resolvePrimitiveMaterialSource(
   properties: MeshInstance3DProperties,
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
-): Array<MaterialSource | undefined> {
-  const overrides = properties.surfaceMaterialOverrides;
-  const surfaceSlots =
-    overrides && overrides.size > 0
-      ? Math.max(...Array.from(overrides.keys()), 0) + 1
-      : 1;
-
-  const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
-
-  const result: Array<MaterialSource | undefined> = new Array(surfaceSlots);
-  for (let i = 0; i < surfaceSlots; i++) {
-    // `material_override` first, and on EVERY surface: it is applied in
-    // `_geometry_instance_add_surface`, which runs per surface, rather than as
-    // a whole-mesh replacement. Only then the per-surface override, then the
-    // mesh's own material — which exists for surface 0 alone on a primitive.
-    const ref = properties.materialOverride ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
-    result[i] = resolveMaterialSource(ref, internalResources, externalResources);
-  }
-  return result;
+): MaterialSource | undefined {
+  // Surface 0 alone. `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`)
+  // refuses any `surface_material_override/N` whose index is past
+  // `surface_override_materials.size()`, and `_mesh_changed` (`:407`) sizes that
+  // array to `mesh->get_surface_count()` — 1 for every PrimitiveMesh. So a
+  // higher-numbered override is dropped rather than adding a surface.
+  //
+  // `material_override` first: it is applied inside
+  // `_geometry_instance_add_surface`, which runs per surface, rather than as a
+  // whole-mesh replacement. Then the per-surface override, then the mesh's own.
+  const ref =
+    properties.materialOverride ??
+    properties.surfaceMaterialOverrides?.get(0) ??
+    findMeshOwnMaterial(properties.mesh, internalResources);
+  return resolveMaterialSource(ref, internalResources, externalResources);
 }
 
 function findMeshOwnMaterial(

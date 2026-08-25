@@ -30,6 +30,7 @@ import type {
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 
 const EXTERNAL_PATH = 'res://dielectric.tres';
 const SECOND_EXTERNAL_PATH = 'res://second.tres';
@@ -45,6 +46,7 @@ const INTERNALS: readonly TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
   { id: 'Box_ext', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)', material: 'ExtResource("1_ext")' } },
   { id: 'Mat_inline', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
+  inlineTwoSurfaceMesh('Mesh_2'),
 ];
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
@@ -128,6 +130,9 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
     const seeded = loadedMaterials();
     const materials = await materialsOf(
       makeNode({
+        // A real two-surface mesh: Godot drops any override past a
+        // PrimitiveMesh's single surface (`testing/twoSurfaceMesh.ts`).
+        mesh: 'SubResource("Mesh_2")',
         surfaceMaterialOverrides: new Map([
           [0, 'SubResource("Mat_inline")'],
           [1, 'ExtResource("2_ext")'],

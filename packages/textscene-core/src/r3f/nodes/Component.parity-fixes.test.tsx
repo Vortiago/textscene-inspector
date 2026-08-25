@@ -39,6 +39,7 @@ import {
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
+import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -359,7 +360,10 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
+          // A real two-surface mesh: `MeshInstance3D::_set`
+          // (`scene/3d/mesh_instance_3d.cpp:65-73`) drops any override past a
+          // PrimitiveMesh's single surface.
+          inlineTwoSurfaceMesh('Mesh_1'),
           sub('StandardMaterial3D', 'MatA', { albedo_color: 'Color(1, 0, 0, 1)' }),
           sub('StandardMaterial3D', 'MatB', { albedo_color: 'Color(0, 1, 0, 1)' }),
         ]}

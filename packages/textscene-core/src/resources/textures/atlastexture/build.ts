@@ -12,6 +12,13 @@
  *
  * The copy is a whole-texel blit with smoothing off, so a 1:1 draw of the crop
  * is byte-identical to a 1:1 draw of the same texels through the sheet.
+ *
+ * Two sheet shapes arrive here. A decoded image goes through a 2D canvas; a
+ * RAW-PIXEL image (`{data, width, height}` — what a `DataTexture` carries) is
+ * copied row by row instead. Not merely because `drawImage` rejects it: a
+ * canvas backing store is PREMULTIPLIED, so routing those bytes through one
+ * would zero the RGB behind alpha 0 that `applyAlphaBorderFix` exists to
+ * preserve.
  */
 
 import * as THREE from 'three';
@@ -26,10 +33,29 @@ import type { AtlasTextureLayout } from './types';
  * consumer showing the whole sprite sheet reads as a pass while being the
  * exact failure this module exists to prevent.
  */
+/** The `{data, width, height}` an image-less texture (`DataTexture`) carries. */
+interface RawPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+/** `image` as raw RGBA pixels, or null when it is a drawable image source instead. */
+function rawPixels(image: unknown, atlas: { width: number; height: number }): RawPixels | null {
+  const candidate = image as Partial<RawPixels> | null;
+  const data = candidate?.data;
+  if (!ArrayBuffer.isView(data)) return null;
+  // Anything but 4 bytes per texel is a format this crop cannot index (a
+  // compressed or single-channel DataTexture); leave it to the canvas path,
+  // which will decline in turn.
+  if (data.length !== atlas.width * atlas.height * 4) return null;
+  return { data: data as Uint8Array, width: atlas.width, height: atlas.height };
+}
+
 export function rasterizeAtlasTexture(
   image: unknown,
   layout: AtlasTextureLayout
-): THREE.CanvasTexture | null {
+): THREE.Texture | null {
   const atlas = imageSize(image);
   if (!atlas) return null;
 
@@ -44,6 +70,9 @@ export function rasterizeAtlasTexture(
   const sw = right - left;
   const sh = bottom - top;
   if (sw <= 0 || sh <= 0) return null;
+
+  const raw = rawPixels(image, atlas);
+  if (raw) return cropRawPixels(raw, layout, left, top, sw, sh);
 
   const doc = globalThis.document;
   if (!doc) return null;
@@ -76,4 +105,45 @@ export function rasterizeAtlasTexture(
   } catch {
     return null; // tainted canvas / unsupported image source
   }
+}
+
+/**
+ * The same blit over raw RGBA bytes: the destination starts fully transparent
+ * (a fresh `Uint8Array` is zeroed), so the margin the region does not cover
+ * needs no separate clear.
+ */
+function cropRawPixels(
+  raw: RawPixels,
+  layout: AtlasTextureLayout,
+  left: number,
+  top: number,
+  sw: number,
+  sh: number
+): THREE.DataTexture {
+  const out = new Uint8Array(layout.width * layout.height * 4);
+  const destX = layout.dest.x + (left - layout.source.x);
+  const destY = layout.dest.y + (top - layout.source.y);
+
+  for (let row = 0; row < sh; row += 1) {
+    const dy = destY + row;
+    if (dy < 0 || dy >= layout.height) continue;
+    for (let col = 0; col < sw; col += 1) {
+      const dx = destX + col;
+      if (dx < 0 || dx >= layout.width) continue;
+      const from = ((top + row) * raw.width + (left + col)) * 4;
+      const to = (dy * layout.width + dx) * 4;
+      out[to] = raw.data[from]!;
+      out[to + 1] = raw.data[from + 1]!;
+      out[to + 2] = raw.data[from + 2]!;
+      out[to + 3] = raw.data[from + 3]!;
+    }
+  }
+
+  const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  // Row 0 is the sheet's own row 0, copied straight across, and a DataTexture
+  // uploads unflipped — so the crop lines up with the sheet it came from.
+  texture.flipY = false;
+  texture.needsUpdate = true;
+  return texture;
 }

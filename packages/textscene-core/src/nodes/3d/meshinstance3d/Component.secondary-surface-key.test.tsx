@@ -14,12 +14,13 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 
-/** Only slot 1 is overridden, which is what gives the mesh a second surface. */
+/** Surface 1 of a two-surface mesh, the only slot this suite overrides. */
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
     name: 'Panel',
-    mesh: 'SubResource("Box_1")',
+    mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: new Map([[1, 'SubResource("Mat_1")']]),
   };
   return { name: 'Panel', type: 'MeshInstance3D', children: [], properties: props };
@@ -32,7 +33,7 @@ async function rebuilds(
 ): Promise<boolean> {
   const tree = (data: Record<string, string>) => {
     const resources: TscnInternalResource[] = [
-      { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
+      inlineTwoSurfaceMesh('Mesh_1'),
       { id: 'Mat_1', type: 'StandardMaterial3D', data },
     ];
     return (

@@ -85,7 +85,14 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.g).toBe(0);
   });
 
-  it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {
+  it('#14 surface_material_override/1 on a one-surface primitive is DROPPED', async () => {
+    // `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) returns
+    // false for `idx >= surface_override_materials.size()`, and `_mesh_changed`
+    // (`:407`) sizes that array to `mesh->get_surface_count()` — 1 for every
+    // PrimitiveMesh. So the override never reaches the server, and the mesh
+    // keeps ONE material rather than growing a second slot: a BoxGeometry
+    // declares six groups, and WebGLRenderer skips any group whose
+    // `material[i]` is undefined, so four faces would have vanished.
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -95,18 +102,12 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
-    // Multi-surface fix: mesh.material is an array — slot 0
-    // defaults to grey placeholder, slot 1 carries the yellow override.
-    // Each surface gets its own material slot in the array, mirroring
-    // the pre-migration imperative renderer's `materials[N]` semantics.
     const mesh = findMesh(renderer.scene) as unknown as {
-      material: Array<{ color: { r: number; g: number; b: number } }>;
+      material: { color: { r: number; g: number; b: number } };
     };
-    expect(Array.isArray(mesh.material)).toBe(true);
-    expect(mesh.material).toHaveLength(2);
-    expect(mesh.material[1]!.color.r).toBe(1);
-    expect(mesh.material[1]!.color.g).toBe(1);
-    expect(mesh.material[1]!.color.b).toBe(0);
+    expect(Array.isArray(mesh.material)).toBe(false);
+    // Godot's default material, not the dropped yellow override.
+    expect(mesh.material.color.g).not.toBe(1);
   });
 
   it('#15 visible=false propagates to mesh.visible', async () => {

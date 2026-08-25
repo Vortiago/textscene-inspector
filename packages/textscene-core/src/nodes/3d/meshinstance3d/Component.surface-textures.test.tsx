@@ -8,6 +8,9 @@
  * Slot gating is Godot's too: a sampler is emitted only inside the matching
  * `if (features[FEATURE_…])` branch, so `normal_texture` without
  * `normal_enabled` reaches no shader at all.
+ *
+ * On a real multi-surface mesh, because a PrimitiveMesh has exactly one surface
+ * and Godot drops every higher override (`testing/twoSurfaceMesh.ts`).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,6 +21,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import type {
   TscnExternalResource,
   TscnInternalResource,
@@ -36,7 +40,7 @@ const EXTERNALS: TscnExternalResource[] = [
 function node(overrides: Map<number, string>): TscnNode {
   const properties: MeshInstance3DProperties = {
     name: 'Panel',
-    mesh: 'SubResource("Box_1")',
+    mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: overrides,
   };
   return { name: 'Panel', type: 'MeshInstance3D', children: [], properties };
@@ -54,7 +58,7 @@ async function render(opts: {
     fake.textures.seed(path, texture);
   }
   const internalResources: TscnInternalResource[] = [
-    { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
+    inlineTwoSurfaceMesh('Mesh_1'),
     ...Object.entries(opts.materials).map(([id, data]) => ({
       id,
       type: 'StandardMaterial3D',
