@@ -44,8 +44,8 @@ import {
 import {
   allocatePaintRange,
   canvasRenderOrder,
+  packPaintRanges,
   paintRangeSize,
-  type PaintRange,
 } from './canvasPaintOrder.js';
 import { PaintRangeProvider, useLayerRank, usePaintRange } from './contexts/PaintOrderContext.js';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
@@ -55,7 +55,7 @@ import { drawnSources } from './drawnSources.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
-import { useTileSetModel } from './useTileSetModel.js';
+import { useTileSetModel, useTileSetModels } from './useTileSetModel.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
 
@@ -309,25 +309,30 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
   const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
 
-  // Resolve the tileset for any y-sorted TileMapLayer child so we can expand
-  // it into per-Y-group items (the dungeon fix).
-  const tileSetRef = useMemo(() => {
-    const tl = rawItems.find(i => i.kind === 'tileGroup' && i.node);
-    if (!tl?.node) return undefined;
-    return (tl.node.properties as TileMapLayerProperties).tile_set;
-  }, [rawItems]);
-  const { model, status } = useTileSetModel(tileSetRef);
+  // Every y-sorted TileMapLayer child's OWN tileset, so each layer's cells are
+  // bucketed at its own tile pitch — siblings routinely carry different
+  // tilesets, and one grid applied to all of them sorts the others' rows
+  // against the wrong world Y.
+  const tileSetRefs = useMemo(
+    () =>
+      rawItems
+        .filter((i) => i.kind === 'tileGroup' && i.node)
+        .map((i) => (i.node!.properties as TileMapLayerProperties).tile_set),
+    [rawItems]
+  );
+  const tileSetModel = useTileSetModels(tileSetRefs);
 
   // Expand tileGroup items into per-Y-group items using groupBySortY,
   // then flatten (preserving tree-order position of the original layer).
   const items = useMemo<YSortItem[]>(() => {
     const expanded: YSortItem[] = [];
     for (const item of rawItems) {
-      if (item.kind === 'tileGroup' && item.node && model && status === 'loaded') {
+      const resolved = item.node ? tileSetModel((item.node.properties as TileMapLayerProperties).tile_set) : null;
+      if (item.kind === 'tileGroup' && item.node && resolved?.model && resolved.status === 'loaded') {
         const tp = item.node.properties as TileMapLayerProperties;
         const cells = tp.cells;
         if (cells?.length) {
-          const grid = model;
+          const grid = resolved.model;
           const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
           // groupBySortY adds layerYSortOrigin to each cell's sort key itself, so the
           // layer world-Y passed in must NOT include it (else the origin double-counts).
@@ -356,7 +361,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
       expanded.push(item);
     }
     return expanded;
-  }, [rawItems, model, status]);
+  }, [rawItems, tileSetModel]);
 
   // Bucket by effectiveZ, sort within each bucket by sortY ascending (stable),
   // then assign rank-based z within each bucket.
@@ -398,18 +403,21 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   // ration — the reason the fractional scheme this replaces had to narrow a
   // shrinking float band at every level.
   const packed = useMemo(() => {
-    let cursor = ownSequence + 1;
-    return sorted.map(({ item }) => {
-      // A tile-group item is ONE drawn group with no subtree — several of them
-      // come out of a single layer, and they are what that layer's own reserve
-      // was held back for. Sizing them by the layer node they name would claim
-      // a fresh reserve PER ROW and run off the end of the parent's run.
-      const size = item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
-      const range: PaintRange = { base: cursor, size };
-      cursor += size;
-      return { item, range };
-    });
-  }, [sorted, ownSequence]);
+    // A tile-group item is ONE drawn group with no subtree — several of them
+    // come out of a single layer, and they are what that layer's own reserve
+    // was held back for. Sizing them by the layer node they name would claim
+    // a fresh reserve PER ROW and run off the end of the parent's run.
+    //
+    // Packed through `packPaintRanges` rather than a bare cursor because the
+    // ROW COUNT is only known once the tileset resolves: a layer with more
+    // distinct sort-Y rows than its reserve held would otherwise walk into the
+    // next sibling's range and reorder it.
+    const sizes = sorted.map(({ item }) =>
+      item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node)
+    );
+    const ranges = packPaintRanges(paintRange, sizes, ownSequence + 1);
+    return sorted.map(({ item }, i) => ({ item, range: ranges[i]! }));
+  }, [sorted, ownSequence, paintRange]);
 
   return (
     <>

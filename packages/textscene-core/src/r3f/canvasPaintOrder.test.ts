@@ -196,6 +196,42 @@ describe('allocatePaintRange', () => {
     expect(control.children[0]!.base).toBeLessThan(control.self);
   });
 
+  it('keeps a subtree that needs MORE than its range inside it anyway', () => {
+    // The shape a sub-scene takes: an `instance=` node reserves a flat 4096
+    // from the HOST tree, but the loaded scene is allocated from that reserve
+    // and its own TileMapLayer claims another 4096. Running past the end would
+    // put the sub-scene's later nodes on top of the host's next sibling.
+    const range = { base: 2, size: 4096 };
+    const subScene = [node('Tiles', 'TileMapLayer'), node('Player', 'Sprite2D')];
+    const allocated = allocatePaintRange(range, subScene);
+
+    const end = range.base + range.size;
+    expect(allocated.self).toBeLessThan(end);
+    for (const child of allocated.children) {
+      expect(child.base).toBeGreaterThanOrEqual(range.base);
+      expect(child.base + child.size).toBeLessThanOrEqual(end);
+    }
+    // Still ORDERED: the parent first, then the tile layer, then the sprite.
+    expect(allocated.self).toBeLessThan(allocated.children[0]!.base);
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
+  });
+
+  it('keeps a degenerate range ordered as far as it goes, never past its end', () => {
+    // Fewer values than children: they cannot all be distinct, but none may
+    // escape — a tie interleaves two subtrees, an overrun reorders a sibling.
+    const range = { base: 10, size: 2 };
+    const children = [node('A', 'Sprite2D'), node('B', 'Sprite2D'), node('C', 'Sprite2D')];
+    const allocated = allocatePaintRange(range, children);
+
+    const end = range.base + range.size;
+    for (const child of allocated.children) {
+      expect(child.base).toBeGreaterThanOrEqual(range.base);
+      expect(child.base + child.size).toBeLessThanOrEqual(end);
+    }
+    expect(allocated.children[0]!.base).toBeLessThanOrEqual(allocated.children[1]!.base);
+    expect(allocated.children[1]!.base).toBeLessThanOrEqual(allocated.children[2]!.base);
+  });
+
   it('keeps every child inside the range it was given', () => {
     const range = { base: 100, size: 8 };
     const children = [node('A', 'Sprite2D'), node('B', 'Sprite2D', [node('B1', 'Sprite2D')])];

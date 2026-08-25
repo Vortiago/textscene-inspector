@@ -278,25 +278,77 @@ export function allocatePaintRange(
   sortsChildren = false
 ): AllocatedPaintRange {
   const behind = children.map((child) => !sortsChildren && drawsBehindParent(child));
-  const sizes = children.map(paintRangeSize);
+  const sizes = fitToRange(children.map(paintRangeSize), range.size);
+  const end = range.base + range.size;
 
   let cursor = range.base;
   const allocated: PaintRange[] = new Array<PaintRange>(children.length);
+  /** Never past `end`: an overrun would land inside the NEXT sibling's range. */
+  const take = (size: number): PaintRange => {
+    const base = Math.min(cursor, Math.max(range.base, end - 1));
+    const taken = Math.max(0, Math.min(size, end - base));
+    cursor = base + taken;
+    return { base, size: taken };
+  };
+
   for (let i = 0; i < children.length; i++) {
     if (!behind[i]) continue;
-    allocated[i] = { base: cursor, size: sizes[i]! };
-    cursor += sizes[i]!;
+    allocated[i] = take(sizes[i]!);
   }
-  const self = cursor;
-  cursor += 1;
+  const self = Math.min(cursor, Math.max(range.base, end - 1));
+  cursor = self + 1;
   for (let i = 0; i < children.length; i++) {
     if (behind[i]) continue;
-    allocated[i] = { base: cursor, size: sizes[i]! };
-    cursor += sizes[i]!;
+    allocated[i] = take(sizes[i]!);
   }
   return {
     self,
     children: allocated,
-    tail: { base: cursor, size: Math.max(0, range.base + range.size - cursor) },
+    tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
+}
+
+/**
+ * The children's sizes scaled to fit `available`, leaving one value for the
+ * parent itself.
+ *
+ * `paintRangeSize` is a pure function of the HOST tree, which is what lets the
+ * world walk and the Control walk agree without either resolving a resource —
+ * but it means a dynamic node's reserve is a guess, and a sub-scene carrying a
+ * `TileMapLayer` of its own already needs more than one. Scaling keeps the
+ * subtree's own order for as long as the room lasts, and — the part that
+ * matters — keeps it out of the next sibling's range, where an overrun reorders
+ * nodes that have nothing to do with it.
+ */
+function fitToRange(sizes: readonly number[], available: number): number[] {
+  const needed = sizes.reduce((sum, size) => sum + size, 0);
+  const room = Math.max(0, available - 1);
+  if (needed <= room) return [...sizes];
+  const scale = needed > 0 ? room / needed : 0;
+  return sizes.map((size) => Math.max(1, Math.floor(size * scale)));
+}
+
+/**
+ * `sizes` laid out in order from `from`, scaled and clamped so the last one
+ * still ends inside `range`.
+ *
+ * For a pass that re-packs a range over items the tree does not list — the
+ * y-sort expansion of a tile layer into one group per row — where the count is
+ * only known once a resource resolves, and so cannot have been reserved for
+ * exactly.
+ */
+export function packPaintRanges(
+  range: PaintRange,
+  sizes: readonly number[],
+  from: number
+): PaintRange[] {
+  const end = range.base + range.size;
+  const fitted = fitToRange(sizes, Math.max(0, end - from) + 1);
+  let cursor = from;
+  return fitted.map((size) => {
+    const base = Math.min(cursor, Math.max(range.base, end - 1));
+    const taken = Math.max(0, Math.min(size, end - base));
+    cursor = base + taken;
+    return { base, size: taken };
+  });
 }
