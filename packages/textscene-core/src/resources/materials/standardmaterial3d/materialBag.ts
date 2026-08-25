@@ -33,7 +33,9 @@ import type {
 // Godot's default COLOR buffer is white (`mesh_storage.cpp:86-97`); three declares that
 // default on ShaderMaterial alone, so any other class reads the WebGL generic attribute
 // — (0,0,0) — and blacks out albedo. On the prototype because `copy` drops it and every
-// GLB instance clones.
+// GLB instance clones. Here because this module mints every material that can READ the
+// default: the other `vertexColors` users write the attribute unconditionally, or gate
+// the flag on it.
 (THREE.Material.prototype as { defaultAttributeValues?: Record<string, number[]> }
 ).defaultAttributeValues = { color: [1, 1, 1] };
 

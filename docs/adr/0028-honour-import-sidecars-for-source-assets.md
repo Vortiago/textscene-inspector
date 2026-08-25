@@ -37,12 +37,16 @@ identity (`scale_mesh=Vector3(1, 1, 1)`, `offset_mesh=Vector3(0, 0, 0)`).
 settings, and `nodes` carries much more than the layer mask. The guard names each
 non-empty block individually, so a new one is a decision rather than a silent inclusion.
 
-What is left unread is inert, a bake concern, or — for the platformer player's animation
-clip slicing and loop modes — an unhandled PLAYBACK divergence, recorded rather than
-resolved: the Animation transport plays the one unsliced clip on its default infinite
-repeat where Godot plays the named slices on the authored loop mode. An unread
-parameter is exactly the failure this ADR exists to prevent, so the boundary is guarded
-rather than merely documented: a test asserts that no vendored sidecar sets any
+What is left unread is inert, a bake concern, or — for `animations`' per-clip
+`settings/loop_mode` and its `slice_N/*` cuts — an unhandled PLAYBACK divergence,
+recorded rather than resolved. Godot bakes both into the AnimationLibrary; the
+transport reads neither, so a clip authored `LOOP_NONE` or `LOOP_PINGPONG` plays as
+three's infinite linear repeat, and an authored slice never becomes its own clip.
+Every vendored value today is `LOOP_LINEAR`, which is what that default already is,
+so nothing in the corpus renders differently — the gap is unwitnessed, not absent.
+
+An unread parameter is exactly the failure this ADR exists to prevent, so the boundary
+is guarded rather than merely documented: a test asserts that no vendored sidecar sets any
 parameter outside the allowlist to a non-default value. It passes trivially today and
 fails the moment a newly vendored demo needs a decision.
 
