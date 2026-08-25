@@ -4,7 +4,7 @@
  * Control is the root of the 2D UI family (Label, Button, Panel, the
  * *Containers, …). Registering the shared layout/anchor/offset + theme-override
  * validators here — once, under `'Control'` — makes them apply to every Control
- * subclass through the ValidatorRegistry base-walk (see linter/nodeBaseTypes.ts),
+ * subclass through the ValidatorRegistry base-walk (see godot/nodeBaseTypes.ts),
  * closing the gap where the render parser coerced these values while the linter
  * ignored them entirely.
  *

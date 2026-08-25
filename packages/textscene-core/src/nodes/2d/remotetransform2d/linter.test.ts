@@ -86,9 +86,9 @@ describe('RemoteTransform2D Linter', () => {
     );
   });
 
-  // Repeated names across parents used to force a decline, because matching by
-  // name alone could not tell them apart. A real walk can: `../Other/Target`
-  // names exactly one node no matter how many others share the name.
+  // Matching by name alone cannot tell repeated names across parents apart and
+  // has to decline. A real walk can: `../Other/Target` names exactly one node
+  // no matter how many others share the name.
   it('resolves a repeated name by its path rather than declining', () => {
     expectNoDiagnostic(
       scene(

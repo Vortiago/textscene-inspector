@@ -136,7 +136,7 @@ describe('armBuilders', () => {
 
   it('reports a builder that interpolates a LOCAL rather than a parameter', () => {
     // The nine physics factories' shape. Nothing pins the argument position, so
-    // this used to `continue` before the reporting branch and vanish.
+    // a scrape that `continue`s before the reporting branch loses it.
     const file = fileWith(
       'export function make(dim: string) {\n' +
         '  const prefix = `area${suffix(dim)}`;\n' +

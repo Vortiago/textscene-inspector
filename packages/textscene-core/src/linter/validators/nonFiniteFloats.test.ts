@@ -4,8 +4,8 @@
  * Godot's parser reads all four (`core/variant/variant_parser.cpp:150-155` for
  * the string form, `:701-706` for the token form) and its serializer writes
  * them back, so a scene carrying one is a scene Godot produced. `parseFloat`
- * returns NaN for every one, which used to make the shared numeric validator
- * report a FORMAT error on all of them everywhere.
+ * returns NaN for every one, so reading them through it makes the shared
+ * numeric validator report a FORMAT error on all of them everywhere.
  *
  * That was right for exactly five properties and wrong for every other float in
  * the repo. These tests pin both halves of the split.

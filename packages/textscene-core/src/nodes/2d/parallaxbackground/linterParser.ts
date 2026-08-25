@@ -12,9 +12,8 @@ import '../ui/canvaslayer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
-// The eight CanvasLayer keys this used to re-declare now come from the base,
-// which grounds `layer` on RS::CANVAS_LAYER_MIN/MAX instead of accepting
-// whatever parseInt tolerated.
+// The eight CanvasLayer keys come from the base, which grounds `layer` on
+// RS::CANVAS_LAYER_MIN/MAX rather than accepting whatever parseInt tolerates.
 validatorRegistry.registerAll('ParallaxBackground', {
   scroll_offset: v.vector2('scroll_offset'),
   scroll_base_offset: v.vector2('scroll_base_offset'),

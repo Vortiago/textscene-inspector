@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import '../../../parser/TscnParser.js';
 import '../../../linter/index.js';
 

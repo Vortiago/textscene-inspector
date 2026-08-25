@@ -2,7 +2,7 @@
 
 import type { TscnNode } from '../../parser/types.js';
 import { isTypeOpaque } from '../parentType.js';
-import { descendsFrom } from '../nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 
 /**
  * The node types that give a `CollisionObject` its shapes, for one dimension.

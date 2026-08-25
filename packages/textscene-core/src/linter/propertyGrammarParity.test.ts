@@ -26,7 +26,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { baseChain } from './nodeBaseTypes.js';
+import { baseChain } from '../godot/nodeBaseTypes.js';
 import { isDeprecatedPropertyName } from '../godot/index.js';
 import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
@@ -362,10 +362,7 @@ describe('property-grammar parity guard', () => {
    * resolving the parser side through `getInheritedParserProps`. The blocker is
    * NOT the lookup table: walking `NODE_BASE_TYPES` for every slice in this set
    * shows only nine distinct ancestors cover all of them, and the table above now
-   * has all nine, so nothing would over-report for want of a hop. (An earlier
-   * version of this note claimed the table needed extending "well past its
-   * current few hops"; that was wrong, and the four entries it implied were a
-   * project have since been added.)
+   * has all nine, so nothing would over-report for want of a hop.
    *
    * What remains is real but is classification work, not plumbing: admitting the
    * whole set at once surfaces every asymmetry it was never asked about, and each
@@ -373,15 +370,11 @@ describe('property-grammar parity guard', () => {
    * the property can give. That is the piece of work, and it wants its own pass
    * rather than being smuggled into a wave.
    */
-  // +1: nodes/2d/ui/canvaslayer/ gained a linterParser.ts. It had a parser and
-  // no linter half at all, so its eight own properties were unvalidated and
-  // invisible to this guard, which only sees a directory holding BOTH files.
+  // Both are ratchets, not derived: computing either side would make the
+  // assertion below compare a number to itself. Moving one is a deliberate act
+  // that belongs in a commit message — a slice entering the swept set, or a new
+  // base-parser reuser entering the blind spot the docblock above sizes.
   const SWEPT_SLICES = 75;
-  // +1: nodes/animation/animationmixer/ — a new abstract tier (linterParser.ts
-  // only, no parser.ts of its own, same shape as canvasitem/shared/), added to
-  // register anims/<name>/libraries/libraries/<name> once for both
-  // AnimationPlayer and AnimationTree rather than duplicating the three
-  // validators across both concrete slices.
   const PARSER_REUSING_SLICES = 173;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {

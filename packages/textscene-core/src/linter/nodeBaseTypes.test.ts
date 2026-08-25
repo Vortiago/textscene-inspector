@@ -5,10 +5,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
-import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
+import { NODE_BASE_TYPES } from '../godot/nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import '../linter/index.js'; // trigger all validator registrations
+import './index.js'; // trigger all validator registrations
 
 /** Walk base → base to the root, returning the full chain (throws on a cycle). */
 function chain(type: string): string[] {
@@ -67,9 +67,8 @@ describe('NODE_BASE_TYPES', () => {
   it('gives every registered type a resolvable chain to its root', () => {
     // A registered type that reaches neither root silently receives no
     // inherited validation, which is what this guards. Which hierarchy a type
-    // belongs to is read from the tables, never from a hand-kept list: the
-    // resource half used to be four names here, and a fifth registration would
-    // have failed the guard rather than been checked by it.
+    // belongs to is read from the tables, never from a hand-kept list, which a
+    // new registration would fail rather than be checked by.
     for (const type of validatorRegistry.getRegisteredNodeTypes()) {
       const root = validatorRegistry.baseChainOf(type).at(-1) ?? type;
       expect([root, type], `${type} reaches no root`).toContain(

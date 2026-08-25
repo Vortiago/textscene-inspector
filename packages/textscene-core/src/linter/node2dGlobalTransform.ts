@@ -60,7 +60,7 @@
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isValidProperties } from './linterUtils.js';
 import { searchAncestors } from './parentType.js';
-import { descendsFrom } from './nodeBaseTypes.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';

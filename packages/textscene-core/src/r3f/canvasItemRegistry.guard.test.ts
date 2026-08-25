@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import './nodes/index'; // side-effect: register every slice's render component
 import { nodeComponentRegistry } from './NodeComponentRegistry';
-import { descendsFrom } from '../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 
 describe('canvasItem registry conformance', () => {
   it('flags every registered CanvasItem descendant as canvasItem', () => {

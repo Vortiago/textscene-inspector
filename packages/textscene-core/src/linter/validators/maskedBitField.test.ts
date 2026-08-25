@@ -108,9 +108,9 @@ describe('maskedBitField', () => {
     });
 
     it('warns that the fraction was dropped, at the shared truncation tier', () => {
-      // 64 is a legal bit, so the arms have nothing to say and the slot used to
-      // go silent — leaving `_to_int`'s own alteration unreported on a slot
-      // `markIntSlot` tags. `truncatedInts.test.ts` sweeps for the same gap.
+      // 64 is a legal bit, so the arms have nothing to say and only this keeps
+      // the slot from going silent on `_to_int`'s own alteration, which
+      // `markIntSlot` tags it for. `truncatedInts.test.ts` sweeps for the same gap.
       const truncated = run('64.9');
       expect(truncated?.severity).toBe('warning');
       expect(truncated?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');

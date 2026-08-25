@@ -36,7 +36,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { polygonPointCount } from '../../../linter/polygonPoints.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 

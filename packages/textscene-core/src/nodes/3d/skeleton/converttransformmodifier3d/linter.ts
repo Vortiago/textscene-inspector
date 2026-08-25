@@ -41,7 +41,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { rangeAdvisories, type RangeArm } from '../../../../linter/rangeAdvisory.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';

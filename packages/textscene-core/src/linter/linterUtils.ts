@@ -14,8 +14,7 @@ export function isValidProperties(props: unknown): props is Record<string, strin
 
 /**
  * Precomputed scene-tree facts, built in ONE depth-first pass, that the
- * NodePath-resolution helpers below used to recompute (via a fresh full-tree
- * walk) on EVERY call. A semantic rule calls these once per matching node, so
+ * NodePath-resolution helpers below read rather than recomputing per call. A semantic rule calls these once per matching node, so
  * without this cache checking every node in an N-node scene cost O(N) per
  * lookup * O(N) nodes = O(N^2) total; with it, the first lookup against a
  * given tree pays the one O(N) walk and every lookup after (same tree) is
@@ -128,9 +127,9 @@ export function countNodesOfType(roots: TscnNode[], type: string): number {
  * without one is not the winner and must not be treated as it.
  *
  * Both paths read the cached per-type list, so `joins` costs a scan of that
- * type's own nodes rather than a fresh walk of the whole tree. It used to walk,
- * which made the one production caller quadratic in exactly the scenes the rule
- * exists for: the ones where the type appears more than once.
+ * type's own nodes rather than a fresh walk of the whole tree, which would make
+ * the one production caller quadratic in exactly the scenes the rule exists for:
+ * the ones where the type appears more than once.
  */
 export function firstNodeOfType(
   roots: TscnNode[],

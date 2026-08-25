@@ -69,9 +69,9 @@ pixel_size = 0.01
       {
         // sprite_3d.cpp:682 hints "0.0001,128" closed at both ends and the
         // setter assigns straight through, so out-of-band is the hinted tier:
-        // a warning, and the ceiling reports as well as the floor. It used to
-        // be a bare "> 0" error, which both invented a severity and let
-        // `pixel_size = 500.0` through in silence.
+        // a warning, and the ceiling reports as well as the floor. A bare
+        // "> 0" error would invent a severity and let `pixel_size = 500.0`
+        // through in silence.
         prop: 'pixel_size',
         valid: [0.01, 0.0001, 128],
         invalid: [

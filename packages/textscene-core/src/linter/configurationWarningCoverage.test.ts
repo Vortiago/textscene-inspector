@@ -25,7 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { descendsFrom } from './nodeBaseTypes.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { WARNINGS, type WarningRow } from './configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules

@@ -43,8 +43,8 @@ function tighter(hint: RangeEnd | undefined, setter: RangeEnd | undefined, end: 
  *
  * Built per END, taking the tighter of the two tiers at each side, because this
  * column is the domain that reports NOTHING. Returning on the hint's ends the
- * moment either exists was wrong in two directions at once: a setter ceiling
- * with a hinted floor printed `integer >= 0` and dropped the ceiling entirely
+ * moment either exists is wrong in two directions at once: a setter ceiling
+ * with a hinted floor prints `integer >= 0` and drops the ceiling entirely
  * (`max_contacts_reported`, `bounces`, `max_distance`), and a setter end
  * COINCIDING with the hint's but excluding it printed `float 0-100` for a
  * property whose setter refuses 0 (`aspect_ratio`).

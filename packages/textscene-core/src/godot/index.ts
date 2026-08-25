@@ -98,3 +98,12 @@ export {
   nodePathLiteral,
   resourceRef,
 } from './variantParser.js';
+export {
+  MAX_BASE_CHAIN_HOPS,
+  NODE_BASE_TYPES,
+  UNCATALOGUED_BASE_TYPES,
+  baseChain,
+  descendsFrom,
+  isCatalogedType,
+} from './nodeBaseTypes.js';
+export { CLASS_BASE_TYPES } from './classBaseTypes.js';

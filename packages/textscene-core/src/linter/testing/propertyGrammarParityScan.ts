@@ -11,7 +11,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { baseChain } from '../nodeBaseTypes.js';
+import { baseChain } from '../../godot/nodeBaseTypes.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.

@@ -8,8 +8,8 @@
  * re-exported here, so no importer moves.
  */
 
-import { CLASS_BASE_TYPES } from './classBaseTypes.js';
-import { MAX_BASE_CHAIN_HOPS } from './nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import {
   buildWildcardIndex,

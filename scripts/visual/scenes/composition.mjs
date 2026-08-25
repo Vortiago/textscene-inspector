@@ -16,8 +16,8 @@ export const SCENE_COMPOSITION_SCENES = [
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn', maxDiffPct: 0.3 },
   // The first golden ever to show a collision gizmo: `physics-bodies` above
   // carries CollisionShape3D nodes but the toggle is off, so its baseline is a
-  // bare plane. Capsule / sphere / cylinder all used to fall through to a 1x1x1
-  // box, and every gizmo was hard-coded green regardless of `debug_color`.
+  // bare plane. This one catches a capsule / sphere / cylinder falling through
+  // to a 1x1x1 box, and a gizmo hard-coded green regardless of `debug_color`.
   // Thin wireframe lines, hence the relaxed threshold.
   {
     name: 'collision-shapes',

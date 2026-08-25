@@ -42,7 +42,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
 
 function checkViewportSize(context: RuleContext): Diagnostic[] {

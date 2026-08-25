@@ -80,7 +80,7 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
         // rather than from `grounding.kind`, which cannot express a property
         // whose floor the setter enforces and whose ceiling only the inspector
         // hint states. The tier is the first thing a reader of this table needs,
-        // and the sheet used to state it wrongly for every property.
+        // so a sheet that reads it from `grounding.kind` states it wrongly.
         tiers: validator?.tiers,
         // The NUMBERS behind those tiers, needed only where an end carries two
         // of them: the cell must name both the refused and the hinted limit.

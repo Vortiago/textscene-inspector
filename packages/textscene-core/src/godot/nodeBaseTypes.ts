@@ -1,21 +1,19 @@
 /**
- * Canonical node-type → base-type table for the linter's validator inheritance.
- * `ValidatorRegistry.findValidator` walks this chain so a validator set
- * registered on `Node3D`, `CanvasItem`, `Control` or any other ancestor applies
- * to every subclass automatically, instead of each subclass silently escaping
- * validation.
+ * Godot's node ancestry: every type → the base it derives from.
  *
- * The table is Godot's own ancestry, derived from the catalog's `chain` field
- * (`nodeBaseTypes.generated.ts`) rather than hand-maintained. That matters
- * because the hand-written version modelled only the levels that carried
- * validators *at the time*, so every new validator tier — `GeometryInstance3D`,
- * `Range`, `BaseButton`, `BoxContainer`, `CanvasItem` — needed each of its
- * leaves re-pointed at it by hand, and a missed leaf lost the whole set
- * silently. With every hop present, registering a validator on an intermediate
- * is all it takes to reach its subclasses.
+ * An engine fact, and here because more than one domain asks it. The linter
+ * walks it in `ValidatorRegistry.findValidator`, so a set registered on `Node3D`
+ * or `Control` reaches every subclass instead of each one silently escaping
+ * validation; the render path asks the same question of a node it is about to
+ * draw. Reaching into `linter/` for it would carry the linter's weight into the
+ * webview bundle, which is what this module exists to prevent.
  *
- * Pure data: React/THREE-free, so it stays on the linter side of the bundle
- * boundary.
+ * Derived from the catalog's `chain` field (`nodeBaseTypes.generated.ts`), not
+ * hand-maintained, and carrying EVERY hop rather than only the levels that
+ * happen to hold validators today. That is what makes registering a validator
+ * on an intermediate — `GeometryInstance3D`, `Range`, `BaseButton`,
+ * `CanvasItem` — reach its subclasses with nothing re-pointed by hand, and a
+ * leaf cannot drop out of a tier by being forgotten.
  */
 
 import { CATALOG_BASE_TYPES } from './nodeBaseTypes.generated.js';

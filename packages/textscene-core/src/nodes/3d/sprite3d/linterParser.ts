@@ -52,7 +52,7 @@ validatorRegistry.registerAll('Sprite3D', {
   frame_coords: v.vector2i('frame_coords', { min: 0, enforced: 'sprite_3d.cpp:894' }),
   // set_region_enabled:848-856 is a bare bool assignment; ADD_PROPERTY
   // (sprite_3d.cpp:1019) hints PROPERTY_HINT_GROUP_ENABLE, a pure UI-grouping
-  // hint with no value bound. A real gap: previously registered nowhere.
+  // hint with no value bound.
   region_enabled: v.boolean('region_enabled'),
   region_rect: v.rect2('region_rect'),
 });

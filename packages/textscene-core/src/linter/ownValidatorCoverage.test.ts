@@ -29,7 +29,7 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain } from './nodeBaseTypes.js';
+import { baseChain } from '../godot/nodeBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 

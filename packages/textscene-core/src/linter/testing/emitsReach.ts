@@ -246,9 +246,9 @@ export function armBuilders(files: string[]): ArmBuilders {
       // interpolates NO parameter is one this scrape cannot pin to a call
       // site — the nine physics factories interpolate a local
       // (`const prefix = \`area${dimSuffix(dim)}\``) rather than their `dim`
-      // parameter. The `continue` used to run before the branch below, so
-      // `unresolvable` was empty for the reason that mattered least: nothing
-      // ever reached it. Twelve of thirteen builders were dropped in silence.
+      // parameter. A `continue` ahead of the branch below leaves `unresolvable`
+      // empty for the reason that matters least — nothing reaches it — and drops
+      // twelve of thirteen builders in silence.
       //
       // Two parameters interpolated by different templates is the other shape
       // it cannot pin, and a name nothing pins to a rule.

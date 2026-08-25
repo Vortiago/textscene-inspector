@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import { baseChain, NODE_BASE_TYPES } from '../nodeBaseTypes.js';
+import { baseChain, NODE_BASE_TYPES } from '../../godot/nodeBaseTypes.js';
 import { walk } from './ruleNameScrape.js';
 import {
   BASE_TYPE_TO_PARSER_SUBPATH,

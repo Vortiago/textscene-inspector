@@ -15,7 +15,7 @@ import {
 } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { descendsFrom } from '../nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { tupleComponent } from '../validators/commonValidators.js';
@@ -101,8 +101,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // linterParser.ts reports as errors.
 
     // Warning: max_contacts_reported set but contact_monitor=false.
-    // NARROWER than it used to read: the flag gates the contact LIST and the signals,
-    // not the reporting itself. `_sync_body_state` writes `contact_count` from the
+    // The flag gates the contact LIST and the signals, not the reporting itself. `_sync_body_state` writes `contact_count` from the
     // state unconditionally (:155, called at :179 ahead of the guard), and the
     // server's `can_report_contacts()` is `!contacts.is_empty()`, sized by
     // max_contacts_reported alone. Saying the property "won't work" claimed more

@@ -1,8 +1,8 @@
 /**
  * A CollisionPolygon provides a body's shapes exactly as a CollisionShape does.
  *
- * The four body rules used to check the `CollisionShape<dim>` type literal
- * alone, which is a FALSE POSITIVE on scenes Godot itself ships:
+ * Checking the `CollisionShape<dim>` type literal alone is a FALSE POSITIVE on
+ * scenes Godot itself ships:
  * `scenes/demos/2d/physics_platformer/tileset_edit.tscn` has a StaticBody2D
  * whose only child is a CollisionPolygon2D, and it was warned about. It stayed
  * invisible because `fixtureLint` sweeps `scenes/fixtures/` and not

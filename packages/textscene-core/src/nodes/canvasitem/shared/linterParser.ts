@@ -60,8 +60,8 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
   // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
   // set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, no
-  // ERR_FAIL, no clamp. The 0..2^32-1 `layerBitmask` bound this used to carry
-  // was never engine-enforced, so it is removed here (ADR-0032 "none").
+  // ERR_FAIL, no clamp. A 0..2^32-1 `layerBitmask` bound is not
+  // engine-enforced, so none is declared here (ADR-0032 "none").
   light_mask: layerBitmask('light_mask', { hinted: 'canvas_item.cpp:1477', width: 'int32' /* canvas_item.h:278 */ }),
   // canvas_item.cpp:1478, same PROPERTY_HINT_LAYERS_2D_RENDER shape.
   // set_visibility_layer (canvas_item.cpp:1598-1602) assigns unconditionally.

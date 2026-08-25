@@ -184,9 +184,9 @@ describe('rule emits meta-guard', () => {
     expect([...builders.keys()].filter((b) => !called.has(b)).sort()).toEqual([]);
     expect(unresolvedCallSites.sort()).toEqual([]);
     // A builder this scrape cannot pin to a call site is NOT thereby exempt.
-    // The list used to be empty because the loop `continue`d before anything
-    // could reach it, so twelve of the tree's thirteen rule-name builders were
-    // dropped in silence and this assertion proved nothing. They cannot be
+    // A loop that `continue`s before anything reaches the list empties it, and
+    // twelve of the tree's thirteen rule-name builders then drop in silence with
+    // this assertion proving nothing. They cannot be
     // pinned — their names come from a local, or from a helper call — so the
     // question becomes the one that is still answerable: is every template
     // they carry covered by a declared `emits` entry?

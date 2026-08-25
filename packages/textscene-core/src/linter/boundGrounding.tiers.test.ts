@@ -98,8 +98,8 @@ describe('per-end grounding', () => {
   });
 
   it('splits float and int the same way strictInt does', () => {
-    // Regression for a bug the 3D rendering audit found: `float`/`int` used to
-    // collapse a per-end split through `boundSeverity`, which returns 'error'
+    // `float`/`int` must split the tier per END rather than through
+    // `boundSeverity`, which returns 'error'
     // unless BOTH ends are hinted — so `{ enforced: { min }, hinted: { max } }`
     // typechecked but silently made the whole bound an error. CSGCylinder3D's
     // `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the

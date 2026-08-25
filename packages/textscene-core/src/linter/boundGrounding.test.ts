@@ -39,15 +39,14 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
  * citation) or takes a `Grounding`. A HAND-ROLLED validator is neither until
  * its author says which, and that gap is what this list holds.
  *
- * This is the whole ratchet. An earlier version also swept a `bounded` tag for
- * validators carrying no grounding, but `ground()` sets `bounded` XOR
- * `formatOnly`, so "bounded and ungrounded" was definitionally "neither
- * formatOnly nor grounding" - the same set this catches, minus the recursion
- * into `.leaves`. The tag and the weaker sweep are gone; this one stayed.
+ * This is the whole ratchet, and one sweep is enough: `ground()` sets `bounded`
+ * XOR `formatOnly`, so "bounded and ungrounded" is definitionally "neither
+ * formatOnly nor grounding" — this same set, without the recursion into
+ * `.leaves`.
  *
- * It found `GPUParticles3D.visibility_aabb` rejecting a negative extent that
- * `set_visibility_aabb` assigns unaltered, because a hand-rolled validator had
- * never been in any denominator.
+ * A hand-rolled validator in no denominator is how
+ * `GPUParticles3D.visibility_aabb` came to reject a negative extent that
+ * `set_visibility_aabb` assigns unaltered.
  *
  * Only ever shrinks. Classify the validator instead of adding an entry.
  */
@@ -93,7 +92,7 @@ describe('bound grounding', () => {
 
   it('gives every grounded bound a source citation', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
-    // same unverifiable claim the invented thresholds used to make.
+    // unverifiable claim an invented threshold makes.
     expect(classifiableKeys().length).toBeGreaterThan(1500);
     expect(sweepValidators(citesNoEngineLocation)).toEqual([]);
   });

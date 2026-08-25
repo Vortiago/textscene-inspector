@@ -16,9 +16,8 @@
  * `Area2D.SpaceOverride` and `Area3D.SpaceOverride`.
  *
  * Enforced separately by each class: `area_2d.cpp:653` and `area_3d.cpp:778`.
- * This table used to live in a shared `physicsValidators.ts`; when that file was
- * deleted the validator-building was correctly inlined into both slices, but the
- * label data got copied rather than re-homed.
+ * The validator-building is inlined into both slices; only the label data is
+ * shared, and it lives here so the two cannot drift apart.
  */
 export const SPACE_OVERRIDE = {
   0: 'DISABLED',

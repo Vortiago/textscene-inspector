@@ -219,7 +219,7 @@ describe('Area3D Linter', () => {
 
   describe('Semantic Validation (Collision Layers)', () => {
     // No `collision_layer == 0` + monitoring check: no engine warning exists
-    // for it, AND the premise was wrong — Area monitoring matches a target
+    // for it, and the premise would be wrong anyway — Area monitoring matches a target
     // body's `collision_layer` against the AREA's `collision_mask`, not the
     // area's own `collision_layer`. squash-the-creeps' MobDetector ships with
     // it deliberately.

@@ -83,8 +83,8 @@ describe('CharacterBody2D Linter', () => {
       },
       {
         // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
-        // PI is the last legal value; this table used to stop at PI/2 and
-        // rejected the upper half of the range as an error.
+        // PI is the last legal value, and a table stopping at PI/2 rejects the
+        // upper half of the range as an error.
         prop: 'floor_max_angle',
         valid: [0, 0.785398, 1.5708, 3.14159],
         invalid: [

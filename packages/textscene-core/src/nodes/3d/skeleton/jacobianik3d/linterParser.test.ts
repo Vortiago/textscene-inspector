@@ -25,7 +25,7 @@ import {
   validatorRegistry,
   type PropertyValidator,
 } from '../../../../linter/ValidatorRegistry';
-import { NODE_BASE_TYPES, baseChain } from '../../../../linter/nodeBaseTypes';
+import { NODE_BASE_TYPES, baseChain } from '../../../../godot/nodeBaseTypes';
 import { expectFixtureClean, readFixture } from '../../../../linter/testing/fixtureCheck';
 import './linterParser';
 

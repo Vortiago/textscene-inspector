@@ -42,7 +42,7 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 
 /** `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155. */
 function isSortableControl(child: TscnNode): boolean {

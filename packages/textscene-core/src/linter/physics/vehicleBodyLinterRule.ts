@@ -15,10 +15,10 @@
  * condition under two rule names. AnimatableBody3D relies on staticBodyLinterRule
  * the same way.
  *
- * This rule used to carry its own copy of the scale check
- * (`vehiclebody3d-scaled-transform`), because `rigidBodyLinterRule` had not
- * implemented rigid_body_3d.cpp:667 yet. Now that it has (reaching VehicleBody3D
- * through the same `descendsFrom` matcher as everything else in this list), the
+ * The scale check (`vehiclebody3d-scaled-transform`) is NOT repeated here:
+ * `rigidBodyLinterRule` implements rigid_body_3d.cpp:667 and reaches
+ * VehicleBody3D through the same `descendsFrom` matcher as everything else in
+ * this list, so the
  * copy here retired rather than double-warning every scaled VehicleBody3D.
  */
 
@@ -26,7 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { isTypeOpaque } from '../parentType.js';
-import { descendsFrom } from '../nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 
 /**
  * `_update_friction` returns before any suspension or traction impulse is

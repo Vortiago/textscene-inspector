@@ -138,10 +138,10 @@ describe('comparison sheets', () => {
 
   it('renders the header pair of a sheet that ALSO has sections', async () => {
     // A sheet's own `image:` and its section markers are both sources, never
-    // either/or. The gallery used to resolve the header pair only when a sheet
-    // had no sections, so the first section silently swallowed the sheet's own
-    // comparison — on the whole-scene sheets that overview IS the subject. The
-    // loss was invisible: every other image on the page still rendered, and the
+    // either/or. Resolving the header pair only when a sheet has no sections
+    // lets the first section swallow the sheet's own comparison — and on the
+    // whole-scene sheets that overview IS the subject. The
+    // loss is invisible: every other image on the page still renders, and the
     // build stayed green because nothing was missing, only unreferenced.
     const sectionedWithHeader = sheets.filter(
       (s) => s.meta.image && parseCompareMarkers(s.body).length > 0
@@ -453,9 +453,8 @@ describe('hand-maintained docs stay in step with the sheets', () => {
     // Two phrasings, two standards, because the README's claim changed in kind
     // once coverage completed. While it read "Around N node types", N was
     // allowed to trail the truth by the rounding "Around" implies — but not by a
-    // whole wave, which is what silently happened before this existed. Now that
-    // it claims ALL of them, hedging is gone and so is the tolerance: an exact
-    // claim that is off by one is simply false.
+    // whole wave. It claims ALL of them, so hedging is gone and so is the
+    // tolerance: an exact claim that is off by one is simply false.
     const readme = readFileSync(ROOT_README, 'utf8');
     const sheetTypes = new Set(
       sheets.filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type).map((s) => s.meta.type)

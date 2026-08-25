@@ -81,7 +81,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // validator instead.
 
     // No `collision_layer` check of any kind: no engine warning exists for it,
-    // AND the premise was wrong. Area monitoring matches a target body's
+    // and the premise would be wrong anyway. Area monitoring matches a target body's
     // `collision_layer` against the AREA's `collision_mask`, not against the
     // area's own `collision_layer`, so the area's layer has no bearing on what
     // it detects. It fired on shipped Godot demos that set `collision_layer = 0`

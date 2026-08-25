@@ -5,7 +5,7 @@
  * One entry per hop of every catalogued node's ancestry, so abstract classes
  * that no scene can instantiate still appear as somebody's base. `Node` is the
  * terminal and has no entry. Merged with the hand-written exceptions in
- * nodeBaseTypes.ts, which is what the linter imports.
+ * nodeBaseTypes.ts, which is what every domain imports.
  */
 
 export const CATALOG_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({

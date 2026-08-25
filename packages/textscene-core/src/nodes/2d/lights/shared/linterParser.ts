@@ -71,8 +71,8 @@ validatorRegistry.registerAll('Light2D', {
   // PROPERTY_HINT_RANGE, so there is no numeric hint to ground a bound on.
   // set_item_cull_mask (light_2d.cpp:143-145) and set_item_shadow_cull_mask
   // (light_2d.cpp:152-154) both assign unconditionally, no ERR_FAIL, no
-  // clamp. The 0..2^32-1 `layerBitmask` bound these used to carry was never
-  // engine-enforced, so it is removed here (ADR-0032 "none").
+  // clamp. A 0..2^32-1 `layerBitmask` bound is not engine-enforced, so none is
+  // declared here (ADR-0032 "none").
   range_item_cull_mask: layerBitmask('range_item_cull_mask', { hinted: 'light_2d.cpp:313', width: 'int32' /* light_2d.h:112 */ }),
   shadow_item_cull_mask: layerBitmask('shadow_item_cull_mask', { hinted: 'light_2d.cpp:320', width: 'int32' /* light_2d.h:115 */ }),
   shadow_enabled: v.boolean('shadow_enabled'),

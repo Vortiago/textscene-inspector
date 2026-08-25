@@ -31,9 +31,9 @@ export type WildcardKind = 'path' | 'indexedLeaf' | 'indexedSubtree' | 'indexedT
 /**
  * A wildcard registration with its prefix already sliced off the pattern.
  *
- * The prefix used to be re-derived on every lookup (`pattern.slice(0, -2) + '/'`,
- * two allocations per candidate) and a miss is the common case, so the work
- * landed on the hot path for every unregistered property of every node. Slicing
+ * Re-deriving the prefix per lookup (`pattern.slice(0, -2) + '/'`, two
+ * allocations per candidate) puts that work on the hot path for every
+ * unregistered property of every node, and a miss is the common case. Slicing
  * once at registration makes the lookup a `startsWith` against a retained
  * string. It also lets the loop skip EXACT keys entirely: `Control` registers
  * far more of those than the six `theme_override_*` wildcards every Control

@@ -9,7 +9,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { MeshInstance3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { checkResourceExists } from '../../../linter/resourceChecker.js';
 import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
 

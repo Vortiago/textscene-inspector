@@ -24,7 +24,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';

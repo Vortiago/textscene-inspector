@@ -2,7 +2,7 @@
  * Node3D strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * `scale` used to keep a bespoke validator rejecting a zero component, mirroring
+ * `scale` keeps no bespoke validator rejecting a zero component, unlike
  * Node2D. Unlike `Node2D::set_scale` (node_2d.cpp:194-198, which substitutes
  * CMP_EPSILON for a (near-)zero component), `Node3D::set_scale` (node_3d.cpp:812-827)
  * is a bare assignment with no zero guard at all: the previous check was a

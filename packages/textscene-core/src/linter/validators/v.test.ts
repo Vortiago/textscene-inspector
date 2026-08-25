@@ -146,10 +146,9 @@ describe('the int combinators agree on what Godot can read', () => {
     expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
   });
 
-  // And on a fractional literal too, now that one engine behaviour has one
-  // verdict: `strictInt` used to call it a FORMAT error on 56 slots while
-  // `v.int` was silent on 169, so the same `.cpp` line judged Sprite2D and
-  // Sprite3D differently.
+  // And on a fractional literal too: one engine behaviour, one verdict. Split
+  // between a FORMAT error on 56 slots and silence on 169, the same `.cpp` line
+  // judges Sprite2D and Sprite3D differently.
   it('agree on a fractional literal, which the INT conversion truncates', () => {
     for (const validator of [v.int('frame', { min: 0, max: 10 }), v.strictInt('frame', { min: 0, max: 10 })]) {
       const diagnostic = validator('frame', '5.5', 1);

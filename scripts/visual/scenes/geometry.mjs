@@ -21,10 +21,10 @@ export const GEOMETRY_SCENES = [
   // sat unnoticed. The 1x1 ruler plate underneath gives the eyeball a scale.
   { name: 'csg-defaults', file: 'unit-csg-defaults.tscn' },
   // Nodes parented UNDER a MeshInstance3D and an OmniLight3D. Both components
-  // used to destructure only `node` and silently delete the subtree the
-  // dispatcher handed them (144 authored child nodes across 19 vendored demo
-  // scenes). Every other 3D fixture hangs its content off Node3D, so nothing
-  // in the golden set could see it.
+  // silently delete the subtree the dispatcher hands them if they destructure
+  // only `node` (144 authored child nodes across 19 vendored demo scenes). Every
+  // other 3D fixture hangs its content off Node3D, so nothing else in the golden
+  // set can see it.
   { name: 'subtree-under-leaf-nodes', file: 'unit-subtree-under-leaf-nodes.tscn' },
   // `cast_shadow = SHADOWS_ONLY`: the box must be ABSENT from the colour buffer
   // while its shadow lands on the ground and the sphere parented under it still
@@ -34,10 +34,10 @@ export const GEOMETRY_SCENES = [
   // relaxed threshold.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn', maxDiffPct: 0.5 },
   // CSG `material` as an ExtResource .tres beside the same node with an inline
-  // SubResource material. Only the sub-resource form used to resolve, so the
-  // 33 ExtResource materials in scenes/demos/3d/csg/csg.tscn rendered white —
-  // and both existing CSG fixtures declare their materials inline, so no
-  // golden could see it. The left box must be green, the right one red.
+  // SubResource material. Resolving only the sub-resource form renders the 33
+  // ExtResource materials in scenes/demos/3d/csg/csg.tscn white, and the other
+  // CSG fixtures declare theirs inline, so no other golden sees it. The left box
+  // must be green, the right one red.
   { name: 'csg-external-material', file: 'unit-csg-external-material.tscn' },
   // A Sprite2D whose `texture` is a CanvasTexture sub-resource (wrapping the
   // same image the sibling references directly). CanvasTexture is a first-class
@@ -47,8 +47,8 @@ export const GEOMETRY_SCENES = [
   { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
   // 2D geometry parity in one frame: Line2D corner joints (sharp + round),
   // Polygon2D `polygons` index lists and `invert_enabled`, and the
-  // NavigationRegion2D navmesh, whose vertices used to render mirrored about
-  // the region origin. Thin joint wedges and navmesh edges are AA-sensitive.
+  // NavigationRegion2D navmesh, whose vertices mirror about the region origin
+  // if the Y-flip is skipped. Thin joint wedges and navmesh edges are AA-sensitive.
   {
     name: '2d-geometry-parity',
     file: 'unit-2d-geometry-parity.tscn',

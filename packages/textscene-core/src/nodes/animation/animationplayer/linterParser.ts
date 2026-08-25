@@ -2,7 +2,7 @@
  * AnimationPlayer strict validators for linting.
  * Migrated to the declarative `v` namespace.
  *
- * `autoplay` and `root_node` used to hand-roll an empty-string rejection, but
+ * `autoplay` and `root_node` reject no empty string:
  * animation_player.cpp:775 (`set_autoplay`) and animation_mixer.cpp:484
  * (`set_root_node`) are both bare assignments, and an empty StringName/NodePath
  * is Godot's own "nothing set" state (autoplay: line 150's `animation_set.has(autoplay)`

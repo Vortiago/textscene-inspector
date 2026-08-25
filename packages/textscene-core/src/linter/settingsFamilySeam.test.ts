@@ -25,7 +25,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import type { ParseError } from './types.js';
-import { baseChain } from './nodeBaseTypes.js';
+import { baseChain } from '../godot/nodeBaseTypes.js';
 import { CHAIN_IK_SETTING_LEAVES } from '../nodes/3d/skeleton/chainik3d/linterParser.js';
 import { BONE_CONSTRAINT_SETTING_LEAVES } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
 import './index.js';

@@ -98,8 +98,8 @@ describe('indexedFamilyValidator', () => {
     });
 
     it('parses the index from the FIRST slash, so a nested key is still indexed', () => {
-      // `0/apply` is what the last-slash split used to read here, and it is not
-      // an integer, so the whole key fell through to no validator at all.
+      // A last-slash split reads `0/apply` here, which is not an integer, so the
+      // whole key falls through to no validator at all.
       const error = family('settings/-1/apply/axis', '1', 1);
       expect(error?.code).toBe('INVALID_SETTING');
       expect(nested.calls).not.toContain('settings/-1/apply/axis');

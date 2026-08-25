@@ -39,7 +39,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
@@ -59,7 +59,7 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
       // `has_node(external_skeleton_node)` AND the node casts to Skeleton3D —
       // its `ERR_FAIL_NULL_MSG(sk, …)` returns with the cache still null for
       // anything else. Both misses leave `external_skeleton_node_cache.is_null()`
-      // true at cpp:64, so Godot warns and this used to stay quiet.
+      // true at cpp:64, so Godot warns and this must not stay quiet.
       const target = resolveNodePath(scene, node, path);
       if (target.status === 'unknowable') return [];
       if (target.status === 'found' && descendsFrom(target.node.type, 'Skeleton3D')) return [];

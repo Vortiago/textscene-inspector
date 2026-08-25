@@ -9,7 +9,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { nodePathLiteral } from '../../../godot/index.js';
 

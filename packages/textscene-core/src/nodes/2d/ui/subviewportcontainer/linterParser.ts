@@ -1,7 +1,7 @@
 /**
  * SubViewportContainer strict validators — format only, so every failure is an
  * error. Control's own anchor/offset/layout validators reach this type through
- * the base-type chain (`linter/nodeBaseTypes.ts`), not from here.
+ * the base-type chain (`godot/nodeBaseTypes.ts`), not from here.
  */
 
 // The base chain. Registration happens on import, so a test that loads only

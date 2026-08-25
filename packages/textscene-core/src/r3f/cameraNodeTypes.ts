@@ -11,7 +11,7 @@
  * which does not ship the linter.
  */
 
-import { descendsFrom } from '../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 
 /** Camera3D and every type descending from it (XRCamera3D). */
 export function isCamera3DType(type: string): boolean {

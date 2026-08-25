@@ -26,7 +26,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
-import { descendsFrom, isCatalogedType } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 // control.h:100-119, Control::CursorShape: CURSOR_ARROW = 0 .. CURSOR_HELP = 16.

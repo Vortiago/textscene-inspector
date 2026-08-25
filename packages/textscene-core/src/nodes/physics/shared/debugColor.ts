@@ -6,7 +6,7 @@
  * ProjectSettings `debug/shapes/collision/shape_color`. Godot's own
  * `_validate_property` strips `debug_color` from a saved scene when it equals
  * that value, so an ABSENT key means the project colour — a translucent teal —
- * not transparent black, and not the green this previewer used to hard-code.
+ * not transparent black, and not a hard-coded green.
  *
  * Source: scene/3d/physics/collision_shape_3d.cpp `_get_default_debug_color()`
  * → `SceneTree::get_debug_collisions_color()`, and class_projectsettings.html
@@ -33,9 +33,9 @@ export function parseDebugColor(raw: string | undefined): Color {
 /**
  * Strict validator for `debug_color`.
  *
- * The shared `Color` grammar, not a bespoke one. It used to be a hand-rolled
- * `[\d.]+`-per-channel regex that also allowed a three-argument spelling, and it
- * was wrong at both ends: `VariantParser::parse_value` refuses a `Color` whose
+ * The shared `Color` grammar, not a bespoke one. A hand-rolled
+ * `[\d.]+`-per-channel regex allowing a three-argument spelling is wrong at both
+ * ends: `VariantParser::parse_value` refuses a `Color` whose
  * argument count is not 4 (`variant_parser.cpp:913`), while a channel is a plain
  * float, so the negative/overbright, scientific and non-finite forms `rtos_fix`
  * writes (`:2145`) all load and were being reported.

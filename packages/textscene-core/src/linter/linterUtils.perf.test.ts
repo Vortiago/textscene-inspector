@@ -3,9 +3,8 @@
  *
  * Semantic lint rules call `findParentNode` / `resolveNodePath` (which
  * itself calls `findNodesByName` and `isUnderInstance`) once per matching
- * node, and each of those used to re-walk the ENTIRE scene tree from scratch
- * every single call. On a scene with N nodes, checking every node this way
- * costs O(N) per lookup * O(N) nodes = O(N^2) total — the "per-node rule
+ * node. Re-walking the ENTIRE scene tree per call costs O(N) per lookup *
+ * O(N) nodes = O(N^2) total on a scene with N nodes — the "per-node rule
  * filtering + O(N^2) NodePath helpers" half of the throughput regression.
  *
  * This test simulates that call pattern directly (one lookup per node, over

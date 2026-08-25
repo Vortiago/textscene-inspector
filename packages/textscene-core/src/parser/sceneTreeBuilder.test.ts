@@ -404,10 +404,9 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      // Handing the flat list back as roots is what this used to do, and it made
-      // every node reachable — which is the set `strandedNodes` subtracts from,
-      // so the report went empty on exactly the file `packed_scene.cpp:219`
-      // refuses. Heading 0 is the root here as it is in the engine, and every
+      // Handing the flat list back as roots makes every node reachable — the set
+      // `strandedNodes` subtracts from — so the report empties on exactly the
+      // file `packed_scene.cpp:219` refuses. Heading 0 is the root here as it is in the engine, and every
       // later heading is stranded and named.
       expect(result.map((r) => r.name)).toEqual(['Node1']);
       expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Node2']);

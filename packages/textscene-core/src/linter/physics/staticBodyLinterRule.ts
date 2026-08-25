@@ -13,7 +13,7 @@ import {
 } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { descendsFrom } from '../nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 
 export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `StaticBody${dim}`;

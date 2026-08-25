@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
-import { NODE_BASE_TYPES } from '../../../../linter/nodeBaseTypes';
+import { NODE_BASE_TYPES } from '../../../../godot/nodeBaseTypes';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import { v } from '../../../../linter/validators/v';
 import './linterParser';

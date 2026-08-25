@@ -394,9 +394,9 @@ physics_material_override = ExtResource("ext_mat_1")
       // because an unrelated property had a bad value.
       expect(errors.some((d) => d.ruleName === 'valid-rigidbody2d-resources')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
-      // The body's semantic warnings arrive alongside those errors. They used to
-      // be suppressed: a validator error withheld the scene and the rule phase
-      // never ran, which is what made this body look like an errors-only case.
+      // The body's semantic warnings arrive alongside those errors. A validator
+      // error that withheld the scene would stop the rule phase running at all,
+      // making this body look like an errors-only case.
       expect(diagnostics.some((d) => d.ruleName === 'rigidbody2d-needs-collision-shape')).toBe(
         true
       );

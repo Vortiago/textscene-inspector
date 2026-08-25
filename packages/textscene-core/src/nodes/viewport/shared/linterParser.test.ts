@@ -1,10 +1,10 @@
 /**
  * The Viewport-level validators must reach BOTH instantiable Viewports.
  *
- * They used to be registered on `SubViewport` alone, so when `Window` arrived
- * it inherited none of them: the same property on the same base class errored
- * on one node type and was silently accepted on the other. These assertions
- * pin the shared registration and the two base-walk links that deliver it.
+ * Registered on `SubViewport` alone, `Window` inherits none of them: the same
+ * property on the same base class then errors on one node type and is silently
+ * accepted on the other. These assertions pin the shared registration and the
+ * two base-walk links that deliver it.
  */
 
 import { describe, expect, it } from 'vitest';

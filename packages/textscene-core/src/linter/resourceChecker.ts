@@ -73,8 +73,8 @@ export function heldResource(resourceRef: string | undefined): string | undefine
  * - `resolved` — the declared type the id names, e.g. `'ConcavePolygonShape3D'`.
  *
  * A `type` exists only in the `resolved` arm, so "not a reference" can no
- * longer be read as "names nothing": the two used to share one `undefined`, and
- * the rule reading it reported a missing resource nobody had asked for.
+ * longer be read as "names nothing". Sharing one `undefined` between the two
+ * makes the rule reading it report a missing resource nobody asked for.
  */
 export type ResourceSlot =
   | { readonly kind: 'empty' }

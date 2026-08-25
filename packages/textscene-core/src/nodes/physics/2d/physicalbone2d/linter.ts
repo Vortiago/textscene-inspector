@@ -20,7 +20,7 @@ import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable, parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
-import { descendsFrom, isCatalogedType } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */

@@ -132,10 +132,10 @@ describe('Camera3D Linter', () => {
           with: { near: 0.001 },
         },
         {
-          // camera_3d.h:50-52: `KeepAspect` has exactly 2 members. "2" used to
-          // be accepted as a bogus "KEEP_ASPECT_DISABLED" that does not exist
-          // in Godot 4.6.3; it is now a warning (camera_3d.cpp:672's hint is
-          // unenforced — set_keep_aspect_mode is a bare assignment).
+          // camera_3d.h:50-52: `KeepAspect` has exactly 2 members, so "2" names
+          // no constant in Godot 4.6.3. A warning, not an error
+          // (camera_3d.cpp:672's hint is unenforced — set_keep_aspect_mode is a
+          // bare assignment).
           prop: 'keep_aspect',
           valid: [0, 1],
           invalid: [

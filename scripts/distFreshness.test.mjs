@@ -312,8 +312,8 @@ describe('stalenessMessage', () => {
   });
 
   it('refuses to answer when the source tree cannot be walked', () => {
-    // `newestMtime` used to return 0 for an unreadable tree, which read as
-    // "older than the stamp" and passed the guard over a walk that never ran.
+    // Returning 0 for an unreadable tree reads as "older than the stamp" and
+    // passes the guard over a walk that never ran.
     const absent = datedCore({ 'dist/index.js': MID, 'tsconfig.tsbuildinfo': NEW });
     expect(stalenessMessage(absent)).toContain('could not be walked');
 

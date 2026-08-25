@@ -112,8 +112,8 @@ describe('the shape-only checks', () => {
     // concave arm to report through — a concave shape under it is simply not
     // its business. Written as a scene rather than only against `emits`
     // because this string IS producible by the file: widening the check half
-    // alone used to emit it here while every meta-guard stayed green, since the
-    // 3D sibling still declared `*-concave-shape` for the wildcard to match.
+    // alone emits it here while every meta-guard stays green, since the 3D
+    // sibling declares `*-concave-shape` for the wildcard to match.
     expect(emittedBy('ShapeCast2D')).not.toContain('shapecast2d-concave-shape');
     expectNoDiagnostic(
       scene(

@@ -12,9 +12,9 @@
  * `PhysicsBody2D`/`PhysicsBody3D` sit between these and the concrete bodies and
  * bind no properties at all, so they get no tier.
  *
- * These keys previously had no owner and were copied into each leaf, which is
- * how they drifted: `collision_layer` and `collision_mask` were declared four
- * times per dimension, and `disable_mode` had four different answers across
+ * One owner, because copying these into each leaf is how they drift:
+ * `collision_layer` and `collision_mask` reached four declarations per
+ * dimension, and `disable_mode` four different answers across
  * seven types — bounded 0-1 on CharacterBody2D/RigidBody3D/CharacterBody3D
  * (rejecting the legal `KEEP_ACTIVE`), 0-2 on StaticBody3D and Area2D, and
  * absent on StaticBody2D and Area3D.

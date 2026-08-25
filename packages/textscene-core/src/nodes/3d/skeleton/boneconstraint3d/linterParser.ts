@@ -2,8 +2,7 @@
  * The `settings/<i>/` leaves BoneConstraint3D contributes to every subclass.
  *
  * The class binds ZERO `ADD_PROPERTY` and its XML lists no member, which is why
- * it sat in `ownValidatorCoverage`'s `NO_OWN_PROPERTIES` as "the constraint
- * parameters live on each subclass". That was wrong:
+ * "the constraint parameters live on each subclass" reads as true and is not:
  * `BoneConstraint3D::get_property_list` (bone_constraint_3d.cpp:91-115, and note
  * the name is UNPREFIXED, so a `_get_property_list` grep misses it) pushes seven
  * PropertyInfos per setting, and every subclass calls it before appending its

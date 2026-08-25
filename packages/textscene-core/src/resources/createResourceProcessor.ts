@@ -3,9 +3,9 @@
  *
  * One generic cache + inflight + event-emission machine, parameterised
  * by *how* a resource is fetched and processed. The
- * standalone `SceneLoader` class that previously reimplemented this
- * exact loop for PackedScene is now a `createSceneProcessor` factory
- * built on top of this one (see `processors/createSceneProcessor.ts`).
+ * PackedScene rides it too, through `createSceneProcessor`
+ * (see `processors/createSceneProcessor.ts`), rather than reimplementing
+ * the loop.
  *
  * Two fetch modes:
  *

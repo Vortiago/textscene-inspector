@@ -351,9 +351,9 @@ describe('AnimationTree Linter', () => {
         });
       });
 
-      // Duplicate names used to force a decline, because matching by name alone
-      // could not tell two "Player" nodes apart. A real walk can: the path names
-      // GroupB's child specifically (node.cpp:1941).
+      // Matching by name alone cannot tell two "Player" nodes apart and has to
+      // decline. A real walk can: the path names GroupB's child specifically
+      // (node.cpp:1941).
       it('picks the right node when a name repeats, rather than declining', () => {
         const content = scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]',

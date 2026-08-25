@@ -3,9 +3,9 @@
  *
  * `transform` is the widest-reaching key in the repo: it is declared on the
  * Node3D tier, so the base-walk delivers it to every spatial node. Its only
- * coverage used to be `scenes/fixtures/edge-invalid-transform.tscn`, a whole
- * scene file whose job was to make the linter emit one error. This asserts the
- * validator directly, which is faster and says what is actually being checked.
+ * coverage is this file, asserting the validator directly rather than through a
+ * whole scene whose job is to make the linter emit one error — faster, and it
+ * says what is actually being checked.
  *
  * Driven through `./linterParser` rather than `Linter` so a failure points at
  * the validator instead of at scene parsing.

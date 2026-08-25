@@ -211,9 +211,9 @@ z_index = 3
   });
 
   /**
-   * The other direction, and the one that was wrong: `Node` IS registered
-   * (`container: true`), so a "is this type registered" test claimed 3D for
-   * every plain-Node container before looking inside. Every 2D sub-scene whose
+   * The other direction, and the one a registration test gets wrong: `Node` IS
+   * registered (`container: true`), so "is this type registered" claims 3D for
+   * every plain-Node container without looking inside. Every 2D sub-scene whose
    * root is a bare `Node` — the shape a Godot level uses — landed on the 3D
    * pass, found no `Camera3D`, and published a clear-colour target.
    */

@@ -23,8 +23,7 @@ describe('AnimationMixer strict validators', () => {
     // no ADD_PROPERTY sweep can see; the other ten are ordinary ADD_PROPERTY
     // members (animation_mixer.cpp:2458-2473), registered HERE rather than on
     // AnimationPlayer and AnimationTree separately so the base-walk gives both
-    // the same set — AnimationPlayer previously validated only `root_node` of
-    // the ten.
+    // the same set, rather than one of them validating a subset.
     expect(validatorRegistry.getOwnKeys('AnimationMixer').sort()).toEqual(
       [
         'active',

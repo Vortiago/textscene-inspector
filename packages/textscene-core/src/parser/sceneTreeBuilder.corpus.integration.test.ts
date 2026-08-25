@@ -9,8 +9,8 @@
  *
  * So the assertion is on `orphanedNodes`, the scene's own report: no corpus
  * scene may orphan a node, except the one fixture that exists to orphan one.
- * It used to read the console warning instead, which is the channel this test's
- * own opening paragraph calls "a warning nobody read".
+ * Not the console warning, which is the channel this test's own opening
+ * paragraph calls "a warning nobody read".
  */
 
 import { describe, expect, it } from 'vitest';
@@ -64,7 +64,8 @@ describe('buildSceneTree over the whole corpus', () => {
 
   it('reattaches the platformer player’s deep overrides to the instance', () => {
     // The case that started this: `Robot` carries `layers = 2` and the four
-    // Parallax labels are the coin counter. All seven used to vanish.
+    // Parallax labels are the coin counter — all seven, or the reattachment is
+    // not doing its job.
     const parsed = new TscnParser().parse(
       readFileSync(join(SCENES, 'demos/3d/platformer/player/player.tscn'), 'utf8')
     );

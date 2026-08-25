@@ -1,9 +1,9 @@
 /**
  * One reported diagnostic, declared once.
  *
- * A dimension- or kind-parameterized factory used to spell each arm's enabling
- * condition TWICE — around the `push` in `check`, and again around the spread
- * in `emits`. No guard can see those two disagree: the emits cross-checks match
+ * A dimension- or kind-parameterized factory would otherwise spell each arm's
+ * enabling condition TWICE — around the `push` in `check`, and again around the
+ * spread in `emits`. No guard can see those two disagree: the emits cross-checks match
  * an interpolated `${prefix}-concave-shape` as a wildcard, so a name a SIBLING
  * instance still declares satisfies them. `ShapeCast2D` could emit
  * `shapecast2d-concave-shape` while its own `emits` omitted it and all 24

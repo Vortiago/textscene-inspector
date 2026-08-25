@@ -2,9 +2,9 @@
  * `Node::get_node_or_null` (node.cpp:1892-1952), ported over the AUTHORED tree.
  *
  * Every NodePath rule needs the same question answered — does this path name a
- * node, and which one — and answering it by matching the path's final segment
- * against every name in the scene was wrong in both directions. Godot does not
- * search: it WALKS, one segment at a time, from the referencing node:
+ * node, and which one. Matching the path's final segment against every name in
+ * the scene answers it wrongly in both directions: Godot does not search, it
+ * WALKS, one segment at a time, from the referencing node:
  *
  *     if (!p_path.is_absolute()) { current = const_cast<Node *>(this); }   // :1903-1904
  *     ...

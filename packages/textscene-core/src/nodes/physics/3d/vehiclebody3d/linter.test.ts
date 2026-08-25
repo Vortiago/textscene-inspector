@@ -159,9 +159,8 @@ describe('VehicleBody3D Linter', () => {
   describe('Semantic Validation (Scaled Transform, inherited from RigidBody3D)', () => {
     // rigid_body_3d.cpp:667 is RigidBodyLinterRule's (rigidbody3d-scale-overridden-at-runtime),
     // which reaches VehicleBody3D through the same `descendsFrom` matcher as
-    // the rest of the shared body set — this slice used to carry its own copy
-    // (`vehiclebody3d-scaled-transform`), retired once that reach landed so a
-    // scaled VehicleBody3D is not warned about twice under two rule names.
+    // the rest of the shared body set. No copy here (`vehiclebody3d-scaled-transform`),
+    // so a scaled VehicleBody3D is not warned about twice under two rule names.
     it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
       expectDiagnostic(
         scene(
@@ -210,7 +209,7 @@ describe('VehicleBody3D Linter', () => {
         { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
       // The measured column lengths, never NaN — the message is the only place
-      // the read shows, and `parseFloat` used to make it unreachable entirely.
+      // the read shows, and `parseFloat` would make it unreachable entirely.
       expect(diagnostic.message).toContain('(Infinity, 1, 1)');
     });
 
@@ -219,8 +218,8 @@ describe('VehicleBody3D Linter', () => {
     // (basis.cpp:321-322). `SIGN(nan)` is 0 — both of its comparisons are false
     // (typedefs.h:124-126) — so the clean columns come back as exactly 0, and
     // `abs(0 - 1) > 0.05` (rigid_body_3d.cpp:666) is true for them. Only the nan
-    // axis itself stays silent. The unsigned reading this rule used to take is
-    // what made the whole node look quiet.
+    // axis itself stays silent. An unsigned reading makes the whole node look
+    // quiet instead.
     it('warns on a nan basis component, since the poisoned determinant zeroes the rest', () => {
       const content = scene(
         node(

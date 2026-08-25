@@ -73,10 +73,10 @@ export const vectorCombinators = {
    * `Vector2i(x, y)` integer format, optionally with a per-COMPONENT minimum.
    *
    * `min` rejects a value Godot's parser reads perfectly well, so it is a bound
-   * like any other and takes its `Grounding`. It used to be a bare positional
-   * `requireNonNegative` boolean, which put it outside `boundGrounding`'s sweep
-   * entirely: `Window.size` and `SubViewport.size` both refused a negative
-   * component with nothing recorded about which setter, if any, agreed.
+   * like any other and takes its `Grounding`. A bare positional
+   * `requireNonNegative` boolean puts it outside `boundGrounding`'s sweep
+   * entirely, which is how `Window.size` and `SubViewport.size` came to refuse a
+   * negative component with nothing recorded about which setter, if any, agreed.
    */
   vector2i(name: string, opts: { min?: number } & Grounding = {}): PropertyValidator {
     const { min } = opts;
@@ -107,8 +107,8 @@ export const vectorCombinators = {
    * VECTOR3 property, e.g. gpu_particles_collision_3d.cpp:101 hints `size`
    * "0.01,1024,0.01,or_greater" - meaning every component must be at least
    * 0.01, with the upper end a soft editor bound. `v.vector3` only checks the
-   * literal's shape, so three slices hand-rolled the parse-and-compare loop
-   * before this existed.
+   * literal's shape, so without this three slices hand-roll the same
+   * parse-and-compare loop.
    *
    * Bounds are inclusive, and either may be omitted. A predicate that is not a
    * range (Camera2D's `zoom` must be non-zero, Node2D's `scale` likewise) is

@@ -137,8 +137,8 @@ describe('Bone2D Linter', () => {
     it('warns on the padded spelling too, which Godot loads identically', () => {
       // The type name and the `(` are separate tokens (variant_parser.cpp:
       // 553-557 + :416-418), so a hand-edited `Transform2D (…)` is the all-zero
-      // rest pose. The linter's tuple grammar used to require them adjacent, so
-      // this scene — the one the rule exists for — went unreported.
+      // rest pose. A tuple grammar requiring them adjacent misses this scene —
+      // the one the rule exists for.
       expectDiagnostic(
         scene(
           node('Skeleton2D', {}, { name: 'Root' }),

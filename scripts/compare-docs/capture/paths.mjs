@@ -19,9 +19,9 @@ export const imagePath = (fixture, side) =>
 /**
  * Where a reference render's WORKSPACE is remembered, beside its image.
  *
- * The mode used to be inferred from the image's dimensions — 2D if it measured
- * exactly the capture frame. That only ever worked because every 2D capture was
- * the same size; now that a 2D frame is the scene's own
+ * Inferring the mode from the image's dimensions — 2D if it measures exactly
+ * the capture frame — only works while every 2D capture is the same size. A 2D
+ * frame is the scene's own
  * `display/window/size/viewport_*`, a 640x400 pong capture and a 1920x1080 RTS
  * capture would both read as '3d'. It would not fail, it would quietly build
  * the gallery against the wrong workspace, which is the worse outcome.

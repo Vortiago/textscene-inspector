@@ -1,7 +1,7 @@
 /**
  * The shared **Range advisory** combinator: warns when a single numeric property
  * falls outside a plausible `[low, high]` band. It owns the mechanics every
- * threshold check used to hand-repeat — presence check, `parseFloat`, NaN guard,
+ * threshold check would otherwise hand-repeat — presence check, `parseFloat`, NaN guard,
  * and the direction comparison — so each rule is a declarative table of **arms**
  * rather than branching code.
  *

@@ -86,7 +86,7 @@ describe('${typeName} shared validators', () => {
 
 import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
-import { descendsFrom } from '${toSrc}linter/nodeBaseTypes.js';
+import { descendsFrom } from '${toSrc}godot/nodeBaseTypes.js';
 
 function check${typeName}(context: RuleContext): Diagnostic[] {
   // No applicability check here: RuleRegistry has already filtered by the

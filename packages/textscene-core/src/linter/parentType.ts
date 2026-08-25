@@ -10,7 +10,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
-import { descendsFrom, isCatalogedType } from './nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
 import type { TscnScene } from '../parser/types.js';
 
 /**

@@ -33,10 +33,9 @@ describe.skipIf(!built)('loadCoreLinter', { timeout: 30_000 }, () => {
     // base chain, so it reaches every Node3D descendant whether or not Godot
     // suffixed the name, and NO type that merely ends in "3D".
     //
-    // This case previously pinned the opposite for ReflectionProbe, back when
-    // the matcher was `nodeType.endsWith('3D')`: that heuristic missed the 16
-    // spatial types Godot did not suffix and claimed NavigationAgent3D, whose
-    // base is plain Node. The generated Linting block reports whatever this
+    // A `nodeType.endsWith('3D')` matcher gets ReflectionProbe right by accident
+    // while missing the 16 spatial types Godot did not suffix, and claiming
+    // NavigationAgent3D, whose base is plain Node. The generated Linting block reports whatever this
     // resolves to, so the asymmetry was published as fact.
     expect(named('ReflectionProbe')).toContain('binary-resource-reference');
     expect(named('ReflectionProbe')).toContain('valid-node3d-visibility');

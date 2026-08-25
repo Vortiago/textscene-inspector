@@ -3,9 +3,7 @@
  * Migrated to the declarative `v` namespace.
  *
  * The space-override family goes through `v.enumInt`, matching Area3D, rather
- * than the hand-rolled `createSpaceOverrideValidator` it used to call: that
- * helper predated the ADR-0032 grounding mechanism and could not carry a
- * citation. It had no other caller once Area2D moved off it, so it is gone.
+ * than a hand-rolled validator, which cannot carry an ADR-0032 citation.
  *
  * `space_override` (bare, no `gravity_`/`linear_damp_`/`angular_damp_`
  * prefix) is deliberately absent: area_2d.cpp has no matching `ADD_PROPERTY`

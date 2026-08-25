@@ -1,6 +1,6 @@
 /**
  * SubViewportContainer linting — the first Control slice to carry lint code
- * (`barrelCompleteness` documents that Controls previously had none).
+ * (`barrelCompleteness` documents which Controls carry one).
  *
  * It earns one because the container is the only Control whose correctness
  * depends on its CHILDREN: with no SubViewport child it draws nothing at all,

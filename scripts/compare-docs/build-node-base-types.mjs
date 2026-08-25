@@ -31,13 +31,13 @@ const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
 export const RESOURCE_BASES = join(here, 'resource-bases.json');
 
-/** `src/linter/<name>` in the core package. */
-function linterModule(name) {
-  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'linter', name);
+/** `src/godot/<name>` in the core package. */
+function godotModule(name) {
+  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'godot', name);
 }
 
-export const OUT = linterModule('nodeBaseTypes.generated.ts');
-export const RESOURCE_OUT = linterModule('resourceBaseTypes.generated.ts');
+export const OUT = godotModule('nodeBaseTypes.generated.ts');
+export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
 
 /**
  * Node-type → immediate-base map covering every class the catalog's ancestry
@@ -90,7 +90,7 @@ export function renderModule(table, version) {
  * One entry per hop of every catalogued node's ancestry, so abstract classes
  * that no scene can instantiate still appear as somebody's base. \`Node\` is the
  * terminal and has no entry. Merged with the hand-written exceptions in
- * nodeBaseTypes.ts, which is what the linter imports.
+ * nodeBaseTypes.ts, which is what every domain imports.
  */
 
 export const CATALOG_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({

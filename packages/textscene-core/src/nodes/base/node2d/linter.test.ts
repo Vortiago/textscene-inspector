@@ -445,9 +445,8 @@ describe('Node2D Linter', () => {
 describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
   // PROPERTY_HINT_RANGE. set_light_mask (canvas_item.cpp:589-596) assigns
-  // unconditionally, no ERR_FAIL, no clamp. ADR-0032 removed the 0..2^32-1
-  // `layerBitmask` bound this used to carry (ungrounded verdict "none");
-  // only the integer format is checked now.
+  // unconditionally, no ERR_FAIL, no clamp, so ADR-0032's verdict is "none":
+  // no 0..2^32-1 `layerBitmask` bound, only the integer format.
   it('accepts the whole 32-bit range, including 0 and the sign bit', () => {
     for (const mask of ['0', '1', '512', '2147483648', '4294967295']) {
       expectClean(scene(node('Node2D', { light_mask: mask })));

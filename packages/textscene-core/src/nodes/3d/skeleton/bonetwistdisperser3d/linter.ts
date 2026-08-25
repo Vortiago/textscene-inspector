@@ -47,7 +47,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
@@ -71,8 +71,8 @@ const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int
  *
  * `_set` resolves the index with `to_int` (bone_twist_disperser_3d.cpp:37), so
  * `settings/00/joint_count` and `settings/0/joint_count` size the same vector.
- * Matching on the text instead read a ceiling of zero for a key spelled `00`
- * and warned that a write Godot applies had been dropped.
+ * Matching on the text instead reads a ceiling of zero for a key spelled `00`,
+ * and warns that a write Godot applies was dropped.
  *
  * A later key wins, because `Object.keys` keeps insertion order and Godot
  * applies the properties in file order too.

@@ -16,7 +16,7 @@ import { dirname, relative, resolve } from 'node:path';
 // The table the registry is CONSTRUCTED with: both hierarchies merged, catalog
 // plus the uncatalogued entries. Walking the node half alone gives every
 // resource type a null chain, and the sweep passes over them vacuously.
-import { CLASS_BASE_TYPES } from './classBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { allSourceFiles, srcRoot, walk } from './testing/ruleNameScrape.js';
 
 /** The two filenames a registration lives in, one per hierarchy. */

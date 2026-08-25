@@ -89,8 +89,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', maxDiffPct: 0.5 },
   // Baseline corrected in the Y-flip fix: a NavigationPolygon's vertices are
   // Godot canvas pixels (+Y DOWN), and this overlay was the one 2D geometry
-  // path that skipped the negation — so the navmesh used to sit ABOVE the
-  // region origin instead of below it.
+  // path where skipping the negation puts the navmesh ABOVE the region origin
+  // instead of below it.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5 },
   // A ParallaxBackground is a CanvasLayer: its subtree hangs off the VIEWPORT,
   // so the blue bar stays at the canvas origin while the red reference bar under

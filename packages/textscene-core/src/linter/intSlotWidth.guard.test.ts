@@ -47,7 +47,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { CLASS_BASE_TYPES } from './classBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { classifiableKeys } from './testing/validatorClassification.js';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/index.js';

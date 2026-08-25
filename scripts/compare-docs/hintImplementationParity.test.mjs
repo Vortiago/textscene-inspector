@@ -8,9 +8,9 @@
  * comment correctly quoting `"0,1000"`, and a validator carrying only the
  * floor — and its own slice test agreed, because it was written from the code.
  *
- * An earlier version of this guard read the quoted hint out of the COMMENT
- * beside each validator. That worked, and was the wrong altitude: the comment
- * is a hand-copy of an authoritative record that already exists here.
+ * Not the quoted hint in the COMMENT beside each validator: that works, and is
+ * the wrong altitude, because the comment is a hand-copy of an authoritative
+ * record that already exists here.
  * `node-properties.json` and `resource-properties.json` are a live
  * `ClassDB.class_get_property_list(c, true)` captured by `pnpm
  * nodes:properties`. Reading the engine's own capture instead of our prose

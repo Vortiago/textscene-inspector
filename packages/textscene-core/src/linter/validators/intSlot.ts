@@ -158,9 +158,9 @@ export function markIntSlot<T extends PropertyValidator>(
  * so this is its own row: the third tier, for a binding-layer conversion.
  *
  * A `_VALUE` code, never `_FORMAT`: the tokenizer reads `5.5` perfectly well
- * (`variant_parser.cpp:443-448` types it FLOAT), and three combinators used to
- * report it as a format failure — telling a reader the file is unparseable
- * when the engine opens it without complaint.
+ * (`variant_parser.cpp:443-448` types it FLOAT), so reporting it as a format
+ * failure tells a reader the file is unparseable when the engine opens it
+ * without complaint.
  *
  * Checked LAST, after every bound: a value that is both fractional and out of
  * range has a genuine error to report, and that outranks this.

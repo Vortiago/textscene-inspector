@@ -55,7 +55,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { parseTransform3D } from '../../../../utils/transform.js';
 import { isEqualApprox, isZeroApprox } from '../../../../godot/math.js';

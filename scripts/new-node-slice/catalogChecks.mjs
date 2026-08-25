@@ -87,7 +87,7 @@ export function checkChain(typeName, parent) {
     fail(
       `${typeName} is not in scripts/compare-docs/node-catalog.json, so NODE_BASE_TYPES ` +
         `has no base for it and every inherited validator would silently skip the type. ` +
-        `Check the spelling, or add it to UNCATALOGUED in linter/nodeBaseTypes.ts with a reason.`
+        `Check the spelling, or add it to UNCATALOGUED in godot/nodeBaseTypes.ts with a reason.`
     );
   }
   const actual = entry.chain?.[0];
@@ -97,5 +97,5 @@ export function checkChain(typeName, parent) {
         `The base-walk uses the catalog, so pass --chain ${actual}.`
     );
   }
-  return `${typeName} → ${parent} (derived, already in linter/nodeBaseTypes.generated.ts)`;
+  return `${typeName} → ${parent} (derived, already in godot/nodeBaseTypes.generated.ts)`;
 }

@@ -61,7 +61,7 @@ function splitOffsetsValidator(): PropertyValidator {
     const body = match[1]!.trim();
     if (body === '') return null;
     // The shared element grammar, as `tilemap` and `polygon2d` already read
-    // their PackedInt32Array bodies. A hand-rolled `/^[+-]?\d+$/` was wrong in
+    // their PackedInt32Array bodies. A hand-rolled `/^[+-]?\d+$/` is wrong in
     // both directions here, measured on 4.6.3: `PackedInt32Array(1.5, 0)` loads
     // as `[1, 0]` and `(2e3, 0)` as `[2000, 0]` — `_parse_construct<int32_t>`
     // takes any number token and narrows it — while `(+3, 0)` fails the load

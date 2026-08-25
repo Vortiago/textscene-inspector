@@ -55,10 +55,10 @@ function storedStrictInt(
 ): { stored: number; asFloat: number } | { error: ParseError } {
   const parsed = parseGodotFloat(value);
   // Text outside the grammar is the only FORMAT failure here. A fractional
-  // literal used to be one too, which reported a file Godot opens as
-  // unparseable — and did so on only 56 of 225 int slots, so the same engine
-  // line gave opposite verdicts on Sprite2D and Sprite3D. It is now the
-  // truncation WARNING every int slot shares, applied after the bounds below.
+  // literal is NOT: calling it one reports a file Godot opens as unparseable,
+  // and did so on only 56 of 225 int slots, so the same engine line gave
+  // opposite verdicts on Sprite2D and Sprite3D. It is the truncation WARNING
+  // every int slot shares, applied after the bounds below.
   if (parsed === null) {
     return {
       error: propertyError(key, line, `Property '${name}' must be an integer, got: "${value}"`, codes.format),
@@ -78,9 +78,9 @@ function storedStrictInt(
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
-    // ONE declaration for the read and the tag. They used to be derived
-    // separately — `slotWidth(max)` for the read, a defaulted `'int32'` for the
-    // tag — and disagreed on every slot whose ceiling exceeds INT32_MAX.
+    // ONE declaration for the read and the tag. Deriving them separately —
+    // `slotWidth(max)` for the read, a defaulted `'int32'` for the tag —
+    // disagrees on every slot whose ceiling exceeds INT32_MAX.
     const width = opts.width ?? slotWidth(opts.max);
     return markIntSlot(ground(
       accepts(

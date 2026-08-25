@@ -33,7 +33,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../linter/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';

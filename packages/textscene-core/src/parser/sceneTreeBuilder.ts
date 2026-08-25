@@ -39,9 +39,9 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // root and renames it `Level2#Name` (`packed_scene.cpp:208-215`, `:561-563`);
   // `strandedNodes` below is what carries the same fact to a caller, since a
   // node absent from the tree is otherwise invisible to everything walking it.
-  // It is also the ONLY report: this used to log `remaining` from here, which
-  // is the narrower set — a second parentless heading never reaches it, so the
-  // console said nothing about a node the linter now names.
+  // It is also the ONLY report. Logging `remaining` from here covers the
+  // narrower set — a second parentless heading never reaches it — so the console
+  // would say nothing about a node the linter names.
   //
   // One node is deferred per pass, then the ordinary resolution above is
   // re-run, so a deferred node's own descendants resolve through their declared

@@ -17,12 +17,12 @@ export const CONTROL_TARGETS = [
     'unit-control-instanced-hud.tscn',
     { minControls: 5, types: ['Label', 'TextureRect'], texts: ['HUD LAYER', 'BADGE'] },
   ],
-  // A Control parented to each of the five Control types that used to render
-  // only `node` and drop the `children` ControlDispatcher handed them. Every
-  // other 2D fixture nests under containers, which forward children, so the
-  // loss was invisible: the five UNDER * strings are what proves it.
+  // A Control parented to each of the five Control types that render `node`
+  // alone if they drop the `children` ControlDispatcher hands them. Every other
+  // 2D fixture nests under containers, which forward children, so that loss is
+  // invisible: the five UNDER * strings are what catch it.
   // Checked/unchecked/radio indicators, and three Control types whose own
-  // `display` default used to overwrite a hidden node's `display: none`.
+  // `display` default can overwrite a hidden node's `display: none`.
   [
     'control-state',
     'unit-control-state.tscn',

@@ -2,9 +2,9 @@
  * The comparison behind the shadow-copy meta-guard: which keys a type
  * re-declares while its base chain already carries them.
  *
- * Both halves read the LIVE registry. An earlier version scraped literal `key:`
- * lines out of each `linterParser.ts` for the own half while the inherited half
- * already read the registry, and that asymmetry was a hole: a key contributed by
+ * Both halves read the LIVE registry. Scraping literal `key:` lines out of each
+ * `linterParser.ts` for the own half while the inherited half reads the registry
+ * is a hole: a key contributed by
  * a `...spread` inside `registerAll` has no `key:` line to scrape, so twenty
  * registrations were invisible and could shadow a base undetected.
  *

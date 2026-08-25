@@ -156,10 +156,10 @@ export function findScene(fixture) {
  * Sheets with no single type behind them, so no generated lint block: the
  * `complex-*` whole-scene showcases.
  *
- * Resources used to sit here too, on the claim that they were validated
- * elsewhere. They are validated by the same registry the generator reads, and
- * once the base-walk covered Godot's resource ancestry a material sheet had a
- * substantial table to show, so the exemption became a blank page over real
+ * Resources are NOT exempt: they are validated by the same registry the
+ * generator reads, and with the base-walk covering Godot's resource ancestry a
+ * material sheet has a substantial table to show. Exempting them is a blank
+ * page over real
  * coverage.
  *
  * Shared because the generator decides which sheets GET a block and the test

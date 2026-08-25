@@ -129,8 +129,8 @@ export interface IndexedFamilyOptions {
    * MARKDOWN: the sheet generator drops this straight into a table cell
    * (`lintCoverage.mjs:131`), where the `<i>` of a natural key shape like
    * `settings/<i>/<leaf>` opens italics and eats the rest of the row. Two slices
-   * reassigned `.accepts` after construction to work around the conflation
-   * before this existed.
+   * would otherwise reassign `.accepts` after construction to work around the
+   * conflation.
    */
   accepts?: string;
   /**

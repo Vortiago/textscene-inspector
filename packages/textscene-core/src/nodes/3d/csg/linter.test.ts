@@ -85,8 +85,8 @@ describe('CSG own-geometry-degenerate rule', () => {
     it('warns on a 2-point polygon carrying a non-finite component', () => {
       // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix`
       // writes, so this is the same 2-point polygon as the case above — but the
-      // renderer decoder this rule used to call throws on it, and the throw
-      // swallowed the warning.
+      // renderer decoder throws on it, and a rule routed through that decoder
+      // loses the warning to the throw.
       const warnings = warningsFor(
         csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(inf, 0, 1, 1)\n')
       );

@@ -293,8 +293,8 @@ describe('parseHeading bounds a delimiter scan at the next attribute', () => {
   });
 
   it('keeps an unclosed-constructor heading linear, not quadratic', () => {
-    // Every attribute used to rescan to end-of-line before falling back, so a
-    // long bracket line hung the extension host as the user typed.
+    // An attribute that rescans to end-of-line before falling back hangs the
+    // extension host on a long bracket line as the user types.
     const line = `[node ${'a=f( '.repeat(20000)}]`;
     const start = performance.now();
     const result = parseHeading(line);

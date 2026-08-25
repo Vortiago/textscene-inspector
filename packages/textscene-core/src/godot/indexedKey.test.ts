@@ -1,8 +1,8 @@
 /**
  * `indexedElements`' own contract, as a fence around the module every rule now
  * resolves an index through. The red-green tests for the defects that produced
- * it are in the slices — the eleven `linter.test.ts` files whose rules used to
- * carry their own grammar.
+ * it are in the slices: the eleven `linter.test.ts` files whose rules resolve
+ * an index through this module.
  */
 
 import { describe, expect, it } from 'vitest';

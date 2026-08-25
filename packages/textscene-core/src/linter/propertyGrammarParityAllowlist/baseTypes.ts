@@ -93,9 +93,9 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Control is the same case for a different reason: Godot sometimes emits
       // a Transform2D there and the parser reads it for compatibility, but it
       // conflicts with the anchor/offset layout model so no validator exists.
-      // One entry here replaces the identical per-type entries NavigationAgent3D,
-      // WorldEnvironment, Timer, SubViewport, AnimationPlayer, AnimationTree,
-      // AudioStreamPlayer and Control each used to carry.
+      // One entry here, inherited by NavigationAgent3D, WorldEnvironment, Timer,
+      // SubViewport, AnimationPlayer, AnimationTree, AudioStreamPlayer and
+      // Control rather than repeated on each.
       'transform',
     ],
     linterOnly: [

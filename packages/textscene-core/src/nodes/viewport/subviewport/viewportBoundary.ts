@@ -32,9 +32,9 @@ export function isViewportBoundary(type: string): boolean {
  * draw in Godot's 3D view — a sub-viewport shares the parent's World3D unless
  * `own_world_3d` (`Viewport::find_world_3d`).
  *
- * So the two questions `TWO_D_UI_TYPES` used to answer at once — "is this 2D UI"
- * and "does the 3D canvas skip it" — diverge here for the first time, and the
- * drop rule subtracts this set.
+ * So the two questions — "is this 2D UI" and "does the 3D canvas skip it" —
+ * diverge here, which is why `TWO_D_UI_TYPES` cannot answer both and the drop
+ * rule subtracts this set.
  */
 export const VIEWPORT_SURFACE_TYPES: ReadonlySet<string> = new Set(['SubViewportContainer']);
 

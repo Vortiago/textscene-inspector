@@ -121,8 +121,8 @@ describe('indexed wildcard routing mirrors the engine', () => {
    * `PropertyListHelper::_get_property` returns nullptr when the index is not
    * `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns false
    * and Godot DROPS the write. Routing has to deliver the key to the family's
-   * dispatcher for that to be reportable at all; leaving it unrouted is how
-   * `item_x/text` used to read as clean.
+   * dispatcher for that to be reportable at all: an unrouted `item_x/text`
+   * reads as clean.
    *
    * A lone sign IS a valid index shape to route (the dispatcher decides), which
    * is why only the empty index below stays unrouted: with nothing between the
@@ -153,9 +153,9 @@ describe('indexed wildcard routing mirrors the engine', () => {
 
 describe('an inherited member name is not a validator', () => {
   it('does not resolve Object.prototype members as registered keys', () => {
-    // A node carrying `toString = 5` used to resolve Object.prototype.toString,
-    // which is truthy, and the caller pushed its return value into the
-    // diagnostic list in place of a ParseError.
+    // `toString = 5` must not resolve Object.prototype.toString: it is truthy,
+    // so the caller would push its return value into the diagnostic list in
+    // place of a ParseError.
     const r = new ValidatorRegistry();
     r.registerAll('Thing', { real: v.boolean('real') });
     for (const inherited of ['toString', 'constructor', 'valueOf', 'hasOwnProperty']) {

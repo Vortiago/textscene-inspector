@@ -19,7 +19,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene } from './testing/testkit.js';
-import { descendsFrom, isCatalogedType, baseChain } from './nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType, baseChain } from '../godot/nodeBaseTypes.js';
 import '../linter/index.js';
 
 /**
