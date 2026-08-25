@@ -294,8 +294,8 @@ describe('Label3D Linter', () => {
     });
 
     describe('vertical_alignment', () => {
-      it('accepts 3 (FILL) — the setter permits it though the hint lists only 3 labels', () => {
-        expect(check('vertical_alignment', '3')).toBeNull();
+it('warns on 3 (FILL) — the setter takes it, the hint lists only three labels', () => {
+        expect(check('vertical_alignment', '3')?.severity).toBe('warning');
       });
       it('rejects 4, one past the setter bound', () => {
         expect(check('vertical_alignment', '4')?.severity).toBe('error');
@@ -303,11 +303,13 @@ describe('Label3D Linter', () => {
     });
 
     describe('text_direction', () => {
-      it('accepts -1, a legacy inherited spelling with no named constant', () => {
-        expect(check('text_direction', '-1')).toBeNull();
+      it('warns on -1: the setter loads it, the hint does not offer it', () => {
+        expect(check('text_direction', '-1')?.severity).toBe('warning');
       });
-      it('accepts 3 (INHERITED), the setter ceiling', () => {
-        expect(check('text_direction', '3')).toBeNull();
+      it('warns on 3 (INHERITED): Label3D hints only Auto/LTR/RTL', () => {
+        // label_3d.cpp:166 lists three labels where the Control classes list
+        // four, and set_text_direction:705 takes all of them.
+        expect(check('text_direction', '3')?.severity).toBe('warning');
       });
       it('rejects -2, one past the setter floor', () => {
         expect(check('text_direction', '-2')?.severity).toBe('error');

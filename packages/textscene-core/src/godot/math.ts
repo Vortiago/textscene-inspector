@@ -57,6 +57,27 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * `Math::lerp` (`core/math/math_funcs.h`): `p_from + (p_to - p_from) * p_weight`.
+ *
+ * Spelled this way rather than as `from * (1 - t) + to * t`: the two differ in
+ * the last bits, and every port here is compared against numbers Godot printed.
+ */
+export function lerp(from: number, to: number, weight: number): number {
+  return from + (to - from) * weight;
+}
+
+/**
+ * `Math::deg_to_rad` (`core/math/math_funcs.h`): `p_y * (Math_PI / 180.0)`.
+ *
+ * Godot serialises several rotations in degrees (`Node2D.rotation_degrees`,
+ * every `*_degrees` particle parameter) and converts on the way in, so the
+ * conversion is an engine fact rather than a rendering convenience.
+ */
+export function degToRad(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+/**
  * `SIGN` (typedefs.h:123-126): `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)`.
  *
  * Not `Math.sign`, and the gap is NaN. Both of the engine's comparisons are

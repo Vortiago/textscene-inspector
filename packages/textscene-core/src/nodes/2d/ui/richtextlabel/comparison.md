@@ -64,7 +64,7 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `tab_size` | integer 0-24 | warning |
 | `tab_stops` | PackedFloat32Array(x, y, …) |  |
 | `text` | quoted string |  |
-| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `threaded` | true or false |  |
 | `vertical_alignment` | enum 0-3 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM/VERTICAL_ALIGNMENT_FILL) | error |
 | `visible_characters` | integer -1-128000 | warning |

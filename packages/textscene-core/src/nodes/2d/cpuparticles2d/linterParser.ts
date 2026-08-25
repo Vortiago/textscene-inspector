@@ -90,7 +90,7 @@ validatorRegistry.registerAll('CPUParticles2D', {
       5: 'DIRECTED_POINTS',
       6: 'RING',
     },
-    { enforced: 'cpu_particles_2d.cpp:480' }
+    { enforced: 'cpu_particles_2d.cpp:481' }
   ),
   // cpu_particles_2d.cpp:1587 hints "0.01,128,0.01,suffix:px" hard both ends;
   // set_emission_sphere_radius (cpu_particles_2d.cpp:491-499) assigns

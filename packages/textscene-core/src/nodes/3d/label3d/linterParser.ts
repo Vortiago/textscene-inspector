@@ -15,6 +15,10 @@ import {
 } from '../../../linter/validators/sharedEnumLabels.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
 import {
+  HORIZONTAL_ALIGNMENT,
+  VERTICAL_ALIGNMENT,
+} from '../../../linter/validators/globalScopeEnums.js';
+import {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
 } from '../../../godot/index.js';
@@ -29,13 +33,11 @@ import {
 } from '../../../linter/validators/textServerEnums.js';
 
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
-const HORIZONTAL_ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
 // `VerticalAlignment` (core/math/math_defs.h:87-92). label_3d.cpp:157 hints
 // only 3 labels ("Top,Center,Bottom"), but set_vertical_alignment:692-693
 // `ERR_FAIL_INDEX((int)p_alignment, 4)` permits FILL too — legal, just not
 // offered by the inspector dropdown, same widening idiom as text_direction's
 // unlabelled -1 below.
-const VERTICAL_ALIGNMENT = { 0: 'TOP', 1: 'CENTER', 2: 'BOTTOM', 3: 'FILL' };
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
@@ -152,17 +154,23 @@ validatorRegistry.registerAll('Label3D', {
   // set_alpha_cut_mode:1013, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the setter
   // refuses.
   alpha_cut: v.enumInt('alpha_cut', 0, 3, LABEL_SPRITE_ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
-  // set_vertical_alignment:693, ERR_FAIL_INDEX((int)p_alignment, 4): the
-  // setter refuses.
-  vertical_alignment: v.enumInt('vertical_alignment', 0, 3, VERTICAL_ALIGNMENT, {
+  // Two tiers, both reachable: label_3d.cpp:157 hints "Top,Center,Bottom" and
+  // set_vertical_alignment:693 refuses only at ERR_FAIL_INDEX((int)…, 4), so
+  // FILL loads and warns while 4 and up error.
+  vertical_alignment: v.enumInt('vertical_alignment', 0, 2, VERTICAL_ALIGNMENT, {
+    hinted: 'label_3d.cpp:157',
     enforced: 'label_3d.cpp:693',
+    enforcedMax: { at: 3 },
   }),
   // set_text_direction:705 — `ERR_FAIL_COND((int)p_text_direction < -1 ||
   // (int)p_text_direction > 3)` — enforced, and -1 is a legacy inherited
   // spelling with no named constant, so it is engine-legal but unlabelled
   // here (same widening Label makes for the identical bound).
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 2, TEXT_DIRECTION, {
+    hinted: 'label_3d.cpp:166',
     enforced: 'label_3d.cpp:705',
+    enforcedMin: { at: -1 },
+    enforcedMax: { at: 3 },
   }),
   // set_autowrap_trim_flags:920 stores `p_flags & TextServer::BREAK_TRIM_MASK`,
   // so bits outside the mask are dropped and the stored value is not the

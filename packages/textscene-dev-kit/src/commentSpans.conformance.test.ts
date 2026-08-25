@@ -31,7 +31,9 @@ import { commentSpans } from './commentSpans';
 const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), '../../..');
 
 function trackedSources(): string[] {
-  return execFileSync('git', ['ls-files', '*.ts', '*.tsx', '*.mjs'], {
+  // `.js` too: the TypeScript parser reads it, and it was the one lexed class
+  // with no oracle at all — `commentConventions` scans it and this file did not.
+  return execFileSync('git', ['ls-files', '*.ts', '*.tsx', '*.mjs', '*.js'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
@@ -46,7 +48,7 @@ function trackedSources(): string[] {
 
 function scriptKind(file: string): ts.ScriptKind {
   if (file.endsWith('.tsx')) return ts.ScriptKind.TSX;
-  if (file.endsWith('.mjs')) return ts.ScriptKind.JS;
+  if (file.endsWith('.mjs') || file.endsWith('.js')) return ts.ScriptKind.JS;
   return ts.ScriptKind.TS;
 }
 
@@ -98,11 +100,86 @@ function parserComments(source: string, file: string): Set<number> {
   return offsets;
 }
 
+/**
+ * How many block comments a CSS file OPENS, counted by delimiter rather than
+ * lexed.
+ *
+ * Deliberately naive, and that is the point: it knows only the two block
+ * delimiters and quoted strings, so it shares no branch with the lexer it
+ * checks. A `calc(100% / 3)` read as opening a regex literal runs the scan past
+ * the next comment's opener — the lexer's count drops and this one does not.
+ */
+function blockDelimiters(source: string): number {
+  let count = 0;
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '"' || c === "'") {
+      i++;
+      while (i < source.length && source[i] !== c) i += source[i] === '\\' ? 2 : 1;
+      i++;
+      continue;
+    }
+    if (c === '/' && source[i + 1] === '*') {
+      count++;
+      const close = source.indexOf('*/', i + 2);
+      i = close === -1 ? source.length : close + 2;
+      continue;
+    }
+    i++;
+  }
+  return count;
+}
+
 describe('commentSpans against the TypeScript parser', () => {
   const files = trackedSources();
 
   it('has a corpus to compare, so an empty file list cannot pass this', () => {
     expect(files.length).toBeGreaterThan(1000);
+  });
+
+  it('keeps every lexed class in the corpus, not just the biggest one', () => {
+    // The sweep above is one aggregate, and `commentConventions` scans five
+    // extensions. A class that stopped being lexed would move that total by a
+    // few hundred out of tens of thousands — invisible — while every comment in
+    // it silently left the tracker-reference guard. Per-class floors are what
+    // make its absence a failure.
+    const counted = new Map<string, number>();
+    for (const file of files) {
+      const ext = file.slice(file.lastIndexOf('.'));
+      counted.set(ext, (counted.get(ext) ?? 0) + 1);
+    }
+    const thin = ['.ts', '.tsx', '.mjs', '.js'].filter((ext) => (counted.get(ext) ?? 0) < 3);
+    expect(thin).toEqual([]);
+  });
+
+  it('lexes the CSS block-comment branch, which no parser oracle covers', () => {
+    // `blockOnly` is a second code path — CSS has no `//` comment, and reading
+    // one swallowed a `url(//…)`. TypeScript is not an oracle for CSS, so the
+    // claim here is narrower and still bites: the branch must find the comments
+    // that are there. It returned zero for every `.module.css` once, when a
+    // `calc(100% / 3)` was read as opening one.
+    const css = execFileSync('git', ['ls-files', '*.css'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter((f) => f !== '' && existsSync(resolve(REPO_ROOT, f)));
+    expect(css.length).toBeGreaterThan(5);
+
+    let spans = 0;
+    const disagree: string[] = [];
+    for (const file of css) {
+      const source = readFileSync(resolve(REPO_ROOT, file), 'utf8');
+      const found = [...commentSpans(source, { blockOnly: true })];
+      spans += found.length;
+      const expected = blockDelimiters(source);
+      if (found.length !== expected) {
+        disagree.push(`${file}: lexed ${found.length}, the file opens ${expected}`);
+      }
+    }
+    expect(disagree).toEqual([]);
+    expect(spans).toBeGreaterThan(50);
   });
 
   it('never blanks real source, and never misses a comment', () => {

@@ -418,8 +418,8 @@ describe('RichTextLabel strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
-    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND still allows', () => {
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('errors past the enum (4)', () => {

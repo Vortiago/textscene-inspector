@@ -52,22 +52,9 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
-/** `HorizontalAlignment` (core/math/math_defs.h:80-85), label.cpp:1433 hint "Left,Center,Right,Fill". */
-const HORIZONTAL_ALIGNMENT = {
-  0: 'HORIZONTAL_ALIGNMENT_LEFT',
-  1: 'HORIZONTAL_ALIGNMENT_CENTER',
-  2: 'HORIZONTAL_ALIGNMENT_RIGHT',
-  3: 'HORIZONTAL_ALIGNMENT_FILL',
-};
 
-/** `VerticalAlignment` (core/math/math_defs.h:87-92), label.cpp:1434 hint "Top,Center,Bottom,Fill". */
-const VERTICAL_ALIGNMENT = {
-  0: 'VERTICAL_ALIGNMENT_TOP',
-  1: 'VERTICAL_ALIGNMENT_CENTER',
-  2: 'VERTICAL_ALIGNMENT_BOTTOM',
-  3: 'VERTICAL_ALIGNMENT_FILL',
-};
 
 /**
  * `TextServer::VisibleCharactersBehavior` (servers/text/text_server.h:90-96),
@@ -225,8 +212,10 @@ validatorRegistry.registerAll('Label', {
   // (label.cpp:1140) — enforced, and -1 is a legacy inherited spelling with no
   // named constant, so it is engine-legal but unlabelled here (same widening
   // Button/LineEdit/LinkButton each make for the identical bound).
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'label.cpp:1455',
     enforced: 'label.cpp:1140',
+    enforcedMin: { at: -1 },
   }),
   // label.cpp:1456 — PROPERTY_HINT_LOCALE_ID; any locale string parses.
   // set_language (label.cpp:1184-1192) assigns unconditionally.

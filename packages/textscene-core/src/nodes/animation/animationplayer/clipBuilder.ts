@@ -27,8 +27,8 @@ import {
 } from 'three';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
 import { warn } from '../../../logger';
+import { degToRad } from '../../../godot/math.js';
 
-const DEG2RAD = Math.PI / 180;
 
 /**
  * How a track's Godot NodePath binds against the animation root.
@@ -168,7 +168,7 @@ function buildTrackData(track: GodotTrack): KeyframeTrack[] {
       return rotationTracks(prefix, times, track.keys, (v) => v);
 
     case 'rotation_degrees':
-      return rotationTracks(prefix, times, track.keys, (v) => v * DEG2RAD);
+      return rotationTracks(prefix, times, track.keys, (v) => degToRad(v));
 
     case 'quaternion':
       return quaternionTracks(prefix, times, track.keys);

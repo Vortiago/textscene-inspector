@@ -13,6 +13,16 @@ describe('commentSpans', () => {
     expect(commentSpans("const u = 'https://example.com';")).toEqual([]);
   });
 
+  it('blockOnly does not read a CSS division as a regex literal', () => {
+    // The failure this branch exists for: `calc(100% / 3)` opened a regex scan
+    // that ran forward and swallowed the `/*` after it, so every comment in the
+    // file below that line left the conventions guard in silence.
+    const spans = commentSpans('a { width: calc(100% / 3); }\n/* kept */\n', {
+      blockOnly: true,
+    });
+    expect(spans.map((s) => s.text)).toEqual(['/* kept */']);
+  });
+
   it('blockOnly ignores CSS-invalid line comments', () => {
     const spans = commentSpans('a { color: red; } /* note */ // not css', { blockOnly: true });
     expect(spans.map((s) => s.text)).toEqual(['/* note */']);

@@ -124,12 +124,10 @@ describe('MenuBar strict validators', () => {
       }
     });
 
-    it('accepts -1, which the setter allows even though the hint omits it', () => {
-      // menu_bar.cpp:801 `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`
-      // opens the floor one below AUTO. Control::TextDirection names no -1
-      // (control.h:166-171 runs AUTO=0 to INHERITED=3), yet the setter stores
-      // it, so rejecting it would fail a scene the engine itself loads.
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
+      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('errors below the enforced floor', () => {

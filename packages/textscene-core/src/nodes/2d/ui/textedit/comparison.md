@@ -40,7 +40,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
+| `autowrap_mode` | enum 1-3 (AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
 | `backspace_deletes_composite_character_enabled` | true or false |  |
 | `caret_blink` | true or false |  |
 | `caret_blink_interval` | float 0.1-10 | error at or below 0, warning below 0.1, warning above 10 |
@@ -81,7 +81,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `syntax_highlighter` | null, SubResource("id") or ExtResource("id") |  |
 | `tab_input_mode` | true or false |  |
 | `text` | quoted string |  |
-| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `use_custom_word_separators` | true or false |  |
 | `use_default_word_separators` | true or false |  |
 | `virtual_keyboard_enabled` | true or false |  |

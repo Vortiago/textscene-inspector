@@ -22,7 +22,14 @@ import {
 import { storedFromFloat, type IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
-import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
+import {
+  accepts,
+  endSeverity,
+  ground,
+  shape,
+  type EndedGrounding,
+  type Grounding,
+} from './grounding.js';
 import type { IntOpts } from './options.js';
 
 /**
@@ -122,11 +129,62 @@ export const integerCombinators = {
     min: number,
     max: number,
     labels: Record<number, string>,
-    opts: Grounding = {}
+    opts: EndedGrounding = {}
   ): PropertyValidator {
     // The labels are the point: `enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)`
     // tells a reader what each number means without opening Godot's docs.
     // Integer-like keys already iterate ascending, so no sort is needed.
+    //
+    // Only the ones INSIDE the window: `labels` is the engine's whole enum,
+    // while min/max is the window one class's hint opens onto it, and a message
+    // that names a constant the bound rejects reads as a contradiction. Passing
+    // a trimmed copy per class would be a second table to keep in step instead.
+    const names = Object.entries(labels)
+      .filter(([value]) => Number(value) >= min && Number(value) <= max)
+      .map(([, label]) => label)
+      .join('/');
+    // The ends travel POSITIONALLY here while every other combinator takes them
+    // in `opts`, and `endSeverity` compares the two tiers by value — so without
+    // them folded back in it sees no hint end at all and calls a reachable
+    // warning band an error.
+    const ended = { ...opts, min, max };
+    return markIntSlot(ground(
+      accepts(
+        createEnumValidator(
+          name,
+          min,
+          max,
+          labels,
+          formatCode(name),
+          valueCode(name),
+          endSeverity(ended, 'min'),
+          endSeverity(ended, 'max'),
+          undefined,
+          opts.enforcedMin,
+          opts.enforcedMax
+        ),
+        `enum ${min}-${max} (${names})`
+      ),
+      opts,
+      { min, max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
+    ));
+  },
+
+  /**
+   * Integer enum whose hint leaves a GAP: `v.enumSet('system_menu_id', {0: 'NONE',
+   * 2: 'APPLICATION_MENU_ID', …})`.
+   *
+   * `PROPERTY_HINT_ENUM` lets a label carry its own `:value`, and a class that
+   * uses them can offer a subset of a contiguous engine enum. The labels ARE the
+   * bound here — every key is offered and nothing between them is — so unlike
+   * {@link enumInt} there is no min/max to state separately.
+   */
+  enumSet(name: string, labels: Record<number, string>, opts: Grounding = {}): PropertyValidator {
+    const values = Object.keys(labels)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const min = values[0]!;
+    const max = values[values.length - 1]!;
     const names = Object.values(labels).join('/');
     return markIntSlot(ground(
       accepts(
@@ -138,12 +196,13 @@ export const integerCombinators = {
           formatCode(name),
           valueCode(name),
           endSeverity(opts, 'min'),
-          endSeverity(opts, 'max')
+          endSeverity(opts, 'max'),
+          new Set(values)
         ),
-        `enum ${min}-${max} (${names})`
+        `enum ${values.join('/')} (${names})`
       ),
       opts,
-      { min, max }
+      { min, max, values }
     ));
   },
 

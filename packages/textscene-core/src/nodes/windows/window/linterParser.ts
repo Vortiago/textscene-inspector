@@ -93,8 +93,8 @@ validatorRegistry.registerAll('Window', {
 
   // "Limits" group. _clamp_limit_size (window.cpp:461-469) raises either component
   // to 0 in both its branches, so a negative limit never survives the setter.
-  min_size: v.vector2i('min_size', { min: 0, enforced: 'window.cpp:461' }),
-  max_size: v.vector2i('max_size', { min: 0, enforced: 'window.cpp:461' }),
+  min_size: v.vector2i('min_size', { min: 0, enforced: 'window.cpp:465' }),
+  max_size: v.vector2i('max_size', { min: 0, enforced: 'window.cpp:465' }),
   keep_title_visible: v.boolean('keep_title_visible'),
 
   // "Content Scale" group.

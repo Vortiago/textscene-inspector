@@ -12,6 +12,7 @@
 import '../../../node/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { CANVAS_LAYER_MIN, CANVAS_LAYER_MAX } from '../../../../godot/rendering.js';
 
 validatorRegistry.registerAll('CanvasLayer', {
   // canvas_layer.cpp:340 — PROPERTY_HINT_RANGE bound exactly to int32 min/max
@@ -19,8 +20,8 @@ validatorRegistry.registerAll('CanvasLayer', {
   // (canvas_layer.cpp:37-43) is a bare assignment with no clamp or
   // ERR_FAIL, so a value outside int32 is a warning, not an error.
   layer: v.int('layer', {
-    min: -2147483648,
-    max: 2147483647,
+    min: CANVAS_LAYER_MIN,
+    max: CANVAS_LAYER_MAX,
     hinted: 'canvas_layer.cpp:340',
   }),
   // canvas_layer.cpp:49-65 — set_visible is a bare assignment (plus an

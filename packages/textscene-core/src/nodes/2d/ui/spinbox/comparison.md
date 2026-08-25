@@ -35,7 +35,7 @@ Strict parsing format-checks these `SpinBox` properties, plus 9 inherited from R
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) | error |
+| `alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `custom_arrow_round` | true or false |  |
 | `custom_arrow_step` | float >= 0 | warning below |
 | `editable` | true or false |  |

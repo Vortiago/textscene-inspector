@@ -17,6 +17,7 @@
 import type { Color } from '../../../utils/colorParser';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
+import { lerp } from '../../../godot/math.js';
 
 /**
  * The normalised gradient offset at integer pixel `(x, y)`, mirroring Godot's
@@ -123,9 +124,6 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
   };
 }
 
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
 
 /** Godot's `Math::cubic_interpolate` (Catmull-Rom): blend `from`→`to` with
  *  pre/post neighbours controlling the tangents. */

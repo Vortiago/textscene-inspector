@@ -7,6 +7,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'fs
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { DEMO_CATEGORY_LABELS } from './generate-fixtures/demoCategories.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -163,7 +164,6 @@ const isometricFiles = walkTscn(isometricDir).sort();
 // path-qualified (`Project (Label): coin/coin`) to stay globally unique — the
 // generator asserts uniqueness below.
 const demosDir = join(rootDir, 'scenes/demos');
-const DEMO_CATEGORY_LABELS = { '2d': '2D', '3d': '3D', gui: 'GUI', viewport: 'Viewport' };
 function demoProjects() {
   let tops;
   try {

@@ -8,7 +8,7 @@
 import type { Color, Vector2 } from '../../base/node2d/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
-import { lerp } from './particleMath';
+import { lerp } from '../../../godot/math.js';
 import type { Particle, ParticleSimInput } from './simTypes';
 import { CPUParticles2DParam } from './types';
 
@@ -60,13 +60,15 @@ export function applyAppearance(input: ParticleSimInput, p: Particle, tv: number
 
   const scaleParam = props.params[CPUParticles2DParam.Scale]!;
   const amount = lerp(scaleParam.min, scaleParam.max, p.scaleRand);
-  // Godot floors the scale so a zero-scale quad never collapses the basis.
-  const scaleX = Math.max(0.00001, texScale * amount);
-  const scaleY = Math.max(0.00001, texScale * amount);
-  p.transform.ax *= scaleX;
-  p.transform.ay *= scaleX;
-  p.transform.bx *= scaleY;
-  p.transform.by *= scaleY;
+  // Godot floors each axis so a zero-scale quad never collapses the basis
+  // (cpu_particles_2d.cpp:1142-1147). ONE value here, not the engine's
+  // `Vector2 base_scale`: its axes only diverge under `split_scale`, and this
+  // port derives `texScale` from the single Scale curve.
+  const scale = Math.max(0.00001, texScale * amount);
+  p.transform.ax *= scale;
+  p.transform.ay *= scale;
+  p.transform.bx *= scale;
+  p.transform.by *= scale;
 }
 
 function multiplyColor(a: Color, b: Color): Color {

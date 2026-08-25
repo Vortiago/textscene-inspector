@@ -65,14 +65,13 @@ validatorRegistry.registerAll('TextEdit', {
     },
     { hinted: 'text_edit.cpp:7558' }
   ),
-  // text_edit.cpp:7559 — PROPERTY_HINT_ENUM "Arbitrary:1,Word:2,Word (Smart):3"
-  // only offers 1-3 in the editor dropdown, but the underlying
-  // TextServer::AutowrapMode enum starts at AUTOWRAP_OFF=0 (servers/text/text_server.h:98-102,
-  // BIND_ENUM_CONSTANT text_server.cpp:574-577), and TextEdit::set_autowrap_mode
-  // has no CLAMP or ERR_FAIL on the value (text_edit.cpp:6354-6360) — same call
-  // as BaseButton's button_mask: an editor-hint width is an authoring aid, not
-  // a validity bound, so 0 is accepted alongside the 3 offered values.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'text_edit.cpp:7559' }),
+  // text_edit.cpp:7559 — PROPERTY_HINT_ENUM "Arbitrary:1,Word:2,Word (Smart):3",
+  // so this class offers 1-3 and the bound is 1-3. The underlying
+  // TextServer::AutowrapMode enum does start at AUTOWRAP_OFF=0
+  // (servers/text/text_server.h:98-102, BIND_ENUM_CONSTANT text_server.cpp:574-577)
+  // and TextEdit::set_autowrap_mode has no CLAMP or ERR_FAIL (text_edit.cpp:6354-6360),
+  // which is why 0 warns rather than erroring.
+  autowrap_mode: v.enumInt('autowrap_mode', 1, 3, AUTOWRAP_MODE, { hinted: 'text_edit.cpp:7559' }),
   // text_edit.cpp:7560
   indent_wrapped_lines: v.boolean('indent_wrapped_lines'),
   // text_edit.cpp:7561
@@ -166,8 +165,10 @@ validatorRegistry.registerAll('TextEdit', {
   // (text_edit.cpp:3724): `ERR_FAIL_COND((int)p_text_direction < -1 || > 3)` —
   // enforced, and -1 is a legacy inherited spelling with no named constant, so
   // it is engine-legal but unlabelled here. Widened from 0-3 to include it.
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'text_edit.cpp:7605',
     enforced: 'text_edit.cpp:3724',
+    enforcedMin: { at: -1 },
   }),
   // text_edit.cpp:7606 — Variant::STRING, PROPERTY_HINT_LOCALE_ID.
   language: v.quotedString('language'),

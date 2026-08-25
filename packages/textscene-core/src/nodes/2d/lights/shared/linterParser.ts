@@ -19,15 +19,12 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../../linter/validators/layerBitmask.js';
 import { v } from '../../../../linter/validators/index.js';
-import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../../godot/rendering.js';
-
-/**
- * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:105-106`), int32's own limits, which
- * `light_2d.cpp:311-312` spell into the hint with `itos`.
- */
-const CANVAS_LAYER_MIN = -2147483648;
-const CANVAS_LAYER_MAX = 2147483647;
+import {
+  CANVAS_ITEM_Z_MIN,
+  CANVAS_ITEM_Z_MAX,
+  CANVAS_LAYER_MIN,
+  CANVAS_LAYER_MAX,
+} from '../../../../godot/rendering.js';
 
 validatorRegistry.registerAll('Light2D', {
   enabled: v.boolean('enabled'),
@@ -88,7 +85,7 @@ validatorRegistry.registerAll('Light2D', {
     0,
     2,
     { 0: 'NONE', 1: 'PCF5', 2: 'PCF13' },
-    { enforced: 'light_2d.cpp:170' }
+    { enforced: 'light_2d.cpp:171' }
   ),
   // light_2d.cpp:319 hints "0,64,0.1" hard both ends; set_shadow_smooth
   // (light_2d.cpp:236-238) assigns unconditionally, so out of range is a

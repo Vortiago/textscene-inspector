@@ -92,7 +92,7 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
 | `structured_text_bidi_override_options` | Array literal ([...]) |  |
 | `text` | quoted string |  |
-| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `virtual_keyboard_enabled` | true or false |  |
 | `virtual_keyboard_show_on_focus` | true or false |  |
 | `virtual_keyboard_type` | enum 0-7 (KEYBOARD_TYPE_DEFAULT/KEYBOARD_TYPE_MULTILINE/KEYBOARD_TYPE_NUMBER/KEYBOARD_TYPE_NUMBER_DECIMAL/KEYBOARD_TYPE_PHONE/KEYBOARD_TYPE_EMAIL_ADDRESS/KEYBOARD_TYPE_PASSWORD/KEYBOARD_TYPE_URL) | warning |

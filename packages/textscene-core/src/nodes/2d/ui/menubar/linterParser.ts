@@ -51,8 +51,10 @@ validatorRegistry.registerAll('MenuBar', {
   // so -1 is engine-legal while the hint never offers it, and anything outside
   // [-1, 3] is refused outright. Button re-declares the property with the
   // byte-identical guard (button.cpp:637), which is why the two slices agree.
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'menu_bar.cpp:757',
     enforced: 'menu_bar.cpp:801',
+    enforcedMin: { at: -1 },
   }),
   // menu_bar.cpp:758 PROPERTY_HINT_LOCALE_ID with an empty hint string: the hint
   // drives an inspector dropdown, it states no bound. set_language

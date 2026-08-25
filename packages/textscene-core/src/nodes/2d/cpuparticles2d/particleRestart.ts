@@ -9,7 +9,7 @@ import { sampleCurve } from '../../../resources/curves/curve/sample';
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { IDENTITY_AFFINE } from './affine2d';
 import type { GodotRandomPCG } from './godotRng';
-import { degToRad, lerp } from './particleMath';
+import { degToRad, lerp } from '../../../godot/math.js';
 import type { Particle, ParticleSimInput, SimState } from './simTypes';
 import {
   CPUParticles2DEmissionShape,

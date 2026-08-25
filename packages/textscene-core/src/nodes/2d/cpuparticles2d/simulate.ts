@@ -33,7 +33,8 @@
  * The step itself lives in siblings — `particlesProcess` (the per-frame loop),
  * `particleRestart` / `particleAdvance` / `particleAppearance` (its three
  * branches), `particleBuffer` (the buffer's ends), `affine2d` and
- * `particleMath` (the arithmetic), `simTypes` (the shapes they pass around).
+ * `simTypes` (the shapes they pass around); the scalar arithmetic is Godot's
+ * own, in `godot/math.ts`.
  * This file is the window and the entry point.
  *
  * ---------------------------------------------------------------------------

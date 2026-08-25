@@ -7,6 +7,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseTscnContent } from './hooks/useParsedScene';
+import { TscnParser } from '../parser/TscnParser';
+import { uniqueNamePaths } from '../utils/uniqueNames';
 import { decomposeTransform3D, identityTransform3D } from '../utils/transform';
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
@@ -198,5 +200,37 @@ update_rotation = false
     const props = targetNode2D(content, 'Root/Target');
     expect(props.position.x).toBeCloseTo(120, 4);
     expect(props.rotation).toBeCloseTo(0.5, 4);
+  });
+});
+
+describe('the %Name table this module builds inline', () => {
+  it('answers what the shared claim walk answers', () => {
+    // The inline collection is fused into a walk `applyRemoteTransforms` needs
+    // anyway, so it is a second APPLICATION of one rule rather than a second
+    // copy of it. This is what holds the two together: Godot's claim is
+    // owner-scoped and first-one-wins (node.cpp:2222-2231), and a change to
+    // either half has to move both.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node3D"]
+[node name="Rig" type="Node3D" parent="."]
+unique_name_in_owner = true
+[node name="Target" type="Node3D" parent="Rig"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+[node name="Target" type="Node3D" parent="."]
+unique_name_in_owner = true
+[node name="Relay" type="RemoteTransform3D" parent="."]
+remote_path = NodePath("%Target")
+`;
+    const nodes = new TscnParser().parse(content).nodes;
+    const shared = uniqueNamePaths(nodes);
+    // The deeper claim wins on document order, and the later sibling does not
+    // take the key from it — the property both halves have to agree on.
+    expect(shared.get('%Target')).toBe('Root/Rig/Target');
+    expect(shared.get('%Rig')).toBe('Root/Rig');
+
+    // And the relay resolves through the same answer: the target it moves is
+    // the one the shared walk names, not the shallower namesake.
+    expect(targetTransform3D(content, 'Root/Rig/Target').position.x).toBe(0);
   });
 });

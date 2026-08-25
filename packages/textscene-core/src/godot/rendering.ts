@@ -39,3 +39,14 @@ export const MATERIAL_RENDER_PRIORITY_MAX = 127;
 export const CANVAS_ITEM_Z_MIN = -4096;
 /** See {@link CANVAS_ITEM_Z_MIN}. */
 export const CANVAS_ITEM_Z_MAX = 4096;
+
+/**
+ * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX`
+ * (`servers/rendering/rendering_server.h:105-106`), int32's own limits —
+ * declared in the same enum block as the Z pair above and spelled into their
+ * hints the same way (`light_2d.cpp:311-312`, `canvas_layer.cpp:340`).
+ * Cite the SETTER's `file:line` at each call site; these carry the numbers.
+ */
+export const CANVAS_LAYER_MIN = -2147483648;
+/** See {@link CANVAS_LAYER_MIN}. */
+export const CANVAS_LAYER_MAX = 2147483647;

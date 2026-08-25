@@ -70,7 +70,23 @@ export function createEnumValidator(
    * single severity reported an ERROR for a value only the inspector hint
    * excludes.
    */
-  maxSeverity: ParseError['severity'] = valueSeverity
+  maxSeverity: ParseError['severity'] = valueSeverity,
+  /**
+   * Exactly which values are in range, where the enum is not contiguous.
+   * `PROPERTY_HINT_ENUM` lets a label carry its own `:value`, and a class that
+   * uses them can leave a gap — PopupMenu offers ids 0 and 2-5 out of a
+   * contiguous engine enum. Membership is not a range, so min/max cannot say
+   * it; they stay the reported band's ends.
+   */
+  allowed?: ReadonlySet<number>,
+  /**
+   * The SETTER's own ends, where they sit outside the hint's. An enum carries
+   * both tiers as often as a range does: `Button.text_direction` hints 0-3 and
+   * its `ERR_FAIL_COND` refuses only below -1, so -1 is a value Godot stores
+   * and the inspector cannot offer — a warning from `min`, not an error.
+   */
+  enforcedMin?: EnforcedEnd,
+  enforcedMax?: EnforcedEnd
 ): PropertyValidator {
   const validator: PropertyValidator = (key, value, line) => {
     const read = readIntSlot(value, max);
@@ -80,14 +96,25 @@ export function createEnumValidator(
     }
     const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
     if (refused) return refused;
-    if (num < min || num > max) {
+    // The setter's ends first, exactly as `createNumericRangeValidator` orders
+    // them: they are the more severe tier, and the band between them and the
+    // hint's ends is what the membership test below reports.
+    const refusal =
+      enforcedEndRefusal(propertyName, enforcedMin, 'min', num) ??
+      enforcedEndRefusal(propertyName, enforcedMax, 'max', num);
+    if (refusal) return propertyError(key, line, refusal, errorCodeValue);
+    const outOfBand = allowed
+      ? !allowed.has(num)
+      : num < min || num > max;
+    if (outOfBand) {
       const validValuesStr = Object.entries(enumValues)
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
+      const band = allowed ? [...allowed].join('/') : `${min}-${max}`;
       return propertyError(
         key,
         line,
-        `Property '${propertyName}' must be ${min}-${max} (got ${num}). Valid values: ${validValuesStr}`,
+        `Property '${propertyName}' must be ${band} (got ${num}). Valid values: ${validValuesStr}`,
         errorCodeValue,
         num < min ? valueSeverity : maxSeverity
       );

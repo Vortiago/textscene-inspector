@@ -83,6 +83,12 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
   // is collected in THIS walk: the claim is first-one-wins in the same
   // depth-first order, and a second traversal rebuilt every path string only to
   // keep a handful of them.
+  //
+  // The RULE is not restated here — `isUniqueNameInOwner` and the key spelling
+  // both come from `utils/uniqueNames`, which owns them — only the loop that
+  // applies it, fused into a walk this function needs anyway. That the two
+  // still answer alike is pinned in this module's test rather than left to a
+  // reader to notice.
   const uniquePaths = new Map<string, string>();
 
   const walk = (node: TscnNode, parentPath: string): void => {

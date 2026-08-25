@@ -8,7 +8,7 @@
 import type { Vector2 } from '../../base/node2d/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import { randFromSeed, type SeedRef } from './godotRng';
-import { degToRad, lerp } from './particleMath';
+import { degToRad, lerp } from '../../../godot/math.js';
 import type { Particle, ParticleCurves, ParticleSimInput, SimState } from './simTypes';
 import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
 

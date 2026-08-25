@@ -23,6 +23,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { fixtures, getFixturesByCategory } from './fixtures';
+import { DEMO_CATEGORY_LABELS } from '../../../scripts/generate-fixtures/demoCategories.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
@@ -38,8 +39,10 @@ function fixtureExistsOnDisk(file: string): boolean {
   return sourceRoots.some((root) => existsSync(join(root, file)));
 }
 
-/** The demo categories generate-fixtures.js lists; a top-level dir outside it is skipped. */
-const DEMO_TOPS = ['2d', '3d', 'gui', 'viewport'];
+// Taken from the generator, never re-typed: a category it starts emitting has
+// to reach this walk too, or the completeness check below reports clean over a
+// corpus it never looked at.
+const DEMO_TOPS = Object.keys(DEMO_CATEGORY_LABELS);
 
 /** `.tscn` files directly in `dir`, as the manifest spells them (basenames). */
 function scenesFlat(dir: string): string[] {

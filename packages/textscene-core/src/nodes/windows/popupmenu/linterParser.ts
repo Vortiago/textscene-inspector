@@ -52,6 +52,19 @@ const SYSTEM_MENU = {
   5: 'DOCK_MENU_ID',
 };
 
+/**
+ * The ids `popup_menu.cpp:3262` actually offers. Derived from the enum above so
+ * the constant names have one home: the hint's `:value` suffixes skip
+ * MAIN_MENU_ID, and nothing else.
+ */
+const OFFERED_SYSTEM_MENUS = {
+  0: SYSTEM_MENU[0],
+  2: SYSTEM_MENU[2],
+  3: SYSTEM_MENU[3],
+  4: SYSTEM_MENU[4],
+  5: SYSTEM_MENU[5],
+};
+
 // popup_menu.h:65-67, Item::CHECKABLE_TYPE_NONE/CHECK_BOX/RADIO_BUTTON, in
 // declaration order (0/1/2), matching the ADD_PROPERTY hint at :3323.
 
@@ -137,9 +150,9 @@ validatorRegistry.registerAll('PopupMenu', {
   allow_search: v.boolean('allow_search'),
   // popup_menu.cpp:3262, hinted (see SYSTEM_MENU above). set_system_menu
   // (popup_menu.cpp:185-193) assigns unconditionally, so this is hinted, not
-  // enforced. The enum is contiguous, so a 0-5 range check is exactly its
-  // constant set.
-  system_menu_id: v.enumInt('system_menu_id', 0, 5, SYSTEM_MENU, {
+  // enforced. The hint's `:value` suffixes leave a gap at MAIN_MENU_ID, which a
+  // range cannot state even though the engine enum behind it is contiguous.
+  system_menu_id: v.enumSet('system_menu_id', OFFERED_SYSTEM_MENUS, {
     hinted: 'popup_menu.cpp:3262',
   }),
   // popup_menu.cpp:3263, Variant::BOOL, no hint. set_prefer_native_menu

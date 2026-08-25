@@ -54,10 +54,10 @@ export function parseCurve2DPoints(dataValue: unknown): Curve2DControlPoint[] {
   return points;
 }
 
-/** Pull the `PackedVector2Array(...)` literal out of a `_data` string or object. */
 /** Built once: a non-global instance carries no `lastIndex`, so it is safe to share. */
 const POINTS_LITERAL_RE = packedArrayCallAnywhere('PackedVector2Array');
 
+/** Pull the `PackedVector2Array(...)` literal out of a `_data` string or object. */
 function extractPointsLiteral(dataValue: unknown): string | null {
   let source: string | null = null;
   if (typeof dataValue === 'string') {

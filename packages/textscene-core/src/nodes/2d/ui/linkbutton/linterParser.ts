@@ -69,8 +69,10 @@ validatorRegistry.registerAll('LinkButton', {
   // `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`,
   // the same bound Button's own text_direction setter enforces (button.cpp:637),
   // so -1 is engine-legal even though the hint does not name it.
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'link_button.cpp:353',
     enforced: 'link_button.cpp:129',
+    enforcedMin: { at: -1 },
   }),
   // link_button.cpp:354: PROPERTY_HINT_LOCALE_ID; any locale string parses.
   // set_language (link_button.cpp:141-151) assigns unconditionally.

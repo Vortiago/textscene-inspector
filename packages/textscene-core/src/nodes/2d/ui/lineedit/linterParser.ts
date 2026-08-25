@@ -31,19 +31,8 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
-/**
- * `LineEdit::HorizontalAlignment` reuses Control's shared `HorizontalAlignment`
- * enum (line_edit.cpp:3485 hint "Left,Center,Right,Fill"). Not hoisted to
- * `sharedEnumLabels.ts`: Button declares the identical table locally too, and
- * each class's setter enforces (or not) at its own file:line.
- */
-const HORIZONTAL_ALIGNMENT = {
-  0: 'HORIZONTAL_ALIGNMENT_LEFT',
-  1: 'HORIZONTAL_ALIGNMENT_CENTER',
-  2: 'HORIZONTAL_ALIGNMENT_RIGHT',
-  3: 'HORIZONTAL_ALIGNMENT_FILL',
-};
 
 /** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
 const VIRTUAL_KEYBOARD_TYPE = {
@@ -164,8 +153,10 @@ validatorRegistry.registerAll('LineEdit', {
   // (line_edit.cpp:2156) — enforced, and -1 is a legacy inherited spelling with
   // no named constant, so it is engine-legal but unlabelled here (same widening
   // TextEdit and Button both make for the identical bound).
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'line_edit.cpp:3520',
     enforced: 'line_edit.cpp:2156',
+    enforcedMin: { at: -1 },
   }),
   // line_edit.cpp:3521 — Variant::STRING, PROPERTY_HINT_LOCALE_ID. set_language
   // (line_edit.cpp:2178-2184) assigns unconditionally.

@@ -32,25 +32,14 @@ import {
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
 } from '../../../../linter/validators/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
 // rich_text_label.cpp:7767: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the
 // full 4-member HorizontalAlignment enum (core/math/math_defs.h:80-84). Not
 // shared with Button's own copy: each slice cites its own ADD_PROPERTY line.
-const HORIZONTAL_ALIGNMENT = {
-  0: 'HORIZONTAL_ALIGNMENT_LEFT',
-  1: 'HORIZONTAL_ALIGNMENT_CENTER',
-  2: 'HORIZONTAL_ALIGNMENT_RIGHT',
-  3: 'HORIZONTAL_ALIGNMENT_FILL',
-} as const;
 
 // rich_text_label.cpp:7768: PROPERTY_HINT_ENUM "Top,Center,Bottom,Fill", the
 // full 4-member VerticalAlignment enum.
-const VERTICAL_ALIGNMENT = {
-  0: 'VERTICAL_ALIGNMENT_TOP',
-  1: 'VERTICAL_ALIGNMENT_CENTER',
-  2: 'VERTICAL_ALIGNMENT_BOTTOM',
-  3: 'VERTICAL_ALIGNMENT_FILL',
-} as const;
 
 // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM "Characters Before
 // Shaping,Characters After Shaping,Glyphs (Layout Direction),Glyphs
@@ -212,8 +201,10 @@ validatorRegistry.registerAll('RichTextLabel', {
   // opens with `ERR_FAIL_COND((int)p_text_direction < -1 || > 3)` (line 7221):
   // enforced, and -1 is a legacy inherited spelling with no named constant but
   // still engine-legal, same as TextEdit's own copy of this property.
-  text_direction: v.enumInt('text_direction', -1, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+    hinted: 'rich_text_label.cpp:7793',
     enforced: 'rich_text_label.cpp:7221',
+    enforcedMin: { at: -1 },
   }),
   // rich_text_label.cpp:7794: Variant::STRING, PROPERTY_HINT_LOCALE_ID.
   // set_language (rich_text_label.cpp:7350-7364) is a bare assignment.

@@ -48,7 +48,7 @@ Strict parsing format-checks these `MenuBar` properties, plus 53 inherited from 
 | `prefer_global_menu` | true or false |  |
 | `start_index` | integer |  |
 | `switch_on_hover` | true or false |  |
-| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

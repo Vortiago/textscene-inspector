@@ -74,7 +74,7 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // gpu_particles_2d.cpp:948 hints "0.00,1.0,0.001" — no `or_greater`/`or_less`,
   // hard both ends. set_interp_to_end (gpu_particles_2d.cpp:210-211) CLAMPs to
   // [0, 1], confirming it as an enforced error.
-  interp_to_end: v.float('interp_to_end', { min: 0, max: 1, enforced: 'gpu_particles_2d.cpp:210' }),
+  interp_to_end: v.float('interp_to_end', { min: 0, max: 1, enforced: 'gpu_particles_2d.cpp:211' }),
 
   one_shot: v.boolean('one_shot'),
 
@@ -151,7 +151,7 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // gpu_particles_2d.cpp:968 hints "2,128,1" — no `or_greater`/`or_less`.
   // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside
   // [2, 128], confirming both ends are enforced errors.
-  trail_sections: v.int('trail_sections', { min: 2, max: 128, enforced: 'gpu_particles_2d.cpp:194' }),
+  trail_sections: v.int('trail_sections', { min: 2, max: 128, enforced: 'gpu_particles_2d.cpp:195' }),
 
   // gpu_particles_2d.cpp:969 hints "1,1024,1" — no `or_greater`/`or_less`.
   // set_trail_section_subdivisions (gpu_particles_2d.cpp:202-205) ERR_FAILs
@@ -159,7 +159,7 @@ validatorRegistry.registerAll('GPUParticles2D', {
   trail_section_subdivisions: v.int('trail_section_subdivisions', {
     min: 1,
     max: 1024,
-    enforced: 'gpu_particles_2d.cpp:202',
+    enforced: 'gpu_particles_2d.cpp:203',
   }),
 
   // gpu_particles_2d.cpp:971, PROPERTY_HINT_RESOURCE_TYPE

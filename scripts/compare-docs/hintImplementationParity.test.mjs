@@ -45,6 +45,8 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
 /** `PropertyInfo::hint` for `PROPERTY_HINT_RANGE`. */
 const HINT_RANGE = 1;
+/** `PropertyInfo::hint` for `PROPERTY_HINT_ENUM`. */
+const HINT_ENUM = 2;
 
 /** Loaded from the built combinator in `beforeAll`; see {@link hintBounds}. */
 let RADIAN_ROUNDTRIP_EPSILON;
@@ -188,6 +190,56 @@ function unimplementedEnds(hint, bounds) {
 }
 
 /**
+ * A `PROPERTY_HINT_ENUM` string as the engine states it: `"A,B,C"`, numbering
+ * from 0, or `"A:0,B:2,C:3"` where a label carries its own value and the set
+ * can skip one. A later unsuffixed label continues from the last value + 1,
+ * which is how `ClassDB` itself reads them.
+ *
+ * `null` for a hint with no string: an empty `PROPERTY_HINT_ENUM` states no
+ * set at all, so there is nothing to compare a bound against.
+ */
+function parseEnumHint(hintString) {
+  if (!hintString) return null;
+  const values = [];
+  let next = 0;
+  for (const part of hintString.split(',')) {
+    const label = part.trim();
+    if (!label) continue;
+    const suffix = label.lastIndexOf(':');
+    if (suffix !== -1 && /^-?\d+$/.test(label.slice(suffix + 1))) {
+      next = Number(label.slice(suffix + 1));
+    }
+    values.push(next);
+    next += 1;
+  }
+  return values.length > 0 ? values : null;
+}
+
+/**
+ * Where the values we accept and the values the hint offers disagree.
+ *
+ * A bound WIDER than its hint is the consequential half here — it is the
+ * warning that never fires, so nothing downstream can notice the value is one
+ * the inspector cannot produce. Five enums shipped that way, all of them
+ * reasoning from what the SETTER takes, which is the error tier's question.
+ */
+function enumMismatches(offered, bounds) {
+  const { min, max, values } = bounds ?? {};
+  if (min === undefined && max === undefined) return [];
+  const accepted = values ?? range(min ?? offered[0], max ?? offered[offered.length - 1]);
+  const hint = new Set(offered);
+  const ours = new Set(accepted);
+  const extra = accepted.filter((v) => !hint.has(v));
+  const missing = offered.filter((v) => !ours.has(v));
+  const out = [];
+  if (extra.length > 0) out.push(`we accept ${extra.join('/')}, the hint does not offer ${extra.length > 1 ? 'them' : 'it'}`);
+  if (missing.length > 0) out.push(`we reject ${missing.join('/')}, the hint offers ${missing.length > 1 ? 'them' : 'it'}`);
+  return out;
+}
+
+const range = (lo, hi) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+
+/**
  * The engine's ranged properties, from both captures.
  *
  * Merging the two maps is safe because their keys cannot collide: `Node` and
@@ -221,6 +273,24 @@ async function rangedProperties() {
   return rows;
 }
 
+/** The same question for `PROPERTY_HINT_ENUM`, whose bound is a SET of values. */
+async function enumProperties() {
+  const { validatorRegistry } = await loadCoreLinter();
+  const engine = engineProperties();
+  const rows = [];
+  for (const [nodeType, properties] of Object.entries(engine)) {
+    for (const property of properties) {
+      if (property.hint !== HINT_ENUM) continue;
+      const offered = parseEnumHint(property.hint_string);
+      if (!offered) continue;
+      const validator = validatorRegistry.findValidator(nodeType, property.name);
+      if (!validator) continue;
+      rows.push({ label: `${nodeType}.${property.name}`, offered, bounds: validator.bounds });
+    }
+  }
+  return rows;
+}
+
 describe('the bound we implement against the bound Godot declared', () => {
   // Fails every assertion below with one actionable message rather than letting
   // them agree with a previous revision's registry.
@@ -236,9 +306,11 @@ describe('the bound we implement against the bound Godot declared', () => {
   // Loading the built barrel is the whole cost of this file, and three ledgers
   // do it at once under a full `--project scripts` run — comfortably fast
   // alone, and over the default when they contend.
+  let enumRows;
   beforeAll(async () => {
     RADIAN_ROUNDTRIP_EPSILON = await loadRadianEpsilon();
     rows = await rangedProperties();
+    enumRows = await enumProperties();
   }, 60_000);
 
   it('bounds no end to a number the engine does not state', () => {
@@ -250,6 +322,18 @@ describe('the bound we implement against the bound Godot declared', () => {
     const wrong = rows
       .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
       .flatMap((r) => mismatches(r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
+    expect(wrong.sort()).toEqual([]);
+  });
+
+  it('accepts exactly the values each enum hint offers', () => {
+    // The same claim as the range assertion above, for the hint that states a
+    // SET instead of two ends. Uncovered until five enums had shipped bounds
+    // wider than the hint they cited — every one of them reasoning from what
+    // the setter accepts, which decides the ERROR tier and not this one.
+    expect(enumRows.length).toBeGreaterThan(50);
+    const wrong = enumRows
+      .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
+      .flatMap((r) => enumMismatches(r.offered, r.bounds).map((d) => `${r.label}: ${d}`));
     expect(wrong.sort()).toEqual([]);
   });
 

@@ -184,6 +184,12 @@ export function ground(
     max?: number;
     enforcedMin?: EnforcedEnd;
     enforcedMax?: EnforcedEnd;
+    /**
+     * Every value in range, where they are not the whole span between the ends.
+     * A `PROPERTY_HINT_ENUM` whose labels carry `:value` suffixes can skip one,
+     * and `min`/`max` alone would tell a guard the gap is in range.
+     */
+    values?: readonly number[];
   } = {}
 ): PropertyValidator {
   const hasMin = bounds.min !== undefined;

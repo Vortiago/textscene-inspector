@@ -27,6 +27,7 @@
 import '../range/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
 // spin_box.cpp:673: ADD_PROPERTY(PropertyInfo(Variant::INT, "alignment",
 // PROPERTY_HINT_ENUM, "Left,Center,Right,Fill"), "set_horizontal_alignment",
@@ -34,10 +35,9 @@ import { v } from '../../../../linter/validators/index.js';
 // forwards straight to LineEdit::set_horizontal_alignment, which is
 // `ERR_FAIL_INDEX((int)p_alignment, 4)` (line_edit.cpp:1072): the delegate
 // carries the guard, so out-of-range is enforced, not merely hinted.
-const ALIGNMENT = { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT', 3: 'FILL' };
 
 validatorRegistry.registerAll('SpinBox', {
-  alignment: v.enumInt('alignment', 0, 3, ALIGNMENT, { enforced: 'line_edit.cpp:1072' }),
+  alignment: v.enumInt('alignment', 0, 3, HORIZONTAL_ALIGNMENT, { enforced: 'line_edit.cpp:1072' }),
   // spin_box.cpp:674: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "editable"), …).
   // SpinBox::set_editable (:602-605) forwards to LineEdit::set_editable
   // (line_edit.cpp:2565-2570), a bare assignment with an early return only

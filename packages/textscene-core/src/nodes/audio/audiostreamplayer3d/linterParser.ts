@@ -131,10 +131,10 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
     hinted: 'audio_stream_player_3d.cpp:900',
   }),
   bus: busValidator,
-  // audio_stream_player_internal.cpp:322 drops the write when <= 0.
+  // audio_stream_player_internal.cpp:323 drops the write when <= 0.
   max_polyphony: v.int('max_polyphony', {
     min: 1,
     message: "Property 'max_polyphony' must be at least 1. Values below 1 cause errors.",
-    enforced: 'audio_stream_player_internal.cpp:322',
+    enforced: 'audio_stream_player_internal.cpp:323',
   }),
 });

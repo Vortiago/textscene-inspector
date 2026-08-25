@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renderReference } from '../../godot-ref/run.mjs';
 import { IMAGES, REPO_ROOT, imagePath, modePath } from './paths.mjs';
+import { readRecordedMode } from './modes.mjs';
 
 export async function captureGodot(fixtures, force) {
   mkdirSync(IMAGES, { recursive: true });
@@ -11,12 +12,13 @@ export async function captureGodot(fixtures, force) {
   const modes = new Map();
   for (const [i, fixture] of fixtures.entries()) {
     const out = imagePath(fixture, 'godot');
-    // The sidecar is half the entry. Without it `resolveModes` has no
-    // workspace for the fixture, so `--ours` refuses it with "capture --godot
-    // first" while this pass answers "have it" — and the remedy it names could
-    // never run. Re-rendering is what that resolver asks for over guessing the
-    // mode from the image's own size.
-    if (!force && existsSync(out) && existsSync(modePath(out))) {
+    // The sidecar is half the entry, and it has to be a READABLE half.
+    // Without a workspace `resolveModes` refuses the fixture with "capture
+    // --godot first" — a remedy that could never run while this pass answered
+    // "have it" off a sidecar that merely existed. `readRecordedMode` is the
+    // same reader that side uses, so the two agree on what counts as an answer
+    // and a recorded `unknown` re-renders instead of sticking.
+    if (!force && existsSync(out) && readRecordedMode(out)) {
       console.log(`[godot] ${i + 1}/${fixtures.length} ${fixture} — have it`);
       continue;
     }

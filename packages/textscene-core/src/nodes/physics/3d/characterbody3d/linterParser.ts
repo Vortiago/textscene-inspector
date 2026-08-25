@@ -62,10 +62,10 @@ validatorRegistry.registerAll('CharacterBody3D', {
     max: 256,
     hinted: 'character_body_3d.cpp:942',
   }),
-  // character_body_3d.cpp:813, ERR_FAIL_COND(p_max_slides < 1): the setter refuses.
+  // character_body_3d.cpp:814, ERR_FAIL_COND(p_max_slides < 1): the setter refuses.
   max_slides: v.positiveInt(
     'max_slides',
     "Property 'max_slides' must be greater than 0. Character needs at least 1 slide iteration to function.",
-    { enforced: 'character_body_3d.cpp:813' }
+    { enforced: 'character_body_3d.cpp:814' }
   ),
 });

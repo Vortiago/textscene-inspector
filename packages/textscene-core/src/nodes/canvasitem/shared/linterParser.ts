@@ -79,11 +79,11 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1486, ENUM 7 labels (matches TEXTURE_FILTER_MAX=7,
   // canvas_item.h:52-60). set_texture_filter (canvas_item.cpp:1665-1667)
   // ERR_FAIL_INDEXes against TEXTURE_FILTER_MAX.
-  texture_filter: v.enumInt('texture_filter', 0, 6, TEXTURE_FILTER, { enforced: 'canvas_item.cpp:1665' }),
+  texture_filter: v.enumInt('texture_filter', 0, 6, TEXTURE_FILTER, { enforced: 'canvas_item.cpp:1667' }),
   // canvas_item.cpp:1487, ENUM 4 labels (matches TEXTURE_REPEAT_MAX=4,
   // canvas_item.h:63-68). set_texture_repeat (canvas_item.cpp:1720-1722)
   // ERR_FAIL_INDEXes against TEXTURE_REPEAT_MAX.
-  texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT, { enforced: 'canvas_item.cpp:1720' }),
+  texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT, { enforced: 'canvas_item.cpp:1722' }),
   material: v.resourceReference('material'),
   use_parent_material: v.boolean('use_parent_material'),
 

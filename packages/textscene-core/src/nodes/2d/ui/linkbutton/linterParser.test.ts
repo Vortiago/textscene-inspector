@@ -143,10 +143,10 @@ describe('LinkButton strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
-    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND still allows', () => {
-      // link_button.cpp:129 fails outside -1..3, so -1 itself is engine-legal,
-      // the same bound Button's own text_direction setter enforces (button.cpp:637).
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
+      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('rejects 4, past the ERR_FAIL_COND the setter enforces', () => {

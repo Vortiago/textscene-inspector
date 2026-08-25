@@ -388,8 +388,8 @@ describe('Label strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
-    it('accepts -1, a legacy value with no named constant the ERR_FAIL_COND still allows', () => {
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('errors on 4, past the ERR_FAIL_COND the setter enforces (label.cpp:1140)', () => {

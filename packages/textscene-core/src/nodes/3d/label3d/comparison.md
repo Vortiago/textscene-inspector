@@ -55,7 +55,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `fixed_size` | true or false |  |
 | `font` | null, SubResource("id") or ExtResource("id") |  |
 | `font_size` | integer >= 1 | warning below |
-| `horizontal_alignment` | enum 0-3 (LEFT/CENTER/RIGHT/FILL) | error |
+| `horizontal_alignment` | enum 0-3 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT/HORIZONTAL_ALIGNMENT_FILL) | error |
 | `justification_flags` | bit mask of JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128) |  |
 | `language` | quoted string |  |
 | `line_spacing` | float |  |
@@ -71,10 +71,10 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
 | `structured_text_bidi_override_options` | Array literal ([...]) |  |
 | `text` | quoted string |  |
-| `text_direction` | enum -1-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error |
+| `text_direction` | enum 0-2 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL) | error below -1, warning below 0, warning above 2, error above 3 |
 | `texture_filter` | enum 0-5 (NEAREST/LINEAR/NEAREST_WITH_MIPMAPS/LINEAR_WITH_MIPMAPS/NEAREST_WITH_MIPMAPS_ANISOTROPIC/LINEAR_WITH_MIPMAPS_ANISOTROPIC) | warning |
 | `uppercase` | true or false |  |
-| `vertical_alignment` | enum 0-3 (TOP/CENTER/BOTTOM/FILL) | error |
+| `vertical_alignment` | enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM) | error below 0, warning above 2, error above 3 |
 | `width` | float |  |
 
 | Rule | Reports | Severity |

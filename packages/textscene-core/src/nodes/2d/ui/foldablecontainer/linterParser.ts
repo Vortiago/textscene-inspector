@@ -16,6 +16,7 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
 
 validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:558, PROPERTY_HINT_NONE. set_folded
@@ -27,19 +28,12 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:560 — PROPERTY_HINT_ENUM "Left,Center,Right" (3
   // entries, 0-2). set_title_alignment: `ERR_FAIL_INDEX((int)p_alignment, 3)`
   // (foldable_container.cpp:128) — enforced, and it matches the hint exactly.
-  // Unlike Button's own `alignment` (button.cpp:737-741 bare-assigns, so FILL=3
-  // reaches the engine), this ERR_FAIL_INDEX genuinely rejects FILL.
-  title_alignment: v.enumInt(
-    'title_alignment',
-    0,
-    2,
-    {
-      0: 'HORIZONTAL_ALIGNMENT_LEFT',
-      1: 'HORIZONTAL_ALIGNMENT_CENTER',
-      2: 'HORIZONTAL_ALIGNMENT_RIGHT',
-    },
-    { enforced: 'foldable_container.cpp:128' }
-  ),
+  // Both this and Button's own `alignment` stop at RIGHT, but on different
+  // tiers: this ERR_FAIL_INDEX genuinely refuses FILL, while Button's setter
+  // (button.cpp:737-741) bare-assigns it and only the hint excludes it.
+  title_alignment: v.enumInt('title_alignment', 0, 2, HORIZONTAL_ALIGNMENT, {
+    enforced: 'foldable_container.cpp:128',
+  }),
   // foldable_container.cpp:561 — PROPERTY_HINT_ENUM "Top,Bottom" (2 entries,
   // 0-1). set_title_position: `ERR_FAIL_INDEX(p_title_position, POSITION_MAX)`
   // where POSITION_MAX=2 (foldable_container.h:42-46, foldable_container.cpp:184)

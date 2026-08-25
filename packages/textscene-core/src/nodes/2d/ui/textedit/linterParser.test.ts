@@ -136,12 +136,13 @@ describe('TextEdit strict validators', () => {
     });
   });
 
-  describe('autowrap_mode (enum 0-3, wider than the editor hint)', () => {
+  describe('autowrap_mode (enum 1-3, the hint TextEdit declares)', () => {
     // text_server.h:98-102: AUTOWRAP_OFF=0, AUTOWRAP_ARBITRARY=1, AUTOWRAP_WORD=2,
-    // AUTOWRAP_WORD_SMART=3. The editor's PROPERTY_HINT_ENUM only offers 1-3
-    // (text_edit.cpp:7559), but set_autowrap_mode has no clamp (text_edit.cpp:6354-6360).
-    it('accepts 0 (AUTOWRAP_OFF, absent from the editor dropdown but unclamped)', () => {
-      expect(check('autowrap_mode', '0')).toBeNull();
+    // AUTOWRAP_WORD_SMART=3. TextEdit's PROPERTY_HINT_ENUM offers only 1-3
+    // (text_edit.cpp:7559), and set_autowrap_mode has no clamp
+    // (text_edit.cpp:6354-6360) — which makes 0 a warning rather than an error.
+    it('warns on 0 (AUTOWRAP_OFF), which this class does not offer', () => {
+      expect(check('autowrap_mode', '0')).not.toBeNull();
     });
 
     it('accepts 3 (AUTOWRAP_WORD_SMART, the documented default)', () => {
@@ -332,8 +333,10 @@ describe('TextEdit strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
-    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND (text_edit.cpp:3724) still allows', () => {
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
+      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('rejects a value beyond the enum (4)', () => {

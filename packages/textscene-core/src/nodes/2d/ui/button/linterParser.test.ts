@@ -78,8 +78,11 @@ describe('Button strict validators', () => {
       expect(check('alignment', '2')).toBeNull();
     });
 
-    it('accepts HORIZONTAL_ALIGNMENT_FILL (3) — set_text_alignment (button.cpp:737-741) bare-assigns with no ERR_FAIL, so a value the hint does not offer still reaches the engine', () => {
-      expect(check('alignment', '3')).toBeNull();
+    it('warns on HORIZONTAL_ALIGNMENT_FILL (3), which the hint does not offer', () => {
+      // The bound is the hint, and the hint stops at RIGHT. `set_text_alignment`
+      // (button.cpp:737-741) bare-assigns, so the value reaches the engine — that
+      // is what keeps this a warning instead of an error, not a reason to accept it.
+      expect(check('alignment', '3')).not.toBeNull();
     });
 
     it('rejects a negative value', () => {
@@ -158,8 +161,10 @@ describe('Button strict validators', () => {
       expect(check('icon_alignment', '2')).toBeNull();
     });
 
-    it('accepts 3 (FILL) — set_icon_alignment (button.cpp:749-756) bare-assigns with no ERR_FAIL, even though the hint does not name it', () => {
-      expect(check('icon_alignment', '3')).toBeNull();
+    it('warns on 3 (FILL), which the hint does not name', () => {
+      // set_icon_alignment (button.cpp:749-756) bare-assigns, so the value reaches the engine
+      // and the tier is a warning — the hint is still what bounds it.
+      expect(check('icon_alignment', '3')).not.toBeNull();
     });
   });
 
@@ -172,8 +177,10 @@ describe('Button strict validators', () => {
       expect(check('vertical_icon_alignment', '2')).toBeNull();
     });
 
-    it('accepts 3 (FILL) — set_vertical_icon_alignment (button.cpp:759-770) bare-assigns with no ERR_FAIL, even though the hint does not name it', () => {
-      expect(check('vertical_icon_alignment', '3')).toBeNull();
+    it('warns on 3 (FILL), which the hint does not name', () => {
+      // set_vertical_icon_alignment (button.cpp:759-770) bare-assigns, so the value reaches the engine
+      // and the tier is a warning — the hint is still what bounds it.
+      expect(check('vertical_icon_alignment', '3')).not.toBeNull();
     });
   });
 
@@ -198,9 +205,10 @@ describe('Button strict validators', () => {
       expect(check('text_direction', '3')).toBeNull();
     });
 
-    it('accepts -1, a legacy value with no named constant that the ERR_FAIL_COND still allows', () => {
-      // button.cpp:637 fails outside -1..3, so -1 itself is engine-legal.
-      expect(check('text_direction', '-1')).toBeNull();
+    it('warns on -1: the setter loads it, the hint does not offer it', () => {
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
+      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('rejects 4, past the ERR_FAIL_COND the setter enforces', () => {
