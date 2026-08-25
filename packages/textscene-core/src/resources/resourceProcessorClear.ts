@@ -32,7 +32,11 @@ export function createClearCache<T>(ctx: ClearContext<T>): (path?: string) => vo
   const { cache, inflight, eventBus, resourceType } = ctx;
 
   return (path?: string): void => {
-    if (path) {
+    // `!== undefined`, not truthiness: `''` is a representable path — a
+    // sub-resource address whose file half is empty (`'::id'`) normalises to it
+    // — and routing that into the full clear below wipes every cached resource
+    // and abandons every in-flight load with nothing announced.
+    if (path !== undefined) {
       // Per-path clear (hot-reload) stays silent: its caller re-requests
       // the path itself, and the resulting loaded/failed event heals
       // subscribed consumers.

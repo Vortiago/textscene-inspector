@@ -9,7 +9,9 @@
  * The indentation below is the emitted file's, not this module's.
  */
 
-export function drawsFiles({ typeName, camel, base, toSrc, toBase, reusedParser }) {
+import { LENIENT_TREE_TEST_CASE } from './parserTests.mjs';
+
+export function drawsFiles({ typeName, lower, camel, base, toSrc, toBase, reusedParser }) {
   const files = new Map();
     files.set(
       'types.ts',
@@ -136,6 +138,41 @@ nodeComponentRegistry.register({
 ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
 
 export { ${typeName} };
+`
+    );
+    // The registration test the other two shapes already carry. Without it a
+    // `draws` slice never loads either aggregation barrel, so a dropped import
+    // in `parser/TscnParser.ts` or `r3f/nodes/index.ts` leaves every co-located
+    // test green while the type falls back to Node at runtime.
+    files.set(
+      `${lower}.test.ts`,
+      `/**
+ * ${typeName} registration — the slice is wired into both aggregation barrels.
+ */
+
+import { describe, expect, it, vi } from 'vitest';
+import { nodeRegistry } from '${toSrc}core/NodeRegistry';
+import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
+import { TscnParser } from '${toSrc}parser/TscnParser';
+import * as logger from '${toSrc}logger';
+import { parse${typeName} } from './parser';
+import { ${typeName} } from './Component';
+import './index';
+import './index.r3f';
+
+describe('${typeName} registration', () => {
+  it('registers its own parser', () => {
+    const registration = nodeRegistry.getRegistration('${typeName}');
+    expect(registration).not.toBeNull();
+    expect(registration!.parser).toBe(parse${typeName});
+  });
+
+  it('registers its own component, so it reads as drawing', () => {
+    expect(nodeComponentRegistry.get('${typeName}')).toBe(${typeName});
+  });
+
+${LENIENT_TREE_TEST_CASE(typeName, base.component)}
+});
 `
     );
   return files;

@@ -71,16 +71,17 @@ describe('Slider shared validators', () => {
       expect(check('HSlider', 'ticks_position', '3')).toBeNull();
     });
 
-    it('rejects 4 with a WARNING, one past the four BIND_ENUM_CONSTANT lines (slider.cpp:471-474); set_ticks_position (slider.cpp:416-422) has no ERR_FAIL', () => {
-      const error = check('HSlider', 'ticks_position', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+    // `slider.cpp:469` passes PROPERTY_HINT_ENUM with no hint string, so the
+    // hint states nothing (`p_hint_string` defaults to `""`, `object.h:181`)
+    // and `set_ticks_position` (`slider.cpp:416-422`) neither fails nor clamps.
+    // Both tiers are therefore absent and the value passes.
+    it('accepts a value outside the constant set: the hint carries no string', () => {
+      expect(check('HSlider', 'ticks_position', '4')).toBeNull();
+      expect(check('VSlider', 'ticks_position', '-1')).toBeNull();
     });
 
-    it('rejects -1 with a WARNING (slider.cpp:469)', () => {
-      const error = check('VSlider', 'ticks_position', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+    it('still refuses a value the INT slot cannot read', () => {
+      expect(check('HSlider', 'ticks_position', '"middle"')).not.toBeNull();
     });
   });
 

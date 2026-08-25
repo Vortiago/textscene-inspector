@@ -87,11 +87,14 @@ function parsePoints(value: string | undefined): CurvePoint[] {
 
   const points: CurvePoint[] = [];
   for (let i = 0; i < entries.length; i += ELEMS_PER_POINT) {
-    // The unreadable POINT goes, not the curve: the `% 5` gate above already
-    // vetted the array's shape, and dropping all of them left `point_count` to
-    // pad the empty list back up to a flat curve the file never contained.
+    // One unreadable point drops the whole curve, because that is what the
+    // engine does: `set_data` validates every element in a loop that finishes
+    // before the first write to `_points` (`curve.cpp:465`, write at `:477`),
+    // so a single non-Vector2 leaves the point list EMPTY. `point_count` then
+    // padding it back to clamped-origin defaults is the engine's own result,
+    // not a shape invented here.
     const position = parseVector2Entry(entries[i]!);
-    if (!position) continue;
+    if (!position) return [];
     points.push({
       position,
       leftTangent: numberOr(entries[i + 1]!, 0),

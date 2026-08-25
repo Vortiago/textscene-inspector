@@ -80,17 +80,35 @@ describe('decodeCurve', () => {
     expect(sampleCurve(curve, 0.5)).toBe(0);
   });
 
-  it('drops only the unreadable point, keeping the ones it read (error path)', () => {
-    // Dropping all of them left `point_count` free to pad the empty list back
-    // up, turning a rejected curve into a confident flat one.
+  it('drops every point when one is unreadable, as `set_data` does (error path)', () => {
+    // `set_data` validates the whole array before it writes any of it
+    // (`curve.cpp:465`, first write `:477`), so one non-Vector2 entry leaves
+    // Godot with NO points. Keeping the readable neighbours drew a curve
+    // through samples the engine never produces.
     const curve = decodeCurve({
       _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
     });
 
+    expect(curve.points).toEqual([]);
+    expect(sampleCurve(curve, 0.5)).toBe(0);
+  });
+
+  it('lets `point_count` pad the emptied list, which is the engine\'s own result', () => {
+    // `_data` is refused wholesale, then `set_point_count` pads with
+    // `_add_point(Vector2())` (`curve.cpp:41-57`) whose position is clamped to
+    // the domain floor (`:63`) — three points at the origin, sampling 0.
+    const curve = decodeCurve({
+      _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
+      point_count: '3',
+    });
+
+    expect(curve.points).toHaveLength(3);
     expect(curve.points.map((p) => p.position)).toEqual([
       { x: 0, y: 0 },
-      { x: 1, y: 1 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
     ]);
+    expect(sampleCurve(curve, 0.5)).toBe(0);
   });
 
   it('falls back on a non-finite TANGENT, as it does on a non-finite position', () => {

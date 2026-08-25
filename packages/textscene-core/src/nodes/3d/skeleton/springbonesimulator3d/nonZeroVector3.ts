@@ -5,6 +5,7 @@
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_REGEX, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { formatCode, valueCode } from '../../../../linter/validators/v/codes.js';
 import { CMP_EPSILON } from '../../../../godot/index.js';
 import { tupleComponent } from '../../../../linter/validators/commonValidators.js';
 
@@ -29,7 +30,7 @@ import { tupleComponent } from '../../../../linter/validators/commonValidators.j
  * @param cite - `file:line` of that leaf's own `ERR_FAIL_COND`.
  */
 export function nonZeroVector3(name: string, cite: string): PropertyValidator {
-  const code = `INVALID_${name.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_VALUE`;
+  const code = valueCode(name);
   const validator = accepts((key, value, line) => {
     const match = VECTOR3_REGEX.exec(value);
     if (!match) {
@@ -37,7 +38,7 @@ export function nonZeroVector3(name: string, cite: string): PropertyValidator {
         key,
         line,
         `Property '${name}' must be Vector3 with 3 numbers like Vector3(0, -1, 0), got: "${value}"`,
-        `INVALID_${name.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_FORMAT`,
+        formatCode(name),
       );
     }
     const components = [match[1], match[2], match[3]].map(tupleComponent);

@@ -42,7 +42,7 @@ export interface CollectDiagnosticsResult {
 }
 
 /**
- * Expands directory arguments into the `.tscn` files they contain
+ * Expands directory arguments into the `.tscn`/`.tres` files they contain
  * (recursively, sorted for deterministic output); plain file paths -
  * including ones the shell already expanded from a glob - pass through
  * unchanged. A path that does not exist on disk is also passed through
@@ -84,7 +84,7 @@ const LINTABLE_EXTENSIONS = new Set(['.tscn', '.tres']);
 const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(name));
 
 /**
- * Recursively collect the `.tscn` FILES under `dir`, appending into `found`
+ * Recursively collect the lintable FILES under `dir`, appending into `found`
  * (threaded through the recursion so nested results are never re-copied at
  * each ancestor level). Dirent-based so the file/directory distinction comes
  * for free from each readdir for ordinary entries (no extra `statSync`
@@ -92,7 +92,7 @@ const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(na
  * the previous `readdirSync(recursive)` behavior, which never follows
  * directory symlinks either. A symlinked FILE, though, is resolved with one
  * `statSync` (mirroring the previous implementation's `statSync(fullPath)
- * .isFile()` check, which follows symlinks) so a `.tscn` symlinked in from
+ * .isFile()` check, which follows symlinks) so a scene symlinked in from
  * elsewhere is still linted rather than silently dropped.
  */
 function collectTscnFiles(dir: string, found: string[] = []): string[] {

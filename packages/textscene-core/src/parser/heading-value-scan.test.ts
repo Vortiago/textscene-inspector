@@ -119,9 +119,35 @@ describe('parseHeading recovers from a malformed attribute', () => {
   });
 
   it('drops an attribute with no value instead of swallowing the next one', () => {
+    // A BARE identifier is the only form that cannot be told from the next
+    // attribute; Godot rejects it as a value, so leaving it behind recovers.
     const result = parseHeading('[node name="X" type= parent="Foo" index="2"]');
     expect(result).not.toBeNull();
     expect(result!.attributes).toEqual({ name: 'X', parent: 'Foo', index: '2' });
+  });
+
+  // `get_token` breaks on `cchar <= 32` (`variant_parser.cpp:415-417`) and
+  // `_parse_tag` calls it straight after `TK_EQUAL` (`:1861-1863`), so the
+  // space is consumed before the value token is read. Reading these as a
+  // missing value cost the heading its `name=` — an ERROR on a file that loads.
+  it.each([
+    ['a quoted string', '[node name= "Root" type="Node2D"]', { name: 'Root', type: 'Node2D' }],
+    ['the type', '[node name="Root" type= "Node2D"]', { name: 'Root', type: 'Node2D' }],
+    ['a number', '[node name="K" parent="." index= 0]', { name: 'K', parent: '.', index: '0' }],
+    [
+      'a constructor',
+      '[node name="K" parent="." transform= Transform2D(1, 0, 0, 1, 2, 3)]',
+      { name: 'K', parent: '.', transform: 'Transform2D(1, 0, 0, 1, 2, 3)' },
+    ],
+    [
+      'an ext_resource path',
+      '[ext_resource type="Texture2D" path= "res://a.png" id="1"]',
+      { type: 'Texture2D', path: 'res://a.png', id: '1' },
+    ],
+  ])('reads %s across the space after "="', (_label, heading, attributes) => {
+    const result = parseHeading(heading);
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual(attributes);
   });
 
   // `resource_format_text.cpp:2127` stores `" binds= " + vars`, so every

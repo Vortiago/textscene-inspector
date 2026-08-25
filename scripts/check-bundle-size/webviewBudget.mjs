@@ -5,10 +5,8 @@
  * deliberately excluded — they don't load on the canvas-paint critical
  * path, so they don't count against this budget.
  *
- * The webview build was flipped from `iife` to `esm` + splitting so
- * React.lazy could actually code-split. Before that flip
- * the entire bundle was the initial chunk (4.1 MB raw / 717 KB gzipped
- * unminified, or 1.4 MB raw / ~620 KB gzipped minified).
+ * The webview builds as `esm` + splitting so React.lazy can code-split; only
+ * the initial chunk is measured here.
  */
 
 import { gzipSync } from 'node:zlib';
@@ -16,25 +14,14 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
-// Budget history (see ARCHITECTURE.md "Bundle Size Target"):
-// - Original budget: main baseline + 200 KB gzipped (247,543 + 200,000 =
-//   447,543 B), from the original acceptance criterion. That criterion
-//   predates GLB support becoming a committed, shipped feature.
-// - Renegotiated 2026-07-14 to an absolute 600 kB gzipped ceiling, after
-//   the realistic lazy-loading was done (drei <Text>/troika; GLTFLoader +
-//   SkeletonUtils) and the closure settled at
-//   484,921 B gz, leaving ~115 KB of headroom. Growth is acceptable for now;
-//   the future direction is exploring lighter rendering technologies,
-//   not squeezing this stack further.
-// - Raised 2026-08-07 to 700 kB. The node-coverage run registers a parser for
-//   every one of Godot's 240 instantiable node types, and each registration is
-//   bundled code even though its linter half is not, so the closure grew to
-//   592,721 B gz with 7.1 KB left. The ceiling guards against an accidental
-//   import pulling a whole library in; it was never meant to cap deliberate,
-//   measured per-type growth, and a limit that tight would fail on the next
-//   slice rather than on a real regression.
-// MAIN_BASELINE_GZ (the pre-merge measurement of `main` from the original
-// budget) is kept only for the informational delta-vs-main report line.
+// The ceiling guards against an accidental import pulling a whole library into
+// the canvas-paint path. It is not a cap on deliberate, measured growth: a
+// parser is registered for every one of Godot's instantiable node types and
+// each registration is bundled code even though its linter half is not, so the
+// closure sits in the high 500s of KB gzipped and no tighter ceiling would fail
+// on a real regression rather than on the next slice.
+// MAIN_BASELINE_GZ (the pre-merge measurement of `main`) feeds only the
+// informational delta-vs-main report line.
 const MAIN_BASELINE_GZ = 247_543;
 const BUDGET_GZ = 700_000; // absolute ceiling, gzipped
 

@@ -267,6 +267,27 @@ describe('new-node-slice intent shapes', () => {
     expect(out).toMatch(/create {2}nodes\/3d\/shapecast3d\/Component\.tsx/);
   });
 
+  it('gives a draws slice the registration test the other shapes carry', () => {
+    // Without it nothing in the slice loads either aggregation barrel, so a
+    // dropped import in `parser/TscnParser.ts` or `r3f/nodes/index.ts` leaves
+    // every co-located test green while the type falls back to Node at runtime.
+    expect(results.draws.out).toMatch(/create {2}nodes\/3d\/shapecast3d\/shapecast3d\.test\.ts/);
+
+    const emitted = drawsFiles({
+      typeName: 'ShapeCast3D',
+      lower: 'shapecast3d',
+      camel: 'shapeCast3D',
+      base: BASES.node3d,
+      toSrc: '../../../',
+      toBase: '../../base/node3d',
+      reusedParser: { fn: 'parseNode3D', importPath: '../../base/node3d/parser' },
+    });
+    const test = emitted.get('shapecast3d.test.ts');
+    expect(test).toContain("import './index';");
+    expect(test).toContain("import './index.r3f';");
+    expect(test).toContain('Unsupported node type');
+  });
+
   it('accepts control as a base for a pending slice', () => {
     expect(results.controlPending.ok).toBe(true);
     expect(results.controlPending.out).toMatch(/base: control, intent: pending/);

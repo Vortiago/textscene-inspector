@@ -91,6 +91,14 @@ describe('GraphNode strict validators', () => {
   });
 
   describe('slot/<index>/<leaf>', () => {
+    // `_set` is hand-rolled (`graph_node.cpp:130`) and reads the index with a
+    // bare `to_int()` (`:45`), which answers 0 for text it cannot read — no
+    // `is_valid_int` gate — so Godot applies the write and the linter must not
+    // report the key as unknown.
+    it('accepts a non-numeric index, which `to_int` reads as slot 0', () => {
+      expect(check('slot/x/left_enabled', 'true')).toBeNull();
+    });
+
     it('accepts a fully populated slot 0', () => {
       expect(check('slot/0/left_enabled', 'true')).toBeNull();
       expect(check('slot/0/left_type', '2')).toBeNull();

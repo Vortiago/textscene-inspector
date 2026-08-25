@@ -278,7 +278,13 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
   const nums = parseFloatList(match[1]);
   if (nums === null) return [];
   const stride = 2 + components;
-  if (nums.length < stride) return [];
+  // Arity is all-or-nothing, as it is in the engine: `Animation::_set` opens
+  // each flat-track branch with `ERR_FAIL_COND_V(vcount % *_TRACK_SIZE, false)`
+  // (`animation.cpp:163` position, `:185` rotation, `:208` scale,
+  // `:230` blend shape) BEFORE the `resize` at `:167`, so a ragged array leaves
+  // the track with no keys at all. Truncating to whole strides animated a track
+  // Godot leaves empty.
+  if (nums.length === 0 || nums.length % stride !== 0) return [];
 
   const keys: GodotKeyframe[] = [];
   for (let i = 0; i + stride <= nums.length; i += stride) {

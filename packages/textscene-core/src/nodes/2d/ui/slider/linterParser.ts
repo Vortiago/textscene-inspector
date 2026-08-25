@@ -28,20 +28,11 @@ validatorRegistry.registerAll('Slider', {
   tick_count: v.int('tick_count', { min: 0, max: 4096, hinted: 'slider.cpp:467' }),
   // slider.cpp:468
   ticks_on_borders: v.boolean('ticks_on_borders'),
-  // slider.cpp:469 — PROPERTY_HINT_ENUM carries no hint string, so the four
-  // BIND_ENUM_CONSTANT lines (slider.cpp:471-474, values from slider.h:39-44)
-  // are the only statement of the range. set_ticks_position (slider.cpp:416-422)
-  // assigns unconditionally, no ERR_FAIL.
-  ticks_position: v.enumInt(
-    'ticks_position',
-    0,
-    3,
-    {
-      0: 'TICK_POSITION_BOTTOM_RIGHT',
-      1: 'TICK_POSITION_TOP_LEFT',
-      2: 'TICK_POSITION_BOTH',
-      3: 'TICK_POSITION_CENTER',
-    },
-    { hinted: 'slider.cpp:469' }
-  ),
+  // No bound: `slider.cpp:469` passes PROPERTY_HINT_ENUM with no hint string, so
+  // `p_hint_string` defaults to `""` (`object.h:181`) and the hint states
+  // nothing — ADR-0032's "nothing" row. `set_ticks_position`
+  // (`slider.cpp:416-422`) assigns past an equality guard with no ERR_FAIL and
+  // no clamp, so there is no enforced tier either, and BIND_ENUM_CONSTANT is
+  // not a grounding the tier table admits.
+  ticks_position: v.lenientInt('ticks_position'),
 });

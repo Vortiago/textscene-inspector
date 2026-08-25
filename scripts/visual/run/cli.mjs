@@ -14,7 +14,16 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--update') opts.update = true;
-    else if (a === '--scene') opts.scene = argv[++i];
+    else if (a === '--scene') {
+      // A missing value must not fall through to "no scene named", which runs
+      // — and under --update REWRITES — all 145 baselines.
+      const value = argv[++i];
+      if (value === undefined || value === '') {
+        console.error('[visual] --scene needs a scene name');
+        process.exit(2);
+      }
+      opts.scene = value;
+    }
     else {
       console.error(`[visual] unknown argument: ${a}`);
       process.exit(2);

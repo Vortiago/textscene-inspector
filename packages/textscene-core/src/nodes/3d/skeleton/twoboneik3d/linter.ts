@@ -117,7 +117,10 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // iterations. See `reportedIndices.ts`.
   const targeted = new Set<number>();
   for (const [at, raw] of targetNodes) {
-    if (at < count && extractNodePath(raw) !== null) targeted.add(at);
+    // `at >= 0` too: `unsatisfiedIndices` documents that `satisfied` is already
+    // restricted to `0..count`, and a stray negative index otherwise inflates
+    // `satisfied.size` and cancels a genuinely missing target.
+    if (at >= 0 && at < count && extractNodePath(raw) !== null) targeted.add(at);
   }
   const missingTargets = unsatisfiedIndices(count, targeted);
 

@@ -95,17 +95,36 @@ function scanBalanced(str: string, start: number, open: string, close: string): 
  * any value whose delimiter never closes — runs to the next whitespace, which
  * is where the next attribute can start.
  */
+/**
+ * Can the token at `i` only be a VALUE, never the start of the next attribute?
+ *
+ * Every attribute begins `identifier =`, so a quoted string, a `[…]` array, a
+ * number and a constructor (an identifier glued to its `(`) are unambiguous.
+ * A BARE identifier is not: Godot rejects one as a value, so reading it as the
+ * next attribute is the lenient recovery a heading with a missing value needs.
+ */
+function opensAValue(str: string, i: number): boolean {
+  const char = str[i];
+  if (char === '"' || char === '[' || char === '-') return true;
+  const code = str.charCodeAt(i);
+  if (code >= 48 && code <= 57) return true;
+  let end = i;
+  while (end < str.length && isIdentCode(str.charCodeAt(end))) end++;
+  return end > i && str[end] === '(';
+}
+
 function scanHeadingValue(str: string, pos: number): { value: string; nextPos: number } {
   const len = str.length;
 
-  // A connection's bound arguments are the one heading value Godot writes with
-  // a space after the `=`: `resource_format_text.cpp:2127` stores
-  // `" binds= " + vars`. Only an array may open across that space — for every
-  // other form a space means the value is missing and the token behind it
-  // belongs to the next attribute, which is what `type= parent="Foo"` pins.
+  // Godot skips whitespace before a value: `_parse_tag` calls `get_token`
+  // straight after `TK_EQUAL` (`variant_parser.cpp:1861-1863`) and that token
+  // loop breaks on `cchar <= 32` (`:415-417`), so `name= "Root"` really is
+  // `name="Root"`. Cross the space for every form that can only be a value;
+  // a bare identifier is the one that cannot be told from the next attribute,
+  // and leaving it behind is what recovers `type= parent="Foo"`.
   let start = pos;
   while (start < len && isSpaceCode(str.charCodeAt(start))) start++;
-  if (str[start] !== '[') start = pos;
+  if (start !== pos && !opensAValue(str, start)) start = pos;
 
   const first = str[start];
   let end = -1;

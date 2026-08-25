@@ -61,7 +61,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
   // relative-to-slice name → content, in the order the plan prints them.
   const files = reusesBaseParser
     ? reusedParserFiles({ typeName, lower, camel, intent, base, toSrc, toBase, reusedParser })
-    : drawsFiles({ typeName, camel, base, toSrc, toBase, reusedParser });
+    : drawsFiles({ typeName, lower, camel, base, toSrc, toBase, reusedParser });
 
   if (linter) {
     for (const [name, content] of linterFiles({

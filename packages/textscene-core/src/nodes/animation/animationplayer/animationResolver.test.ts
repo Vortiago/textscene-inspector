@@ -474,6 +474,23 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toEqual([]);
   });
+
+  it('skips a 3D transform track whose flat array is not a whole number of strides', () => {
+    // `Animation::_set` refuses the write outright on `vcount % 5`
+    // (`animation.cpp:163`), so the track carries no keys. Truncating to the
+    // whole strides drew motion between keyframes the engine never stored.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        // 8 floats against a stride of 5: one whole keyframe and 3 strays.
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1, 1, 0)',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks).toEqual([]);
+  });
 });
 
 describe('resolveAnimations — end-to-end from a parsed dict-form scene', () => {

@@ -203,6 +203,23 @@ describe('TwoBoneIK3D semantic rules', () => {
     expect(diagnostic.message).toContain('setting(s) 0');
   });
 
+  it('still warns when a stray NEGATIVE index carries the only target', () => {
+    // `unsatisfiedIndices` documents that `satisfied` is already restricted to
+    // `0..count`. A negative index counted as satisfied inflated `satisfied.size`
+    // and cancelled the warning for setting 0, which really has no target —
+    // and Godot refuses the negative write outright (`two_bone_ik_3d.cpp:39`).
+    const diagnostic = expectDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/-1/target_node': 'NodePath("../Root")',
+        })
+      ),
+      { ruleName: 'twoboneik3d-setting-missing-target-node', severity: 'warning' }
+    );
+    expect(diagnostic.message).toContain('setting(s) 0');
+  });
+
   it('warns on an explicitly empty NodePath, the same unset value as absence', () => {
     expectDiagnostic(
       scene(node('TwoBoneIK3D', { setting_count: 1, 'settings/0/target_node': 'NodePath("")' })),

@@ -45,6 +45,19 @@ export function enumerateGodotNodes() {
     encoding: 'utf8',
     timeout: 120_000,
   });
+  // `error` carries a spawn failure — ENOENT when godot/xvfb-run is missing, a
+  // timeout, or ENOBUFS once the four blobs outgrow Node's default stdout cap —
+  // that `status` alone (null in those cases) does not say. Without this the
+  // marker search below reports it as "Godot did not emit ...", blaming the
+  // engine for a spawn that never produced output.
+  if (res.error) {
+    throw new Error(`Could not run Godot to build the catalog: ${res.error.message}`);
+  }
+  if (res.status !== 0) {
+    throw new Error(
+      `Godot exited ${res.status} while building the catalog:\n${(res.stderr ?? '').slice(-800)}`
+    );
+  }
   const out = `${res.stdout ?? ''}\n${res.stderr ?? ''}`;
   return {
     classes: blobAfter(out, '###NODES_JSON###', 'the node list'),

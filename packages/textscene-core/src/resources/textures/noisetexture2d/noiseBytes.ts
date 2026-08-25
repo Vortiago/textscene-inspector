@@ -1,3 +1,5 @@
+import { clamp } from '../../../godot/index.js';
+
 /**
  * The scalar arithmetic Godot's noise image layer does, in the integer forms it
  * does it in.
@@ -11,5 +13,5 @@ export function alphaBlend(background: number, foreground: number, alpha: number
 }
 
 export function clamp8(value: number): number {
-  return Math.min(255, Math.max(0, Math.trunc(value)));
+  return clamp(Math.trunc(value), 0, 255);
 }

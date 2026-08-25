@@ -124,7 +124,8 @@ import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
 import { TscnParser } from '${toSrc}parser/TscnParser';
 import * as logger from '${toSrc}logger';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
-import './index';
+import './index';${base.invisibleBase ? `
+import './index.r3f';` : ''}
 
 describe('${typeName} registration', () => {
   it('registers the ${reusedParser.fn} parse it reuses', () => {
@@ -133,9 +134,21 @@ describe('${typeName} registration', () => {
     expect(registration!.parser).toBe(${reusedParser.fn});
   });
 
+${
+  base.invisibleBase
+    ? `  // The badge reads the declared INTENT, never the absence of a registration:
+  // a pending slice registers the invisible base so the type keeps \`visible\`
+  // and stays out of both workspaces. Importing \`./index.r3f\` above is what
+  // lets this assertion see the registration the slice actually makes.
+  it('registers the base under the pending render intent', () => {
+    expect(nodeComponentRegistry.renderIntentOf('${typeName}')).toBe('pending');
+  });`
+    : `  // A control base opts out of mounting an invisible base, so this slice
+  // registers no component at all and the dispatcher falls back.
   it('registers no render component, so it still reads as not implemented', () => {
     expect(nodeComponentRegistry.get('${typeName}')).toBeUndefined();
-  });
+  });`
+}
 
 ${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });

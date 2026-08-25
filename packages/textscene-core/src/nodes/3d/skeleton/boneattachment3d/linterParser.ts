@@ -26,12 +26,16 @@ validatorRegistry.registerAll('BoneAttachment3D', {
   // "unset, resolve from bone_name". Neither end is statically checkable.
   // `strictInt`, not `int`: a bone index is discrete, and `v.int` would read
   // `2.5` as 2 instead of reporting it.
-  // The setter assigns, then (when a Skeleton3D has resolved) rewrites anything
-  // `<= -1` or past the bone count back to -1. So -2 is ALTERED, which is the
-  // enforced tier, while -1 itself is a no-op and must stay legal: it is the
-  // documented unset default, and a floor of 0 would reject what Godot writes.
+  // Cited on `_check_bind`, not on the setter: `set_bone_idx`'s own rewrite
+  // (`:201`) sits inside `if (sk)` (`:198`) and `get_skeleton()` reads
+  // `get_parent()` (`:139`), but PackedScene sets properties at
+  // `packed_scene.cpp:492` and parents only at `:541`, so that branch is dead at
+  // load. `_check_bind` runs on NOTIFICATION_ENTER_TREE (`:275`) once the parent
+  // exists and rewrites any `bone_idx <= -1` to `find_bone(bone_name)`, which is
+  // -1 for the empty default name. So -2 IS altered to -1 — the enforced tier —
+  // while -1 itself is the documented unset default and must stay legal.
   // The ceiling is the live bone count, which no per-property validator sees.
-  bone_idx: v.strictInt('bone_idx', { min: -1, enforced: 'bone_attachment_3d.cpp:201' }),
+  bone_idx: v.strictInt('bone_idx', { min: -1, enforced: 'bone_attachment_3d.cpp:117-118' }),
   // bone_attachment_3d.cpp:378, plain Variant::BOOL. set_override_pose
   // (cpp:220-236) assigns past an equality guard and then only reconfigures
   // notifications, so nothing beyond the literal's shape is checkable.

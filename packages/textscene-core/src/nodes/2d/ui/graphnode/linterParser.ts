@@ -65,6 +65,12 @@ const slotValidator = indexedFamilyValidator({
   leaves: SLOT_LEAVES,
   unknownCode: 'INVALID_SLOT_KEY',
   describes: 'slot',
+  // `_set` is hand-rolled (`graph_node.cpp:130` declares the list) and reads the
+  // index with a bare `str.get_slicec('/', 1).to_int()` (`:45`) — no
+  // `is_valid_int` gate — so `slot/x/left_enabled` resolves to slot 0 and the
+  // write lands. Stated rather than defaulted: taking the default is
+  // indistinguishable from never having checked.
+  indexParse: 'to_int',
   negativeIndex: {
     cite: 'graph_node.cpp:706',
     code: 'INVALID_SLOT_INDEX',
