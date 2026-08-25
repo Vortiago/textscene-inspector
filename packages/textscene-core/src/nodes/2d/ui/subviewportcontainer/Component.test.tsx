@@ -48,8 +48,17 @@ import {
   ViewportPassProvider,
   useRegisterViewportPass,
 } from '../../../../r3f/contexts/ViewportPassRegistryContext';
+import {
+  ViewportRectProvider,
+  useViewportRect,
+  type ViewportRect,
+} from '../../../../r3f/contexts/ViewportRectContext';
 import { SubViewportContainer } from './Component';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+// Side-effect: the Control painters and the node registrations
+// `viewportContentKind` classifies against.
+import '../../../../r3f/controls/index';
+import '../../../../r3f/nodes/index';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -143,6 +152,10 @@ describe('<SubViewportContainer>', () => {
   it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
     projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
     try {
+      // MIXED, so this container's LIVE arm is the one under test — a
+      // Control-only viewport is drawn by `ControlRasterPass`, whose own suite
+      // asserts the same rule for that route.
+      const mesh = node('Mesh', 'MeshInstance3D', {});
       const bar = node('Bar', 'ColorRect', {
         anchorLeft: 0,
         anchorTop: 0,
@@ -156,7 +169,7 @@ describe('<SubViewportContainer>', () => {
       const renderer = await mount(
         <SubViewportContainer
           {...painterEnv()}
-          solveNode={containerSolveNode({}, {}, [bar])}
+          solveNode={containerSolveNode({}, {}, [mesh, bar])}
           rect={RECT}
           renderOrder={0}
         />
@@ -233,5 +246,89 @@ describe('<SubViewportContainer>', () => {
       const matched = warnCalls.filter((args) => String(args[0]).includes('Booth/View'));
       expect(matched.length).toBeGreaterThan(0);
     });
+  });
+});
+
+/**
+ * A sub-viewport's Controls reach the canvas by exactly ONE route.
+ *
+ * `viewportContentKind` (`viewport/subviewport/viewportContent.ts`) already
+ * decides which rasterizer owns a target: a Control-only (`'dom'`) viewport is
+ * drawn by `ControlRasterPass` into the texture this quad samples, so drawing
+ * the same subtree live alongside it composites it twice — and only the quad
+ * copy carries the container's `self_modulate`. The live arm exists for a MIXED
+ * viewport, whose offscreen pass renders the non-Control half alone.
+ */
+describe('<SubViewportContainer> — one route per sub-viewport', () => {
+  /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
+  function groupNames(renderer: Awaited<ReturnType<typeof mount>>): string[] {
+    return renderer.scene
+      .findAll(() => true)
+      .map((n) => (n.instance as THREE.Object3D).name)
+      .filter((name) => name.length > 0);
+  }
+
+  it('does not ALSO draw a Control-only sub-viewport live — the raster texture is the whole picture', async () => {
+    const renderer = await mount(
+      <>
+        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [node('Backdrop', 'ColorRect', {})])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(groupNames(renderer).filter((n) => n.includes('Backdrop'))).toEqual([]);
+  });
+
+  it('still draws a MIXED viewport’s Controls live, over the pass that rendered its 3D half', async () => {
+    const renderer = await mount(
+      <>
+        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [
+            node('Mesh', 'MeshInstance3D', {}),
+            node('Backdrop', 'ColorRect', {}),
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(groupNames(renderer).filter((n) => n.includes('Backdrop')).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) hands
+ * `get_size() / shrink` to `set_size_force`, which takes a `Size2i` — and
+ * `Vector2::operator Vector2i` (`core/math/vector2.cpp:213`) truncates. A
+ * container 200 px wide at shrink 3 forces 66, not the 67 a round would give.
+ */
+describe('<SubViewportContainer> — the forced sub-viewport size truncates', () => {
+  function RectProbe({ path, onRect }: { path: string; onRect: (r: ViewportRect | null) => void }) {
+    const rect = useViewportRect(path);
+    useEffect(() => onRect(rect), [rect, onRect]);
+    return null;
+  }
+
+  it('truncates `get_size() / shrink` rather than rounding it', async () => {
+    let seen: ViewportRect | null = null;
+    await mount(
+      <ViewportRectProvider>
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({ stretch: true, stretch_shrink: 3 })}
+          rect={{ x: 0, y: 0, w: 200, h: 150 }}
+          renderOrder={0}
+        />
+        <RectProbe path="Booth/View" onRect={(r) => { seen = r; }} />
+      </ViewportRectProvider>
+    );
+    // 200/3 = 66.67 -> 66; 150/3 = 50 exactly.
+    expect(seen).toEqual({ x: 66, y: 50 });
   });
 });

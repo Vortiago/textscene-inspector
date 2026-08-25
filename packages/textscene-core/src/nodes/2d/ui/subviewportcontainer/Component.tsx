@@ -66,6 +66,7 @@ import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectCo
 import { joinPath } from '../../../../utils/nodePath.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
+import { useViewportContentKind } from '../../../viewport/subviewport/useViewportContentKind.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
@@ -92,9 +93,11 @@ interface ViewportSurfaceNativeProps {
 /**
  * One nested `SubViewport`'s surface: the pixel arm (a quad sampling its
  * published texture, or the cycle/unpublished fallback) plus the Controls
- * arm (its own direct Control children, drawn live — the always-on mechanism
- * that composites a MIXED 3D/2D-plus-Controls viewport's Controls on top,
- * since the offscreen pass only ever renders one non-Control content kind).
+ * arm (its own direct Control children, drawn live to composite a MIXED
+ * 3D/2D-plus-Controls viewport's Controls on top, since the offscreen pass only
+ * ever renders one non-Control content kind — a Control-ONLY viewport is
+ * already whole in the texture, and drawing it live too would composite it
+ * twice).
  */
 function ViewportSurfaceNative({
   viewport,
@@ -117,22 +120,32 @@ function ViewportSurfaceNative({
   // container's top-left (Godot never offsets successive children); with it
   // on every viewport fills the container's rect instead — the container
   // rect does not size the content otherwise.
-  const width = stretch ? Math.max(1, Math.round(containerRect.w)) : Math.max(1, Math.round(authoredSize.x));
-  const height = stretch ? Math.max(1, Math.round(containerRect.h)) : Math.max(1, Math.round(authoredSize.y));
+  // `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) is
+  // `set_size_force(get_size() / shrink)`, and `set_size_force` takes a
+  // `Size2i` — the `Vector2::operator Vector2i` conversion (`vector2.cpp:213`)
+  // TRUNCATES, so a fractional container rect loses the remainder rather than
+  // rounding up. Divided from the raw rect, not from a pre-rounded width, or
+  // the truncation happens one step too late.
+  const forcedSize = useMemo(
+    () => ({
+      // A zero-pixel render target is not allocatable, so the floor is ours;
+      // Godot has no such content to draw either way.
+      x: Math.max(1, Math.trunc(containerRect.w / shrink)),
+      y: Math.max(1, Math.trunc(containerRect.h / shrink)),
+    }),
+    [containerRect.w, containerRect.h, shrink]
+  );
 
-  // The rect the sub-viewport itself renders AT: unshrunk unless stretching,
-  // in which case Godot's `set_size_force(get_size() / stretch_shrink)` is
-  // exactly `width / shrink` — the CONTAINER's already-solved rect divided
-  // down, no extra measurement round trip needed.
+  // With `stretch` off each viewport draws at its OWN size, anchored at the
+  // container's top-left; with it on the forced size above is the target.
+  const width = stretch ? forcedSize.x * shrink : Math.max(1, Math.round(authoredSize.x));
+  const height = stretch ? forcedSize.y * shrink : Math.max(1, Math.round(authoredSize.y));
+
   const registerViewportRect = useRegisterViewportRect();
   useEffect(() => {
     if (!stretch) return undefined;
-    const forced = {
-      x: Math.max(1, Math.round(width / shrink)),
-      y: Math.max(1, Math.round(height / shrink)),
-    };
-    return registerViewportRect(path, forced);
-  }, [registerViewportRect, path, stretch, width, height, shrink]);
+    return registerViewportRect(path, forcedSize);
+  }, [registerViewportRect, path, stretch, forcedSize]);
 
   const { texture, cyclic } = useViewportTargetSlot(path, null);
 
@@ -144,9 +157,10 @@ function ViewportSurfaceNative({
   // decides the rendered size and the scale it is blown back up by, so the two
   // can never disagree.
   const shrinking = stretch && shrink > 1;
-  const renderedWidth = shrinking ? Math.max(1, Math.round(width / shrink)) : width;
-  const renderedHeight = shrinking ? Math.max(1, Math.round(height / shrink)) : height;
+  const renderedWidth = shrinking ? forcedSize.x : width;
+  const renderedHeight = shrinking ? forcedSize.y : height;
 
+  const contentKind = useViewportContentKind(viewport);
   const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources);
   const controlsViewport: Rect2 = useMemo(
     () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
@@ -223,6 +237,12 @@ function ViewportSurfaceNative({
             renderOrder={renderOrder}
           />
         ) : null}
+        {/* A `'dom'` viewport is drawn by `ControlRasterPass` into the very
+            texture the quad above samples; drawing it live as well composites
+            it twice, and only the quad carries the container's tint. This arm
+            is for a MIXED viewport, whose offscreen pass renders the
+            non-Control half alone (`viewportContent.ts`). */}
+        {contentKind === 'dom' ? null : (
         <ControlCanvasWalker
           tree={tree}
           generation={generation}
@@ -236,6 +256,7 @@ function ViewportSurfaceNative({
           // is the root window's alone — never reaches them.
           snapToPixels
         />
+        )}
       </ControlClipProvider>
     </CanvasItemGroup>
   );
