@@ -127,19 +127,24 @@ function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, 
 
 /**
  * The rect a registered canvas boundary (`controlSolverRegistry.isCanvasBoundary`
- * — `CanvasLayer`) takes: the whole rect it was handed, at its origin.
+ * — `CanvasLayer`) takes: the whole VIEWPORT, wherever in the tree it sits.
  *
- * Such a node is not a `CanvasItem`, so `Control::get_parent_anchorable_rect`
- * (`control.cpp:1568-1578`) never consults it — a Control under one resolves
- * against the viewport instead. It also authors no anchors or offsets, so the
- * anchor formula would hand it `(0, 0, 0, 0)` and every Control beneath it would
- * anchor against a degenerate rect: a `FULL_RECT` HUD collapses to nothing, and a
- * right-anchored one lands at negative x. Filling the rect it was given makes
- * this boundary a pure passthrough — it authors no rect of its own, so it
- * takes on its parent's exactly.
+ * Such a node is a `Node`, not a `CanvasItem`, so a Control beneath it has a
+ * null `data.parent_canvas_item` and `Control::get_parent_anchorable_rect`
+ * (`control.cpp:685-699`) answers with `get_viewport()->get_visible_rect()` —
+ * the same null that resets modulate to white and the sampler to the root
+ * default. A full-screen HUD under an offset 200x100 Panel therefore covers the
+ * SCREEN, not the panel.
+ *
+ * The boundary authors no anchors or offsets of its own, so the anchor formula
+ * would hand it `(0, 0, 0, 0)` and every Control beneath it would anchor against
+ * a degenerate rect. Stating the viewport instead is what makes the passthrough
+ * faithful; `originX`/`originY` are the boundary's parent's absolute top-left,
+ * and subtracting them is what puts a rect that is expressed relative to that
+ * parent back at the viewport origin.
  */
-function canvasBoundaryRect(parentRect: Rect2): Rect2 {
-  return { x: 0, y: 0, w: parentRect.w, h: parentRect.h };
+function canvasBoundaryRect(originX: number, originY: number, viewport: Rect2): Rect2 {
+  return { x: viewport.x - originX, y: viewport.y - originY, w: viewport.w, h: viewport.h };
 }
 
 // --- Phase 1: combined minimum size ------------------------------------------
@@ -330,13 +335,16 @@ function record(
 function solveFree(
   n: SolveNode,
   parentRect: Rect2,
+  /** `parentRect`'s top-left in VIEWPORT coordinates — see `canvasBoundaryRect`. */
+  origin: Vec2,
+  viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
   if (controlSolverRegistry.isCanvasBoundary(n.node.type)) {
-    rect = canvasBoundaryRect(parentRect);
+    rect = canvasBoundaryRect(origin.x, origin.y, viewport);
   } else {
     const layout = resolveNodeLayout(n, ctx, controlLayoutOrder(n));
     rect = floorAtMinimumSize(
@@ -347,7 +355,7 @@ function solveFree(
     );
   }
   record(n, rect, minSize, out, ctx.minimumSizeMeta?.(n));
-  dispatchChildren(n, rect, ctx, out);
+  dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
 /**
@@ -364,6 +372,9 @@ function solveFree(
 function dispatchChildren(
   n: SolveNode,
   rect: Rect2,
+  /** `n`'s own top-left in VIEWPORT coordinates — see `canvasBoundaryRect`. */
+  origin: Vec2,
+  viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>
 ): void {
@@ -371,7 +382,7 @@ function dispatchChildren(
 
   if (!containerFn) {
     for (const child of n.children) {
-      solveFree(child, rect, ctx, out);
+      solveFree(child, rect, origin, viewport, ctx, out);
     }
     return;
   }
@@ -415,13 +426,20 @@ function dispatchChildren(
     // moment a child's minimum is fractional. Every real text minimum is.
     let childRect: Rect2;
     if (controlSolverRegistry.isCanvasBoundary(child.node.type)) {
-      childRect = canvasBoundaryRect(rect);
+      childRect = canvasBoundaryRect(origin.x, origin.y, viewport);
     } else {
       const childLayout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
       childRect = floorAtMinimumSize(assigned, minSize, childLayout.growHorizontal, childLayout.growVertical);
     }
     record(child, childRect, minSize, out, meta);
-    dispatchChildren(child, childRect, ctx, out);
+    dispatchChildren(
+      child,
+      childRect,
+      { x: origin.x + childRect.x, y: origin.y + childRect.y },
+      viewport,
+      ctx,
+      out
+    );
   }
 }
 
@@ -458,9 +476,12 @@ export function solveControlTree(
   viewport: Rect2,
   ctx: SolveContext
 ): ReadonlyMap<string, SolvedControl> {
+  // A root's rect is stated relative to the viewport, so the viewport's own
+  // top-left is where the absolute walk starts.
+  const rootOrigin: Vec2 = { x: viewport.x, y: viewport.y };
   const out = new Map<string, SolvedControl>();
   for (const root of roots) {
-    solveFree(root, viewport, ctx, out);
+    solveFree(root, viewport, rootOrigin, viewport, ctx, out);
   }
 
   if (!hasSizeDependentMinimum(roots)) return out;
@@ -468,7 +489,7 @@ export function solveControlTree(
   const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
   const out2 = new Map<string, SolvedControl>();
   for (const root of roots) {
-    solveFree(root, viewport, pass2Ctx, out2);
+    solveFree(root, viewport, rootOrigin, viewport, pass2Ctx, out2);
   }
   return out2;
 }

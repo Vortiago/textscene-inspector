@@ -511,6 +511,30 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
     expect(solved.get('Root/HUD/Score')?.rect).toEqual({ x: 1032, y: 8, w: 112, h: 24 });
   });
 
+  it('takes the VIEWPORT rect, not its parent Control\'s, and sits at the viewport origin', () => {
+    // `Control::get_parent_anchorable_rect` (`control.cpp:685-699`) falls back
+    // to `get_viewport()->get_visible_rect()` when `data.parent_canvas_item` is
+    // null, and a CanvasLayer — a `Node`, not a `CanvasItem` — is exactly that
+    // null. So a full-screen HUD under an offset 200x100 Panel covers the
+    // SCREEN, not the panel. The boundary's own rect is stated relative to its
+    // parent, so its negative origin is what puts it back at (0, 0).
+    controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
+    const hud = node('Root/Panel/HUD/Hud', 'Control', { anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 });
+    const layer = node('Root/Panel/HUD', BOUNDARY, {}, [hud]);
+    const panel = node('Root/Panel', 'Control', {
+      offsetLeft: 100,
+      offsetTop: 50,
+      offsetRight: 300,
+      offsetBottom: 150,
+    }, [layer]);
+    const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [panel]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root/Panel')?.rect).toEqual({ x: 100, y: 50, w: 200, h: 100 });
+    expect(solved.get('Root/Panel/HUD')?.rect).toEqual({ x: -100, y: -50, w: 1152, h: 648 });
+    expect(solved.get('Root/Panel/HUD/Hud')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
+  });
+
   it('is unaffected by an enclosing container fn, which never owns a non-CanvasItem child', () => {
     const CONTAINER = 'TestContainerForBoundary';
     controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
