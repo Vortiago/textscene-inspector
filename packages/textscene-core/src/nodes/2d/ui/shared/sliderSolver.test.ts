@@ -85,6 +85,15 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill (LTR only, no RTL)',
     expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, theme)).toEqual({ x: 0, y: 16, w: 8, h: 8 });
   });
 
+  it('floors the half-grabber term — `grabber->get_width() / 2` is INTEGER division (slider.cpp:334)', () => {
+    // A theme scale that lands the grabber on an ODD size is the only way to
+    // see it: 16 * 1.1 rounds to 18 ... so scale to 15 directly via a theme
+    // whose grabber is odd. p = areasize*0 + trunc(grabber/2).
+    const odd = nativeTheme(1);
+    const oddTheme = { ...odd, sliderGrabberSize: 15 };
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, oddTheme).w).toBe(7);
+  });
+
   it('grows with the ratio on a HORIZONTAL slider, keeping the half-grabber term', () => {
     // p = 284*0.5 + 8 = 150.
     expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, theme)).toEqual({ x: 0, y: 16, w: 150, h: 8 });

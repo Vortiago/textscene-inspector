@@ -237,14 +237,17 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
   let colRemainingPixel = 0;
   if (colExpanded.size > 0) {
     colExpand = Math.trunc(remainingWidth / colExpanded.size);
-    colRemainingPixel = remainingWidth - colExpanded.size * colExpand;
+    // `int col_remaining_pixel` (`grid_container.cpp:147`) — the remainder of a
+    // FLOAT `remaining_space` truncates too, so a fractional leftover never
+    // becomes an extra distributed pixel.
+    colRemainingPixel = Math.trunc(remainingWidth - colExpanded.size * colExpand);
   }
 
   let rowExpand = 0;
   let rowRemainingPixel = 0;
   if (rowExpanded.size > 0) {
     rowExpand = Math.trunc(remainingHeight / rowExpanded.size);
-    rowRemainingPixel = remainingHeight - rowExpanded.size * rowExpand;
+    rowRemainingPixel = Math.trunc(remainingHeight - rowExpanded.size * rowExpand);
   }
 
   const colRemainingPixelIndex = remainingPixelIndex(colExpanded, usedColumnCount, colRemainingPixel);

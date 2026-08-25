@@ -127,15 +127,18 @@ export function sliderTrackRect(vertical: boolean, size: Vec2, theme: NativeThem
 export function sliderGrabberAreaRect(vertical: boolean, size: Vec2, ratio: number, theme: NativeTheme): Rect2 {
   const thickness = theme.sliderTrackThickness;
   const grabber = theme.sliderGrabberSize;
+  // `grabber->get_height() / 2` / `get_width() / 2` are INTEGER divisions in
+  // `slider.cpp:302,334` — an odd grabber contributes the floor, not the half.
+  const halfGrabber = Math.trunc(grabber / 2);
   if (vertical) {
     const areasize = size.y - grabber;
     const x = Math.trunc((size.x - thickness) / 2);
-    const y = Math.round(size.y - areasize * ratio - grabber / 2);
-    const h = Math.round(areasize * ratio + grabber / 2);
+    const y = Math.round(size.y - areasize * ratio - halfGrabber);
+    const h = Math.round(areasize * ratio + halfGrabber);
     return { x, y, w: thickness, h };
   }
   const areasize = size.x - grabber;
-  const p = Math.trunc(areasize * ratio + grabber / 2);
+  const p = Math.trunc(areasize * ratio + halfGrabber);
   return { x: 0, y: Math.trunc((size.y - thickness) / 2), w: p, h: thickness };
 }
 

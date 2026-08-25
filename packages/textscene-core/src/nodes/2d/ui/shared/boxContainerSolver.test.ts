@@ -250,6 +250,18 @@ describe('boxContainerMinimumSize', () => {
     expect(boxContainerMinimumSize(true, 16, sizes)).toEqual({ x: 58, y: 62 });
   });
 
+  it('TRUNCATES each child minimum before accumulating (Size2i, box_container.cpp)', () => {
+    // `Size2i size = c->get_combined_minimum_size()` narrows before the sum, so
+    // two 10.7px children come to 10 + 10 + separation, not 21.4 + separation.
+    // Every real text minimum is fractional, so this is the common case.
+    expect(boxContainerMinimumSize(true, 4, [{ x: 0, y: 10.7 }, { x: 0, y: 10.7 }])).toEqual({
+      x: 0,
+      y: 24,
+    });
+    // The cross axis narrows too: max(9.9, 3) truncates to 9, not 9.9.
+    expect(boxContainerMinimumSize(true, 0, [{ x: 9.9, y: 0 }])).toEqual({ x: 9, y: 0 });
+  });
+
   it('a single child needs no separation', () => {
     expect(boxContainerMinimumSize(false, 99, [{ x: 40, y: 12 }])).toEqual({ x: 40, y: 12 });
   });

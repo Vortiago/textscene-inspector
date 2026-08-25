@@ -176,11 +176,15 @@ export function textureRectDraw(
 
     case STRETCH_KEEP_ASPECT:
     case STRETCH_KEEP_ASPECT_CENTERED: {
-      let texWidth = (textureSize.x * rectSize.y) / textureSize.y;
-      let texHeight = rectSize.y;
+      // `int tex_width` / `int tex_height` (`texture_rect.cpp:63-69`): both
+      // sides of the aspect fit truncate, and so does the `size.height` /
+      // `size.width` each falls back to. The OFFSETS below stay fractional —
+      // `offset` is a `Point2`, and its halving is float division.
+      let texWidth = Math.trunc((textureSize.x * rectSize.y) / textureSize.y);
+      let texHeight = Math.trunc(rectSize.y);
       if (texWidth > rectSize.x) {
-        texWidth = rectSize.x;
-        texHeight = (textureSize.y * texWidth) / textureSize.x;
+        texWidth = Math.trunc(rectSize.x);
+        texHeight = Math.trunc((textureSize.y * texWidth) / textureSize.x);
       }
       let offsetX = 0;
       let offsetY = 0;

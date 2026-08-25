@@ -249,6 +249,18 @@ describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
     });
   });
 
+  it('STRETCH_KEEP_ASPECT TRUNCATES the fitted extent — `int tex_width`/`int tex_height` (:63-64)', () => {
+    // A 100x30 texture in a 200x20 rect: tex_width = 100*20/30 = 66.67, which
+    // `int tex_width` narrows to 66. The CENTERED offset stays fractional —
+    // `offset` is a `Point2` and its halving is float division (:72-73).
+    expect(textureRectDraw({ x: 200, y: 20 }, { x: 100, y: 30 }, 5)).toEqual({
+      offset: { x: 67, y: 0 },
+      size: { x: 66, y: 20 },
+      region: undefined,
+      tile: false,
+    });
+  });
+
   it('STRETCH_KEEP_ASPECT re-clamps to width when the height-driven fit overshoots it (:66-69)', () => {
     // A rect taller relative to the texture than KEEP_ASPECT above: 100x150,
     // same 320x160 texture. tex_width = 320*150/160 = 300 > 100 (rect width)

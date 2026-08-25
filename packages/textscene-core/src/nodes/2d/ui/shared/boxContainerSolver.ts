@@ -224,12 +224,17 @@ export function boxContainerMinimumSize(
 
   childMinSizes.forEach((size, i) => {
     const sep = i === 0 ? 0 : separation;
+    // `Size2i size = c->get_combined_minimum_size()` (`box_container.cpp`):
+    // the child's minimum is TRUNCATED before it is accumulated, and the
+    // accumulator is a `Size2i` too. Every real text minimum is fractional.
+    const w = Math.trunc(size.x);
+    const h = Math.trunc(size.y);
     if (vertical) {
-      crossAxis = Math.max(crossAxis, size.x);
-      mainAxis += size.y + sep;
+      crossAxis = Math.max(crossAxis, w);
+      mainAxis += h + sep;
     } else {
-      crossAxis = Math.max(crossAxis, size.y);
-      mainAxis += size.x + sep;
+      crossAxis = Math.max(crossAxis, h);
+      mainAxis += w + sep;
     }
   });
 
