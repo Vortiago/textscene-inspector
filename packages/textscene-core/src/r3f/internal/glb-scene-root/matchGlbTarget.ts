@@ -22,6 +22,15 @@
 import type { GlbObjectEntry } from './glbHierarchy.js';
 import { info, warn } from '../../../logger.js';
 
+export interface MatchGlbTargetOptions {
+  /**
+   * Fall back to the nearest ancestor when the leaf itself has no counterpart.
+   * Off for a per-instance property (a render-layer mask), which an ancestor would
+   * spread over every sibling under it.
+   */
+  allowAncestor?: boolean;
+}
+
 /**
  * The GLB object a Godot path names, or `null` when the graph has nothing that
  * could be it.
@@ -31,7 +40,8 @@ import { info, warn } from '../../../logger.js';
  */
 export function matchGlbTarget(
   entries: readonly GlbObjectEntry[],
-  godotPath: string
+  godotPath: string,
+  { allowAncestor = true }: MatchGlbTargetOptions = {}
 ): GlbObjectEntry | null {
   const exact = entries.find((e) => e.relPath === godotPath);
   if (exact) return exact;
@@ -48,7 +58,7 @@ export function matchGlbTarget(
 
   // The node itself has no counterpart — `Skeleton3D` exists only in Godot's
   // tree. The nearest ancestor that DOES match is the object it must have meant.
-  for (let depth = segments.length - 1; depth > 0; depth--) {
+  for (let depth = segments.length - 1; allowAncestor && depth > 0; depth--) {
     // No exact-match fast path here: an exact hit is itself the deepest
     // possible subsequence match, so `bestSubsequenceMatch` already returns it.
     const match = bestSubsequenceMatch(entries, segments.slice(0, depth));

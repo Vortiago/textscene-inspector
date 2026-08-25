@@ -350,6 +350,26 @@ describe('disposeClonedMaterials', () => {
     spies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1));
   });
 
+  it('owns and frees a non-Mesh surface slot, the same slots the sidecar writer reaches', () => {
+    // A glTF's non-triangle primitives arrive as Points/Line and carry a material of
+    // their own. The clone and both disposers walk material slots, not `isMesh`, so a
+    // clone can neither share the template's material nor leak its own copy.
+    const source = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial());
+    source.name = 'points';
+    const clone = cloneWithMaterials(source);
+    const clonedPoints = clone.getObjectByName('points') as THREE.Points;
+    const clonedMaterial = clonedPoints.material as THREE.Material;
+    expect(clonedMaterial).not.toBe(source.material);
+
+    const sourceSpy = vi.spyOn(source.material as THREE.Material, 'dispose');
+    const cloneSpy = vi.spyOn(clonedMaterial, 'dispose');
+
+    disposeClonedMaterials(clone);
+
+    expect(cloneSpy).toHaveBeenCalledTimes(1);
+    expect(sourceSpy).not.toHaveBeenCalled();
+  });
+
   it('does not dispose the SOURCE material (only the clone owns the disposed instance)', () => {
     const source = new THREE.Mesh(
       new THREE.BoxGeometry(),

@@ -23,12 +23,11 @@ the two renderers is only evidence when they are fed the same inputs the engine 
 ## Why the allowlist is short
 
 All 25 scene `.import` files in the corpus were fetched and read. Three things across all
-of them have a visual consequence: the tree's root scale, the `_subresources`
-material remaps that repoint a glTF's embedded materials at a `.tres`, and a per-node
-render-layer mask (`resource_importer_scene.cpp:1836`) that a decal's `cull_mask`
-then filters on
-(`editor/import/3d/resource_importer_scene.cpp:1620-1645`, which Godot bakes into the
-imported scene). Every other non-default value is either something three's `GLTFLoader`
+of them have a visual consequence: the tree's root scale; the `_subresources` material
+remaps that repoint a glTF's embedded materials at a `.tres`
+(`editor/import/3d/resource_importer_scene.cpp:1620-1645`); and a per-node render-layer
+mask (`:1836`) that a decal's `cull_mask` then filters on. Godot bakes all three into the
+imported scene. Every other non-default value is either something three's `GLTFLoader`
 already does (`meshes/ensure_tangents`), or a bake/performance concern with no bearing
 on a preview (`meshes/generate_lods`, `create_shadow_meshes`, `light_baking`,
 `lightmap_texel_size`, `force_disable_compression`). The three `.obj` sidecars are
@@ -38,7 +37,10 @@ identity (`scale_mesh=Vector3(1, 1, 1)`, `offset_mesh=Vector3(0, 0, 0)`).
 settings, and `nodes` carries much more than the layer mask. The guard names each
 non-empty block individually, so a new one is a decision rather than a silent inclusion.
 
-What is left unread is inert or a bake concern, not a deferred decision. But an unread
+What is left unread is inert, a bake concern, or — for the platformer player's animation
+clip slicing and loop modes — an unhandled PLAYBACK divergence, recorded rather than
+resolved: the Animation transport plays the one unsliced clip on its default infinite
+repeat where Godot plays the named slices on the authored loop mode. An unread
 parameter is exactly the failure this ADR exists to prevent, so the boundary is guarded
 rather than merely documented: a test asserts that no vendored sidecar sets any
 parameter outside the allowlist to a non-default value. It passes trivially today and

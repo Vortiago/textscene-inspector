@@ -65,6 +65,9 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
   return resourceSliceRegistry.busTypeFor(resourceType);
 }
 
+/** Ceiling on a peer-processor wait — see `ResourceLoader.peerLoad`. */
+const PEER_LOAD_TIMEOUT_MS = 30_000;
+
 export class ResourceLoader {
   readonly metadata: MetadataStore;
   readonly eventBus: ResourceEventBus;
@@ -133,6 +136,32 @@ export class ResourceLoader {
     for (const listener of this.pendingListeners) listener();
   }
 
+  /**
+   * Await a peer processor's resource — the one shape every cross-processor dependency
+   * uses: answer from cache, else request it and wait on that processor's bus slot.
+   *
+   * BOUNDED on purpose. A processor whose `shouldProcess` refuses bytes it was asked for
+   * settles nothing at all — by design, since the byte layer broadcasts one file to every
+   * processor and expects a sibling to claim it — so an unbounded await would wedge the
+   * caller for the session. One caller is the GLB template's own load, where that means
+   * the asset never appears and never reports missing. The ceiling is far above any real
+   * fetch, so it only ever fires on that silence.
+   */
+  private async peerLoad<T>(
+    processor: ResourceProcessor<T>,
+    busType: ResourceType,
+    path: string
+  ): Promise<T | null> {
+    const cached = processor.getCached(path);
+    if (cached !== undefined) return cached;
+    processor.request(path);
+    try {
+      return await this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+    } catch {
+      return null;
+    }
+  }
+
   constructor(fileEventBus?: FileEventBus) {
     this._fileEventBus = fileEventBus || null;
     this.eventBus = new ResourceEventBus();
@@ -141,33 +170,16 @@ export class ResourceLoader {
     // Texture processor first — materials need it for inline texture refs.
     this.textures = createTextureProcessor(fileEventBus, this.eventBus);
 
-    const loadTexture = async (path: string): Promise<THREE.Texture | null> => {
-      const cached = this.textures.getCached(path);
-      if (cached !== undefined) return cached;
-      this.textures.request(path);
-      try {
-        return await this.eventBus.once<THREE.Texture>('texture', 'loaded', path);
-      } catch {
-        return null;
-      }
-    };
+    const loadTexture = (path: string): Promise<THREE.Texture | null> =>
+      this.peerLoad(this.textures, 'texture', path);
 
     this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture);
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
-    // which resolves through the MATERIAL processor — same shape as `loadTexture` above.
-    const loadMaterialForGLB = async (path: string): Promise<THREE.Material | null> => {
-      const cached = this.materials.getCached(path);
-      if (cached !== undefined) return cached;
-      this.materials.request(path);
-      try {
-        return await this.eventBus.once<THREE.Material>('material', 'loaded', path);
-      } catch {
-        return null;
-      }
-    };
-
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, loadMaterialForGLB);
+    // which resolves through the MATERIAL processor.
+    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, (path) =>
+      this.peerLoad(this.materials, 'material', path)
+    );
 
     // PackedScene processor — the former standalone SceneLoader collapsed
     // into the same machinery via direct-load mode (`createResourceProcessor`'s
@@ -186,20 +198,11 @@ export class ResourceLoader {
     this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
     this.fonts = createFontProcessor(fileEventBus, this.eventBus);
 
-    // A Theme's font refs resolve through the FONT processor (a different
-    // peer, unlike a Font's own self-recursion) — same getCached-then-request-
-    // then-await shape as `loadTexture` above.
-    const loadFontForThemes = async (address: string): Promise<FontResource | null> => {
-      const cached = this.fonts.getCached(address);
-      if (cached !== undefined) return cached;
-      this.fonts.request(address);
-      try {
-        return await this.eventBus.once<FontResource>('font', 'loaded', address);
-      } catch {
-        return null;
-      }
-    };
-    this.themes = createThemeProcessor(fileEventBus, this.eventBus, loadFontForThemes);
+    // A Theme's font refs resolve through the FONT processor (a different peer, unlike a
+    // Font's own self-recursion).
+    this.themes = createThemeProcessor(fileEventBus, this.eventBus, (address) =>
+      this.peerLoad(this.fonts, 'font', address)
+    );
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],

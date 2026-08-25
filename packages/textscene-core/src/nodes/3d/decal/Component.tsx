@@ -160,7 +160,7 @@ export function Decal({ node, children }: NodeComponentProps) {
       // RGB is 1 so only alpha is scaled. three enables vertex ALPHA only at
       // itemSize 4; `buildDecalProjectionGeometry` always writes the attribute,
       // so this flag can never meet a geometry without one (which would sample
-      // black rather than merely skip the fade).
+      // the material default rather than merely skip the fade).
       vertexColors: true,
       depthWrite: false,
       // Sit the projection ON the surface without z-fighting the coincident

@@ -75,7 +75,8 @@ export interface DecalGeometricFade {
  * The attribute is written unconditionally, even when both fades are inert. The
  * material sets `vertexColors: true` once and shares itself across every
  * receiver, and `vertexColors` against a geometry with no `color` attribute
- * samples black — so the bake and that flag must not be separable.
+ * samples whatever `defaultAttributeValues` holds — nothing this module guarantees,
+ * so the bake and that flag must not be separable.
  */
 export function bakeDecalFadeAttribute(
   geometry: THREE.BufferGeometry,

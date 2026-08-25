@@ -8,15 +8,24 @@
  * under `.godot/imported/`, which this previewer never reads (ADR-0028).
  *
  * Values stay raw strings; `importRootScale`, `importExternalMaterials` and
- * `importNodeLayers` are the typed
- * readers, because `nodes/root_scale`, `nodes/apply_root_scale` and `_subresources`'
- * material remaps are the only parameters we honour; everything else is either something
- * three's GLTFLoader already does or a bake concern with no visual consequence.
+ * `importNodeLayers` are the typed readers, because `nodes/root_scale`,
+ * `nodes/apply_root_scale` and, from `_subresources`, the per-material `use_external`
+ * remaps and per-node `mesh_instance/layers` are the only parameters we honour;
+ * everything else is either something three's GLTFLoader already does or a bake concern
+ * with no visual consequence.
  *
  * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031): a
  * sidecar is found by path convention beside its asset, never named by a
  * scene, so it claims no type name and no bus slot.
  */
+
+import {
+  INITIAL_SCAN_STATE,
+  isIncompleteState,
+  scanValueChunk,
+  type ValueScanState,
+} from './utils';
+import * as logger from '../logger';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -41,44 +50,49 @@ export function parseImportFile(content: string): ParsedImportFile | null {
   let importer: string | null = null;
   const params: Record<string, string> = {};
   let sawSection = false;
-  let pendingKey: string | null = null;
-  let pending = '';
-  let depth = 0;
+  let pending: { key: string; lines: string[]; scan: ValueScanState } | null = null;
+
+  /** Commit whatever the open value has accumulated, balanced or salvaged. */
+  const storePending = (): void => {
+    if (pending && section === 'params') params[pending.key] = unquote(pending.lines.join('\n'));
+    pending = null;
+  };
 
   for (const rawLine of content.split('\n')) {
     const line = rawLine.trim();
+    const heading = SECTION.exec(line);
+    const pair = KEY_VALUE.exec(line);
 
-    // A `{`/`[` value spans lines until its brackets balance, so nothing inside it is
-    // read as a section heading or a key of its own.
-    if (pendingKey !== null) {
-      pending += `\n${line}`;
-      depth += bracketDepth(line);
-      if (depth <= 0) {
-        if (section === 'params') params[pendingKey] = pending;
-        pendingKey = null;
-        pending = '';
+    // A `{`/`[`/`"` value spans lines until it balances, so nothing inside it is read as
+    // a key of its own. A section heading or a bare `key=` line means it never closed:
+    // Godot quotes every key inside a Variant dictionary, so neither shape occurs inside
+    // one. Salvaging on them stops one malformed value swallowing the keys after it.
+    if (pending) {
+      const open = pending;
+      if (!heading && !pair) {
+        open.lines.push(line);
+        open.scan = scanValueChunk(line, open.scan);
+        if (!isIncompleteState(open.scan)) storePending();
+        continue;
       }
-      continue;
+      storePending();
     }
 
     if (line === '' || line.startsWith(';')) continue;
 
-    const heading = SECTION.exec(line);
     if (heading) {
       section = heading[1]!;
       sawSection = true;
       continue;
     }
 
-    const pair = KEY_VALUE.exec(line);
     if (!pair) continue;
     const [, key, rawValue] = pair;
     const raw = rawValue!.trim();
 
-    depth = bracketDepth(raw);
-    if (depth > 0) {
-      pendingKey = key!;
-      pending = raw;
+    const scan = scanValueChunk(raw, INITIAL_SCAN_STATE);
+    if (isIncompleteState(scan)) {
+      pending = { key: key!, lines: [raw], scan };
       continue;
     }
 
@@ -86,26 +100,9 @@ export function parseImportFile(content: string): ParsedImportFile | null {
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
   }
+  storePending();
 
   return sawSection ? { importer, params } : null;
-}
-
-/** Net `{`/`[` nesting a line opens, ignoring bracket characters inside strings. */
-function bracketDepth(line: string): number {
-  let depth = 0;
-  let inString = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (inString) {
-      if (char === '\\') i++;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === '{' || char === '[') depth++;
-    else if (char === '}' || char === ']') depth--;
-  }
-  return depth;
 }
 
 /** Godot writes strings quoted; every other value form is left verbatim. */
@@ -168,6 +165,10 @@ export function importExternalMaterials(
         typeof candidate === 'string' && candidate.startsWith('res://')
     );
     if (path) remaps.set(name, path);
+    // A remap with no `res://` path is a divergence Godot resolves through its uid table
+    // and we cannot, so it is announced rather than dropped — the caller draws the glTF's
+    // own material.
+    else logger.warn(`[ImportSidecar] material '${name}' remaps to no res:// path`);
   }
   return remaps;
 }
@@ -191,21 +192,42 @@ export function importNodeLayers(parsed: ParsedImportFile | null): ReadonlyMap<s
 }
 
 /**
- * One category of the `_subresources` dictionary. Godot writes it as a Variant, which is
- * JSON for the scalar-valued import options these categories hold — a category carrying
- * anything else is unreadable here and reads as absent, per this module's contract.
+ * The decoded `_subresources` dictionary, memoised per parse: both typed readers ask for
+ * a category of the same blob, and a sidecar's animation slices can run to hundreds of KB.
+ */
+const decodedSubResources = new WeakMap<ParsedImportFile, Record<string, unknown> | null>();
+
+/**
+ * One category of the `_subresources` dictionary. Godot writes the whole thing as a
+ * single Variant, which is JSON for the scalar-valued import options these categories
+ * hold — so the failure unit is the DICTIONARY, not the category: one value JSON cannot
+ * read (`Vector3(…)`, `&"…"`, `inf`) takes every category with it. That is a divergence
+ * we would otherwise render silently, so it is warned about once per parse.
  */
 function subResourceCategory(
   parsed: ParsedImportFile | null,
   category: string
 ): Record<string, unknown> | null {
-  const raw = parsed?.params['_subresources'];
-  if (raw === undefined) return null;
-  try {
-    const value = JSON.parse(raw) as Record<string, unknown>;
-    const found = value[category];
-    return typeof found === 'object' && found !== null ? (found as Record<string, unknown>) : null;
-  } catch {
-    return null;
+  if (!parsed) return null;
+  const found = decodeSubResources(parsed)?.[category];
+  return typeof found === 'object' && found !== null ? (found as Record<string, unknown>) : null;
+}
+
+function decodeSubResources(parsed: ParsedImportFile): Record<string, unknown> | null {
+  const memo = decodedSubResources.get(parsed);
+  if (memo !== undefined) return memo;
+
+  const raw = parsed.params['_subresources'];
+  let decoded: Record<string, unknown> | null = null;
+  if (raw !== undefined) {
+    try {
+      decoded = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      logger.warn(
+        '[ImportSidecar] _subresources is not readable as JSON; every override in it is ignored'
+      );
+    }
   }
+  decodedSubResources.set(parsed, decoded);
+  return decoded;
 }

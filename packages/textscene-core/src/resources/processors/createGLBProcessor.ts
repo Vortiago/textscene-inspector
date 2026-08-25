@@ -10,12 +10,14 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import {
   createGLBMesh,
-  disposeMeshMaterials,
+  forEachSurfaceMaterial,
   gltfResourceDir,
   isGLBPath,
 } from '../formats/glb/glbProcessing';
 import { applyRootScale } from '../formats/glb/rootScale';
 import { stampVisualLayers } from '../../r3f/visualLayers';
+import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
+import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
 import {
   importExternalMaterials,
   importNodeLayers,
@@ -34,11 +36,11 @@ export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
  * `disposeClonedMaterials`), the TEMPLATE owns its geometry too.
  */
 function disposeGLBMesh(mesh: THREE.Object3D): void {
+  // Materials through the same slot-gated walker the sidecar writes through, so a
+  // surface it can reach is a surface this can free.
+  forEachSurfaceMaterial(mesh, (material) => material.dispose());
   mesh.traverse((node) => {
-    if (node instanceof THREE.Mesh) {
-      node.geometry?.dispose();
-      disposeMeshMaterials(node);
-    }
+    if (node instanceof THREE.Mesh) node.geometry?.dispose();
   });
 }
 
@@ -59,7 +61,7 @@ async function applyImportSidecar(
   object: THREE.Object3D,
   path: string,
   fileEventBus: FileEventBus | undefined,
-  loadMaterial: MaterialLoaderFn | undefined
+  loadMaterial: MaterialLoaderFn
 ): Promise<void> {
   if (!fileEventBus) return;
 
@@ -90,9 +92,12 @@ function applySidecarRootScale(
 
 /**
  * `_subresources`' per-node `mesh_instance/layers`, matched by node path
- * (`resource_importer_scene.cpp:1836`). Godot's path holds the raw glTF names, which
- * three's loader has already sanitized on the object graph, so the lookup sanitizes each
- * segment the same way rather than comparing raw to cooked.
+ * (`resource_importer_scene.cpp:1836`).
+ *
+ * Resolved through `matchGlbTarget` — its header carries why the two importers' node
+ * lists differ. Godot's key holds the raw glTF names, so each segment is sanitized into
+ * three's spelling first; the nearest-ancestor fallback is OFF, because a mask belongs to
+ * one mesh instance and an ancestor would stamp every sibling under it.
  */
 function applySidecarNodeLayers(
   object: THREE.Object3D,
@@ -102,27 +107,17 @@ function applySidecarNodeLayers(
   const masks = importNodeLayers(parsed);
   if (masks.size === 0) return;
 
+  const entries = flattenGlbObjects(object);
   for (const [nodePath, mask] of masks) {
-    const target = resolveSanitizedPath(object, nodePath);
+    const segments = nodePath.split('/').map((s) => THREE.PropertyBinding.sanitizeNodeName(s));
+    const target = matchGlbTarget(entries, segments.join('/'), { allowAncestor: false });
     if (!target) {
-      logger.warn(`[GLBProcessor] ${path}: import sidecar layers path '${nodePath}' matched no node`);
+      logger.warn(`[GLBProcessor] ${path}: import sidecar layers path '${nodePath}' names no mesh`);
       continue;
     }
     logger.info(`[GLBProcessor] ${path}: import sidecar layers ${mask} on '${nodePath}'`);
-    stampVisualLayers(target, mask);
+    stampVisualLayers(target.object, mask);
   }
-}
-
-/** Walk `a/b/c` from the asset root, comparing three's sanitized names. */
-function resolveSanitizedPath(root: THREE.Object3D, nodePath: string): THREE.Object3D | null {
-  let current: THREE.Object3D | null = null;
-  for (const segment of nodePath.split('/')) {
-    const wanted = THREE.PropertyBinding.sanitizeNodeName(segment);
-    const pool: THREE.Object3D[] = current ? current.children : [root, ...root.children];
-    current = pool.find((child) => child.name === wanted) ?? null;
-    if (!current) return null;
-  }
-  return current;
 }
 
 /**
@@ -139,18 +134,22 @@ async function applySidecarMaterials(
   object: THREE.Object3D,
   path: string,
   parsed: ParsedImportFile | null,
-  loadMaterial: MaterialLoaderFn | undefined
+  loadMaterial: MaterialLoaderFn
 ): Promise<void> {
-  if (!loadMaterial) return;
   const remaps = importExternalMaterials(parsed);
   if (remaps.size === 0) return;
 
+  // One traversal: the visitor already hands over each slot's setter, so keeping them is
+  // what makes a second walk after the awaits unnecessary.
+  const slots: { material: THREE.Material; assign: (m: THREE.Material) => void }[] = [];
   const wanted = new Map<string, string>();
-  forEachSurfaceMaterial(object, (material) => {
+  forEachSurfaceMaterial(object, (material, assign) => {
     const external = remaps.get(material.name);
-    if (external !== undefined) wanted.set(material.name, external);
+    if (external === undefined) return;
+    wanted.set(material.name, external);
+    slots.push({ material, assign });
   });
-  if (wanted.size === 0) return;
+  if (slots.length === 0) return;
 
   const built = new Map<string, THREE.Material>();
   await Promise.all(
@@ -163,12 +162,12 @@ async function applySidecarMaterials(
   if (built.size === 0) return;
 
   const replaced = new Set<THREE.Material>();
-  forEachSurfaceMaterial(object, (material, assign) => {
-    const external = built.get(material.name);
-    if (!external) return;
-    replaced.add(material);
-    assign(external);
-  });
+  for (const slot of slots) {
+    const external = built.get(slot.material.name);
+    if (!external) continue;
+    replaced.add(slot.material);
+    slot.assign(external);
+  }
   // Nothing else can reference these: every surface carrying the name was just reassigned.
   for (const material of replaced) material.dispose();
 
@@ -178,36 +177,13 @@ async function applySidecarMaterials(
   );
 }
 
-/** Visit every surface material under `object`, with the setter for its own slot. */
-function forEachSurfaceMaterial(
-  object: THREE.Object3D,
-  visit: (material: THREE.Material, assign: (replacement: THREE.Material) => void) => void
-): void {
-  object.traverse((node) => {
-    const mesh = node as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    if (Array.isArray(mesh.material)) {
-      const slots = mesh.material;
-      slots.forEach((material, index) => {
-        visit(material, (replacement) => {
-          slots[index] = replacement;
-        });
-      });
-    } else if (mesh.material) {
-      visit(mesh.material, (replacement) => {
-        mesh.material = replacement;
-      });
-    }
-  });
-}
-
 /**
  * Create a GLB mesh processor that handles loading and caching GLB/GLTF meshes.
  */
 export function createGLBProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus,
-  loadMaterial?: MaterialLoaderFn
+  loadMaterial: MaterialLoaderFn
 ): ResourceProcessor<THREE.Object3D> {
   return createResourceProcessor({
     fileEventBus,

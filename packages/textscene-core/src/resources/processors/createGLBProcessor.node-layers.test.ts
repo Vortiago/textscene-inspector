@@ -14,8 +14,11 @@ import { initGlbModules } from '../formats/glb/glbProcessing';
 import { visualLayersOf } from '../../r3f/visualLayers';
 
 const GLTF_PATH = 'res://town/lamp/scene.gltf';
-/** The witness path: the middle segment's SPACE is what three sanitizes to `_`. */
-const NODE_PATH = 'Sketchfab_model/Lowpoly lamp_105/Object_4';
+/**
+ * The witness path, verbatim from the vendored sidecar: a SPACE that three sanitizes to
+ * `_`, and the full chain the Sketchfab export really carries.
+ */
+const NODE_PATH = 'Sketchfab_model/root/GLTF_SceneRootNode/Lowpoly lamp_105/Object_4';
 
 const SIDECAR = `[remap]
 
@@ -33,15 +36,20 @@ _subresources={
 }
 `;
 
-/** Three nested nodes, the leaf carrying the only mesh. */
+/**
+ * The vendored lamp's node chain, leaf-mesh included, under a NAMED scene — the scene
+ * name is what a first-segment lookup that admitted the root could latch onto.
+ */
 function nestedGltf(): ArrayBuffer {
   const gltf = {
     asset: { version: '2.0' },
     scene: 0,
-    scenes: [{ nodes: [0] }],
+    scenes: [{ name: 'Sketchfab_Scene', nodes: [0] }],
     nodes: [
       { name: 'Sketchfab_model', children: [1] },
-      { name: 'Lowpoly lamp_105', children: [2] },
+      { name: 'root', children: [2] },
+      { name: 'GLTF_SceneRootNode', children: [3] },
+      { name: 'Lowpoly lamp_105', children: [4] },
       { name: 'Object_4', mesh: 0 },
     ],
     meshes: [{ name: 'lamp', primitives: [{ attributes: { POSITION: 0 } }] }],
@@ -98,5 +106,17 @@ describe('createGLBProcessor — import sidecar node layers', () => {
       [`${GLTF_PATH}.import`]: SIDECAR.replace('Object_4"', 'Object_9"'),
     });
     expect(visualLayersOf(theMesh(root))).toBe(1);
+  });
+
+  it('crosses a level Godot\'s importer synthesised and three\'s did not', async () => {
+    // Godot inserts a Skeleton3D between an armature and the mesh it skins, so a sidecar
+    // path into any skinned asset names a node three's graph has no counterpart for.
+    const root = await loadWith({
+      [`${GLTF_PATH}.import`]: SIDECAR.replace(
+        'Lowpoly lamp_105/Object_4',
+        'Lowpoly lamp_105/Skeleton3D/Object_4'
+      ),
+    });
+    expect(visualLayersOf(theMesh(root))).toBe(2);
   });
 });

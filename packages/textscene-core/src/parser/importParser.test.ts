@@ -71,13 +71,26 @@ _subresources={
 "use_external/path": "uid://dw85jibvfqqnm"
 },
 "Negro_COLOR_0": {
-"use_external/enabled": false,
+"use_external/enabled": true,
 "use_external/fallback_path": "res://materials/black.tres",
 "use_external/path": "uid://d33e11pbpppvj"
 }
 }
 }
 gltf/naming_version=2
+`;
+
+/** Godot writes a disabled remap the same way, minus the flag — no corpus sidecar has one. */
+const DISABLED_REMAP_IMPORT = `[params]
+
+_subresources={
+"materials": {
+"Negro_COLOR_0": {
+"use_external/enabled": false,
+"use_external/fallback_path": "res://materials/black.tres"
+}
+}
+}
 `;
 
 describe('parseImportFile', () => {
@@ -110,6 +123,33 @@ describe('parseImportFile', () => {
   it('returns null for content that is not a sidecar', () => {
     expect(parseImportFile('')).toBeNull();
     expect(parseImportFile('not an ini file')).toBeNull();
+  });
+});
+
+describe('parseImportFile — a value that never balances', () => {
+  // Godot writes balanced values; a truncated or hand-edited sidecar may not. The
+  // parameter this whole mechanism exists for must survive one, rather than being
+  // swallowed into it and silently reading as absent.
+  it('captures a multi-line value whole and resumes at the key after it', () => {
+    const parsed = parseImportFile(MANNEQUINY_IMPORT)!;
+    expect(parsed.params['_subresources']).toContain('"materials"');
+    expect(parsed.params['gltf/naming_version']).toBe('2');
+  });
+
+  it('recovers the next key after an unterminated value', () => {
+    const parsed = parseImportFile('[params]\n\nfoo={\nnodes/root_scale=0.01\n')!;
+    expect(importRootScale(parsed)).toEqual({ scale: 0.01, bake: true });
+  });
+
+  it('recovers the next section after an unterminated value', () => {
+    const parsed = parseImportFile('[params]\n\nfoo={\n\n[remap]\n\nimporter="scene"\n')!;
+    expect(parsed.importer).toBe('scene');
+  });
+
+  it('reads a quoted value whose brackets are string content, not nesting', () => {
+    const parsed = parseImportFile('[params]\n\nnodes/root_name="a { b"\nnodes/root_scale=0.5\n')!;
+    expect(parsed.params['nodes/root_name']).toBe('a { b');
+    expect(importRootScale(parsed)).toEqual({ scale: 0.5, bake: true });
   });
 });
 
@@ -166,21 +206,16 @@ describe('importExternalMaterials', () => {
   it('reads the glTF material name -> external .tres table', () => {
     const remaps = importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT));
     // resource_importer_scene.cpp:1625-1633 — the uid is tried first, the res:// fallback second.
-    expect(remaps.get('Azul_COLOR_0')).toBe('res://materials/blue.tres');
-    expect(remaps.get('Blanco_COLOR_0')).toBe('res://materials/white.tres');
+    expect([...remaps]).toEqual([
+      ['Azul_COLOR_0', 'res://materials/blue.tres'],
+      ['Blanco_COLOR_0', 'res://materials/white.tres'],
+      ['Negro_COLOR_0', 'res://materials/black.tres'],
+    ]);
   });
 
   it('skips a material whose use_external/enabled is false', () => {
     // resource_importer_scene.cpp:1621 gates on the flag, not on the path being present.
-    expect(importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT)).has('Negro_COLOR_0')).toBe(
-      false
-    );
-  });
-
-  it('keeps the multi-line _subresources value out of params as a truncated string', () => {
-    const parsed = parseImportFile(MANNEQUINY_IMPORT)!;
-    expect(parsed.params['_subresources']).toContain('"materials"');
-    expect(parsed.params['gltf/naming_version']).toBe('2');
+    expect(importExternalMaterials(parseImportFile(DISABLED_REMAP_IMPORT)).size).toBe(0);
   });
 
   it('is empty for a sidecar with no material remaps at all', () => {
@@ -193,6 +228,7 @@ describe('importExternalMaterials', () => {
     const parsed = parseImportFile('[params]\n\n_subresources={\n"materials": Vector3(1, 1, 1)\n}\n');
     expect(importExternalMaterials(parsed).size).toBe(0);
   });
+});
 
 describe('importNodeLayers', () => {
   const sidecar = (body: string) => parseImportFile(`[params]\n\n_subresources={\n${body}\n}\n`);
@@ -216,5 +252,4 @@ describe('importNodeLayers', () => {
     expect(importNodeLayers(null).size).toBe(0);
     expect(importNodeLayers(parseImportFile('[params]\n\nnodes/root_scale=1.0\n')).size).toBe(0);
   });
-});
 });
