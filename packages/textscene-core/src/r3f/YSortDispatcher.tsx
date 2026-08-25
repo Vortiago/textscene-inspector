@@ -472,11 +472,8 @@ function TileGroupRenderer({ item, layerRank, sequence, node }: {
   node: TscnNode;
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
-  const renderOrder = canvasRenderOrder({
-    layerRank,
-    zFinal: accumulateCanvasItemZ(useEffectiveZ(), tileProps),
-    sequence,
-  });
+  const zFinal = accumulateCanvasItemZ(useEffectiveZ(), tileProps);
+  const renderOrder = canvasRenderOrder({ layerRank, zFinal, sequence });
   const { model, status } = useTileSetModel(tileProps.tile_set);
   // A y-sorted layer is decomposed into per-Y groups here instead of rendering
   // through <TileMapLayer>, so its CanvasItem tint has to be resolved here too —
@@ -490,8 +487,9 @@ function TileGroupRenderer({ item, layerRank, sequence, node }: {
   const canvasModulate = useCanvasModulateFor(material);
   const { color, opacity } = useCanvasItemTint(tileProps, canvasModulate);
   // This path bypasses CanvasItem2D, so the accumulated z the lights are culled
-  // against comes from the sort item, which already carries it.
-  const lighting = useCanvasItemLighting(material, tileProps.light_mask, item.effectiveZ);
+  // against is the one the draw-order key above already resolved — `item.effectiveZ`
+  // is accumulated from `YSortContext`, which has no provider and always starts at 0.
+  const lighting = useCanvasItemLighting(material, tileProps.light_mask, zFinal);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;

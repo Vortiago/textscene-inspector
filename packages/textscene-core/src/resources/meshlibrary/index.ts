@@ -3,7 +3,7 @@
  *
  * `decode.ts` turns a MeshLibrary **ParsedResource** into the
  * `MeshLibraryModel`. There is no `build.ts`: an item resolves to a
- * **Sub-resource path** (ADR-0029) that the ArrayMesh slice builds on its own
+ * **Sub-resource path** (ADR-0032) that the ArrayMesh slice builds on its own
  * bus slot, so this slice hands out addresses, never THREE objects.
  *
  * No `extensions` claim: a MeshLibrary arrives as `.tres`, the shared

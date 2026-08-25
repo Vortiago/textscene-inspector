@@ -108,6 +108,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # `assertWebBuildFresh` compares core's src against core's OWN dist before
+      # it will capture from a downloaded bundle, so the dist has to exist here
+      # even though nothing in this job bundles it.
+      - name: Build Core
+        run: pnpm --filter @textscene/core build
+
       # Reuse the dist built by the build job. run.mjs rebuilds by default —
       # locally that guards against capturing a stale dist that predates the
       # change under test — but here the artifact IS this commit's build, so
@@ -156,6 +162,12 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+
+      # `assertWebBuildFresh` compares core's src against core's OWN dist before
+      # it will capture from a downloaded bundle, so the dist has to exist here
+      # even though nothing in this job bundles it.
+      - name: Build Core
+        run: pnpm --filter @textscene/core build
 
       # Same reuse-the-build-artifact rationale as the visual-regression job
       # above: the artifact IS this commit's build, so VISUAL_SKIP_BUILD=1

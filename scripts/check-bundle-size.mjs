@@ -151,9 +151,8 @@ function checkHostBundles() {
 // - Renegotiated 2026-07-14 to an absolute 600 kB gzipped ceiling, after
 //   the realistic lazy-loading was done (drei <Text>/troika; GLTFLoader +
 //   SkeletonUtils) and the closure settled at
-//   484,921 B gz, leaving ~115 KB of headroom. Growth is acceptable for now;
-//   the future direction is exploring lighter rendering technologies,
-//   not squeezing this stack further.
+//   484,921 B gz. Growth is acceptable; the future direction is exploring
+//   lighter rendering technologies, not squeezing this stack further.
 // - Renegotiated to 1 MB after the native 2D-UI work, which left the closure at
 //   579,655 B gz — 6 KB under the old 600 kB ceiling. The growth was audited
 //   rather than assumed: the Control PAINTERS, the MSDF atlas, the glyph

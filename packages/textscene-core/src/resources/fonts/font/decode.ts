@@ -138,7 +138,14 @@ export function resolveInlineFontResource(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   fontCache: FontCacheReader,
-  pending: Set<string>
+  pending: Set<string>,
+  /**
+   * SubResource ids already on this walk. `base_font`/`fallbacks` can name a
+   * sibling that names them back, and this resolver runs synchronously inside
+   * the Control rect solve — an unguarded cycle blows the stack out of a React
+   * render rather than degrading.
+   */
+  visiting: ReadonlySet<string> = new Set()
 ): FontResource | null {
   if (!ref) return null;
   const parsed = parseResourceReference(ref);
@@ -155,13 +162,22 @@ export function resolveInlineFontResource(
     return cached;
   }
 
+  if (visiting.has(parsed.id)) return null;
   const sub = findSubResource(internalResources, parsed.id);
   if (!sub) return null;
+  const nowVisiting = new Set(visiting).add(parsed.id);
   // `parseInternalResource` echoes the heading's own `id` into `data` — strip
   // it back out, or it leaks into `properties` as a fake declared property.
   const { id: _id, ...properties } = sub.data as Record<string, string>;
   const resolveNested = (nestedRef: string | undefined): FontResource | null =>
-    resolveInlineFontResource(nestedRef, externalResources, internalResources, fontCache, pending);
+    resolveInlineFontResource(
+      nestedRef,
+      externalResources,
+      internalResources,
+      fontCache,
+      pending,
+      nowVisiting
+    );
 
   switch (sub.type) {
     case 'SystemFont': {

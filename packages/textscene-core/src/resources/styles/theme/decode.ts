@@ -48,10 +48,14 @@ function scanTheme<T>(
   properties: Record<string, string>,
   resolveRef: (ref: string) => T | null
 ): ScannedTheme<T> {
-  const fonts: Record<string, Record<string, T>> = {};
-  const fontSizes: Record<string, Record<string, number>> = {};
-  const typeVariations: Record<string, string> = {};
-  const rest: Record<string, string> = {};
+  // Prototype-free: the theme-item TYPE and NAME halves are parsed straight out
+  // of a `.tres` key, so `__proto__/fonts/toString = …` would otherwise resolve
+  // truthy through the chain, skip the `??=` and land the write on
+  // `Object.prototype`. `in` on the read side (`lookup.ts`) walks the chain too.
+  const fonts: Record<string, Record<string, T>> = Object.create(null);
+  const fontSizes: Record<string, Record<string, number>> = Object.create(null);
+  const typeVariations: Record<string, string> = Object.create(null);
+  const rest: Record<string, string> = Object.create(null);
 
   let defaultFont: T | null = null;
   let defaultFontSize: number | undefined;
@@ -71,7 +75,7 @@ function scanTheme<T>(
     if (fontMatch) {
       const [, type, name] = fontMatch;
       const resolved = resolveRef(value);
-      if (resolved !== null) (fonts[type!] ??= {})[name!] = resolved;
+      if (resolved !== null) (fonts[type!] ??= Object.create(null))[name!] = resolved;
       continue;
     }
 
@@ -79,7 +83,7 @@ function scanTheme<T>(
     if (sizeMatch) {
       const [, type, name] = sizeMatch;
       const n = parseOptionalFloat(value);
-      if (n !== undefined && n > 0) (fontSizes[type!] ??= {})[name!] = n;
+      if (n !== undefined && n > 0) (fontSizes[type!] ??= Object.create(null))[name!] = n;
       continue;
     }
 

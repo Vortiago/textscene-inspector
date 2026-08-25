@@ -31,8 +31,6 @@ import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import styles from './TscnCanvas.module.css';
 
-// Lazy for the same reason `Canvas2DStage` lazy-loads its Control overlay:
-// this pulls in the native Control barrel (17+ registrations), which have no
 /**
  * The contents of the R3F scene (everything that would normally live
  * inside `<Canvas>`). Exported separately so `@react-three/test-renderer`

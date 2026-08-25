@@ -34,8 +34,8 @@ const resources: TscnInternalResource[] = [
       content_margin_bottom: '13',
       draw_center: 'false',
       border_blend: 'true',
-      anti_aliased: 'false',
-      aa_size: '3',
+      anti_aliasing: 'false',
+      anti_aliasing_size: '3',
       corner_detail: '5',
       skew: 'Vector2(0.3, -0.2)',
       shadow_color: 'Color(0, 0, 1, 0.4)',
@@ -49,11 +49,16 @@ const resources: TscnInternalResource[] = [
     type: 'StyleBoxFlat',
     data: { border_width_left: '3', border_width_top: '3', border_width_right: '3', border_width_bottom: '3' },
   },
-  { id: 'StyleBoxFlat_aa_size_too_small', type: 'StyleBoxFlat', data: { aa_size: '0' } },
+  { id: 'StyleBoxFlat_aa_size_too_small', type: 'StyleBoxFlat', data: { anti_aliasing_size: '0' } },
   { id: 'StyleBoxFlat_corner_detail_too_small', type: 'StyleBoxFlat', data: { corner_detail: '0' } },
   { id: 'StyleBoxFlat_corner_detail_too_large', type: 'StyleBoxFlat', data: { corner_detail: '50' } },
-  { id: 'StyleBoxFlat_aa_size_too_large', type: 'StyleBoxFlat', data: { aa_size: '50' } },
+  { id: 'StyleBoxFlat_aa_size_too_large', type: 'StyleBoxFlat', data: { anti_aliasing_size: '50' } },
   { id: 'StyleBoxEmpty_x', type: 'StyleBoxEmpty', data: {} },
+  {
+    id: 'StyleBoxEmpty_margins',
+    type: 'StyleBoxEmpty',
+    data: { content_margin_left: '7', content_margin_bottom: '3' },
+  },
   { id: 'StandardMaterial3D_m', type: 'StandardMaterial3D', data: {} },
 ];
 
@@ -83,8 +88,8 @@ describe('parseStyleBox', () => {
     // style_box_flat.h: bg_color default Color(0.6,0.6,0.6) [a defaults to 1],
     // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
     // corner_radius/expand_margin default 0 per side; draw_center default
-    // true; blend_border (border_blend) default false; anti_aliased default
-    // true; aa_size default 1; corner_detail default 8; skew and shadow_offset
+    // true; blend_border (border_blend) default false; anti_aliasing default
+    // true; anti_aliasing_size default 1; corner_detail default 8; skew and shadow_offset
     // default to a zero Vector2; shadow_size default 0; shadow_color default
     // Color(0, 0, 0, 0.6) (style_box_flat.h:39,48-53).
     const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', resources);
@@ -107,12 +112,12 @@ describe('parseStyleBox', () => {
     });
   });
 
-  it('clamps an authored aa_size below the setter minimum to 0.01 (StyleBoxFlat::set_aa_size)', () => {
+  it('clamps an authored anti_aliasing_size below the setter minimum to 0.01 (StyleBoxFlat::set_aa_size)', () => {
     const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_small")', resources);
     expect(box?.aaSize).toBeCloseTo(0.01);
   });
 
-  it('clamps an authored aa_size above the setter maximum to 10 (StyleBoxFlat::set_aa_size)', () => {
+  it('clamps an authored anti_aliasing_size above the setter maximum to 10 (StyleBoxFlat::set_aa_size)', () => {
     const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_large")', resources);
     expect(box?.aaSize).toBe(10);
   });
@@ -153,8 +158,28 @@ describe('parseStyleBox', () => {
     expect(parseStyleBox('SubResource("StandardMaterial3D_m")', resources)).toBeNull();
   });
 
-  it('degrades to null for StyleBoxEmpty (no fill/border data to read)', () => {
-    expect(parseStyleBox('SubResource("StyleBoxEmpty_x")', resources)).toBeNull();
+  // `null` means "no override", which every consumer answers by painting the
+  // default theme box. A StyleBoxEmpty is an override that REPLACES that chrome
+  // with nothing, so it must not take the same route.
+  it('resolves StyleBoxEmpty to a box that paints nothing, not to null', () => {
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', resources);
+    expect(box).not.toBeNull();
+    expect(box!.drawCenter).toBe(false);
+    expect(box!.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
+    expect(box!.shadowSize).toBe(0);
+  });
+
+  // StyleBoxEmpty does not override `get_style_margin`, so the base StyleBox's 0
+  // is what an unset `content_margin_<side>` falls back to — not StyleBoxFlat's
+  // border width.
+  it('gives StyleBoxEmpty zero content margin where StyleBoxFlat would fall back to its border width', () => {
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', resources);
+    expect(box!.contentMargin).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
+  });
+
+  it('honours a StyleBoxEmpty content margin authored on the StyleBox base', () => {
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_margins")', resources);
+    expect(box!.contentMargin).toEqual({ left: 7, top: 0, right: 0, bottom: 3 });
   });
 
   it('degrades to null when the resource list is empty', () => {

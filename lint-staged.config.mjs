@@ -38,17 +38,26 @@ function owningPackage(file) {
   }
 }
 
+/** @type {import('lint-staged').Configuration} */
 export default {
-  '*.{ts,tsx,js,jsx,mjs}': ['eslint --fix', 'vitest related --run'],
-  '*.{ts,tsx}': (files) => {
+  // ONE key, so the three run in SEQUENCE. lint-staged runs different glob keys
+  // CONCURRENTLY, and a second key overlapping this one would put `tsc` on the
+  // same files `eslint --fix` is rewriting.
+  '*.{ts,tsx,js,jsx,mjs}': (files) => {
+    const quoted = files.map((f) => JSON.stringify(f)).join(' ');
     const packages = [
       ...new Set(
         files
+          .filter((f) => /\.tsx?$/.test(f))
           .map((f) => owningPackage(f.replace(`${process.cwd()}/`, '')))
           .filter((name) => name !== null)
       ),
     ];
-    return packages.map((name) => `pnpm --filter ${name} type-check`);
+    return [
+      `eslint --fix ${quoted}`,
+      `vitest related --run ${quoted}`,
+      ...packages.map((name) => `pnpm --filter ${name} type-check`),
+    ];
   },
   '*.tscn': (files) => [
     'pnpm build:linter',

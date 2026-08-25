@@ -26,7 +26,7 @@ export default [
       'docs/probes/',
       // Vendored third-party source (minified); linted upstream, not here.
       'scripts/compare-docs/vendor/',
-      // Generated MSDF font atlas (packet P10): the base64 PNG and per-glyph
+      // Generated MSDF font atlas: the base64 PNG and per-glyph
       // JSON table are hundreds of KB on single lines. Produced by
       // `scripts/fonts/bake-metrics.mjs`; drift is caught by its `--check`
       // mode, not by lint.

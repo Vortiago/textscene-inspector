@@ -6,8 +6,12 @@
  *
  * Degrades to `null`, never throws, for: an absent ref, a non-SubResource
  * reference (ExtResource / malformed string), an unknown id, or an id that
- * resolves to something other than `StyleBoxFlat` (`StyleBoxEmpty` included —
- * it carries no fill/border data to read). A resolved `StyleBoxFlat` with
+ * resolves to something that is not a StyleBox at all. `null` means "no
+ * override" — consumers fall back to the default theme on it, so a resolved
+ * `StyleBoxEmpty` must NOT take that route: Godot's local-override branch
+ * returns it unconditionally and `StyleBoxEmpty::draw` has an empty body, so
+ * it REPLACES the widget's chrome with nothing. It comes back as a box that
+ * paints nothing and carries zero style margin. A resolved `StyleBoxFlat` with
  * absent keys fills them from Godot's documented defaults; see
  * `native/styleBoxFlat.ts` for the field-by-field citation.
  */
@@ -24,6 +28,7 @@ const DEFAULT_BG_COLOR = { r: 0.6, g: 0.6, b: 0.6, a: 1 }; // style_box_flat.h:3
 const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40
 const DEFAULT_SHADOW_COLOR = { r: 0, g: 0, b: 0, a: 0.6 }; // style_box_flat.h:39
 const ZERO_VECTOR2: Vec2 = { x: 0, y: 0 }; // `skew`/`shadow_offset` (style_box_flat.h:48,53)
+const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
 const CONTEXT = 'StyleBoxFlat';
 
@@ -55,6 +60,47 @@ function contentMarginOr(raw: string | undefined, borderWidth: number): number {
   return parsed < 0 ? borderWidth : parsed;
 }
 
+/**
+ * A resolved `StyleBoxEmpty` as `StyleBoxFlatData`: nothing to draw
+ * (`StyleBoxEmpty::draw` is empty), and `get_style_margin` is the base
+ * `StyleBox`'s 0 rather than `StyleBoxFlat`'s border width, so an unset
+ * `content_margin_<side>` resolves to 0. `drawCenter: false` with zero borders
+ * and zero shadow is what makes `styleBoxFlatGeometry` emit no vertices.
+ */
+function emptyStyleBox(data: Record<string, string>): StyleBoxFlatData {
+  const contentMargin = (raw: string | undefined): number => {
+    const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
+    return parsed < 0 ? 0 : parsed;
+  };
+  return {
+    bgColor: TRANSPARENT,
+    borderColor: TRANSPARENT,
+    borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
+    cornerRadius: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 },
+    expandMargin: {
+      left: floatOr(data.expand_margin_left, 0, CONTEXT),
+      top: floatOr(data.expand_margin_top, 0, CONTEXT),
+      right: floatOr(data.expand_margin_right, 0, CONTEXT),
+      bottom: floatOr(data.expand_margin_bottom, 0, CONTEXT),
+    },
+    contentMargin: {
+      left: contentMargin(data.content_margin_left),
+      top: contentMargin(data.content_margin_top),
+      right: contentMargin(data.content_margin_right),
+      bottom: contentMargin(data.content_margin_bottom),
+    },
+    drawCenter: false,
+    borderBlend: false,
+    antiAliased: false,
+    aaSize: 1,
+    cornerDetail: 1,
+    skew: ZERO_VECTOR2,
+    shadowColor: TRANSPARENT,
+    shadowSize: 0,
+    shadowOffset: ZERO_VECTOR2,
+  };
+}
+
 export function parseStyleBox(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
@@ -63,9 +109,12 @@ export function parseStyleBox(
   const parsed = parseResourceReference(ref);
   if (!parsed || parsed.type !== 'SubResource') return null;
   const resource = findSubResource(internalResources, parsed.id);
-  if (!resource || resource.type !== 'StyleBoxFlat') return null;
+  if (!resource) return null;
 
   const data = resource.data as Record<string, string>;
+
+  if (resource.type === 'StyleBoxEmpty') return emptyStyleBox(data);
+  if (resource.type !== 'StyleBoxFlat') return null;
 
   const borderWidth = {
     left: floatOr(data.border_width_left, 0, CONTEXT),
@@ -98,8 +147,10 @@ export function parseStyleBox(
     },
     drawCenter: boolOr(data.draw_center, true, CONTEXT),
     borderBlend: boolOr(data.border_blend, false, CONTEXT),
-    antiAliased: boolOr(data.anti_aliased, true, CONTEXT),
-    aaSize: clamp(floatOr(data.aa_size, 1, CONTEXT), AA_SIZE_MIN, AA_SIZE_MAX),
+    // Scene-file keys, not the C++ member names: `_bind_methods` exports
+    // `set_anti_aliased`/`set_aa_size` as `anti_aliasing`/`anti_aliasing_size`.
+    antiAliased: boolOr(data.anti_aliasing, true, CONTEXT),
+    aaSize: clamp(floatOr(data.anti_aliasing_size, 1, CONTEXT), AA_SIZE_MIN, AA_SIZE_MAX),
     cornerDetail: Math.round(
       clamp(floatOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX)
     ),

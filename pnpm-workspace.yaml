@@ -65,7 +65,7 @@ catalog:
   # ESLint plugins
   eslint-plugin-react-hooks: ^7.1
 
-  # Font baking (scripts/fonts/bake-metrics.mjs, packet P10) — devDependencies
+  # Font baking (scripts/fonts/bake-metrics.mjs) — devDependencies
   # of the repo root only, never shipped: fontkit reads hhea/OS-2/hmtx from
   # the vendored TTF/OTF (it does not decompress woff2 itself), wawoff2
   # decompresses the vendored woff2 to the TTF fontkit and msdf-bmfont-xml

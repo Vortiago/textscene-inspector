@@ -65,14 +65,22 @@ export function buildThemeTypeChain(
   const chain: string[] = [];
 
   if (typeVariation) {
-    const owner = themeSearchOrder(ancestorThemes, projectTheme).find(
-      (t) => typeVariation in t.typeVariations
+    const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
+      Object.hasOwn(t.typeVariations, typeVariation)
     );
     if (owner) {
+      // Godot's own `Theme::get_type_dependencies` walks this unguarded
+      // ("assuming no funny business was done to the Theme"). A previewer reads
+      // files it did not write, so a `MyPanel/base_type = &"MyPanel"` cycle must
+      // stop the walk rather than spin the main thread.
+      const seen = new Set<string>();
       let current: string | undefined = typeVariation;
-      while (current !== undefined && current !== '') {
+      while (current !== undefined && current !== '' && !seen.has(current)) {
+        seen.add(current);
         chain.push(current);
-        const base: string | undefined = owner.typeVariations[current];
+        const base: string | undefined = Object.hasOwn(owner.typeVariations, current)
+          ? owner.typeVariations[current]
+          : undefined;
         current = base;
         if (current === nativeType) break;
       }
@@ -94,7 +102,7 @@ export function buildThemeTypeChain(
 function fontInTheme(theme: ThemeResource, type: string, name: string): FontResource | undefined {
   const explicit = theme.fonts[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (type in theme.typeVariations) return undefined;
+  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
   return theme.defaultFont ?? undefined;
 }
 
@@ -102,7 +110,7 @@ function fontInTheme(theme: ThemeResource, type: string, name: string): FontReso
 function fontSizeInTheme(theme: ThemeResource, type: string, name: string): number | undefined {
   const explicit = theme.fontSizes[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (type in theme.typeVariations) return undefined;
+  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
   return theme.defaultFontSize;
 }
 

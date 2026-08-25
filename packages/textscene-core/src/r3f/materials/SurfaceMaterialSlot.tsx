@@ -273,29 +273,23 @@ export function useMaterialTextures(
 
   // The repack allocates its own pixel buffer, and the binding may hand back a
   // CLONE of it that gets an upload of its own — disposing only the original
-  // frees nothing. Same object when nothing diverged, so one dispose suffices.
-  useEffect(() => {
-    return () => {
-      repackedFlowmap?.dispose();
-      if (anisotropyMap !== repackedFlowmap) anisotropyMap?.dispose();
-    };
-  }, [repackedFlowmap, anisotropyMap]);
+  // frees nothing. Only the clone is this pair's second object; when nothing
+  // diverged the two are one texture and the repack effect below owns it.
+  const anisotropyClone = anisotropyMap === repackedFlowmap ? undefined : anisotropyMap;
 
-  // Every OTHER slot's binding may equally have produced a clone, each one a GPU
-  // upload of its own. `releaseBoundTexture` frees exactly those and leaves the
-  // loader's shared cache entries alone. Listed rather than folded into an array
-  // literal, which would be a new array every render.
-  useEffect(() => {
-    return () => {
-      releaseBoundTexture(albedoMap);
-      releaseBoundTexture(normalMap);
-      releaseBoundTexture(roughnessMap);
-      releaseBoundTexture(metalnessMap);
-      releaseBoundTexture(emissiveMap);
-      releaseBoundTexture(aoMap);
-      releaseBoundTexture(displacementMap);
-    };
-  }, [albedoMap, normalMap, roughnessMap, metalnessMap, emissiveMap, aoMap, displacementMap]);
+  // ONE EFFECT PER TEXTURE. A shared dependency list would run every cleanup
+  // the moment any single slot resolved, freeing the GPU texture of the slots
+  // that did NOT change while the mounted material still had them bound —
+  // three then re-uploads each of them on the next frame.
+  useDisposeTexture(repackedFlowmap);
+  useDisposeTexture(anisotropyClone);
+  useReleaseBoundTexture(albedoMap);
+  useReleaseBoundTexture(normalMap);
+  useReleaseBoundTexture(roughnessMap);
+  useReleaseBoundTexture(metalnessMap);
+  useReleaseBoundTexture(emissiveMap);
+  useReleaseBoundTexture(aoMap);
+  useReleaseBoundTexture(displacementMap);
 
   const firstMissingPath = useMemo(() => {
     for (const slot of TEXTURE_SLOTS) {
@@ -458,4 +452,20 @@ function effectiveSlot(
   asyncSlot: { value: THREE.Texture | undefined } | null
 ): { value: THREE.Texture | undefined } | null {
   return procedural ? { value: procedural } : asyncSlot;
+}
+
+/** Frees one binding-owned texture clone when THAT texture changes, and only then. */
+function useReleaseBoundTexture(texture: THREE.Texture | undefined): void {
+  useEffect(() => {
+    const own = texture;
+    return () => releaseBoundTexture(own);
+  }, [texture]);
+}
+
+/** Same, for a texture this module allocated itself rather than through the binding. */
+function useDisposeTexture(texture: THREE.Texture | undefined): void {
+  useEffect(() => {
+    const own = texture;
+    return () => own?.dispose();
+  }, [texture]);
 }

@@ -411,12 +411,6 @@ cycle is simply never driven — its target keeps whatever it last held,
 deterministic rather than flickering — `logger.warn` names it once, and
 `useViewportPassCycle` lets the sampling surface fall back to a placeholder.
 
-**Known limitation, not a regression:** a Control nested under a `Node2D`
-ancestor is positioned from its solved rect against the viewport; Godot composes
-the full CanvasItem transform chain through every `Node2D` parent above it. The
-DOM overlay was equally blind to a `Node2D` ancestor's transform, so this is
-unchanged behaviour, not new fallout from going native.
-
 ### Resource Loading
 
 Every resource type is a **Resource slice** (ADR-0031, CONTEXT.md):

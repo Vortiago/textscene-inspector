@@ -105,6 +105,10 @@ const CONTROL_LEAVES = [
   'GridContainer',
   'HBoxContainer',
   'VBoxContainer',
+  // SplitContainer → H/VSplitContainer in Godot; the intermediate is not
+  // authorable, so the leaves link straight to Control.
+  'HSplitContainer',
+  'VSplitContainer',
   // Displays its SubViewport children's targets (ADR-0033). Needs the Control
   // chain like any other: without it every anchor/offset/layout validator
   // silently skips this type while erroring on every sibling Control.

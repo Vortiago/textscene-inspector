@@ -67,7 +67,11 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
     () => ({ x: 0, y: 0, w: viewportSize.width, h: viewportSize.height }),
     [viewportSize.width, viewportSize.height]
   );
-  const canvasModulate = useMemo(() => canvasModulateColor(rootNodes), [rootNodes]);
+  // The RAW roots, not the showRoots copy: `canvasModulateColor` propagates
+  // visibility, so forcing a root visible here would find a CanvasModulate that
+  // `NodeDispatcher`/`World2DCanvas` — which read `nodes` — correctly skip, and
+  // one canvas would be drawn with two different tints.
+  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
   // The same ranks `NodeDispatcher` derives, from the same nodes — this walk is
   // its SIBLING rather than its descendant, so it cannot inherit them, and a
   // Control ranked against a different layer set than the world would order

@@ -32,7 +32,7 @@
 
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { RefObject } from 'react';
+import { useRef, type RefObject } from 'react';
 import type { Vec3Tuple } from '../nodeTransform';
 
 /** Scratch, reused across frames — this runs on every rendered frame. */
@@ -44,9 +44,22 @@ export function useFixedSize(
   /** The node's OWN authored scale, re-read every frame so the factor never compounds. */
   authoredScale: Vec3Tuple
 ): void {
+  // `enabled` going false must WRITE the authored scale back, not just stop
+  // overwriting it: r3f compares a `scale` tuple shallowly, so an unchanged
+  // authored value is never re-assigned and the last frame's factor would stick.
+  const wasEnabled = useRef(false);
+
   useFrame(({ camera }) => {
     const object = ref.current;
-    if (!object || !enabled) return;
+    if (!object) return;
+    if (!enabled) {
+      if (wasEnabled.current) {
+        object.scale.set(authoredScale[0], authoredScale[1], authoredScale[2]);
+        wasEnabled.current = false;
+      }
+      return;
+    }
+    wasEnabled.current = true;
     const projection = camera.projectionMatrix.elements;
     let sc: number;
     if (projection[15] !== 0) {
