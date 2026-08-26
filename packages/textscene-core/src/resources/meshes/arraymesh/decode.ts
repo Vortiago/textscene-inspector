@@ -124,9 +124,9 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   }
 
   const extById = extResourcePathsById(parsed.extResources);
-  return decodeSurfaces(surfacesRaw, selfPath, (block) =>
-    readMaterialPath(block, parsed, extById, filePath)
-  );
+  return decodeSurfaces(surfacesRaw, selfPath, (block) => ({
+    materialPath: readMaterialPath(block, parsed, extById, filePath),
+  }));
 }
 
 /**
@@ -149,18 +149,19 @@ export function decodeSceneArrayMesh(
   if (typeof surfacesRaw !== 'string') return { surfaces: [] };
 
   const extById = extResourcePathsById(externalResources);
-  const mesh = decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) =>
-    resolveRefToResourcePath(readMaterialRef(block), extById, '', REJECT_SUB_RESOURCES) ??
-    undefined
-  );
-  // Carry the scene-local id alongside, since no path can express it.
-  for (const [i, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
-    const surface = mesh.surfaces[i];
-    if (!surface || surface.materialPath) continue;
-    const ref = parseResourceReference(readMaterialRef(block) ?? '');
-    if (ref?.type === 'SubResource') surface.materialSubResourceId = ref.id;
-  }
-  return mesh;
+  // Both halves per BLOCK, inside the one walk. `decodeSurfaces` compacts — a
+  // non-triangle primitive or an undecodable one is skipped — so the surface at
+  // index `i` is not the block at index `i`, and a second pass pairing them by
+  // position put a surface's material on whichever surface outlived it.
+  return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
+    const raw = readMaterialRef(block);
+    const materialPath =
+      resolveRefToResourcePath(raw, extById, '', REJECT_SUB_RESOURCES) ?? undefined;
+    if (materialPath !== undefined) return { materialPath };
+    // The scene-local id, since no path can express it.
+    const ref = parseResourceReference(raw ?? '');
+    return ref?.type === 'SubResource' ? { materialSubResourceId: ref.id } : {};
+  });
 }
 
 /**
@@ -185,7 +186,7 @@ function extResourcePathsById(
 function decodeSurfaces(
   surfacesRaw: string,
   label: string,
-  resolveMaterial: (block: string) => string | undefined
+  resolveMaterial: (block: string) => Pick<ArrayMeshSurface, 'materialPath' | 'materialSubResourceId'>
 ): ArrayMeshData {
   const surfaces: ArrayMeshSurface[] = [];
   let declared = 0;
@@ -258,7 +259,7 @@ function decodeSurfaces(
       uvs,
       normals,
       indices,
-      materialPath: resolveMaterial(block),
+      ...resolveMaterial(block),
     });
   }
 

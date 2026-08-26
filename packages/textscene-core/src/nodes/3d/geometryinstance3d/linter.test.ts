@@ -131,5 +131,16 @@ describe('GeometryInstance3D Linter', () => {
     it('produces no diagnostics for a node with no properties (all defaults)', () => {
       expectClean(scene(node('GeometryInstance3D')));
     });
+
+    it('stays silent on a CSG shape, whose warnings chain to Node instead', () => {
+      // `CSGShape3D::get_configuration_warnings` starts from
+      // `Node::get_configuration_warnings` (csg_shape.cpp:978), so it skips
+      // GeometryInstance3D and VisualInstance3D both and Godot's editor shows
+      // nothing for an inverted visibility range on a CSGBox3D.
+      expectNoDiagnostic(
+        scene(node('CSGBox3D', { visibility_range_begin: 20, visibility_range_end: 10 })),
+        { ruleName: 'geometryinstance3d-visibility-range-end-before-begin' }
+      );
+    });
   });
 });

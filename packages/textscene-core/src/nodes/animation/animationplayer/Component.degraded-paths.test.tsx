@@ -21,8 +21,8 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
 
-// A single resolvable "slide" clip moving Target from x=0 to x=10 over 1s —
-// used to prove a real animation is skipped when root_node can't resolve.
+// A single resolvable "slide" clip moving Target from x=0 to x=10 over 1s. It
+// is what proves a real animation is skipped when root_node can't resolve.
 const RESOLVABLE_INTERNAL: TscnInternalResource[] = [
   { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"slide": SubResource("A")\n}' } },
   {

@@ -21,12 +21,13 @@
  * first). Mirrored below with a static ancestor walk; `descendsFrom` stands in
  * for `cast_to`, which also accepts subclasses.
  *
- * `rest` field-initialises to `Transform2D rest;` (skeleton_2d.h:48) — the
- * IDENTITY matrix, since `Transform2D`'s default constructor
- * (`core/math/transform_2d.h`) leaves it untouched at identity — not the
- * all-zero literal this warning tests for. Godot omits a property at its
- * serialised default, so an ABSENT `rest` key is the identity default and must
- * never trip this: only an explicit `Transform2D(0, 0, 0, 0, 0, 0)` does.
+ * `rest` is declared `Transform2D rest;` (skeleton_2d.h:48), which alone would
+ * be the identity — but `Bone2D::Bone2D()` zeroes all three columns
+ * (skeleton_2d.cpp:496-499, "this is a clever hack so the bone knows no rest
+ * has been set yet, allowing to show an error"). The all-zero matrix is
+ * therefore the CLASS DEFAULT, which the serialiser omits, so an ABSENT `rest`
+ * key is exactly the state the warning exists for and is the only state Godot's
+ * own saver ever writes it in.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -118,10 +119,13 @@ function checkBone2D(context: RuleContext): Diagnostic[] {
 
   if (isValidProperties(node.properties)) {
     const rest = node.properties.rest;
-    if (rest !== undefined && isAllZeroTransform2D(rest)) {
+    // An absent key IS the all-zero default (see the header), so both spellings
+    // of "no rest pose" reach this: gating on `rest !== undefined` left the rule
+    // firing only on a literal Godot's saver never writes.
+    if (rest === undefined || isAllZeroTransform2D(rest)) {
       diagnostics.push({
         severity: 'warning',
-        message: `Bone2D '${node.name}' has rest set to the all-zero Transform2D. This bone lacks a proper REST pose; go to the Skeleton2D node and set one.`,
+        message: `Bone2D '${node.name}' has no rest pose: its rest is the all-zero Transform2D, which is what an unset one stores. Go to the Skeleton2D node and set one.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: REST_RULE,

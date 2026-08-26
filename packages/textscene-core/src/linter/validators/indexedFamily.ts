@@ -135,8 +135,10 @@ export interface IndexedFamilyOptions {
   accepts?: string;
   /**
    * The negative-index branch, when the class routes writes through the helper
-   * that refuses one. Omit where a slice covers the index range with a semantic
-   * rule instead (FileDialog does), which leaves the dispatcher format-only.
+   * that refuses one. Omitting it does NOT leave the dispatcher format-only: the
+   * key comes back as an unrecognised one instead, which names the leaf rather
+   * than the index. A slice whose semantic rule also claims the negative band
+   * then reports one refusal twice, so the two must not both cover it.
    */
   negativeIndex?: {
     /** `file:line` of the guard that refuses it. Pass a literal, not a variable. */

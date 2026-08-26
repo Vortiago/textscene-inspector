@@ -203,6 +203,17 @@ describe('FileDialog strict validators', () => {
       // Three leaves only, file_dialog.cpp:2201-2203.
       expect(check('option_0/tooltip', '"nope"')?.code).toBe('INVALID_OPTION_KEY');
     });
+
+    it('names the INDEX, not the leaf, for a negative one', () => {
+      // `_get_property` refuses `index < 0` (property_list_helper.cpp:58) with
+      // the leaf perfectly well known, so `INVALID_OPTION_KEY`'s "unknown
+      // property" wording would describe the wrong half of the key — and the
+      // semantic rule beside it deliberately leaves this band here.
+      const error = check('option_-1/name', '"Extra"');
+      expect(error?.severity).toBe('error');
+      expect(error?.code).toBe('INVALID_OPTION_INDEX');
+      expect(error?.message).toContain('-1');
+    });
   });
 
   describe('the nine Customization bools', () => {

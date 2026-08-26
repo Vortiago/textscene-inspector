@@ -9,6 +9,10 @@
 [node name="MySkeleton2D" type="Skeleton2D" parent="."]
 
 [node name="Bone" type="Bone2D" parent="MySkeleton2D"]
+; An unset rest is the all-zero default Bone2D's constructor writes, which is a
+; configuration warning of its own; set one so the fixture carries only
+; PhysicalBone2D's diagnostics.
+rest = Transform2D(1, 0, 0, 1, 0, 0)
 
 [node name="MyPhysicalBone2D" type="PhysicalBone2D" parent="MySkeleton2D"]
 position = Vector2(10, 20)

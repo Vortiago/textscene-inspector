@@ -71,7 +71,7 @@ describe('Bone2D Linter', () => {
           node('Bone2D', {}, { name: 'Mid', parent: '.' }),
           node('Bone2D', {}, { name: 'Leaf', parent: 'Mid' })
         )
-      ).filter((d) => d.nodeName === 'Leaf');
+      ).filter((d) => d.nodeName === 'Leaf' && d.ruleName !== 'bone2d-missing-rest-pose');
       expect(diagnostics.map((d) => d.ruleName)).toEqual(['bone2d-chain-does-not-terminate']);
     });
 
@@ -86,7 +86,11 @@ describe('Bone2D Linter', () => {
 
 [node name="MyBone2D" type="Bone2D" parent="Rig"]
 `;
-      const diagnostics = lint(content).filter((d) => d.nodeType === 'Bone2D');
+      // The orthogonal rest-pose warning is not this rule's subject; these
+      // bones set no `rest`, which is its own (correct) diagnostic.
+      const diagnostics = lint(content).filter(
+        (d) => d.nodeType === 'Bone2D' && d.ruleName !== 'bone2d-missing-rest-pose'
+      );
       expect(diagnostics).toEqual([]);
     });
 
@@ -101,16 +105,22 @@ describe('Bone2D Linter', () => {
 
 [node name="Leaf" type="Bone2D" parent="Mid"]
 `;
-      const diagnostics = lint(content).filter((d) => d.nodeType === 'Bone2D');
+      // The orthogonal rest-pose warning is not this rule's subject; these
+      // bones set no `rest`, which is its own (correct) diagnostic.
+      const diagnostics = lint(content).filter(
+        (d) => d.nodeType === 'Bone2D' && d.ruleName !== 'bone2d-missing-rest-pose'
+      );
       expect(diagnostics).toEqual([]);
     });
   });
 
   describe('rest pose (bone2d-missing-rest-pose)', () => {
-    it('passes when rest is absent (identity default, skeleton_2d.h:48)', () => {
-      expectNoDiagnostic(
+    it('warns when rest is absent, which IS the all-zero default', () => {
+      // `Bone2D::Bone2D()` zeroes all three columns (skeleton_2d.cpp:496-499),
+      // so the serialiser omits the key on exactly the bone Godot warns about.
+      expectDiagnostic(
         scene(node('Skeleton2D', {}, { name: 'Root' }), node('Bone2D', {}, { parent: '.' })),
-        { ruleName: 'bone2d-missing-rest-pose' }
+        { ruleName: 'bone2d-missing-rest-pose', severity: 'warning' }
       );
     });
 

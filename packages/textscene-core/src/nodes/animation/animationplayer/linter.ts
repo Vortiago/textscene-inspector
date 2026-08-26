@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { extractLibraries, isActive } from './parser.js';
 import { literalText } from '../../../godot/index.js';
-import { resolveAnimations } from './animationResolver.js';
+import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
 
 /**
  * Validate AnimationPlayer semantic rules
@@ -62,9 +62,15 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // renderer is deliberately lenient about external libraries). A file that
   // declares no clip source at all is equally unenumerable: the clips may be
   // added by script, so there is nothing here to call the reference dangling.
-  const hasUnresolvableLibrary = Object.entries(rawProps).some(
-    ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
-  );
+  // Both spellings of "external": the library resource itself may be an
+  // ExtResource, and an INLINE library may map a clip name to one. The second is
+  // the ordinary layout once clips are saved as their own `.tres`, and
+  // `resolveAnimations` reads only the SubResource entries, so a library that
+  // carries one enumerates fewer clips than it holds.
+  const hasUnresolvableLibrary =
+    Object.entries(rawProps).some(
+      ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
+    ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
   // A resolvable-but-empty library is still enumerable (a missing clip IS caught); only an
   // unresolvable ExtResource library, or no clip source at all, suppresses the check.
   const canCheckExistence = (hasAnimations || hasLibraries) && !hasUnresolvableLibrary;

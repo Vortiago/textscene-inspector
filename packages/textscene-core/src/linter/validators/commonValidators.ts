@@ -107,7 +107,12 @@ export function createEnumValidator(
       ? !allowed.has(num)
       : num < min || num > max;
     if (outOfBand) {
+      // Only the constants the bound ACCEPTS. `enumValues` is the engine's whole
+      // enum, while min/max is the window this class's hint opens onto it, so
+      // listing all of them named the rejected value as a valid one in the same
+      // sentence that refused it (`Button.alignment` offers 0-2 of a 0-3 enum).
       const validValuesStr = Object.entries(enumValues)
+        .filter(([val]) => (allowed ? allowed.has(Number(val)) : Number(val) >= min && Number(val) <= max))
         .map(([val, name]) => `${val}=${name}`)
         .join(', ');
       const band = allowed ? [...allowed].join('/') : `${min}-${max}`;

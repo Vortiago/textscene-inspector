@@ -13,8 +13,8 @@
  * mesh switches to a magenta placeholder material with a drei `<Text>`
  * label naming the missing path.
  *
- * Material precedence (matches Godot):
- *   surface_material_override > material_override > mesh's own material > default placeholder.
+ * Material precedence (render_forward_clustered.cpp:4206, :4267):
+ *   material_override > surface_material_override > mesh's own material > default placeholder.
  *
  * The pieces live in sibling modules: reference resolution in
  * `meshMaterialResolution.ts`, the texture pipeline in

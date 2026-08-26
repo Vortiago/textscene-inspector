@@ -212,14 +212,24 @@ export function parseHeading(line: string): ParsedHeading | null {
       continue;
     }
 
+    const key = attributesStr.slice(keyStart, pos);
+
+    // The `=` may sit any distance past the key: `_parse_tag` reads it through
+    // its own `get_token` (`variant_parser.cpp:1855-1858`), whose loop breaks on
+    // `cchar <= 32` (`:415-417`), so `[node name = "Root"]` is a heading Godot
+    // loads — the same whitespace rule `scanHeadingValue` already crosses on the
+    // other side of the `=`. Stopping the key scan at the space and then
+    // demanding `=` at that exact index dropped every attribute of such a line.
+    let equals = pos;
+    while (equals < len && isSpaceCode(attributesStr.charCodeAt(equals))) equals++;
+
     // Not `key=…`: drop this token alone and resync at the next whitespace,
     // rather than abandoning every attribute that follows it.
-    if (attributesStr[pos] !== '=') {
+    if (attributesStr[equals] !== '=') {
       pos = skipToSpace(attributesStr, pos);
       continue;
     }
-    const key = attributesStr.slice(keyStart, pos);
-    pos++; // skip '='
+    pos = equals + 1; // skip '='
 
     // An empty capture means `pos` sits on whitespace or the end (`key=` with
     // nothing after it), so the skip at the top of the loop still advances.

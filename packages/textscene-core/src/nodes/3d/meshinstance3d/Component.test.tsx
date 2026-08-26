@@ -242,7 +242,7 @@ describe('<MeshInstance3D>', () => {
       expect(material.roughness).toBe(0.8);
     });
 
-    it('prefers surface_material_override[0] over material_override', async () => {
+    it('prefers material_override over surface_material_override[0]', async () => {
       const surfaceMap = new Map<number, string>();
       surfaceMap.set(0, 'SubResource("Surf_0")');
       const node = makeNode({
@@ -255,11 +255,15 @@ describe('<MeshInstance3D>', () => {
         meshSubResource('StandardMaterial3D', 'OverrideAll', { albedo_color: 'Color(1, 0, 0, 1)' }),
         meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
       ];
+      // `_geometry_instance_add_surface` takes `material_override` ahead of the
+      // material the caller picked, and that caller had already chosen
+      // `surface_materials[j]` over the mesh's own
+      // (render_forward_clustered.cpp:4206, :4267).
       const renderer = await render(node, resources);
       const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
         .material as THREE.MeshStandardMaterial;
-      expect(material.color.r).toBe(0);
-      expect(material.color.g).toBe(1);
+      expect(material.color.r).toBe(1);
+      expect(material.color.g).toBe(0);
     });
   });
 

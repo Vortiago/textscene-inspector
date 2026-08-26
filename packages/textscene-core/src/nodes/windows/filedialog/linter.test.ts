@@ -46,19 +46,18 @@ describe('FileDialog semantic rules', () => {
     );
   });
 
-  it('warns on a negative option index', () => {
-    expectDiagnostic(
+  it('leaves a negative option index to the dispatcher, which already refuses it', () => {
+    // One refusal, one diagnostic: `_get_property` rejects `index < 0` and
+    // `index >= count` in the same line, but only the second needs option_count
+    // to state, and the first is phase 1's (linterParser.ts).
+    expectNoDiagnostic(
       scene(
         node('FileDialog', {
           option_count: 2,
           'option_-1/name': '"Extra"',
         })
       ),
-      {
-        ruleName: 'filedialog-option-index-out-of-range',
-        severity: 'error',
-        nodeType: 'FileDialog',
-      }
+      { ruleName: 'filedialog-option-index-out-of-range' }
     );
   });
 

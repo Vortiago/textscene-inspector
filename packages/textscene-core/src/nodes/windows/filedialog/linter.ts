@@ -23,6 +23,11 @@
  * `set_option_values`/`set_option_default`, with no error surfaced anywhere,
  * exactly the "silently dropped write" case ADR-0032 grounds a diagnostic on.
  *
+ * Only the `>= option_count` half is this rule's, because only that half needs a
+ * sibling property to state. The negative half is the dispatcher's own branch in
+ * linterParser.ts, as it is on PopupMenu — claiming it here reported one refusal
+ * twice, once under a message saying the leaf name was unknown.
+ *
  * Godot's own saver can never produce this: `option_count` is a ClassDB-bound
  * property (`ADD_ARRAY_COUNT`), so `Object::get_property_list` always places
  * it ahead of the `_get_property_list`-appended `option_<N>/…` leaves
@@ -38,14 +43,15 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex } from '../../../godot/index.js';
+import { indexedElements } from '../../../godot/index.js';
+import { listIndices } from '../../../linter/reportedIndices.js';
 
 /**
- * `option_<idx>/`, with the index captured. FileDialog serves the family
- * through a `PropertyListHelper` (file_dialog.cpp), whose `_get_property`
- * gates on `String::is_valid_int()` (property_list_helper.cpp:53).
+ * FileDialog serves the family through a `PropertyListHelper` (file_dialog.cpp),
+ * whose `_get_property` gates on `String::is_valid_int()`
+ * (property_list_helper.cpp:53).
  */
-const OPTION_KEY_RE = indexedKeyRegex('^option_(#)/', 'is_valid_int');
+const OPTION_PREFIX = 'option_';
 
 function checkFileDialog(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -63,22 +69,22 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   // file does not state; neither is a count this rule can name in a message.
   if (count === null) return diagnostics;
 
-  const offending = new Set<number>();
-  for (const key of Object.keys(rawProps)) {
-    const match = OPTION_KEY_RE.exec(key);
-    if (!match) continue;
-    const index = Number(match[1]);
-    if (index < 0 || index >= count) offending.add(index);
-  }
-  if (offending.size === 0) return diagnostics;
+  // `indexedElements`, not a hand-rolled key scan: it resolves the index the way
+  // `_get_property` does and skips a key with no leaf, which `option_3/` is —
+  // the twin rule on PopupMenu already reads its family through it. Negative
+  // indices belong to the dispatcher's own branch; see linterParser.ts.
+  const offending = [...indexedElements(rawProps, OPTION_PREFIX, 'is_valid_int').keys()]
+    .filter((index) => index >= count)
+    .sort((a, b) => a - b);
+  if (offending.length === 0) return diagnostics;
 
-  const indices = [...offending].sort((a, b) => a - b).join(', ');
+  const indices = listIndices(offending);
   diagnostics.push({
     severity: 'error',
     message:
       `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
       `PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ` +
-      'an index that is negative or >= the array length, so FileDialog never calls the ' +
+      'an index >= the array length, so FileDialog never calls the ' +
       "matching setter and these option_<N>/… values are silently dropped on load.",
     nodeName: node.name,
     nodeType: node.type,

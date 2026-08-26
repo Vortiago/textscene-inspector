@@ -156,10 +156,10 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 /**
  * Dispatches `option_<index>/<leaf>` to the validator for its leaf name.
  *
- * No negative-index branch here, unlike the item families: this slice covers the
- * index range with a cross-field rule instead, because the interesting bound is
- * the index against `option_count`, which a per-property validator cannot see.
- * See linter.ts.
+ * The negative half of the index bound lives here and the `>= option_count` half
+ * in `linter.ts`, exactly as PopupMenu splits its own: `_get_property` refuses
+ * both in one line, but only the second needs a sibling property to state, and a
+ * rule that claimed the first as well would report it beside this diagnostic.
  */
 const optionValidator = indexedFamilyValidator({
   prefix: 'option_',
@@ -170,6 +170,12 @@ const optionValidator = indexedFamilyValidator({
   // whose `_get_property` returns nullptr unless the index `is_valid_int()`
   // (property_list_helper.cpp:53-55), so a non-numeric index is a DROPPED write.
   indexParse: 'is_valid_int',
+  negativeIndex: {
+    cite: 'property_list_helper.cpp:58',
+    code: 'INVALID_OPTION_INDEX',
+    message: (index) =>
+      `Option index ${index} must be non-negative. FileDialog's property helper refuses a negative index (property_list_helper.cpp:58), so this property is never applied`,
+  },
 });
 
 validatorRegistry.registerAll('FileDialog', {

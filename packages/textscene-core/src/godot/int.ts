@@ -406,10 +406,20 @@ export function slotComponents(
   literal: string,
   /** The slot's own type name, e.g. `Vector2` — NOT the spelling in the file. */
   floatTypeName: string,
-  captures: readonly (string | undefined)[]
+  captures: readonly (string | undefined)[],
+  /**
+   * How a component of the FLOAT spelling reads, for the grammar the caller
+   * matched with. `slotTupleRegex` is finite-only, so `matchedFloat` is the
+   * default; the linter's `makeFloatTupleRegex` also admits `inf`/`nan`, and
+   * `parseFloat` answers NaN for all four of those spellings — which would turn
+   * every comparison against a legal `inf` component false. The int branch is
+   * shared either way: `_parse_construct<int32_t>` refuses a non-finite
+   * argument outright.
+   */
+  readFloat: (text: string) => number = matchedFloat
 ): number[] {
   const asInt = isConvertedSpelling(floatTypeName, compositeTypeName(literal));
   return captures.map((capture) =>
-    asInt ? (storedInt(capture) ?? NaN) : matchedFloat(capture ?? '')
+    asInt ? (storedInt(capture) ?? NaN) : readFloat(capture ?? '')
   );
 }

@@ -18,6 +18,7 @@ import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
+import { slotComponents } from '../../godot/int.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 
 /**
@@ -44,7 +45,11 @@ function parseScale2D(raw: string | undefined): { x: number; y: number } {
   if (raw === undefined) return { x: 1, y: 1 };
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
-  return { x: tupleComponent(match[1]), y: tupleComponent(match[2]) };
+  // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
+  // converts, whose arguments are narrowed to int32 before the widening, so
+  // `Vector2i(0.5, 1)` scales by the (0, 1) the engine stores.
+  const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
+  return { x: x!, y: y! };
 }
 
 export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {

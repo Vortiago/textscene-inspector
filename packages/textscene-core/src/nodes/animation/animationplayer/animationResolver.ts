@@ -129,6 +129,29 @@ function audioTrackPaths(data: Record<string, unknown>): string[] {
 
 const SUB_RESOURCE_ENTRY = new RegExp(`"([^"]+)"\\s*:\\s*${SUB_RESOURCE_REF_BODY}`, 'g');
 
+/**
+ * Whether any of these libraries holds a clip {@link resolveAnimations} cannot
+ * enumerate.
+ *
+ * `_data` maps a clip name to whichever reference the project saved: an
+ * `ExtResource` when the Animation lives in its own `.tres`, which is the
+ * ordinary layout once clips are shared between scenes. {@link parseLibraryData}
+ * reads only the `SubResource` spelling, so such a library resolves to FEWER
+ * clips than it holds — and a caller that treats the resolved set as complete
+ * calls a live clip name dangling.
+ */
+export function hasUnresolvableClips(
+  libraries: readonly AnimationLibraryRef[],
+  internalResources: readonly TscnInternalResource[]
+): boolean {
+  return libraries.some((lib) => {
+    const libResource = findById(internalResources, lib.subResourceId);
+    if (!libResource || libResource.type !== 'AnimationLibrary') return false;
+    const dataStr = asString(libResource.data['_data']);
+    return dataStr !== undefined && dataStr.includes('ExtResource(');
+  });
+}
+
 function parseLibraryData(dataStr: string): Array<[string, string]> {
   const entries: Array<[string, string]> = [];
   for (const match of dataStr.matchAll(SUB_RESOURCE_ENTRY)) {

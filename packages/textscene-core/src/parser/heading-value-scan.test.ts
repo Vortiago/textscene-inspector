@@ -150,6 +150,19 @@ describe('parseHeading recovers from a malformed attribute', () => {
     expect(result!.attributes).toEqual(attributes);
   });
 
+  // The same `get_token` whitespace skip applies BEFORE the `=` too: it is read
+  // by its own `get_token` call (`variant_parser.cpp:1855-1858`). Demanding the
+  // `=` at the index the key scan stopped at cost the heading every attribute,
+  // so the nodes lost their name, type and parent at once.
+  it.each([
+    ['before the "="', '[node name ="Root" type ="Node2D"]'],
+    ['on both sides of it', '[node name = "Root" type = "Node2D"]'],
+  ])('reads a key whose "=" is padded %s', (_label, heading) => {
+    const result = parseHeading(heading);
+    expect(result).not.toBeNull();
+    expect(result!.attributes).toEqual({ name: 'Root', type: 'Node2D' });
+  });
+
   // `resource_format_text.cpp:2127` stores `" binds= " + vars`, so every
   // connection carrying bound arguments puts a space between the `=` and the
   // array. Reading that as an empty value dropped the binds from scenes Godot

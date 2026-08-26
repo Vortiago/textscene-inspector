@@ -44,8 +44,14 @@ export function resolveExtArrayMeshPath(
  * Single-surface meshes return a length-1 array; multi-surface meshes
  * return a length-N array with `undefined` for unpopulated slots (the
  * caller's SecondarySurfaceMaterial renders a default placeholder).
- * The first element collapses the legacy fallback chain:
- *   surface_material_override[0] > material_override > mesh-own.
+ *
+ * `material_override` wins over BOTH the per-surface override and the mesh's
+ * own material, on EVERY surface, which is the order the renderer resolves in:
+ * `_geometry_instance_add_surface` takes `material_override` ahead of the
+ * material handed to it (`render_forward_clustered.cpp:4206`), and the caller
+ * already chose `surface_materials[j]` over the mesh's own
+ * (`render_forward_clustered.cpp:4267`). The per-surface override is therefore
+ * only reachable while `material_override` is unset.
  */
 export function resolveMaterialSubResources(
   properties: MeshInstance3DProperties,
@@ -57,15 +63,14 @@ export function resolveMaterialSubResources(
       ? Math.max(...Array.from(overrides.keys()), 0) + 1
       : 1;
 
-  const slot0Ref =
-    overrides?.get(0) ??
-    properties.materialOverride ??
-    findMeshOwnMaterial(properties.mesh, internalResources);
+  // Slot 0 alone falls back to the mesh's own material: a primitive mesh
+  // declares one `material`, which is surface 0's.
+  const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
 
   const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
-  result[0] = resolveStandardMaterial(slot0Ref, internalResources);
-  for (let i = 1; i < surfaceSlots; i++) {
-    const ref = overrides?.get(i);
+  for (let i = 0; i < surfaceSlots; i++) {
+    const ref =
+      properties.materialOverride ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
     result[i] = resolveStandardMaterial(ref, internalResources);
   }
   return result;

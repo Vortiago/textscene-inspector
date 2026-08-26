@@ -64,6 +64,7 @@ import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
+import { slotComponents } from '../godot/int.js';
 
 /** Godot's own `Transform2D` layout: x-axis `(a, b)`, y-axis `(c, d)`, origin `(tx, ty)`. */
 export interface Transform2DMatrix {
@@ -98,7 +99,11 @@ function parseVector2(raw: string | undefined, fallback: { x: number; y: number 
   if (raw === undefined) return fallback;
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return fallback; // malformed is linterParser.ts's job, not this helper's
-  return { x: tupleComponent(match[1]), y: tupleComponent(match[2]) };
+  // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
+  // converts, whose arguments are narrowed to int32 before the widening, so a
+  // fractional or wrapping component stores a different number than it states.
+  const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
+  return { x: x!, y: y! };
 }
 
 function parseScalar(raw: string | undefined, fallback: number): number {

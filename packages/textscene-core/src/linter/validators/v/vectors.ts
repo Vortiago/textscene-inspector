@@ -10,6 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { ruleInt, tupleComponent } from '../commonValidators.js';
+import { slotComponents } from '../../../godot/int.js';
 import { markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
@@ -135,7 +136,13 @@ export const vectorCombinators = {
           formatCode(name)
         );
       }
-      const parts = [match[1], match[2], match[3]].map(tupleComponent);
+      // `slotComponents`, not bare `tupleComponent`: `VECTOR3_REGEX` admits the
+      // `Vector3i(...)` spelling `can_convert_strict` converts, and its arguments
+      // are narrowed through `_parse_construct<int32_t>` BEFORE the widening into
+      // this float slot. Read as plain floats, the bound was checked against a
+      // number Godot never stores, and the renderer — which does narrow —
+      // disagreed with the linter about the same literal.
+      const parts = slotComponents(value, 'Vector3', [match[1], match[2], match[3]], tupleComponent);
       const belowMin = min !== undefined && parts.some((c) => c < min);
       const aboveMax = max !== undefined && parts.some((c) => c > max);
       if (belowMin || aboveMax) {

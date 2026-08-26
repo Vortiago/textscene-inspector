@@ -67,7 +67,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.r).toBe(1); // override (red), not mesh-own (blue)
   });
 
-  it('#13 surface_material_override/0 wins over material_override', async () => {
+  it('#13 material_override wins over surface_material_override/0', async () => {
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf0")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -79,10 +79,14 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
       sub('StandardMaterial3D', 'Surf0', { albedo_color: 'Color(0, 1, 0, 1)' }),
     ]);
+    // `_geometry_instance_add_surface` takes `material_override` ahead of the
+    // material it was handed, and that caller had already chosen
+    // `surface_materials[j]` over the mesh's own
+    // (render_forward_clustered.cpp:4206, :4267).
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshStandardMaterial;
-    expect(mat.color.r).toBe(0);
-    expect(mat.color.g).toBe(1);
+    expect(mat.color.r).toBe(1);
+    expect(mat.color.g).toBe(0);
   });
 
   it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {
