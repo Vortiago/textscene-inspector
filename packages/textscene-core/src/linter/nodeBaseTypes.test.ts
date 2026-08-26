@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
+import { TWO_D_UI_TYPES } from '../r3f/controls/has2DUIContent.js';
 import '../linter/index.js'; // trigger all validator registrations
 
 /** Walk base → base to the root, returning the full chain (throws on a cycle). */
@@ -61,6 +62,28 @@ describe('NODE_BASE_TYPES', () => {
   it('does NOT route CanvasLayer through Control (it descends from Node)', () => {
     expect(chain('CanvasLayer')).not.toContain('Control');
     expect(chain('CanvasLayer')).toEqual(['CanvasLayer', 'Node']);
+  });
+
+  it('routes every Control slice through Control, including the ones that declare no validator', () => {
+    // The guard below can only see a type that registers a validator OF ITS
+    // OWN — which is exactly the case that cannot go missing silently, since
+    // its validators would have nowhere to hang. A Control slice that declares
+    // none (no `index.linter.ts`: ColorRect, Panel, LineEdit, the split
+    // containers) needs the base entry for the INHERITED anchor/offset/layout
+    // set and is invisible to a registry walk, so it takes this one instead.
+    //
+    // `TWO_D_UI_TYPES` is the render-side mirror, itself drift-guarded against
+    // `ControlComponentRegistry` (`has2DUIContent.driftguard.test.ts`); this
+    // closes the third side of that triangle. Both split containers reached
+    // main without it, in the same commit that added three sibling Control
+    // types correctly.
+    for (const type of TWO_D_UI_TYPES) {
+      // A Node, not a CanvasItem — the one member that must NOT chain here.
+      if (type === 'CanvasLayer') continue;
+      const c = chain(type);
+      expect(c, `${type} does not resolve through Control`).toContain('Control');
+      expect(c[c.length - 1]).toBe('Node');
+    }
   });
 
   it('gives every registered node type a resolvable chain to Node', () => {
