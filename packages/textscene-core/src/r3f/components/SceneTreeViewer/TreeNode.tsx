@@ -74,7 +74,7 @@ export interface TreeNodeProps {
    */
   matches: (path: string) => boolean;
   /**
-   * The host scene's externalResources, used to resolve
+   * The host scene's externalResources, which resolve
    * `node.instance = ExtResource("id")` references against the
    * `res://` path of the referenced PackedScene. Threaded down from
    * `SceneTreeViewer` so every TreeNode can attempt sub-scene

@@ -198,8 +198,8 @@ curve = SubResource("Curve3D_road")`;
   });
 
   it('clears a stale resolvedPath when the path_node stops resolving', () => {
-    // The pass mutates in place, so a node that used to resolve must not keep its old
-    // curve after an edit points it somewhere else.
+    // The pass mutates in place, so a node that resolved before an edit must not
+    // keep its old curve once the edit points it somewhere else.
     const nodes = parse(SIBLING_SCENE);
     const poly = find(nodes, 'RoadTop')!.properties as CSGPolygon3DProperties;
     expect(poly.resolvedPath).toBeDefined();

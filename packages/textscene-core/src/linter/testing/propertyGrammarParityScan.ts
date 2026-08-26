@@ -49,6 +49,13 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   HBoxContainer: '2d/ui/hboxcontainer/parser.ts',
   PanelContainer: '2d/ui/panelcontainer/parser.ts',
   MeshInstance3D: '3d/meshinstance3d/parser.ts',
+  // Two family parsers that live in `shared/` rather than under a type of their
+  // own, which is why the subpath is a module and not a slice: a Range subclass
+  // reads the five Range keys `parseRange` models, and a Slider subclass its
+  // three more through `parseSlider`. Without the hops every one of those reads
+  // as linter-only on HSlider and VSlider.
+  Range: '2d/ui/shared/range.ts',
+  Slider: '2d/ui/shared/slider.ts',
 };
 
 /**

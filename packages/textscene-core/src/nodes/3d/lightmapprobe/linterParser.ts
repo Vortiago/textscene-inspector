@@ -13,7 +13,7 @@
  * hand-rolled `_set`/`_get`/`_get_property_list` (checked both spellings — no
  * unprefixed `get_property_list` either, the shape `ChainIK3D` uses). Its only
  * other reference in the engine, `lightmap_gi.cpp:465-468`, is
- * `Object::cast_to<LightmapProbe>` used to find probe nodes by type, followed
+ * `Object::cast_to<LightmapProbe>`, which finds probe nodes by type, followed
  * by `probe->get_global_transform()` — Node3D's own method, not anything
  * LightmapProbe declares. `LightmapProbe.xml` carries no `<members>` block,
  * which agrees: the class exists to be found by its type, not to carry state.

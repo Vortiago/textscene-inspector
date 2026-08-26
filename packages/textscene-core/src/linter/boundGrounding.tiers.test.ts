@@ -123,7 +123,7 @@ describe('per-end grounding', () => {
     expect(intV('sides', '65', 1)?.severity).toBe('warning');
   });
 
-  it('splits enumInt per end too, which used to collapse to error', () => {
+  it('splits enumInt per end too, rather than collapsing both to error', () => {
     // `boundSeverity` returned 'warning' only when BOTH ends were hinted, so an
     // enforced floor made the whole bound error, ceiling included.
     const split = v.enumInt(
