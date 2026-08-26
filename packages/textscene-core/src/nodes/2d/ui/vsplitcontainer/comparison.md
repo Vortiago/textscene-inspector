@@ -51,11 +51,12 @@ limitations HSplitContainer's sheet records apply here unchanged.
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks nothing on this node: no validators are registered for `VSplitContainer`, and it inherits none.
+Strict parsing format-checks the inherited set (35 inherited from Control); `VSplitContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 Identical to HSplitContainer's, and for the same reason: the three properties

@@ -98,11 +98,12 @@ rows, every `_compute_split_offset` branch, the same boundaries.
 ## Linting
 
 <!-- lint:begin HSplitContainer -->
-Strict parsing format-checks nothing on this node: no validators are registered for `HSplitContainer`, and it inherits none.
+Strict parsing format-checks the inherited set (35 inherited from Control); `HSplitContainer` declares none of its own. Every validator failure is an **error**.
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `control-property-order` (type-family match) | `control-property-order` | warning |
 <!-- lint:end -->
 
 Strict and lenient parsing do not diverge here, because neither parser
