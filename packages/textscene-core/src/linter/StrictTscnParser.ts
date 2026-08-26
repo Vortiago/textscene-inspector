@@ -162,11 +162,18 @@ export class StrictTscnParser {
         // refuses the null with an `ERR_FAIL_COND(...is_null())`, so nothing is
         // stored at all and only that validator carries the guard's `file:line`.
         //
-        // Only the message is rewritten: severity, line, column and code stay
-        // the validator's, so the diagnostic keeps anchoring on the value.
+        // The severity moves with the message. What is being reported is the
+        // Variant binding narrowing the literal on the way IN, which ADR-0032
+        // puts at the CONVERSION tier: the setter receives the type's zero and
+        // refuses nothing, so the file loads exactly as `hframes = 5.5` does.
+        // The validator's own tier answers a question this branch has replaced.
+        //
+        // Line, column and code stay the validator's, so the diagnostic keeps
+        // anchoring on the value.
         if (isNilLiteral(value) && !ownsNilMessage(validator)) {
           errors.push({
             ...error,
+            severity: 'warning',
             message:
               `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
               `the type's zero value instead.`,

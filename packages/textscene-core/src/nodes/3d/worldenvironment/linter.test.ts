@@ -316,6 +316,79 @@ environment = SubResource("env_1")
     });
   });
 
+  // `get_configuration_warnings` carries the same first-wins test three times,
+  // one per resource slot (world_environment.cpp:195-205), each fed by its own
+  // group and its own `_update_current_*` (:39-52, :75-105). A node can win one
+  // group and lose another, so the winner is resolved per slot.
+  describe('the camera_attributes and compositor groups', () => {
+    it('warns on the second node to declare camera_attributes', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="CameraAttributesPractical" id="cam_1"]
+[sub_resource type="CameraAttributesPractical" id="cam_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("cam_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("cam_2")
+`,
+        {
+          ruleName: 'single-worldenvironment',
+          severity: 'warning',
+          prop: "'WE2'",
+          contains: ['Only one WorldEnvironment is allowed per scene'],
+        }
+      );
+    });
+
+    it('warns on the second node to declare a compositor', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Compositor" id="c_1"]
+[sub_resource type="Compositor" id="c_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_2")
+`,
+        {
+          ruleName: 'single-worldenvironment',
+          severity: 'warning',
+          prop: "'WE2'",
+          contains: ['Only the first Compositor has an effect'],
+        }
+      );
+    });
+
+    it('resolves each group independently, so an environment-only leader does not claim the rest', () => {
+      // WE1 joins only the environment group, so WE2 is FIRST in the compositor
+      // one and Godot says nothing about its compositor.
+      const diagnostics = lint(`[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Compositor" id="c_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_1")
+`);
+      expect(diagnostics.filter((d) => d.ruleName === 'single-worldenvironment')).toEqual([]);
+    });
+  });
+
   describe('Semantic Validation (Multiple WorldEnvironment)', () => {
     it('should warn when multiple WorldEnvironment nodes exist', () => {
       expectDiagnostic(

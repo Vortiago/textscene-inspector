@@ -1,9 +1,9 @@
 /**
  * Semantic rule for GraphEdit: `zoom_min` authored above `zoom_max`.
  *
- * Advisory (WARNING, never error): each value on its own is a perfectly ordinary
- * float that Godot's parser reads, and neither validator can see the other. What
- * breaks is that the two SETTERS guard against each other:
+ * Error tier (ADR-0032): each value on its own is a perfectly ordinary float
+ * that Godot's parser reads, and neither validator can see the other, but the
+ * two SETTERS refuse each other outright:
  *
  *   void GraphEdit::set_zoom_min(float p_zoom_min) {
  *       ERR_FAIL_COND_MSG(p_zoom_min > zoom_max, "Cannot set min zoom level greater than max zoom level.");

@@ -244,8 +244,12 @@ const flatFamily = indexedFamilyValidator({
  * to a real joint and the write lands. Demanding digits here would push
  * `settings/0/joints/x/twist_amount` down to `flatFamily`, which would report an
  * unknown leaf for a key Godot accepts.
+ *
+ * The leaf is ONE segment and a trailing tail is dropped, because `_set` reads
+ * it with a fixed `get_slicec('/', 4)` (:67) and never looks past it — so
+ * `settings/0/joints/0/twist_amount/extra` reaches the setter as well.
  */
-const JOINT_KEY_RE = /^settings\/([^/]+)\/joints\/([^/]+)\/(.+)$/;
+const JOINT_KEY_RE = /^settings\/([^/]+)\/joints\/([^/]+)\/([^/]+)(?:\/.*)?$/;
 
 /**
  * The negative-index error for an index `to_int` resolves below zero.

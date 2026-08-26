@@ -177,6 +177,19 @@ describe('resolveNodePath', () => {
       });
     });
 
+    // `owned_unique_nodes` is read on the node the walk has REACHED before the
+    // owner's table is consulted (node.cpp:1930-1933). Below an instance that
+    // first table is the sub-scene's own claims, which this file cannot see, so
+    // a hit in the outer table may be shadowed by one we cannot read.
+    it('declines a %name reached THROUGH an instance, whose own claims are elsewhere', () => {
+      const tree = node('Root', [
+        node('Weapon', [], { instance: 'ExtResource("1_gun")' }),
+        node('Sight', [], { properties: { unique_name_in_owner: 'true' } }),
+      ]);
+      const scene = sceneOf(tree);
+      expect(resolveNodePath(scene, tree, 'Weapon/%Sight')).toEqual({ status: 'unknowable' });
+    });
+
     it('continues walking below the unique node', () => {
       const tree = node('Root', [
         node('Rig', [node('Hand')], { properties: { unique_name_in_owner: 'true' } }),

@@ -36,10 +36,10 @@
  *    written ahead of the `_get_property_list`-appended leaves, and
  *    `tabs.resize(p_count)` (tab_bar.cpp:755) keeps the two in step.
  *
- * Both are warnings rather than errors. Each rests on a sibling property whose
- * value the rule reads from an unordered bag, and the engine's response is a
- * dropped write rather than a refused file: the scene still loads, just
- * without the tab state the author wrote.
+ * Both are errors under ADR-0032: the engine refuses the write, either at an
+ * `ERR_FAIL_INDEX` or by dropping it in `PropertyListHelper`. The scene still
+ * loads — the tier is about what the setter does with the value, not about
+ * whether the file parses — so the tab state the author wrote is simply gone.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';

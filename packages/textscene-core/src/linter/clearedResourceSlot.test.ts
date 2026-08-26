@@ -254,6 +254,14 @@ const SLOTS: Slot[] = [
       prop: 'camera_attributes',
       expected: ['warning worldenvironment-requires-environment'],
     },
+    // The third first-wins group. It is NOT in the "neither resource" guard
+    // (world_environment.cpp:187 names only the other two), so a compositor-only
+    // node still carries that warning whether the slot is held or cleared.
+    {
+      type: 'WorldEnvironment',
+      prop: 'compositor',
+      expected: ['warning worldenvironment-requires-environment'],
+    },
   ]),
   ...at('nodes/animation/animationtree/linter.ts', [
     { type: 'AnimationTree', prop: 'tree_root', expected: ['warning animationtree-missing-tree-root'] },

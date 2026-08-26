@@ -337,6 +337,14 @@ describe('joints/<j>/twist_amount', () => {
   it('rejects an unrecognised joint leaf', () => {
     expect(check('settings/0/joints/0/nonsense', '1')?.code).toBe('INVALID_SETTING_KEY');
   });
+
+  it('ignores whatever follows the leaf, which _set never reads', () => {
+    // `prop = path.get_slicec('/', 4)` is `twist_amount` for both spellings
+    // (:66-68), so the deeper one reaches `set_joint_twist_amount` too. The flat
+    // arm reads its leaf at :37 the same way.
+    expect(check('settings/0/joints/0/twist_amount/extra', '0.25')).toBeNull();
+    expect(check('settings/0/root_bone/extra', '3')).toBeNull();
+  });
 });
 
 describe('the derived read-only leaves', () => {

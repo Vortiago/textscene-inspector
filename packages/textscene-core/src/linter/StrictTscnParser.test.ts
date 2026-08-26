@@ -187,5 +187,22 @@ texture_filter = null
       expect(nil!.column).toBe('texture_filter'.length + 3);
       expect(nil!.line).toBe(4);
     });
+
+    it('reports at the CONVERSION tier, which ADR-0032 puts at warning', () => {
+      // The binding narrows the null before the setter runs, so the setter never
+      // refuses anything and the file loads — the same tier `hframes = 5.5`
+      // gets. Reporting it as an error failed `lint:scenes` on a scene Godot
+      // opens without complaint.
+      const content = `[gd_scene load_steps=1 format=3]
+
+[node name="Panel" type="Control"]
+texture_filter = null
+visible = null
+`;
+
+      const nils = parser.parse(content).errors.filter((e) => e.message.includes('cannot hold'));
+      expect(nils).toHaveLength(2);
+      expect(nils.map((e) => e.severity)).toEqual(['warning', 'warning']);
+    });
   });
 });

@@ -42,6 +42,8 @@ export class TscnPreviewPanel {
    * `webviewReady` message.
    */
   private _webviewReady = false;
+  /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
+  private _disposed = false;
   private _pendingLoadContent: string | undefined;
 
   /**
@@ -126,6 +128,13 @@ export class TscnPreviewPanel {
   }
 
   public dispose() {
+    if (this._disposed) return;
+    // Set FIRST: `_onDidDispose` listeners and any load still in flight both
+    // reach `_postMessageToWebview`, and `WebviewPanel.webview` throws
+    // `Webview is disposed` from its getter. `_handleLoadResource` posts from
+    // inside its own try/catch, so the catch re-posts and throws again, escaping
+    // its `void`ed call as an unhandled rejection.
+    this._disposed = true;
     this._onDidDispose.fire();
 
     this._panel.dispose();
@@ -274,6 +283,7 @@ export class TscnPreviewPanel {
   }
 
   private _postMessageToWebview(message: HostToWebviewMessage): void {
+    if (this._disposed) return;
     this._panel.webview.postMessage(message);
   }
 }

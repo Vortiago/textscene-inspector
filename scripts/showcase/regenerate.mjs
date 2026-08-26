@@ -11,7 +11,12 @@
 
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { killPreviewGroup, startPreview, waitForServer } from '../visual/previewServer.mjs';
+import {
+  assertPortFree,
+  killPreviewGroup,
+  startPreview,
+  waitForServer,
+} from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
@@ -24,6 +29,12 @@ function spawnNode(args, env) {
   });
 }
 
+// Before the spawn, never after: `--strictPort` plus `stdio: 'ignore'` means our
+// own server fails silently on a taken port, and `waitForServer` then gets its
+// 200 from the stranger — every .webm, poster and 2D screenshot below would be
+// recorded against a foreign build, exiting 0. Every other `startPreview` caller
+// checks first.
+await assertPortFree(PORT);
 const { proc, baseUrl } = startPreview(PORT);
 let exitCode = 0;
 try {

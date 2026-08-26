@@ -66,6 +66,14 @@ function citeFor(g: string | { min?: string; max?: string } | undefined, end: 'm
   return typeof g === 'string' ? g : g[end];
 }
 
+/** Both ends' citations, in min-then-max order, without the duplicate a shared one makes. */
+function distinctCites(g: string | { min?: string; max?: string } | undefined): string[] {
+  const cites = [citeFor(g, 'min'), citeFor(g, 'max')].filter(
+    (cite): cite is string => cite !== undefined
+  );
+  return [...new Set(cites)];
+}
+
 /**
  * Tag a validator with what it accepts, for the generated `## Linting` table.
  * Exported so a slice with a bespoke validator can describe it too — an
@@ -219,20 +227,19 @@ export function ground(
       ...(hasMax || separate.max ? { max: tierFor('max') } : {}),
     };
   }
-  const enforced = citeFor(opts.enforced, 'min') ?? citeFor(opts.enforced, 'max');
-  const hinted = citeFor(opts.hinted, 'min') ?? citeFor(opts.hinted, 'max');
-  if (enforced) {
-    // BOTH citations when the ends are grounded differently. Recording only the
-    // enforced one discarded the hinted end's `file:line` entirely, so the
-    // citation sweep could never see it and a wrong or malformed second-end
-    // citation was unobservable. `extra_cull_margin` (an enforced floor and a
-    // hinted ceiling) is the live shape.
-    validator.grounding = {
-      kind: 'enforced',
-      cite: hinted && hinted !== enforced ? `${enforced}, ${hinted}` : enforced,
-    };
-  } else if (hinted) {
-    validator.grounding = { kind: 'hinted', cite: hinted };
+  // EVERY distinct citation, across both kinds and both ends. Keeping one per
+  // kind discarded the second end's `file:line` entirely, so the citation sweep
+  // could never see it and a wrong or malformed one was unobservable. Both
+  // shapes are live: `extra_cull_margin` grounds its floor and its ceiling
+  // differently, and `Control.anchors_preset` has a distinct ENFORCED cite per
+  // end (an early return at one line, an `ERR_FAIL_INDEX` at another).
+  const enforced = distinctCites(opts.enforced);
+  const hinted = distinctCites(opts.hinted);
+  if (enforced.length > 0) {
+    const both = [...enforced, ...hinted.filter((cite) => !enforced.includes(cite))];
+    validator.grounding = { kind: 'enforced', cite: both.join(', ') };
+  } else if (hinted.length > 0) {
+    validator.grounding = { kind: 'hinted', cite: hinted.join(', ') };
   }
   // An unbounded numeric combinator rejects only what is not a number, which
   // is the same class of rejection every `shape` makes.

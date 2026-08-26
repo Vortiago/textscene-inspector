@@ -2,6 +2,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { nodePathLiteral } from '../godot/index.js';
+import { uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
  * Narrow a node's `properties` to a string-keyed record before reading raw
@@ -81,6 +82,27 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   for (const matches of byName.values()) Object.freeze(matches);
 
   return { parentOf, byName, underInstanceAncestor, nodesByType };
+}
+
+/**
+ * The `%Name` claim table, built once per tree.
+ *
+ * Every other per-scene fact in this layer already sits behind
+ * `sceneIndexCache`; this one memoised per CALL instead, and
+ * `uniqueNameClaims` joins a path string for every node in the scene. One
+ * `visibility_parent = NodePath("%Rig")` per node then cost O(N) walks and
+ * O(N) string builds each, N times over. Lazy rather than a `SceneIndex`
+ * field, because most scenes carry no `%Name` path at all.
+ */
+const uniqueClaimsCache = new WeakMap<TscnNode[], ReturnType<typeof uniqueNameClaims>>();
+
+export function sceneUniqueClaims(roots: TscnNode[]): ReturnType<typeof uniqueNameClaims> {
+  let claims = uniqueClaimsCache.get(roots);
+  if (!claims) {
+    claims = uniqueNameClaims(roots);
+    uniqueClaimsCache.set(roots, claims);
+  }
+  return claims;
 }
 
 function getSceneIndex(roots: TscnNode[]): SceneIndex {

@@ -230,4 +230,70 @@ describe('indexedFamilyValidator', () => {
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  describe('a trailing segment past the leaf', () => {
+    it('reaches the leaf under a hand-rolled _set, which reads one fixed slice', () => {
+      // `get_slicec('/', 2)` returns `root_bone` for `settings/0/root_bone/extra`
+      // exactly as it does for `settings/0/root_bone`, and the branch below it
+      // calls the setter either way (bone_twist_disperser_3d.cpp:37-40).
+      const leaf = probe();
+      const family = indexedFamilyValidator({
+        prefix: 'settings/',
+        leaves: { root_bone: leaf },
+        unknownCode: 'INVALID_SETTING',
+        describes: 'setting',
+        indexParse: 'to_int',
+      });
+      expect(family('settings/0/root_bone/extra', '1', 3)).toBeNull();
+      expect(leaf.calls).toContain('settings/0/root_bone/extra');
+    });
+
+    it('resolves at the family own leaf depth, not at the first slash', () => {
+      const leaf = probe();
+      const family = indexedFamilyValidator({
+        prefix: 'settings/',
+        leaves: { 'position/enabled': leaf },
+        unknownCode: 'INVALID_SETTING',
+        describes: 'setting',
+        indexParse: 'to_int',
+      });
+      expect(family('settings/0/position/enabled/extra', 'true', 3)).toBeNull();
+      expect(leaf.calls).toContain('settings/0/position/enabled/extra');
+      expect(family('settings/0/position/other', 'true', 3)?.code).toBe('INVALID_SETTING');
+    });
+
+    it('does not swallow the tail of a branch that reads below itself', () => {
+      // `end_bone` is a branch, not a terminal leaf: `_set` reads an option at
+      // slice 3 and returns false for one it does not know
+      // (two_bone_ik_3d.cpp:57-70). The declared `end_bone/direction` beside it
+      // is what says so.
+      const bone = probe();
+      const direction = probe();
+      const family = indexedFamilyValidator({
+        prefix: 'settings/',
+        leaves: { end_bone: bone, 'end_bone/direction': direction },
+        unknownCode: 'INVALID_SETTING',
+        describes: 'setting',
+        indexParse: 'to_int',
+      });
+      expect(family('settings/0/end_bone/not_an_option', '1', 3)?.code).toBe('INVALID_SETTING');
+      expect(family('settings/0/end_bone', '1', 3)).toBeNull();
+      expect(family('settings/0/end_bone/direction/extra', '1', 3)).toBeNull();
+      expect(direction.calls).toContain('settings/0/end_bone/direction/extra');
+    });
+
+    it('stays unknown under the PropertyListHelper parse, which cuts at the last slash', () => {
+      // `rsplit("/", true, 1)` leaves `0/text` as the index text, `is_valid_int`
+      // refuses it and no write lands (property_list_helper.cpp:47-55).
+      const leaf = probe();
+      const family = indexedFamilyValidator({
+        prefix: 'item_',
+        leaves: { text: leaf },
+        unknownCode: 'INVALID_ITEM',
+        describes: 'item',
+      });
+      expect(family('item_0/text/extra', '"hi"', 1)?.code).toBe('INVALID_ITEM');
+      expect(leaf.calls).toHaveLength(0);
+    });
+  });
 });

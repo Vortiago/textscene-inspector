@@ -160,6 +160,19 @@ describe('per-end grounding', () => {
     expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:377');
     expect(split.grounding?.cite).toContain('visual_instance_3d.cpp:602');
   });
+
+  it('keeps both ENFORCED citations too, not just the first', () => {
+    // `Control.anchors_preset` is the live shape: a -1 early return at one line
+    // and an ERR_FAIL_INDEX at another. Dropping the max cite put it outside the
+    // citation sweep, so a wrong or malformed one could never fail.
+    const preset = v.int('anchors_preset', {
+      min: -1,
+      max: 15,
+      enforced: { min: 'control.cpp:983', max: 'control.cpp:1116' },
+    });
+    expect(preset.grounding?.cite).toContain('control.cpp:983');
+    expect(preset.grounding?.cite).toContain('control.cpp:1116');
+  });
 });
 
 describe('an end no value can reach reports at the setter\'s tier', () => {

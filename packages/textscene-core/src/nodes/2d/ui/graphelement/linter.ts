@@ -2,10 +2,10 @@
  * Semantic rule for GraphElement — `selected = true` authored alongside
  * `selectable = false`.
  *
- * Advisory (WARNING, never error): both values are individually legal Godot,
- * but `scene/gui/graph_element.cpp`'s `set_selectable` forces the element out
- * of selection whenever it is made unselectable, regardless of which property
- * the deserializer applies first:
+ * Error tier (ADR-0032): both values are individually legal Godot, but
+ * `scene/gui/graph_element.cpp`'s `set_selectable` ALTERS one of them — it
+ * forces the element out of selection whenever it is made unselectable,
+ * regardless of which property the deserializer applies first:
  *
  *   void GraphElement::set_selectable(bool p_selectable) {
  *       if (!p_selectable) {

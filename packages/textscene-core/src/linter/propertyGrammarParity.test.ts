@@ -315,22 +315,14 @@ describe('property-grammar parity guard', () => {
   });
 
   // The render-gap surface is the previewer's honest to-do list, so it gets a
-  // number rather than a pile. Exact equality, not a ceiling: this list should
-  // only move when someone deliberately adds a slice or closes a gap, and
-  // either way the diff should say so out loud.
-  // +9 on Light3D, then +38 across Label3D, Line2D, Polygon2D, GridMap, both
-  // NavigationRegions, TileMapLayer, Sprite2D and Path3D.
+  // number rather than a pile. Exact equality, not a ceiling: it moves only when
+  // someone deliberately adds a slice or closes a gap, and either way the diff
+  // should say which.
   //
-  // None of these are new gaps. The previewer never read any of them; they
-  // became VISIBLE only once validators existed for the properties, because
-  // this guard can only ask "should the renderer be reading this?" about a key
-  // one side already declares. The engine-property sweep that added those
-  // validators is what surfaced them, so the number rising here is the
-  // to-do list becoming honest rather than growing.
-  // +47 from the second engine-property wave: Viewport 32, Control 5,
-  // CanvasLayer 5, Camera3D 3, WorldEnvironment 1, Node3D 1. Same character as
-  // the +38 before them, and Viewport dominates because a viewport IS the
-  // image-forming settings, so nearly everything it declares is a real gap.
+  // A rise is usually the list becoming honest rather than growing. This guard
+  // can only ask "should the renderer be reading this?" about a key one side
+  // already declares, so a key the previewer never read becomes VISIBLE the
+  // moment a validator exists for it.
   const EXPECTED_RENDER_GAP_KEYS = 142;
 
   it('the render-gap surface matches its recorded size', () => {
@@ -358,17 +350,13 @@ describe('property-grammar parity guard', () => {
    * new slices are symmetric" when it actually means "they were never examined".
    * A wave that adds ten base-reusing slices now moves a number and must say so.
    *
-   * Closing it means keying the population on `linterParser.ts` alone and
-   * resolving the parser side through `getInheritedParserProps`. The blocker is
-   * NOT the lookup table: walking `NODE_BASE_TYPES` for every slice in this set
-   * shows only nine distinct ancestors cover all of them, and the table above now
-   * has all nine, so nothing would over-report for want of a hop.
-   *
-   * What remains is real but is classification work, not plumbing: admitting the
-   * whole set at once surfaces every asymmetry it was never asked about, and each
-   * one needs the honest `linterOnly` vs `renderGap` call that only a reading of
-   * the property can give. That is the piece of work, and it wants its own pass
-   * rather than being smuggled into a wave.
+   * Widening the population wholesale is not the answer. For a transform-only
+   * type Godot draws nothing, and for a `pending` one the whole type is a single
+   * declared gap `renderIntent` already carries, so the per-key "should the
+   * renderer read this?" question has nothing to answer on either — it would add
+   * one allowlist row per key saying what `renderIntent` says once. Where the
+   * question does have an answer and the slice reuses a family parser, the fix is
+   * a hop in `BASE_TYPE_TO_PARSER_SUBPATH`, not a wider population.
    */
   // Both are ratchets, not derived: computing either side would make the
   // assertion below compare a number to itself. Moving one is a deliberate act

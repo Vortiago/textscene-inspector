@@ -13,16 +13,42 @@ import { checkResourceExists, heldResource } from '../../../linter/resourceCheck
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
 
-/** `environment.is_valid()`, the gate on joining the group (world_environment.cpp:39). */
-function declaresEnvironment(node: TscnNode): boolean {
-  return isValidProperties(node.properties) && heldResource(node.properties.environment) !== undefined;
+/**
+ * The three first-wins groups a WorldEnvironment can join, one per resource
+ * slot. `_notification` gates each `add_to_group` on that slot's own
+ * `is_valid()` (world_environment.cpp:39-52), each `_update_current_*` takes
+ * `get_first_node_in_group` for its group alone (:75-105), and
+ * `get_configuration_warnings` carries the matching test three times
+ * (:195-205). The winners are therefore independent: a node can win the
+ * Environment group and still be ignored for its Compositor.
+ *
+ * `says` is the engine's own sentence for that slot, trimmed of the
+ * "(or set of instantiated scenes)" clause this file cannot see across.
+ */
+const FIRST_WINS_SLOTS = ['environment', 'camera_attributes', 'compositor'] as const;
+
+/**
+ * The engine's own sentence per slot, trimmed of the "(or set of instantiated
+ * scenes)" clause this file cannot see across. A `Record` over the slot union,
+ * so a slot added above without a sentence is a type error rather than an
+ * undefined tail.
+ */
+const GROUP_WARNING: Record<(typeof FIRST_WINS_SLOTS)[number], string> = {
+  environment: 'Only the first Environment has an effect.',
+  camera_attributes: 'Only one WorldEnvironment is allowed per scene.',
+  compositor: 'Only the first Compositor has an effect.',
+};
+
+/** `<slot>.is_valid()`, the gate on joining that slot's group (world_environment.cpp:39-52). */
+function declaresSlot(node: TscnNode, key: string): boolean {
+  return isValidProperties(node.properties) && heldResource(node.properties[key]) !== undefined;
 }
 
 /**
  * `Ref` identity, spelled the way two references to one resource compare equal.
  * Takes the HELD reference, so the empty-slot question is asked once per slot.
  */
-function environmentId(held: string | undefined): string | undefined {
+function resourceRefId(held: string | undefined): string | undefined {
   if (held === undefined) return undefined;
   const parsed = parseResourceReference(held);
   return parsed ? `${parsed.type}:${parsed.id}` : held;
@@ -120,12 +146,12 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // world_environment.cpp:195 warns when `environment.is_valid() &&
-  // get_viewport()->find_world_3d()->get_environment() != environment`, and the
-  // world's environment is whatever `_update_current_environment` (:76-80) took
-  // from `get_first_node_in_group`. That winner is not a live-tree fact: the group
-  // is sorted in tree order (scene_tree.cpp:333-347 with node.h:132-134), so it is
-  // the first WorldEnvironment in the file.
+  // world_environment.cpp:195-205 warns when `<slot>.is_valid()` and the world's
+  // held resource for that slot is not this node's, and the world took it from
+  // `get_first_node_in_group` (:75-105). That winner is not a live-tree fact:
+  // the group is sorted in tree order (scene_tree.cpp:333-347 with
+  // node.h:132-134), so it is the first WorldEnvironment in the file that joins
+  // THAT group.
   //
   // Two consequences the old count-based form got wrong, both silent-in-Godot:
   // the winner itself compares equal and is never warned about, and the test is
@@ -133,9 +159,9 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // and neither warns.
   //
   // First means first node that JOINS the group, and `add_to_group` is gated on
-  // `environment.is_valid()` (:39-40) — a leading WorldEnvironment carrying only
-  // `camera_attributes` never enters it, so the next one along is the winner and
-  // Godot says nothing about it.
+  // that slot's own `is_valid()` — a leading WorldEnvironment carrying only
+  // `camera_attributes` never enters the environment group, so the next one
+  // along wins it and Godot says nothing about that one.
   //
   // The comparison is by resource ID, not by the raw text: `!=` on a `Ref` is
   // instance identity, and `SubResource("e")` and `SubResource( "e" )` are the
@@ -146,18 +172,18 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // also carries the World3D scenario id, so a WorldEnvironment inside a
   // SubViewport with `own_world_3d` is first in its own group; that scoping is
   // not modelled.
-  const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', declaresEnvironment);
-  const winningId = first && isValidProperties(first.properties)
-    ? environmentId(heldResource(first.properties.environment))
-    : undefined;
-  if (
-    environment !== undefined &&
-    node !== first &&
-    environmentId(environment) !== winningId
-  ) {
+  for (const key of FIRST_WINS_SLOTS) {
+    const held = heldResource(rawProps[key]);
+    if (held === undefined) continue;
+    const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', (n) => declaresSlot(n, key));
+    if (node === first) continue;
+    const winningId = first && isValidProperties(first.properties)
+      ? resourceRefId(heldResource(first.properties[key]))
+      : undefined;
+    if (resourceRefId(held) === winningId) continue;
     diagnostics.push({
       severity: 'warning',
-      message: `WorldEnvironment '${node.name}' is not the first in the scene, and its 'environment' is not the one the first declares, so Godot ignores it. Only the first Environment has an effect.`,
+      message: `WorldEnvironment '${node.name}' is not the first in the scene to declare '${key}', and the resource it names is not the one that first node declares, so Godot ignores it. ${GROUP_WARNING[key]}`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'single-worldenvironment',

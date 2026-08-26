@@ -167,6 +167,49 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
     propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
+  /**
+   * The leaf names whose branch reads a segment BELOW itself, taken from the
+   * declared leaves: `end_bone` is one because `end_bone/direction` is declared
+   * beside it. Such a branch has its own `else { return false; }` for an option
+   * it does not know (two_bone_ik_3d.cpp:69), so it does not swallow a tail —
+   * only a terminal branch does.
+   */
+  const readsDeeper = new Set<string>();
+  for (const name of Object.keys(leaves)) {
+    for (let cut = name.indexOf('/'); cut >= 0; cut = name.indexOf('/', cut + 1)) {
+      readsDeeper.add(name.slice(0, cut));
+    }
+  }
+
+  /**
+   * The declared leaf a HAND-ROLLED `_set` reaches for, which is not always the
+   * whole remainder.
+   *
+   * `get_slicec('/', n)` reads one segment at a fixed depth and ignores whatever
+   * follows, so `settings/0/root_bone/extra` calls `set_root_bone` exactly as
+   * `settings/0/root_bone` does (bone_twist_disperser_3d.cpp:37-40). Cutting
+   * from the RIGHT rather than at the first `/` is what keeps the classes whose
+   * leaf is itself two segments resolving at their own depth
+   * (`settings/<i>/<where>/<what>`, convert_transform_modifier_3d.cpp:37-40).
+   *
+   * `PropertyListHelper` cuts at the LAST `/` instead
+   * (property_list_helper.cpp:47), so there the trailing segment lands in the
+   * index text, fails `is_valid_int` and no write happens — that family keeps
+   * the whole remainder and reports it unknown.
+   */
+  const declaredLeaf = (leafName: string): string => {
+    if (Object.prototype.hasOwnProperty.call(leaves, leafName)) return leafName;
+    let candidate = leafName;
+    for (;;) {
+      const cut = candidate.lastIndexOf('/');
+      if (cut < 0) return leafName;
+      candidate = candidate.slice(0, cut);
+      if (Object.prototype.hasOwnProperty.call(leaves, candidate) && !readsDeeper.has(candidate)) {
+        return candidate;
+      }
+    }
+  };
+
   const validator = accepts((key, value, line) => {
     // The FIRST `/` past the prefix, so a leaf may itself contain one. The last
     // `/` would swallow `apply` into the index and `settings/0/apply/axis` would
@@ -200,8 +243,9 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
 
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.
-    if (!Object.prototype.hasOwnProperty.call(leaves, leafName)) return unknown(key, line);
-    const leaf = leaves[leafName];
+    const resolved = gatesOnValidInt ? leafName : declaredLeaf(leafName);
+    if (!Object.prototype.hasOwnProperty.call(leaves, resolved)) return unknown(key, line);
+    const leaf = leaves[resolved];
     if (!leaf) return unknown(key, line);
     return leaf(key, value, line);
   }, opts.accepts ?? describes);

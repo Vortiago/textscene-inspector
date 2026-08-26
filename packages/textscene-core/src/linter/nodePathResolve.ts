@@ -45,9 +45,9 @@
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
-import { isUnderInstance } from './linterUtils.js';
+import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
-import { UNIQUE_NODE_PREFIX, uniqueNameClaims } from '../utils/uniqueNames.js';
+import { UNIQUE_NODE_PREFIX } from '../utils/uniqueNames.js';
 
 /**
  * What resolving a NodePath against the authored tree can say.
@@ -103,7 +103,6 @@ export function resolveNodePath(
   const segments = nameSegments(path);
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
-  let uniques: ReturnType<typeof uniqueNameClaims> | null = null;
   let current: TscnNode = referencingNode;
 
   for (const name of segments) {
@@ -125,14 +124,15 @@ export function resolveNodePath(
     }
 
     if (name.startsWith(UNIQUE_NODE_PREFIX)) {
-      uniques ??= uniqueNameClaims(scene.nodes);
-      const claimed = uniques.get(name);
       // The claim table is built from THIS file's headings only, and
-      // `owned_unique_nodes` belongs to the node the walk has reached
-      // (`node.cpp:1930-1933`) — so a sub-scene root owns unique names declared
-      // in another file. A miss there is our blindness, exactly as a child miss
-      // below is, not the engine's null. (:1935-1937)
-      if (!claimed) return isTypeUnknowable(current) ? UNKNOWABLE : MISSING;
+      // `owned_unique_nodes` belongs to the node the walk has REACHED, read
+      // before the owner's table (`node.cpp:1930-1933`) — so a sub-scene root
+      // owns unique names declared in another file, and they win. Reaching an
+      // opaque node makes both answers our blindness: a miss may be a name that
+      // file claims, and a HIT may be shadowed by one. (:1935-1937)
+      if (isTypeUnknowable(current)) return UNKNOWABLE;
+      const claimed = sceneUniqueClaims(scene.nodes).get(name);
+      if (!claimed) return MISSING;
       current = claimed.node;
       continue;
     }
