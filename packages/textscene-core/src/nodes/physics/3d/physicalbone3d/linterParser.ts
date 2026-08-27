@@ -25,7 +25,7 @@
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 // physical_bone_3d.cpp:891, 913-918 — 6 BIND_ENUM_CONSTANT (JOINT_TYPE_NONE..JOINT_TYPE_6DOF)
@@ -194,7 +194,7 @@ const jointConstraintsValidator: PropertyValidator = accepts((key, value, line) 
     ? JOINT_CONSTRAINT_LEAVES[leafName]
     : undefined;
   if (!leaf) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Unknown joint constraint property: "${key}"`,

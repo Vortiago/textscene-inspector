@@ -65,6 +65,20 @@ export interface ParseError {
   column: number;
   /** Machine-readable error code */
   code: string;
+  /**
+   * True when this refusal is about the KEY rather than the value it was handed
+   * — an unrecognised leaf name, a shape `_set` cannot resolve, a negative
+   * index — so every value fails it, `null` included.
+   *
+   * `PropertyValidator.keyVerdict` answers the same question for a validator
+   * whose EVERY verdict is key-level. A family dispatcher cannot carry that
+   * flag: its leaf branches really do read a value, and only the branch that
+   * produced this error knows which kind it made. The strict parser's nil
+   * rewrite reads both, because "this slot stores the type's zero instead"
+   * describes a slot the class does not have and replaces the refusal's own
+   * reason and tier with it.
+   */
+  keyVerdict?: true;
 }
 
 /**

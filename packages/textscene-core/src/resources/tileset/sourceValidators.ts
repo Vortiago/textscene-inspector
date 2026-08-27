@@ -9,12 +9,12 @@
  * terminal position instead.
  */
 
-import { accepts, propertyError, v } from '../../linter/validators/index.js';
+import { accepts, keyShapeError, propertyError, v } from '../../linter/validators/index.js';
 import { dropTrailingComma, indexedKeyRegex, isNilLiteral, splitTopLevel } from '../../godot/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
 const unknownKey = (key: string, line: number, describes: string, code: string) =>
-  propertyError(key, line, `Unknown TileSet ${describes} property: "${key}"`, code);
+  keyShapeError(key, line, `Unknown TileSet ${describes} property: "${key}"`, code);
 
 /**
  * A resource slot whose `add_*` method opens with an `ERR_FAIL_COND_V(…
@@ -69,7 +69,7 @@ export const sourceValidator: PropertyValidator = accepts((key, value, line) => 
   if (!match) return unknownKey(key, line, 'source', 'INVALID_TILESET_SOURCE_KEY');
   const id = Number(match[1]);
   if (id === -1) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       'Source id -1 is TileSet::INVALID_SOURCE, so add_source re-seats the source at the ' +
@@ -78,7 +78,7 @@ export const sourceValidator: PropertyValidator = accepts((key, value, line) => 
     );
   }
   if (id < 0) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Source id ${id} must be non-negative: add_source fails ` +
@@ -112,7 +112,7 @@ export const patternValidator: PropertyValidator = accepts((key, value, line) =>
   if (!match) return unknownKey(key, line, 'pattern', 'INVALID_TILESET_PATTERN_KEY');
   const index = Number(match[1]);
   if (index < 0) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Pattern index ${index} must be non-negative: TileSet::_set fills patterns with ` +

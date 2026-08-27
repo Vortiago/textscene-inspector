@@ -45,7 +45,7 @@
 
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 import { toIntIndex } from '../../../../godot/index.js';
@@ -169,7 +169,7 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
 
   const index = toIntIndex(rest.slice(0, slash));
   if (index < 0) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`,

@@ -63,7 +63,7 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 import { toIntIndex } from '../../../../godot/index.js';
 
@@ -269,7 +269,7 @@ function negativeIndexError(
   code: string
 ) {
   const index = toIntIndex(indexText);
-  if (index < 0) return propertyError(key, line, message(index), code);
+  if (index < 0) return keyShapeError(key, line, message(index), code);
   return null;
 }
 
@@ -283,7 +283,7 @@ const settingValidator = accepts((key, value, line) => {
   if (!match) return flatFamily(key, value, line);
 
   const unknown = () =>
-    propertyError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
+    keyShapeError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
 
   const negativeSetting = negativeIndexError(
     match[1] ?? '',

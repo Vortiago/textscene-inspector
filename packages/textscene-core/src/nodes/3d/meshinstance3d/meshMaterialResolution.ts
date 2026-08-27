@@ -76,6 +76,51 @@ export function resolveMaterialSubResources(
   return result;
 }
 
+/**
+ * Where an ArrayMesh surface's material comes from: the scene's own
+ * `[sub_resource]`, or a `res://` path the pipeline loads.
+ *
+ * The two channels `ArrayMeshSurfaces` already renders through, named so
+ * `material_override` can fill either one for every surface at once.
+ */
+export interface MaterialSlotSource {
+  /** A StandardMaterial3D declared in this scene, already resolved. */
+  readonly subResource?: TscnInternalResource;
+  /** A `res://` path to an external material `.tres`. */
+  readonly path?: string;
+}
+
+/**
+ * `material_override` as a slot source, or `null` when it names nothing this
+ * previewer can draw.
+ *
+ * `resolveMaterialSubResources` above answers the same question for a PRIMITIVE
+ * mesh, whose surface count comes off the override map. An ArrayMesh's surfaces
+ * come from the decoded mesh instead, so its material slots are built in
+ * `ArrayMeshSurfaces` and need the override in the shape that renderer takes —
+ * otherwise `material_override` reached only the primitive branch and an
+ * ArrayMesh kept drawing its own per-surface materials, which is the one
+ * precedence `render_forward_clustered.cpp:4206` puts it ahead of.
+ *
+ * `null` for an unresolvable reference, deliberately: an `ExtResource` this
+ * scene never declares is an invalid `Ref` to Godot too, and an invalid
+ * override is no override — the surfaces keep their own materials rather than
+ * all turning default white.
+ */
+export function resolveMaterialOverrideSource(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[],
+  externalResources: readonly TscnExternalResource[]
+): MaterialSlotSource | null {
+  if (!ref) return null;
+  const subResource = resolveStandardMaterial(ref, internalResources);
+  if (subResource) return { subResource };
+  const parsed = parseResourceReference(ref);
+  if (parsed?.type !== 'ExtResource') return null;
+  const path = externalResources.find((r) => r.id === parsed.id)?.path;
+  return path ? { path } : null;
+}
+
 function findMeshOwnMaterial(
   meshRef: string | undefined,
   internalResources: readonly TscnInternalResource[]

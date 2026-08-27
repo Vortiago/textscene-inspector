@@ -61,7 +61,7 @@
  * a helper that owned the citation would blind that check everywhere at once.
  */
 
-import { propertyError } from './propertyError.js';
+import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { IS_VALID_INT_RE, toIntIndex, type IndexParse } from '../../godot/index.js';
@@ -165,7 +165,7 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   // forty of them per setting, so a closure and a RegExp object per call are
   // paid on the success path too. One closure per registered family instead.
   const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
-    propertyError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
+    keyShapeError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
 
   /**
    * The leaf names whose branch reads a segment BELOW itself, taken from the
@@ -233,7 +233,7 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
       // Godot refuses to RESOLVE a negative index under either parse, so
       // `_set` treats the key as unrecognised and the write never lands.
       if (!negativeIndex) return unknown(key, line);
-      return propertyError(key, line, negativeIndex.message(index), negativeIndex.code);
+      return keyShapeError(key, line, negativeIndex.message(index), negativeIndex.code);
     }
     // A non-negative index resolves to SOME setting and the write lands, so the
     // leaf below is the only thing left that Godot can refuse. A magnitude past

@@ -41,6 +41,7 @@ import { SecondarySurfaceMaterial } from './SecondarySurfaceMaterial';
 import { shadowCastingFlags } from './meshShadowFlags';
 import {
   resolveExtArrayMeshPath,
+  resolveMaterialOverrideSource,
   resolveMaterialSubResources,
   resolveMeshSubResource,
 } from './meshMaterialResolution';
@@ -89,6 +90,20 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties, internalResources]
   );
   const materialSubResource = materialSubResources[0] ?? undefined;
+
+  // The same override, in the shape the ArrayMesh branches render through:
+  // their surfaces come off the decoded mesh, not off the override map above,
+  // so without this `material_override` reached the primitive branch alone and
+  // an ArrayMesh kept drawing its own per-surface materials.
+  const materialOverride = useMemo(
+    () =>
+      resolveMaterialOverrideSource(
+        properties.materialOverride,
+        internalResources,
+        externalResources
+      ),
+    [properties.materialOverride, internalResources, externalResources]
+  );
 
   const materialScalars = useMemo(
     () =>
@@ -176,7 +191,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
     return (
       <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces mesh={arrayMeshResult.value} shadowSide={shadowFlags.shadowSide} />
+        <ArrayMeshSurfaces
+          mesh={arrayMeshResult.value}
+          shadowSide={shadowFlags.shadowSide}
+          override={materialOverride}
+        />
       </MeshShell>
     );
   }
@@ -193,6 +212,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
             mesh={sceneArrayMesh.resource}
             sceneMaterials={sceneArrayMesh.sceneMaterials}
             shadowSide={shadowFlags.shadowSide}
+            override={materialOverride}
           />
         ) : (
           UNRESOLVED_MESH

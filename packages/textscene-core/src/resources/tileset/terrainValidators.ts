@@ -9,7 +9,7 @@
  */
 
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
-import { accepts, propertyError, v } from '../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../linter/validators/index.js';
 import { indexedKeyRegex } from '../../godot/index.js';
 import { terrainColor } from './terrainColor.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
@@ -93,7 +93,7 @@ export const terrainSetValidator: PropertyValidator = accepts((key, value, line)
   // (:3896 against :3904), so the outer guard is the one that reports.
   const setIndex = Number(nested[1]);
   if (setIndex < 0) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       negativeTerrainSet(setIndex),
@@ -102,7 +102,7 @@ export const terrainSetValidator: PropertyValidator = accepts((key, value, line)
   }
   const terrainIndex = Number(nested[2]);
   if (terrainIndex < 0) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Terrain index ${terrainIndex} must be non-negative. TileSet::_set fails ` +
@@ -114,7 +114,7 @@ export const terrainSetValidator: PropertyValidator = accepts((key, value, line)
 
   const leafName = nested[3]!;
   if (!Object.prototype.hasOwnProperty.call(TERRAIN_LEAVES, leafName)) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Unknown TileSet terrain property: "${key}"`,

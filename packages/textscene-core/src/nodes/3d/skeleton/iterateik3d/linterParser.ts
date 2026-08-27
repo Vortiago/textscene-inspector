@@ -20,7 +20,7 @@
 import '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { propertyError } from '../../../../linter/validators/propertyError.js';
+import { keyShapeError } from '../../../../linter/validators/propertyError.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
 import {
   ROTATION_AXIS,
@@ -126,7 +126,7 @@ const settingsValidator = accepts((key, value, line) => {
       // setting index below already covers what `_set` refuses uniformly.
       const settingIndex = toIntIndex(joint[1]!);
       if (settingIndex < 0) {
-        return propertyError(
+        return keyShapeError(
           key,
           line,
           negativeSettingIndex(settingIndex),

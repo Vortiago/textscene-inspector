@@ -55,9 +55,16 @@ export interface HeaderFormat {
  * a caller asking about the file.
  */
 export function readHeaderFormat(content: string): HeaderFormat | null {
-  const lines = content.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i]!.trim();
+  // Walked with `indexOf`, not `split('\n')`: this runs before the parser's own
+  // scan of the same text and always answers on the FIRST non-blank line, so
+  // splitting the whole file allocated an array of every line in it to read the
+  // leading comment run.
+  let at = 0;
+  for (let line = 1; at < content.length; line++) {
+    const newline = content.indexOf('\n', at);
+    const end = newline === -1 ? content.length : newline;
+    const trimmed = content.slice(at, end).trim();
+    at = end + 1;
     if (trimmed === '' || trimmed.startsWith(';')) continue;
 
     const heading = parseHeading(trimmed);
@@ -68,7 +75,7 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
     // declare an empty attribute the oldest format there is. Unreadable text
     // falls through to a normal lint, matching the parser's own leniency.
     const format = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : null;
-    return { format, line: i + 1 };
+    return { format, line };
   }
   return null;
 }

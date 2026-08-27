@@ -41,8 +41,14 @@ export function activate(context: vscode.ExtensionContext) {
     // holds. The active editor is the fallback for the palette entry, which
     // passes nothing.
     vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
-      const target = resource ?? vscode.window.activeTextEditor?.document.uri;
-      if (target?.fsPath.endsWith('.tscn')) {
+      // `resource` is whatever VS Code hands the handler, which the signature
+      // describes rather than enforces: a menu that passes something other than
+      // a URI would make the bare `resource.fsPath` below throw out of the
+      // command. Anything without one falls back to the active editor, the same
+      // path the palette entry takes.
+      const clicked = typeof resource?.fsPath === 'string' ? resource : undefined;
+      const target = clicked ?? vscode.window.activeTextEditor?.document.uri;
+      if (target?.fsPath?.endsWith('.tscn')) {
         getOrCreatePanel(target);
       } else {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');

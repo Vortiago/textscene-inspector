@@ -13,7 +13,7 @@
 // without this line just the full barrel ever registers it.
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, propertyError } from '../../../linter/validators/index.js';
+import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
 import { indexedKeyRegex, parseGodotInt, toIntIndex, toUint32 } from '../../../godot/index.js';
 import { BONE_LEAVES } from './boneLeaves.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
@@ -76,7 +76,7 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // skeleton_3d.cpp:135: the chain closes `} else { return false; }`, so a leaf
   // with no arm is a write Godot silently drops.
   if (!Object.prototype.hasOwnProperty.call(BONE_LEAVES, what)) {
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Unknown bone property: "${key}". Skeleton3D has no "${what}" bone property, so Godot drops the write.`,

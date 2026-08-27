@@ -204,5 +204,42 @@ visible = null
       expect(nils).toHaveLength(2);
       expect(nils.map((e) => e.severity)).toEqual(['warning', 'warning']);
     });
+
+    // A key-shape refusal describes a key the class does not have, so "this
+    // slot stores the type's zero instead" names a slot that does not exist —
+    // the same reason `keyVerdict` exempts a removal. A family dispatcher
+    // cannot carry that flag on the whole validator, because its LEAF branches
+    // really do read a value, so the refusal itself says so.
+    describe('leaves a key-shape refusal alone', () => {
+      const parseOne = (type: string, key: string, value: string) =>
+        parser.parse(
+          `[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node3D"]\n\n` +
+            `[node name="N" type="${type}" parent="."]\n${key} = ${value}\n`
+        ).errors;
+
+      it('keeps the unknown-key error on a glued-index family', () => {
+        const [written] = parseOne('ItemList', 'item_0/bogus', '"x"');
+        const [asNil] = parseOne('ItemList', 'item_0/bogus', 'null');
+        expect(written!.message).toMatch(/^Unknown item_/);
+        expect(asNil!.message).toBe(written!.message);
+        expect(asNil!.severity).toBe('error');
+      });
+
+      it('keeps the unknown-key error on a hand-rolled nested family', () => {
+        const [written] = parseOne('SpringBoneSimulator3D', 'settings/0/joints/0/bogus', '"x"');
+        const [asNil] = parseOne('SpringBoneSimulator3D', 'settings/0/joints/0/bogus', 'null');
+        expect(written!.message).toContain('Unknown SpringBoneSimulator3D joint property');
+        expect(asNil!.message).toBe(written!.message);
+        expect(asNil!.severity).toBe('error');
+      });
+
+      it('keeps the negative-index refusal', () => {
+        const [written] = parseOne('FileDialog', 'option_-1/name', '"x"');
+        const [asNil] = parseOne('FileDialog', 'option_-1/name', 'null');
+        expect(written!.message).toContain('must be non-negative');
+        expect(asNil!.message).toBe(written!.message);
+        expect(asNil!.severity).toBe('error');
+      });
+    });
   });
 });

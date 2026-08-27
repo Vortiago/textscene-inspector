@@ -5,7 +5,7 @@
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 import { JOINT_LEAVES } from './jointLeaves.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
@@ -67,7 +67,7 @@ const COLLISION_KEY = indexedKeyRegex(
 function negativeIndexError(indexText: string, key: string, line: number) {
   const index = toIntIndex(indexText);
   if (index < 0) {
-    return propertyError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');
+    return keyShapeError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');
   }
   return null;
 }
@@ -104,7 +104,7 @@ export const settingsValidator: PropertyValidator = accepts((key, value, line) =
     if (Object.prototype.hasOwnProperty.call(JOINT_LEAVES, leafName)) {
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
-    return propertyError(
+    return keyShapeError(
       key,
       line,
       `Unknown SpringBoneSimulator3D joint property: "${key}". _set has no case for ` +

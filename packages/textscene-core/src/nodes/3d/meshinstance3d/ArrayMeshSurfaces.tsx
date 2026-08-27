@@ -12,6 +12,7 @@ import { parseStandardMaterial3DScalars } from '../../../resources/materials/sta
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
+import type { MaterialSlotSource } from './meshMaterialResolution';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { warn } from '../../../logger';
 
@@ -28,6 +29,7 @@ export function ArrayMeshSurfaces({
   mesh,
   shadowSide,
   sceneMaterials,
+  override,
 }: {
   mesh: ArrayMeshResource;
   shadowSide: THREE.Side | undefined;
@@ -37,6 +39,20 @@ export function ArrayMeshSurfaces({
    * rather than through the pipeline.
    */
   sceneMaterials?: readonly (TscnInternalResource | undefined)[];
+  /**
+   * The node's `material_override`, already resolved, or null when it names
+   * none.
+   *
+   * It replaces the material on EVERY surface:
+   * `_geometry_instance_add_surface` takes `material_override` ahead of the
+   * material it was handed (`render_forward_clustered.cpp:4206`), and that
+   * caller had already chosen the surface's own
+   * (`render_forward_clustered.cpp:4267`). The mesh's per-surface materials are
+   * therefore reachable only while the override is unset — which is the whole
+   * of what this prop expresses, and what the primitive branch's
+   * `resolveMaterialSubResources` says for a mesh with no surfaces of its own.
+   */
+  override?: MaterialSlotSource | null;
 }) {
   const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
   const multiSurface = surfacePaths.length > 1;
@@ -45,7 +61,8 @@ export function ArrayMeshSurfaces({
       <primitive object={mesh.geometry} attach="geometry" />
       {surfacePaths.map((path, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        const scene = sceneMaterials?.[i];
+        const scene = override ? override.subResource : sceneMaterials?.[i];
+        const slotPath = override ? (override.path ?? null) : path;
         // A scene-local material is already in hand; only a PATH needs the pipeline.
         return scene ? (
           <StandardMaterialSlot
@@ -57,7 +74,7 @@ export function ArrayMeshSurfaces({
         ) : (
           <ExternalMaterialSlot
             key={`surf-${i}`}
-            path={path}
+            path={slotPath}
             attach={attach}
             shadowSide={shadowSide}
           />

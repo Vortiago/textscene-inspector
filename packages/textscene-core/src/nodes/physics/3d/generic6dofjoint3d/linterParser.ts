@@ -39,7 +39,7 @@
 
 import '../../joints/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 // generic_6dof_joint_3d.cpp:52-73 — ADD_GROUP("Linear Limit", "linear_limit_"),
@@ -197,7 +197,7 @@ function groupValidator(
     // and get called as a validator. The key is text the `.tscn` chooses.
     const leaf = Object.hasOwn(leaves, leafName) ? leaves[leafName] : undefined;
     if (!leaf) {
-      return propertyError(key, line, `Unknown ${groupLabel} property: "${key}"`, unknownCode);
+      return keyShapeError(key, line, `Unknown ${groupLabel} property: "${key}"`, unknownCode);
     }
     return leaf(key, value, line);
   }, `${groupLabel} parameter (see generic_6dof_joint_3d.cpp _bind_methods)`);
