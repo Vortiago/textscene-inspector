@@ -1713,8 +1713,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Material Override",
+    "file": "unit-arraymesh-material-override.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Own Material",
     "file": "unit-arraymesh-own-material.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Arraymesh Scene Material Override",
+    "file": "unit-arraymesh-scene-material-override.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

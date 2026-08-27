@@ -88,6 +88,21 @@ export const GEOMETRY_SCENES = [
   // one's material is the ExtResource control, so a regression turns only the
   // RIGHT plate white.
   { name: 'arraymesh-own-material', file: 'unit-arraymesh-own-material.tscn' },
+  // `material_override` over an ArrayMesh, one golden per mesh SOURCE — the
+  // external `.tres` decoded by the resource pipeline, and a
+  // `[sub_resource type="ArrayMesh"]` decoded straight from the scene. They live
+  // in the ArrayMesh chapter rather than beside `material-override` because the
+  // mesh source IS the variable: that golden and `surface-material-override` both
+  // drive a primitive BoxMesh, whose material slots are built from the override
+  // map itself, so neither can see an ArrayMesh whose slots come off the decoded
+  // surfaces instead. Each scene carries its own un-overridden control instance,
+  // and the override must reach EVERY surface, so a half-coloured right instance
+  // fails as loudly as an uncoloured one.
+  { name: 'arraymesh-material-override', file: 'unit-arraymesh-material-override.tscn' },
+  {
+    name: 'arraymesh-scene-material-override',
+    file: 'unit-arraymesh-scene-material-override.tscn',
+  },
   { name: 'grid-map', file: 'unit-grid-map.tscn' },
   // `grid-map` above is GridMap-ONLY, so the camera auto-fit reframes any
   // uniform shift of the whole grid into an identical image — it cannot see a

@@ -1,0 +1,79 @@
+; ONE VARIABLE: `material_override` on a MeshInstance3D whose mesh is a
+; `[sub_resource type="ArrayMesh"]` of the SCENE — the second of the two
+; ArrayMesh sources, decoded straight from the `.tscn` with no file and no
+; resource pipeline behind it. Its twin fixture unit-arraymesh-material-override
+; drives the external `.tres` source, and the override arrives there as a scene
+; sub-resource; here it arrives as an ExtResource PATH, so the pair covers both
+; mesh sources and both forms the override itself can take.
+;
+; The surfaces are the same two blue plates the sibling ArrayMesh fixtures use,
+; inlined. The LEFT instance keeps them. The RIGHT instance adds
+; `material_override`, which replaces the material on EVERY surface
+; (render_forward_clustered.cpp:4206) — both of its plates must read orange.
+;
+; This is also the only fixture in the bag with an inline ArrayMesh at all: every
+; other one loads a `.tres`, so the scene-decode path had no visual witness.
+[gd_scene load_steps=5 format=3 uid="uid://unitarraymeshscenematoverride"]
+
+[ext_resource type="Material" path="res://unit-arraymesh-own-material-shared.tres" id="1_shared"]
+[ext_resource type="Material" path="res://unit-arraymesh-override-material.tres" id="2_override"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_own"]
+resource_name = "own_body"
+albedo_color = Color(0.16028944, 0.23593739, 0.8209799, 1)
+metallic = 0.0
+roughness = 0.5
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_quads"]
+resource_name = "scene_own_material_quads"
+_surfaces = [{
+"aabb": AABB(-2.1, -1, 0, 2, 2, 0),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": ExtResource("1_shared"),
+"name": "shared_body",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("ZmYGwAAAgL8AAAAAzczMvQAAgL8AAAAAzczMvQAAgD8AAAAAZmYGwAAAgD8AAAAA/3//f////7//f/9/////v/9//3////+//3//f////78=")
+}, {
+"aabb": AABB(0.1, -1, 0, 2, 2, 0),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("StandardMaterial3D_own"),
+"name": "own_body",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("zczMPQAAgL8AAAAAZmYGQAAAgL8AAAAAZmYGQAAAgD8AAAAAzczMPQAAgD8AAAAA/3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0
+
+[node name="Root" type="Node3D"]
+
+[node name="ControlQuads" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.3, 0, 0)
+mesh = SubResource("ArrayMesh_quads")
+
+[node name="OverriddenQuads" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3, 0, 0)
+mesh = SubResource("ArrayMesh_quads")
+material_override = ExtResource("2_override")
+
+[node name="Title" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+text = "Scene ArrayMesh: surface materials vs material_override"
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 1, 0.7, 1)
+
+[node name="Description" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.8, 0)
+text = "Left plates blue; BOTH right plates orange"
+pixel_size = 0.005
+billboard = 1
+modulate = Color(1, 1, 1, 1)
