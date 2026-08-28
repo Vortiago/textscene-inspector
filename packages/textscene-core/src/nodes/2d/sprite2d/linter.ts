@@ -11,6 +11,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector2i } from '../../../linter/validators/vectorValidators.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * The grid count Godot ACTUALLY holds, or `null` for a literal no rule can use.
@@ -135,7 +136,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   } else if (rawProps.region_rect !== undefined && rawProps.region_enabled !== undefined) {
     // Check if region_enabled is explicitly false
     const regionEnabled = rawProps.region_enabled.toLowerCase();
-    if (regionEnabled === 'false' || regionEnabled === '0') {
+    if (boolSlotValue(regionEnabled) === false) {
       diagnostics.push({
         severity: 'warning',
         message: `Property 'region_rect' is set but 'region_enabled' is false. The region_rect will be ignored.`,

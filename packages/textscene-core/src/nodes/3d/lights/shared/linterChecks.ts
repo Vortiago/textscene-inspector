@@ -10,7 +10,7 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
-import { resourceRef } from '../../../../godot/index.js';
+import { resourceRef, boolSlotValue} from '../../../../godot/index.js';
 
 /**
  * OmniLight3D's and SpotLight3D's shared `light_projector` check — the SAME
@@ -37,7 +37,7 @@ export function projectorWithoutShadowDiagnostic(
   // warn about; keying off presence reported this beside the format error the
   // validator already raises, two diagnostics for one defect.
   if (!resourceRef(properties.light_projector ?? '')) return null;
-  if (properties.shadow_enabled === 'true') return null;
+  if (boolSlotValue(properties.shadow_enabled) === true) return null;
 
   return {
     severity: 'warning',

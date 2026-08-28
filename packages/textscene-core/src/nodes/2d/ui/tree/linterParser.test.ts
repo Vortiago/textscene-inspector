@@ -223,8 +223,10 @@ describe('Tree strict validators', () => {
       expect(check(property, 'false')).toBeNull();
     });
 
-    it('rejects the integer spelling Godot never writes for a BOOL', () => {
-      expect(check(property, '1')?.severity).toBe('error');
+    it('converts the integer spelling rather than refusing it', () => {
+      // `can_convert_strict` lists INT as a valid source for a BOOL target
+      // (`variant.cpp:550-558`), so Godot loads this and stores true. Measured.
+      expect(check(property, '1')?.severity).toBe('warning');
     });
 
     it('rejects a capitalised spelling', () => {

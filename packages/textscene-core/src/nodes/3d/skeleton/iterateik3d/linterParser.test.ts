@@ -146,7 +146,7 @@ describe('deterministic', () => {
   });
 
   it('rejects a non-boolean', () => {
-    expect(check('deterministic', '1')?.severity).toBe('error');
+    expect(check('deterministic', '1')?.severity).toBe('warning');
   });
 });
 

@@ -120,7 +120,7 @@ describe('CanvasGroup strict validators', () => {
 
     it('rejects anything else', () => {
       const error = check('use_mipmaps', '1');
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
     });
   });
 });

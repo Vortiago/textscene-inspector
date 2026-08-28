@@ -48,6 +48,7 @@ import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 /**
  * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear
@@ -113,7 +114,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     const report = (arm: RuleArm | undefined, message: string) =>
       reportArm(diagnostics, arm, node, message);
 
-    if (props.carve_navigation_mesh === 'true' && props.affect_navigation_mesh !== 'true') {
+    if (boolSlotValue(props.carve_navigation_mesh) === true && boolSlotValue(props.affect_navigation_mesh) !== true) {
       report(arms.carveWithoutAffect, `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`);
     }
 

@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
@@ -45,7 +46,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: emission_angle_degrees without emission_angle_enabled
-  if (rawProps.emission_angle_degrees !== undefined && rawProps.emission_angle_enabled !== 'true') {
+  if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
       severity: 'warning',
       message: `Property 'emission_angle_degrees' is set but 'emission_angle_enabled' is not true. The emission angle will have no effect.`,
@@ -56,7 +57,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: emission_angle_filter_attenuation_db without emission_angle_enabled
-  if (rawProps.emission_angle_filter_attenuation_db !== undefined && rawProps.emission_angle_enabled !== 'true') {
+  if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
       severity: 'warning',
       message: `Property 'emission_angle_filter_attenuation_db' is set but 'emission_angle_enabled' is not true. The filter will have no effect.`,

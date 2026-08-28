@@ -10,6 +10,7 @@
 import { floatOr } from '../../../parser/valueParsers';
 import { countAtLeast, flooredCount } from '../meshCounts';
 import type { CylinderMeshProperties } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function decodeCylinderMesh(properties: Record<string, string>): CylinderMeshProperties {
   return {
@@ -23,7 +24,7 @@ export function decodeCylinderMesh(properties: Record<string, string>): Cylinder
       'CylinderMesh radial_segments'
     ),
     rings: countAtLeast(properties.rings, 0, 4, 'CylinderMesh rings'),
-    capTop: properties.cap_top !== 'false',
-    capBottom: properties.cap_bottom !== 'false',
+    capTop: boolSlotValue(properties.cap_top) !== false,
+    capBottom: boolSlotValue(properties.cap_bottom) !== false,
   };
 }

@@ -43,7 +43,7 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
       const error = check('playback_auto_capture', '1');
       expect(error).not.toBeNull();
       expect(error!.message).toContain('playback_auto_capture');
-      expect(error!.message).toContain('boolean');
+      expect(error!.message).toContain('converts');
     });
   });
 

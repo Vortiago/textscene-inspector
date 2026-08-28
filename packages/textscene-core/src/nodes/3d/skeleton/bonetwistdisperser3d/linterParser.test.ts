@@ -197,7 +197,7 @@ describe('the end-bone tail leaves', () => {
   it('accepts both booleans for extend_end_bone', () => {
     expect(check('settings/0/extend_end_bone', 'true')).toBeNull();
     expect(check('settings/0/extend_end_bone', 'false')).toBeNull();
-    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('error');
+    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('warning');
   });
 
   it('accepts every BoneDirection constant', () => {

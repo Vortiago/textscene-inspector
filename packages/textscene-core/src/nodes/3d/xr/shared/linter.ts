@@ -60,6 +60,7 @@ import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../..
 import { parseTransform3D } from '../../../../utils/transform.js';
 import { isEqualApprox, isZeroApprox } from '../../../../godot/math.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
@@ -139,7 +140,7 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // openxr_composition_layer.cpp:773-775. `enable_hole_punch` defaults false
   // (openxr_composition_layer.h:88) and `sort_order` defaults 1 (h:90), so an
   // explicit `enable_hole_punch = true` with sort_order omitted still warns.
-  const holePunchEnabled = properties.enable_hole_punch === 'true';
+  const holePunchEnabled = boolSlotValue(properties.enable_hole_punch) === true;
   const sortOrder =
     ruleInt(properties.sort_order, 1);
   if (holePunchEnabled && sortOrder !== null && sortOrder >= 0) {

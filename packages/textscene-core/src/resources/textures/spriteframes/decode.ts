@@ -26,6 +26,7 @@
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
 import { dictNumberField, dictRefField } from '../../../godot/variantParser.js';
 import { matchedFloat } from '../../../godot/number.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * The dict fields this decoder scrapes, in the grammar Godot's own tokenizer
@@ -85,7 +86,7 @@ export function parseSpriteFramesAnimations(
       // Per-frame durations only when one was captured per frame; else uniform.
       durations: durations.length === frames.length ? durations : frames.map(() => 1),
       fps: finiteFps(speedMatch),
-      loop: loopMatch ? loopMatch[1] === 'true' : true,
+      loop: loopMatch ? boolSlotValue(loopMatch[1]) === true : true,
     });
   }
   return result;

@@ -65,8 +65,8 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.severity).toBe('warning');
+      expect(result!.message).toContain('converts');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
@@ -75,7 +75,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '0', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
 
     it('should reject string "True" (wrong capitalization)', () => {
@@ -169,7 +169,7 @@ flip_faces = 1
         d.message.includes('flip_faces')
       );
       expect(flipFacesErrors.length).toBeGreaterThan(0);
-      expect(flipFacesErrors[0]!.severity).toBe('error');
+      expect(flipFacesErrors[0]!.severity).toBe('warning');
     });
 
     it('should validate PlaneMesh with multiple properties including flip_faces', () => {

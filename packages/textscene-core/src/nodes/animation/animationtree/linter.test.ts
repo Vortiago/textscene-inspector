@@ -201,7 +201,7 @@ describe('AnimationTree Linter', () => {
       it('should reject invalid deterministic value', () => {
         expectDiagnostic(scene(node('AnimationTree', { deterministic: 1 })), {
           prop: 'deterministic',
-          contains: ['deterministic', 'boolean'],
+          contains: ['deterministic', 'converts'],
         });
       });
     });

@@ -9,6 +9,7 @@ import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr } from '../../../parser/valueParsers';
 import { ruleInt } from '../../../godot/int.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseLabel3D(
   heading: ParsedHeading,
@@ -24,11 +25,11 @@ export function parseLabel3D(
     modulate: parseColor(properties.modulate),
     outline_size: floatOr(properties.outline_size, 12, 'outline_size'),
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
-    double_sided: properties.double_sided !== 'false', // Godot default true
+    double_sided: boolSlotValue(properties.double_sided) !== false, // Godot default true
     font_size: floatOr(properties.font_size, 32, 'font_size'),
     line_spacing: floatOr(properties.line_spacing, 0, 'line_spacing'),
     horizontal_alignment: parseHorizontalAlignment(properties.horizontal_alignment),
-    no_depth_test: properties.no_depth_test === 'true',
+    no_depth_test: boolSlotValue(properties.no_depth_test) === true,
   };
 }
 

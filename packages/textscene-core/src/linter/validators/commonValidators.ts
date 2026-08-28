@@ -4,7 +4,12 @@ import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
 import { readIntSlot, slotWidth, truncatedInt, unrepresentableInt } from './intSlot.js';
-import { parseGodotFloat, type IntWidth } from '../../godot/index.js';
+import {
+  boolLiteralAsNumber,
+  boolSlotValue,
+  parseGodotFloat,
+  type IntWidth,
+} from '../../godot/index.js';
 
 /**
  * The Variant-literal readers, re-exported from their home in `src/godot/`.
@@ -32,6 +37,36 @@ export function tupleComponent(text: string | undefined): number {
 }
 
 /**
+ * A cross-family spelling warning: the value IS stored, but not as it is
+ * written, so re-saving the scene in Godot rewrites the line.
+ *
+ * The same tier and the same reasoning as {@link truncatedInt} — the stored
+ * value differs from the written one, and not by the setter's doing, so it is
+ * a warning and never an error. `can_convert_strict` accepts the whole
+ * BOOL/INT/FLOAT family (`variant.cpp:550-583`), which is why there is nothing
+ * for the engine to refuse here.
+ */
+function convertedSpelling(
+  propertyName: string,
+  key: string,
+  value: string,
+  line: number,
+  code: string,
+  storedText: string,
+  converted: boolean
+): ParseError | null {
+  if (!converted) return null;
+  return propertyError(
+    key,
+    line,
+    `Property '${propertyName}' is written "${value.trim()}", which this slot converts: ` +
+      `Godot stores ${storedText} and writes it back that way.`,
+    code,
+    'warning'
+  );
+}
+
+/**
  * Creates a boolean validator function
  * Validates that a value is either 'true' or 'false'
  */
@@ -40,10 +75,14 @@ export function createBooleanValidator(
   errorCode: string = 'INVALID_BOOLEAN_FORMAT'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    if (value !== 'true' && value !== 'false') {
+    const stored = boolSlotValue(value);
+    if (stored === undefined) {
       return propertyError(key, line, `Property '${propertyName}' must be a boolean (true or false), got: "${value}"`, errorCode);
     }
-    return null;
+    return convertedSpelling(
+      propertyName, key, value, line, errorCode, String(stored),
+      boolLiteralAsNumber(value) === undefined
+    );
   };
 }
 
@@ -252,7 +291,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // `null` in the FLOAT case, and that is the flag the truncation check reads
     // at the end: only an INT slot has a fractional part to drop.
     const read = parseAsInt ? readIntSlot(value, max, spec.width) : null;
-    const num = read ? read.stored : parseGodotFloat(value);
+    const num = read ? read.stored : boolLiteralAsNumber(value) ?? parseGodotFloat(value);
     // An INT slot narrows a non-finite at PARSE time to a value the file does
     // not state (see `asStoredInt`), so the literal is ALTERED and reports as
     // an error. A FLOAT slot stores it verbatim and says nothing. That is the
@@ -311,7 +350,13 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // Last, so a value that is BOTH fractional and out of range reports the
     // error rather than this warning. A FLOAT slot stores `5.5` verbatim and
     // has nothing to say.
-    return read ? truncatedInt(propertyName, key, value, line, errorCodeValue, read) : null;
+    return (
+      (read ? truncatedInt(propertyName, key, value, line, errorCodeValue, read) : null) ??
+      convertedSpelling(
+        propertyName, key, value, line, errorCodeValue, String(num),
+        boolLiteralAsNumber(value) !== undefined
+      )
+    );
   };
   return validator;
 }

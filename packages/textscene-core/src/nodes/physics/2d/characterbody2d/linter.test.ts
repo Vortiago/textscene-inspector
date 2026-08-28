@@ -69,17 +69,17 @@ describe('CharacterBody2D Linter', () => {
       {
         prop: 'floor_stop_on_slope',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'floor_constant_speed',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'floor_block_on_wall',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so

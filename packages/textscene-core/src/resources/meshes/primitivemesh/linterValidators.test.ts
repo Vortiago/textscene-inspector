@@ -24,7 +24,7 @@ runResourcePropertyValidation('PlaneMesh', [
   {
     prop: 'add_uv2',
     valid: ['true'],
-    invalid: [{ value: '1', contains: ['add_uv2'], severity: 'error' }],
+    invalid: [{ value: '1', contains: ['add_uv2'], severity: 'warning' }],
   },
   {
     prop: 'custom_aabb',

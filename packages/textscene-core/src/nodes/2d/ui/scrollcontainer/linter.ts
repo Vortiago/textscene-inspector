@@ -43,13 +43,14 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /** `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155. */
 function isSortableControl(child: TscnNode): boolean {
   if (!descendsFrom(child.type, 'Control')) return false;
   const props = isValidProperties(child.properties) ? child.properties : {};
-  if (props.top_level === 'true') return false;
-  if (props.visible === 'false') return false;
+  if (boolSlotValue(props.top_level) === true) return false;
+  if (boolSlotValue(props.visible) === false) return false;
   return true;
 }
 

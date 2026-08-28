@@ -19,7 +19,7 @@ import {
   parseGodotFloat,
   enforcedEndRefusal,
 } from '../commonValidators.js';
-import { storedFromFloat, type IntWidth } from '../../../godot/index.js';
+import { boolLiteralAsNumber, storedFromFloat, type IntWidth } from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import {
@@ -53,7 +53,7 @@ function storedStrictInt(
   max: number | undefined,
   width?: IntWidth
 ): { stored: number; asFloat: number } | { error: ParseError } {
-  const parsed = parseGodotFloat(value);
+  const parsed = boolLiteralAsNumber(value) ?? parseGodotFloat(value);
   // Text outside the grammar is the only FORMAT failure here. A fractional
   // literal is NOT: calling it one reports a file Godot opens as unparseable,
   // and did so on only 56 of 225 int slots, so the same engine line gave

@@ -8,6 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseCamera2D(
   heading: ParsedHeading,
@@ -25,6 +26,6 @@ export function parseCamera2D(
     limitRight: intOr(properties.limit_right, 10000000),
     limitBottom: intOr(properties.limit_bottom, 10000000),
     limitEnabled: boolOr(properties.limit_enabled, true),
-    enabled: properties.enabled === undefined ? true : properties.enabled !== 'false',
+    enabled: properties.enabled === undefined ? true : boolSlotValue(properties.enabled) !== false,
   };
 }

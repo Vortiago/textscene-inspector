@@ -20,7 +20,7 @@
  * layout props, optional light scalars): no fallback and no warning. All four
  * return `undefined` when the property is ABSENT; on a present-but-unparseable
  * value the numeric and vector readers also return `undefined`, but
- * `parseOptionalBool` returns `false` — it is `value === 'true'`, so anything
+ * `parseOptionalBool` returns `false` — it asks what the slot STORES, so anything
  * else reads as false rather than unset. Pass `context` (a node type or name) to
  * label the warning.
  *
@@ -43,7 +43,7 @@ import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
 import { slotComponents, storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
 
-import { nodePathLiteral, toIntIndex } from '../godot/index.js';
+import { nodePathLiteral, toIntIndex, boolSlotValue} from '../godot/index.js';
 
 /**
  * A finite scalar in the tokenizer's grammar, or `null`.
@@ -151,9 +151,10 @@ export function intOr(
 
 export function boolOr(value: string | undefined, fallback: boolean, context = 'value'): boolean {
   if (value === undefined) return fallback;
-  const v = value.toLowerCase();
-  if (v === 'true' || v === '1') return true;
-  if (v === 'false' || v === '0') return false;
+  // `boolSlotValue` already reads the int and float spellings a BOOL slot
+  // converts, which is where this reader's own `'1'`/`'0'` arms came from.
+  const stored = boolSlotValue(value);
+  if (stored !== undefined) return stored;
   warn(`${context}: invalid bool "${value}", using ${fallback}`);
   return fallback;
 }
@@ -331,13 +332,14 @@ export function parseOptionalInt(
 }
 
 /**
- * Optional bool reader: `undefined` for an absent value, else `value === 'true'`.
+ * Optional bool reader: `undefined` for an absent value, else what the BOOL
+ * slot stores for it.
  * Distinct from `boolOr`; used where a missing property is meaningful (Control
  * flags that default off only when present, so absence stays unset).
  */
 export function parseOptionalBool(value: string | undefined): boolean | undefined {
   if (value === undefined) return undefined;
-  return value === 'true';
+  return boolSlotValue(value) === true;
 }
 
 /**

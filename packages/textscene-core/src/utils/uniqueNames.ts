@@ -15,6 +15,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
+import { boolSlotValue } from '../godot/index.js';
 
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 export const UNIQUE_NODE_PREFIX = '%';
@@ -35,7 +36,7 @@ export interface UniqueNameClaim {
  * on the render tree the typed `properties` never carries it at all.
  */
 export function isUniqueNameInOwner(node: TscnNode): boolean {
-  return node.rawProperties?.unique_name_in_owner === 'true';
+  return boolSlotValue(node.rawProperties?.unique_name_in_owner) === true;
 }
 
 /**

@@ -36,6 +36,7 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
 const ROTATION_ORIENTED = 4;
@@ -53,7 +54,7 @@ function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unk
   const curveRef = (parent.properties as Record<string, string>)?.curve;
   const curve = resolveSubResourceRef(curveRef, scene.internalResources ?? []);
   const enabled = curve?.data?.up_vector_enabled;
-  return enabled === false || enabled === 'false';
+  return enabled === false || (typeof enabled === 'string' && boolSlotValue(enabled) === false);
 }
 
 /**

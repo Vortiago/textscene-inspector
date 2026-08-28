@@ -313,8 +313,8 @@ describe('Node2D Linter', () => {
     it('should detect invalid z_as_relative format', () => {
       expectDiagnostic(scene(node('Node2D', { z_as_relative: 1 })), {
         ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['z_as_relative', 'boolean'],
+        severity: 'warning',
+        contains: ['z_as_relative', 'converts'],
       });
     });
   });

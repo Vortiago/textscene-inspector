@@ -68,7 +68,7 @@ describe('GPUParticles3D Linter', () => {
       {
         prop: 'emitting',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         // gpu_particles_3d.cpp:76, ERR_FAIL_COND_MSG(p_amount < 1): only the floor
@@ -97,7 +97,7 @@ describe('GPUParticles3D Linter', () => {
       {
         prop: 'one_shot',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'preprocess',
@@ -137,7 +137,7 @@ describe('GPUParticles3D Linter', () => {
       {
         prop: 'fract_delta',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'visibility_aabb',
@@ -155,7 +155,7 @@ describe('GPUParticles3D Linter', () => {
       {
         prop: 'local_coords',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         // gpu_particles_3d.cpp:843 hints 4 labels (Index/Lifetime/Reverse
@@ -170,7 +170,7 @@ describe('GPUParticles3D Linter', () => {
       {
         prop: 'trail_enabled',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -

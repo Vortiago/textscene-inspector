@@ -45,7 +45,7 @@ describe('Area3D Linter', () => {
     });
 
     runPropertyValidation({ nodeType: 'Area3D', acceptChild: collisionShape3d }, [
-      { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       { prop: 'monitorable', valid: [true, false], invalid: [{ value: '"yes"', contains: ['boolean'] }] },
       {
         prop: 'gravity_space_override',
@@ -56,7 +56,7 @@ describe('Area3D Linter', () => {
         prop: 'gravity_point',
         valid: [true, false],
         with: { gravity_point_unit_distance: 1.0 },
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'gravity_point_center',
@@ -113,7 +113,7 @@ describe('Area3D Linter', () => {
         prop: 'audio_bus_override',
         valid: [true, false],
         with: { audio_bus_name: '"Master"' },
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       { prop: 'audio_bus_name', valid: ['"Master"', '"SFX"'] },
       {

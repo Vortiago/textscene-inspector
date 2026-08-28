@@ -137,6 +137,9 @@ const COMPOSITE_KEYS: ReadonlyArray<{
  * geometry. `inf` stays a legal literal; it is simply not renderable here.
  */
 function decodeValue(raw: string): GodotKeyframeValue | null {
+  // The two literals only, NOT `boolSlotValue`: a keyframe value is an untyped
+  // Variant, so there is no BOOL slot to convert toward and `1` is the number
+  // one. Booleanizing here turns every scalar track into a constant `true`.
   if (raw === 'true') return true;
   if (raw === 'false') return false;
   for (const { re, read } of COMPOSITE_KEYS) {

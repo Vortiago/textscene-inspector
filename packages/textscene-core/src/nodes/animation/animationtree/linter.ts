@@ -10,7 +10,7 @@ import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { RESOURCE_REF_RE } from '../../../godot/index.js';
+import { RESOURCE_REF_RE, boolSlotValue} from '../../../godot/index.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 
 /**
@@ -128,7 +128,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // `get_editor_error_message()` (animation_tree.cpp:995-997), a
   // `TOOLS_ENABLED`-only method Godot calls to render text INSIDE the
   // blend-tree graph editor, not from `get_configuration_warnings()`.
-  if (rawProps.active === 'false') {
+  if (boolSlotValue(rawProps.active) === false) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimationTree 'active' is set to false. The AnimationTree will not process animations until this is set to true at runtime.`,

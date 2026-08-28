@@ -21,7 +21,7 @@ runResourcePropertyValidation('StandardMaterial3D', [
   {
     prop: 'resource_local_to_scene',
     valid: ['true', 'false'],
-    invalid: [{ value: '1', contains: ['resource_local_to_scene'], severity: 'error' }],
+    invalid: [{ value: '1', contains: ['resource_local_to_scene'], severity: 'warning' }],
   },
 ]);
 

@@ -4,6 +4,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { LabelProperties } from './types';
 import { parseControl } from '../control/parser';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /**
  * Godot's `Label` constructor calls `set_v_size_flags(SIZE_SHRINK_CENTER)`, so
@@ -26,6 +27,6 @@ export function parseLabel(
   result.horizontalAlignment = parseOptionalInt(properties.horizontal_alignment);
   result.verticalAlignment = parseOptionalInt(properties.vertical_alignment);
   result.autowrapMode = parseOptionalInt(properties.autowrap_mode);
-  if (properties.uppercase === 'true') result.uppercase = true;
+  if (boolSlotValue(properties.uppercase) === true) result.uppercase = true;
   return result;
 }

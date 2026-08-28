@@ -22,7 +22,7 @@ import {
   splitTopLevel,
   SUB_RESOURCE_REF_ANYWHERE_RE,
   SUB_RESOURCE_REF_BODY,
-} from '../../../godot/index.js';
+ boolSlotValue,} from '../../../godot/index.js';
 
 /**
  * `transitions = [&"Start", &"Idle", SubResource("…"), …]` as alternating tokens.
@@ -155,7 +155,7 @@ function resolveInnerNode(
       return {
         kind: 'blend2',
         name,
-        filtered: asString(resource.data['filter_enabled']) === 'true',
+        filtered: boolSlotValue(asString(resource.data['filter_enabled'])) === true,
         in0: inputs(0),
         in1: inputs(1),
       };

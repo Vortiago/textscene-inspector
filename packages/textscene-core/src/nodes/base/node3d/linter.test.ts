@@ -107,7 +107,7 @@ describe('Node3D Linter', () => {
       {
         prop: 'visible',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['visible', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['visible', 'converts'] }],
       },
       {
         prop: 'top_level',

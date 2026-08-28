@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /** `Light3D::set_param` default for `PARAM_SPOT_ANGLE` (light_3d.cpp:480). */
 const DEFAULT_SPOT_ANGLE = 45;
@@ -42,7 +43,7 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
     // No finiteness guard: `spot_angle = inf` is a shadowless cone wider than
     // 90 degrees (light_3d.cpp:655), and `nan >= 90` is false either way.
-    if (properties.shadow_enabled === 'true' && spotAngle !== null && spotAngle >= 90) {
+    if (boolSlotValue(properties.shadow_enabled) === true && spotAngle !== null && spotAngle >= 90) {
       diagnostics.push({
         severity: 'warning',
         message: `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`,

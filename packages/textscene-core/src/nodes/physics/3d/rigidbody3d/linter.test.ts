@@ -113,19 +113,19 @@ custom_integrator = false
       {
         prop: 'lock_rotation',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'freeze_mode',
         valid: [0, 1],
         invalid: [{ value: 5, contains: ['0-1'] }],
       },
-      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'continuous_cd', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'can_sleep', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'sleeping', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'custom_integrator', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'continuous_cd', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'can_sleep', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'sleeping', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'custom_integrator', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       {
         // rigid_body_3d.cpp:524, ERR_FAIL_INDEX_MSG(p_amount,
         // MAX_CONTACTS_REPORTED_3D_MAX=4096): fails on `< 0 || >= 4096`, so the

@@ -33,13 +33,13 @@ const CASES: KeyCase[] = [
     // (:622): 32 checkboxes express every pattern, so no value is out of range.
     key: 'occlusion_layer_0/light_mask',
     valid: ['1', '0', '-1', '2147483647'],
-    invalid: [{ value: 'true', severity: 'error', contains: ['light_mask'] }],
+    invalid: [{ value: 'true', severity: 'warning', contains: ['light_mask'] }],
   },
   {
     // tile_set.cpp:3851 demands Variant::BOOL.
     key: 'occlusion_layer_0/sdf_collision',
     valid: ['true', 'false'],
-    invalid: [{ value: '1', severity: 'error', contains: ['sdf_collision'] }],
+    invalid: [{ value: '1', severity: 'warning', contains: ['sdf_collision'] }],
   },
   {
     key: 'physics_layer_0/collision_layer',

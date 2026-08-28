@@ -23,6 +23,7 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /** Subclasses whose constructor sets toggle_mode, so absence means true. */
 const TOGGLE_MODE_ON_BY_DEFAULT = new Set([
@@ -50,7 +51,7 @@ function checkButtonGroup(context: RuleContext): Diagnostic[] {
   const toggleMode =
     props.toggle_mode === undefined
       ? TOGGLE_MODE_ON_BY_DEFAULT.has(node.type)
-      : props.toggle_mode === 'true';
+      : boolSlotValue(props.toggle_mode) === true;
   if (toggleMode) return [];
 
   return [

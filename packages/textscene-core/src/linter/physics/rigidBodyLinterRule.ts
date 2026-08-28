@@ -20,6 +20,7 @@ import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { slotComponents } from '../../godot/int.js';
 import { tupleComponent } from '../validators/commonValidators.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 /**
  * Per-axis scale tolerance, shared by both dimensions: rigid_body_3d.cpp:667
@@ -113,7 +114,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // than the guard supports.
     if (rawProps.max_contacts_reported !== undefined) {
       const contactMonitor = rawProps.contact_monitor;
-      if (contactMonitor !== 'true') {
+      if (boolSlotValue(contactMonitor) !== true) {
         diagnostics.push({
           severity: 'warning',
           message:

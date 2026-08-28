@@ -223,7 +223,7 @@ autoplay = 1
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
       expect(diagnostics[0]!.message).toContain('autoplay');
-      expect(diagnostics[0]!.message).toContain('boolean');
+      expect(diagnostics[0]!.message).toContain('converts');
     });
   });
 

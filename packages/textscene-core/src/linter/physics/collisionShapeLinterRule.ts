@@ -19,6 +19,7 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
@@ -216,7 +217,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // regardless of parent type when the margin is set without the flag; this
     // one fires on the flag itself, gated on the PARENT being an Area2D, which
     // ignores one-way collision entirely (it has no solid faces to be one-way about).
-    if (rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+    if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
       report(arms.oneWayIgnoredUnderArea2D, `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`);
     }
 
@@ -230,7 +231,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     }
 
     // WARNING: one_way_collision_margin set but one_way_collision is false (2D only)
-    if (rawProps.one_way_collision_margin && rawProps.one_way_collision !== 'true') {
+    if (rawProps.one_way_collision_margin && boolSlotValue(rawProps.one_way_collision) !== true) {
       const margin = parseGodotFloat(rawProps.one_way_collision_margin);
       // Only warn if margin is non-zero and one_way_collision is explicitly false or not set
       if (margin !== null && margin > 0) {

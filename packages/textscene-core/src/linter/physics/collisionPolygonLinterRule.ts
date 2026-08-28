@@ -26,6 +26,7 @@ import { dimSuffix } from './dim.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { ruleInt } from '../validators/commonValidators.js';
 import { polygonPointCount } from '../polygonPoints.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
   const type = `CollisionPolygon${dim}`;
@@ -136,7 +137,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
 
     // collision_polygon_2d.cpp:252-254 — `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
     // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
-    if (rawProps.one_way_collision === 'true' && parent && descendsFrom(parent.type, 'Area2D')) {
+    if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
       report(arms.oneWayIgnored, `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`);
     }
 

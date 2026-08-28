@@ -162,7 +162,7 @@ describe('PathFollow3D Linter', () => {
       it('should reject non-boolean cubic_interp', () => {
         expectDiagnostic(pathScene({ cubic_interp: 1 }), {
           prop: 'cubic_interp',
-          contains: ['boolean'],
+          contains: ['converts'],
         });
       });
 
@@ -184,7 +184,7 @@ describe('PathFollow3D Linter', () => {
       it('should reject non-boolean tilt_enabled', () => {
         expectDiagnostic(pathScene({ tilt_enabled: 1 }), {
           prop: 'tilt_enabled',
-          contains: ['boolean'],
+          contains: ['converts'],
         });
       });
 

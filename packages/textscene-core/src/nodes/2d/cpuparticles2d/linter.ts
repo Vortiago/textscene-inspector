@@ -13,7 +13,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { ruleInt } from '../../../godot/index.js';
+import { ruleInt, boolSlotValue} from '../../../godot/index.js';
 
 /**
  * The EMISSION_SHAPE_* ordinals whose positions come from Godot's process-wide
@@ -57,7 +57,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
 
   // Godot's default is TRUE, so only an explicit setting is worth reporting —
   // warning on every emitter that omits the property would say nothing.
-  if (props.fract_delta === 'true') {
+  if (boolSlotValue(props.fract_delta) === true) {
     diagnostics.push({
       severity: 'warning',
       message: `CPUParticles2D 'fract_delta' gives a restarting particle a partial first step. The previewer's frozen pose steps at a fixed rate and ignores it, so particles land up to one frame behind Godot's.`,

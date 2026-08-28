@@ -168,7 +168,7 @@ describe('ChainIK3D extend_end_bone', () => {
   });
 
   it('rejects a non-boolean', () => {
-    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('error');
+    expect(check('settings/0/extend_end_bone', '1')?.severity).toBe('warning');
   });
 });
 

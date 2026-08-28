@@ -91,7 +91,7 @@ describe('CollisionShape2D Linter', () => {
           prop: 'disabled',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', contains: ['disabled', 'boolean'] },
+            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['disabled', 'converts'] },
             { value: '"yes"', contains: ['disabled', 'boolean'] },
           ],
         },
@@ -99,7 +99,7 @@ describe('CollisionShape2D Linter', () => {
           prop: 'one_way_collision',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', contains: ['one_way_collision', 'boolean'] },
+            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['one_way_collision', 'converts'] },
           ],
         },
         {

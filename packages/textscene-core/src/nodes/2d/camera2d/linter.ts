@@ -12,6 +12,7 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { searchAncestors } from '../../../linter/parentType.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * The Viewport a node draws into, or null for the scene's own viewport.
@@ -48,7 +49,7 @@ function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | un
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
 function cameraIsEnabled(node: TscnNode): boolean {
   if (!isValidProperties(node.properties)) return true;
-  return (node.properties as Record<string, string>).enabled !== 'false';
+  return boolSlotValue((node.properties as Record<string, string>).enabled) !== false;
 }
 
 /** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
@@ -95,7 +96,7 @@ function smoothingIsFrozen(
   speedKey: string
 ): boolean {
   const raw = rawProps[speedKey];
-  if (rawProps[enabledKey] !== 'true' || raw === undefined) return false;
+  if (boolSlotValue(rawProps[enabledKey]) !== true || raw === undefined) return false;
   return parseGodotFloat(raw) === 0;
 }
 

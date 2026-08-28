@@ -40,6 +40,7 @@ import { stampVisualLayers } from '../../visualLayers';
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Walk `root`'s descendants and, for every override node that carries a
@@ -117,7 +118,7 @@ export function applyGlbNodeOverrides(
     // glTF node with several primitives becomes a Group of Meshes in three,
     // and the mask is read per mesh with no inheritance.
     if (layers !== undefined) stampVisualLayers(target, layers);
-    if (visible !== undefined) target.visible = visible !== 'false';
+    if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
     if (!transform) continue;
 
     const { position, rotation, scale } = decomposeForR3F(transform);

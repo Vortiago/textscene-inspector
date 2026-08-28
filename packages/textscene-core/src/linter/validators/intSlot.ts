@@ -15,6 +15,7 @@ import {
   readerLimitedInt,
   storedFromFloat,
   type IntWidth,
+  boolLiteralAsNumber,
 } from '../../godot/index.js';
 
 /**
@@ -111,7 +112,7 @@ export interface IntSlotRead {
  * `seed = 4294967295.0` at the ceiling its own `PROPERTY_HINT_RANGE` declares.
  */
 export function readIntSlot(value: string, max?: number | null, width?: IntWidth): IntSlotRead {
-  const asFloat = parseGodotFloat(value);
+  const asFloat = boolLiteralAsNumber(value) ?? parseGodotFloat(value);
   if (asFloat === null) return { asFloat: null, stored: null };
   return { asFloat, stored: storedFromFloat(asFloat, value, width ?? slotWidth(max)) };
 }

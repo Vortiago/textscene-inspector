@@ -28,6 +28,7 @@ import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from '../../../r3f/lighting2d/shadowVolumes';
 import type { LightOccluder2DProperties } from './types';
 import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;
@@ -56,7 +57,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
       warn(`[LightOccluder2D] unreadable occluder polygon: ${data.polygon}`);
       return null;
     }
-    const closed = data.closed !== 'false';
+    const closed = boolSlotValue(data.closed) !== false;
     return polygonToSegments(raw, closed);
   }, [occluderResource]);
 

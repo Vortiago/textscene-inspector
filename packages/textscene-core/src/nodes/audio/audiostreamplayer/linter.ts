@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -44,7 +45,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   // audio track drives this node instead (its own `stream` is then beside
   // the point).
   if (
-    rawProps.autoplay === 'true' &&
+    boolSlotValue(rawProps.autoplay) === true &&
     resourceSlotIsEmpty(rawProps.stream) &&
     !isDrivenByAnimationAudioTrack(scene, node)
   ) {

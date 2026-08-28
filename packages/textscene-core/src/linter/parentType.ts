@@ -12,6 +12,7 @@ import type { TscnNode } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
 import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
 import type { TscnScene } from '../parser/types.js';
+import { boolSlotValue } from '../godot/index.js';
 
 /**
  * What a rule can say about a node's parent, once the cases it must not judge
@@ -278,7 +279,7 @@ export function placementPhrase(verdict: ParentVerdict): string {
  * (`canvas_layer.cpp:341`) and Window (`window.cpp:3436`) alike.
  */
 export function isExplicitlyHidden(properties: Record<string, string>): boolean {
-  return properties.visible === 'false';
+  return boolSlotValue(properties.visible) === false;
 }
 
 /**

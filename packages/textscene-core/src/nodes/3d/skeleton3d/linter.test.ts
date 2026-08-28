@@ -286,8 +286,8 @@ describe('Skeleton3D Linter', () => {
         it('rejects an enabled that is not a bool', () => {
           expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/enabled': '1' })), {
             prop: 'enabled',
-            severity: 'error',
-            contains: ['true or false'],
+            severity: 'warning',
+            contains: ['converts'],
           });
         });
       });

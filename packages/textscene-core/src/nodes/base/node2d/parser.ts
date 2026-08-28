@@ -14,6 +14,7 @@ import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/value
 import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);
 
@@ -22,7 +23,7 @@ export function parseNode2D(
   properties: Record<string, string>
 ): Node2DProperties {
   const name = heading.attributes.name || '';
-  const visible = properties.visible === undefined ? undefined : properties.visible !== 'false';
+  const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
 
   // Defaults match Godot.
   let position: Vector2 = { x: 0, y: 0 };
@@ -57,19 +58,19 @@ export function parseNode2D(
     scale,
     skew,
     z_index: intOr(properties.z_index, 0),
-    z_as_relative: properties.z_as_relative === undefined ? true : properties.z_as_relative !== 'false',
-    show_behind_parent: properties.show_behind_parent === 'true',
+    z_as_relative: properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
+    show_behind_parent: boolSlotValue(properties.show_behind_parent) === true,
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)
       : { r: 1, g: 1, b: 1, a: 1 },
     light_mask: intOr(properties.light_mask, 1, `${name || 'Node2D'}.light_mask`),
-    y_sort_enabled: properties.y_sort_enabled === 'true',
+    y_sort_enabled: boolSlotValue(properties.y_sort_enabled) === true,
     y_sort_origin: properties.y_sort_origin !== undefined
       ? floatOr(properties.y_sort_origin, 0)
       : 0,
     ...(properties.material !== undefined ? { material: properties.material } : {}),
-    use_parent_material: properties.use_parent_material === 'true',
+    use_parent_material: boolSlotValue(properties.use_parent_material) === true,
   };
 }
 

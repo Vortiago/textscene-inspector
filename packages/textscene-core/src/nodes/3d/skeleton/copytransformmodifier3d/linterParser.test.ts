@@ -106,7 +106,7 @@ describe('CopyTransformModifier3D strict validators', () => {
 
     it('rejects a non-integer mask as a format error', () => {
       const error = check('settings/0/axes', 'true');
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
     });
   });
 

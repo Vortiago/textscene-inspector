@@ -63,9 +63,9 @@ describe('CharacterBody3D Linter', () => {
         valid: ['Vector3(1.5, -2.3, 0.5)'],
         invalid: [{ value: 'Vector2(1, 2)' }],
       },
-      { prop: 'floor_stop_on_slope', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'floor_stop_on_slope', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       {
         // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
         // PI is the last legal value, and a table stopping at PI/2 rejects the

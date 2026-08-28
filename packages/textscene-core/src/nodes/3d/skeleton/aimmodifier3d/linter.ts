@@ -25,7 +25,7 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements } from '../../../../godot/index.js';
+import { indexedElements, boolSlotValue} from '../../../../godot/index.js';
 
 const SETTING_PREFIX = 'settings/';
 
@@ -80,7 +80,7 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const settings = [...declaredSettings(properties)].sort(([a], [b]) => a - b);
   for (const [index, leaves] of settings) {
-    if (leaves.use_euler?.trim() !== 'true') continue;
+    if (boolSlotValue(leaves.use_euler) !== true) continue;
 
     const forwardAxis = settingNumber(leaves, 'forward_axis', DEFAULT_FORWARD_AXIS);
     const primaryAxis = settingNumber(

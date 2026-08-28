@@ -7,7 +7,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { Skeleton3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { indexedKeyRegex } from '../../../godot/index.js';
+import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
 
 /**
@@ -45,7 +45,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // `motion_scale` is validated in linterParser.ts, both tiers of it.
 
   // Warning: show_rest_only = true (debugging mode, animations disabled)
-  if (rawProps.show_rest_only === 'true') {
+  if (boolSlotValue(rawProps.show_rest_only) === true) {
     diagnostics.push({
       severity: 'warning',
       message: `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`,
@@ -56,7 +56,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   }
 
   // Warning: animate_physical_bones = true (deprecated ragdoll feature)
-  if (rawProps.animate_physical_bones === 'true') {
+  if (boolSlotValue(rawProps.animate_physical_bones) === true) {
     diagnostics.push({
       severity: 'warning',
       message: `animate_physical_bones is enabled. This is a deprecated feature for ragdoll physics. Consider using the new SkeletonModifier3D system instead.`,

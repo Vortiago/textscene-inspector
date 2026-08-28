@@ -12,6 +12,7 @@
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalInt, parseHeadingIndex } from '../../../../parser/valueParsers';
 import type { CanvasLayerProperties } from './types';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 export function parseCanvasLayer(
   heading: ParsedHeading,
@@ -22,7 +23,7 @@ export function parseCanvasLayer(
   if (heading.attributes.instance !== undefined) result.instance = heading.attributes.instance;
   const index = parseHeadingIndex(heading.attributes.index);
   if (index !== undefined) result.index = index;
-  if (properties.visible !== undefined) result.visible = properties.visible !== 'false';
+  if (properties.visible !== undefined) result.visible = boolSlotValue(properties.visible) !== false;
   const layer = parseOptionalInt(properties.layer);
   if (layer !== undefined) result.layer = layer;
   return result;

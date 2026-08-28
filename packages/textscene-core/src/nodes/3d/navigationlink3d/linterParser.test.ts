@@ -109,7 +109,8 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-boolean literal', () => {
-      // createBooleanValidator matches the literal 'true'/'false' only.
+      // A capitalised spelling is not a Variant literal at all, so nothing
+      // converts it — unlike the int spelling, which the slot does convert.
       expect(check('enabled', 'True')?.severity).toBe('error');
     });
   });
@@ -121,7 +122,7 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-boolean literal', () => {
-      expect(check('bidirectional', '1')?.severity).toBe('error');
+      expect(check('bidirectional', '1')?.severity).toBe('warning');
     });
   });
 

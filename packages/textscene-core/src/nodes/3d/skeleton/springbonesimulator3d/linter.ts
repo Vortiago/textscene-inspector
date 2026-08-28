@@ -49,7 +49,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedElements, indexedKeyRegex, toIntIndex, boolSlotValue} from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth.
@@ -103,7 +103,7 @@ const EXCLUDE_COLLISION_RE = indexedKeyRegex(
 /** A `.tscn` boolean, or the C++ default when the key is absent. */
 function readBool(raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined) return fallback;
-  return raw.trim() === 'true';
+  return boolSlotValue(raw) === true;
 }
 
 /** `indices` as `0, 2, 5`, ascending, for a message. */

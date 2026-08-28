@@ -81,7 +81,7 @@ describe('AnimatedSprite2D Linter', () => {
         {
           prop: 'centered',
           valid: [true, false],
-          invalid: [{ value: 1, contains: ['centered', 'boolean'] }],
+          invalid: [{ value: 1, severity: 'warning', contains: ['centered', 'converts'] }],
         },
         {
           prop: 'offset',
@@ -91,7 +91,7 @@ describe('AnimatedSprite2D Linter', () => {
         {
           prop: 'flip_h',
           valid: [true],
-          invalid: [{ value: 1, contains: ['flip_h', 'boolean'] }],
+          invalid: [{ value: 1, severity: 'warning', contains: ['flip_h', 'converts'] }],
         },
         {
           prop: 'flip_v',

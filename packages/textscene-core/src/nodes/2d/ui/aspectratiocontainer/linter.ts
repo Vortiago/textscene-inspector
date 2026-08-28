@@ -19,6 +19,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 // texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,
 // EXPAND_IGNORE_SIZE=1, EXPAND_FIT_WIDTH=2, EXPAND_FIT_WIDTH_PROPORTIONAL=3,
@@ -40,7 +41,7 @@ function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
     // nothing. `unknowable` counts as silent for the reason
     // `hiddenOrUnknowableInTree` gives: an instanced ancestor's `visible` is not
     // in this file, and guessing reports what the author cannot see.
-    if (child.properties.top_level === 'true') continue;
+    if (boolSlotValue(child.properties.top_level) === true) continue;
     if (hiddenOrUnknowableInTree(context.scene, child)) continue;
 
     const raw = child.properties.expand_mode;

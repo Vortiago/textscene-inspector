@@ -42,7 +42,7 @@ describe('BaseMaterial3D Linter Validators', () => {
       const result = validator!('normal_enabled', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
   });
 

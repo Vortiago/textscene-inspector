@@ -187,7 +187,7 @@ describe('VideoStreamPlayer strict validators', () => {
     it('rejects a non-boolean literal on every flag', () => {
       for (const flag of FLAGS) {
         const error = check(flag, '1');
-        expect(error?.severity, flag).toBe('error');
+        expect(error?.severity, flag).toBe('warning');
         expect(error?.message, flag).toContain(flag);
       }
     });

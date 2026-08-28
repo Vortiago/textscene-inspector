@@ -53,6 +53,7 @@ import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -128,7 +129,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     const hidden = new Set<THREE.Object3D>();
     if (!object) return hidden;
     for (const override of overrides) {
-      if (override.rawProperties?.visible !== 'false') continue;
+      if (boolSlotValue(override.rawProperties?.visible) !== false) continue;
       if (!isApplicableGlbOverride(override)) continue;
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (target) hidden.add(target);

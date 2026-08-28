@@ -106,9 +106,11 @@ describe('ItemList booleans', () => {
     expect(check(property, 'false')).toBeNull();
   });
 
-  it.each(BOOLEANS)('rejects a non-boolean for %s', (property) => {
+  it.each(BOOLEANS)('converts the integer spelling for %s rather than refusing it', (property) => {
+    // Godot stores true for `1` in a BOOL slot (`variant.cpp:550-558`), so the
+    // spelling is a warning about what gets written back, not a refusal.
     const error = check(property, '1');
-    expect(error?.severity).toBe('error');
+    expect(error?.severity).toBe('warning');
     expect(error?.message).toContain(property);
   });
 

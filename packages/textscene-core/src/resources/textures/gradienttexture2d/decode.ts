@@ -18,7 +18,7 @@ import { enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { packedArrayLiteral } from '../../../godot/index.js';
+import { packedArrayLiteral, boolSlotValue} from '../../../godot/index.js';
 import { floatElements } from '../../shapes/packedArray';
 import {
   GradientFill,
@@ -154,7 +154,7 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
       [GradientRepeat.None, GradientRepeat.Repeat, GradientRepeat.Mirror],
       'GradientTexture2D.repeat'
     ),
-    useHdr: data.use_hdr === 'true',
+    useHdr: boolSlotValue(data.use_hdr) === true,
   };
 }
 

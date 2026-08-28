@@ -14,6 +14,7 @@ import {
 } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   // What an area pair does with the two monitor flags: detection needs the
@@ -62,7 +63,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // still a working gravity, damping and audio-bus zone.
     const monitoring = rawProps.monitoring ?? 'true'; // Default is true in Godot
     const monitorable = rawProps.monitorable ?? 'true'; // Default is true in Godot
-    if (monitoring === 'false' && monitorable === 'false') {
+    if (boolSlotValue(monitoring) === false && boolSlotValue(monitorable) === false) {
       diagnostics.push({
         severity: 'warning',
         message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`,
@@ -89,7 +90,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
 
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
     const collisionMask = rawProps.collision_mask;
-    if (monitoring === 'true' && collisionMask !== undefined) {
+    if (boolSlotValue(monitoring) === true && collisionMask !== undefined) {
       // `ruleInt`, not `parseInt`: the latter stops at the first
       // character it cannot use, so `1e-1` read as 1 and missed the zero mask
       // Godot actually stores. uint32_t setter (collision_object_2d.h:124,

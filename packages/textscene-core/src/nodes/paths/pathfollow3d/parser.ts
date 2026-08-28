@@ -14,6 +14,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import { RotationMode, type PathFollow3DProperties } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function parsePathFollow3D(
   heading: ParsedHeading,
@@ -28,7 +29,7 @@ export function parsePathFollow3D(
     cubic_interp: boolOr(properties.cubic_interp, true),
     loop: boolOr(properties.loop, true),
     tilt_enabled: boolOr(properties.tilt_enabled, true),
-    use_model_front: properties.use_model_front === 'true',
+    use_model_front: boolSlotValue(properties.use_model_front) === true,
   };
   if (properties.progress !== undefined) result.progress = floatOr(properties.progress, 0);
   if (properties.progress_ratio !== undefined) {

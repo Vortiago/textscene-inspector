@@ -129,7 +129,7 @@ describe('Environment Linter Validators', () => {
       const result = validator!('volumetric_fog_enabled', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
   });
 

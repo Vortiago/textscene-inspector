@@ -55,7 +55,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'centered',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['centered', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['centered', 'converts'] }],
       },
       {
         prop: 'offset',
@@ -65,7 +65,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'flip_h',
         valid: [true],
-        invalid: [{ value: 1, contains: ['flip_h', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['flip_h', 'converts'] }],
       },
       {
         prop: 'flip_v',
@@ -75,7 +75,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'region_enabled',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['region_enabled', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['region_enabled', 'converts'] }],
       },
       {
         prop: 'region_rect',
@@ -86,7 +86,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'region_filter_clip_enabled',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['region_filter_clip_enabled', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['region_filter_clip_enabled', 'converts'] }],
       },
       {
         prop: 'hframes',

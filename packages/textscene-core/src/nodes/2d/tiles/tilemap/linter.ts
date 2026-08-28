@@ -38,6 +38,7 @@ import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/res
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { tileMapLayerVector } from '../shared/layerVector';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -75,9 +76,9 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   });
 
   type Layer = (typeof layers)[number];
-  const isLayerYSorted = ([, leaves]: Layer) => leaves.y_sort_enabled === 'true';
+  const isLayerYSorted = ([, leaves]: Layer) => boolSlotValue(leaves.y_sort_enabled) === true;
   const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.z_index, 0) || 0;
-  const nodeYSorted = rawProps.y_sort_enabled === 'true'; // inherited Node2D key, own node
+  const nodeYSorted = boolSlotValue(rawProps.y_sort_enabled) === true; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858
   const ySortedZIndices = new Set(layers.filter(isLayerYSorted).map(layerZIndex));

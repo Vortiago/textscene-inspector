@@ -113,7 +113,7 @@ disabled = false
 shape = SubResource("shape_1")
 disabled = 1
 `;
-        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['boolean'] });
+        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['converts'] });
       });
 
       it('should reject string non-boolean disabled value', () => {

@@ -21,7 +21,7 @@ describe('CharacterBody3D strict validators (physics state)', () => {
     });
 
     it('rejects a numeric stand-in for a boolean', () => {
-      expect(check('slide_on_ceiling', '1')?.severity).toBe('error');
+      expect(check('slide_on_ceiling', '1')?.severity).toBe('warning');
     });
   });
 

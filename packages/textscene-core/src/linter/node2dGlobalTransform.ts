@@ -65,6 +65,7 @@ import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
 import { slotComponents } from '../godot/int.js';
+import { boolSlotValue } from '../godot/index.js';
 
 /** Godot's own `Transform2D` layout: x-axis `(a, b)`, y-axis `(c, d)`, origin `(tx, ty)`. */
 export interface Transform2DMatrix {
@@ -145,7 +146,7 @@ function localTransform2D(node: TscnNode): Transform2DMatrix {
 }
 
 function isTopLevel(node: TscnNode): boolean {
-  return isValidProperties(node.properties) && node.properties.top_level === 'true';
+  return isValidProperties(node.properties) && boolSlotValue(node.properties.top_level) === true;
 }
 
 export type GlobalTransform2DVerdict =

@@ -100,9 +100,9 @@ max_contacts_reported = 10
         valid: [0.0, 0.5, 5.0, 15.0, -0.5, -1.0],
         invalid: [{ value: -1.5, contains: ['>= -1'] }],
       },
-      { prop: 'lock_rotation', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'lock_rotation', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'freeze', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'contact_monitor', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       {
         // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount,
         // MAX_CONTACTS_REPORTED_2D_MAX=4096): fails on `< 0 || >= 4096`, so the

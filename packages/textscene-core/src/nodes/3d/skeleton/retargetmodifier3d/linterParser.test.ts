@@ -129,7 +129,7 @@ describe('RetargetModifier3D strict validators', () => {
 
     it('rejects a non-boolean', () => {
       const error = check('use_global_pose', '1');
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
       expect(error?.code).toBe('INVALID_USE_GLOBAL_POSE_FORMAT');
     });
   });

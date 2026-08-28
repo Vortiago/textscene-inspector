@@ -122,7 +122,7 @@ describe('SpringBoneCollisionCapsule3D strict validators', () => {
 
     it('rejects a numeric stand-in for a boolean', () => {
       const error = check('inside', '1');
-      expect(error?.severity).toBe('error');
+      expect(error?.severity).toBe('warning');
       expect(error?.code).toBe('INVALID_INSIDE_FORMAT');
     });
   });

@@ -43,6 +43,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -52,7 +53,7 @@ function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const selectableRaw = props.selectable;
   const selectedRaw = props.selected;
   if (selectableRaw === undefined || selectedRaw === undefined) return [];
-  if (selectableRaw.trim() !== 'false' || selectedRaw.trim() !== 'true') return [];
+  if (boolSlotValue(selectableRaw) !== false || boolSlotValue(selectedRaw) !== true) return [];
 
   return [
     {

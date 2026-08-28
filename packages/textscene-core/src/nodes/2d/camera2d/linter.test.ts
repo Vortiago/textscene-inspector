@@ -55,7 +55,7 @@ describe('Camera2D Linter', () => {
       {
         prop: 'ignore_rotation',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['ignore_rotation', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['ignore_rotation', 'converts'] }],
       },
       {
         prop: 'offset',
@@ -85,7 +85,7 @@ describe('Camera2D Linter', () => {
       {
         prop: 'limit_smoothed',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['limit_smoothed', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['limit_smoothed', 'converts'] }],
       },
       {
         prop: 'limit_left',
@@ -175,7 +175,7 @@ describe('Camera2D Linter', () => {
       {
         prop: 'editor_draw_screen',
         valid: [true],
-        invalid: [{ value: 1, contains: ['editor_draw_screen', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['editor_draw_screen', 'converts'] }],
       },
       {
         prop: 'editor_draw_limits',
@@ -185,7 +185,7 @@ describe('Camera2D Linter', () => {
       {
         prop: 'editor_draw_drag_margin',
         valid: [true],
-        invalid: [{ value: 0, contains: ['editor_draw_drag_margin', 'boolean'] }],
+        invalid: [{ value: 0, severity: 'warning', contains: ['editor_draw_drag_margin', 'converts'] }],
       },
     ]);
 

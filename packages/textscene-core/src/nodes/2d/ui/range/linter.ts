@@ -33,6 +33,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -60,7 +61,7 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     }
   }
 
-  if (props.exp_edit === 'true' && minRaw !== undefined) {
+  if (boolSlotValue(props.exp_edit) === true && minRaw !== undefined) {
     const min = parseGodotFloat(minRaw);
     if (min !== null && !Number.isNaN(min) && min < 0) {
       diagnostics.push({

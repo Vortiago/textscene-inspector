@@ -42,6 +42,7 @@ import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 const PARENT_RULE = 'boneattachment3d-parent-not-skeleton3d';
 const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
@@ -49,7 +50,7 @@ const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
 function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;
-  if (properties.use_external_skeleton === 'true') {
+  if (boolSlotValue(properties.use_external_skeleton) === true) {
     // `extractNodePath` returns null for a non-literal and for NodePath(""),
     // which is exactly the "no path" case the engine's null cache covers.
     const path = extractNodePath(properties.external_skeleton ?? '');

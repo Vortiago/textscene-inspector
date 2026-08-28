@@ -16,7 +16,7 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, slotTupleRegex, ruleInt, storedInt } from '../../godot/index.js';
+import { indexedKeyRegex, slotTupleRegex, ruleInt, storedInt, boolSlotValue} from '../../godot/index.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -220,9 +220,9 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     if (altId < 0) continue;
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
-    if (prop === 'flip_h') alternative.flipH = value === 'true';
-    else if (prop === 'flip_v') alternative.flipV = value === 'true';
-    else if (prop === 'transpose') alternative.transpose = value === 'true';
+    if (prop === 'flip_h') alternative.flipH = typeof value === 'string' && boolSlotValue(value) === true;
+    else if (prop === 'flip_v') alternative.flipV = typeof value === 'string' && boolSlotValue(value) === true;
+    else if (prop === 'transpose') alternative.transpose = typeof value === 'string' && boolSlotValue(value) === true;
     else if (prop === 'texture_origin')
       alternative.textureOrigin = vec2iOr(value, { x: 0, y: 0 }, key);
   }

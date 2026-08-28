@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Validate AudioStreamPlayer2D semantic rules
@@ -53,7 +54,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   }
 
   // WARNING: autoplay enabled but no stream set
-  if (rawProps.autoplay === 'true' && streamEmpty && !drivenByAnimation) {
+  if (boolSlotValue(rawProps.autoplay) === true && streamEmpty && !drivenByAnimation) {
     diagnostics.push({
       severity: 'warning',
       message: `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`,

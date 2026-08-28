@@ -19,6 +19,7 @@ import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 /** Which of the two cast families — they differ only by the `shape` property. */
 export type CastKind = 'Ray' | 'Shape';
@@ -103,8 +104,8 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
 
     // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml — identical across all
     // four: collide_with_areas false, collide_with_bodies true.
-    const withAreas = (props.collide_with_areas ?? 'false') === 'true';
-    const withBodies = (props.collide_with_bodies ?? 'true') === 'true';
+    const withAreas = boolSlotValue((props.collide_with_areas ?? 'false')) === true;
+    const withBodies = boolSlotValue((props.collide_with_bodies ?? 'true')) === true;
     if (!withAreas && !withBodies) {
       report(arms.noCollideTarget, `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`);
     }

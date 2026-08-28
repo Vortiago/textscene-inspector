@@ -42,6 +42,6 @@ runResourcePropertyValidation('TileSet', [
   {
     prop: 'uv_clipping',
     valid: ['true', 'false'],
-    invalid: [{ value: '1', contains: ['uv_clipping'], severity: 'error' }],
+    invalid: [{ value: '1', contains: ['uv_clipping'], severity: 'warning' }],
   },
 ]);

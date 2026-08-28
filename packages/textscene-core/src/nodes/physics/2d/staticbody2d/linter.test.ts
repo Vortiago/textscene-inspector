@@ -137,7 +137,7 @@ physics_material_override = SubResource("mat_1")
       {
         prop: 'input_pickable',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
     ]);
   });

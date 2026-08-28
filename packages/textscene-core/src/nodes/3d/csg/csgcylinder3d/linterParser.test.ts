@@ -80,15 +80,17 @@ radius = -1.0
     expect(warnings[0]!.message).toContain('sides');
   });
 
-  it('rejects a non-boolean cone flag', () => {
+  it('converts a numeric cone flag rather than refusing it', () => {
     const content = `[gd_scene format=3]
 
 [node name="Cylinder" type="CSGCylinder3D"]
 cone = 3
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('cone');
+    // `3` booleanizes to true (`variant_op.cpp:1120`), so the file loads and
+    // the diagnostic is about the spelling Godot writes back, not a refusal.
+    const found = linter.lint(content).filter((d) => d.message.includes('cone'));
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0]!.severity).toBe('warning');
   });
 });
