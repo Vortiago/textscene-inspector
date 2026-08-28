@@ -54,8 +54,21 @@ export function parseSlider(
  * so `tick_count <= 1` paints nothing at all, and the borders are skipped
  * unless `ticks_on_borders` is set.
  */
+/**
+ * The most tick marks this previewer will place.
+ *
+ * `Slider::set_ticks` has no guard at all (slider.cpp:386-393), so `tick_count`
+ * is an unbounded INT slot and `2000000000` is a legal file the linter passes.
+ * One index per tick hangs or OOMs the webview and the VS Code preview.
+ *
+ * A slider is at most a few hundred CSS pixels wide here, so past this every
+ * additional mark lands sub-pixel on top of another and changes no rendered
+ * image. This is a limit of the previewer, not a claim about Godot.
+ */
+const MAX_RENDERED_TICKS = 1024;
+
 export function sliderTickIndices(props: SliderProperties): number[] {
-  const ticks = props.tickCount ?? SLIDER_DEFAULT_TICK_COUNT;
+  const ticks = Math.min(props.tickCount ?? SLIDER_DEFAULT_TICK_COUNT, MAX_RENDERED_TICKS);
   if (ticks <= 1) return [];
   const onBorders = props.ticksOnBorders ?? false;
   const indices: number[] = [];

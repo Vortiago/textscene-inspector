@@ -81,7 +81,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
 import { v, accepts, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { packedArrayLiteral } from '../../../godot/index.js';
+import { packedArrayForms } from '../../../godot/index.js';
 
 // file_dialog.cpp:2114, PROPERTY_HINT_ENUM, 5 labels ("Open File,Open Files,
 // Open Folder,Open Any,Save"). set_file_mode (:1362-1363) is
@@ -113,7 +113,10 @@ const ACCESS = { 0: 'RESOURCES', 1: 'USERDATA', 2: 'FILESYSTEM' };
  * through with no per-element check, so this rejects only what Godot's own
  * parser could not read either: format-only, no citation needed for a bound.
  */
-const FILTERS_WRAPPER_RE = packedArrayLiteral('PackedStringArray');
+// All three spellings the slot converts: `can_convert_strict` lists ARRAY as a
+// valid source for PACKED_STRING_ARRAY (variant.cpp:467-473) and the write
+// converts, so `filters = ["*.png"]` is a file Godot loads — measured on 4.6.3.
+const FILTERS_FORMS = packedArrayForms('PackedStringArray');
 // The trailing comma is legal here: this branch's close is ungated —
 // `if (token.type == TK_PARENTHESIS_CLOSE) break;` (variant_parser.cpp:1524-1525)
 // — unlike `_parse_construct`'s `first &&` at :575.
@@ -122,19 +125,19 @@ const FILTERS_BODY_RE = /^\s*"(?:[^"\\]|\\.)*"\s*(?:,\s*"(?:[^"\\]|\\.)*"\s*)*,?
 function packedStringArrayValidator(name: string): PropertyValidator {
   const code = `INVALID_${name.toUpperCase()}_FORMAT`;
   const validator = accepts((key, value, line) => {
-    const match = FILTERS_WRAPPER_RE.exec(value);
+    const match = FILTERS_FORMS.map((form) => form.exec(value)).find(Boolean);
     if (!match) {
       return propertyError(
         key,
         line,
-        `Property '${name}' must be a PackedStringArray of quoted strings like PackedStringArray("*.png, *.jpg"), got: ${value}`,
+        `Property '${name}' must be an array of quoted strings like PackedStringArray("*.png"), Array[String](["*.png"]) or ["*.png"], got: ${value}`,
         code
       );
     }
     const body = match[1]!.trim();
     if (body === '' || FILTERS_BODY_RE.test(body)) return null;
     return propertyError(key, line, `Property '${name}' contains a non-string element: ${value}`, code);
-  }, 'PackedStringArray("filter", …)');
+  }, 'string array (PackedStringArray(…), Array[String]([…]) or […])');
   validator.formatOnly = true;
   return validator;
 }

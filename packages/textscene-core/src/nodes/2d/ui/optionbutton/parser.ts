@@ -29,14 +29,27 @@ export function parseOptionButton(
   // Godot index) aligns with items[selected] even when an item omits its text key. A
   // filtered/compacted array would shift selection past any text-less item.
   const itemCount = ruleCount(properties.item_count) ?? 0;
+  // Read before the item walk, which bounds itself on it.
+  result.selected = parseOptionalInt(properties.selected);
   // Grouped by the item `_get_property` RESOLVES each key to, not by the text
   // the file spells: the gate is `is_valid_int()` and the read is `to_int()`
   // (property_list_helper.cpp:53-55), so `popup/item_00/text` and
   // `popup/item_+0/text` are item 0. Building the key forward from the counter
   // found neither and drew the item blank.
   const declared = indexedElements(properties, 'popup/item_', 'is_valid_int');
+  // Dense only as far as anything can OBSERVE. `set_item_count` refuses only a
+  // negative (option_button.cpp:310), so `item_count = 2000000000` is a legal
+  // file, and one slot per index hangs or OOMs the webview and the VS Code
+  // preview with no diagnostic — the linter clears the value, correctly.
+  //
+  // Nothing past the last index the file NAMES or `selected` points at differs
+  // from an absent item: it renders blank either way, and the component reads
+  // `items[selected]` alone. So the alignment `selected` needs is preserved
+  // exactly, and the tail that carried no information is not built.
+  const observed = Math.max(-1, ...declared.keys(), result.selected ?? -1);
+  const slots = Math.min(itemCount, observed + 1);
   const items: OptionItem[] = [];
-  for (let i = 0; i < itemCount; i++) {
+  for (let i = 0; i < slots; i++) {
     const leaves = declared.get(i);
     const rawText = leaves?.text;
     const text = rawText !== undefined ? unquoteString(rawText) : '';
@@ -45,6 +58,5 @@ export function parseOptionButton(
   }
 
   if (items.length > 0) result.items = items;
-  result.selected = parseOptionalInt(properties.selected);
   return result;
 }

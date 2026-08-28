@@ -108,3 +108,4 @@ export {
 } from './nodeBaseTypes.js';
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
+export { packedArrayForms } from './variantParser.js';

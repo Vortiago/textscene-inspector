@@ -195,3 +195,48 @@ export function resourceRef(
   if (!match) return null;
   return { kind: match[1] as 'SubResource' | 'ExtResource', id: match[2]! };
 }
+
+/**
+ * The element type Godot names inside `Array[T]([…])` for each packed type.
+ *
+ * The GETTER decides the spelling that reaches the file: a `TypedArray<T>`
+ * behind a `PropertyInfo(Variant::PACKED_*, …)` serialises through the
+ * `is_typed()` branch (`variant_parser.cpp:2341-2344`) and writes `Array[T]([…])`
+ * rather than the declared packed name.
+ */
+const PACKED_ELEMENT_TYPE: Readonly<Record<string, string>> = {
+  PackedByteArray: 'int',
+  PackedInt32Array: 'int',
+  PackedInt64Array: 'int',
+  PackedFloat32Array: 'float',
+  PackedFloat64Array: 'float',
+  PackedStringArray: 'String',
+  PackedVector2Array: 'Vector2',
+  PackedVector3Array: 'Vector3',
+  PackedVector4Array: 'Vector4',
+  PackedColorArray: 'Color',
+};
+
+/**
+ * The three spellings a packed slot accepts, packed form first.
+ *
+ * `can_convert_strict` lists ARRAY as a valid source for every PACKED_* type
+ * (`variant.cpp:467-473`) and the write converts, so the bare `[…]` literal
+ * loads into a genuinely packed slot — measured on 4.6.3: `filters = ["*.png"]`
+ * stores a PackedStringArray, `points = [Vector2(0, 0), Vector2(5, 5)]` a
+ * PackedVector2Array, `split_offsets = Array[int]([3, 7])` a PackedInt32Array.
+ *
+ * The BODIES differ between them and the caller must read them differently: the
+ * packed constructor takes a FLAT argument list (`PackedVector2Array(x, y, x, y)`,
+ * divided by the group size at `variant_parser.cpp:1555`), while the other two
+ * hold one ELEMENT each (`[Vector2(0, 0), …]`). `[0]` is the packed form, so a
+ * caller can test the match index to know which body it has.
+ */
+export function packedArrayForms(packedTypeName: string): readonly RegExp[] {
+  const element = PACKED_ELEMENT_TYPE[packedTypeName] ?? packedTypeName;
+  return [
+    packedArrayLiteral(packedTypeName),
+    new RegExp(`^${WS}Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[([\\s\\S]*)\\]${WS}\\)${WS}$`),
+    ARRAY_LITERAL_RE,
+  ];
+}

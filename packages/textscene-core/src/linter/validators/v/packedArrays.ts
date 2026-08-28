@@ -5,7 +5,13 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
-import { packedArrayLiteral, readerLimitedInt, type IntWidth } from '../../../godot/index.js';
+import {
+  packedArrayForms,
+  packedArrayLiteral,
+  readerLimitedInt,
+  splitTopLevel,
+  type IntWidth,
+} from '../../../godot/index.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
@@ -182,6 +188,44 @@ function firstNonNumericElement(body: string | readonly string[]): string | null
   return null;
 }
 
+/** The element each packed type's non-packed spellings hold, by wrapper name. */
+const ELEMENT_TYPE: Readonly<Record<string, string>> = {
+  PackedVector2Array: 'Vector2',
+  PackedVector3Array: 'Vector3',
+  PackedColorArray: 'Color',
+  PackedFloat32Array: 'float',
+};
+
+/**
+ * The first element of a BARE or typed array body Godot could not put in this
+ * slot, or null when every one fits.
+ *
+ * The bare and typed spellings hold one element per comma — `Vector2(0, 0)`,
+ * not the packed form's flat `0, 0` — so they are split at the TOP level and
+ * each is checked whole. A tuple element must be its own constructor at the
+ * slot's arity; a scalar element is just a number.
+ */
+function firstBadArrayElement(
+  body: string,
+  element: string | undefined,
+  groupSize: number
+): string | null {
+  for (const part of splitTopLevel(body)) {
+    const trimmed = part.trim();
+    if (trimmed === '') continue;
+    if (groupSize === 1) {
+      if (!TSCN_FLOAT_RE.test(trimmed)) return trimmed;
+      continue;
+    }
+    const call = element === undefined ? null : packedArrayLiteral(element).exec(trimmed);
+    // The arity is the slot's own: `[Vector3(0, 0, 0)]` in a Vector2 array is a
+    // conversion Godot does not make, so it stays an offender.
+    if (!call || splitTopLevel(call[1]!).length !== groupSize) return trimmed;
+    if (firstNonNumericElement(call[1]!) !== null) return trimmed;
+  }
+  return null;
+}
+
 /**
  * `Packed<Kind>Array(n1, n2, …)` — an arbitrary-length list of fixed-size
  * TUPLES (2 floats per Vector2, 3 per Vector3, 4 per Color), format-only.
@@ -212,21 +256,30 @@ function packedTupleArray(
   example: string = Array(groupSize).fill('0').join(', ')
 ): PropertyValidator {
   const formatErr = formatCode(name);
-  const WRAPPER_RE = packedArrayLiteral(wrapper);
+  const [PACKED_RE, ...OTHER_FORMS] = packedArrayForms(wrapper);
+  const element = ELEMENT_TYPE[wrapper];
   return shape((key, value, line) => {
-    const match = WRAPPER_RE.exec(value);
-    if (!match) {
+    // The packed constructor's body is a FLAT argument list; the other two hold
+    // one ELEMENT each. Both are values Godot loads into this slot, so the form
+    // that matched decides how the body is read rather than whether it is one.
+    const packed = PACKED_RE!.exec(value);
+    const body = packed
+      ? packed[1]!.trim()
+      : (OTHER_FORMS.map((form) => form.exec(value)).find(Boolean)?.[1] ?? undefined)?.trim();
+    if (body === undefined) {
       return propertyError(
         key,
         line,
-        `Property '${name}' must be a ${wrapper} like ${wrapper}(${example}), got: ${value}`,
+        `Property '${name}' must be a ${wrapper} like ${wrapper}(${example}), ` +
+          `Array[${element ?? wrapper}]([…]) or […], got: ${value}`,
         formatErr
       );
     }
-    const body = match[1]!.trim();
     if (body === '') return null;
 
-    const offender = firstNonNumericElement(body);
+    const offender = packed
+      ? firstNonNumericElement(body)
+      : firstBadArrayElement(body, element, groupSize);
     if (offender !== null) {
       return propertyError(
         key,

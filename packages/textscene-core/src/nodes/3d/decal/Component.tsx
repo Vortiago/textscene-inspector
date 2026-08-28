@@ -44,8 +44,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
-import { resolveTexture2DPath } from '../../../resources/SubResourceResolver';
-import { useResource, useResourceLoader } from '../../../resources/useResource';
+import { useResourceLoader } from '../../../resources/useResource';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
@@ -55,6 +54,7 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
+import { useTexture2D } from '../../../resources/useTexture2D';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -91,15 +91,16 @@ export function Decal({ node, children }: NodeComponentProps) {
   }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
-  // Resolve `texture_albedo = ExtResource("id")` → res:// path. Empty string
-  // short-circuits useResource (its contract) so the hook count stays stable
-  // whether or not an albedo texture is present.
-  const texturePath = useMemo(
-    () => resolveTexture2DPath(properties.texture_albedo, externalResources, internalResources),
-    [properties.texture_albedo, externalResources, internalResources]
-  );
-  const texResult = useResource<THREE.Texture>(texturePath ?? '', 'Texture2D');
-  const albedo = texResult.value ?? null;
+  // `useTexture2D`, not `resolveTexture2DPath` + `useResource`: a Texture2D slot
+  // also holds a procedurally generated sub-resource, which has no path at all.
+  // Resolving to a path alone drew `scenes/demos/3d/decals/test.tscn`'s
+  // GradientTexture2D albedo as nothing, silently. The hook owns the
+  // distinction and keeps the hook count stable for an absent texture.
+  const albedo = useTexture2D(
+    properties.texture_albedo,
+    externalResources,
+    internalResources
+  ).texture;
 
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows. The projection maths is

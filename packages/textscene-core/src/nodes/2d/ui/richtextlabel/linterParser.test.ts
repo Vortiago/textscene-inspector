@@ -302,8 +302,15 @@ describe('RichTextLabel strict validators', () => {
       }
     });
 
-    it('rejects a value not wrapped in PackedFloat32Array(...)', () => {
-      expect(check('tab_stops', '[10, 20, 30]')).not.toBeNull();
+    it('accepts the bare array spelling the slot converts', () => {
+      // Measured on 4.6.3: `tab_stops = [10, 20, 30]` stores
+      // PackedFloat32Array([10.0, 20.0, 30.0]). `can_convert_strict` lists
+      // ARRAY as a valid source for every PACKED_* type (variant.cpp:467-473).
+      expect(check('tab_stops', '[10, 20, 30]')).toBeNull();
+    });
+
+    it('rejects a value that is no array at all', () => {
+      expect(check('tab_stops', 'Vector2(1, 2)')).not.toBeNull();
     });
 
     it('rejects a non-numeric element', () => {

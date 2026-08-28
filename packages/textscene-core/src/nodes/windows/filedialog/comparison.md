@@ -55,7 +55,7 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `file_mode` | enum 0-4 (OPEN_FILE/OPEN_FILES/OPEN_DIR/OPEN_ANY/SAVE_FILE) | error |
 | `file_sort_options_enabled` | true or false |  |
 | `filename_filter` | quoted string |  |
-| `filters` | PackedStringArray("filter", …) |  |
+| `filters` | string array (PackedStringArray(…), Array[String]([…]) or […]) |  |
 | `folder_creation_enabled` | true or false |  |
 | `hidden_files_toggle_enabled` | true or false |  |
 | `layout_toggle_enabled` | true or false |  |
