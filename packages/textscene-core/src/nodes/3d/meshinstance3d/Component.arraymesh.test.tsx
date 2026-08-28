@@ -56,7 +56,6 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
-
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
     name: 'Trailer',

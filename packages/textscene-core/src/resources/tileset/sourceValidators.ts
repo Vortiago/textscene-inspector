@@ -9,7 +9,7 @@
  * terminal position instead.
  */
 
-import { accepts, keyShapeError, propertyError, v } from '../../linter/validators/index.js';
+import { accepts, keyShapeError, nilShapeError, propertyError, v } from '../../linter/validators/index.js';
 import { dropTrailingComma, indexedKeyRegex, isNilLiteral, splitTopLevel } from '../../godot/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
@@ -25,8 +25,8 @@ const unknownKey = (key: string, line: number, describes: string, code: string) 
  * source_id)` at tile_set.cpp:3968, and `add_pattern(p_value)` inside the fill
  * loop at :3997 — so a bare `null` in either key does arrive as a null `Ref`.
  *
- * `nilVerdict` keeps that message: the strict parser otherwise substitutes the
- * claim that the slot stores a zero value, which is what a slot whose
+ * `nilShapeError` keeps that message: the strict parser otherwise substitutes
+ * the claim that the slot stores a zero value, which is what a slot whose
  * CONVERSION discards the null does. These are OBJECT slots, where `NIL` does
  * convert, and the refusal happens afterwards — nothing is stored at all.
  */
@@ -36,7 +36,7 @@ function requiredResource(name: string, cite: string, code: string): PropertyVal
     const bad = format(key, value, line);
     if (bad) return bad;
     if (!isNilLiteral(value)) return null;
-    return propertyError(
+    return nilShapeError(
       key,
       line,
       `'${key}' must name a resource: TileSet::add_${name} refuses a cleared slot with ` +
@@ -44,7 +44,6 @@ function requiredResource(name: string, cite: string, code: string): PropertyVal
       code
     );
   };
-  validator.nilVerdict = true;
   // Not format-only: it refuses `null`, a value Godot's parser reads and every
   // other resource slot stores, so it owes the guard's own citation.
   validator.grounding = { kind: 'enforced', cite };
@@ -90,9 +89,6 @@ export const sourceValidator: PropertyValidator = accepts((key, value, line) => 
   return sourceResource(key, value, line);
 }, 'sources/<id> = SubResource("id") naming a TileSetSource');
 sourceValidator.grounding = { kind: 'enforced', cite: 'tile_set.cpp:477, tile_set.cpp:479' };
-// The registry returns THIS function, so the tag has to sit here as well as on
-// the leaf it forwards to.
-sourceValidator.nilVerdict = true;
 sourceValidator.leaves = [sourceResource];
 
 /** `trim_prefix("pattern_").is_valid_int()` (:3995). */
@@ -124,7 +120,6 @@ export const patternValidator: PropertyValidator = accepts((key, value, line) =>
   return patternResource(key, value, line);
 }, 'pattern_<n> = SubResource("id") naming a TileMapPattern');
 patternValidator.grounding = { kind: 'enforced', cite: 'tile_set.cpp:3997, tile_set.cpp:1359' };
-patternValidator.nilVerdict = true;
 patternValidator.leaves = [patternResource];
 
 /**

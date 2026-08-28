@@ -106,4 +106,4 @@ export {
   descendsFrom,
   isCatalogedType,
 } from './nodeBaseTypes.js';
-export { CLASS_BASE_TYPES } from './classBaseTypes.js';
+export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';

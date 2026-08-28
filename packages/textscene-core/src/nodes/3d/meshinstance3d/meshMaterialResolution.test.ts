@@ -24,6 +24,9 @@ const shader: TscnInternalResource = { id: 'Shader_1', type: 'ShaderMaterial', d
 const EXTERNAL: TscnExternalResource[] = [
   { id: '1_mat', path: 'res://body.tres', type: 'Material' },
   { id: '2_tex', path: 'res://body.png', type: 'Texture2D' },
+  { id: '3_sky', path: 'res://sky.tres', type: 'Sky' },
+  { id: '4_shader', path: 'res://body.tres', type: 'ShaderMaterial' },
+  { id: '5_untyped', path: 'res://body.tres', type: '' },
 ];
 
 const resolve = (ref: string | undefined) =>
@@ -38,8 +41,12 @@ describe('resolveMaterialOverrideSource', () => {
     expect(resolve('ExtResource("1_mat")')).toEqual({ path: 'res://body.tres' });
   });
 
-  it('reads a bare res:// path, a form the property also takes', () => {
-    expect(resolve('res://body.tres')).toEqual({ path: 'res://body.tres' });
+  it('is no override for a bare res:// path, which the slot cannot hold', () => {
+    // Unquoted it is an identifier and the whole file fails to parse
+    // (variant_parser.cpp:1619); quoted it is a STRING, which
+    // `can_convert_strict` refuses for an OBJECT slot (variant.cpp:731-737).
+    expect(resolve('res://body.tres')).toBeNull();
+    expect(resolve('"res://body.tres"')).toBeNull();
   });
 
   it('is no override when the property is absent', () => {
@@ -62,6 +69,23 @@ describe('resolveMaterialOverrideSource', () => {
     expect(resolve('null')).toBeNull();
   });
 
+  it('is no override for a .tres the heading declares as something else', () => {
+    // The extension is the container, not the type: a Sky saved as text is a
+    // `.tres` that resolves to no material, and the slot would then paint
+    // default white over EVERY surface.
+    expect(resolve('ExtResource("3_sky")')).toBeNull();
+  });
+
+  it('takes an ExtResource whose declared type descends from Material', () => {
+    expect(resolve('ExtResource("4_shader")')).toEqual({ path: 'res://body.tres' });
+  });
+
+  it('falls back to the path when the heading declares no type at all', () => {
+    // Godot always writes `type=`, so a heading without one is hand-written and
+    // there is no type-level answer to fall back on.
+    expect(resolve('ExtResource("5_untyped")')).toEqual({ path: 'res://body.tres' });
+  });
+
   it('is no override for an ExtResource that is not a material file', () => {
     // A `.png` reaching the material pipeline resolves to nothing, and the slot
     // then paints default white over EVERY surface — the opposite of what an
@@ -76,12 +100,15 @@ describe('resolveMaterialSubResources', () => {
     type: 'BoxMesh',
     data: { material: 'SubResource("Mat_1")' },
   };
-  const resolveSlots = (materialOverride?: string) =>
+  const resolveSlots = (materialOverride?: string, surface0?: string) =>
     resolveMaterialSubResources(
       {
         name: 'Mesh',
         mesh: 'SubResource("Box_1")',
-        surfaceMaterialOverrides: new Map<number, string>(),
+        surfaceMaterialOverrides:
+          surface0 === undefined
+            ? new Map<number, string>()
+            : new Map<number, string>([[0, surface0]]),
         materialOverride,
       },
       [boxMesh, material]
@@ -100,5 +127,12 @@ describe('resolveMaterialSubResources', () => {
     // chain that does not read the literal drops the mesh's material for a node
     // that overrides nothing.
     expect(resolveSlots('null')).toEqual([material]);
+  });
+
+  it('a null surface override is no override either, and falls through to it', () => {
+    // The same cleared slot one term to the right in the same chain: the map
+    // stores the property's TEXT, so `surface_material_override/0 = null` has
+    // to fall through to the mesh's own material rather than shadow it.
+    expect(resolveSlots(undefined, 'null')).toEqual([material]);
   });
 });

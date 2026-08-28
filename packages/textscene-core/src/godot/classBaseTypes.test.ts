@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CLASS_BASE_TYPES } from './classBaseTypes.js';
+import { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
@@ -35,5 +35,23 @@ describe('CLASS_BASE_TYPES', () => {
   it('keeps Resource as the terminal, as Node is on the other side', () => {
     expect(CLASS_BASE_TYPES.Resource).toBeUndefined();
     expect(CLASS_BASE_TYPES.Node).toBeUndefined();
+  });
+
+  it('walks the merged table, which the node-only walk cannot', () => {
+    expect(descendsFromClass('StandardMaterial3D', 'Material')).toBe(true);
+    expect(descendsFromClass('ShaderMaterial', 'Material')).toBe(true);
+    expect(descendsFromClass('Material', 'Material')).toBe(true);
+  });
+
+  it('answers false for a sibling branch and for a class it has never heard of', () => {
+    expect(descendsFromClass('Texture2D', 'Material')).toBe(false);
+    expect(descendsFromClass('Sky', 'Material')).toBe(false);
+    expect(descendsFromClass('MeshInstance3D', 'Material')).toBe(false);
+    expect(descendsFromClass('SomeGDExtensionThing', 'Material')).toBe(false);
+  });
+
+  it('reads no key off Object.prototype for a type name a .tscn chose', () => {
+    expect(descendsFromClass('constructor', 'Material')).toBe(false);
+    expect(descendsFromClass('__proto__', 'Material')).toBe(false);
   });
 });

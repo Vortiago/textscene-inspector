@@ -4,11 +4,12 @@
  */
 
 import type * as THREE from 'three';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../r3f/SceneResourcesContext';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import type { StandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/types';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
@@ -56,41 +57,42 @@ export function ArrayMeshSurfaces({
 }) {
   const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
   const multiSurface = surfacePaths.length > 1;
-  // Every surface reads the same override, so its scalars are decoded once
-  // rather than per slot — `parseStandardMaterial3DScalars` walks ~60 property
-  // decodes and this runs inside the render.
-  const overrideScalars = useMemo(
-    () =>
-      override?.subResource
-        ? parseStandardMaterial3DScalars(override.subResource.data as Record<string, string>)
-        : null,
-    [override]
+  // One source per surface, chosen once: the override fills BOTH channels for
+  // every surface at once, so the mesh's own material is reachable only while
+  // it is unset, and the two channels can never disagree about which won.
+  const sources: MaterialSlotSource[] = surfacePaths.map((path, i) =>
+    override ?? { subResource: sceneMaterials?.[i], path: path ?? undefined }
   );
+  // Every slot reading the same sub-resource decodes it once, across renders
+  // too — `parseStandardMaterial3DScalars` walks ~60 property decodes and this
+  // runs inside the render. Keyed on the resource OBJECT, which a re-parse
+  // replaces, so a cache hit can never be stale; a WeakMap so the entry dies
+  // with it.
+  const decoded = useRef(new WeakMap<TscnInternalResource, StandardMaterial3DScalars>());
+  const scalarsOf = (resource: TscnInternalResource): StandardMaterial3DScalars => {
+    const hit = decoded.current.get(resource);
+    if (hit) return hit;
+    const built = parseStandardMaterial3DScalars(resource.data as Record<string, string>);
+    decoded.current.set(resource, built);
+    return built;
+  };
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      {surfacePaths.map((path, i) => {
+      {sources.map((source, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        // One source per surface: the override fills both channels for every
-        // surface at once, so the mesh's own material is reachable only while
-        // it is unset.
-        const scene = override ? override.subResource : sceneMaterials?.[i];
         // A scene-local material is already in hand; only a PATH needs the pipeline.
-        return scene ? (
+        return source.subResource ? (
           <StandardMaterialSlot
             key={`surf-${i}`}
-            scalars={
-              override
-                ? overrideScalars
-                : parseStandardMaterial3DScalars(scene.data as Record<string, string>)
-            }
+            scalars={scalarsOf(source.subResource)}
             attach={attach}
             shadowSide={shadowSide}
           />
         ) : (
           <ExternalMaterialSlot
             key={`surf-${i}`}
-            path={override ? (override.path ?? null) : path}
+            path={source.path ?? null}
             attach={attach}
             shadowSide={shadowSide}
           />

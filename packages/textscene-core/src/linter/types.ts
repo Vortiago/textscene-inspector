@@ -70,17 +70,31 @@ export interface ParseError {
    * — an unrecognised leaf name, a shape `_set` cannot resolve, a negative
    * index — so every value fails it, `null` included.
    *
-   * It sits on the ERROR rather than the validator because it is a per-branch
-   * fact: a family dispatcher reads the value in its leaf branches and refuses
-   * a key in its unknown-leaf and negative-index ones, and `findValidator`
-   * hands the strict parser the dispatcher. That parser's nil rewrite reads it,
-   * because "this slot stores the type's zero instead" describes a slot the
-   * class does not have and would replace the refusal's own reason and tier.
+   * That parser's nil rewrite reads it, because "this slot stores the type's
+   * zero instead" describes a slot the class does not have and would replace
+   * the refusal's own reason and tier.
    *
-   * `ownsNilMessage` is where it is asked, beside the one other reason a
-   * refusal already accounts for a `null` ({@link PropertyValidator.nilVerdict}).
+   * `ownsNilMessage` is where it is asked, beside {@link ParseError.nilVerdict}.
    */
   keyVerdict?: true;
+
+  /**
+   * True when the refusal is about the bare `null` ITSELF: the slot exists and
+   * the setter opens with an `ERR_FAIL_COND(...is_null())`, so the write is
+   * refused and nothing is stored. `TileSet.sources/<id>` (`add_source`,
+   * tile_set.cpp:477) and `TileSet.pattern_<n>` (`add_pattern`, :1359) are the
+   * two.
+   *
+   * Both are OBJECT slots, which is exactly where the nil rewrite has nothing
+   * true to say: `NIL -> OBJECT` is the one conversion `can_convert_strict`
+   * allows, so no zero is stored in place of the null — the add is simply
+   * refused, and only this refusal holds the guard's `file:line`.
+   *
+   * Like `keyVerdict` it rides on the ERROR, for the same reason: `findValidator`
+   * hands the seam a family's dispatcher and `withFiniteGuard` hands it a
+   * wrapper, so a tag on the validator that refused never arrives.
+   */
+  nilVerdict?: true;
 }
 
 /**

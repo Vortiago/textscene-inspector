@@ -13,10 +13,31 @@
  * keep the last of a colliding pair.
  */
 
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
 export const CLASS_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...NODE_BASE_TYPES,
   ...RESOURCE_BASE_TYPES_GENERATED,
 });
+
+/**
+ * Does `className` descend from (or equal) `ancestor`, over BOTH hierarchies?
+ *
+ * `descendsFrom` walks the node table alone, so it answers false for every
+ * resource: `StandardMaterial3D` reaches `Material` only through the merged
+ * one. A caller asking what a `[ext_resource type="…"]` heading names — the
+ * type is a Resource, never a Node — needs this.
+ *
+ * `Object.hasOwn` and a hop bound for the same reasons `descendsFrom` states:
+ * the key is a type name the `.tscn` chooses, and the bound only stops a
+ * malformed table from spinning.
+ */
+export function descendsFromClass(className: string, ancestor: string): boolean {
+  let current: string | undefined = className;
+  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
+    if (current === ancestor) return true;
+    current = Object.hasOwn(CLASS_BASE_TYPES, current) ? CLASS_BASE_TYPES[current] : undefined;
+  }
+  return false;
+}

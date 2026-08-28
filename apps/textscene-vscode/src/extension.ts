@@ -44,13 +44,13 @@ export function activate(context: vscode.ExtensionContext) {
       // `resource` is whatever VS Code hands the handler, which the signature
       // describes rather than enforces: an argument with no string `fsPath`
       // falls back to the active editor, the same path the palette entry takes,
-      // rather than throwing out of the command. Both arms then hold a string
-      // `fsPath`, so the test below needs no second optional chain.
+      // rather than throwing out of the command. The fallback arm is typed
+      // rather than checked, so the test below keeps its own optional chain.
       const target =
         typeof resource?.fsPath === 'string'
           ? resource
           : vscode.window.activeTextEditor?.document.uri;
-      if (target?.fsPath.endsWith('.tscn')) {
+      if (target?.fsPath?.endsWith('.tscn')) {
         getOrCreatePanel(target);
       } else {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');

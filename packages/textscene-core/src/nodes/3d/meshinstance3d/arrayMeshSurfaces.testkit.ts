@@ -2,9 +2,8 @@
  * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline — a wall
  * quad's bytes, minus the file wrapper.
  *
- * One copy, because `"format": 34359742487` encodes the vertex layout: a
- * decoder change re-bakes these bytes, and a second copy would decode into a
- * different geometry with only one suite failing to say so.
+ * `"format": 34359742487` encodes the vertex layout, so a decoder change
+ * re-bakes these bytes; every suite reading them from here re-bakes together.
  */
 export const INLINE_SURFACES = `[{
 "aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
@@ -21,8 +20,10 @@ export const INLINE_SURFACES = `[{
 
 /** The same surface, carrying a scene-local material in its `material` slot. */
 export function inlineSurfacesWithMaterial(subResourceId: string): string {
+  // Replacer function, not a replacement string: `$&` and friends are special
+  // in the latter, and these bytes are load-bearing.
   return INLINE_SURFACES.replace(
     '"name": "inline",',
-    `"material": SubResource("${subResourceId}"),\n"name": "inline",`
+    () => `"material": SubResource("${subResourceId}"),\n"name": "inline",`
   );
 }

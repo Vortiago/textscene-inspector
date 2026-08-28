@@ -35,23 +35,6 @@ export type PropertyValidator = ((
   accepts?: string;
 
   /**
-   * True when this validator refuses a bare `null` on its OWN authority — the
-   * setter opens with an `ERR_FAIL_COND(...is_null())`, so the write is refused
-   * and nothing is stored.
-   *
-   * `TileSet.sources/<id>` (`add_source`, tile_set.cpp:477) and
-   * `TileSet.pattern_<n>` (`add_pattern`, :1359) are the two. Both are OBJECT
-   * slots, which is exactly where the strict parser's nil rewrite has nothing
-   * true to say: `NIL -> OBJECT` is the one conversion `can_convert_strict`
-   * allows, so no zero value is stored in place of the null — the add is simply
-   * refused. Only this validator holds the `file:line` that says so.
-   *
-   * Separate from {@link ParseError.keyVerdict}, which answers the same seam
-   * question for a different reason: there the class has no such slot at all.
-   */
-  nilVerdict?: true;
-
-  /**
    * True when the ONLY thing this validator rejects is a value that never
    * reaches the property — `Color(1, 1)`, `not-a-float`, an unquoted string.
    * Such a rejection needs no citation, because no `.tscn` the engine loads
@@ -147,15 +130,14 @@ export type PropertyValidator = ((
  *
  * ONE question with two answers — the class has no such slot
  * ({@link ParseError.keyVerdict}), or the setter refuses the null
- * ({@link PropertyValidator.nilVerdict}) — asked once here rather than spelled
- * as a growing list of exemptions at the seam.
+ * ({@link ParseError.nilVerdict}) — asked once here rather than spelled as a
+ * growing list of exemptions at the seam.
  *
- * The two answers sit on different objects because they are known at different
- * places. A `nilVerdict` slot is one the whole validator is about. A key
- * verdict is a per-branch fact: a family dispatcher reads the value in its leaf
- * branches and refuses a key in its unknown-leaf and negative-index ones, and
- * the registry hands this seam the dispatcher, so only the error carries it.
+ * Both answers ride on the ERROR because neither is knowable from the function
+ * the registry hands this seam: `findValidator` returns a family's dispatcher
+ * rather than the leaf that refused, and `withFiniteGuard` returns a wrapper
+ * rather than either. A refusal therefore carries its own verdict.
  */
-export function ownsNilMessage(validator: PropertyValidator, error: ParseError): boolean {
-  return validator.nilVerdict === true || error.keyVerdict === true;
+export function ownsNilMessage(error: ParseError): boolean {
+  return error.keyVerdict === true || error.nilVerdict === true;
 }

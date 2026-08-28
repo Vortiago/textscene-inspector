@@ -7,11 +7,11 @@
  * (variant.cpp:543-544), so every other slot silently stores the type's zero.
  *
  * That is false for a slot whose setter REFUSES the null outright — nothing is
- * stored at all — and such a validator says so itself, with the `file:line` of
- * the guard. `nilVerdict` is how it keeps its own message.
+ * stored at all — and such a refusal says so itself, with the `file:line` of
+ * the guard. `nilShapeError` is how it keeps its own message.
  *
  * Both directions are asserted. The rewrite still owning every untagged
- * validator is what stops the tag being widened into a no-op.
+ * refusal is what stops the tag being widened into a no-op.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -52,16 +52,23 @@ describe('nil-literal verdicts', () => {
     expect(diagnostics[0]!.message).toContain("zero value");
   });
 
+  it('declares the verdict on the ERROR, so a forwarder keeps the message', () => {
+    // The registry hands the seam a family's DISPATCHER, and a wrapper such as
+    // `withFiniteGuard` hands it a different function again. Neither is the
+    // validator that refused, so a tag on the validator never arrives; the
+    // error travels.
+    const source = validatorRegistry.findValidator('TileSet', 'sources/0')!;
+    expect(ownsNilMessage(source('sources/0', 'null', 1)!)).toBe(true);
+  });
+
   it('is one question, asked of both tags', () => {
     const source = validatorRegistry.findValidator('TileSet', 'sources/0');
     const shape = validatorRegistry.findValidator('TileSet', 'tile_shape');
     // HBoxContainer::vertical is the removal case, which owns its message for a
     // different reason: the class has no such slot at all.
     const removed = validatorRegistry.findValidator('HBoxContainer', 'vertical');
-    // The removal's answer sits on its ERROR, the nil slot's on its validator,
-    // so the question is asked of the pair.
     const verdict = (v: PropertyValidator | null, key: string) =>
-      ownsNilMessage(v!, v!(key, 'null', 1)!);
+      ownsNilMessage(v!(key, 'null', 1)!);
     expect(verdict(source, 'sources/0')).toBe(true);
     expect(verdict(removed, 'vertical')).toBe(true);
     expect(verdict(shape, 'tile_shape')).toBe(false);

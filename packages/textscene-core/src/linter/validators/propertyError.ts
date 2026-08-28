@@ -41,3 +41,22 @@ export function keyShapeError(
 ): ParseError {
   return { ...propertyError(key, line, message, code), keyVerdict: true };
 }
+
+/**
+ * The same, for a refusal of a bare `null` handed to a slot that exists — a
+ * setter opening with an `ERR_FAIL_COND(...is_null())`, where nothing is
+ * stored at all.
+ *
+ * The strict parser's nil rewrite must not restate that either: it claims the
+ * slot holds the type's zero, which is what a slot whose CONVERSION discards
+ * the null does, not one whose setter refuses it. See
+ * {@link ParseError.nilVerdict}.
+ */
+export function nilShapeError(
+  key: string,
+  line: number,
+  message: string,
+  code: string
+): ParseError {
+  return { ...propertyError(key, line, message, code), nilVerdict: true };
+}

@@ -153,14 +153,14 @@ export class StrictTscnParser {
         // default.
         //
         // The claim is about a slot whose CONVERSION discards the null, and it
-        // is exactly as narrow as that. Two kinds of validator answer for the
+        // is exactly as narrow as that. Two kinds of refusal answer for the
         // null themselves and keep their message, which is what
         // `ownsNilMessage` asks: a key-level verdict rejects every value
         // because the class has no such slot, so "this slot stores zero
         // instead" describes a slot that does not exist and hides the removal's
-        // own reason; and a `nilVerdict` slot is an OBJECT one whose setter
-        // refuses the null with an `ERR_FAIL_COND(...is_null())`, so nothing is
-        // stored at all and only that validator carries the guard's `file:line`.
+        // own reason; and a nil verdict is an OBJECT slot whose setter refuses
+        // the null with an `ERR_FAIL_COND(...is_null())`, so nothing is stored
+        // at all and only that refusal carries the guard's `file:line`.
         //
         // The severity moves with the message. What is being reported is the
         // Variant binding narrowing the literal on the way IN, which ADR-0032
@@ -171,13 +171,13 @@ export class StrictTscnParser {
         // Line, column and code stay the validator's, so the diagnostic keeps
         // anchoring on the value.
         //
-        // A key verdict rides on the ERROR rather than the validator because it
-        // is a per-branch fact: a family dispatcher reads the value in its leaf
-        // branches and refuses a KEY in its unknown-leaf and negative-index
-        // ones, and the registry hands this seam the dispatcher. Rewriting one
-        // of those claims a slot stores zero for a key the class does not have,
+        // Both verdicts ride on the ERROR, because neither is knowable from the
+        // function this seam is handed: `findValidator` returns a family's
+        // dispatcher rather than the leaf branch that refused, and
+        // `withFiniteGuard` returns a wrapper rather than either. Rewriting a
+        // refusal that carries one claims a slot stores zero where none does,
         // and reports a dropped write as a warning.
-        if (isNilLiteral(value) && !ownsNilMessage(validator, error)) {
+        if (isNilLiteral(value) && !ownsNilMessage(error)) {
           errors.push({
             ...error,
             severity: 'warning',

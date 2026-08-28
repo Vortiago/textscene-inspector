@@ -7,9 +7,22 @@
 import type { MeshInstance3DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { parseResourceReference } from '../../../resources/SubResourceResolver';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
-import { isNilLiteral } from '../../../godot';
+import { descendsFromClass, isNilLiteral } from '../../../godot';
+import { isMaterialPath } from '../../../resources/materials/standardmaterial3d/loadMaterial';
+
+/**
+ * A resource reference that actually names something, or undefined.
+ *
+ * `null` is legal in every resource slot and means the slot is empty, but the
+ * parser stores the property's TEXT and the string `"null"` is truthy — so a
+ * `??` chain over raw refs steps over a cleared slot instead of falling
+ * through it.
+ */
+function heldRef(ref: string | undefined): string | undefined {
+  return ref !== undefined && ref !== '' && !isNilLiteral(ref) ? ref : undefined;
+}
 
 export function resolveMeshSubResource(
   meshRef: string | undefined,
@@ -68,17 +81,14 @@ export function resolveMaterialSubResources(
   // declares one `material`, which is surface 0's.
   const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
 
-  // `null` is a legal literal in any resource slot and means no override, so
-  // the chain has to fall THROUGH it: the parser stores the property's text,
-  // and the string `"null"` is truthy to `??`, which would otherwise drop the
-  // mesh's own material for a node that overrides nothing.
-  const override = isNilLiteral(properties.materialOverride ?? '')
-    ? undefined
-    : properties.materialOverride;
+  // Every term goes through `heldRef`: a cleared slot must fall THROUGH the
+  // chain, and each of the three is raw parser text.
+  const override = heldRef(properties.materialOverride);
 
   const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
   for (let i = 0; i < surfaceSlots; i++) {
-    const ref = override ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
+    const ref =
+      override ?? heldRef(overrides?.get(i)) ?? (i === 0 ? heldRef(meshOwn) : undefined);
     result[i] = resolveStandardMaterial(ref, internalResources);
   }
   return result;
@@ -110,23 +120,40 @@ export interface MaterialSlotSource {
  *
  * `null` for a reference that names no material, deliberately: to Godot the
  * property is a `Ref<Material>`, so a reference that does not load as one is
- * null there too, and no override is what the surfaces then keep. That covers
- * both an `ExtResource` this scene never declares and one pointing at a file
- * that is not a material — a `.png` handed to the material pipeline resolves
- * to nothing and would paint every surface default white instead.
+ * null there too, and no override is what the surfaces then keep. Anything
+ * else reaches `ExternalMaterialSlot`, whose pipeline builds nothing from a
+ * non-material file and paints every surface default white.
+ *
+ * The `[ext_resource]` heading's declared `type` is what answers it, not the
+ * filename: `type="Sky" path="res://sky.tres"` is a `.tres` that is no
+ * material. `isMaterialPath` then asks the second question, whether the
+ * pipeline can load the file the heading points at.
+ *
+ * An `ExtResource` is the only reference form that reaches here. A bare
+ * `res://…` is not a value this property can hold: unquoted it is an
+ * identifier and the file fails to load (`variant_parser.cpp:1619`), quoted it
+ * is a STRING, which `can_convert_strict` refuses for an OBJECT slot
+ * (`variant.cpp:731-737`), so the write is dropped.
  */
 export function resolveMaterialOverrideSource(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
 ): MaterialSlotSource | null {
-  if (!ref) return null;
-  const subResource = resolveStandardMaterial(ref, internalResources);
+  const held = heldRef(ref);
+  if (!held) return null;
+  const subResource = resolveStandardMaterial(held, internalResources);
   if (subResource) return { subResource };
-  // `resolveExtResourcePath` also passes a bare `res://…` through, which is a
-  // form the property takes.
-  const path = resolveExtResourcePath(ref, externalResources);
-  return path?.endsWith('.tres') ? { path } : null;
+  const parsed = parseResourceReference(held);
+  if (parsed?.type !== 'ExtResource') return null;
+  const declared = externalResources.find((r) => r.id === parsed.id);
+  if (!declared) return null;
+  // A heading with no `type` at all is hand-written — Godot's saver always
+  // writes one (`resource_format_text.cpp:1870`) — so the extension is the only
+  // signal left and the lenient parser attempts the override rather than
+  // dropping it.
+  if (declared.type !== '' && !descendsFromClass(declared.type, 'Material')) return null;
+  return isMaterialPath(declared.path) ? { path: declared.path } : null;
 }
 
 function findMeshOwnMaterial(

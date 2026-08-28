@@ -44,7 +44,6 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
   );
 }
 
-
 describe('MeshInstance3D flags (assertions 11–17)', () => {
   it('#11 mesh resolves → BufferGeometry present on rendered mesh', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")' });

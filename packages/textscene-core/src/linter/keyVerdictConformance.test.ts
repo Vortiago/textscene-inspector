@@ -21,6 +21,8 @@ import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import type { PropertyValidator } from './propertyValidator.js';
+import { classifiableKeys } from './testing/validatorClassification.js';
+import { keyShapeError } from './validators/propertyError.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** Spans the Variant forms a `.tscn` can put in any slot. */
@@ -37,28 +39,48 @@ const VALUES = [
   'SubResource("Guard_1")',
 ];
 
+/** The one value the seam ever consults, so the one whose error is judged. */
+const NIL = VALUES.indexOf('null');
+
 /** A leaf name no Godot class declares, so any refusal of it is key-level. */
 const BOGUS = '__guard_bogus__';
 
 /**
+ * Segments a family's `_set` matches BELOW its own index. A synthesised key
+ * cannot guess a literal, so the branches that refuse a joint or a per-terrain
+ * key are unreachable without naming them, and a bogus segment lands on the
+ * enclosing family's unknown-leaf arm instead. The `every nested segment still
+ * reaches a refusal` case fails when one goes stale.
+ */
+const NESTED_SEGMENTS = ['joints/0', 'joints/-1', 'terrain_0', 'terrain_-1'];
+
+/** Probes for a family indexed at `base`, its nested branches included. */
+function indexedProbes(base: string): string[] {
+  return [
+    `${base}0/${BOGUS}`,
+    `${base}-1/${BOGUS}`,
+    `${base}-1/name`,
+    ...NESTED_SEGMENTS.flatMap((segment) => [
+      `${base}0/${segment}/${BOGUS}`,
+      `${base}-1/${segment}/${BOGUS}`,
+    ]),
+  ];
+}
+
+/**
  * Concrete keys to probe for one registered key pattern. Wildcards are the four
- * shapes `buildWildcardIndex` recognises; anything else is an exact key.
+ * shapes `buildWildcardIndex` recognises; anything else is an exact key, which
+ * covers every removal too.
  */
 function probeKeys(pattern: string): string[] {
-  if (pattern.endsWith('#/**')) {
-    const p = pattern.slice(0, -4);
-    return [`${p}0/${BOGUS}`, `${p}-1/${BOGUS}`, `${p}0/joints/0/${BOGUS}`];
-  }
-  if (pattern.endsWith('#/*')) {
-    const p = pattern.slice(0, -3);
-    return [`${p}0/${BOGUS}`, `${p}-1/${BOGUS}`];
-  }
+  if (pattern.endsWith('#/**')) return indexedProbes(pattern.slice(0, -4));
+  if (pattern.endsWith('#/*')) return indexedProbes(pattern.slice(0, -3));
   if (pattern.endsWith('/*')) {
     // A `prefix/*` family often carries its index BELOW the wildcard
     // (`bones/0/position`), so the bare leaf probe alone never reaches the
     // branch that resolves an index.
     const p = pattern.slice(0, -2);
-    return [`${p}/${BOGUS}`, `${p}/0/${BOGUS}`, `${p}/-1/${BOGUS}`, `${p}/-1/name`];
+    return [`${p}/${BOGUS}`, ...indexedProbes(`${p}/`)];
   }
   if (pattern.endsWith('#')) {
     const p = pattern.slice(0, -1);
@@ -75,52 +97,64 @@ interface Offender {
 
 /**
  * Whether `probe` refuses `key` the same way whatever the value, and if so
- * whether that refusal declares itself. `owner` is the validator the REGISTRY
- * hands the seam — a leaf's own flag never reaches it, so a leaf is judged
- * against its dispatcher's exemption and its own error's.
+ * whether that refusal declares itself. The verdict is read off the ERROR, the
+ * one object that survives a dispatcher and a wrapper alike, so a leaf is
+ * judged on what it actually returns.
  */
-function offence(
-  nodeType: string,
-  key: string,
-  probe: PropertyValidator,
-  owner: PropertyValidator
-): Offender | null {
+function offence(nodeType: string, key: string, probe: PropertyValidator): Offender | null {
   const errors = VALUES.map((value) => probe(key, value, 1));
   const first = errors[0];
   if (!first) return null;
   const uniform = errors.every((e) => e && e.message === first.message && e.code === first.code);
   if (!uniform) return null;
-  if (ownsNilMessage(owner, first)) return null;
+  // The nil error, not the first: the rewrite this guards runs on that one
+  // alone, and a branch may build the same message twice by two routes.
+  if (ownsNilMessage(errors[NIL]!)) return null;
   return { nodeType, key, message: first.message };
 }
 
-function sweep(): Offender[] {
+/** Offenders, and the subject counts that say the sweep had subjects. */
+function sweep(): { offenders: Offender[]; probes: number; exempt: number } {
   const offenders: Offender[] = [];
-  for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
-    for (const pattern of validatorRegistry.getOwnKeys(nodeType)) {
-      for (const key of probeKeys(pattern)) {
-        const validator = validatorRegistry.findValidator(nodeType, key);
-        if (!validator) continue;
+  let probes = 0;
+  let exempt = 0;
 
-        const found = offence(nodeType, key, validator, validator);
-        if (found) offenders.push(found);
+  // Recursive and deduped, like `collectValidators`: a leaf can itself be a
+  // dispatcher (BoneTwistDisperser3D's `settings/*` holds a whole family), and
+  // one leaf instance is shared between dispatchers.
+  const visit = (
+    nodeType: string,
+    key: string,
+    validator: PropertyValidator,
+    seen: Set<PropertyValidator>
+  ): void => {
+    if (seen.has(validator)) return;
+    seen.add(validator);
+    probes++;
+    const found = offence(nodeType, key, validator);
+    if (found) offenders.push(found);
+    // The exemption arm firing is what says the sweep still reaches refusals:
+    // an empty registry drives `probes` and `exempt` to zero together.
+    const nilError = validator(key, 'null', 1);
+    if (nilError && ownsNilMessage(nilError)) exempt++;
+    for (const leaf of validator.leaves ?? []) visit(nodeType, key, leaf, seen);
+  };
 
-        // Past the dispatcher: a family's leaf carries its own `keyVerdict`,
-        // but `findValidator` returns the dispatcher, so only the error the
-        // leaf builds can reach the seam.
-        for (const leaf of validator.leaves ?? []) {
-          const leafFound = offence(nodeType, key, leaf, validator);
-          if (leafFound) offenders.push(leafFound);
-        }
-      }
+  // `classifiableKeys`, not `getOwnKeys`: removals are the third population and
+  // a removal-only type never appears in the validator map at all.
+  for (const { nodeType, key: pattern } of classifiableKeys()) {
+    for (const key of probeKeys(pattern)) {
+      const validator = validatorRegistry.findValidator(nodeType, key);
+      if (!validator) continue;
+      visit(nodeType, key, validator, new Set());
     }
   }
-  return offenders;
+  return { offenders, probes, exempt };
 }
 
 describe('key-shape refusals declare themselves on the error', () => {
   it('every value-independent refusal carries keyVerdict', () => {
-    const offenders = sweep();
+    const { offenders } = sweep();
     const report = offenders
       .map((o) => `  ${o.nodeType} :: ${o.key}\n    ${o.message}`)
       .join('\n');
@@ -132,20 +166,40 @@ describe('key-shape refusals declare themselves on the error', () => {
     ).toEqual([]);
   });
 
-  it('sees a refusal that forgets the flag', () => {
+  it('sweeps a population that cannot quietly empty', () => {
+    const { probes, exempt } = sweep();
+    expect(probes).toBeGreaterThan(3000);
+    expect(exempt).toBeGreaterThan(200);
+  });
+
+  it('every nested segment still reaches a refusal', () => {
+    for (const segment of NESTED_SEGMENTS) {
+      const reached = classifiableKeys().some(({ nodeType, key: pattern }) =>
+        probeKeys(pattern)
+          .filter((key) => key.includes(`/${segment}/`))
+          .some((key) => {
+            const validator = validatorRegistry.findValidator(nodeType, key);
+            const error = validator?.(key, 'null', 1);
+            return error?.keyVerdict === true;
+          })
+      );
+      expect(reached, `no family refuses a key below "${segment}"`).toBe(true);
+    }
+  });
+
+  it('sees a refusal that forgets the flag, and clears one that carries it', () => {
     // The guard is only worth its runtime if it fails on the shape it bans, so
-    // the ban is exercised against a validator written the wrong way.
-    const unflagged = (key: string, _value: string, line: number) => ({
+    // `offence` itself is run against a validator written each way.
+    const unflagged: PropertyValidator = (key, _value, line) => ({
       severity: 'error' as const,
       message: `Unknown ${key}`,
       line,
       column: key.length + 3,
       code: 'GUARD_PROBE',
     });
-    const errors = VALUES.map((value) => unflagged('bogus', value, 1));
-    const uniform = errors.every((e) => e.message === errors[0]!.message);
-    expect(uniform).toBe(true);
-    expect(ownsNilMessage(unflagged, errors[0]!)).toBe(false);
-    expect(errors[0]).not.toHaveProperty('keyVerdict');
+    const flagged: PropertyValidator = (key, _value, line) =>
+      keyShapeError(key, line, `Unknown ${key}`, 'GUARD_PROBE');
+    expect(offence('Guard', BOGUS, unflagged)).not.toBeNull();
+    expect(offence('Guard', BOGUS, flagged)).toBeNull();
   });
 });

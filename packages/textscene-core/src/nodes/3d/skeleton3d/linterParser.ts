@@ -38,9 +38,9 @@ const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
 const bonesValidator: PropertyValidator = (key, value, line) => {
   const match = BONE_KEY_RE.exec(key);
   if (!match) {
-    // `keyVerdict`, like every refusal below: the key names no slot, so the
-    // nil rewrite has no zero value to claim. Spelled here rather than through
-    // `keyShapeError` because column 1 anchors the whole key, not past it.
+    // `keyVerdict`: the key names no slot, so the nil rewrite has no zero
+    // value to claim. Spelled here rather than through `keyShapeError` because
+    // column 1 anchors the whole key, not past it.
     return {
       severity: 'error',
       message: `Invalid bone property key format: "${key}". Expected: bones/<number>/<property>`,
