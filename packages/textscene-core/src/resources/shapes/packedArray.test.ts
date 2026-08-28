@@ -103,3 +103,33 @@ describe('fanTriangulate', () => {
     expect(fanTriangulate([0, 1])).toEqual([]);
   });
 });
+
+describe('parsePackedInt32Arrays — the bare inner-array spelling', () => {
+  it('reads sub-polygons written as plain nested arrays', () => {
+    // Measured on 4.6.3: `polygons = [[0, 1, 2], [0, 2, 3]]` on a Polygon2D
+    // loads as two sub-polygons. The strict side accepts it (polygon_2d.cpp:720
+    // is an untyped ARRAY and `set_polygons` takes `const Array &`), so a
+    // constructor-only scan here made the renderer disagree with the linter
+    // about the same file, silently: zero iterations, `[]`, and the outline
+    // fan-triangulated as one polygon with nothing reported on either layer.
+    expect(parsePackedInt32Arrays('[[0, 1, 2], [0, 2, 3]]')).toEqual([
+      [0, 1, 2],
+      [0, 2, 3],
+    ]);
+  });
+
+  it('still reads the constructor spellings', () => {
+    expect(parsePackedInt32Arrays('[PackedInt32Array(0, 1, 2)]')).toEqual([[0, 1, 2]]);
+    expect(
+      parsePackedInt32Arrays('Array[PackedInt32Array]([PackedInt32Array(3, 4, 5)])')
+    ).toEqual([[3, 4, 5]]);
+  });
+
+  it('reads an empty outer array as no sub-polygons', () => {
+    expect(parsePackedInt32Arrays('[]')).toEqual([]);
+  });
+
+  it('refuses a bare element the tokenizer cannot read', () => {
+    expect(() => parsePackedInt32Arrays('[[0, oops, 2]]')).toThrow();
+  });
+});
