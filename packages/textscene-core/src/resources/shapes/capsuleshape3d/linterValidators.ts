@@ -6,9 +6,10 @@
  * it. See capsule_shape_3d.cpp.
  */
 
-// Registers the Resource tier this chain terminates at, so `resource_name` and
-// its siblings still resolve when this module is loaded on its own.
-import '../../resource/linterValidators.js';
+// Registers the Shape3D tier this class inherits from, and through it the
+// Resource tier the chain terminates at, so an inherited key still resolves
+// when this module is loaded on its own.
+import '../shape3d/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
