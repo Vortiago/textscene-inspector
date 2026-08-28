@@ -86,7 +86,7 @@ export class TscnParserCore {
    * @returns Parsed scene structure
    */
   parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
-    logger.info('Starting TSCN parsing');
+    logger.info('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF so Windows-authored .tscn files don't leave a
     // trailing \r on each line (which would otherwise corrupt accumulated
     // multi-line string values).
@@ -303,7 +303,7 @@ export class TscnParserCore {
       );
     }
 
-    logger.info(`Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
+    logger.info(`[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
 
     return {
       nodes: sceneTree,

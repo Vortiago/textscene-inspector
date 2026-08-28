@@ -83,14 +83,23 @@ export class Linter {
   }
 
   /**
-   * Convert parse errors to diagnostic format
+   * Convert parse errors to diagnostic format.
+   *
+   * The node comes from the error, which the scanning loop stamped while it was
+   * inside that node's body ({@link ParseError.nodeName}). Reporting every one
+   * of these as `<unknown>` made the linter's core product — a grounded refusal
+   * of a property VALUE — unable to say which of a scene's nodes wrote it, in
+   * the CLI's human output (`format.ts`) and its JSON alike.
+   *
+   * `<unknown>` remains the answer where it is the true one: a malformed
+   * heading, and the `format=` header, belong to no node.
    */
   private convertParseErrors(errors: ParseError[]): Diagnostic[] {
     return errors.map(error => ({
       severity: error.severity,
       message: error.message,
-      nodeName: '<unknown>',
-      nodeType: '<unknown>',
+      nodeName: error.nodeName ?? '<unknown>',
+      nodeType: error.nodeType ?? '<unknown>',
       ruleName: STRICT_PARSER_RULE_NAME,
       location: {
         line: error.line,

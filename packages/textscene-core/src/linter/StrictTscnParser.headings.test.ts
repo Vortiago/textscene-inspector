@@ -33,8 +33,8 @@ describe('StrictTscnParser', () => {
 
     it('should report every malformed heading (edge-malformed-bracket fixture shape)', () => {
       // Mirrors scenes/fixtures/edge-malformed-bracket.tscn: both lines open a
-      // bracket but never close it. Previously these were silently swallowed
-      // by the property-parsing fallback and the file linted clean.
+      // bracket but never close it. Without this the property-parsing fallback
+      // swallows them and the file lints clean.
       const content = `[gd_scene format=3
 
 [node name="Root" type="Node3D"

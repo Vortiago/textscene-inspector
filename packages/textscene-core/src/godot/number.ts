@@ -50,6 +50,20 @@ import { compositeSpellings } from './variantConversion.js';
 export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
+ * The anchored form, for a whole string that must BE one finite number.
+ *
+ * Lives here rather than at the caller because `godotLiteralGrammar.guard`
+ * refuses a rebuilt scalar grammar anywhere outside this directory — a second
+ * anchored copy is exactly the drift the guard exists to stop. Its first
+ * consumer is the `.tscn` header's `format=` field, which Godot reads as a
+ * Variant number into an `int` (`resource_format_text.cpp:1140`).
+ *
+ * Digits and an exponent can still overflow (`1e999`), so a caller that must
+ * not see an infinity tests the parsed RESULT, not just this pattern.
+ */
+export const FLOAT_RE = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
+
+/**
  * The anchored regex for a fixed-arity composite written with the FINITE
  * grammar above, each component its own capture group.
  *

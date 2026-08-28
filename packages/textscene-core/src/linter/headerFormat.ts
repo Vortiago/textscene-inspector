@@ -11,6 +11,7 @@
  */
 
 import { parseHeading } from '../parser/utils.js';
+import { FLOAT_RE } from '../godot/number.js';
 
 /**
  * The newest format this linter does not lint.
@@ -53,6 +54,19 @@ export interface HeaderFormat {
  * heading grammar cannot read must stop the search rather than advance, or an
  * unclosed `[gd_scene format=3` would hand the next `[ext_resource …]` line to
  * a caller asking about the file.
+ *
+ * The field is read as Godot reads it: a Variant number assigned to an `int`.
+ * `format_version = tag.fields["format"]` (`resource_format_text.cpp:1140`)
+ * targets `int format_version` (`resource_format_text.h:68`), so a fractional
+ * or exponent spelling TRUNCATES rather than failing to parse —
+ * `[gd_scene format=2.0]` IS a format-2 file and must get the legacy scope
+ * limit. Reading only `\d+` called it unreadable, which returns `null`, which
+ * is the ABSENT-format case (`:1147-1148`, defaulting to the CURRENT version)
+ * — so a legacy file was linted against a grammar it predates.
+ *
+ * `FLOAT_RE` is the shared engine grammar rather than a rebuilt one, and the
+ * read is still not `Number(raw)`: that takes `format=` as 0 and would call an
+ * empty attribute the oldest format there is.
  */
 export function readHeaderFormat(content: string): HeaderFormat | null {
   // Walked with `indexOf` rather than `split('\n')`: the answer is always on the
@@ -71,10 +85,11 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
     if (!heading || (heading.type !== 'gd_scene' && heading.type !== 'gd_resource')) return null;
 
     const raw = heading.attributes.format;
-    // `/^\d+$/` rather than `Number(raw)`, which reads `format=` as 0 and would
-    // declare an empty attribute the oldest format there is. Unreadable text
-    // falls through to a normal lint, matching the parser's own leniency.
-    const format = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : null;
+    // Unreadable text falls through to a normal lint, matching the parser's own
+    // leniency. `1e999` parses and overflows, so the finite check is on the
+    // RESULT — a grammar cannot catch it. See the note above `readHeaderFormat`.
+    const parsed = raw !== undefined && FLOAT_RE.test(raw) ? Number(raw) : NaN;
+    const format = Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     return { format, line };
   }
   return null;

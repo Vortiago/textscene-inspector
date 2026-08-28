@@ -31,10 +31,24 @@ describe('readHeaderFormat', () => {
     });
   });
 
-  it('reports no version for text no integer grammar reads', () => {
+  it('reports no version for text no number grammar reads', () => {
     expect(readHeaderFormat('[gd_scene format=abc]\n')?.format).toBeNull();
-    expect(readHeaderFormat('[gd_scene format=3.0]\n')?.format).toBeNull();
-    expect(readHeaderFormat('[gd_scene format=-1]\n')?.format).toBeNull();
+    expect(readHeaderFormat('[gd_scene format=]\n')?.format).toBeNull();
+    // Digits and an exponent, but it overflows: a grammar cannot catch this,
+    // so the finite check is on the parsed RESULT.
+    expect(readHeaderFormat('[gd_scene format=1e999]\n')?.format).toBeNull();
+  });
+
+  it('truncates a number spelling, because the engine assigns it to an int', () => {
+    // `format_version = tag.fields["format"]` (resource_format_text.cpp:1140)
+    // targets `int format_version` (resource_format_text.h:68), so the field is
+    // read as a Variant number and truncated. Reading only `\d+` reported
+    // `format=2.0` as ABSENT, and absent means CURRENT (:1147-1148) — so a
+    // legacy file was linted against a grammar it predates.
+    expect(readHeaderFormat('[gd_scene format=3.0]\n')?.format).toBe(3);
+    expect(readHeaderFormat('[gd_scene format=2.0]\n')?.format).toBe(2);
+    expect(readHeaderFormat('[gd_scene format=2.9]\n')?.format).toBe(2);
+    expect(readHeaderFormat('[gd_scene format=-1]\n')?.format).toBe(-1);
   });
 
   it('stops at an unreadable header rather than advancing past it', () => {

@@ -104,12 +104,12 @@ export async function loadCoreParser() {
  * declared and registered one hop up on `BaseMaterial3D`.
  *
  * Not re-exported by the linter barrel, so it is loaded from its own module
- * (the resolve hook above is process-wide, so this works the same way).
+ * (the resolve hook above is process-wide, so this works the same way). It
+ * lives under `godot/` — an engine fact, imported by the linter rather than
+ * owned by it — so the path must track that, not the directory it left.
  */
 export async function loadClassBaseTypes() {
-  const mod = await import(
-    pathToFileURL(join(here, '../../packages/textscene-core/dist/linter/classBaseTypes.js')).href
-  );
+  const mod = await import(pathToFileURL(join(DIST, 'godot/classBaseTypes.js')).href);
   return mod.CLASS_BASE_TYPES;
 }
 

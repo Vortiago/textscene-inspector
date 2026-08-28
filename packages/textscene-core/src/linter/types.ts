@@ -79,6 +79,24 @@ export interface ParseError {
   keyVerdict?: true;
 
   /**
+   * The node this refusal belongs to, when it belongs to one.
+   *
+   * A property refusal is ABOUT a node — "`draw_order` must be 0-1" is useless
+   * without saying which of eleven CPUParticles2D wrote it — but the validator
+   * seam is handed a key and a value, never the heading. The scanning loop has
+   * it (`onSectionStart` carries the heading's `name=`/`type=`), so the
+   * identity is stamped on the error there and `Linter.convertParseErrors`
+   * reads it back.
+   *
+   * ABSENT is meaningful and must stay reachable: a malformed heading, and the
+   * `format=` header itself, genuinely belong to no node, and saying
+   * `<unknown>` for those is the honest answer rather than a gap to fill.
+   */
+  nodeName?: string;
+  /** See {@link ParseError.nodeName}. */
+  nodeType?: string;
+
+  /**
    * True when the refusal is about the bare `null` ITSELF: the slot exists and
    * the setter opens with an `ERR_FAIL_COND(...is_null())`, so the write is
    * refused and nothing is stored. `TileSet.sources/<id>` (`add_source`,

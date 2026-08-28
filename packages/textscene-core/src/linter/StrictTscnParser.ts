@@ -70,6 +70,12 @@ export class StrictTscnParser {
   parse(content: string): StrictParseResult {
     const errors: ParseError[] = [];
 
+    // The node whose body the scan is inside, or null between/outside node
+    // sections. Every refusal raised while it is set is ABOUT that node, and
+    // nothing else in this seam knows which one — the validator is handed a key
+    // and a value.
+    let currentNode: { nodeName: string; nodeType: string } | null = null;
+
     const observer: ParseObserver = {
       onError: (error) => {
         errors.push({
@@ -78,11 +84,24 @@ export class StrictTscnParser {
           line: error.line,
           column: error.column,
           code: error.code,
+          // A malformed HEADING is the line that would have opened a node, so
+          // it belongs to no node — `currentNode` is still the previous one and
+          // must not be borrowed. A malformed property line inside a node body
+          // does belong to it.
+          ...(error.code === 'INVALID_PROPERTY_FORMAT' ? currentNode : null),
         });
       },
 
       onSectionStart: (heading, section, line) => {
-        if (section !== 'node') return;
+        if (section !== 'node') {
+          currentNode = null;
+          return;
+        }
+
+        currentNode = {
+          nodeName: heading.attributes.name ?? '<unknown>',
+          nodeType: heading.attributes.type ?? '<unknown>',
+        };
 
         if (!heading.attributes.name) {
           errors.push({
@@ -91,6 +110,7 @@ export class StrictTscnParser {
             line,
             column: 1,
             code: 'MISSING_NODE_NAME',
+            ...currentNode,
           });
         }
         // A heading with none of `type=` / `index=` / `instance=` is LEGAL:
@@ -120,6 +140,7 @@ export class StrictTscnParser {
             line,
             column: 1,
             code: 'MISSING_NODE_IDENTIFIER',
+            ...currentNode,
           });
         }
       },
@@ -180,6 +201,7 @@ export class StrictTscnParser {
         if (isNilLiteral(value) && !ownsNilMessage(error)) {
           errors.push({
             ...error,
+            ...currentNode,
             severity: 'warning',
             message:
               `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
@@ -187,7 +209,7 @@ export class StrictTscnParser {
           });
           return;
         }
-        errors.push(error);
+        errors.push({ ...error, ...currentNode });
       },
     };
 

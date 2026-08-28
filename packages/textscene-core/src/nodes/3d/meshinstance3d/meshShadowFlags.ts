@@ -12,9 +12,10 @@ export interface ShadowFlags {
 
 /**
  * Decode Godot's `cast_shadow` enum (0=OFF, 1=ON, 2=DOUBLE_SIDED,
- * 3=SHADOWS_ONLY) into the three flags the renderer needs. Previously
- * only the boolean was returned and modes 2 and 3 collapsed silently to
- * castShadow=true.
+ * 3=SHADOWS_ONLY) into the three flags the renderer needs.
+ *
+ * All four modes are distinct: a single boolean cannot carry 2 or 3, which both
+ * cast while differing in which faces do it and whether the mesh is drawn.
  */
 export function shadowCastingFlags(value: number | undefined): ShadowFlags {
   // class_geometryinstance3d.html: cast_shadow defaults to 1

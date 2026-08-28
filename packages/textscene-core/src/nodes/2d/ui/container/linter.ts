@@ -30,7 +30,6 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 
 function checkContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (node.type !== 'Container') return [];
 
   const props = isValidProperties(node.properties) ? node.properties : {};
   if (props.script !== undefined) return [];

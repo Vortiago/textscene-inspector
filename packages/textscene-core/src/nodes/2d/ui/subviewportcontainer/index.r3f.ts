@@ -8,8 +8,9 @@
  * passes through in the 2D world canvas, where the sub-viewport's own
  * registration blocks the subtree instead.
  *
- * It IS in `TWO_D_UI_TYPES` (that set mirrors the Control registry, and drives
- * the 2D-content hint and the root-workspace rule). The 3D dispatcher subtracts
+ * It IS a Control, so `is2DUIType` claims it for the 2D-content hint and the
+ * root-workspace rule, and it is in `TWO_D_UI_TYPES` because it ships a
+ * component. The 3D dispatcher subtracts
  * it separately via `isViewportSurface`, because "is this 2D UI" and "does the
  * 3D canvas skip its subtree" are different questions here — ADR-0030.
  */
