@@ -38,16 +38,19 @@ validatorRegistry.registerAll('OpenXRCompositionLayerCylinder', {
   central_angle: v.positiveFloat('central_angle', undefined, {
     enforced: 'openxr_composition_layer_cylinder.cpp:157',
   }),
-  // :75, PROPERTY_HINT_NONE. set_fallback_segments (:169-173),
-  // ERR_FAIL_COND(p_fallback_segments == 0) refuses exactly 0. The parameter
-  // is uint32_t, so a NEGATIVE .tscn literal does not hit this guard — it
-  // wraps to a huge unsigned value instead (Variant::operator uint32_t(),
-  // variant.cpp:1511-1513, a plain narrowing cast) and gets used as-is, which
-  // is Godot silently ALTERING the value rather than refusing it. Either way
-  // the requested segment count is never honoured, so min:1 is the honest
-  // floor for what a .tscn value should be, grounded in the same guard.
+  // :75, PROPERTY_HINT_NONE — so there is no hint tier here at all, and
+  // no outer bound to warn about. set_fallback_segments (:169-173) is
+  // `ERR_FAIL_COND(p_fallback_segments == 0)`: exactly one value refused.
+  //
+  // The parameter is uint32_t, so a NEGATIVE literal never reaches that guard —
+  // `Variant::operator uint32_t()` (variant.cpp:1511-1513) narrows it first, and
+  // -1 is stored as 4294967295. That is the SLOT altering the value, which the
+  // declared width already reports; a `min: 1` said "must be >= 1, got: -1",
+  // naming a floor the engine does not have and a value it does not store, and
+  // it refused `4000000000`, which the unsigned slot holds exactly.
   fallback_segments: v.int('fallback_segments', {
-    min: 1,
-    enforced: 'openxr_composition_layer_cylinder.cpp:170',
+    width: 'uint32',
+    enforcedMin: { at: 0, exclusive: true },
+    enforced: { min: 'openxr_composition_layer_cylinder.cpp:170' },
   }),
 });

@@ -15,6 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
+import { sweepValidators } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 describe('validator `accepts` metadata', () => {
@@ -25,14 +26,19 @@ describe('validator `accepts` metadata', () => {
   });
 
   it('tags every registered validator with what it accepts', () => {
-    const untagged = types.flatMap((type) =>
-      validatorRegistry
-        .getOwnKeys(type)
-        .filter((key) => !validatorRegistry.findValidator(type, key)?.accepts)
-        .map((key) => `${type}.${key}`)
-    );
+    // The deduped LEAF walk, not `getOwnKeys` crossed with `findValidator`:
+    // that reaches roots only, so a validator behind a wildcard dispatcher
+    // could ship untagged and render an empty Accepts cell with nothing
+    // failing. Its own docblock names this shape as the bug it exists to stop.
+    const untagged = sweepValidators((validator) => !validator.accepts);
 
     expect(untagged).toEqual([]);
+  });
+
+  it('sweeps past the roots, so a leaf cannot hide from the tag check', () => {
+    const all = sweepValidators(() => true);
+    const roots = types.flatMap((type) => validatorRegistry.getOwnKeys(type));
+    expect(all.length).toBeGreaterThan(roots.length);
   });
 
   it('describes a bounded number with its bounds rather than just its type', () => {

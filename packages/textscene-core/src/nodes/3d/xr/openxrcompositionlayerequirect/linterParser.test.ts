@@ -167,8 +167,15 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
     it('errors at exactly 0', () => {
       expect(check('fallback_segments', '0')?.severity).toBe('error');
     });
-    it('errors below 0 (the uint32_t wrap never produces the requested count)', () => {
-      expect(check('fallback_segments', '-1')?.severity).toBe('error');
+    it('does not report a floor of 1, which no engine line states', () => {
+      // The parameter is uint32_t, so `-1` narrows to 4294967295 before the
+      // `== 0` guard runs — stored, not refused. The old `min: 1` said
+      // "must be >= 1, got: -1", naming a bound the engine does not have.
+      expect(check('fallback_segments', '-1')?.message ?? '').not.toContain('>= 1');
+    });
+
+    it('accepts a count above INT32_MAX, which the unsigned slot holds', () => {
+      expect(check('fallback_segments', '4000000000')).toBeNull();
     });
   });
 });

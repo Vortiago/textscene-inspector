@@ -13,8 +13,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { v } from './validators/v.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
 import { outerEndIsReachable } from './validators/v/grounding.js';
+import { collectValidators } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { layerBitmask } from './validators/layerBitmask.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
@@ -183,26 +183,30 @@ describe('an end no value can reach reports at the setter\'s tier', () => {
     // or INSIDE it — no value can be outside the hint without the setter having
     // refused it first — so the band the hint's tier would describe is empty
     // and the end must report the setter's `error`.
+    // `collectValidators`, not `getRegisteredNodeTypes() x getOwnKeys()`: the
+    // latter reaches ROOTS only, so the 88 leaf validators behind a wildcard
+    // dispatcher — Generic6DOFJoint3D, `PhysicalBone3D.joint_constraints/*`,
+    // `MenuButton.popup/item_#/*`, `Skeleton3D.bones/*` — were never examined,
+    // and the floor below passed on roots alone. Its sibling
+    // `boundGrounding.test.ts` had already been migrated; this one had not.
     const wrong: string[] = [];
     let examined = 0;
-    for (const type of validatorRegistry.getRegisteredNodeTypes()) {
-      for (const key of validatorRegistry.getOwnKeys(type)) {
-        const validator = validatorRegistry.findValidator(type, key);
-        const bounds = validator?.bounds;
-        if (!bounds || !validator?.tiers) continue;
-        for (const end of ['min', 'max'] as const) {
-          if (bounds[end] === undefined) continue;
-          examined += 1;
-          if (outerEndIsReachable(bounds, end)) continue;
-          if (validator.tiers[end] !== 'error') {
-            wrong.push(`${type}.${key} ${end} is ${validator.tiers[end]}`);
-          }
+    for (const { label, validator } of collectValidators(
+      (candidate) => candidate.bounds !== undefined && candidate.tiers !== undefined
+    )) {
+      const bounds = validator.bounds!;
+      for (const end of ['min', 'max'] as const) {
+        if (bounds[end] === undefined) continue;
+        examined += 1;
+        if (outerEndIsReachable(bounds, end)) continue;
+        if (validator.tiers![end] !== 'error') {
+          wrong.push(`${label} ${end} is ${validator.tiers![end]}`);
         }
       }
     }
-    // Anti-vacuity: the sweep is registry-derived, so a registry that stopped
-    // tagging `bounds` would leave this trivially green.
-    expect(examined).toBeGreaterThan(500);
+    // Anti-vacuity, above the 1,613 ends the roots-only walk reached: a
+    // regression to that population has to FAIL rather than look thorough.
+    expect(examined).toBeGreaterThan(1650);
     expect(wrong).toEqual([]);
   });
 

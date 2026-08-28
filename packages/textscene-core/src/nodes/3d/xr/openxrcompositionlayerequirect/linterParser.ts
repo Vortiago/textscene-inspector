@@ -44,13 +44,19 @@ validatorRegistry.registerAll('OpenXRCompositionLayerEquirect', {
     enforcedMax: { at: Math.PI / 2 },
     enforced: 'openxr_composition_layer_equirect.cpp:178',
   }),
-  // :80, PROPERTY_HINT_NONE. set_fallback_segments (:190-194),
-  // ERR_FAIL_COND(p_fallback_segments == 0) — same uint32_t shape as
-  // OpenXRCompositionLayerCylinder's own fallback_segments (see that file's
-  // comment): a negative literal wraps rather than tripping this guard, but
-  // never produces the requested count either, so min:1 is the honest floor.
+  // :80, PROPERTY_HINT_NONE — so there is no hint tier here at all, and
+  // no outer bound to warn about. set_fallback_segments (:190-194) is
+  // `ERR_FAIL_COND(p_fallback_segments == 0)`: exactly one value refused.
+  //
+  // The parameter is uint32_t, so a NEGATIVE literal never reaches that guard —
+  // `Variant::operator uint32_t()` (variant.cpp:1511-1513) narrows it first, and
+  // -1 is stored as 4294967295. That is the SLOT altering the value, which the
+  // declared width already reports; a `min: 1` said "must be >= 1, got: -1",
+  // naming a floor the engine does not have and a value it does not store, and
+  // it refused `4000000000`, which the unsigned slot holds exactly.
   fallback_segments: v.int('fallback_segments', {
-    min: 1,
-    enforced: 'openxr_composition_layer_equirect.cpp:191',
+    width: 'uint32',
+    enforcedMin: { at: 0, exclusive: true },
+    enforced: { min: 'openxr_composition_layer_equirect.cpp:191' },
   }),
 });
