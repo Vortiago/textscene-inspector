@@ -30,6 +30,9 @@ import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { baseChain } from '../godot/nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
+import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
+import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 
@@ -143,6 +146,73 @@ function typesUnderGuard(): string[] {
 function typesWithoutOwnValidators(): string[] {
   return typesUnderGuard().filter((type) => validatorRegistry.getOwnKeys(type).length === 0);
 }
+
+/**
+ * Resource classes this previewer CLAIMS a slice for that declare no validators
+ * of their own.
+ *
+ * The node guard above seeds from `nodeRegistry` closed over the NODE base
+ * chain, so the whole Resource hierarchy sat outside the only zero-own-validator
+ * ratchet: `BoxShape3D.size = Vector3(-1, -2, -3)` drew no diagnostic at all
+ * though `box_shape_3d.cpp:100` is an `ERR_FAIL_COND_MSG`, and the node list's
+ * pinned length read "three known gaps" while these went uncounted.
+ *
+ * The population is the claim table intersected with Godot's own resource
+ * classes, so the previewer's file-format pseudo-types (`GLB`, `GLTF`) are not
+ * held to a ClassDB standard they were never in.
+ *
+ * Removing an entry (by declaring its validators) is the only correct edit.
+ */
+const UNDECLARED_RESOURCES: readonly string[] = [
+  'ArrayMesh', 'AtlasTexture', 'BoxMesh', 'BoxShape3D', 'CanvasItemMaterial', 'CapsuleMesh',
+  'CompressedTexture2D',
+  'ConcavePolygonShape3D', 'ConvexPolygonShape3D', 'Curve', 'Curve2D', 'Curve3D', 'CylinderMesh',
+  'FastNoiseLite', 'Gradient', 'GradientTexture2D', 'ImageTexture',
+  'NavigationMesh', 'NavigationPolygon', 'NoiseTexture2D', 'PackedScene', 'PanoramaSkyMaterial',
+  'PhysicalSkyMaterial', 'PrismMesh', 'ProceduralSkyMaterial', 'QuadMesh', 'RectangleShape2D',
+  'ShaderMaterial', 'Sky', 'SphereMesh', 'SpriteFrames', 'StandardMaterial3D',
+  'StyleBoxEmpty', 'StyleBoxFlat', 'Texture2D', 'TorusMesh', 'ViewportTexture',
+];
+
+/** Claimed resource types Godot's ClassDB also declares. */
+function claimedResourceClasses(): string[] {
+  const claimed = new Set(resourceSliceRegistry.all().flatMap((r) => r.typeNames));
+  return [...claimed]
+    .filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED)
+    .sort();
+}
+
+describe('own-validator coverage for resource slices', () => {
+  it('accounts for every claimed resource type that declares no validators', () => {
+    const accounted = new Set(UNDECLARED_RESOURCES);
+    const unaccounted = claimedResourceClasses()
+      .filter((type) => validatorRegistry.getOwnKeys(type).length === 0)
+      .filter((type) => !accounted.has(type));
+
+    // A type here parses but validates nothing of its own, so every property on
+    // it is silently accepted. Declare its validators.
+    expect(unaccounted).toEqual([]);
+  });
+
+  it('keeps the list free of types that now declare validators', () => {
+    const stale = UNDECLARED_RESOURCES.filter(
+      (type) => validatorRegistry.getOwnKeys(type).length > 0
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it('never lets the undeclared resource list grow', () => {
+    // The ratchet, exact rather than a ceiling: a ceiling above the current
+    // length is a free slot for the next silently-unvalidated slice.
+    expect(UNDECLARED_RESOURCES.length).toBe(37);
+  });
+
+  it('sweeps a population that cannot quietly empty', () => {
+    // A claim table that stopped populating would make every assertion above
+    // trivially green.
+    expect(claimedResourceClasses().length).toBeGreaterThan(40);
+  });
+});
 
 describe('own-validator coverage', () => {
   it('accounts for every type that declares no validators', () => {
