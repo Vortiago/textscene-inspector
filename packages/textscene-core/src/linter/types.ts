@@ -70,13 +70,15 @@ export interface ParseError {
    * — an unrecognised leaf name, a shape `_set` cannot resolve, a negative
    * index — so every value fails it, `null` included.
    *
-   * `PropertyValidator.keyVerdict` answers the same question for a validator
-   * whose EVERY verdict is key-level. A family dispatcher cannot carry that
-   * flag: its leaf branches really do read a value, and only the branch that
-   * produced this error knows which kind it made. The strict parser's nil
-   * rewrite reads both, because "this slot stores the type's zero instead"
-   * describes a slot the class does not have and replaces the refusal's own
-   * reason and tier with it.
+   * It sits on the ERROR rather than the validator because it is a per-branch
+   * fact: a family dispatcher reads the value in its leaf branches and refuses
+   * a key in its unknown-leaf and negative-index ones, and `findValidator`
+   * hands the strict parser the dispatcher. That parser's nil rewrite reads it,
+   * because "this slot stores the type's zero instead" describes a slot the
+   * class does not have and would replace the refusal's own reason and tier.
+   *
+   * `ownsNilMessage` is where it is asked, beside the one other reason a
+   * refusal already accounts for a `null` ({@link PropertyValidator.nilVerdict}).
    */
   keyVerdict?: true;
 }

@@ -56,25 +56,41 @@ export function ArrayMeshSurfaces({
 }) {
   const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
   const multiSurface = surfacePaths.length > 1;
+  // Every surface reads the same override, so its scalars are decoded once
+  // rather than per slot — `parseStandardMaterial3DScalars` walks ~60 property
+  // decodes and this runs inside the render.
+  const overrideScalars = useMemo(
+    () =>
+      override?.subResource
+        ? parseStandardMaterial3DScalars(override.subResource.data as Record<string, string>)
+        : null,
+    [override]
+  );
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
       {surfacePaths.map((path, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
+        // One source per surface: the override fills both channels for every
+        // surface at once, so the mesh's own material is reachable only while
+        // it is unset.
         const scene = override ? override.subResource : sceneMaterials?.[i];
-        const slotPath = override ? (override.path ?? null) : path;
         // A scene-local material is already in hand; only a PATH needs the pipeline.
         return scene ? (
           <StandardMaterialSlot
             key={`surf-${i}`}
-            scalars={parseStandardMaterial3DScalars(scene.data as Record<string, string>)}
+            scalars={
+              override
+                ? overrideScalars
+                : parseStandardMaterial3DScalars(scene.data as Record<string, string>)
+            }
             attach={attach}
             shadowSide={shadowSide}
           />
         ) : (
           <ExternalMaterialSlot
             key={`surf-${i}`}
-            path={slotPath}
+            path={override ? (override.path ?? null) : path}
             attach={attach}
             shadowSide={shadowSide}
           />

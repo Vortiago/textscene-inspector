@@ -13,6 +13,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { inlineSurfacesWithMaterial } from './arrayMeshSurfaces.testkit';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -43,23 +44,6 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
   );
 }
 
-/**
- * One decoded surface of an inline `[sub_resource type="ArrayMesh"]`, naming a
- * scene-local material — the shape the ArrayMesh branch renders through.
- * Bytes are the wall quad from `Component.arraymesh.test.tsx`.
- */
-const SCENE_ARRAY_MESH_SURFACES = `[{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"material": SubResource("MeshOwn"),
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]`;
 
 describe('MeshInstance3D flags (assertions 11–17)', () => {
   it('#11 mesh resolves → BufferGeometry present on rendered mesh', async () => {
@@ -86,16 +70,15 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
   });
 
   // The ArrayMesh branch builds its material slots from the DECODED mesh, not
-  // from the override map the primitive branch reads, so `material_override`
-  // reached it through neither until it was threaded in — an ArrayMesh kept
-  // drawing its own per-surface material with an override set beside it.
+  // from the override map the primitive branch reads, so the override reaches
+  // it only through the prop this asserts.
   it('#12b material_override replaces a scene ArrayMesh surface material', async () => {
     const node = makeNode({
       mesh: 'SubResource("Wall_1")',
       materialOverride: 'SubResource("Override")',
     });
     const renderer = await render(node, [
-      sub('ArrayMesh', 'Wall_1', { _surfaces: SCENE_ARRAY_MESH_SURFACES }),
+      sub('ArrayMesh', 'Wall_1', { _surfaces: inlineSurfacesWithMaterial('MeshOwn') }),
       sub('StandardMaterial3D', 'MeshOwn', { albedo_color: 'Color(0, 0, 1, 1)' }),
       sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
     ]);

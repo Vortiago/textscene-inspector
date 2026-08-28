@@ -93,8 +93,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   // The same override, in the shape the ArrayMesh branches render through:
   // their surfaces come off the decoded mesh, not off the override map above,
-  // so without this `material_override` reached the primitive branch alone and
-  // an ArrayMesh kept drawing its own per-surface materials.
+  // so the map cannot carry it there.
   const materialOverride = useMemo(
     () =>
       resolveMaterialOverrideSource(

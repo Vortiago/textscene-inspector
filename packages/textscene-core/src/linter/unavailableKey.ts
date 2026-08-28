@@ -8,7 +8,7 @@
  */
 
 import type { PropertyValidator } from './propertyValidator.js';
-import { propertyError } from './validators/propertyError.js';
+import { keyShapeError } from './validators/propertyError.js';
 
 /**
  * A key a concrete type takes away from its base, and the engine guard that
@@ -38,7 +38,7 @@ export function unavailableValidator(nodeType: string, removal: Removal): Proper
   const cached = unavailableValidators.get(cacheKey);
   if (cached) return cached;
   const validator: PropertyValidator = (key, _value, line) =>
-    propertyError(
+    keyShapeError(
       key,
       line,
       `Property '${key}' cannot be set on ${nodeType}: ${removal.reason}`,
@@ -49,6 +49,5 @@ export function unavailableValidator(nodeType: string, removal: Removal): Proper
   // is a grounded rejection (ADR-0032), not a format check.
   validator.grounding = { kind: 'enforced', cite: removal.cite };
   unavailableValidators.set(cacheKey, validator);
-  validator.keyVerdict = true;
   return validator;
 }

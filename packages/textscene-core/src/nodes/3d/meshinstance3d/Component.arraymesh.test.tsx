@@ -19,6 +19,7 @@ import type { ArrayMeshResource } from '../../../resources/processors/createArra
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { INLINE_SURFACES, inlineSurfacesWithMaterial } from './arrayMeshSurfaces.testkit';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -55,23 +56,6 @@ _surfaces = [{
 blend_shape_mode = 0
 `;
 
-/**
- * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline — the wall
- * quad's bytes, minus the file wrapper. `trailer_truck.tscn` writes its trailer
- * body exactly this way, which is why the trailer rendered as nothing.
- */
-const INLINE_SURFACES = `[{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"name": "inline",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]`;
 
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
@@ -249,7 +233,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
             {
               id: 'ArrayMesh_inline',
               type: 'ArrayMesh',
-              data: { _surfaces: INLINE_SURFACES.replace('"name": "inline",', '"material": SubResource("Mat_blue"),\n"name": "inline",') },
+              data: { _surfaces: inlineSurfacesWithMaterial('Mat_blue') },
             },
             {
               id: 'Mat_blue',

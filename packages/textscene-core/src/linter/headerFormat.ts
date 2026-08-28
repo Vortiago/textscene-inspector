@@ -55,10 +55,10 @@ export interface HeaderFormat {
  * a caller asking about the file.
  */
 export function readHeaderFormat(content: string): HeaderFormat | null {
-  // Walked with `indexOf`, not `split('\n')`: this runs before the parser's own
-  // scan of the same text and always answers on the FIRST non-blank line, so
-  // splitting the whole file allocated an array of every line in it to read the
-  // leading comment run.
+  // Walked with `indexOf` rather than `split('\n')`: the answer is always on the
+  // first non-blank line, so the walk is O(header) over a file of any size. It
+  // saves no allocation at the lint level — `TscnParserCore.parse` splits the
+  // same content on the next statement (`Linter.lint`) — only this second copy.
   let at = 0;
   for (let line = 1; at < content.length; line++) {
     const newline = content.indexOf('\n', at);

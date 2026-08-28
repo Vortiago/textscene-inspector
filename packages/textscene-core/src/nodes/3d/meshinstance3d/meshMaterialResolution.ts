@@ -7,8 +7,9 @@
 import type { MeshInstance3DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { parseResourceReference, resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
+import { isNilLiteral } from '../../../godot';
 
 export function resolveMeshSubResource(
   meshRef: string | undefined,
@@ -67,10 +68,17 @@ export function resolveMaterialSubResources(
   // declares one `material`, which is surface 0's.
   const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
 
+  // `null` is a legal literal in any resource slot and means no override, so
+  // the chain has to fall THROUGH it: the parser stores the property's text,
+  // and the string `"null"` is truthy to `??`, which would otherwise drop the
+  // mesh's own material for a node that overrides nothing.
+  const override = isNilLiteral(properties.materialOverride ?? '')
+    ? undefined
+    : properties.materialOverride;
+
   const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
   for (let i = 0; i < surfaceSlots; i++) {
-    const ref =
-      properties.materialOverride ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
+    const ref = override ?? overrides?.get(i) ?? (i === 0 ? meshOwn : undefined);
     result[i] = resolveStandardMaterial(ref, internalResources);
   }
   return result;
@@ -97,15 +105,15 @@ export interface MaterialSlotSource {
  * `resolveMaterialSubResources` above answers the same question for a PRIMITIVE
  * mesh, whose surface count comes off the override map. An ArrayMesh's surfaces
  * come from the decoded mesh instead, so its material slots are built in
- * `ArrayMeshSurfaces` and need the override in the shape that renderer takes —
- * otherwise `material_override` reached only the primitive branch and an
- * ArrayMesh kept drawing its own per-surface materials, which is the one
- * precedence `render_forward_clustered.cpp:4206` puts it ahead of.
+ * `ArrayMeshSurfaces` and need the override in the shape that renderer takes.
+ * `render_forward_clustered.cpp:4206` is the precedence it stands ahead of.
  *
- * `null` for an unresolvable reference, deliberately: an `ExtResource` this
- * scene never declares is an invalid `Ref` to Godot too, and an invalid
- * override is no override — the surfaces keep their own materials rather than
- * all turning default white.
+ * `null` for a reference that names no material, deliberately: to Godot the
+ * property is a `Ref<Material>`, so a reference that does not load as one is
+ * null there too, and no override is what the surfaces then keep. That covers
+ * both an `ExtResource` this scene never declares and one pointing at a file
+ * that is not a material — a `.png` handed to the material pipeline resolves
+ * to nothing and would paint every surface default white instead.
  */
 export function resolveMaterialOverrideSource(
   ref: string | undefined,
@@ -115,10 +123,10 @@ export function resolveMaterialOverrideSource(
   if (!ref) return null;
   const subResource = resolveStandardMaterial(ref, internalResources);
   if (subResource) return { subResource };
-  const parsed = parseResourceReference(ref);
-  if (parsed?.type !== 'ExtResource') return null;
-  const path = externalResources.find((r) => r.id === parsed.id)?.path;
-  return path ? { path } : null;
+  // `resolveExtResourcePath` also passes a bare `res://…` through, which is a
+  // form the property takes.
+  const path = resolveExtResourcePath(ref, externalResources);
+  return path?.endsWith('.tres') ? { path } : null;
 }
 
 function findMeshOwnMaterial(

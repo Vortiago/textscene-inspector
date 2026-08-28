@@ -171,15 +171,13 @@ export class StrictTscnParser {
         // Line, column and code stay the validator's, so the diagnostic keeps
         // anchoring on the value.
         //
-        // `error.keyVerdict` is the third exemption and the one a validator
-        // cannot declare for itself: a family dispatcher reads a value in its
-        // leaf branches and refuses a KEY in its unknown-leaf and
-        // negative-index ones, so only the branch that produced the error knows
-        // which it made. Rewriting one of those said a slot stores zero for a
-        // key the class does not have, and downgraded a dropped write to a
-        // warning — `item_0/bogus = null` reported neither the unknown leaf nor
-        // an error.
-        if (isNilLiteral(value) && !ownsNilMessage(validator) && error.keyVerdict !== true) {
+        // A key verdict rides on the ERROR rather than the validator because it
+        // is a per-branch fact: a family dispatcher reads the value in its leaf
+        // branches and refuses a KEY in its unknown-leaf and negative-index
+        // ones, and the registry hands this seam the dispatcher. Rewriting one
+        // of those claims a slot stores zero for a key the class does not have,
+        // and reports a dropped write as a warning.
+        if (isNilLiteral(value) && !ownsNilMessage(validator, error)) {
           errors.push({
             ...error,
             severity: 'warning',

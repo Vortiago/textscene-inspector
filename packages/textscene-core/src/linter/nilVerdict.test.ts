@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { lint, node, scene, subResource } from './testing/testkit.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
+import type { PropertyValidator } from './propertyValidator.js';
 import './index.js';
 
 const tileSet = (key: string, value: string): string =>
@@ -57,8 +58,12 @@ describe('nil-literal verdicts', () => {
     // HBoxContainer::vertical is the removal case, which owns its message for a
     // different reason: the class has no such slot at all.
     const removed = validatorRegistry.findValidator('HBoxContainer', 'vertical');
-    expect(ownsNilMessage(source!)).toBe(true);
-    expect(ownsNilMessage(removed!)).toBe(true);
-    expect(ownsNilMessage(shape!)).toBe(false);
+    // The removal's answer sits on its ERROR, the nil slot's on its validator,
+    // so the question is asked of the pair.
+    const verdict = (v: PropertyValidator | null, key: string) =>
+      ownsNilMessage(v!, v!(key, 'null', 1)!);
+    expect(verdict(source, 'sources/0')).toBe(true);
+    expect(verdict(removed, 'vertical')).toBe(true);
+    expect(verdict(shape, 'tile_shape')).toBe(false);
   });
 });

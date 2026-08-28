@@ -35,19 +35,6 @@ export type PropertyValidator = ((
   accepts?: string;
 
   /**
-   * True when this validator's verdict is about the KEY, not the value it was
-   * handed: the key is one the class removes, or one `_set` refuses to read
-   * back. Every value fails, `null` included.
-   *
-   * The strict parser's nil-literal rewrite reads it. That rewrite says Godot
-   * stores the type's zero value instead, which is true of a slot that exists
-   * and false here — `BoxContainer::set_vertical` is `ERR_FAIL_COND_MSG(is_fixed)`
-   * and stores nothing — and it replaced the removal's own reason and cite with
-   * a claim about a slot the class does not have.
-   */
-  keyVerdict?: true;
-
-  /**
    * True when this validator refuses a bare `null` on its OWN authority — the
    * setter opens with an `ERR_FAIL_COND(...is_null())`, so the write is refused
    * and nothing is stored.
@@ -59,8 +46,8 @@ export type PropertyValidator = ((
    * allows, so no zero value is stored in place of the null — the add is simply
    * refused. Only this validator holds the `file:line` that says so.
    *
-   * Separate from {@link keyVerdict}, which answers the same seam question for a
-   * different reason: there the class has no such slot at all.
+   * Separate from {@link ParseError.keyVerdict}, which answers the same seam
+   * question for a different reason: there the class has no such slot at all.
    */
   nilVerdict?: true;
 
@@ -155,14 +142,20 @@ export type PropertyValidator = ((
 };
 
 /**
- * Whether this validator's own message already accounts for a bare `null`, so
- * the strict parser must not restate what the slot does with one.
+ * Whether this refusal's own message already accounts for a bare `null`, so the
+ * strict parser must not restate what the slot does with one.
  *
  * ONE question with two answers — the class has no such slot
- * ({@link PropertyValidator.keyVerdict}), or the setter refuses the null
+ * ({@link ParseError.keyVerdict}), or the setter refuses the null
  * ({@link PropertyValidator.nilVerdict}) — asked once here rather than spelled
  * as a growing list of exemptions at the seam.
+ *
+ * The two answers sit on different objects because they are known at different
+ * places. A `nilVerdict` slot is one the whole validator is about. A key
+ * verdict is a per-branch fact: a family dispatcher reads the value in its leaf
+ * branches and refuses a key in its unknown-leaf and negative-index ones, and
+ * the registry hands this seam the dispatcher, so only the error carries it.
  */
-export function ownsNilMessage(validator: PropertyValidator): boolean {
-  return validator.keyVerdict === true || validator.nilVerdict === true;
+export function ownsNilMessage(validator: PropertyValidator, error: ParseError): boolean {
+  return validator.nilVerdict === true || error.keyVerdict === true;
 }

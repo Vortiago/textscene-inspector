@@ -8,7 +8,7 @@
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
-import { propertyError } from '../propertyError.js';
+import { keyShapeError } from '../propertyError.js';
 import { formatCode } from './codes.js';
 import { accepts, shape } from './grounding.js';
 
@@ -47,7 +47,7 @@ export const keyVerdictCombinators = {
   ): PropertyValidator {
     const validator = accepts(
       (key, _value, line) =>
-        propertyError(
+        keyShapeError(
           key,
           line,
           `Property '${key}' is read-only: derived from ${opts.derivedFrom}, and _set has no branch for it, so the write is dropped`,
@@ -56,7 +56,6 @@ export const keyVerdictCombinators = {
       `read-only (derived from ${opts.derivedFrom})`
     );
     validator.grounding = { kind: 'enforced', cite: opts.cite };
-    validator.keyVerdict = true;
     return validator;
   },
 };

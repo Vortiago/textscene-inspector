@@ -206,10 +206,10 @@ visible = null
     });
 
     // A key-shape refusal describes a key the class does not have, so "this
-    // slot stores the type's zero instead" names a slot that does not exist —
-    // the same reason `keyVerdict` exempts a removal. A family dispatcher
-    // cannot carry that flag on the whole validator, because its LEAF branches
-    // really do read a value, so the refusal itself says so.
+    // slot stores the type's zero instead" names a slot that does not exist.
+    // The flag sits on the ERROR: a family dispatcher's LEAF branches really do
+    // read a value, and the registry hands the seam the dispatcher, so only the
+    // branch that refused can say which kind of verdict it made.
     describe('leaves a key-shape refusal alone', () => {
       const parseOne = (type: string, key: string, value: string) =>
         parser.parse(
