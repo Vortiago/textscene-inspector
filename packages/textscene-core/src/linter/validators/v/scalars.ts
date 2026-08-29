@@ -115,23 +115,35 @@ export const scalarCombinators = {
   /**
    * A `Variant::ARRAY` property's literal shape, and nothing about its elements.
    *
-   * `typedAs` names the element type when the `ADD_PROPERTY` carries a
-   * `PROPERTY_HINT_ARRAY_TYPE`, and it is REQUIRED to accept the wrapped
-   * `Array[T]([…])` form: `Array::is_typed()` is what makes the writer emit that
-   * wrapper (variant_parser.cpp:2341-2344), so an unhinted property is never
-   * written wrapped. Whether to accept the wrapper anyway is therefore a
-   * per-property question and deliberately not a default — seven call sites had
-   * each answered it from their own property's hint, and collapsing them onto one
-   * answer would have silently widened five of them.
+   * Which wrapped `Array[T]([…])` values load is the SETTER's question, and
+   * there are three answers:
+   *
+   * - `typedAs: 'T'` — the property carries a `PROPERTY_HINT_ARRAY_TYPE` and
+   *   its setter takes a `TypedArray<T>`, so `Array::assign` refuses an array
+   *   typed as anything else. Matching the wrapper shape alone would accept
+   *   `Array[Dictionary]` for a RichTextEffect slot.
+   * - `anyElementType: true` — the setter takes a bare `const Array &`, or
+   *   `_set` tests only `p_value.get_type() != Variant::ARRAY`. A typed array
+   *   IS `Variant::ARRAY`, so EVERY element type loads. Name the `file:line` of
+   *   that gate at the call site.
+   * - neither — not yet answered from the setter. The wrapper is refused,
+   *   which is the narrow answer and the one to widen once the engine line has
+   *   been read.
+   *
+   * `Array::is_typed()` deciding whether the WRITER emits a wrapper
+   * (variant_parser.cpp:2341-2344) does not bound any of this: what Godot saves
+   * never limits what it loads, and a hand-edited or foreign-tool file is
+   * exactly the file a linter exists for.
    *
    * Elements go unchecked because every one of these setters bare-assigns the
    * whole array with no per-element guard; a stricter validator would reject
    * values the engine loads.
    */
-  arrayLiteral(name: string, opts?: { typedAs?: string }): PropertyValidator {
+  arrayLiteral(name: string, opts?: { typedAs?: string; anyElementType?: true }): PropertyValidator {
     const code = formatCode(name);
     const typed = opts?.typedAs;
-    const wrapper = typed ? ` or Array[${typed}]([...])` : '';
+    const anyType = opts?.anyElementType === true;
+    const wrapper = anyType ? ' or Array[T]([...])' : typed ? ` or Array[${typed}]([...])` : '';
     return shape((key, value, line) => {
       const reject = () =>
         propertyError(
@@ -142,13 +154,28 @@ export const scalarCombinators = {
         );
       const wrapped = TYPED_WRAPPER_RE.exec(value.trim());
       if (wrapped) {
-        // The wrapper names its element type, and `Array::assign` refuses a
-        // typed array whose type is not the property's, so matching the wrapper
-        // shape alone would accept `Array[Dictionary]` for a RichTextEffect
-        // slot. An unhinted property takes no wrapper at all.
+        if (anyType) return null;
         return typed !== undefined && wrapped[1]!.trim() === typed ? null : reject();
       }
       return ARRAY_LITERAL_RE.test(value) ? null : reject();
     }, `Array literal ([...]${wrapper})`);
   },
 };
+
+/**
+ * The raw ELEMENT text of a value {@link scalarCombinators.arrayLiteral} has
+ * already accepted, for a caller that goes on to count or split the elements.
+ *
+ * Positional, never a second grammar: the shape is vetted, so this only has to
+ * know WHERE the elements sit in each spelling. A caller reaching for
+ * `value.trim().slice(1, -1)` reads `rray[int]([0, 4` out of
+ * `Array[int]([0, 4])` and then counts pairs on text that is not the array —
+ * which is why widening the shape and widening its readers is one change.
+ */
+export function arrayLiteralElements(value: string): string {
+  const text = value.trim();
+  const wrapped = TYPED_WRAPPER_RE.exec(text);
+  // `Array[` + the captured element type + `](`, then the bare literal, then `)`.
+  const bare = wrapped ? text.slice('Array['.length + wrapped[1]!.length + ']('.length, -1) : text;
+  return ARRAY_LITERAL_RE.exec(bare)?.[1] ?? '';
+}

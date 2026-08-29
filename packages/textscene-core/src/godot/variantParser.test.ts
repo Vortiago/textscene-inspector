@@ -10,6 +10,7 @@ import {
   NODE_PATH_LITERAL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
   RESOURCE_REF_RE,
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
   SUB_RESOURCE_REF_ANYWHERE_RE,
   SUB_RESOURCE_REF_BODY,
   isNilLiteral,
@@ -141,5 +142,29 @@ describe('the NIL literal', () => {
     expect(isNilLiteral('nils')).toBe(false);
     expect(isNilLiteral('NULL')).toBe(false);
     expect(isNilLiteral('')).toBe(false);
+  });
+});
+
+describe('the ExtResource discriminator', () => {
+  it('takes the padding the tokenizer discards', () => {
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('{ "walk": ExtResource("1_abc") }')).toBe(true);
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('{ "walk": ExtResource ("1_abc") }')).toBe(true);
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('{ "walk": ExtResource\t( "1_abc" ) }')).toBe(true);
+  });
+
+  it('stops at the paren, so the legacy integer id still counts as a reference', () => {
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('ExtResource( 1 )')).toBe(true);
+  });
+
+  it('says nothing about a SubResource, which is resolvable in-file', () => {
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('{ "walk": SubResource("Animation_1") }')).toBe(false);
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test('"ExtResource"')).toBe(false);
+  });
+
+  // No `g` flag, so `.test()` carries no `lastIndex` between callers.
+  it('is stateless across calls', () => {
+    const value = 'ExtResource("1_abc")';
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)).toBe(true);
+    expect(EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)).toBe(true);
   });
 });

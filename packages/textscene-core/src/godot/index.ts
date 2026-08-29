@@ -41,6 +41,13 @@ export {
   sign,
   smoothstep,
 } from './math.js';
+export {
+  type BasisComponents,
+  basisGetScale,
+  basisGetScaleAbs,
+  basisHasUnitScale,
+  basisIsOrthonormal,
+} from './basis.js';
 export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
 export {
   IS_VALID_INT_RE,
@@ -59,6 +66,7 @@ export {
   CANVAS_LAYER_MAX,
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
+export { CURSOR_ARROW, CURSOR_MAX, CURSOR_SHAPES } from './control.js';
 export {
   allFinite,
   FLOAT_PATTERN_SOURCE,
@@ -84,6 +92,7 @@ export { DEFAULT_ANIMATION_NAME } from './animation.js';
 export { canonicalPropertyName, isDeprecatedPropertyName } from './deprecated.js';
 export {
   ARRAY_LITERAL_RE,
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
   NODE_PATH_LITERAL_ANYWHERE_RE,
   RESOURCE_REF_RE,
@@ -107,5 +116,14 @@ export {
   isCatalogedType,
 } from './nodeBaseTypes.js';
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
+export {
+  GODOT_TEXT_RESOURCE_EXTENSIONS,
+  isGodotTextResourcePath,
+} from './resourceFormats.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
-export { packedArrayForms } from './variantParser.js';
+export {
+  packedArrayBody,
+  packedArrayForms,
+  packedElementType,
+  type PackedArrayBody,
+} from './variantParser.js';

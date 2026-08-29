@@ -148,8 +148,8 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     if (index >= count) outOfRange.add(index);
 
     const siblings = settings.get(index);
-    const individual = readBool(siblings?.individual_config, false);
-    const allChildCollisions = readBool(siblings?.enable_all_child_collisions, true);
+    const individual = readBool(siblings?.get('individual_config'), false);
+    const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {

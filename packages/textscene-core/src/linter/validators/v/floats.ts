@@ -11,6 +11,7 @@ import {
   endSeverity,
   ground,
   maybeFinite,
+  maybeNan,
   type FiniteGrounding,
   type Grounding,
 } from './grounding.js';
@@ -40,7 +41,7 @@ export const floatCombinators = {
    * Default `min = null` (no lower bound), `max = null` (no upper bound).
    */
   float(name: string, opts: FloatOpts = {}): PropertyValidator {
-    return maybeFinite(name, opts, ground(
+    return maybeNan(name, opts, maybeFinite(name, opts, ground(
       accepts(
         createNumericRangeValidator({
           propertyName: name,
@@ -58,7 +59,7 @@ export const floatCombinators = {
       ),
       opts,
       { min: opts.min, max: opts.max, enforcedMin: opts.enforcedMin, enforcedMax: opts.enforcedMax }
-    ));
+    )));
   },
 
   /**
@@ -103,7 +104,7 @@ export const floatCombinators = {
 
   /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
   nonNegativeFloat(name: string, opts: FiniteGrounding = {}): PropertyValidator {
-    return maybeFinite(name, opts, ground(
+    return maybeNan(name, opts, maybeFinite(name, opts, ground(
       accepts(
         createNumericRangeValidator({
           propertyName: name,
@@ -116,7 +117,7 @@ export const floatCombinators = {
       ),
       opts,
       { min: 0 }
-    ));
+    )));
   },
 
   /**

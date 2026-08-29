@@ -46,6 +46,18 @@ export function startPreview(port) {
     ['--filter', '@textscene/web-previewer', 'preview', '--port', String(port), '--strictPort'],
     { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
   );
+  // `detached` puts the preview in its OWN process group, so the terminal's
+  // Ctrl-C never reaches it — and a `finally` block does not run on signal
+  // death either. Without this the server outlives the harness, holds the port,
+  // and the next run aborts at `assertPortFree`. Registered here rather than in
+  // each caller so a new launcher cannot forget it. `process.exit` still fires
+  // `exit` listeners, which is how playwright closes any browser it launched.
+  const stopOnSignal = (signal) => {
+    killPreviewGroup(proc);
+    process.exit(signal === 'SIGINT' ? 130 : 143);
+  };
+  process.once('SIGINT', stopOnSignal);
+  process.once('SIGTERM', stopOnSignal);
   return { proc, baseUrl: `http://localhost:${port}` };
 }
 

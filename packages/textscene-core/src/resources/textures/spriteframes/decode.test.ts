@@ -124,14 +124,50 @@ describe('parseSpriteFramesAnimations', () => {
     expect(map.get('x')!.durations).toEqual([3, 1, 2]);
   });
 
-  it('uses uniform durations when the captured count does not match the frames', () => {
+  it('defaults only the frame that lacks a duration, keeping its neighbours', () => {
     // Godot always writes a duration per frame (sprite_frames.cpp:185) and its
     // reader drops a frame that lacks one; the preview keeps the frame instead
-    // and shows every frame for the default 1.0.
+    // and shows it for the default 1.0. Reading each frame DICT is what keeps
+    // that local: the count guard this replaced saw a short duration list and
+    // discarded the authored 3.0 along with it.
     const map = parseSpriteFramesAnimations(
       '[{"frames": [{"texture": ExtResource("1")}, {"duration": 3.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0}]'
     );
-    expect(map.get('x')!.durations).toEqual([1, 1]);
+    expect(map.get('x')!.durations).toEqual([1, 3]);
+  });
+
+  it('keeps a frame whose texture slot is null, with its authored duration', () => {
+    // `_get_animations` writes `f["texture"]` unconditionally
+    // (sprite_frames.cpp:184) and the writer spells a null Ref `null`;
+    // `_set_animations` gates only on `f.has("texture")` (:222) and `add_frame`
+    // has no null guard (:35-41), so Godot round-trips a blank frame. Dropping
+    // it here shortened the animation AND, via the frame-count guard,
+    // flattened every authored duration to 1.
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [{"duration": 0.5, "texture": ExtResource("1")}, {"duration": 3.0, "texture": null}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"blink", "speed": 1.0}]'
+    );
+    const blink = map.get('blink')!;
+    expect(blink.frames).toEqual(['ExtResource("1")', null, 'ExtResource("2")']);
+    expect(blink.durations).toEqual([0.5, 3, 0.5]);
+  });
+
+  it('reads `nil` in a texture slot the same way, the reader\'s other spelling', () => {
+    // `variant_parser.cpp:699` takes `null` and `nil` through one arm.
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [{"duration": 2.0, "texture": nil}], "name": &"x"}]'
+    );
+    expect(map.get('x')!.frames).toEqual([null]);
+    expect(map.get('x')!.durations).toEqual([2]);
+  });
+
+  it('gives a frame dict with no texture key a blank slot rather than dropping it', () => {
+    // Godot drops it (`ERR_CONTINUE(!f.has("texture"))`, sprite_frames.cpp:222);
+    // keeping it holds the remaining frames at the indices the file spells.
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [{"duration": 1.0}, {"duration": 4.0, "texture": ExtResource("1")}], "name": &"x"}]'
+    );
+    expect(map.get('x')!.frames).toEqual([null, 'ExtResource("1")']);
+    expect(map.get('x')!.durations).toEqual([1, 4]);
   });
 
   it('does not leak nested frame dicts into the animation split', () => {

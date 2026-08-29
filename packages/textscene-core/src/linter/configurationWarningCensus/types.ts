@@ -7,7 +7,12 @@
  * re-derivation recipe are explained; this file is only the shape.
  */
 
-export type DeclineCategory = 'runtime-only' | 'instance-opaque' | 'default-omitted' | 'editor-only';
+export type DeclineCategory =
+  | 'runtime-only'
+  | 'instance-opaque'
+  | 'default-omitted'
+  | 'editor-only'
+  | 'engine-unreachable';
 
 export type Verdict =
   /** The `ruleName` a rule emits for this exact condition. */

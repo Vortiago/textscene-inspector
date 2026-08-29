@@ -36,7 +36,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { hasNonUnitScale3D } from '../../../../utils/transform.js';
+import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
 
 const SCALE_RULE = 'light3d-non-unit-scale';
 

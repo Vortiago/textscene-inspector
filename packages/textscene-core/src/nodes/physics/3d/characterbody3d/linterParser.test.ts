@@ -1,6 +1,6 @@
 /**
- * CharacterBody3D strict validators: slide_on_ceiling and the two
- * `radians_as_degrees` angles. Asserted through validatorRegistry rather than a
+ * CharacterBody3D strict validators: slide_on_ceiling, up_direction and the
+ * two `radians_as_degrees` angles. Asserted through validatorRegistry rather than a
  * full scene lint: the unit under test is the validator, not scene parsing.
  */
 
@@ -22,6 +22,37 @@ describe('CharacterBody3D strict validators (physics state)', () => {
 
     it('rejects a numeric stand-in for a boolean', () => {
       expect(check('slide_on_ceiling', '1')?.severity).toBe('warning');
+    });
+  });
+
+  // character_body_3d.cpp:848, ERR_FAIL_COND_MSG(p_up_direction == Vector3()). Exact equality, so
+  // only the zero vector itself is refused; everything else is normalised.
+  describe('up_direction', () => {
+    it('accepts the default and any other direction', () => {
+      expect(check('up_direction', 'Vector3(0, 1, 0)')).toBeNull();
+      expect(check('up_direction', 'Vector3(-3, 4, 5)')).toBeNull();
+    });
+
+    it('accepts a component under CMP_EPSILON, which this guard does not use', () => {
+      expect(check('up_direction', 'Vector3(1e-9, 0, 0)')).toBeNull();
+    });
+
+    it.each(['Vector3(nan, 0, 0)', 'Vector3(inf, 0, 0)'])('accepts %s, unequal to zero', (value) => {
+      expect(check('up_direction', value)).toBeNull();
+    });
+
+    it('errors on the zero vector the setter refuses', () => {
+      const error = check('up_direction', 'Vector3(0, 0, 0)');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('zero vector');
+    });
+
+    it('errors on the Vector3i spelling of it that Godot converts', () => {
+      expect(check('up_direction', 'Vector3i(0, 0, 0)')?.severity).toBe('error');
+    });
+
+    it('still reports a malformed literal as a format error', () => {
+      expect(check('up_direction', 'Vector3(0, 1)')?.message).toContain('Vector3 with 3 numbers');
     });
   });
 

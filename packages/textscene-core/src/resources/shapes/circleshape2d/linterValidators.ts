@@ -1,9 +1,5 @@
 /**
  * Strict parser validation for CircleShape2D's OWN properties.
- *
- * `mid_height` is deliberately absent: its `ADD_PROPERTY` carries
- * `PROPERTY_USAGE_NONE`, so Godot never serialises it and no `.tscn` can hold
- * it. See circle_shape_2d.cpp.
  */
 
 // Registers the Shape2D tier this class inherits from, and through it the

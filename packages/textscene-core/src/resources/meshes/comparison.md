@@ -97,10 +97,10 @@ The lenient parser never rejects a mesh property: an unreadable `subdivide_width
   its scalars apply, its textures do not. `StandardMaterialSlot` already accepts the
   maps and `ExternalMaterialSlot` already resolves them per surface one branch away in
   the same loop; the scene branch passes only `scalars`. No corpus scene uses one.
-- **`material_override` / `surface_material_override/N` do not reach an ArrayMesh.**
-  Both ArrayMesh paths render one slot per draw group from the surface's own material,
-  so a node-level override is dropped where Godot would apply it. Pre-existing for an
-  external `.tres`; the inline path inherits it.
+- **`surface_material_override/N` does not reach an ArrayMesh.** Both ArrayMesh paths
+  build one slot per draw group from the surface's own material, so a per-surface
+  override is dropped where Godot would apply it. `material_override` does reach them,
+  through the slot source both paths take.
 - **A `.tres` whose every surface is undecodable fails the whole resource**, which puts
   its path in the missing-resources panel even though the file is present. The
   placeholder is right; the panel row overstates the cause.

@@ -79,6 +79,20 @@ describe('XROrigin3D rule', () => {
       expect(ruleDiagnostics(linter.lint(content), CAMERA_CHILD_RULE)).toEqual([]);
     });
 
+    it.each(['inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {
+      // A legal literal (variant_parser.cpp:149-157), not a malformed one:
+      // get_scale carries it (or the 0 its NaN determinant signs to) into an
+      // axis no comparison calls 1, and xr_nodes.cpp:698 pushes the warning.
+      const content = `[gd_scene format=3]
+
+[node name="Origin" type="XROrigin3D"]
+transform = Transform3D(${spelling}, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Camera" type="XRCamera3D" parent="."]
+`;
+      expect(ruleDiagnostics(linter.lint(content), SCALE_RULE)).toHaveLength(1);
+    });
+
     it('stays quiet when the origin is explicitly hidden', () => {
       const content = `[gd_scene format=3]
 

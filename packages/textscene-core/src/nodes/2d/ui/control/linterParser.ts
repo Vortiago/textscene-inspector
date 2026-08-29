@@ -20,6 +20,8 @@ import { hintedBitField, v, shape, propertyError } from '../../../../linter/vali
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import {
   ARRAY_LITERAL_RE,
+  CURSOR_MAX,
+  CURSOR_SHAPES,
   dropTrailingComma,
   NODE_PATH_LITERAL_RE,
   splitTopLevel,
@@ -81,15 +83,19 @@ validatorRegistry.registerAll('Control', {
   // (control.cpp:919-935) assigns unconditionally, no ERR_FAIL.
   layout_mode: v.int('layout_mode', { min: 0, max: 3, hinted: 'control.cpp:4210' }),
   // control.cpp:4245, ENUM built from the preset table ("Custom:-1" plus 16
-  // named presets 0-15). Both ends are genuinely enforced, just by two
-  // different guards: -1 is special-cased as always valid
-  // (_set_anchors_layout_preset early-returns on it, control.cpp:983-988);
-  // anything else reaches set_anchors_preset's `ERR_FAIL_INDEX((int)p_preset,
-  // 16)` (control.cpp:1116), which also rejects anything below -1.
+  // named presets 0-15). ONE guard produces both verdicts:
+  // `set_anchors_preset`'s `ERR_FAIL_INDEX((int)p_preset, 16)`
+  // (control.cpp:1116) refuses -5 and 16 alike. The floor is -1 rather than 0
+  // only because `_set_anchors_layout_preset` returns before reaching it on
+  // exactly that value (control.cpp:983-989, "Keep settings as is").
+  // In LAYOUT_MODE_POSITION (0, the field default at control.h:201) and
+  // LAYOUT_MODE_CONTAINER (2) the write never reaches :1116 at all — the early
+  // return at control.cpp:991-994 drops it, in range or not — which is still
+  // the error tier, since the stored value is not the written one.
   anchors_preset: v.int('anchors_preset', {
     min: -1,
     max: 15,
-    enforced: { min: 'control.cpp:983', max: 'control.cpp:1116' },
+    enforced: 'control.cpp:1116',
   }),
   anchor_left: v.float('anchor_left'),
   anchor_top: v.float('anchor_top'),
@@ -218,31 +224,14 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:1953' }
   ),
   mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
-  // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX) where
-  // CURSOR_MAX=17 (control.h:100-118, ARROW=0..HELP=16) — enforced.
+  // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX) — enforced. The
+  // enum is `godot/control.ts`'s, because SubViewportContainer's rule reads the
+  // same table and the two must not disagree about where it ends.
   mouse_default_cursor_shape: v.enumInt(
     'mouse_default_cursor_shape',
     0,
-    16,
-    {
-      0: 'ARROW',
-      1: 'IBEAM',
-      2: 'POINTING_HAND',
-      3: 'CROSS',
-      4: 'WAIT',
-      5: 'BUSY',
-      6: 'DRAG',
-      7: 'CAN_DROP',
-      8: 'FORBIDDEN',
-      9: 'VSIZE',
-      10: 'HSIZE',
-      11: 'BDIAGSIZE',
-      12: 'FDIAGSIZE',
-      13: 'MOVE',
-      14: 'VSPLIT',
-      15: 'HSPLIT',
-      16: 'HELP',
-    },
+    CURSOR_MAX - 1,
+    CURSOR_SHAPES,
     { enforced: 'control.cpp:2877' }
   ),
 

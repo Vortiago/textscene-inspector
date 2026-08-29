@@ -109,15 +109,28 @@ describe('Node strict validators', () => {
     });
   });
 
+  /**
+   * node.cpp:4063 is PROPERTY_HINT_FLAGS "Process,Physics Process", and
+   * ProcessThreadMessages (node.h:89-93) declares no bit outside it, so the
+   * hint's set IS the whole legal set. set_process_thread_messages
+   * (node.cpp:1233-1240) bare-assigns with no mask: measured on 4.6.3, writing
+   * 7 stores 7, so an unlisted bit is kept and merely unreachable from the
+   * inspector — a warning, never an error.
+   */
   describe('process_thread_messages', () => {
-    it('accepts a combined bitfield', () => {
-      expect(check('process_thread_messages', '3')).toBeNull();
+    it.each(['0', '1', '2', '3'])('accepts %s, a subset of the hinted bits', (value) => {
+      expect(check('process_thread_messages', value)).toBeNull();
     });
 
-    it('carries no range bound: node.cpp:4063 is PROPERTY_HINT_FLAGS, a 2-bit ' +
-      'bitmask rather than a linear range, and set_process_thread_messages ' +
-      '(node.cpp:1233-1239) is a bare BitField assignment', () => {
-      expect(check('process_thread_messages', '-1')).toBeNull();
+    it('warns on a bit the hint does not offer, naming the ones it does', () => {
+      const error = check('process_thread_messages', '7');
+      expect(error?.severity).toBe('warning');
+      expect(error?.message).toContain('FLAG_PROCESS_THREAD_MESSAGES (1)');
+      expect(error?.message).toContain('FLAG_PROCESS_THREAD_MESSAGES_PHYSICS (2)');
+    });
+
+    it('warns on a negative, which sets every bit rather than none', () => {
+      expect(check('process_thread_messages', '-1')?.severity).toBe('warning');
     });
   });
 

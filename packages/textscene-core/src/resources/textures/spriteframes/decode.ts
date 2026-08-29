@@ -7,10 +7,11 @@
  *      "loop": true, "name": &"right", "speed": 5.0 }, …]
  *
  * A full GDScript-literal parser is not needed for the preview: split the outer
- * array into its top-level animation dicts (by brace depth), then per dict pull
- * the `name`, the ordered `texture` refs + per-frame `duration`s, the `speed`
- * (fps) and the `loop` flag. (No string-escaped braces appear in these values,
- * so depth tracking is safe without quote-awareness.)
+ * array into its top-level animation dicts (by brace depth), pull each dict's
+ * `name`, `speed` (fps) and `loop`, then split its `frames` array the same way
+ * and read `texture` + `duration` out of each FRAME dict. (No string-escaped
+ * braces appear in these values, so depth tracking is safe without
+ * quote-awareness.)
  *
  * Defaults and the duration clamp are Godot's own: `struct Anim { double speed
  * = 5.0; bool loop = true; }` and `float duration = 1.0`
@@ -36,11 +37,13 @@ import { boolSlotValue } from '../../../godot/index.js';
  * padding `get_token` discards (variant_parser.cpp:415-417), so an authored
  * `ExtResource( "2" )` went unmatched; `[0-9.]+` for the numbers refused the
  * `1e-05` the writer emits for a small value and the `-` a hand-edited one may
- * carry. Either miss desynchronises `durations` from `frames`, and the
- * frame-count guard below then throws away EVERY authored duration.
+ * carry.
+ *
+ * Read once per FRAME dict, so neither is `g`-flagged and neither carries a
+ * `lastIndex` between frames.
  */
-const TEXTURE_REF_RE = dictRefField('texture', true);
-const DURATION_RE = dictNumberField('duration', true);
+const TEXTURE_REF_RE = dictRefField('texture');
+const DURATION_RE = dictNumberField('duration');
 const SPEED_RE = dictNumberField('speed');
 
 /** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
@@ -64,32 +67,66 @@ export function parseSpriteFramesAnimations(
   animationsValue: string
 ): Map<string, SpriteFramesAnimation> {
   const result = new Map<string, SpriteFramesAnimation>();
-  for (const block of splitTopLevelDicts(animationsValue)) {
+  for (const block of splitTopLevelDicts(animationsValue, ANIMATION_DICT_DEPTH)) {
     const nameMatch = block.match(/"name"\s*:\s*&?"([^"]*)"/);
     const name = nameMatch ? nameMatch[1]! : 'default';
-    // `matchAll` clones the regex it is handed and leaves the original's
-    // `lastIndex` at 0, so these shared `g` instances stay stateless.
-    const frames = [...block.matchAll(TEXTURE_REF_RE)].map((m) => m[1]!);
-    const durations = [...block.matchAll(DURATION_RE)].map((m) => {
-      const d = matchedFloat(m[1]!);
-      // Godot clamps a read duration to its minimum, so a `0.0` frame blinks
-      // rather than lingering. `1e999` overflows to infinity in Godot's reader
-      // too, and no frame can last that long here; fall back to the API default
-      // 1.0 so one such value can't stall playback.
-      return Number.isFinite(d) ? Math.max(d, SPRITE_FRAME_MINIMUM_DURATION) : 1;
-    });
+    // Per FRAME dict, not two scans of the whole block: `frames` and `durations`
+    // are then in step by construction. Two independent scans desynchronise
+    // whenever one field is spelled in a form the other's grammar misses — a
+    // `"texture": null` slot, or a frame dict carrying no `"duration"` — and
+    // the count guard that stood here answered a desync by discarding EVERY
+    // authored duration, turning a 3-frame [0.5, 3.0, 0.5] blink into 2 frames
+    // at 1.0.
+    const frameDicts = splitTopLevelDicts(block, FRAME_DICT_DEPTH);
+    const frames = frameDicts.map(frameTexture);
+    const durations = frameDicts.map(frameDuration);
     const speedMatch = SPEED_RE.exec(block);
     const loopMatch = block.match(/"loop"\s*:\s*(true|false)/);
     result.set(name, {
       name,
       frames,
-      // Per-frame durations only when one was captured per frame; else uniform.
-      durations: durations.length === frames.length ? durations : frames.map(() => 1),
+      durations,
       fps: finiteFps(speedMatch),
       loop: loopMatch ? boolSlotValue(loopMatch[1]) === true : true,
     });
   }
   return result;
+}
+
+/**
+ * A frame's texture ref, or null when the slot holds no resource.
+ *
+ * `null` is a real, round-trippable frame: `_get_animations` writes
+ * `f["texture"] = anim.frames[i].texture` unconditionally
+ * (sprite_frames.cpp:184) and the writer spells a null Ref `null`, while
+ * `_set_animations` gates on `f.has("texture")` alone (:222) — true for a null
+ * value — and `add_frame` has no null guard (:35-41). So Godot writes and
+ * reloads a blank frame, and it must occupy a slot here rather than vanish.
+ *
+ * Anything else that is not a reference reads as null for the same reason
+ * Godot does: a non-Object Variant converts to a null `Ref<Texture2D>`.
+ */
+function frameTexture(frameDict: string): string | null {
+  return TEXTURE_REF_RE.exec(frameDict)?.[1] ?? null;
+}
+
+/**
+ * A frame's display duration.
+ *
+ * Godot clamps a read duration to its minimum, so a `0.0` frame blinks rather
+ * than lingering (`MAX(SPRITE_FRAME_MINIMUM_DURATION, …)`, sprite_frames.cpp:225).
+ * `1e999` overflows to infinity in Godot's reader too, and no frame can last
+ * that long here; that and an absent or malformed literal fall back to the API
+ * default 1.0 so one such value can't stall playback. Godot instead DROPS a
+ * frame dict carrying no `"duration"` (`ERR_CONTINUE(!f.has("duration"))`,
+ * :223); the preview keeps the frame, since showing it is closer to the
+ * author's intent than silently renumbering the animation.
+ */
+function frameDuration(frameDict: string): number {
+  const match = DURATION_RE.exec(frameDict);
+  if (!match) return 1;
+  const d = matchedFloat(match[1]!);
+  return Number.isFinite(d) ? Math.max(d, SPRITE_FRAME_MINIMUM_DURATION) : 1;
 }
 
 /**
@@ -106,8 +143,20 @@ function finiteFps(speedMatch: RegExpExecArray | null): number {
   return Number.isFinite(speed) ? speed : 5;
 }
 
-/** The substrings of each `{…}` opened at array-depth 1 (the animation dicts). */
-function splitTopLevelDicts(value: string): string[] {
+/**
+ * Where each level of dict sits, counting every `[` and `{` from the start of
+ * the string handed in.
+ *
+ * In the whole `animations` value the outer array is depth 1 and its animation
+ * dicts open at 2. Inside ONE such dict the dict itself is depth 1, its
+ * `"frames"` array is 2, and each frame dict opens at 3 — `frames` is the only
+ * nested array Godot writes into an animation dict (sprite_frames.cpp:178-188).
+ */
+const ANIMATION_DICT_DEPTH = 2;
+const FRAME_DICT_DEPTH = 3;
+
+/** The substrings of each `{…}` that opens exactly `dictDepth` brackets deep. */
+function splitTopLevelDicts(value: string, dictDepth: number): string[] {
   const blocks: string[] = [];
   let depth = 0;
   let start = -1;
@@ -115,9 +164,9 @@ function splitTopLevelDicts(value: string): string[] {
     const c = value[i];
     if (c === '[' || c === '{') {
       depth++;
-      if (c === '{' && depth === 2) start = i; // outer array is depth 1; its dicts open at 2
+      if (c === '{' && depth === dictDepth) start = i;
     } else if (c === ']' || c === '}') {
-      if (c === '}' && depth === 2 && start >= 0) {
+      if (c === '}' && depth === dictDepth && start >= 0) {
         blocks.push(value.slice(start, i + 1));
         start = -1;
       }

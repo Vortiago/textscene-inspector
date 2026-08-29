@@ -73,9 +73,12 @@ describe('AnimatedSprite2D Linter', () => {
         {
           prop: 'frame',
           valid: [5, 0],
+          // A reject node carries no `sprite_frames`, so the dropped-write rule
+          // fires beside the validator and a `frame` lookup finds it first.
+          // Naming the phase pins each case to the diagnostic it is about.
           invalid: [
-            { value: -1, contains: ['frame', 'non-negative'] },
-            { value: 1.5, contains: ['frame', 'integer'] },
+            { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
+            { value: 1.5, ruleName: 'strict-parser', contains: ['frame', 'integer'] },
           ],
         },
         {
@@ -195,8 +198,26 @@ describe('AnimatedSprite2D Linter', () => {
       expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"walk"' })), {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
         severity: 'error',
-        contains: ['animation', "sprite_frames' is not set"],
+        contains: ['animation', "no 'sprite_frames' in effect"],
       });
+    });
+
+    // The slot is null until its own line runs (packed_scene.cpp:492), so
+    // set_animation clears the name and ERR_FAIL_MSGs. Measured on 4.6.3: this
+    // body loads the default animation, the one below it loads "walk".
+    it('errors when sprite_frames is written below animation', () => {
+      expectDiagnostic(
+        scene(spriteFrames, node('AnimatedSprite2D', { animation: '"walk"', ...withFrames })),
+        {
+          ruleName: 'animatedsprite2d-animation-no-spriteframes',
+          severity: 'error',
+          contains: ['animation', 'in effect at that line'],
+        }
+      );
+    });
+
+    it('passes on the same values with sprite_frames written above animation', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"walk"' })));
     });
 
     // `set_animation` returns at animated_sprite_2d.cpp:554-556 when the name equals the
@@ -216,6 +237,51 @@ describe('AnimatedSprite2D Linter', () => {
 
     it('should pass when both autoplay and sprite_frames are set', () => {
       expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, autoplay: '"idle"' })));
+    });
+  });
+
+  // `set_frame_and_progress` returns at animated_sprite_2d.cpp:360-362 while the
+  // SpriteFrames slot is null, so the whole write is dropped. Measured on 4.6.3.
+  describe('Semantic Validation (Frame Without SpriteFrames)', () => {
+    it('errors on a frame above 0 with no sprite_frames', () => {
+      expectDiagnostic(scene(node('AnimatedSprite2D', { frame: 2 })), {
+        ruleName: 'animatedsprite2d-frame-no-spriteframes',
+        severity: 'error',
+        contains: ['frame', 'drops the write', 'frame 0'],
+      });
+    });
+
+    // Properties replay in FILE order (packed_scene.cpp:492), so the slot is
+    // still null on the line above it. Measured: this body loads on frame 0.
+    it('errors when sprite_frames is written below frame', () => {
+      expectDiagnostic(
+        scene(spriteFrames, node('AnimatedSprite2D', { frame: 2, ...withFrames })),
+        {
+          ruleName: 'animatedsprite2d-frame-no-spriteframes',
+          severity: 'error',
+          contains: ['frame', 'in effect at that line'],
+        }
+      );
+    });
+
+    it('passes on the same values with sprite_frames written above frame', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame: 2 })));
+    });
+
+    it('stays silent on frame 0, the value the node already holds', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: 0 })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
+      ).toHaveLength(0);
+    });
+
+    // The `>= 0` floor in linterParser.ts already reports a negative frame; a
+    // second error on the same line is the double-report ADR-0032 forbids.
+    it('leaves a negative frame to the validator alone', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: -1 })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
+      ).toHaveLength(0);
     });
   });
 

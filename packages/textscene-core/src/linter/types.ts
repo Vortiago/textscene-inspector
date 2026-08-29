@@ -79,18 +79,21 @@ export interface ParseError {
   keyVerdict?: true;
 
   /**
-   * The node this refusal belongs to, when it belongs to one.
+   * The section this refusal belongs to, when it belongs to one — a node's
+   * `name=`, or a `[sub_resource]`'s `id=`.
    *
-   * A property refusal is ABOUT a node — "`draw_order` must be 0-1" is useless
-   * without saying which of eleven CPUParticles2D wrote it — but the validator
-   * seam is handed a key and a value, never the heading. The scanning loop has
-   * it (`onSectionStart` carries the heading's `name=`/`type=`), so the
-   * identity is stamped on the error there and `Linter.convertParseErrors`
-   * reads it back.
+   * A property refusal is ABOUT one of them — "`draw_order` must be 0-1" is
+   * useless without saying which of eleven CPUParticles2D wrote it, and
+   * "`radius` must be non-negative" without saying which of five
+   * `CircleShape2D` sub-resources — but the validator seam is handed a key and
+   * a value, never the heading. The scanning loop has it (`onSectionStart`
+   * carries the heading's attributes), so the identity is stamped on the error
+   * there and `Linter.convertParseErrors` reads it back.
    *
-   * ABSENT is meaningful and must stay reachable: a malformed heading, and the
-   * `format=` header itself, genuinely belong to no node, and saying
-   * `<unknown>` for those is the honest answer rather than a gap to fill.
+   * ABSENT is meaningful and must stay reachable: a malformed heading, the
+   * `format=` header itself, and a `.tres`'s `[resource]` body genuinely have
+   * no such identity, and saying `<unknown>` for those is the honest answer
+   * rather than a gap to fill.
    */
   nodeName?: string;
   /** See {@link ParseError.nodeName}. */

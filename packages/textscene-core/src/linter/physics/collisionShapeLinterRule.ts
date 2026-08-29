@@ -19,7 +19,7 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
@@ -172,22 +172,25 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // Godot's own message picks `body_type` from a nested VehicleBody3D cast.
     // The push is UNCONDITIONAL on freeze/freeze_mode — "except when frozen" in
     // Godot's own string is message prose, not part of the guard.
+    // `descendsFromClass` on the shape side too: `cast_to<ConcavePolygonShape3D>`
+    // (:140, :142) succeeds for a subclass, and only the merged node+resource
+    // table holds a Shape's ancestry.
     if (arms.concaveUnderRigidBody && parent && shape.kind === 'resolved') {
       if (descendsFrom(parent.type, 'RigidBody3D')) {
         const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
-        if (shape.type === 'ConcavePolygonShape3D') {
+        if (descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
           report(arms.concaveUnderRigidBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
               `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
               `behave well for a ${bodyType}, except when frozen with freeze_mode set to Static.`
           );
-        } else if (shape.type === 'WorldBoundaryShape3D') {
+        } else if (descendsFromClass(shape.type, 'WorldBoundaryShape3D')) {
           report(arms.worldBoundaryUnderRigidBody, `${type} '${node.name}' uses a WorldBoundaryShape3D under a ${bodyType} ('${parent.name}'). ` +
               `WorldBoundaryShape3D doesn't support ${bodyType} in a non-static mode.`
           );
         }
       } else if (
         descendsFrom(parent.type, 'CharacterBody3D') &&
-        shape.type === 'ConcavePolygonShape3D'
+        descendsFromClass(shape.type, 'ConcavePolygonShape3D')
       ) {
         report(arms.concaveUnderCharacterBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a CharacterBody3D ('${parent.name}'). ` +
             `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
@@ -222,10 +225,12 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     }
 
     // WARNING: shape resolves to a polygon-based Shape2D with limited editing
-    // (2D only — collision_shape_2d.cpp:184-189).
+    // (2D only — collision_shape_2d.cpp:185-187 assigns the slot into a
+    // `Ref<...PolygonShape2D>` and tests `is_valid()`, a cast a subclass passes).
     if (
       shape.kind === 'resolved' &&
-      (shape.type === 'ConvexPolygonShape2D' || shape.type === 'ConcavePolygonShape2D')
+      (descendsFromClass(shape.type, 'ConvexPolygonShape2D') ||
+        descendsFromClass(shape.type, 'ConcavePolygonShape2D'))
     ) {
       report(arms.polygonShapeLimitedEditing, `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`);
     }

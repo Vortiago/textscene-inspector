@@ -3,36 +3,32 @@
 /**
  * The stateful halves of the `vscode` module mock: its five namespaces, built
  * out of `vi.fn()` spies, plus the small factories tests build arguments with.
- * The two big ones have files of their own (`vscodeWorkspaceMock`,
- * `vscodeWindowMock`) and are re-exported here so callers see one surface.
+ * The two big ones have files of their own (`vscodeWorkspaceMock.testkit`,
+ * `vscodeWindowMock.testkit`) and are re-exported here so callers see one surface.
  *
- * `test-setup.ts` assembles these (and `vscodeMockClasses.ts`) into the module
+ * `test-setup.ts` assembles these (and `vscodeMockClasses.testkit.ts`) into the module
  * mock and clears every spy after each test.
  */
 
 import { vi } from 'vitest';
 import * as path from 'path';
-export { mockWorkspace } from './vscodeWorkspaceMock';
-export { mockWindow } from './vscodeWindowMock';
+import type * as vscode from 'vscode';
+export { mockWorkspace } from './vscodeWorkspaceMock.testkit';
+export { mockWindow } from './vscodeWindowMock.testkit';
 
 // ============================================================================
 // Helper Factories
 // ============================================================================
 
 /**
- * Create a mock vscode.Uri object
+ * Create a mock vscode.Uri object.
+ *
+ * Typed as the real `Uri` so it can be passed wherever the API asks for one:
+ * the structural shape it actually has cannot satisfy `Uri.with`, whose spy
+ * returns `undefined` where the interface promises another `Uri`. No caller
+ * calls `with`, so the assertion costs nothing a test could observe.
  */
-export function createMockUri(fsPath: string): {
-  fsPath: string;
-  path: string;
-  scheme: string;
-  authority: string;
-  query: string;
-  fragment: string;
-  with: ReturnType<typeof vi.fn>;
-  toString: () => string;
-  toJSON: () => { fsPath: string; path: string; scheme: string };
-} {
+export function createMockUri(fsPath: string): vscode.Uri {
   // Normalize path for cross-platform compatibility
   const normalizedPath = fsPath.replace(/\\/g, '/');
 
@@ -46,7 +42,7 @@ export function createMockUri(fsPath: string): {
     with: vi.fn(),
     toString: () => `file://${normalizedPath}`,
     toJSON: () => ({ fsPath, path: normalizedPath, scheme: 'file' })
-  };
+  } as unknown as vscode.Uri;
 }
 
 /**

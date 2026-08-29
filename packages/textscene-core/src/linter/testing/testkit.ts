@@ -138,33 +138,65 @@ export interface DiagnosticExpectation {
   contains?: string[];
 }
 
-function locate(diagnostics: Diagnostic[], where: DiagnosticExpectation): Diagnostic | undefined {
-  if (where.ruleName !== undefined) {
-    return diagnostics.find(
-      d =>
-        d.ruleName === where.ruleName &&
-        (where.prop === undefined || d.message.includes(where.prop))
-    );
-  }
-  if (where.prop !== undefined) return diagnostics.find(d => d.message.includes(where.prop!));
-  return diagnostics[0];
+/**
+ * Every diagnostic `where` could be naming, by the fields that IDENTIFY one.
+ *
+ * `prop` is a message substring, not a property name — `{ prop: 'resource
+ * reference' }` matches the sentence `createResourceReferenceValidator` emits
+ * for EVERY resource slot, and `{ prop: 'theme_override_constants' }` matches a
+ * whole property family. So this returns the set, and the positive helper below
+ * refuses one it cannot narrow to a single member.
+ */
+function candidates(diagnostics: Diagnostic[], where: DiagnosticExpectation): Diagnostic[] {
+  return diagnostics.filter(
+    d =>
+      (where.ruleName === undefined || d.ruleName === where.ruleName) &&
+      (where.prop === undefined || d.message.includes(where.prop))
+  );
+}
+
+/** The asserted fields: what narrows a family down to the diagnostic under test. */
+function matchesAsserted(d: Diagnostic, where: DiagnosticExpectation): boolean {
+  return (
+    (where.severity === undefined || d.severity === where.severity) &&
+    (where.nodeType === undefined || d.nodeType === where.nodeType) &&
+    (where.contains ?? []).every(substring => d.message.includes(substring))
+  );
+}
+
+function describe1(d: Diagnostic): string {
+  return `[${d.severity}] ${d.ruleName} (${d.nodeType}): ${d.message}`;
+}
+
+/** Why a `where` failed, listing the near-misses so the tier and rule are visible. */
+function locateHint(where: DiagnosticExpectation, named: Diagnostic[]): string {
+  const asked = JSON.stringify(where);
+  if (named.length === 0) return `no diagnostic matches ${asked}`;
+  return `${asked} must identify ONE claim; by prop/ruleName there are ${named.length}:\n  ${named.map(describe1).join('\n  ')}`;
 }
 
 /**
- * Assert the scene produces a diagnostic matching `where`, and return it.
- * Replaces the `length>0` + `find(...)` + `toBeDefined` + `toContain(...)` triplet.
+ * Assert the scene produces exactly one CLAIM matching `where`, and return its
+ * diagnostic.
+ *
+ * One claim, not the first hit: `where` is matched by message substring, so a
+ * `{ prop }` naming a shared sentence or a property family answers to several
+ * diagnostics at once, and taking the head asserts about whichever one the
+ * linter happened to sort first. Narrow with `ruleName`, `severity` or
+ * `contains` — those filter the set before it is counted, so disambiguating and
+ * asserting are the same act.
+ *
+ * Distinct MESSAGES, not distinct diagnostics: a rule that reports once per node
+ * puts the same sentence in the list twice, and "which of the two" is a question
+ * with no wrong answer. Two different sentences is the case where it has one.
  */
 export function expectDiagnostic(content: string, where: DiagnosticExpectation): Diagnostic {
   const diagnostics = lint(content);
-  expect(diagnostics.length).toBeGreaterThan(0);
-  const found = locate(diagnostics, where);
-  expect(found).toBeDefined();
-  if (where.severity !== undefined) expect(found?.severity).toBe(where.severity);
-  if (where.nodeType !== undefined) expect(found?.nodeType).toBe(where.nodeType);
-  for (const substring of where.contains ?? []) {
-    expect(found?.message).toContain(substring);
-  }
-  return found as Diagnostic;
+  expect(diagnostics.length, 'the scene produced no diagnostics at all').toBeGreaterThan(0);
+  const named = candidates(diagnostics, where);
+  const matched = named.filter(d => matchesAsserted(d, where));
+  expect([...new Set(matched.map(d => d.message))], locateHint(where, named)).toHaveLength(1);
+  return matched[0]!;
 }
 
 /** Assert no diagnostic matching `where` is present (other diagnostics may exist). */
@@ -193,7 +225,10 @@ function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
 export function expectNoDiagnostic(content: string, where: DiagnosticExpectation): void {
   const diagnostics = lint(content);
   expectEveryHeadingPlaced(diagnostics);
-  expect(locate(diagnostics, where)).toBeUndefined();
+  // On the identity fields only. A negative quantifier over a family is the
+  // stronger claim, and narrowing it by the asserted fields would turn "no
+  // diagnostic for this property" into "none at that tier".
+  expect(candidates(diagnostics, where).map(describe1)).toEqual([]);
 }
 
 /**
@@ -266,7 +301,14 @@ export interface PropertyCase {
   valid?: PropValue[];
   /** Values that must produce a diagnostic mentioning `prop`. */
   invalid?: InvalidCase[];
-  /** Extra properties added to the accept-case node so it is otherwise valid. */
+  /**
+   * Extra properties added to the accept-case node so it is otherwise valid.
+   *
+   * Written ABOVE the property under test. Godot replays a node's properties in
+   * file order (packed_scene.cpp:492), so context written below the value it is
+   * meant to make legal is not yet in effect — `frame = 3` over a `hframes = 4`
+   * beneath it is the refused write Sprite2D's rule reports, not an accept case.
+   */
   with?: Record<string, PropValue>;
   /** Override the table-level accept mode for this property. */
   acceptMode?: AcceptMode;
@@ -316,7 +358,7 @@ export function runResourcePropertyValidation(
       for (const value of propCase.valid ?? []) {
         it(`accepts ${renderValue(value)}`, () => {
           const content = scene(
-            subResource(resourceType, { [propCase.prop]: value, ...propCase.with }),
+            subResource(resourceType, { ...propCase.with, [propCase.prop]: value }),
             root
           );
           if (mode === 'no-error') expectNoErrors(content);
@@ -353,7 +395,7 @@ export function runPropertyValidation(
         it(`accepts ${renderValue(value)}`, () => {
           const underTest = node(
             nodeType,
-            { ...baseProps, [propCase.prop]: value, ...propCase.with },
+            { ...baseProps, ...propCase.with, [propCase.prop]: value },
             nodeOptions
           );
           const content = scene(...prefix, underTest, ...(acceptChild ? [acceptChild] : []));

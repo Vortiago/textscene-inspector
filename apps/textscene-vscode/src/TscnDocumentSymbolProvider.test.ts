@@ -26,6 +26,22 @@ const mockCancellationToken: vscode.CancellationToken = {
   onCancellationRequested: vi.fn(),
 };
 
+/**
+ * The provider's return type is the API's `ProviderResult`, but its body is
+ * synchronous and always returns an array. Narrowing once here keeps every
+ * assertion below reading a `DocumentSymbol[]`.
+ */
+function symbolsOf(
+  provider: TscnDocumentSymbolProvider,
+  document: vscode.TextDocument
+): vscode.DocumentSymbol[] {
+  const result = provider.provideDocumentSymbols(document, mockCancellationToken);
+  if (!Array.isArray(result)) {
+    throw new Error('provideDocumentSymbols returned a thenable, not an array');
+  }
+  return result;
+}
+
 describe('TscnDocumentSymbolProvider', () => {
   // ============================================================================
   // Happy Path: Symbol Extraction
@@ -46,17 +62,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       expect(symbols).toHaveLength(1); // Root
-      expect(symbols![0].name).toBe('Root');
-      expect(symbols![0].detail).toBe('Node3D');
-      expect(symbols![0].children).toHaveLength(1); // Player
-      expect(symbols![0].children[0].name).toBe('Player');
-      expect(symbols![0].children[0].detail).toBe('MeshInstance3D');
-      expect(symbols![0].children[0].children).toHaveLength(1); // Camera
-      expect(symbols![0].children[0].children[0].name).toBe('Camera');
-      expect(symbols![0].children[0].children[0].detail).toBe('Camera3D');
+      expect(symbols[0]!.name).toBe('Root');
+      expect(symbols[0]!.detail).toBe('Node3D');
+      expect(symbols[0]!.children).toHaveLength(1); // Player
+      expect(symbols[0]!.children[0]!.name).toBe('Player');
+      expect(symbols[0]!.children[0]!.detail).toBe('MeshInstance3D');
+      expect(symbols[0]!.children[0]!.children).toHaveLength(1); // Camera
+      expect(symbols[0]!.children[0]!.children[0]!.name).toBe('Camera');
+      expect(symbols[0]!.children[0]!.children[0]!.detail).toBe('Camera3D');
     });
 
     it('should assign correct symbol kinds', () => {
@@ -73,17 +89,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       // Verify we have the root and its children
       expect(symbols).toHaveLength(1);
-      expect(symbols![0].kind).toBe(vscode.SymbolKind.Module); // Node3D
-      expect(symbols![0].children).toHaveLength(3);
+      expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Module); // Node3D
+      expect(symbols[0]!.children).toHaveLength(3);
 
       // Check each child's symbol kind
-      const meshChild = symbols![0].children.find(c => c.name === 'Mesh');
-      const lightChild = symbols![0].children.find(c => c.name === 'Light');
-      const camChild = symbols![0].children.find(c => c.name === 'Cam');
+      const meshChild = symbols[0]!.children.find(c => c.name === 'Mesh');
+      const lightChild = symbols[0]!.children.find(c => c.name === 'Light');
+      const camChild = symbols[0]!.children.find(c => c.name === 'Cam');
 
       expect(meshChild?.kind).toBe(vscode.SymbolKind.Class); // MeshInstance3D
       expect(lightChild?.kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
@@ -98,9 +114,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
-      expect(symbols![0].kind).toBe(vscode.SymbolKind.Object); // Default fallback
+      expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Object); // Default fallback
     });
   });
 
@@ -112,7 +128,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
     it('should handle empty files', () => {
       const document = createMockDocument('[gd_scene format=3]\n');
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       expect(symbols).toEqual([]);
     });
@@ -120,7 +136,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
     it('should handle parse errors gracefully', () => {
       const document = createMockDocument('invalid tscn content @#$%');
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       // Should return empty array, not throw
       expect(symbols).toEqual([]);
@@ -136,12 +152,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       expect(symbols).toHaveLength(1);
-      expect(symbols![0].name).toBe('Root');
-      expect(symbols![0].children).toHaveLength(1);
-      expect(symbols![0].children[0].name).toBe('Child');
+      expect(symbols[0]!.name).toBe('Root');
+      expect(symbols[0]!.children).toHaveLength(1);
+      expect(symbols[0]!.children[0]!.name).toBe('Child');
     });
 
     it('should handle deeply nested hierarchies', () => {
@@ -158,13 +174,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       expect(symbols).toHaveLength(1);
-      expect(symbols![0].children).toHaveLength(1); // Level1
-      expect(symbols![0].children[0].children).toHaveLength(1); // Level2
-      expect(symbols![0].children[0].children[0].children).toHaveLength(1); // Level3
-      expect(symbols![0].children[0].children[0].children[0].name).toBe('Level3');
+      expect(symbols[0]!.children).toHaveLength(1); // Level1
+      expect(symbols[0]!.children[0]!.children).toHaveLength(1); // Level2
+      expect(symbols[0]!.children[0]!.children[0]!.children).toHaveLength(1); // Level3
+      expect(symbols[0]!.children[0]!.children[0]!.children[0]!.name).toBe('Level3');
     });
   });
 
@@ -184,13 +200,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       // Verify symbols exist and have range information
       expect(symbols).toHaveLength(1);
-      expect(symbols![0].name).toBe('Root');
-      expect(symbols![0].range).toBeDefined();
-      expect(symbols![0].selectionRange).toBeDefined();
+      expect(symbols[0]!.name).toBe('Root');
+      expect(symbols[0]!.range).toBeDefined();
+      expect(symbols[0]!.selectionRange).toBeDefined();
     });
 
     it('should assign ranges for nested nodes', () => {
@@ -205,12 +221,12 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
       // Verify nested nodes have ranges
-      expect(symbols![0].children).toHaveLength(1);
-      expect(symbols![0].children[0].range).toBeDefined();
-      expect(symbols![0].children[0].selectionRange).toBeDefined();
+      expect(symbols[0]!.children).toHaveLength(1);
+      expect(symbols[0]!.children[0]!.range).toBeDefined();
+      expect(symbols[0]!.children[0]!.selectionRange).toBeDefined();
     });
   });
 
@@ -239,10 +255,10 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
-      const ab = symbols![0].children.find(c => c.name === 'AB')!;
-      const b = symbols![0].children.find(c => c.name === 'B')!;
+      const ab = symbols[0]!.children.find(c => c.name === 'AB')!;
+      const b = symbols[0]!.children.find(c => c.name === 'B')!;
 
       expect(ab.children[0]!.selectionRange.start).toBe(4);
       expect(b.children[0]!.selectionRange.start).toBe(5);
@@ -274,10 +290,10 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
-      const foo = symbols![0].children.find(c => c.name === 'Foo')!;
-      const bar = symbols![0].children.find(c => c.name === 'Bar')!;
+      const foo = symbols[0]!.children.find(c => c.name === 'Foo')!;
+      const bar = symbols[0]!.children.find(c => c.name === 'Bar')!;
       const targetUnderFoo = foo.children[0]!.children[0]!;
       const targetUnderBar = bar.children[0]!.children[0]!;
 
@@ -305,12 +321,12 @@ visible = true
 
       const document = createMockDocument(tscnContent);
       const provider = new TscnDocumentSymbolProvider();
-      const symbols = provider.provideDocumentSymbols(document, mockCancellationToken);
+      const symbols = symbolsOf(provider, document);
 
-      expect(symbols![0].children).toHaveLength(3);
-      expect(symbols![0].children[0].kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
-      expect(symbols![0].children[1].kind).toBe(vscode.SymbolKind.Object); // DirectionalLight3D
-      expect(symbols![0].children[2].kind).toBe(vscode.SymbolKind.Object); // OmniLight3D
+      expect(symbols[0]!.children).toHaveLength(3);
+      expect(symbols[0]!.children[0]!.kind).toBe(vscode.SymbolKind.Object); // SpotLight3D
+      expect(symbols[0]!.children[1]!.kind).toBe(vscode.SymbolKind.Object); // DirectionalLight3D
+      expect(symbols[0]!.children[2]!.kind).toBe(vscode.SymbolKind.Object); // OmniLight3D
     });
   });
 });

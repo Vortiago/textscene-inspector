@@ -71,6 +71,9 @@ const INVOCATIONS = {
     'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Range', '--linter',
   ],
   draws: ['ShapeCast3D', '3d', '--intent', 'draws', '--chain', 'Node3D'],
+  // The memorialised case: MeshInstance3D owns a parser.ts, so `--base node3d`
+  // and the real ancestry disagree about what a SoftBody3D slice reuses.
+  drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws', '--chain', 'MeshInstance3D'],
   controlPending: [
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button',
   ],
@@ -268,9 +271,11 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('gives a draws slice the registration test the other shapes carry', () => {
-    // Without it nothing in the slice loads either aggregation barrel, so a
-    // dropped import in `parser/TscnParser.ts` or `r3f/nodes/index.ts` leaves
-    // every co-located test green while the type falls back to Node at runtime.
+    // It proves the slice's OWN self-registration: both entry points imported,
+    // both registries answered. It cannot see a dropped aggregation import —
+    // the imports above register the slice regardless — which is why
+    // `parserBarrelCompleteness` exists and why the round-trip block that
+    // claimed to catch one is no longer emitted.
     expect(results.draws.out).toMatch(/create {2}nodes\/3d\/shapecast3d\/shapecast3d\.test\.ts/);
 
     const emitted = drawsFiles({
@@ -280,12 +285,58 @@ describe('new-node-slice intent shapes', () => {
       base: BASES.node3d,
       toSrc: '../../../',
       toBase: '../../base/node3d',
-      reusedParser: { fn: 'parseNode3D', importPath: '../../base/node3d/parser' },
+      reusedParser: {
+        fn: 'parseNode3D',
+        importPath: '../../base/node3d/parser',
+        propsType: 'Node3DProperties',
+        typesPath: '../../base/node3d/types',
+      },
     });
     const test = emitted.get('shapecast3d.test.ts');
     expect(test).toContain("import './index';");
     expect(test).toContain("import './index.r3f';");
-    expect(test).toContain('Unsupported node type');
+    expect(test).toContain("nodeRegistry.getRegistration('ShapeCast3D')");
+    expect(test).toContain("nodeComponentRegistry.get('ShapeCast3D')");
+    // Retired: it spied for this warning through a parser that had already been
+    // handed the registration by the import above, so the branch was unreachable.
+    expect(test).not.toContain('Unsupported node type');
+  });
+
+  it('points a `draws` slice at the nearest typed ancestor, not the --base flag', () => {
+    // `draws` was the one intent that took the flag, so a SoftBody3D slice was
+    // scaffolded against `parseNode3D` while its linter side inherited every
+    // MeshInstance3D validator: `mesh`, `skin` and the material overrides were
+    // validated and then discarded. The plan settles the resolution; the
+    // template is rendered directly for the CALL and the props alias, which
+    // `--dry-run` does not print.
+    const { ok, out } = results.drawsUnderTypedAncestor;
+    expect(ok).toBe(true);
+    expect(out).toMatch(/parser {2}parseMeshInstance3D from \.\.\/meshinstance3d\/parser/);
+
+    const emitted = drawsFiles({
+      typeName: 'SoftBody3D',
+      lower: 'softbody3d',
+      camel: 'softBody3D',
+      base: BASES.node3d,
+      toSrc: '../../../',
+      toBase: '../../base/node3d',
+      reusedParser: {
+        fn: 'parseMeshInstance3D',
+        importPath: '../meshinstance3d/parser',
+        propsType: 'MeshInstance3DProperties',
+        typesPath: '../meshinstance3d/types',
+      },
+    });
+    // Importing the ancestor parse and then calling the base one is the shape
+    // that compiled only because slice.mjs pinned the two equal.
+    expect(emitted.get('parser.ts')).toContain('parseMeshInstance3D(heading, properties)');
+    expect(emitted.get('parser.ts')).not.toContain('parseNode3D');
+    expect(emitted.get('types.ts')).toContain(
+      "import type { MeshInstance3DProperties } from '../meshinstance3d/types';"
+    );
+    expect(emitted.get('types.ts')).toContain(
+      'export type SoftBody3DProperties = MeshInstance3DProperties;'
+    );
   });
 
   it('accepts control as a base for a pending slice', () => {
@@ -332,7 +383,12 @@ describe('new-node-slice intent shapes', () => {
         base: BASES[baseKey],
         toSrc: '../../../',
         toBase: `../../${BASES[baseKey].dir}`,
-        reusedParser: { fn: BASES[baseKey].parser, importPath: `../../${BASES[baseKey].dir}/parser` },
+        reusedParser: {
+          fn: BASES[baseKey].parser,
+          importPath: `../../${BASES[baseKey].dir}/parser`,
+          propsType: BASES[baseKey].propsType,
+          typesPath: `../../${BASES[baseKey].dir}/types`,
+        },
       });
       expect(emitted.get('index.r3f.ts'), baseKey).toMatch(flag);
     }

@@ -16,14 +16,14 @@ const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME' };
 validatorRegistry.registerAll('CPUParticles2D', {
   emitting: v.boolean('emitting'),
   // cpu_particles_2d.cpp:1492 hints "1,1000000,1,exp", closed at both ends.
-  // set_amount (cpu_particles_2d.cpp:67-68) ERR_FAIL_COND_MSGs below 1, so the
+  // set_amount ERR_FAIL_COND_MSGs below 1 (cpu_particles_2d.cpp:68), so the
   // floor is enforced; the ceiling is never checked, which makes it a warning
   // rather than nothing at all. The CPUParticles3D twin reads the same hint the
   // same way.
   amount: v.int('amount', {
     min: 1,
     max: 1000000,
-    enforced: { min: 'cpu_particles_2d.cpp:67' },
+    enforced: { min: 'cpu_particles_2d.cpp:68' },
     hinted: { max: 'cpu_particles_2d.cpp:1492' },
   }),
   texture: v.resourceReference('texture'),
@@ -56,8 +56,9 @@ validatorRegistry.registerAll('CPUParticles2D', {
   // cpu_particles_2d.cpp:1502 hints "0," + itos(UINT32_MAX) + ",1" hard both
   // ends; set_seed (cpu_particles_2d.cpp:613) is `seed = p_seed;` — the
   // uint32_t param coerces an out-of-range value rather than rejecting it.
-  // UINT32_MAX as a literal, as in the three sibling particle slices.
-  seed: v.strictInt('seed', { min: 0, max: 4294967295, hinted: 'cpu_particles_2d.cpp:1502' }),
+  // UINT32_MAX as a literal, and the same combinator, as in the three sibling
+  // particle slices.
+  seed: v.int('seed', { min: 0, max: 4294967295, hinted: 'cpu_particles_2d.cpp:1502' }),
   // cpu_particles_2d.cpp:1503 hints "0,1,0.01" hard both ends;
   // set_lifetime_randomness (cpu_particles_2d.cpp:106-108) assigns unconditionally.
   lifetime_randomness: v.float('lifetime_randomness', { min: 0, max: 1, hinted: 'cpu_particles_2d.cpp:1503' }),

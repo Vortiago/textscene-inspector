@@ -40,7 +40,8 @@
  * VALUES as well as keys, and two of them legitimately spell a digit class in
  * one: `arraymesh/surfaceFields.ts` pulls an int field out of a serialised
  * `_surfaces` block, `animationtree/treeResources.ts` tokenises a
- * `node_connections` array. So the wider sweep bans the digit class in a KEY,
+ * `node_connections` array. So the wider sweep bans an index SPELLING in a KEY
+ * — the digit class, and the `[^/]+` segment a `to_int` family matches with —
  * identified by the path separator beside it, and the two bans live here
  * together because the difference between them is the whole point — a sibling
  * file would state half the rule twice.
@@ -96,6 +97,35 @@ const REGEXP_CTOR = /new RegExp\(\s*(['"`])((?:[^\\]|\\.)*?)\1/g;
 const DIGIT_CLASS = /\\d|\[0-9]|\\p\{Nd\}/;
 
 /**
+ * A wildcard SEGMENT — the OTHER spelling of an index position, and the one a
+ * digit-class ban cannot see.
+ *
+ * `to_int` refuses nothing, so a family that reads its index that way matches
+ * the whole segment: `[^/]+`. Three files spelled that by hand and slid straight
+ * under the term above while making exactly the claim it exists to centralise.
+ * Only the negated-slash OPENING is required, so `[^/\s]` and any other
+ * narrowing of the same class lands here too.
+ */
+const SEGMENT_CLASS = /\[\^\\?\//;
+
+/** Character classes removed, so a `/` inside one cannot pass for a separator. */
+const withoutClasses = (body: string): string => body.replace(/\[(?:[^\]\\]|\\.)*\]/g, '');
+
+/**
+ * A literal path segment: a family's own prefix or leaf, spelled out
+ * (`settings\/`, `joints\/`).
+ *
+ * The discriminator the segment class needs and the digit class does not. A
+ * digit class beside a separator can only be an index; a wildcard segment beside
+ * one is an index only when the pattern also NAMES the family it indexes.
+ * `generic6dofjoint3d/linterParser.ts`'s `/^[^/]+\//` names none — it strips
+ * whatever the first segment is, for a group prefix Godot enumerates rather than
+ * indexes — and there is no `#` for it to compose. Stated as an edge rather than
+ * exempted, so the ban stays absolute for everything that does name a family.
+ */
+const LITERAL_SEGMENT = /\w\\?\//;
+
+/**
  * `${…}` blanked. A prefix or a leaf name interpolated INTO a shape string is an
  * argument to the shared builder, not a grammar, and composing the builder is
  * the pattern this guard wants.
@@ -120,14 +150,28 @@ function handRolledIndexGrammar(source: string): string | null {
 }
 
 /**
+ * One extracted pattern body, judged against both index spellings.
+ *
+ * The two terms carry different second conditions because they are differently
+ * self-evident: a digit class beside a separator can only be an index, while a
+ * wildcard segment is one only where the pattern also names the family
+ * ({@link LITERAL_SEGMENT}).
+ */
+function spellsAnIndexPosition(body: string): boolean {
+  if (DIGIT_CLASS.test(body) && PATH_SEPARATOR.test(body)) return true;
+  return SEGMENT_CLASS.test(body) && LITERAL_SEGMENT.test(withoutClasses(body));
+}
+
+/**
  * The same offence at the parser/decoder layer, narrowed to a KEY grammar.
  *
  * A Godot property key is `/`-separated — `get_slicec('/', n)`,
  * `split("/", true, 2)`, `rsplit("/", true, 1)` are the three readers the engine
- * uses — so a pattern spelling both a separator and a digit class is describing
- * an index position, whatever file it sits in. Every value grammar in the
- * package spells no separator at all, so the two sets do not overlap and this
- * needs no allowlist either.
+ * uses — so a pattern spelling a separator beside either index spelling, a digit
+ * class ({@link DIGIT_CLASS}) or a wildcard segment ({@link SEGMENT_CLASS}), is
+ * describing an index position, whatever file it sits in. Every value grammar in
+ * the package spells no separator at all, so the two sets do not overlap and
+ * this needs no allowlist either.
  *
  * Two edges, stated rather than contorted around. A `res://` grammar that
  * spelled a digit class would land here wrongly — none does, and the answer then
@@ -138,10 +182,8 @@ function handRolledIndexGrammar(source: string): string | null {
  */
 function handRolledKeyGrammar(source: string): string | null {
   const src = withoutInterpolations(stripComments(source));
-  for (const m of src.matchAll(REGEX_LITERAL))
-    if (DIGIT_CLASS.test(m[1]!) && PATH_SEPARATOR.test(m[1]!)) return m[0];
-  for (const m of src.matchAll(REGEXP_CTOR))
-    if (DIGIT_CLASS.test(m[2]!) && PATH_SEPARATOR.test(m[2]!)) return m[0];
+  for (const m of src.matchAll(REGEX_LITERAL)) if (spellsAnIndexPosition(m[1]!)) return m[0];
+  for (const m of src.matchAll(REGEXP_CTOR)) if (spellsAnIndexPosition(m[2]!)) return m[0];
   return null;
 }
 
@@ -220,6 +262,30 @@ describe('Godot indexed-key grammar', () => {
       .toBeNull();
     expect(handRolledKeyGrammar(String.raw`const RE = /^\d+$/;`)).toBeNull();
     expect(handRolledKeyGrammar(String.raw`const RE = /\.(cpp|h|glsl):\d+/;`)).toBeNull();
+  });
+
+  /**
+   * The segment spelling, at all three of its contracts.
+   *
+   * The sanctioned line is pinned VERBATIM because it is spared by a
+   * tokenization accident, not by intent: {@link REGEX_LITERAL} treats the `/`
+   * inside `[^/]` as its own delimiter, so a shape string's leaf capture never
+   * reaches a term as one class. An extractor change that repaired that would
+   * flag every composed shape in the package, and this is what says so first.
+   */
+  it('recognises a wildcard index segment, and leaves a generic path helper alone', () => {
+    expect(handRolledKeyGrammar(String.raw`const RE = /^settings\/([^/]+)\/joints\/(.+)$/;`))
+      .not.toBeNull();
+    expect(handRolledKeyGrammar(String.raw`const RE = new RegExp('^item/([^/]+)/name$');`)).not
+      .toBeNull();
+    // Names no family segment: a first-segment stripper, not an index grammar.
+    expect(handRolledKeyGrammar(String.raw`const RE = /^[^/]+\//;`)).toBeNull();
+    // The composed spelling this guard wants, exactly as a slice writes it.
+    expect(
+      handRolledKeyGrammar(
+        String.raw`const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/([^/]+)(?:/.*)?$', 'to_int');`
+      )
+    ).toBeNull();
   });
 
   it('reads a to_int index through toIntIndex, never Number', () => {

@@ -19,20 +19,24 @@
  * The second half of the guard, `get_script().is_null()`, is easy to miss
  * reading the message alone: a bare Container WITH a script attached (the
  * intended use — the script implements `_get_allowed_size_flags_*`/sorts
- * children in `NOTIFICATION_SORT_CHILDREN`) never warns. A `.tscn` only ever
- * shows a script as present or absent — Godot never serialises a script
- * property at a "null" value — so absence of the `script` key IS the trigger.
+ * children in `NOTIFICATION_SORT_CHILDREN`) never warns. The trigger is an EMPTY
+ * slot, not an absent key: `variant_parser.cpp:699` reads `null`/`nil` to
+ * `Variant()`, `Object::set_script` leaves `script_instance` null for it
+ * (object.cpp:1092-1107), and `get_script()` (object.cpp:1134-1136) then answers
+ * `is_null()` exactly as it does for an absent key — so the engine warns for
+ * both, and `resourceSlotIsEmpty` is what holds the spellings to one answer.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 function checkContainer(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
   const props = isValidProperties(node.properties) ? node.properties : {};
-  if (props.script !== undefined) return [];
+  if (!resourceSlotIsEmpty(props.script)) return [];
 
   return [
     {

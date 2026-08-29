@@ -7,8 +7,9 @@
  * which no format check can see.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic, expectNoErrors } from '../../../../linter/testing/testkit';
+import { CURSOR_MAX, CURSOR_SHAPES } from '../../../../godot/control';
 import './linterParser';
 import './linter';
 
@@ -24,8 +25,17 @@ ${children}`;
 }
 
 describe('SubViewportContainer cursor shape — only a shape the node can hold', () => {
+  // This rule and Control's `mouse_default_cursor_shape` validator read the same
+  // enum and must end it in the same place: the rule warns strictly BELOW
+  // CURSOR_MAX and the validator errors at or above it, so a sentinel wider than
+  // the label list double-reports and a narrower one goes silent on a legal
+  // shape. Godot binds one BIND_ENUM_CONSTANT per shape (control.cpp:4347-4363).
+  it('ends the shape list exactly where CURSOR_MAX does', () => {
+    expect(Object.keys(CURSOR_SHAPES)).toHaveLength(CURSOR_MAX);
+  });
+
   it('says nothing about a non-finite or out-of-enum cursor', () => {
-    // `Control::CursorShape` runs 0-16 (control.h:180-197). A value outside it
+    // `Control::CursorShape` runs 0-16 (control.h:100-119). A value outside it
     // is not "a shape other than Arrow", it is not a shape.
     for (const shape of ['inf', 'nan', '99', '2e1']) {
       expectNoDiagnostic(

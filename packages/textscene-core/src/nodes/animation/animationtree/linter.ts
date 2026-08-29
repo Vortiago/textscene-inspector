@@ -123,11 +123,13 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warning: active = false. Not a port of get_configuration_warnings() —
-  // AnimationTree has none. The wording is adapted from
-  // `get_editor_error_message()` (animation_tree.cpp:995-997), a
+  // Warning: active = false. Not a port of
+  // `AnimationTree::get_configuration_warnings()` (animation_tree.cpp:717-723),
+  // whose one row is the null `root_animation_node` that
+  // `animationtree-missing-tree-root` above already carries. The wording here is
+  // adapted from `get_editor_error_message()` (animation_tree.cpp:995-997), a
   // `TOOLS_ENABLED`-only method Godot calls to render text INSIDE the
-  // blend-tree graph editor, not from `get_configuration_warnings()`.
+  // blend-tree graph editor.
   if (boolSlotValue(rawProps.active) === false) {
     diagnostics.push({
       severity: 'warning',
@@ -183,7 +185,15 @@ const animationTreeValidationRule: LintRule = {
       {
         ruleName: 'animationtree-anim-player-wrong-type',
         severity: 'warning',
-        grounding: { kind: 'engine', at: 'animation_tree.cpp:1020' },
+        // NOT animation_tree.cpp:1020: that ADD_PROPERTY's
+        // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
+        // picker and constrains no stored value. set_animation_player
+        // (:845-856) bare-assigns any path; the type is consulted only here.
+        grounding: {
+          kind: 'engine-inert',
+          at: 'animation_tree.cpp:875-876',
+          unused: 'the cast to AnimationPlayer yields null and the whole setup block is skipped, so the tree binds to no player and plays nothing',
+        },
       },
       {
         ruleName: 'animationtree-inactive',

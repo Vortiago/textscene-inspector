@@ -309,6 +309,30 @@ physics_material_override = ExtResource("ext_mat_1")
       );
     });
 
+    it('quotes no number for a component narrowed at parse time', () => {
+      // `Vector2i(...)` arguments run `_parse_construct<int32_t>`, whose
+      // identifier branch takes `inf` through `stor_fix`
+      // (variant_parser.cpp:149-159, :577-586); `_to_int<int32_t>` then narrows
+      // the double, undefined behaviour outside int32 (variant.h:369-370). The
+      // engine scales by something, but by no number this rule may print — and
+      // the NaN that stood in reached the message as `scale (NaN, 5)`.
+      const diagnostics = lint(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(inf, 5)' }), collisionShape2d)
+      );
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'rigidbody2d-scale-overridden-at-runtime')
+      ).toEqual([]);
+    });
+
+    it('still warns for an integer spelling whose components the slot holds', () => {
+      // Nothing is narrowed here, so the converted spelling reads as the (2, 2)
+      // Godot widens into the float slot.
+      expectDiagnostic(
+        scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(2, 2)' }), collisionShape2d),
+        { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
+      );
+    });
+
     // physical_bone_2d.cpp:109: `RigidBody2D::get_configuration_warnings()`,
     // called as the base of PhysicalBone2D's own override, unchanged — this
     // repo's `applicableNodeTypeMatcher` mirrors that by reaching every

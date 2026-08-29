@@ -18,7 +18,7 @@ import { parseValueArray } from './keyframeValues.js';
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { info, warn } from '../../../logger';
-import { NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
+import { EXT_RESOURCE_CALL_ANYWHERE_RE, NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
 import type { AnimationLibraryRef } from './types';
 
 export type { GodotKeyframeValue } from './keyframeValues.js';
@@ -87,7 +87,7 @@ export function resolveAnimations(
  * given libraries' Animation resources. Used by the AudioStreamPlayer /
  * AudioStreamPlayer2D / AudioStreamPlayer3D linters: `AnimationMixer` builds
  * its own polyphonic playback bound to an audio track's target node and never
- * reads that node's own `stream` property (animation_mixer.cpp:889-897), so a
+ * reads that node's own `stream` property (animation_mixer.cpp:891-898), so a
  * node driven this way is not silent even with no `stream` of its own.
  *
  * Deliberately separate from `resolveAnimations`/`parseTracks`, which drop
@@ -148,7 +148,7 @@ export function hasUnresolvableClips(
     const libResource = findById(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') return false;
     const dataStr = asString(libResource.data['_data']);
-    return dataStr !== undefined && dataStr.includes('ExtResource(');
+    return dataStr !== undefined && EXT_RESOURCE_CALL_ANYWHERE_RE.test(dataStr);
   });
 }
 

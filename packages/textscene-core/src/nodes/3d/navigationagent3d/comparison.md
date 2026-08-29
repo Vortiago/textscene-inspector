@@ -86,7 +86,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `path_desired_distance` | float >= 0.1 | warning below |
 | `path_height_offset` | float >= -100 | warning below |
 | `path_max_distance` | float >= 0.01 | warning below |
-| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4) |  |
+| `path_metadata_flags` | bit mask of PATH_METADATA_INCLUDE_TYPES (1) \| PATH_METADATA_INCLUDE_RIDS (2) \| PATH_METADATA_INCLUDE_OWNERS (4) |  |
 | `path_postprocessing` | enum 0-2 (PATH_POSTPROCESSING_CORRIDORFUNNEL/PATH_POSTPROCESSING_EDGECENTERED/PATH_POSTPROCESSING_NONE) | warning |
 | `path_return_max_length` | float >= 0 | error below |
 | `path_return_max_radius` | float >= 0 | error below |

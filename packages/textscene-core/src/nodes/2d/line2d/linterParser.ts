@@ -79,14 +79,13 @@ validatorRegistry.registerAll('Line2D', {
   // p_limit = 0.f;`), a silent correction ADR-0032 treats as enforced.
   sharp_limit: v.float('sharp_limit', { min: 0, enforced: 'line_2d.cpp:244' }),
   // line_2d.cpp:409 hints "1,32,1" — no or_greater/or_less, hard both ends.
-  // set_round_precision (line_2d.cpp:255-256) clamps below 1
-  // (`_round_precision = MAX(1, p_precision);`), enforcing the floor; the 32
-  // ceiling is never setter-enforced, so it is a warning. `strictInt` (not
-  // `int`) because only it wires a per-end severity through.
+  // set_round_precision clamps below 1 (`_round_precision = MAX(1,
+  // p_precision);`, line_2d.cpp:256), enforcing the floor; the 32 ceiling is
+  // never setter-enforced, so it is a warning.
   round_precision: v.strictInt('round_precision', {
     min: 1,
     max: 32,
-    enforced: { min: 'line_2d.cpp:255' },
+    enforced: { min: 'line_2d.cpp:256' },
     hinted: { max: 'line_2d.cpp:409' },
   }),
   // line_2d.cpp:410, BOOL, no hint. set_antialiased (line_2d.cpp:264-267) is a

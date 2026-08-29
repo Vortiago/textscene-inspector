@@ -9,10 +9,10 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 
 - `pnpm type-check:all` — builds `@textscene/core` first; run once in a fresh worktree
   before any per-package check. It does **not** cover test files.
-- `pnpm --filter @textscene/core type-check:tests` — a separate tsc project over the
-  `*.test.ts(x)` files. vitest transpiles without checking, so a test can be green and
-  untyped; only the pre-push hook runs this, which is how two waves reached a push with
-  it red. Run it with the other gates, not at push time.
+- `pnpm type-check:tests` — one tsc project per package over the `*.test.ts(x)` files,
+  which every package's build tsconfig excludes. vitest transpiles without checking, so
+  a test can be green and untyped. It runs in `validate` (so the pre-push hook and
+  `release.yml`) and as its own CI step. Run it with the other gates, not at push time.
 - `pnpm test:unit` — full vitest suite, takes minutes. On shell-tool timeout re-run the
   SAME command with a larger `timeout` (ms); a subset never proves the gate.
 - Per-package: `pnpm --filter @textscene/web-previewer type-check` / `test`.
@@ -75,10 +75,13 @@ drawn, registers the base under `renderIntent: 'pending'` (except `--base contro
 registration: dropping the registration also drops `visible` and puts the type in both
 workspaces. `--chain` names the Godot parent and is
 checked against ClassDB: `NODE_BASE_TYPES` is derived from the node catalog's ancestry
-(`pnpm nodes:base-types` → `linter/nodeBaseTypes.generated.ts`), so nothing is written
-by hand, but a type name Godot does not know gets no base and silently receives zero
-inherited validation. Conformance tests (barrelCompleteness, reactFree, ruleCoverage,
-baseChainCompleteness) fail on a mis-wired slice.
+(`pnpm nodes:base-types` → `godot/nodeBaseTypes.generated.ts`), so a type name Godot
+does not know gets no base and silently receives zero inherited validation. A class the
+pinned 4.6.3 ClassDB does not enumerate gets its one hop written by hand in
+`godot/nodeBaseTypes.ts`'s `UNCATALOGUED` table, with the reason beside it —
+`baseChainCompleteness.test.ts` rejects a registered type that is in neither, and an
+entry the catalog could have answered. Conformance tests (barrelCompleteness, reactFree,
+ruleCoverage, baseChainCompleteness) fail on a mis-wired slice.
 
 Coverage: `node scripts/coverage-report.mjs [--next 5]` derives which Godot node types
 are still unregistered, base classes first.
@@ -123,11 +126,11 @@ real parser instead of the decode/build split. Conformance:
   A `p_flags & MASK` setter is BOTH tiers and needs `maskedBitField`, not a min/max:
   a bit outside the mask is dropped (error), a bit inside it but missing from the
   `FLAGS` hint is kept yet unreachable from the inspector (warning).
-  A fractional literal in an INT slot is a fourth case and also a warning: `_to_int`
-  truncates it BEFORE the setter runs, so `set_hframes` never sees the `5.5` — the
-  stored value differs from the written one, but not by the setter's doing. It is
-  the shared `truncatedInt`, applied to every int slot after its bounds; no slice
-  declares it.
+  A literal an INT slot stores DIFFERENTLY is a fourth case and also a warning:
+  `_to_int` truncates `5.5` and maps `true` to 1 BEFORE the setter runs, so
+  `set_hframes` never sees either — the stored value differs from the written one,
+  but not by the setter's doing. It is the shared `storedNotWritten`, applied to
+  every int slot after its bounds; no slice declares it.
   `inf`/`-inf`/`inf_neg`/`nan` are LEGAL float literals that Godot writes and reloads
   (`variant_parser.cpp:150-155`), so every float validator accepts them. Only a setter
   opening with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so with

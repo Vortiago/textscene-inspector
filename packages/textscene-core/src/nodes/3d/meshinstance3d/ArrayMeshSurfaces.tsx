@@ -50,8 +50,7 @@ export function ArrayMeshSurfaces({
    * caller had already chosen the surface's own
    * (`render_forward_clustered.cpp:4267`). The mesh's per-surface materials are
    * therefore reachable only while the override is unset — which is the whole
-   * of what this prop expresses, and what the primitive branch's
-   * `resolveMaterialSubResources` says for a mesh with no surfaces of its own.
+   * of what this prop expresses.
    */
   override?: MaterialSlotSource | null;
 }) {
@@ -68,12 +67,14 @@ export function ArrayMeshSurfaces({
   // runs inside the render. Keyed on the resource OBJECT, which a re-parse
   // replaces, so a cache hit can never be stale; a WeakMap so the entry dies
   // with it.
-  const decoded = useRef(new WeakMap<TscnInternalResource, StandardMaterial3DScalars>());
+  const decoded = useRef<WeakMap<TscnInternalResource, StandardMaterial3DScalars>>(undefined);
+  decoded.current ??= new WeakMap();
   const scalarsOf = (resource: TscnInternalResource): StandardMaterial3DScalars => {
-    const hit = decoded.current.get(resource);
+    const cache = decoded.current!;
+    const hit = cache.get(resource);
     if (hit) return hit;
     const built = parseStandardMaterial3DScalars(resource.data as Record<string, string>);
-    decoded.current.set(resource, built);
+    cache.set(resource, built);
     return built;
   };
   return (
@@ -126,9 +127,13 @@ export function useSceneArrayMeshGeometry(
   // source pane re-parses the scene and hands down fresh arrays and a fresh
   // resource object, so identity deps would re-decode and re-upload the whole
   // inline mesh on the render thread per character — and unlike the `.tres` path
-  // there is no processor cache to absorb it.
+  // there is no processor cache to absorb it. The ext-resource table is the
+  // decode's second input (a surface's `material` may name a `res://` path) and
+  // is keyed separately rather than folded in, so the surface blob is not
+  // re-concatenated per render.
   const surfacesRaw = resource?.type === 'ArrayMesh' ? resource.data['_surfaces'] : undefined;
   const key = typeof surfacesRaw === 'string' ? surfacesRaw : null;
+  const extKey = JSON.stringify(externalResources.map((r) => [r.id, r.path]));
 
   const built = useMemo(() => {
     if (resource?.type !== 'ArrayMesh' || key === null) return null;
@@ -140,13 +145,7 @@ export function useSceneArrayMeshGeometry(
           geometry: buildArrayMeshGeometry(mesh),
           materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
         },
-        // Resolved here rather than in the decoder: only the renderer holds the
-        // scene's resources, and a scene's materials are reachable by no path.
-        sceneMaterials: mesh.surfaces.map((s) =>
-          s.materialSubResourceId === undefined
-            ? undefined
-            : findSubResource(internalResources, s.materialSubResourceId)
-        ),
+        materialIds: mesh.surfaces.map((s) => s.materialSubResourceId),
       };
     } catch (error) {
       warn(
@@ -155,10 +154,26 @@ export function useSceneArrayMeshGeometry(
       );
       return null;
     }
-    // `key` stands in for `resource`/`externalResources`: same bytes, same mesh.
+    // `key` + `extKey` stand in for `resource`/`externalResources`: same bytes
+    // and same ext table, same mesh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, extKey]);
 
   useEffect(() => () => built?.resource.geometry.dispose(), [built]);
-  return built;
+
+  // Resolved OUTSIDE the decode memo, and not in the decoder: only the renderer
+  // holds the scene's resources, a scene's materials are reachable by no path,
+  // and the material sub-resource lives BESIDE `_surfaces` rather than in it —
+  // so editing its `albedo_color` leaves the decode key untouched and would
+  // never reach the surface from inside.
+  return useMemo(
+    () =>
+      built && {
+        resource: built.resource,
+        sceneMaterials: built.materialIds.map((id) =>
+          id === undefined ? undefined : findSubResource(internalResources, id)
+        ),
+      },
+    [built, internalResources]
+  );
 }

@@ -200,7 +200,9 @@ const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
 
 /**
  * Whoever reads a PACKED array, derived the same way: the file composes one of
- * the two shared builders.
+ * the shared builders, or the form-set and body reader built on them. All four
+ * spellings, because a reader that moves from one to another must stay in the
+ * population rather than leave it by being rewritten.
  *
  * `parseInt` only. `parseFloat` is the CORRECT reader for a packed FLOAT array
  * once the element has matched the finite grammar, which is what
@@ -211,8 +213,40 @@ const REBUILDS_SCALAR_GRAMMAR = /new RegExp\([^)]*FLOAT_PATTERN_SOURCE/;
  * it at 2 — or, on the `inf` that `rtos_fix` writes, NaN'd the whole decode and
  * reported `tilemap-invalid-tile-data` on a file Godot loads.
  */
-const PACKED_ARRAY_READERS = /\b(?:packedArrayLiteral|packedArrayCallAnywhere)\(/;
+const PACKED_ARRAY_READERS =
+  /\b(?:packedArrayLiteral|packedArrayCallAnywhere|packedArrayForms|packedArrayBody)\(/;
 const RAW_INT_PARSE = /\bparseInt\(/;
+
+/**
+ * A resource-reference literal asked for with a MEMBERSHIP TEST rather than a
+ * grammar — the spelling both scans above are blind to, since neither a regex
+ * literal nor a `new RegExp` argument is involved.
+ *
+ * `dataStr.includes('ExtResource(')` reads as a cheap discriminator and is a
+ * tight grammar: `get_token` discards every character <= 32 before a token
+ * (variant_parser.cpp:415-417) and the reference branch then asks only for the
+ * next token to be `(` (:1089-1093), so `ExtResource ("id")` is a file that
+ * loads and that spelling misses it. The two that shipped decided whether to
+ * TRUST an enumeration whose own reader was already tolerant, so the
+ * suppression failed and `animationplayer-current-animation-missing` fired at
+ * error tier on a scene Godot plays.
+ *
+ * Scoped to the reference literals. A composite membership test is legitimate
+ * and present — `bbcode.tsx` discriminates a `Color(` prefix, `intSlotProbe.ts`
+ * reads a validator's `accepts` description — and this guard family carries no
+ * exemptions, so widening the term to `COMPOSITES` would have to acquire one.
+ */
+const REFERENCE_LITERAL_NAME = /(?:SubResource|ExtResource|NodePath)\s*\(/;
+const MEMBERSHIP_TEST =
+  /\.(?:includes|startsWith|endsWith|indexOf|lastIndexOf)\(\s*(['"`])((?:[^\\]|\\.)*?)\1/g;
+
+/** The offending call text, or `null` when the source spells no reference this way. */
+function membershipTestedReference(source: string): string | null {
+  for (const m of stripComments(source).matchAll(MEMBERSHIP_TEST)) {
+    if (REFERENCE_LITERAL_NAME.test(m[2]!)) return m[0];
+  }
+  return null;
+}
 
 /**
  * The composites whose slot narrows every component to `int32_t`. Derived from
@@ -379,6 +413,28 @@ describe('Godot composite literal grammar', () => {
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
+  });
+
+  it('never asks for a resource reference with a membership test', () => {
+    // `godot/` is the complement, not an exemption: the shared discriminators
+    // and bodies live there and are the only place one may be spelled.
+    const population = files.filter(({ rel }) => !rel.startsWith('godot/'));
+    expect(population.length).toBeGreaterThan(1000);
+
+    const offenders = population
+      .filter(({ src }) => membershipTestedReference(src) !== null)
+      .map(({ rel }) => rel)
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  // The detector's own edges, pinned because no source file exercises them.
+  it('tells a membership-tested reference from a key prefix that merely shares a word', () => {
+    expect(membershipTestedReference("value.includes('ExtResource(')")).not.toBeNull();
+    expect(membershipTestedReference('raw.startsWith("NodePath (")')).not.toBeNull();
+    expect(membershipTestedReference("key.startsWith('libraries/')")).toBeNull();
+    // A composite is another assertion's subject, and legitimately spelled here.
+    expect(membershipTestedReference("value.startsWith('Color(')")).toBeNull();
   });
 
   it('reads a packed INT element through the shared reader, never parseInt', () => {

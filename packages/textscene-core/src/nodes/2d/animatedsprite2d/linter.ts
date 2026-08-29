@@ -7,8 +7,28 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
+import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
+
+/**
+ * The SpriteFrames reference in effect when Godot replays `key`.
+ *
+ * `SceneState::instantiate` applies a node's stored properties in the order the
+ * FILE lists them (packed_scene.cpp:369-492), and `set_frame_and_progress`
+ * returns without writing while the slot is null
+ * (animated_sprite_2d.cpp:360-362). A `sprite_frames` line written BELOW `frame`
+ * therefore leaves the frame where an absent one does. Measured on 4.6.3:
+ * `frame = 2` above `sprite_frames` loads as frame 0, below it as frame 2.
+ */
+function spriteFramesWhenApplied(
+  rawProps: Record<string, string>,
+  key: string
+): string | undefined {
+  const written = Object.keys(rawProps);
+  const slotAt = written.indexOf('sprite_frames');
+  if (slotAt === -1 || slotAt > written.indexOf(key)) return undefined;
+  return heldResource(rawProps.sprite_frames);
+}
 
 /**
  * Validate AnimatedSprite2D semantic rules (resource references, animation properties, etc.)
@@ -45,8 +65,10 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // `sprite_frames` is declared ahead of `animation` (animated_sprite_2d.cpp:671-672),
-  // so a null SpriteFrames at this point is the authored absence, not load order.
+  // `set_animation` clears the name and ERR_FAIL_MSGs whenever the SpriteFrames
+  // slot is null at that line (animated_sprite_2d.cpp:562-565), which a slot
+  // written BELOW `animation` is too. Measured on 4.6.3: `animation = &"walk"`
+  // above `sprite_frames` loads as the default name, below it as "walk".
   //
   // Not `"default"`, though: `set_animation` opens with
   // `if (animation == p_name) { return; }` (animated_sprite_2d.cpp:554-556) and the
@@ -55,14 +77,30 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   if (
     rawProps.animation &&
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
-    resourceSlotIsEmpty(rawProps.sprite_frames)
+    spriteFramesWhenApplied(rawProps, 'animation') === undefined
   ) {
     diagnostics.push({
       severity: 'error',
-      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" but 'sprite_frames' is not set. Godot clears 'animation' back to empty, so the authored name never applies.`,
+      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" with no 'sprite_frames' in effect at that line. Godot clears 'animation', so the authored name never applies.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite2d-animation-no-spriteframes',
+    });
+  }
+
+  // With a null SpriteFrames `set_frame_and_progress` drops EVERY frame
+  // (animated_sprite_2d.cpp:360-362), not only the negative one
+  // `linterParser.ts` floors — so this is that guard's cross-property half.
+  // Above 0 only: a negative frame is the validator's error already, and 0 is
+  // the value the node holds anyway.
+  const frame = ruleInt(rawProps.frame);
+  if (frame !== null && frame > 0 && spriteFramesWhenApplied(rawProps, 'frame') === undefined) {
+    diagnostics.push({
+      severity: 'error',
+      message: `Property 'frame' is set to ${frame} with no 'sprite_frames' in effect at that line. Godot drops the write, so the node loads on frame 0.`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'animatedsprite2d-frame-no-spriteframes',
     });
   }
 
@@ -99,6 +137,11 @@ const animatedSprite2DValidationRule: LintRule = {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
         severity: 'error',
         grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
+      },
+      {
+        ruleName: 'animatedsprite2d-frame-no-spriteframes',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:360' },
       },
     ],
   },

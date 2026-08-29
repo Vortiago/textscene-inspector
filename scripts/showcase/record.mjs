@@ -16,6 +16,7 @@
 
 import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';
 import {
   ACTION_TIMEOUT_MS,
@@ -31,7 +32,7 @@ import {
   useThisCamera,
 } from './record/helpers.mjs';
 
-const OUT_DIR = process.env.SHOWCASE_OUT || 'docs/showcase/web';
+const OUT_DIR = process.env.SHOWCASE_OUT || join(REPO_ROOT, 'docs/showcase/web');
 
 /** Capture the poster frame used for verification + the showcase thumbnail. */
 async function poster(page, name) {

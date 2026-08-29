@@ -103,7 +103,13 @@ async function main() {
       results.push({ scene, status: result.status, detail: result.detail });
     }
   } finally {
-    await browser?.close();
+    // A crashed browser REJECTS close(); letting that propagate would skip the
+    // kill below and strand a `vite preview` holding the port.
+    try {
+      await browser?.close();
+    } catch {
+      /* already gone */
+    }
     killPreviewGroup(proc);
   }
 

@@ -48,10 +48,16 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
 
   // Reuse the nearest ancestor's typed parser, not the --base flag's: they
   // differ whenever a Godot ancestor owns a parser.ts, and taking the flag
-  // silently discards every property that ancestor reads.
-  const reusedParser = reusesBaseParser
-    ? parentParser(typeName, sliceDir, { importPath: `${toBase}/parser`, fn: base.parser })
-    : { importPath: `${toBase}/parser`, fn: base.parser };
+  // silently discards every property that ancestor reads. Every intent, `draws`
+  // included: its own parser DELEGATES to the reused one and its `types.ts`
+  // aliases what that returns, so the flag would lose the same properties one
+  // layer down (SoftBody3D under MeshInstance3D).
+  const reusedParser = parentParser(typeName, sliceDir, {
+    importPath: `${toBase}/parser`,
+    fn: base.parser,
+    propsType: base.propsType,
+    typesPath: `${toBase}/types`,
+  });
   // Resolved once: the same answer feeds the generated import and the plan line
   // below, and finding it walks the whole nodes/ tree.
   const parentLinterImport = linter

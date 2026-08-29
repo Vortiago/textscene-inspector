@@ -1,4 +1,7 @@
 {
+  // The mocha integration suite under `src/test/`, compiled by esbuild and
+  // typed here. The vitest suites beside the sources belong to
+  // `tsconfig.unit-tests.json`.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,

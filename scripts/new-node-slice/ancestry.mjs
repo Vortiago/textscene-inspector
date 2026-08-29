@@ -5,8 +5,8 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { CORE_SRC, REPO_ROOT } from './paths.mjs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
 
 /**
  * Every slice file of one basename, read once.
@@ -30,6 +30,12 @@ function slicesNamed(basename) {
   })(join(CORE_SRC, 'nodes'));
   sliceSources.set(basename, found);
   return found;
+}
+
+/** `dir` seen from `sliceDir`, always as an explicit relative specifier. */
+function specifier(sliceDir, dir) {
+  const rel = relative(sliceDir, dir).replaceAll('\\', '/');
+  return rel.startsWith('.') ? rel : `./${rel}`;
 }
 
 /** The one directory whose `basename` holds any of `needles`, if exactly one does. */
@@ -80,14 +86,54 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
   for (const ancestor of chain) {
     const dir = ownerOf(ancestor);
     if (!dir) continue;
-    const rel = relative(sliceDir, dir).replaceAll('\\', '/');
-    return `${rel.startsWith('.') ? rel : `./${rel}`}/linterParser.js`;
+    return `${specifier(sliceDir, dir)}/linterParser.js`;
   }
   return fallback;
 }
 
 /**
- * The parse function a `transform-only` / `pending` slice should reuse.
+ * The module specifier `src` imports the name `local` from, if it does.
+ *
+ * Both spellings: a whole-clause `import type { X }` and the inline modifier
+ * inside a value import (`import { Mode, type XProperties }`), which eight
+ * slices use and a `type`-only pattern misses.
+ */
+function importSourceOf(src, local) {
+  for (const [, names, from] of src.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*'([^']+)'/g)) {
+    const bound = names
+      .split(',')
+      .map((n) => n.trim().replace(/^type\s+/, '').split(/\s+as\s+/).at(-1))
+      .filter(Boolean);
+    if (bound.includes(local)) return from;
+  }
+  return undefined;
+}
+
+/**
+ * The props type `parse<ancestor>` RETURNS, and where a slice imports it from.
+ *
+ * Read from the signature rather than assumed to be `<ancestor>Properties`:
+ * `parseCenterContainer` returns `ControlProperties`, and `HBoxContainer`'s own
+ * alias is a re-export of `BoxContainerProperties`. A generated `types.ts`
+ * aliasing a name its ancestor never exports does not compile, and one aliasing
+ * the `--base` type instead is the type-level half of the same property loss
+ * `parentParser` exists to stop.
+ */
+function parentPropsType(ownerDir, ancestor, sliceDir) {
+  const src = readFileSync(join(ownerDir, 'parser.ts'), 'utf8');
+  const returns = new RegExp(`export function parse${ancestor}\\([\\s\\S]*?\\):\\s*(\\w+)`).exec(src);
+  const from = returns && importSourceOf(src, returns[1]);
+  if (!from) {
+    fail(
+      `${ownerDir}/parser.ts: cannot read what parse${ancestor} returns, so the scaffold ` +
+        `cannot give the new slice the props type it reuses. Declare an imported return type.`
+    );
+  }
+  return { propsType: returns[1], typesPath: specifier(sliceDir, resolve(ownerDir, from)) };
+}
+
+/**
+ * The parse function a slice should reuse, and the props type it returns.
  *
  * The sibling of `parentLinterParser`, and needed for the same reason: `--base`
  * is a coarse flag (node3d/node2d/node/control) while `--chain` is the real
@@ -100,15 +146,18 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
  * Walks the catalog ancestry to the nearest ancestor that owns a `parser.ts`,
  * falling back to the `--base` slice when none does.
  *
- * @returns `{ importPath, fn }` relative to the slice directory.
+ * @returns `{ importPath, fn, propsType, typesPath }` relative to the slice directory.
  */
 export function parentParser(typeName, sliceDir, fallback) {
   const chain = catalogChain(typeName);
   for (const ancestor of chain) {
     const owner = ownerOfParser(ancestor);
     if (!owner) continue;
-    const rel = relative(sliceDir, owner).replaceAll('\\', '/');
-    return { importPath: `${rel.startsWith('.') ? rel : `./${rel}`}/parser`, fn: `parse${ancestor}` };
+    return {
+      importPath: `${specifier(sliceDir, owner)}/parser`,
+      fn: `parse${ancestor}`,
+      ...parentPropsType(owner, ancestor, sliceDir),
+    };
   }
   return fallback;
 }

@@ -30,6 +30,7 @@
  */
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { assertPortFree } from '../../visual/previewServer.mjs';
 import { sleep } from './capture/platform.mjs';
 import { OUT, PORT, TMP, UD } from './capture/paths.mjs';
 import { killProcessTree, killStaleHost, launchDevHost, rmRetry, waitCDP } from './capture/devHost.mjs';
@@ -52,6 +53,12 @@ mkdirSync(TMP, { recursive: true });
 const UD_MARKER = UD;
 killStaleHost(UD_MARKER); // a prior aborted run can leave the host holding the dir
 await rmRetry(UD);
+// The SIGKILL above is delivered, not awaited; a host still dying holds the port.
+await sleep(500);
+// A sibling worktree's dev-host is spared by design and keeps answering here.
+// `waitCDP` polls for *a* 200 and `connectOverCDP` attaches to whatever answers,
+// so without this the shots below would be of the WRONG build, exit code 0.
+await assertPortFree(PORT, 'VSCODE_CDP_PORT');
 
 const { proc, launchFailed } = await launchDevHost();
 

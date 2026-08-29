@@ -43,7 +43,7 @@ Strict parsing format-checks these `Tree` properties, plus 53 inherited from Con
 | `auto_tooltip` | true or false |  |
 | `column_titles_visible` | true or false |  |
 | `columns` | integer >= 1 | error below |
-| `drop_mode_flags` | bit mask of DROP_MODE_ON_ITEM (1) | DROP_MODE_INBETWEEN (2) | warning |
+| `drop_mode_flags` | bit mask of DROP_MODE_ON_ITEM (1) \| DROP_MODE_INBETWEEN (2) |  |
 | `enable_drag_unfolding` | true or false |  |
 | `enable_recursive_folding` | true or false |  |
 | `hide_folding` | true or false |  |

@@ -12,15 +12,19 @@
  * Two rules asked it and only one asked it correctly, so it lives here once.
  */
 
-import { packedArrayLiteral } from '../godot/index.js';
+import { packedArrayBody, packedArrayForms, splitTopLevel } from '../godot/index.js';
 
 /**
- * Matches the same wrapper `v.packedVector2Array` accepts; a value that doesn't
- * match is malformed, and reporting that is linterParser.ts's job, not a rule's.
- * Compiled once — a literal inside the function would rebuild on every node
- * either rule visits. No `g` flag, so the shared instance is stateless.
+ * The three spellings a packed slot takes, the same instances
+ * `v.packedVector2Array` matches against — so a value the validator blesses is
+ * one this counts, and a value that matches none is malformed, which is
+ * linterParser.ts's job to report rather than a rule's.
+ *
+ * Built once: rebuilding them inside the function would recompile three RegExps
+ * on every node either rule visits. None carries `g`, so the shared instances
+ * are stateless.
  */
-const POLYGON_WRAPPER = packedArrayLiteral('PackedVector2Array');
+const POLYGON_FORMS = packedArrayForms('PackedVector2Array');
 
 /**
  * Vertex count for `raw`, mirroring `polygon.size()`
@@ -34,12 +38,17 @@ const POLYGON_WRAPPER = packedArrayLiteral('PackedVector2Array');
  */
 export function polygonPointCount(raw: string | undefined): number | null {
   if (raw === undefined) return 0;
-  const match = POLYGON_WRAPPER.exec(raw);
-  if (!match) return null;
-  const body = match[1]!.trim();
-  if (body === '') return 0;
-  const parts = body.split(',').filter((part) => part.trim().length > 0);
-  // `_build_polygon` pairs consecutive components (collision_polygon_2d.cpp:65-71);
-  // a trailing odd component is not a whole vertex.
-  return Math.floor(parts.length / 2);
+  const matched = packedArrayBody(POLYGON_FORMS, raw);
+  if (!matched) return null;
+  if (matched.body === '') return 0;
+  if (matched.flat) {
+    const parts = matched.body.split(',').filter((part) => part.trim().length > 0);
+    // `_build_polygon` pairs consecutive components (collision_polygon_2d.cpp:65-71);
+    // a trailing odd component is not a whole vertex.
+    return Math.floor(parts.length / 2);
+  }
+  // The bare and typed bodies hold one whole vertex per top-level comma, and a
+  // trailing comma yields an empty part Godot's array reader does not count
+  // (variant_parser.cpp:1658-1662).
+  return splitTopLevel(matched.body).filter((part) => part !== '').length;
 }

@@ -43,6 +43,7 @@ import '../../nodes/physics/3d/conetwistjoint3d/index.r3f';
 import '../../nodes/physics/3d/generic6dofjoint3d/index.r3f';
 import '../../nodes/physics/3d/sliderjoint3d/index.r3f';
 import '../../nodes/physics/3d/collisionpolygon3d/index.r3f';
+import '../../nodes/physics/3d/softbody3d/index.r3f';
 import '../../nodes/3d/skeleton3d/index.r3f';
 // Registered while still a render gap: the base holds the transform space open.
 import '../../nodes/3d/particles/gpuparticles3d/index.r3f';

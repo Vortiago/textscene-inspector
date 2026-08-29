@@ -21,7 +21,7 @@
  */
 
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
-import { v } from '../../linter/validators/index.js';
+import { hintedBitField, v } from '../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Node', {
   // node.cpp:4050 — PROPERTY_USAGE_NO_EDITOR, still serialised.
@@ -65,11 +65,19 @@ validatorRegistry.registerAll('Node', {
   ),
   // node.cpp:4062 — a bare INT with no hint.
   process_thread_group_order: v.int('process_thread_group_order'),
-  // node.cpp:4063, PROPERTY_HINT_FLAGS "Process,Physics Process": a 2-bit
-  // BITMASK, not a linear range (valid combinations are 0-3). `min: 0` was a
-  // shape nicety that could never reject an out-of-range combination anyway
-  // (there is no `max`), so there is nothing left to bound.
-  process_thread_messages: v.int('process_thread_messages'),
+  // node.cpp:4063, PROPERTY_HINT_FLAGS "Process,Physics Process" — a BITMASK,
+  // where membership is not a range: 1, 2 and 3 are the whole legal set and a
+  // `max` would wave through every in-range non-subset. set_process_thread_messages
+  // (node.cpp:1233-1240) bare-assigns with no mask, and ProcessThreadMessages
+  // (node.h:89-93) declares no bit outside the hint, so an unlisted bit is KEPT
+  // and merely unreachable from the inspector — the hint's warning tier.
+  process_thread_messages: hintedBitField('process_thread_messages', {
+    hinted: 'node.cpp:4063',
+    labels: {
+      1: 'FLAG_PROCESS_THREAD_MESSAGES',
+      2: 'FLAG_PROCESS_THREAD_MESSAGES_PHYSICS',
+    },
+  }),
   // node.cpp:4066, PROPERTY_HINT_ENUM "Inherit,On,Off". set_physics_interpolation_mode
   // (node.cpp:935-949) is a bare assignment; no engine-side range check.
   physics_interpolation_mode: v.enumInt(

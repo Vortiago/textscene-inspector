@@ -53,6 +53,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parentType.js';
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { literalText } from '../../../../godot/index.js';
 
 const TRACKER_RULE = 'openxrrendermodelmanager-tracker-required-for-local-pose';
 const PARENT_RULE = 'openxrrendermodelmanager-parent-not-xrorigin3d';
@@ -67,12 +68,6 @@ function readTracker(properties: Record<string, string>): number {
   if (raw === undefined) return RENDER_MODEL_TRACKER_ANY;
   const parsed = ruleInt(raw);
   return parsed ?? RENDER_MODEL_TRACKER_ANY;
-}
-
-/** The `"…"` body of a TSCN string literal, or the raw text if it isn't one. */
-function quotedStringContent(value: string): string {
-  const match = value.match(/^"([\s\S]*)"$/);
-  return match ? match[1]! : value;
 }
 
 /**
@@ -100,7 +95,11 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
 
   if (directParentOnly) {
     const rawPose = properties.make_local_to_pose;
-    const hasPose = rawPose !== undefined && quotedStringContent(rawPose).length > 0;
+    // `literalText` rather than a hand-rolled unwrap: Godot's own check is
+    // `if (!make_local_to_pose.is_empty())` (cpp:204), and every jacket the
+    // empty string wears — `""` and the StringName `&""` a String slot converts
+    // — has to come off before the length is read.
+    const hasPose = rawPose !== undefined && literalText(rawPose) !== '';
     if (hasPose) {
       diagnostics.push({
         severity: 'warning',

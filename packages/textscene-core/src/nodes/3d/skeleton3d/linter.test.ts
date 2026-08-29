@@ -89,7 +89,12 @@ describe('Skeleton3D Linter', () => {
       {
         prop: 'show_rest_only',
         valid: [true, false],
-        invalid: [{ value: 'yes', contains: ['true or false'] }, { value: 1 }],
+        // `1` also flips the semantic debug-mode rule on, so the format claim
+        // has to name itself or the two are interchangeable here.
+        invalid: [
+          { value: 'yes', contains: ['true or false'] },
+          { value: 1, ruleName: 'strict-parser', contains: ['this slot converts'] },
+        ],
       },
       {
         prop: 'animate_physical_bones',

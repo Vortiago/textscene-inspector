@@ -19,12 +19,15 @@
  * Where a regex literal may begin: after an operator or an opener, never after
  * a value.
  *
- * `>` stays in the set for `x => /re/.test(x)`. `<` is deliberately absent: no
- * expression usefully compares against a regex, while `</div>` ends every JSX
- * element, and reading that slash as a regex opener scans away the rest of the
- * `.tsx` file.
+ * `>` stays in the set for `x => /re/.test(x)`. `<` and `}` are deliberately
+ * absent, for one reason in two spellings: `</div>` and `<Foo bar={1} />` end
+ * every JSX element, and reading either slash as a regex opener scans away the
+ * rest of the line and the comment on it. Neither loses a real literal — no
+ * expression usefully compares against a regex, and a regex opening a statement
+ * straight after a block's closing brace is not a form this tree writes.
+ * `${` sets `prev` to `{`, so an interpolated regex is unaffected.
  */
-const REGEX_ALLOWED_AFTER = /[(,=:[!&|?{};+\-*%^~>]$/;
+const REGEX_ALLOWED_AFTER = /[(,=:[!&|?{;+\-*%^~>]$/;
 
 /**
  * A regex may also open after a KEYWORD, where the preceding character is a
@@ -62,12 +65,22 @@ export function commentSpans(
    */
   const templates: { braces: number }[] = [];
 
+  /**
+   * A `'`/`"` string, which ENDS WITH ITS LINE when the closing quote never
+   * arrives: only a template literal may hold a raw newline, so a scan running
+   * past one is reading text that is not a string. JSX prose is where that
+   * happens — the apostrophe in `<p>Don't</p>` opened a string that ran to the
+   * next `'` anywhere in the file, blanking every comment in between.
+   * The escape branch still consumes `\<newline>`, so a line continuation
+   * inside a real string keeps working.
+   */
   const skipQuoted = (quote: string): void => {
     i++;
     while (i < source.length) {
       const c = source[i]!;
       if (c === '\\') i += 2;
       else if (c === quote) return void i++;
+      else if (c === '\n') return;
       else i++;
     }
   };

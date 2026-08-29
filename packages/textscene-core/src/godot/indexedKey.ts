@@ -84,13 +84,19 @@ export function indexedKeyRegex(shape: string, indexParse: IndexParse): RegExp {
  * `ERR_FAIL_INDEX_V` beside the parse, so the write never lands, and phase 1
  * already reports it. A later key wins, because `Object.keys` keeps insertion
  * order and Godot applies properties in file order too.
+ *
+ * A `Map` of leaves, not an object literal, for the same reason `deprecated.ts`
+ * uses one: the leaf name is raw `.tscn` text. `settings/0/__proto__` reached
+ * `Object.prototype`'s setter and the authored write vanished, and on every
+ * ordinary element `leaves.constructor` and `leaves.toString` answered with a
+ * FUNCTION out of something typed as strings.
  */
 export function indexedElements(
   properties: Readonly<Record<string, string>>,
   prefix: string,
   indexParse: IndexParse
-): Map<number, Record<string, string>> {
-  const elements = new Map<number, Record<string, string>>();
+): Map<number, Map<string, string>> {
+  const elements = new Map<number, Map<string, string>>();
   for (const [key, value] of Object.entries(properties)) {
     if (!key.startsWith(prefix)) continue;
     const slash =
@@ -104,8 +110,8 @@ export function indexedElements(
     // NaN for a magnitude no double names exactly; every comparison against it
     // is false, so admitting it would seat an element under a wrong key.
     if (!(index >= 0)) continue;
-    const leaves = elements.get(index) ?? {};
-    leaves[leaf] = value;
+    const leaves = elements.get(index) ?? new Map<string, string>();
+    leaves.set(leaf, value);
     elements.set(index, leaves);
   }
   return elements;

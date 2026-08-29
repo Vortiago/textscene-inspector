@@ -192,7 +192,17 @@ export default [
 
   // Test files
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx', '**/test-setup.ts'],
+    // `*.testkit.ts` is the repo's spelling for a test-only helper module that
+    // is not itself a suite; vitest excludes it from coverage the same way.
+    files: [
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      '**/*.test.tsx',
+      '**/*.spec.tsx',
+      '**/*.testkit.ts',
+      '**/*.testkit.tsx',
+      '**/test-setup.ts',
+    ],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

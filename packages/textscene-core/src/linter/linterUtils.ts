@@ -76,10 +76,11 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   };
   walk(roots, null, false);
 
-  // Freeze each name bucket: `findNodesByName` hands these arrays straight
-  // to callers (no per-call copy, matching `RuleRegistry`'s hot-path
+  // Freeze each bucket: `findNodesByName` and `nodesOfType` hand these arrays
+  // straight to callers (no per-call copy, matching `RuleRegistry`'s hot-path
   // contract) — freezing here makes that contract enforced, not just documented.
   for (const matches of byName.values()) Object.freeze(matches);
+  for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
   return { parentOf, byName, underInstanceAncestor, nodesByType };
 }
@@ -114,22 +115,32 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
   return index;
 }
 
+/** Shared empty result for a type or name miss — one frozen instance, not a fresh allocation per miss. */
+const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
+
 /**
- * How many nodes of `type` the scene contains, counted once per scene.
+ * Every node of `type` in the scene, in depth-first (= Godot tree) order.
  *
  * Several of Godot's configuration warnings are "only the first of these has an
- * effect" — `WorldEnvironment`, `ShaderGlobalsOverride`, `CanvasModulate`,
- * `Camera2D`. Each rule answered it by recursing the whole tree inside `check`,
- * which the linter calls once per matching node: O(matches x nodes), and the
- * pathological input is precisely the case those rules exist to detect. The
- * count comes off the cached per-scene index instead, built in the same single
- * walk that already produces the parent and name maps.
+ * effect", or "these contend with each other" — `ShaderGlobalsOverride` and
+ * `WorldEnvironment` through {@link countNodesOfType} and
+ * {@link firstNodeOfType}, `Camera2D` through this list, which it tallies by
+ * viewport scope. A rule that answers such a question by recursing the whole
+ * tree inside `check` is O(matches x nodes), and the pathological input is
+ * precisely the case the rule exists to detect. The list comes off the cached
+ * per-scene index instead, built in the same single walk that already produces
+ * the parent and name maps, and is returned frozen rather than copied per call.
  *
  * Exact-name, not base-walked: Godot's own checks compare `get_class()` or scan
  * a type-keyed group, never a subclass closure.
  */
+export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
+  return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
+}
+
+/** How many nodes of `type` the scene contains, off the same cached index. */
 export function countNodesOfType(roots: TscnNode[], type: string): number {
-  return getSceneIndex(roots).nodesByType.get(type)?.length ?? 0;
+  return nodesOfType(roots, type).length;
 }
 
 /**
@@ -185,9 +196,6 @@ export function extractNodePath(value: string): string | null {
   // an empty string to show.
   return nodePathLiteral(value) || null;
 }
-
-/** Shared empty result for `findNodesByName` misses — one frozen instance, not a fresh allocation per miss. */
-const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
 
 /**
  * Collect every node named `name` anywhere in the scene tree (depth-first).

@@ -73,6 +73,20 @@ make_local_to_pose = "grip"
     expect(ruleDiagnostics(linter.lint(content))).toEqual([]);
   });
 
+  // Godot's own check is `if (!make_local_to_pose.is_empty())` (cpp:204), and a
+  // String slot takes the StringName spelling too (variant.cpp:582-590), so both
+  // of these are the empty string the class defaults to.
+  it.each(['""', '&""'])('stays quiet on an empty make_local_to_pose %s', (pose) => {
+    const content = `[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="Manager" type="OpenXRRenderModelManager" parent="."]
+make_local_to_pose = ${pose}
+`;
+    expect(ruleDiagnostics(linter.lint(content))).toEqual([]);
+  });
+
   it('warns for a manager under any other typed parent (direct-parent arm)', () => {
     const content = `[gd_scene format=3]
 

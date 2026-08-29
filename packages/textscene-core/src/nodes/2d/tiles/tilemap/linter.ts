@@ -56,7 +56,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // layer answers to.
   const layerData: Array<[string, string]> = [];
   for (const [index, leaves] of layers) {
-    const tileData = leaves.tile_data;
+    const tileData = leaves.get('tile_data');
     if (tileData !== undefined) layerData.push([`layer_${index}/tile_data`, tileData]);
   }
   // Absent means the current format, not the oldest one: the member initialises
@@ -76,8 +76,8 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   });
 
   type Layer = (typeof layers)[number];
-  const isLayerYSorted = ([, leaves]: Layer) => boolSlotValue(leaves.y_sort_enabled) === true;
-  const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.z_index, 0) || 0;
+  const isLayerYSorted = ([, leaves]: Layer) => boolSlotValue(leaves.get('y_sort_enabled')) === true;
+  const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.get('z_index'), 0) || 0;
   const nodeYSorted = boolSlotValue(rawProps.y_sort_enabled) === true; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858

@@ -34,9 +34,10 @@ validatorRegistry.registerAll('MenuBar', {
   // there is no bound to check. set_start_index (menu_bar.cpp:836-844) assigns
   // straight through; bind_global_menu's `if (start_index >= 0)`
   // (menu_bar.cpp:229) only selects a placement strategy, it never rejects or
-  // rewrites the stored value. `strictInt` rather than `int` because this is a
-  // discrete position, so "1.5" is a format error rather than a truncation.
-  start_index: v.strictInt('start_index'),
+  // rewrites the stored value. `lenientInt`, since `strictInt`'s narrowed read
+  // exists to feed a bound and there is none: a fractional literal is the
+  // truncation warning every int slot shares, not a format error.
+  start_index: v.lenientInt('start_index'),
   // menu_bar.cpp:753 `PropertyInfo(Variant::BOOL, "switch_on_hover")`, no hint.
   // set_switch_on_hover (menu_bar.cpp:788-790) is a bare assignment.
   switch_on_hover: v.boolean('switch_on_hover'),

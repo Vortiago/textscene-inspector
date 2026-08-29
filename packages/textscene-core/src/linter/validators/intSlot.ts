@@ -149,28 +149,70 @@ export function markIntSlot<T extends PropertyValidator>(
 }
 
 /**
- * The warning for a fractional literal in an INT slot, or `null` for a whole one.
+ * A cross-family spelling warning: the value IS stored, but not as it is
+ * written, so re-saving the scene in Godot rewrites the line.
  *
- * Godot loads `hframes = 5.5` and stores 5 — measured on 4.6.3, silently. The
- * value the engine holds is not the value the file states, which is worth
- * saying; but the alteration happens in the Variant conversion
- * (`variant.h:369-370`) on the way INTO the setter, and `set_hframes` only ever
- * sees the 5. ADR-0032 reserves the error tier for the setter's own behaviour,
- * so this is its own row: the third tier, for a binding-layer conversion.
+ * The same tier and the same reasoning as {@link storedNotWritten} — the stored
+ * value differs from the written one, and not by the setter's doing, so it is
+ * a warning and never an error. `can_convert_strict` accepts the whole
+ * BOOL/INT/FLOAT family (`variant.cpp:550-583`), which is why there is nothing
+ * for the engine to refuse here.
+ *
+ * Here rather than beside the combinators that report it: an int slot and a
+ * bool slot are the two DIRECTIONS of one conversion, and the int half is
+ * folded into {@link storedNotWritten} below.
+ */
+export function convertedSpelling(
+  propertyName: string,
+  key: string,
+  value: string,
+  line: number,
+  code: string,
+  storedText: string,
+  converted: boolean
+): ParseError | null {
+  if (!converted) return null;
+  return propertyError(
+    key,
+    line,
+    `Property '${propertyName}' is written "${value.trim()}", which this slot converts: ` +
+      `Godot stores ${storedText} and writes it back that way.`,
+    code,
+    'warning'
+  );
+}
+
+/**
+ * The warning for a literal an INT slot stores as something else, or `null`
+ * when the stored value is the written one.
+ *
+ * TWO spellings reach it, because they are one engine behaviour and ADR-0032
+ * gives them one verdict. `_to_int` (`variant.h:361-377`) maps a BOOL to 1/0
+ * and truncates a FLOAT, so `cast_shadow = true` stores 1 and `hframes = 5.5`
+ * stores 5. Applied by every int reader as its last step, which is what stops a
+ * factory from carrying only one of the two: the enum, positive-int, strictInt
+ * and bit-field readers all performed the BOOL conversion and said nothing,
+ * while the range reader alone warned. Measured on 4.6.3: both are silent in
+ * the engine.
+ *
+ * The alteration happens in the Variant conversion (`variant.h:369-370`) on the
+ * way INTO the setter, and `set_hframes` only ever sees the 5. ADR-0032
+ * reserves the error tier for the setter's own behaviour, so this is its own
+ * row: the third tier, for a binding-layer conversion.
  *
  * A `_VALUE` code, never `_FORMAT`: the tokenizer reads `5.5` perfectly well
  * (`variant_parser.cpp:443-448` types it FLOAT), so reporting it as a format
  * failure tells a reader the file is unparseable when the engine opens it
  * without complaint.
  *
- * Checked LAST, after every bound: a value that is both fractional and out of
- * range has a genuine error to report, and that outranks this.
+ * Checked LAST, after every bound: a value that is both out of range and stored
+ * differently has a genuine error to report, and that outranks this.
  *
  * Takes the caller's {@link IntSlotRead} rather than the raw text: the float
  * this needs is the one the stored int was derived from, so re-reading it here
  * parsed the same literal a second time on every clean property.
  */
-export function truncatedInt(
+export function storedNotWritten(
   propertyName: string,
   key: string,
   value: string,
@@ -180,6 +222,13 @@ export function truncatedInt(
 ): ParseError | null {
   const { asFloat, stored } = read;
   if (stored === null || Number.isNaN(stored)) return null;
+  // The BOOL arm first: `true` reads as a whole 1, so the fractional test below
+  // returns null past it and the conversion would go unreported.
+  const converted = convertedSpelling(
+    propertyName, key, value, line, errorCodeValue, String(stored),
+    boolLiteralAsNumber(value) !== undefined
+  );
+  if (converted) return converted;
   if (asFloat === null || Number.isInteger(asFloat)) return null;
   return propertyError(
     key,
@@ -191,7 +240,7 @@ export function truncatedInt(
 }
 
 /**
- * {@link truncatedInt} for the COMPONENTS of an integer composite.
+ * {@link storedNotWritten} for the COMPONENTS of an integer composite.
  *
  * `_parse_construct<int32_t>` (`variant_parser.cpp:577-592`) takes any number
  * token and narrows it, which is the same conversion a scalar int slot performs

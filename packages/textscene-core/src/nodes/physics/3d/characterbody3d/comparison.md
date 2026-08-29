@@ -45,7 +45,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) |  |
 | `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
-| `up_direction` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `up_direction` | Vector3(x, y, z) other than the zero vector, or the Vector3i spelling Godot converts |  |
 | `velocity` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `wall_min_slide_angle` | radians, 0° to 180° | warning |
 
@@ -56,6 +56,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-characterbody3d` | `characterbody3d-needs-collision-shape` | warning |
 |  | `characterbody3d-floor-props-in-floating-mode` | warning |
+|  | `characterbody3d-slide-on-ceiling-in-floating-mode` | warning |
 <!-- lint:end -->
 
 CharacterBody3D has no `parser.ts` either: it reuses `parseNode3D` directly,

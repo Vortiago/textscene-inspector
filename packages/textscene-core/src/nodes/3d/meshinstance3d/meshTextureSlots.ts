@@ -139,23 +139,10 @@ export function materialTextureState(
  * neither.
  */
 export function transformedTexture(
-  slot: { value: THREE.Texture | undefined } | null,
+  texture: THREE.Texture | undefined,
   state: TextureState | null
 ): THREE.Texture | undefined {
-  const value = slot?.value;
-  if (!value) return undefined;
-  if (!state) return value;
-  return applyTextureState(value, state);
-}
-
-/**
- * A synchronously-resolved procedural texture (e.g. GradientTexture2D) takes
- * precedence over the async-loaded slot for the same map. Returns a
- * `transformedTexture`-shaped slot so the UV-transform path is shared.
- */
-export function effectiveSlot(
-  procedural: THREE.Texture | undefined,
-  asyncSlot: { value: THREE.Texture | undefined } | null
-): { value: THREE.Texture | undefined } | null {
-  return procedural ? { value: procedural } : asyncSlot;
+  if (!texture) return undefined;
+  if (!state) return texture;
+  return applyTextureState(texture, state);
 }

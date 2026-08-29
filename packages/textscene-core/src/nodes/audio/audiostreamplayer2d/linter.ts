@@ -28,7 +28,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   // A stream can also arrive through an AnimationPlayer audio track that
-  // targets this node (animation_mixer.cpp:889-897 builds its own polyphonic
+  // targets this node (animation_mixer.cpp:891-898 builds its own polyphonic
   // playback and never reads the node's `stream`), so a node driven that way
   // is not silent despite having no `stream` of its own.
   const streamEmpty = resourceSlotIsEmpty(rawProps.stream);

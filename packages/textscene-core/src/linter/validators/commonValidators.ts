@@ -3,7 +3,13 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import { readIntSlot, slotWidth, truncatedInt, unrepresentableInt } from './intSlot.js';
+import {
+  convertedSpelling,
+  readIntSlot,
+  slotWidth,
+  storedNotWritten,
+  unrepresentableInt,
+} from './intSlot.js';
 import {
   boolLiteralAsNumber,
   boolSlotValue,
@@ -34,36 +40,6 @@ export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/
  */
 export function tupleComponent(text: string | undefined): number {
   return parseGodotFloat(text ?? '') ?? NaN;
-}
-
-/**
- * A cross-family spelling warning: the value IS stored, but not as it is
- * written, so re-saving the scene in Godot rewrites the line.
- *
- * The same tier and the same reasoning as {@link truncatedInt} — the stored
- * value differs from the written one, and not by the setter's doing, so it is
- * a warning and never an error. `can_convert_strict` accepts the whole
- * BOOL/INT/FLOAT family (`variant.cpp:550-583`), which is why there is nothing
- * for the engine to refuse here.
- */
-function convertedSpelling(
-  propertyName: string,
-  key: string,
-  value: string,
-  line: number,
-  code: string,
-  storedText: string,
-  converted: boolean
-): ParseError | null {
-  if (!converted) return null;
-  return propertyError(
-    key,
-    line,
-    `Property '${propertyName}' is written "${value.trim()}", which this slot converts: ` +
-      `Godot stores ${storedText} and writes it back that way.`,
-    code,
-    'warning'
-  );
 }
 
 /**
@@ -163,7 +139,7 @@ export function createEnumValidator(
         num < min ? valueSeverity : maxSeverity
       );
     }
-    return truncatedInt(propertyName, key, value, line, errorCodeValue, read);
+    return storedNotWritten(propertyName, key, value, line, errorCodeValue, read);
   };
   return validator;
 }
@@ -347,16 +323,16 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, maxSeverity);
     }
 
-    // Last, so a value that is BOTH fractional and out of range reports the
-    // error rather than this warning. A FLOAT slot stores `5.5` verbatim and
-    // has nothing to say.
-    return (
-      (read ? truncatedInt(propertyName, key, value, line, errorCodeValue, read) : null) ??
-      convertedSpelling(
-        propertyName, key, value, line, errorCodeValue, String(num),
-        boolLiteralAsNumber(value) !== undefined
-      )
-    );
+    // Last, so a value that is BOTH stored differently and out of range reports
+    // the error rather than this warning. A FLOAT slot has no `read` and stores
+    // `5.5` verbatim, but converts a BOOL exactly as an int slot does
+    // (`_to_float`, `variant.h:361-377`), so it reports that half on its own.
+    return read
+      ? storedNotWritten(propertyName, key, value, line, errorCodeValue, read)
+      : convertedSpelling(
+          propertyName, key, value, line, errorCodeValue, String(num),
+          boolLiteralAsNumber(value) !== undefined
+        );
   };
   return validator;
 }
@@ -385,6 +361,6 @@ export function createPositiveIntegerValidator(
       const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
       return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
-    return truncatedInt(propertyName, key, value, line, errorCodeValue, read);
+    return storedNotWritten(propertyName, key, value, line, errorCodeValue, read);
   };
 }

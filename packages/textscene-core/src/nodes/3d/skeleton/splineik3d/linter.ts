@@ -52,7 +52,7 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const posed = new Set<number>();
   for (const [index, leaves] of settings) {
     if (index >= count) continue;
-    const path = leaves.path_3d;
+    const path = leaves.get('path_3d');
     if (path !== undefined && !isUnsetPath(path.trim())) posed.add(index);
   }
   // Capped at both ends: `setting_count` has no ceiling, so the WALK is bounded

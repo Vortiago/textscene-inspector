@@ -32,8 +32,20 @@ describe('a PackedVector2Array slot', () => {
     expect(at('Array[Vector2]([])')).toBeNull();
   });
 
+  it('accepts the convertible element spelling, at the slot\'s own arity', () => {
+    // `Variant::operator Vector2()` reads a Vector2i verbatim
+    // (`variant.cpp:1751-1756`), and `_convert_array` runs it per element
+    // (`variant.cpp:2082-2091`) — so this is a file Godot opens.
+    expect(at('[Vector2i(0, 0), Vector2i(5, 5)]')).toBeNull();
+    expect(at('Array[Vector2]([Vector2i(0, 0)])')).toBeNull();
+    expect(at('[Vector2(0, 0), Vector2i(5, 5)]')).toBeNull();
+  });
+
   it('still reports an element that is not a Vector2', () => {
+    // A RESHAPING conversion, which `godot/variantConversion.ts` leaves out of
+    // the accepted table on purpose; the arity check is what catches it.
     expect(at('[Vector3(0, 0, 0)]')?.severity).toBe('error');
+    expect(at('[Vector2i(0, 0, 0)]')?.severity).toBe('error');
     expect(at('[oops]')?.severity).toBe('error');
   });
 

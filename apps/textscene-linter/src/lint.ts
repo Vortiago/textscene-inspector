@@ -1,8 +1,9 @@
 /** File linting and exit-code logic for the TSCN linter CLI. */
 
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { extname, join, resolve } from 'path';
+import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
+import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { formatDiagnostics, formatError } from './format';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -73,17 +74,6 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
 }
 
 /**
- * Both text formats Godot writes, and the linter's subject is both.
- *
- * A `.tres` is the same grammar with its type in the `[gd_resource]` header
- * rather than a section heading; the validators a `[sub_resource]` block gets
- * inside a scene are the ones a standalone resource file gets here.
- */
-const LINTABLE_EXTENSIONS = new Set(['.tscn', '.tres']);
-
-const isLintable = (name: string): boolean => LINTABLE_EXTENSIONS.has(extname(name));
-
-/**
  * Recursively collect the lintable FILES under `dir`, appending into `found`
  * (threaded through the recursion so nested results are never re-copied at
  * each ancestor level). Dirent-based so the file/directory distinction comes
@@ -105,11 +95,11 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
       } catch {
         continue; // broken symlink — skip rather than throw
       }
-      if (stats.isFile() && isLintable(entry.name)) found.push(fullPath);
+      if (stats.isFile() && isGodotTextResourcePath(entry.name)) found.push(fullPath);
       continue;
     }
     if (entry.isDirectory()) collectTscnFiles(fullPath, found);
-    else if (entry.isFile() && isLintable(entry.name)) found.push(fullPath);
+    else if (entry.isFile() && isGodotTextResourcePath(entry.name)) found.push(fullPath);
   }
   return found;
 }

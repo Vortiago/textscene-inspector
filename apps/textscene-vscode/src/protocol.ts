@@ -142,3 +142,16 @@ export type WebviewToHostMessage =
   | LoadResourceMessage
   | ResourceNeededMessage
   | LogMessage;
+
+/**
+ * A webview can post anything to its host, so the host listener narrows before
+ * it reads: a message is a non-null object carrying a string `type`. Mirrors
+ * `isHostToWebviewMessage` so the wire is policed the same way both directions.
+ */
+export function isWebviewToHostMessage(data: unknown): data is WebviewToHostMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as { type?: unknown }).type === 'string'
+  );
+}

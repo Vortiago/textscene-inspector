@@ -11,8 +11,9 @@ renders_as: nothing yet; Godot draws a deformable mesh, the previewer does not
 
 A deformable 3D physics mesh: Godot draws it as a soft, simulated version of its
 own `mesh`, but the previewer only parses and validates it so far and does not draw
-it yet, so it renders as an invisible transform-only fallback and its children still
-show.
+it yet. The Node3D base mounts under `renderIntent: 'pending'`, so it holds its
+transform and honours `visible`, its children still show, and the badge reports
+the gap.
 
 ## Properties exercised
 

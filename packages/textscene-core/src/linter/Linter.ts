@@ -85,14 +85,17 @@ export class Linter {
   /**
    * Convert parse errors to diagnostic format.
    *
-   * The node comes from the error, which the scanning loop stamped while it was
-   * inside that node's body ({@link ParseError.nodeName}). Reporting every one
-   * of these as `<unknown>` made the linter's core product — a grounded refusal
-   * of a property VALUE — unable to say which of a scene's nodes wrote it, in
-   * the CLI's human output (`format.ts`) and its JSON alike.
+   * The owner comes from the error, which the scanning loop stamped while it
+   * was inside that section's body ({@link ParseError.nodeName}). Reporting
+   * every one of these as `<unknown>` made the linter's core product — a
+   * grounded refusal of a property VALUE — unable to say which of a scene's
+   * nodes wrote it, in the CLI's human output (`format.ts`) and its JSON alike.
+   * A `[sub_resource]` body is named by its `id=`, since resource validators
+   * run over it and several shapes of one type sit side by side.
    *
    * `<unknown>` remains the answer where it is the true one: a malformed
-   * heading, and the `format=` header, belong to no node.
+   * heading, the `format=` header, and a `.tres`'s `[resource]` body — the
+   * file's own single resource, which no id identifies.
    */
   private convertParseErrors(errors: ParseError[]): Diagnostic[] {
     return errors.map(error => ({

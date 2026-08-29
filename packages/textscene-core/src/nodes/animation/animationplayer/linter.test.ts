@@ -484,3 +484,42 @@ describe('AnimationPlayer Linter', () => {
     });
   });
 });
+
+/**
+ * An ExtResource-backed clip is unenumerable here, so it SUPPRESSES the
+ * missing-clip claim rather than feeding it. Godot's tokenizer discards every
+ * character <= 32 before a token (variant_parser.cpp:415-417) and the
+ * `ExtResource` branch then asks only for the next token to be `(`
+ * (:1089-1093), so the padded spelling loads and must suppress too — the reader
+ * that ENUMERATES the clips is already whitespace-tolerant, so a tighter
+ * suppression check calls a live clip name dangling.
+ */
+describe('AnimationPlayer clip existence — the padding Godot discards', () => {
+  const withLibrary = (entry: string, props: Record<string, string>) =>
+    scene(
+      `[ext_resource type="Animation" path="res://walk.tres" id="1_walk"]`,
+      `[sub_resource type="AnimationLibrary" id="Lib"]\n_data = {\n"walk": ${entry}\n}`,
+      node('AnimationPlayer', { libraries: '{\n"": SubResource("Lib")\n}', ...props }, { name: 'Anim' })
+    );
+
+  it('says nothing about current_animation behind a padded ExtResource clip', () => {
+    expectNoDiagnostic(withLibrary('ExtResource ("1_walk")', { current_animation: '"walk"' }), {
+      ruleName: 'animationplayer-current-animation-missing',
+    });
+  });
+
+  it('says nothing about autoplay behind a padded ExtResource clip', () => {
+    expectNoDiagnostic(withLibrary('ExtResource ("1_walk")', { autoplay: '"walk"' }), {
+      ruleName: 'animationplayer-autoplay-missing',
+    });
+  });
+
+  // The claim still stands where the clip set IS enumerable, so the fix widens
+  // the suppression rather than retiring the rule.
+  it('still reports a clip no SubResource entry defines', () => {
+    expectDiagnostic(withLibrary('SubResource("Anim_idle")', { current_animation: '"walk"' }), {
+      ruleName: 'animationplayer-current-animation-missing',
+      severity: 'error',
+    });
+  });
+});

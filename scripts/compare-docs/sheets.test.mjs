@@ -20,6 +20,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isDivider, splitRow } from './markdownTable.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
   collectSheetFiles,
@@ -179,6 +180,35 @@ describe('comparison sheets', () => {
         problems.push(`${s.label}: lint block names ${begins[0][1]}, frontmatter says ${s.meta.type}`);
       }
     }
+    expect(problems.sort()).toEqual([]);
+  });
+
+  it('gives every table row the cell count its own header declares', () => {
+    // The one shape both other guards are blind to. `docs:lint-sections --check`
+    // re-runs the generator and diffs it against its own output, so a row the
+    // generator itself malformed reads as up to date; the gallery then splits it
+    // into six `<td>` against three `<th>`. Fourteen committed rows carried an
+    // unescaped `|` from a bit-mask `Accepts` string, printing a mask label
+    // where the severity belongs and dropping the last bits.
+    const problems = [];
+    let tables = 0;
+    for (const s of sheets) {
+      const lines = s.body.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].trim().startsWith('|')) continue;
+        const rows = [];
+        while (i < lines.length && lines[i].trim().startsWith('|')) rows.push(lines[i++]);
+        tables++;
+        const width = splitRow(rows[0]).length;
+        for (const row of rows) {
+          if (isDivider(row.trim())) continue;
+          const got = splitRow(row).length;
+          if (got !== width) problems.push(`${s.label}: ${got} cells in a ${width}-column table — ${row.trim()}`);
+        }
+      }
+    }
+    // Without this the guard passes on a corpus whose tables it never found.
+    expect(tables).toBeGreaterThan(500);
     expect(problems.sort()).toEqual([]);
   });
 

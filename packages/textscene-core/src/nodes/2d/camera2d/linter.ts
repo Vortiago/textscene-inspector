@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
+import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { searchAncestors } from '../../../linter/parentType.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
@@ -52,25 +52,35 @@ function cameraIsEnabled(node: TscnNode): boolean {
   return boolSlotValue((node.properties as Record<string, string>).enabled) !== false;
 }
 
+/**
+ * Enabled Camera2D nodes per viewport scope, tallied once per scene.
+ *
+ * The rule runs on every Camera2D and every one of them asks for the same
+ * table, so it is built from the shared per-type index rather than recursed
+ * per call: a fresh walk of `scene.nodes` with a depth-N ancestor climb inside
+ * it made this O(matches x nodes x depth), and the pathological input is
+ * exactly the scene the rule exists to detect. Keyed on the roots array like
+ * every other per-scene fact, and correct on the same terms — `searchAncestors`
+ * reads nothing of `scene` but `nodes`.
+ */
+const enabledCamerasByScope = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
+
 /** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
 function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): number {
-  let count = 0;
-
-  function traverse(nodes: TscnScene['nodes']): void {
-    for (const node of nodes) {
-      // An `undefined` scope never equals `scope`, so a camera whose viewport
-      // this file cannot determine is left out of the contending set.
-      if (node.type === 'Camera2D' && cameraIsEnabled(node) && viewportScopeOf(scene, node) === scope) {
-        count++;
-      }
-      if (node.children && node.children.length > 0) {
-        traverse(node.children);
-      }
+  let tally = enabledCamerasByScope.get(scene.nodes);
+  if (!tally) {
+    tally = new Map<TscnNode | null, number>();
+    for (const camera of nodesOfType(scene.nodes, 'Camera2D')) {
+      if (!cameraIsEnabled(camera)) continue;
+      // A camera whose viewport this file cannot determine is left out of the
+      // contending set: `undefined` is never a scope a caller holds.
+      const cameraScope = viewportScopeOf(scene, camera);
+      if (cameraScope === undefined) continue;
+      tally.set(cameraScope, (tally.get(cameraScope) ?? 0) + 1);
     }
+    enabledCamerasByScope.set(scene.nodes, tally);
   }
-
-  traverse(scene.nodes);
-  return count;
+  return tally.get(scope) ?? 0;
 }
 
 /**

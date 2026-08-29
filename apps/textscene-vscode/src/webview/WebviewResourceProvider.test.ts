@@ -5,11 +5,15 @@
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 describe('WebviewResourceProvider', () => {
-  let mockVsCode: { postMessage: ReturnType<typeof vi.fn>; getState: ReturnType<typeof vi.fn>; setState: ReturnType<typeof vi.fn> };
+  let mockVsCode: {
+    postMessage: Mock<(message: unknown) => void>;
+    getState: Mock<() => unknown>;
+    setState: Mock<(state: unknown) => void>;
+  };
   let provider: WebviewResourceProvider;
   let messageListeners: Array<(event: MessageEvent) => void>;
 
@@ -30,9 +34,9 @@ describe('WebviewResourceProvider', () => {
 
     // Mock VSCode API
     mockVsCode = {
-      postMessage: vi.fn(),
-      getState: vi.fn(),
-      setState: vi.fn()
+      postMessage: vi.fn<(message: unknown) => void>(),
+      getState: vi.fn<() => unknown>(),
+      setState: vi.fn<(state: unknown) => void>()
     };
 
     provider = new WebviewResourceProvider(mockVsCode);

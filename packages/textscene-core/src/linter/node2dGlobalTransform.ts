@@ -51,6 +51,15 @@
  *   case as identity would be a false positive waiting to happen; silence is
  *   the honest answer.
  *
+ * A fourth shape is `'unknowable'` for a reason of its own: a `position` or
+ * `scale` written in the `Vector2i(...)` spelling whose components Godot
+ * narrows at parse time. The engine composes a real transform from the
+ * narrowed numbers, but they are not the ones the file states and not ones
+ * this module may name — `_to_int`'s float branch is undefined behaviour
+ * (`variant.h:369-370`) — so the composition is refused rather than carried
+ * out on a NaN. NaN answers each predicate below by its own accident: skew
+ * reported on a node the engine finds unskewed, and scale reported nowhere.
+ *
  * `transform` is never read as an alternative to the discrete properties:
  * unlike Node3D, Node2D's own `transform` `ADD_PROPERTY` carries
  * `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`), so the engine never serialises
@@ -64,7 +73,7 @@ import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
-import { slotComponents } from '../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../godot/int.js';
 import { boolSlotValue } from '../godot/index.js';
 
 /** Godot's own `Transform2D` layout: x-axis `(a, b)`, y-axis `(c, d)`, origin `(tx, ty)`. */
@@ -96,14 +105,25 @@ function multiply(parent: Transform2DMatrix, local: Transform2DMatrix): Transfor
 }
 
 
-function parseVector2(raw: string | undefined, fallback: { x: number; y: number }): { x: number; y: number } {
+/** The vector as the slot holds it; `null` when the composition must not proceed. */
+function parseVector2(
+  raw: string | undefined,
+  fallback: { x: number; y: number }
+): { x: number; y: number } | null {
   if (raw === undefined) return fallback;
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return fallback; // malformed is linterParser.ts's job, not this helper's
+  const captures = [match[1], match[2]];
+  // Not the fallback, and not NaN: the engine stores a number here, just not
+  // the one written, and `slotComponents` answers an unnameable one with the
+  // same NaN a legal `nan` component gets. Carried into the composition that
+  // NaN made `hasZeroGlobalSkew` report skew on a transform Godot builds
+  // unskewed, so the whole answer is withheld instead.
+  if (slotComponentsAltered(raw, 'Vector2', captures)) return null;
   // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
   // converts, whose arguments are narrowed to int32 before the widening, so a
   // fractional or wrapping component stores a different number than it states.
-  const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
+  const [x, y] = slotComponents(raw, 'Vector2', captures, tupleComponent);
   return { x: x!, y: y! };
 }
 
@@ -126,13 +146,14 @@ function parseScalar(raw: string | undefined, fallback: number): number {
  * (`node_2d.h`): position `(0, 0)`, rotation `0`, scale `(1, 1)`, skew `0` —
  * together the identity transform, matching what an absent key means.
  */
-function localTransform2D(node: TscnNode): Transform2DMatrix {
+function localTransform2D(node: TscnNode): Transform2DMatrix | null {
   if (!isValidProperties(node.properties)) return IDENTITY;
   const props = node.properties;
 
   const position = parseVector2(props.position, { x: 0, y: 0 });
   const rotation = parseScalar(props.rotation, 0);
   const scale = parseVector2(props.scale, { x: 1, y: 1 });
+  if (position === null || scale === null) return null;
   const skew = parseScalar(props.skew, 0);
 
   return {
@@ -151,7 +172,7 @@ function isTopLevel(node: TscnNode): boolean {
 
 export type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DMatrix }
-  /** See the module docblock for exactly which ancestor shapes land here. */
+  /** See the module docblock: which ancestor shapes land here, and which literal. */
   | { readonly kind: 'unknowable' };
 
 /** Resolve `node`'s global `Transform2D`, composed statically. See the module docblock. */
@@ -174,7 +195,9 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
 
   let composed = IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
-    composed = multiply(composed, localTransform2D(chain[i]!));
+    const local = localTransform2D(chain[i]!);
+    if (local === null) return { kind: 'unknowable' };
+    composed = multiply(composed, local);
   }
   return { kind: 'known', transform: composed };
 }

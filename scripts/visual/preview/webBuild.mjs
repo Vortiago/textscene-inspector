@@ -12,13 +12,6 @@ import { REPO_ROOT, WEB_DIST_INDEX } from './paths.mjs';
 const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
 
 /**
- * Sources whose edits must reach the bundle. The app bundles `@textscene/core`
- * from its BUILT `dist/`, so a core edit needs core rebuilt AND the app
- * re-bundled — two steps, either of which can be skipped without any error.
- */
-const BUNDLED_SOURCE_DIRS = ['packages/textscene-core/src', 'apps/textscene-web/src'];
-
-/**
  * Only files that can actually end up in the bundle count. Tests, comparison
  * sheets and fixtures live inside `src/` but vite never sees them, so treating
  * them as staleness would make the guard cry wolf after a test-only edit — and a
@@ -29,6 +22,58 @@ const NOT_BUNDLED = /\.(test|spec|contract)\.[jt]sx?$/;
 
 /** Reaches the bundle, so an edit to it must reach `dist/` too. */
 const isBundled = (name) => BUNDLED_FILE.test(name) && !NOT_BUNDLED.test(name);
+
+/** A scene, resource, texture or script the corpus ships — anything but docs. */
+const isCorpusInput = (name) => !name.endsWith('.md');
+
+/** The test kit vite never bundles, excluded the way `distFreshness.mjs` does. */
+const notTesting = (name) => name !== 'testing';
+
+/**
+ * Every tree whose edits must reach `dist/`, with what counts as an input.
+ *
+ * The app bundles `@textscene/core` from its BUILT `dist/`, so a core edit needs
+ * core rebuilt AND the app re-bundled — two steps, either of which can be
+ * skipped without any error.
+ *
+ * `scenes/` is where every golden's scene actually lives: `copy-fixtures` stages
+ * it into `apps/textscene-web/public/fixtures/` at `prebuild`, and vite copies
+ * `public/` into `dist/` verbatim. Edit a `.tscn`, skip the build, and the deep
+ * link still resolves — the fixture NAME is unchanged — while the bundle serves
+ * the PREVIOUS scene, so every golden passes and `--update` commits that render
+ * as the new baseline. `public/` itself is deliberately NOT walked: it is a copy
+ * whose mtimes are stage times, so `pnpm dev`'s `predev` restage alone would
+ * make the guard demand a rebuild for content that never changed.
+ *
+ * `scenes/games/` is deploy-only (`VITE_INCLUDE_GAMES`) and never in the bundle
+ * this harness captures from.
+ */
+const BUNDLED_TREES = [
+  { dir: 'packages/textscene-core/src', keep: isBundled, enterDir: notTesting },
+  { dir: 'apps/textscene-web/src', keep: isBundled, enterDir: notTesting },
+  { dir: 'scenes', keep: isCorpusInput, enterDir: (name) => name !== 'games' },
+];
+
+/**
+ * Single-file inputs: vite's entry document, the config that shapes the build,
+ * and the script that decides which of `scenes/` reaches `public/`.
+ */
+const BUNDLED_FILES = [
+  'apps/textscene-web/index.html',
+  'apps/textscene-web/vite.config.ts',
+  'apps/textscene-web/scripts/copy-fixtures.js',
+];
+
+/** Refuse the capture, naming the input the bundle predates. */
+function refuseStale(file) {
+  console.error(
+    `[preview] dist/ predates ${relative(REPO_ROOT, file)} — this capture would ` +
+      `reflect the PREVIOUS revision, not your change.\n` +
+      `[preview] rebuild: pnpm --filter @textscene/core build && ` +
+      `pnpm --filter @textscene/web-previewer build`
+  );
+  process.exit(1);
+}
 
 /**
  * Refuse to capture from a bundle older than the sources it claims to contain.
@@ -45,11 +90,8 @@ export function assertWebBuildFresh() {
     process.exit(1);
   }
   const builtAt = statSync(WEB_DIST_INDEX).mtimeMs;
-  for (const dir of BUNDLED_SOURCE_DIRS) {
-    // `testing/` is the test kit vite never bundles, excluded the way
-    // `distFreshness.mjs` excludes it — otherwise a kit-only edit demands a
-    // rebuild of two packages for work the guard cannot be measuring.
-    const { at, file, failed } = newestMtime(join(REPO_ROOT, dir), isBundled, (name) => name !== 'testing');
+  for (const { dir, keep, enterDir } of BUNDLED_TREES) {
+    const { at, file, failed } = newestMtime(join(REPO_ROOT, dir), keep, enterDir);
     // A walk that could not complete reports a LOW mtime, so `at > builtAt` is
     // false and the guard reads fresh over a directory it never saw — the one
     // answer a freshness guard must never give.
@@ -57,15 +99,15 @@ export function assertWebBuildFresh() {
       console.error(`[preview] could not read every source under ${dir}; freshness is unproven`);
       process.exit(1);
     }
-    if (at > builtAt) {
-      console.error(
-        `[preview] dist/ predates ${relative(REPO_ROOT, file)} — this capture would ` +
-          `reflect the PREVIOUS revision, not your change.\n` +
-          `[preview] rebuild: pnpm --filter @textscene/core build && ` +
-          `pnpm --filter @textscene/web-previewer build`
-      );
+    if (at > builtAt) refuseStale(file);
+  }
+  for (const rel of BUNDLED_FILES) {
+    const file = join(REPO_ROOT, rel);
+    if (!existsSync(file)) {
+      console.error(`[preview] ${rel} is missing; freshness is unproven`);
       process.exit(1);
     }
+    if (statSync(file).mtimeMs > builtAt) refuseStale(file);
   }
 }
 

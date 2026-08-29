@@ -18,17 +18,54 @@
  * write `resource_local_to_scene`).
  */
 
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
-import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
+import {
+  useUniqueNameClaims,
+  useViewportTexture,
+} from '../../../r3f/contexts/ViewportTextureContext.js';
 import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
 } from '../../../r3f/viewportTexturePath.js';
+import { unclaimedUniqueNames } from '../../../utils/nodePath.js';
+import { uniqueNameLivePaths } from '../../../utils/uniqueNames.js';
+import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
+
+/** Literals already reported, so a re-render does not repeat the message. */
+const reportedDangling = new Set<string>();
+
+/**
+ * Report a `viewport_path` whose leading `%Name` nothing in the scene claims, in
+ * the one case where that is knowable rather than a race.
+ *
+ * A COMPOUND `%Name/rest` is dead the moment the table lacks the name: a
+ * publisher registers its own path and at most its own single-segment `%Name`
+ * alias, so no key a consumer can build ever appears and the null is permanent.
+ * A BARE `%Name` is left alone — the alias answers it, including for content
+ * composed in from an instanced sub-scene, which the authored-tree table has no
+ * opinion about, and targets arrive after first paint anyway.
+ */
+function warnUnclaimedAlias(
+  consumerPath: string,
+  viewportPath: string,
+  uniquePaths: ReadonlyMap<string, string>
+): void {
+  if (!viewportPath.includes('/')) return;
+  const unclaimed = unclaimedUniqueNames(viewportPath, uniquePaths);
+  if (unclaimed.length === 0) return;
+  const seen = `${consumerPath}\u0000${viewportPath}`;
+  if (reportedDangling.has(seen)) return;
+  reportedDangling.add(seen);
+  warn(
+    `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
+  );
+}
 
 /**
  * Whether a texture reference names a ViewportTexture — the guard a slot uses
@@ -57,11 +94,21 @@ export function useViewportTextureSlot(
   internalResources: readonly TscnInternalResource[]
 ): THREE.Texture | null {
   const consumerPath = useNodePath();
+  const claims = useUniqueNameClaims();
+  // Live paths, not authored ones: the registry is keyed the way the composed
+  // render tree spells a path, which is what a claim's `livePath` carries.
+  const uniquePaths = useMemo(() => (claims ? uniqueNameLivePaths(claims) : undefined), [claims]);
   const resource = resolveSubResourceRef(ref, internalResources);
   const viewportPath =
     resource?.type === VIEWPORT_TEXTURE_TYPE
       ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
       : null;
-  const key = viewportPath === null ? null : viewportTextureRegistryKey(consumerPath, viewportPath);
+  const key =
+    viewportPath === null
+      ? null
+      : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
+  if (consumerPath && viewportPath !== null && uniquePaths) {
+    warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
+  }
   return useViewportTexture(key)?.texture ?? null;
 }

@@ -152,6 +152,22 @@ describe('an alias whose _set arm refuses the value', () => {
     expect(canonicalPropertyName('PointLight2D', 'mode', '1.0')).toBe('blend_mode');
   });
 
+  it('keeps a `+`-signed PointLight2D.mode off blend_mode, since no file loads it', () => {
+    // `get_token` consumes only `-` before the digit test
+    // (variant_parser.cpp:420-424); `+` falls through to "Unexpected character"
+    // (:508-510), so `mode = +5` is a parse error for the whole file and never
+    // becomes a num. Renaming the key hid the deprecated spelling's own
+    // validator and named a property the file does not contain.
+    expect(canonicalPropertyName('PointLight2D', 'mode', '+5')).toBe('mode');
+    expect(canonicalPropertyName('PointLight2D', 'mode', '+1.5')).toBe('mode');
+  });
+
+  it('still forwards every spelling the tokenizer reads as a number', () => {
+    for (const value of ['0', '-5', '2e1', '5.', '-1.25', 'inf', 'nan']) {
+      expect(canonicalPropertyName('PointLight2D', 'mode', value)).toBe('blend_mode');
+    }
+  });
+
   it('does not let a refused value clear the canonical key beside it', () => {
     const bag = canonicalisePropertyBag('RichTextLabel', { text: '"Hello"', bbcode_text: '""' });
     expect(bag.text).toBe('"Hello"');

@@ -61,7 +61,11 @@ export const sceneServiceWarnings: Readonly<Record<string, readonly WarningRow[]
     {
       at: 'viewport.cpp:3711',
       says: 'size must be at least 2 pixels on both dimensions to render anything',
-      verdict: { rule: 'viewport-size-too-small' },
+      verdict: {
+        declined: 'engine-unreachable',
+        because:
+          'the condition reads Viewport::size (viewport.h:256), whose only assignment is size = p_size.maxi(2) in _set_size (viewport.cpp:1120,1133), so neither component is ever <= 1; Window::set_size (window.cpp:401) reaches the same floor through _update_viewport_size (window.cpp:1352) and its own Window::size (window.h:126) is shadowed, not read here',
+      },
     },
   ],
 };

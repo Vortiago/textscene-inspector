@@ -36,14 +36,14 @@ validatorRegistry.registerAll('GPUParticles2D', {
   emitting: v.boolean('emitting'),
 
   // gpu_particles_2d.cpp:942 hints "1,1000000,1,exp" — no `or_greater`/`or_less`,
-  // so the hint is hard both ends. set_amount (gpu_particles_2d.cpp:71-72) only
-  // ERR_FAILs below 1; the 1000000 ceiling is never setter-enforced, so it is
-  // a warning, not an error. `strictInt` (not `int`) because only it wires a
-  // per-end severity through to the underlying validator.
-  amount: v.strictInt('amount', {
+  // so the hint is hard both ends. set_amount only ERR_FAILs below 1
+  // (gpu_particles_2d.cpp:72); the 1000000 ceiling is never setter-enforced, so
+  // it is a warning, not an error. Same combinator as the three sibling
+  // particle slices, which read the identical setter and hint.
+  amount: v.int('amount', {
     min: 1,
     max: 1000000,
-    enforced: { min: 'gpu_particles_2d.cpp:71' },
+    enforced: { min: 'gpu_particles_2d.cpp:72' },
     hinted: { max: 'gpu_particles_2d.cpp:942' },
   }),
 
@@ -138,28 +138,31 @@ validatorRegistry.registerAll('GPUParticles2D', {
   trail_enabled: v.boolean('trail_enabled'),
 
   // gpu_particles_2d.cpp:967 hints "0.01,10,0.01,or_greater,suffix:s" —
-  // `or_greater` opens the ceiling. set_trail_lifetime
-  // (gpu_particles_2d.cpp:187-188) ERR_FAILs below `0.01 - CMP_EPSILON`, one
-  // epsilon UNDER the hint's floor, so that band loads and only warns.
+  // `or_greater` opens the ceiling. set_trail_lifetime ERR_FAILs below
+  // `0.01 - CMP_EPSILON` (gpu_particles_2d.cpp:188), one epsilon UNDER the
+  // hint's floor, so that band loads and only warns.
   trail_lifetime: v.float('trail_lifetime', {
     enforcedMin: { at: 0.01 - CMP_EPSILON },
     min: 0.01,
-    enforced: { min: 'gpu_particles_2d.cpp:187' },
+    enforced: { min: 'gpu_particles_2d.cpp:188' },
     hinted: { min: 'gpu_particles_2d.cpp:967' },
   }),
 
   // gpu_particles_2d.cpp:968 hints "2,128,1" — no `or_greater`/`or_less`.
-  // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside
-  // [2, 128], confirming both ends are enforced errors.
-  trail_sections: v.int('trail_sections', { min: 2, max: 128, enforced: 'gpu_particles_2d.cpp:195' }),
+  // set_trail_sections ERR_FAILs at each end on its own line, so each end
+  // cites its own guard.
+  trail_sections: v.int('trail_sections', {
+    min: 2,
+    max: 128,
+    enforced: { min: 'gpu_particles_2d.cpp:195', max: 'gpu_particles_2d.cpp:196' },
+  }),
 
   // gpu_particles_2d.cpp:969 hints "1,1024,1" — no `or_greater`/`or_less`.
-  // set_trail_section_subdivisions (gpu_particles_2d.cpp:202-205) ERR_FAILs
-  // outside [1, 1024], confirming both ends are enforced errors.
+  // set_trail_section_subdivisions ERR_FAILs at each end on its own line.
   trail_section_subdivisions: v.int('trail_section_subdivisions', {
     min: 1,
     max: 1024,
-    enforced: 'gpu_particles_2d.cpp:203',
+    enforced: { min: 'gpu_particles_2d.cpp:203', max: 'gpu_particles_2d.cpp:204' },
   }),
 
   // gpu_particles_2d.cpp:971, PROPERTY_HINT_RESOURCE_TYPE

@@ -14,8 +14,15 @@ import { indexedElements } from '../../../../godot/index.js';
  * grow loop through `is_property_valid`, which ends at
  * `property_list.has(components[1])` (property_list_helper.cpp:135), so
  * `layer_9/anything_else` builds nothing.
+ *
+ * The ONE list. `tilemap/linterParser.ts` types its validator map
+ * `Record<LayerLeaf, PropertyValidator>`, so a leaf on either side without the
+ * other is a compile error — which layers EXIST and which leaves are VALIDATED
+ * cannot drift apart. The direction is forced: `tilemap/parser.ts` reads this
+ * module, and importing the validators here would pull the linter into the
+ * render bundle.
  */
-const LAYER_LEAVES = new Set([
+export const LAYER_LEAF_NAMES = [
   'name',
   'enabled',
   'modulate',
@@ -24,7 +31,12 @@ const LAYER_LEAVES = new Set([
   'z_index',
   'navigation_enabled',
   'tile_data',
-]);
+] as const;
+
+/** The leaf half of one `layer_<i>/<leaf>` key. */
+export type LayerLeaf = (typeof LAYER_LEAF_NAMES)[number];
+
+const LAYER_LEAVES: ReadonlySet<string> = new Set(LAYER_LEAF_NAMES);
 
 /**
  * How far the gap fill goes. The engine's own limit is memory, so a single
@@ -56,12 +68,12 @@ const LAYER_FILL_CEILING = 64;
  */
 export function tileMapLayerVector(
   properties: Readonly<Record<string, string>>
-): Array<[number, Record<string, string>]> {
+): Array<[number, ReadonlyMap<string, string>]> {
   const declared = indexedElements(properties, 'layer_', 'is_valid_int');
   const written = [...declared.entries()].filter(([, leaves]) =>
-    Object.keys(leaves).some((leaf) => LAYER_LEAVES.has(leaf))
+    [...leaves.keys()].some((leaf) => LAYER_LEAVES.has(leaf))
   );
   const layerCount = written.reduce((count, [index]) => Math.max(count, index + 1), 1);
   if (layerCount > LAYER_FILL_CEILING) return written.sort(([a], [b]) => a - b);
-  return Array.from({ length: layerCount }, (_, index) => [index, declared.get(index) ?? {}]);
+  return Array.from({ length: layerCount }, (_, index) => [index, declared.get(index) ?? new Map()]);
 }

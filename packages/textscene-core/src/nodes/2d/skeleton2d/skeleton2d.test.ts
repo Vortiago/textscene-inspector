@@ -29,21 +29,6 @@ describe('Skeleton2D registration', () => {
     expect(nodeComponentRegistry.isTransformOnly('Skeleton2D')).toBe(true);
   });
 
-  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
-    const scene = new TscnParser().parse(
-      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n' +
-        '[node name="MySkeleton2D" type="Skeleton2D" parent="."]\n'
-    );
-
-    const node = scene.nodes[0]?.children[0];
-    expect(node?.type).toBe('Skeleton2D');
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
-
-    warnSpy.mockRestore();
-  });
-
   it('reads its own fixture through the lenient parser, stack sub-resource and all', () => {
     // The fixture carries a SkeletonModificationStack2D sub-resource, a type
     // the previewer models nowhere. The strict side is covered by

@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Hold-last-valid invariant: late fetch resolution after a keystroke is dropped
+// Debounced edit forward, and the gate the buffer passes through
 // ---------------------------------------------------------------------------
 
 describe('debounced edit forward', () => {

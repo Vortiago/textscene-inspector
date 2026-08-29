@@ -51,9 +51,9 @@ import {
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
+  readTargetPixels,
   selectViewportCamera,
   selectViewportCamera2D,
-  targetPixelsToImageData,
   viewportAspect,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
@@ -115,10 +115,10 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * Godot floors a viewport at 2 (`viewport.cpp:1120`, `p_size.maxi(2)`) and
  * imposes no ceiling — the GPU driver refuses an oversized allocation instead.
  * A previewer cannot take that exit: `size = Vector2i(2000000000, 8)` is a file
- * Godot opens, and here the number reaches `new THREE.WebGLRenderTarget` and a
- * `new Uint8Array(width * height * 4)` that sits outside any `try`. So the
- * ceiling is ours rather than the engine's, and it is WebGL2's common
- * `MAX_TEXTURE_SIZE`.
+ * Godot opens, and the number reaches `new THREE.WebGLRenderTarget` here. So
+ * the ceiling is ours rather than the engine's, and it is WebGL2's common
+ * `MAX_TEXTURE_SIZE`. It bounds each AXIS; the readback's own allocation is
+ * bounded by nothing and answers for its own failure (`readTargetPixels`).
  */
 const MAX_VIEWPORT_EXTENT = 16384;
 
@@ -173,18 +173,19 @@ function OffscreenViewport({
     hasRendered.current = false;
   }, [target]);
 
-  const readPixels = useCallback((): ImageData | null => {
-    if (!hasRendered.current) return null;
-    const buffer = new Uint8Array(width * height * 4);
-    try {
-      gl.readRenderTargetPixels(target, 0, 0, width, height, buffer);
-    } catch {
-      // No real GL context (headless harnesses, a lost context) — "not ready",
-      // which is exactly what null means here.
-      return null;
-    }
-    return targetPixelsToImageData(buffer, width, height);
-  }, [gl, target, width, height]);
+  // A throw here is "not ready", which is what null means: no real GL context
+  // (headless harnesses, a lost context), or a heap too small for the readback.
+  const readPixels = useCallback(
+    (): ImageData | null =>
+      hasRendered.current
+        ? readTargetPixels(
+            (buffer) => gl.readRenderTargetPixels(target, 0, 0, width, height, buffer),
+            width,
+            height
+          )
+        : null,
+    [gl, target, width, height]
+  );
 
   const entry = useMemo<ViewportTextureEntry>(
     () => ({ texture: target.texture, size: { x: width, y: height }, readPixels }),

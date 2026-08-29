@@ -55,7 +55,7 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isExplicitlyHidden, isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { hasNonUnitScale3D } from '../../../../utils/transform.js';
+import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
 
 const CAMERA_CHILD_RULE = 'xrorigin3d-missing-camera-child';
 const SCALE_RULE = 'xrorigin3d-unsupported-scale';

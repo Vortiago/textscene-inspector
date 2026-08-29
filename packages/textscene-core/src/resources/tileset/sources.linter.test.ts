@@ -62,9 +62,15 @@ const CASES: KeyCase[] = [
     // tile_set.cpp:3971 demands Variant::ARRAY and :3973 an EVEN element count,
     // because each pair is one from/to mapping.
     key: 'tile_proxies/source_level',
-    valid: ['[]', '[0, 1]', '[0, 1, 2, 3]'],
+    // The typed spelling loads: :3971 tests the Variant TYPE, and a typed Array
+    // IS `Variant::ARRAY`. What the SAVER emits bounds none of it.
+    valid: ['[]', '[0, 1]', '[0, 1, 2, 3]', 'Array[int]([0, 4, 2, 4])', 'Array[int]([])'],
     invalid: [
       { value: '[0]', severity: 'error', contains: ['even', 'tile_set.cpp:3973'] },
+      // And the pair count is read out of the WRAPPED body, not off the head of
+      // the value: `slice(1, -1)` here yields `rray[int]([0, 4, 2` and counts 3.
+      { value: 'Array[int]([0])', severity: 'error', contains: ['even', 'got 1'] },
+      { value: 'Array[int]([0, 4, 2])', severity: 'error', contains: ['even', 'got 3'] },
       { value: '5', severity: 'error', contains: ['source_level'] },
     ],
   },

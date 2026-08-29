@@ -16,6 +16,7 @@ import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/renderin
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { packedArrayLiteral } from '../../../../godot/index.js';
+import type { LayerLeaf } from '../shared/layerVector.js';
 
 // `\s*` at both ends and before the paren: Godot's tokenizer discards any
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
@@ -66,7 +67,10 @@ const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
 // family wrapper — but the `.leaves` sweep in validatorClassification reads it.
 markIntSlot(tileDataValidator);
 
-const LAYER_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+// Keyed by the shared name list, so a leaf declared in only one of the two
+// places is a compile error rather than a silent divergence between which
+// layers EXIST and which leaves are VALIDATED.
+const LAYER_LEAVES: Readonly<Record<LayerLeaf, PropertyValidator>> = {
   // tile_map.cpp:1030, Variant::STRING. set_layer_name (:333-335) forwards
   // straight to Node::set_name, no format constraint of its own.
   name: v.quotedString('name'),

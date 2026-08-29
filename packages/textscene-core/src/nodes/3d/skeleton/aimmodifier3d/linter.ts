@@ -49,7 +49,7 @@ const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
  * or past `settings.size()` (aim_modifier_3d.cpp:40), so keys beyond the count
  * never land and the condition cannot arise for them.
  */
-function declaredSettings(properties: Record<string, string>): Map<number, Record<string, string>> {
+function declaredSettings(properties: Record<string, string>): Map<number, Map<string, string>> {
   const settingCount = ruleCount(properties.setting_count) ?? 0;
   const settings = indexedElements(properties, SETTING_PREFIX, 'to_int');
   for (const index of [...settings.keys()]) {
@@ -60,11 +60,11 @@ function declaredSettings(properties: Record<string, string>): Map<number, Recor
 
 /** A setting's value for `leaf`, or the engine default when the scene omits it. */
 function settingNumber(
-  leaves: Record<string, string>,
+  leaves: ReadonlyMap<string, string>,
   leaf: string,
   fallback: number
 ): number {
-  const raw = leaves[leaf];
+  const raw = leaves.get(leaf);
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
   // A malformed value is the validator's to report; NaN here would compare
@@ -80,7 +80,7 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const settings = [...declaredSettings(properties)].sort(([a], [b]) => a - b);
   for (const [index, leaves] of settings) {
-    if (boolSlotValue(leaves.use_euler) !== true) continue;
+    if (boolSlotValue(leaves.get('use_euler')) !== true) continue;
 
     const forwardAxis = settingNumber(leaves, 'forward_axis', DEFAULT_FORWARD_AXIS);
     const primaryAxis = settingNumber(

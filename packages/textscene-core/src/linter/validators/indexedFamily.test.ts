@@ -188,19 +188,50 @@ describe('indexedFamilyValidator', () => {
       expect(error?.message).toContain('index -1 is refused');
     });
 
-    it('is an ENFORCED grounding, since the write really is dropped', () => {
-      expect(family.grounding).toEqual({ kind: 'enforced', cite: 'some_file.cpp:39' });
+    it('is an ENFORCED grounding naming both guards, since either drops the write', () => {
+      // This family takes the default `is_valid_int` parse, so the index gate
+      // can refuse a key here too and its citation belongs beside the class's.
+      expect(family.grounding).toEqual({
+        kind: 'enforced',
+        cite: 'property_list_helper.cpp:53-55, some_file.cpp:39',
+      });
       expect(family.formatOnly).toBeUndefined();
     });
   });
 
   describe('grounding tags', () => {
-    it('is format-only without a negative-index branch, since only shapes are refused', () => {
+    /**
+     * The `is_valid_int` gate refuses a real value — `item_x/text` reaches
+     * `_get_property`, which returns nullptr, so `_set` returns false and the
+     * write is DROPPED (property_list_helper.cpp:53-55). That is ADR-0032's
+     * error tier, and tagging the family `formatOnly` said the opposite: the
+     * bound sweep then never asked for the citation.
+     */
+    it('cites the index gate even with no negative-index branch', () => {
+      const family = indexedFamilyValidator({
+        prefix: 'item_',
+        leaves: { relative: v.boolean('relative') },
+        unknownCode: 'INVALID_ITEM',
+        describes: 'item',
+      });
+      expect(family.formatOnly).toBeUndefined();
+      expect(family.grounding).toEqual({
+        kind: 'enforced',
+        cite: 'property_list_helper.cpp:53-55',
+      });
+      // The arm the citation is about, so the tag cannot drift off the refusal.
+      expect(family('item_x/relative', 'true', 1)?.code).toBe('INVALID_ITEM');
+    });
+
+    it('is format-only under to_int with no negative-index branch', () => {
+      // `to_int` resolves every index text to some element, so no refusal of a
+      // real value is left for the dispatcher to ground.
       const family = indexedFamilyValidator({
         prefix: 'settings/',
         leaves: { relative: v.boolean('relative') },
         unknownCode: 'INVALID_SETTING',
         describes: 'setting',
+        indexParse: 'to_int',
       });
       expect(family.formatOnly).toBe(true);
       expect(family.grounding).toBeUndefined();

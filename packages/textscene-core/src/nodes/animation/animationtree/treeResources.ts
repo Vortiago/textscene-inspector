@@ -117,20 +117,28 @@ function extractSubResourceId(ref: string): string | null {
   return SUB_RESOURCE_REF_ANYWHERE_RE.exec(ref)?.[1] ?? null;
 }
 
+/**
+ * The ONE door from a sub-resource id to a node, so the cycle guard covers every
+ * recursion path. A BlendTree may hold another BlendTree and nothing in the
+ * engine stops that chain closing on itself — `add_node` guards only the name,
+ * null and `/` (animation_blend_tree.cpp:1489-1493), `connect_node` only a node
+ * feeding itself (:1615-1619) — and this runs in a render-phase `useMemo` with
+ * no error boundary above it, so an unguarded re-entry blanks the whole preview.
+ *
+ * `visiting` is the path, not the visited set: the copy is per-branch, so one
+ * sub-resource wired into two ports still resolves on both.
+ */
 function resolveNodeById(
   id: string,
   resources: readonly TscnInternalResource[],
-  visiting: Set<string>
+  visiting: Set<string>,
+  name = '',
+  inputs: (port: number) => AnimNode | null = () => null
 ): AnimNode | null {
-  if (visiting.has(id)) return null; // guard cyclic references
+  if (visiting.has(id)) return null;
   const resource = findSubResource(resources, id);
   if (!resource) return null;
-
-  const visited = new Set(visiting).add(id);
-  if (resource.type === 'AnimationNodeBlendTree') {
-    return resolveBlendTree(resource, resources, visited);
-  }
-  return resolveInnerNode(resource, '', resources, visited);
+  return resolveInnerNode(resource, name, resources, new Set(visiting).add(id), inputs);
 }
 
 /**
@@ -189,10 +197,8 @@ function resolveBlendTree(
     if (seen.has(localName)) return null; // cyclic connection guard
     const subId = nodeIds.get(localName);
     if (subId === undefined) return null;
-    const resource = findSubResource(resources, subId);
-    if (!resource) return null;
     const nextSeen = new Set(seen).add(localName);
-    return resolveInnerNode(resource, localName, resources, visiting, (port) => {
+    return resolveNodeById(subId, resources, visiting, localName, (port) => {
       const from = connections.get(`${localName}:${port}`);
       return from === undefined ? null : resolveLocal(from, nextSeen);
     });
@@ -262,7 +268,7 @@ function resolveStateMachine(
     const match = /^states\/(.+)\/node$/.exec(unquoteKey(rawKey));
     if (!match || match[1] === undefined) continue;
     const subId = extractSubResourceId(asString(rawValue) ?? '');
-    const node = subId === null ? null : resolveNodeById(subId, resources, new Set(visiting));
+    const node = subId === null ? null : resolveNodeById(subId, resources, visiting);
     states.push({ name: match[1], node });
   }
 

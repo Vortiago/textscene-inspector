@@ -19,8 +19,8 @@
  * The pieces live in sibling modules: reference resolution in
  * `meshMaterialResolution.ts`, the texture pipeline in
  * `useMeshMaterialTextures.ts` / `meshTextureSlots.ts`, `cast_shadow` decoding
- * in `meshShadowFlags.ts`, and the three render fragments in `MeshShell.tsx`,
- * `ArrayMeshSurfaces.tsx` and `SecondarySurfaceMaterial.tsx`.
+ * in `meshShadowFlags.ts`, and the two render fragments in `MeshShell.tsx` and
+ * `ArrayMeshSurfaces.tsx`.
  */
 
 import * as THREE from 'three';
@@ -37,12 +37,12 @@ import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlo
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { ArrayMeshSurfaces, useSceneArrayMeshGeometry } from './ArrayMeshSurfaces';
 import { MeshShell, UNRESOLVED_MESH } from './MeshShell';
-import { SecondarySurfaceMaterial } from './SecondarySurfaceMaterial';
+import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { shadowCastingFlags } from './meshShadowFlags';
 import {
   resolveExtArrayMeshPath,
-  resolveMaterialOverrideSource,
-  resolveMaterialSubResources,
+  resolveMaterialSlotSource,
+  resolvePrimitiveMaterialSlot,
   resolveMeshSubResource,
 } from './meshMaterialResolution';
 import { useMeshMaterialTextures } from './useMeshMaterialTextures';
@@ -81,22 +81,22 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     externalResources
   );
 
-  // Parity-audit fix: when multiple `surface_material_override/N`
-  // slots are populated (e.g. a GLB or multi-surface mesh), build an
-  // array of material SubResources so each surface gets its own slot.
-  // Single-surface meshes return a length-1 array.
-  const materialSubResources = useMemo(
-    () => resolveMaterialSubResources(properties, internalResources),
-    [properties, internalResources]
+  // The primitive branch's ONE material slot: a PrimitiveMesh has a single
+  // surface, so `surface_material_override/N` for N > 0 addresses nothing.
+  const materialSlot = useMemo(
+    () => resolvePrimitiveMaterialSlot(properties, internalResources, externalResources),
+    [properties, internalResources, externalResources]
   );
-  const materialSubResource = materialSubResources[0] ?? undefined;
+  // Scalars and textures come from a scene sub-resource; an external `.tres`
+  // carries its own and is built by the pipeline instead.
+  const materialSubResource = materialSlot?.subResource;
 
-  // The same override, in the shape the ArrayMesh branches render through:
-  // their surfaces come off the decoded mesh, not off the override map above,
-  // so the map cannot carry it there.
+  // The same resolution for `material_override` alone, which is what the
+  // ArrayMesh branches render through: their surfaces come off the decoded
+  // mesh rather than off the node's properties.
   const materialOverride = useMemo(
     () =>
-      resolveMaterialOverrideSource(
+      resolveMaterialSlotSource(
         properties.materialOverride,
         internalResources,
         externalResources
@@ -236,35 +236,31 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     );
   }
 
+  // An external `.tres` material goes through the pipeline, textures and all;
+  // only a scene sub-resource has scalars this component can read directly.
+  // `mesh.material` stays a singular Material either way — the mesh has one
+  // surface, and an array over a geometry whose groups it does not cover makes
+  // three skip those groups entirely.
   return (
     <MeshShell {...shellProps}>
       {geometryElement}
-      <StandardMaterialSlot
-        scalars={materialScalars}
-        albedoMap={albedoMap}
-        normalMap={normalMap}
-        roughnessMap={roughnessMap}
-        metalnessMap={metalnessMap}
-        emissiveMap={emissiveMap}
-        aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
-        displacementMap={displacementMap}
-        anisotropyMap={anisotropyMap}
-        shadowSide={shadowFlags.shadowSide}
-        meshType={meshResource?.type}
-        // Multi-surface meshes (slot N>0 populated): attach the primary
-        // material at `material-0` so R3F builds an array and the
-        // secondary slots can land at `material-N`. Single-surface meshes
-        // omit `attach` to keep `mesh.material` a singular Material.
-        attach={materialSubResources.length > 1 ? 'material-0' : undefined}
-      />
-      {materialSubResources.slice(1).map((subRes, i) => (
-        <SecondarySurfaceMaterial
-          key={`mat-${i + 1}`}
-          attach={`material-${i + 1}`}
-          subResource={subRes}
+      {materialSlot?.path ? (
+        <ExternalMaterialSlot path={materialSlot.path} shadowSide={shadowFlags.shadowSide} />
+      ) : (
+        <StandardMaterialSlot
+          scalars={materialScalars}
+          albedoMap={albedoMap}
+          normalMap={normalMap}
+          roughnessMap={roughnessMap}
+          metalnessMap={metalnessMap}
+          emissiveMap={emissiveMap}
+          aoMap={materialScalars?.aoEnabled ? aoMap : undefined}
+          displacementMap={displacementMap}
+          anisotropyMap={anisotropyMap}
           shadowSide={shadowFlags.shadowSide}
+          meshType={meshResource?.type}
         />
-      ))}
+      )}
     </MeshShell>
   );
 }

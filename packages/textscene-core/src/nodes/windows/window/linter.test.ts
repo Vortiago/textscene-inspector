@@ -7,8 +7,8 @@
  * fail flakily on a sibling's half-written file mid-wave.
  */
 
-import { describe, it } from 'vitest';
-import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import { describe, expect, it } from 'vitest';
+import { lint, node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -74,5 +74,35 @@ describe('Window sizes with a converted component no int32 holds', () => {
       scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' })),
       { ruleName: 'window-max-size-below-min-size', severity: 'warning', contains: ['Vector2i(-1, 600)'] }
     );
+  });
+});
+
+/**
+ * `Viewport::get_configuration_warnings()`'s "size must be at least 2 pixels"
+ * row (viewport.cpp:3711) is NOT ported, and this pins that.
+ *
+ * It tests `Viewport::size` (viewport.h:256), whose only assignment is
+ * `size = p_size.maxi(2)` in `_set_size` (viewport.cpp:1120, 1133). A Window
+ * reaches that same floor — `set_size` (window.cpp:401) stores its own shadowing
+ * `Window::size` (window.h:126) and then routes through `_update_viewport_size`
+ * to `_set_size` (window.cpp:1352) — so no component of the field the warning
+ * reads is ever <= 1 and Godot never raises it. Measured on 4.6.3:
+ * `Window.size = (0, 0)` leaves the viewport at (2, 2).
+ *
+ * `size` itself keeps its error-tier validator, from Window's own floor at
+ * `size = size.max(size_limit)` (window.cpp:1190).
+ */
+describe('Window size below the viewport floor', () => {
+  it('reports the negative component once, as the validator error, with no warning beside it', () => {
+    const diagnostics = lint(scene(node('Window', { size: 'Vector2i(-3, 400)' })));
+    expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([['strict-parser', 'error']]);
+    expect(diagnostics[0]?.message).toContain('size');
+  });
+
+  it('says nothing about a size Godot silently floors', () => {
+    expectClean(scene(node('Window', { size: 'Vector2i(1, 1)' })));
+    // Popup resolves Window's validators through the base-walk, so this covers
+    // the whole family the retired rule reached.
+    expectClean(scene(node('Popup', { size: 'Vector2i(1, 600)' })));
   });
 });

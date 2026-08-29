@@ -123,7 +123,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     // in `_set`; reporting it again here would double up on one defect.
     if (!(index >= 0)) continue;
 
-    const modeRaw = settings.get(index)?.[`${match[2]!}/transform_mode`];
+    const modeRaw = settings.get(index)?.get(`${match[2]!}/transform_mode`);
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);

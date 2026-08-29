@@ -203,10 +203,22 @@ describe('Tree strict validators', () => {
       const error = check('drop_mode_flags', '4');
       expect(error?.severity).toBe('warning');
       expect(error?.message).toContain('drop_mode_flags');
+      // The bit list, not a numeric span: this is `hintedBitField`, so the
+      // diagnostic names the two bits the hint offers. A `{ min: 0, max: 3 }`
+      // range coincides with them only because they are the two LOWEST bits,
+      // and reports a magnitude the property does not have.
+      expect(error?.message).toContain('DROP_MODE_ON_ITEM (1) | DROP_MODE_INBETWEEN (2)');
+      expect(error?.message).not.toContain('0-3');
     });
 
     it('warns on a negative mask', () => {
       expect(check('drop_mode_flags', '-1')?.severity).toBe('warning');
+    });
+
+    // Read at the BitField width `hintedBitField` declares: 2^32 is a value the
+    // slot holds, so it is the hint's warning and not an unstorable-int error.
+    it('warns on a bit past int32 rather than refusing it', () => {
+      expect(check('drop_mode_flags', '4294967296')?.severity).toBe('warning');
     });
 
     it('rejects a non-numeric mask as a format error', () => {

@@ -59,6 +59,18 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
       expect(found[0]!.severity).toBe('warning');
     });
 
+    it.each(['inf', '-inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {
+      // A legal literal (variant_parser.cpp:149-157), not a malformed one:
+      // get_scale carries it (or the 0 its NaN determinant signs to) into an
+      // axis no comparison calls 1, and light_3d.cpp:183 pushes the warning.
+      const content = `[gd_scene format=3]
+
+[node name="Light" type="${nodeType}"]
+transform = Transform3D(${spelling}, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+`;
+      expect(ruleDiagnostics(new Linter().lint(content), SCALE_RULE)).toHaveLength(1);
+    });
+
     it('warns on a non-uniformly scaled transform', () => {
       const content = `[gd_scene format=3]
 

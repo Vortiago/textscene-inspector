@@ -13,6 +13,7 @@
 
 import * as vscode from 'vscode';
 import { Linter, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import { isGodotTextResourcePath } from '@textscene/core/godot';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
@@ -91,13 +92,14 @@ function rangeForDiagnostic(
 }
 
 /**
- * Both text formats the linter takes. The `tscn` language claims `.tres` as
- * well, so the languageId arm already covers one; the filename arm is the
- * fallback for a document whose association a user has overridden.
+ * The `tscn` language claims `.tres` as well, so the languageId arm already
+ * covers both; the filename arm is the fallback for a document whose
+ * association a user has overridden, and it asks `godot/resourceFormats` so the
+ * editor and the CLI walk answer the same question.
  */
 function isTscnDocument(document: vscode.TextDocument): boolean {
   if (document.languageId === 'tscn') return true;
-  return document.fileName.endsWith('.tscn') || document.fileName.endsWith('.tres');
+  return isGodotTextResourcePath(document.fileName);
 }
 
 export class TscnDiagnostics implements vscode.Disposable {

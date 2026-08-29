@@ -60,7 +60,7 @@ describe('AudioStreamPlayer semantic rules', () => {
 
   it('stays silent when an AnimationPlayer audio track targets this node', () => {
     // The coin.tscn shape, ported to the non-positional player:
-    // animation_mixer.cpp:889-897 builds its own polyphonic playback for the
+    // animation_mixer.cpp:891-898 builds its own polyphonic playback for the
     // track's target and never reads the node's `stream`.
     expectClean(
       scene(

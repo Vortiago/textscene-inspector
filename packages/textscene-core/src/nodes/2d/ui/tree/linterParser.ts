@@ -9,7 +9,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { hintedBitField, v } from '../../../../linter/validators/index.js';
 
 /**
  * `drop_mode_flags` is a `PROPERTY_HINT_FLAGS` field whose setter does NOT mask.
@@ -18,24 +18,17 @@ import { v } from '../../../../linter/validators/index.js';
  * there is no `p_flags & MASK`, and `get_drop_mode_flags` hands the wide value
  * straight back. So `maskedBitField` would be the wrong tool twice over: it
  * grounds itself `enforced` and reports an ERROR, and nothing here is enforced.
- * This is `layerBitmask`'s case instead, where only the inspector widget is
- * narrow, which ADR-0032 puts at the warning tier.
+ * `hintedBitField` is that combinator's warning arm standing alone, which is
+ * where ADR-0032 puts a bit the engine keeps and the inspector cannot offer.
  *
- * A range expresses that membership exactly, and only because the two offered
- * bits happen to be the two lowest: DROP_MODE_ON_ITEM=1 | DROP_MODE_INBETWEEN=2
- * (tree.h:463-467) makes the subsets of the hinted mask precisely {0,1,2,3}. Do
- * not widen the ceiling; it is a bit list, not a magnitude.
+ * The hint at tree.cpp:6816 lists two entries, "On Item,In Between", i.e.
+ * DROP_MODE_ON_ITEM=1 and DROP_MODE_INBETWEEN=2 (tree.h:464-466); DROP_MODE_DISABLED
+ * is 0, the empty set, and not a bit of its own.
  */
-const dropModeFlagsValidator = v.int('drop_mode_flags', {
-  min: 0,
-  max: 3,
-  // tree.cpp:6816: PROPERTY_HINT_FLAGS "On Item,In Between", two entries.
+const dropModeFlagsValidator = hintedBitField('drop_mode_flags', {
   hinted: 'tree.cpp:6816',
-  message:
-    "Property 'drop_mode_flags' accepts only DROP_MODE_ON_ITEM (1) and DROP_MODE_INBETWEEN (2), so 0-3; " +
-    'the engine stores a wider value unaltered but the inspector cannot express it',
+  labels: { 1: 'DROP_MODE_ON_ITEM', 2: 'DROP_MODE_INBETWEEN' },
 });
-dropModeFlagsValidator.accepts = 'bit mask of DROP_MODE_ON_ITEM (1) | DROP_MODE_INBETWEEN (2)';
 
 validatorRegistry.registerAll('Tree', {
   // tree.cpp:6807: a bare `PropertyInfo(Variant::INT, "columns")`, no hint, so

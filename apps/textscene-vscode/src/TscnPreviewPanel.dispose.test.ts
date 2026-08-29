@@ -21,7 +21,7 @@ async function readyPanel() {
   await new Promise<void>((r) => setTimeout(r, 10));
   mock.triggerMessage({ type: 'webviewReady' });
   mock.webview.postMessage.mockClear();
-  return { webview: mock.webview, hostPanel: mock.panel, panel };
+  return { ...mock, hostPanel: mock.panel, panel };
 }
 
 describe('a disposed preview panel', () => {
@@ -34,13 +34,28 @@ describe('a disposed preview panel', () => {
     expect(webview.postMessage).not.toHaveBeenCalled();
   });
 
-  it('is idempotent, so closing an already-closed panel does not run teardown twice', async () => {
-    // `onDidDispose` fires `dispose()`, and callers hold the panel and call it
-    // themselves, so the second run is reachable — and it would fire the emitter
-    // after the emitter was disposed.
-    const { hostPanel, panel } = await readyPanel();
+  it('disposes every subscription it registered with the host panel', async () => {
+    // Both registrations pass `this._disposables`; drop either argument and the
+    // array stays empty, so `dispose()`'s teardown loop silently does nothing
+    // and the listener outlives the closed panel.
+    const { messageSubscription, didDisposeSubscription, panel } = await readyPanel();
+
+    expect(messageSubscription.dispose).not.toHaveBeenCalled();
+    expect(didDisposeSubscription.dispose).not.toHaveBeenCalled();
 
     panel.dispose();
+
+    expect(messageSubscription.dispose).toHaveBeenCalledTimes(1);
+    expect(didDisposeSubscription.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('is idempotent, so the close event and a holder both disposing runs teardown once', async () => {
+    // The real close path: VS Code fires `onDidDispose`, which calls `dispose()`.
+    // A caller still holding the panel calls it too, and that second run would
+    // fire `_onDidDispose` after the emitter was disposed.
+    const { hostPanel, panel, fireDidDispose } = await readyPanel();
+
+    fireDidDispose();
     panel.dispose();
 
     expect(hostPanel.dispose).toHaveBeenCalledTimes(1);

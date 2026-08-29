@@ -104,4 +104,34 @@ describe('#221 drag-and-drop a .tscn file', () => {
     // The previously-loaded scene must still be showing (hold last valid).
     expect(screen.queryByText('StubRoot')).toBeTruthy();
   });
+
+  it('leaves a drag carrying no files to the browser', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+
+    const target = screen.getByTestId('app-root');
+    // Dragging a selection inside the Source textarea to move it: calling
+    // `preventDefault()` here cancels the browser's own text insertion, and
+    // routing it into the ingest raises a bogus "no .tscn" error.
+    const textDrag = { dataTransfer: { files: [], types: ['text/plain'] } };
+
+    // `fireEvent` returns false once a handler has prevented the default.
+    expect(fireEvent.dragEnter(target, textDrag)).toBe(true);
+    expect(fireEvent.dragOver(target, textDrag)).toBe(true);
+    expect(fireEvent.drop(target, textDrag)).toBe(true);
+
+    expect(screen.queryByTestId('drop-zone-hint')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
+
+  it('treats a file drag that carries no files as a no-op, not an error', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+
+    dropFiles([]);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('StubRoot')).toBeTruthy();
+  });
 });

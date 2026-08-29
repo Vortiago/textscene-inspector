@@ -65,7 +65,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
@@ -239,17 +239,17 @@ const flatFamily = indexedFamilyValidator({
 /**
  * `settings/<i>/joints/<j>/<leaf>`, the nested indexed family.
  *
- * Both index halves are `[^/]+` rather than digits on purpose: `_set` reads the
- * joint index with the same bare `to_int` (:66), so a non-numeric one resolves
- * to a real joint and the write lands. Demanding digits here would push
- * `settings/0/joints/x/twist_amount` down to `flatFamily`, which would report an
- * unknown leaf for a key Godot accepts.
+ * Both index halves go through `indexedKeyRegex` under `to_int`: `_set` reads
+ * the joint index with the same bare `to_int` the setting index uses (:66), so a
+ * non-numeric one resolves to a real joint and the write lands. Demanding digits
+ * would push `settings/0/joints/x/twist_amount` down to `flatFamily`, which
+ * would report an unknown leaf for a key Godot accepts.
  *
  * The leaf is ONE segment and a trailing tail is dropped, because `_set` reads
  * it with a fixed `get_slicec('/', 4)` (:67) and never looks past it — so
  * `settings/0/joints/0/twist_amount/extra` reaches the setter as well.
  */
-const JOINT_KEY_RE = /^settings\/([^/]+)\/joints\/([^/]+)\/([^/]+)(?:\/.*)?$/;
+const JOINT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/([^/]+)(?:/.*)?$', 'to_int');
 
 /**
  * The negative-index error for an index `to_int` resolves below zero.

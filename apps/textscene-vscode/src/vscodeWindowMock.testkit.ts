@@ -43,7 +43,11 @@ export const mockWindow: any = {
   activeTextEditor: undefined,
 
   /**
-   * Create output channel
+   * Create output channel.
+   *
+   * `logger.ts` passes `{ log: true }`, whose real return is a
+   * `LogOutputChannel` — the per-level methods below, not just `appendLine`.
+   * Without them every relay onto the channel is unreachable under test.
    */
   createOutputChannel: vi.fn().mockReturnValue({
     append: vi.fn(),
@@ -51,6 +55,11 @@ export const mockWindow: any = {
     clear: vi.fn(),
     show: vi.fn(),
     hide: vi.fn(),
-    dispose: vi.fn()
+    dispose: vi.fn(),
+    trace: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
   })
 };

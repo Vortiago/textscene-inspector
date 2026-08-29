@@ -3,8 +3,14 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { visualLayersOf } from '../../../r3f/visualLayers';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type {
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnNode,
+} from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
@@ -264,6 +270,84 @@ describe('<MeshInstance3D>', () => {
         .material as THREE.MeshStandardMaterial;
       expect(material.color.r).toBe(1);
       expect(material.color.g).toBe(0);
+    });
+  });
+
+  describe('an ExtResource material on a primitive mesh', () => {
+    const MAT_PATH = 'res://checker_floor.mat.tres';
+    const EXTERNAL: TscnExternalResource[] = [
+      { id: '1_mat', path: MAT_PATH, type: 'Material' },
+      { id: '2_tex', path: 'res://body.png', type: 'Texture2D' },
+    ];
+
+    async function renderWithLoader(node: TscnNode, internalResources: TscnInternalResource[]) {
+      const fake = createFakeResourceLoader();
+      const loaded = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+      fake.materials.seed(MAT_PATH, loaded);
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider
+            internalResources={internalResources}
+            externalResources={EXTERNAL}
+          >
+            <MeshInstance3D node={node} />
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      return { material: mesh.material as THREE.MeshStandardMaterial, loaded };
+    }
+
+    it('draws a surface_material_override naming a `.tres`, not the default grey', async () => {
+      // Every IK demo floor: `mesh = SubResource(PlaneMesh)` with
+      // `surface_material_override/0 = ExtResource("…mat.tres")`. Resolved
+      // through SubResource lookup alone the reference named nothing, and the
+      // plane drew Godot's default 3D material instead of its checker texture.
+      const surfaceMap = new Map<number, string>([[0, 'ExtResource("1_mat")']]);
+      const { material, loaded } = await renderWithLoader(
+        makeNode({ mesh: 'SubResource("Plane_1")', surfaceMaterialOverrides: surfaceMap }),
+        [meshSubResource('PlaneMesh', 'Plane_1', { size: 'Vector2(40, 40)' })]
+      );
+      expect(material).toBe(loaded);
+    });
+
+    it('draws a material_override naming a `.tres` ahead of the surface override', async () => {
+      // `_geometry_instance_add_surface` takes `material_override` ahead of the
+      // material handed to it (render_forward_clustered.cpp:4206), whichever
+      // channel each of the two arrives through.
+      const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf_0")']]);
+      const { material, loaded } = await renderWithLoader(
+        makeNode({
+          mesh: 'SubResource("Box_1")',
+          materialOverride: 'ExtResource("1_mat")',
+          surfaceMaterialOverrides: surfaceMap,
+        }),
+        [
+          meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+          meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
+        ]
+      );
+      expect(material).toBe(loaded);
+    });
+
+    it('falls through an override that names no material to the surface override', async () => {
+      // A `Ref<Material>` that does not load is null in Godot, so the layer
+      // below is what the surface keeps. Short-circuiting on the unresolvable
+      // reference instead blanked the surface's own material to default grey.
+      const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf_0")']]);
+      const { material } = await renderWithLoader(
+        makeNode({
+          mesh: 'SubResource("Box_1")',
+          materialOverride: 'ExtResource("2_tex")',
+          surfaceMaterialOverrides: surfaceMap,
+        }),
+        [
+          meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+          meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
+        ]
+      );
+      expect(material.color.r).toBe(0);
+      expect(material.color.g).toBe(1);
     });
   });
 

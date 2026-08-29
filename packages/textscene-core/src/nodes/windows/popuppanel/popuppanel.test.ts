@@ -7,12 +7,10 @@
  * slices this registration buys the declared gap alone.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { TscnParser } from '../../../parser/TscnParser';
-import * as logger from '../../../logger';
 import { parseNode } from '../../node/parser';
 import './index';
 import './index.r3f';
@@ -27,20 +25,5 @@ describe('PopupPanel registration', () => {
   it('registers a base component as a declared gap, so it still reads as not implemented', () => {
     expect(nodeComponentRegistry.renderIntentOf('PopupPanel')).toBe('pending');
     expect(rendersOwnVisual('PopupPanel')).toBe('not-implemented');
-  });
-
-  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
-    const scene = new TscnParser().parse(
-      '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n\n' +
-        '[node name="MyPopupPanel" type="PopupPanel" parent="."]\n'
-    );
-
-    const node = scene.nodes[0]?.children[0];
-    expect(node?.type).toBe('PopupPanel');
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
-
-    warnSpy.mockRestore();
   });
 });

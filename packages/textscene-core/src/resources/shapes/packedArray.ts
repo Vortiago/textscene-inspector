@@ -1,14 +1,18 @@
 import {
   ARRAY_LITERAL_RE,
+  packedArrayBody,
   packedArrayCallAnywhere,
+  packedArrayForms,
   packedArrayLiteral,
+  packedElementType,
   parseGodotFloat,
   parseGodotInt,
+  splitTopLevel,
 } from '../../godot/index.js';
 
-const PACKED_VECTOR3_ARRAY_RE = packedArrayLiteral('PackedVector3Array');
-const PACKED_VECTOR2_ARRAY_RE = packedArrayLiteral('PackedVector2Array');
-const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
+const PACKED_VECTOR3_ARRAY_FORMS = packedArrayForms('PackedVector3Array');
+const PACKED_VECTOR2_ARRAY_FORMS = packedArrayForms('PackedVector2Array');
+const PACKED_COLOR_ARRAY_FORMS = packedArrayForms('PackedColorArray');
 
 /**
  * Elements of a packed FLOAT body, as Godot's tokenizer reads them.
@@ -32,40 +36,56 @@ export function floatElements(inner: string, wrapper: string, value: string): nu
   });
 }
 
-/** Parse Godot `PackedVector3Array(x, y, z, x, y, z, ...)` into a flat Float32Array. */
+/**
+ * A packed TUPLE slot in any of the three spellings it takes, flattened to the
+ * components the packed constructor would have listed.
+ *
+ * The packed body is one FLAT argument list; the bare and typed bodies hold one
+ * `Vector2(…)` / `Vector3(…)` / `Color(…)` element per top-level comma, so they
+ * are split and each element's own body is read at the slot's arity. An element
+ * of another arity is a conversion Godot does not make, so it throws with the
+ * rest of the malformed text rather than contributing a short vertex.
+ */
+function packedTupleFloats(
+  value: string,
+  wrapper: string,
+  forms: readonly RegExp[],
+  groupSize: number
+): Float32Array {
+  const matched = packedArrayBody(forms, value);
+  if (!matched) throw new Error(`Invalid ${wrapper} format: ${value}`);
+  if (matched.body === '') return new Float32Array(0);
+  if (matched.flat) return new Float32Array(floatElements(matched.body, wrapper, value));
+
+  const elementRe = packedArrayLiteral(packedElementType(wrapper));
+  const out: number[] = [];
+  for (const part of splitTopLevel(matched.body)) {
+    // A trailing comma leaves one empty part, and Godot's array reader closes on
+    // the bracket before demanding another value (variant_parser.cpp:1658-1662),
+    // so it is no element. The validator skips it the same way.
+    if (part === '') continue;
+    const element = elementRe.exec(part);
+    if (!element) throw new Error(`Invalid ${wrapper} format: ${value}`);
+    const components = floatElements(element[1]!, wrapper, value);
+    if (components.length !== groupSize) throw new Error(`Invalid ${wrapper} format: ${value}`);
+    out.push(...components);
+  }
+  return new Float32Array(out);
+}
+
+/** Parse a Godot `PackedVector3Array` slot into a flat Float32Array. */
 export function parsePackedVector3Array(value: string): Float32Array {
-  const match = PACKED_VECTOR3_ARRAY_RE.exec(value);
-  if (!match) {
-    throw new Error(`Invalid PackedVector3Array format: ${value}`);
-  }
-  const inner = match[1]!.trim();
-  if (inner === '') return new Float32Array(0);
-  const nums = floatElements(inner, 'PackedVector3Array', value);
-  return new Float32Array(nums);
+  return packedTupleFloats(value, 'PackedVector3Array', PACKED_VECTOR3_ARRAY_FORMS, 3);
 }
 
-/** Parse Godot `PackedVector2Array(x, y, x, y, ...)` into a flat Float32Array. */
+/** Parse a Godot `PackedVector2Array` slot into a flat Float32Array. */
 export function parsePackedVector2Array(value: string): Float32Array {
-  const match = PACKED_VECTOR2_ARRAY_RE.exec(value);
-  if (!match) {
-    throw new Error(`Invalid PackedVector2Array format: ${value}`);
-  }
-  const inner = match[1]!.trim();
-  if (inner === '') return new Float32Array(0);
-  const nums = floatElements(inner, 'PackedVector2Array', value);
-  return new Float32Array(nums);
+  return packedTupleFloats(value, 'PackedVector2Array', PACKED_VECTOR2_ARRAY_FORMS, 2);
 }
 
-/** Parse Godot `PackedColorArray(r, g, b, a, r, g, b, a, ...)` into a flat Float32Array. */
+/** Parse a Godot `PackedColorArray` slot into a flat Float32Array. */
 export function parsePackedColorArray(value: string): Float32Array {
-  const match = PACKED_COLOR_ARRAY_RE.exec(value);
-  if (!match) {
-    throw new Error(`Invalid PackedColorArray format: ${value}`);
-  }
-  const inner = match[1]!.trim();
-  if (inner === '') return new Float32Array(0);
-  const nums = floatElements(inner, 'PackedColorArray', value);
-  return new Float32Array(nums);
+  return packedTupleFloats(value, 'PackedColorArray', PACKED_COLOR_ARRAY_FORMS, 4);
 }
 
 /** One `[...]` group nested inside an outer array, its body captured. */

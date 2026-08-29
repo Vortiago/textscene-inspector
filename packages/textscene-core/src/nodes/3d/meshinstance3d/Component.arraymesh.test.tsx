@@ -257,6 +257,48 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     expect(colours.some((c) => c !== 0xffffff)).toBe(true);
   });
 
+  it("re-reads an inline surface's material sub-resource without re-decoding the mesh", async () => {
+    // The material sub-resource lives BESIDE `_surfaces`, not in it, so editing
+    // its `albedo_color` leaves the decode key untouched — resolving it inside
+    // the decode memo froze the surface at whatever colour the first parse had.
+    // The geometry must survive that edit: re-decoding and re-uploading the
+    // whole inline mesh per keystroke is what the key exists to avoid.
+    const loader = makeLoader();
+    const tree = (albedo: string) => (
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            {
+              id: 'ArrayMesh_inline',
+              type: 'ArrayMesh',
+              data: { _surfaces: inlineSurfacesWithMaterial('Mat_edit') },
+            },
+            { id: 'Mat_edit', type: 'StandardMaterial3D', data: { albedo_color: albedo } },
+          ]}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={inlineMeshNode('ArrayMesh_inline')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const renderer = await ReactThreeTestRenderer.create(tree('Color(1, 0, 0, 1)'));
+    await new Promise<void>((r) => setTimeout(r, 10));
+    const before = firstMeshGeometry(renderer);
+    const colourOf = () =>
+      (
+        renderer.scene.findAllByType('MeshStandardMaterial')[0]!
+          .instance as THREE.Object3D & THREE.MeshStandardMaterial
+      ).color;
+    expect(colourOf().r).toBeCloseTo(1, 5);
+
+    await renderer.update(tree('Color(0, 0, 1, 1)'));
+
+    expect(colourOf().b).toBeCloseTo(1, 5);
+    expect(colourOf().r).toBeCloseTo(0, 5);
+    expect(firstMeshGeometry(renderer)).toBe(before);
+  });
+
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
     // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
     // draw nothing and say nothing — how the missing trailer went unnoticed.

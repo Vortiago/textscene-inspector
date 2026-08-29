@@ -48,7 +48,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
@@ -86,8 +86,10 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
     // A negative index is refused before the count is read at all.
     if (settingIndex < 0) continue;
     // A malformed count is its own validator's error; ignoring it here leaves
-    // the setting at its zero default rather than inventing a ceiling.
-    const count = ruleInt(properties[key] ?? '');
+    // the setting at its zero default rather than inventing a ceiling. A
+    // NEGATIVE one is refused outright (`ERR_FAIL_COND(p_count < 0)`, :487), so
+    // `ruleCount` reads the size the vector keeps rather than the authored text.
+    const count = ruleCount(properties[key]);
     if (count === null) continue;
     counts.set(settingIndex, count);
   }
@@ -103,7 +105,11 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
-  const settingCount = ruleInt(settingCountRaw, 0);
+  // `ruleCount`, not `ruleInt`: `set_setting_count` refuses a negative outright
+  // (`ERR_FAIL_COND(p_count < 0)`, :650), so `settings` keeps the empty length
+  // it loaded with and a rule counting against -1 names a size Godot never held
+  // — beside the `enforced:` validator that already errored on the same value.
+  const settingCount = ruleCount(settingCountRaw);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
   // against; each is already its own validator's diagnostic.
   if (settingCount === null) return diagnostics;

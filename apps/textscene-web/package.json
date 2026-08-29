@@ -15,6 +15,8 @@
     "test": "vitest run",
     "pretype-check": "pnpm --filter @textscene/core build",
     "type-check": "tsc --noEmit",
+    "pretype-check:tests": "pnpm --filter @textscene/core build",
+    "type-check:tests": "tsc --noEmit -p tsconfig.tests.json",
     "clean": "rimraf dist node_modules/.vite public/fixtures public/parity"
   },
   "keywords": [
@@ -41,6 +43,7 @@
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

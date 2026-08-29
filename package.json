@@ -22,7 +22,8 @@
     "lint:scenes:only": "node apps/textscene-linter/bin/tscn-lint.js scenes/examples scenes/demos scenes/isometric scenes/materials",
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
-    "validate": "pnpm build && pnpm type-check && pnpm --filter @textscene/core type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm check:bundle-size && pnpm check:package",
+    "type-check:tests": "pnpm -r type-check:tests",
+    "validate": "pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:gallery --check && pnpm check:bundle-size && pnpm check:package",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
@@ -49,6 +50,7 @@
     "nodes:base-types": "node scripts/compare-docs/build-node-base-types.mjs",
     "nodes:links": "node scripts/compare-docs/build-node-catalog.mjs --links-only",
     "docs:lint-sections": "node scripts/compare-docs/build-lint-sections.mjs",
+    "docs:gallery": "node scripts/compare-docs/build-gallery.mjs",
     "recapture": "node scripts/compare-docs/recapture.mjs"
   },
   "keywords": [
@@ -82,7 +84,7 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "catalog:",
     "globals": "^17.8.0",
-    "happy-dom": "^20.11.1",
+    "happy-dom": "catalog:",
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",
     "pixelmatch": "^7.2.0",

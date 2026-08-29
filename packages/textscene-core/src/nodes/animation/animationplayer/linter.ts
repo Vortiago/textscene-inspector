@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { extractLibraries, isActive } from './parser.js';
-import { literalText } from '../../../godot/index.js';
+import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
 import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
 
 /**
@@ -69,7 +69,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // carries one enumerates fewer clips than it holds.
   const hasUnresolvableLibrary =
     Object.entries(rawProps).some(
-      ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
+      ([key, value]) =>
+        (key === 'libraries' || key.startsWith('libraries/')) &&
+        EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
     ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
   // A resolvable-but-empty library is still enumerable (a missing clip IS caught); only an
   // unresolvable ExtResource library, or no clip source at all, suppresses the check.

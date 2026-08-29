@@ -13,14 +13,11 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../linter/testing/fixtureCheck';
+import { checkerFor, expectError, expectWarning } from '../../../linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('LightmapGI', property);
-  expect(validator, `no validator registered for LightmapGI.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `LightmapGI.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('LightmapGI');
 
 /**
  * Set exactly ONE, from the source rather than from expectation: list the keys
@@ -132,13 +129,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a value past the enum — set_bake_quality is a bare assignment, hint-only', () => {
-      const error = check('quality', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('quality', '4'), 'must be 0-3');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('quality', 'high')?.severity).toBe('error');
+      expectError(check('quality', 'high'), 'must be a number');
     });
   });
 
@@ -163,15 +158,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects below 1 — set_supersampling_factor is ERR_FAIL_COND(p_factor < 1)', () => {
-      const error = check('supersampling_factor', '0.5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('supersampling_factor', '0.5'), 'must be between 1 and 8');
     });
 
     it('rejects past the closed hint ceiling as a warning, not an error', () => {
-      const error = check('supersampling_factor', '20');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('supersampling_factor', '20'), 'must be between 1 and 8');
     });
   });
 
@@ -186,21 +177,15 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a negative value — set_bounces is ERR_FAIL_COND(p_bounces < 0 || p_bounces > 16)', () => {
-      const error = check('bounces', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('bounces', '-1'), 'must be non-negative');
     });
 
     it('rejects past the true ceiling of 16, which the hint\'s or_greater does not actually open', () => {
-      const error = check('bounces', '17');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
-      expect(error?.message).toContain('at most 16');
-      expect(error?.message).toContain("Godot's setter refuses the write");
+      expectError(check('bounces', '17'), 'must be at most 16', "Godot's setter refuses the write");
     });
 
     it('still refuses a value far past 16 — or_greater opens the HINT, not the setter', () => {
-      expect(check('bounces', '1000')?.severity).toBe('error');
+      expectError(check('bounces', '1000'), 'must be at most 16');
     });
 
     it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
@@ -211,7 +196,7 @@ describe('LightmapGI strict validators', () => {
     it('warns that a fractional value is truncated, never refusing it', () => {
       // `Variant::_to_int` (variant.h:369-370) converts rather than refusing,
       // so the file loads — with 5 where it says 5.9.
-      expect(check('bounces', '5.9')?.severity).toBe('warning');
+      expectWarning(check('bounces', '5.9'), 'is an integer slot, so Godot drops the fractional part of "5.9" and stores 5.');
     });
   });
 
@@ -222,15 +207,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a negative value — set_bounce_indirect_energy is ERR_FAIL_COND(p_indirect_energy < 0.0)', () => {
-      const error = check('bounce_indirect_energy', '-0.1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('bounce_indirect_energy', '-0.1'), 'must be between 0 and 2');
     });
 
     it('rejects past the closed hint ceiling as a warning', () => {
-      const error = check('bounce_indirect_energy', '2.5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('bounce_indirect_energy', '2.5'), 'must be between 0 and 2');
     });
   });
 
@@ -253,19 +234,15 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('warns on 3 — ShadowmaskMode::SHADOWMASK_MODE_ONLY exists on the enum type (lightmap_gi.h:50) but this property\'s own hint (cpp:1925) offers only 3 labels', () => {
-      const error = check('shadowmask_mode', '3');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('shadowmask_mode', '3'), 'must be 0-2');
     });
 
     it('rejects a negative value as a warning — set_shadowmask_mode is a bare assignment', () => {
-      const error = check('shadowmask_mode', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('shadowmask_mode', '-1'), 'must be 0-2');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('shadowmask_mode', 'none')?.severity).toBe('error');
+      expectError(check('shadowmask_mode', 'none'), 'must be a number');
     });
   });
 
@@ -312,13 +289,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects below the hinted floor as a warning — set_denoiser_strength is a bare assignment', () => {
-      const error = check('denoiser_strength', '0.0001');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('denoiser_strength', '0.0001'), 'must be >= 0.001');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('denoiser_strength', 'low')?.severity).toBe('error');
+      expectError(check('denoiser_strength', 'low'), 'must be a number');
     });
   });
 
@@ -329,19 +304,15 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects below 1 as a warning — set_denoiser_range is a bare assignment', () => {
-      const error = check('denoiser_range', '0');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('denoiser_range', '0'), 'must be between 1 and 20');
     });
 
     it('rejects past 20 as a warning', () => {
-      const error = check('denoiser_range', '21');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('denoiser_range', '21'), 'must be between 1 and 20');
     });
 
     it('warns that a fractional value is truncated, never refusing it', () => {
-      expect(check('denoiser_range', '15.9')?.severity).toBe('warning');
+      expectWarning(check('denoiser_range', '15.9'), 'is an integer slot, so Godot drops the fractional part of "15.9" and stores 15.');
     });
   });
 
@@ -355,13 +326,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects below the floor — set_bias is ERR_FAIL_COND(p_bias < 0.00001)', () => {
-      const error = check('bias', '0.000001');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('bias', '0.000001'), 'must be >= 0.00001');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('bias', 'low')?.severity).toBe('error');
+      expectError(check('bias', 'low'), 'must be a number');
     });
   });
 
@@ -379,21 +348,15 @@ describe('LightmapGI strict validators', () => {
     // (0.01 - CMP_EPSILON) while the :1932 hint floors at a bare 0.01, so a
     // value in between loads and only warns.
     it('warns on a value fractionally under 0.01 but within CMP_EPSILON, which the setter still takes', () => {
-      const error = check('texel_scale', '0.0099999');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('texel_scale', '0.0099999'), 'must be between 0.01 and 100');
     });
 
     it('errors below (0.01 - CMP_EPSILON) — set_texel_scale is ERR_FAIL_COND(p_multiplier < (0.01 - CMP_EPSILON))', () => {
-      const error = check('texel_scale', '0.005');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('texel_scale', '0.005'), 'must be at least 0.00999');
     });
 
     it('rejects past the closed hint ceiling as a warning', () => {
-      const error = check('texel_scale', '150');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('texel_scale', '150'), 'must be between 0.01 and 100');
     });
   });
 
@@ -404,19 +367,15 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects below 2048 — set_max_texture_size is ERR_FAIL_COND_MSG(p_size < 2048, …)', () => {
-      const error = check('max_texture_size', '2047');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('max_texture_size', '2047'), 'must be between 2048 and 16384');
     });
 
     it('rejects past 16384 — set_max_texture_size is ERR_FAIL_COND_MSG(p_size > 16384, …)', () => {
-      const error = check('max_texture_size', '16385');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('max_texture_size', '16385'), 'must be between 2048 and 16384');
     });
 
     it('warns that a fractional value in range is truncated, never refusing it', () => {
-      expect(check('max_texture_size', '8192.7')?.severity).toBe('warning');
+      expectWarning(check('max_texture_size', '8192.7'), 'is an integer slot, so Godot drops the fractional part of "8192.7" and stores 8192.');
     });
   });
 
@@ -429,13 +388,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a value past the enum as a warning — set_environment_mode is a bare assignment', () => {
-      const error = check('environment_mode', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('environment_mode', '4'), 'must be 0-3');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('environment_mode', 'scene')?.severity).toBe('error');
+      expectError(check('environment_mode', 'scene'), 'must be a number');
     });
   });
 
@@ -478,15 +435,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a negative value as a warning — set_environment_custom_energy is a bare assignment', () => {
-      const error = check('environment_custom_energy', '-0.1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('environment_custom_energy', '-0.1'), 'must be between 0 and 64');
     });
 
     it('rejects past 64 as a warning', () => {
-      const error = check('environment_custom_energy', '64.1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('environment_custom_energy', '64.1'), 'must be between 0 and 64');
     });
   });
 
@@ -518,13 +471,11 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects a value past the enum as a warning — set_generate_probes is a bare assignment', () => {
-      const error = check('generate_probes_subdiv', '5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('generate_probes_subdiv', '5'), 'must be 0-4');
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      expect(check('generate_probes_subdiv', 'high')?.severity).toBe('error');
+      expectError(check('generate_probes_subdiv', 'high'), 'must be a number');
     });
   });
 

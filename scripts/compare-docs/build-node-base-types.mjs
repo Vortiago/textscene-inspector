@@ -4,7 +4,7 @@
  * Resource hierarchy.
  *
  * Usage:
- *   pnpm nodes:base-types      # -> packages/textscene-core/src/linter/{node,resource}BaseTypes.generated.ts
+ *   pnpm nodes:base-types      # -> packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts
  *
  * The catalog stores each node's full `chain` up to `Object`, so every hop in
  * it is a fact from Godot's own ClassDB rather than a judgement call. Emitting
@@ -40,6 +40,26 @@ export const OUT = godotModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
 
 /**
+ * Every table this emits must be walkable to a terminal.
+ *
+ * The consumers walk it: `descendsFrom`, `baseChain`, `ValidatorRegistry`, the
+ * gallery's coverage. Each of those carries its own bound or `visited` set, so
+ * a cycle here does not hang them — it silently truncates a class's ancestry
+ * instead, which is the same "zero inherited validation" this file exists to
+ * prevent. Refusing to WRITE one is the layer that answers it for all of them.
+ */
+function assertAcyclic(table, what) {
+  for (const start of Object.keys(table)) {
+    const seen = new Set([start]);
+    for (let at = table[start]; at !== undefined; at = table[at]) {
+      if (seen.has(at)) throw new Error(`${what} has a cycle: walking up from ${start} reaches ${at} twice`);
+      seen.add(at);
+    }
+  }
+  return table;
+}
+
+/**
  * Node-type → immediate-base map covering every class the catalog's ancestry
  * mentions. `Node` is the terminal (it gets no entry) and `Object` is dropped:
  * it is not a node, and the walk must stop somewhere concrete.
@@ -50,6 +70,16 @@ export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
 export function deriveBaseTypes(nodes) {
   const derived = new Map();
   for (const node of nodes) {
+    // A catalogued class with no ancestry contributes no hop, so it lands in
+    // NODE_BASE_TYPES with no base and inherits nothing — the silence
+    // `--chain`'s ClassDB check cannot see, because the name IS in the catalog.
+    // Only `Node` itself has nowhere to go.
+    if (node.name !== 'Node' && !node.chain?.length) {
+      throw new Error(
+        `${node.name} has no chain in the catalog, so it would receive no base and ` +
+          `no inherited validator. Re-run \`pnpm nodes:catalog\` against a local Godot.`
+      );
+    }
     const chain = [node.name, ...(node.chain ?? [])];
     for (let i = 0; i < chain.length - 1; i++) {
       const child = chain[i];
@@ -64,7 +94,10 @@ export function deriveBaseTypes(nodes) {
       derived.set(child, parent);
     }
   }
-  return Object.fromEntries([...derived].sort(([a], [b]) => a.localeCompare(b)));
+  return assertAcyclic(
+    Object.fromEntries([...derived].sort(([a], [b]) => a.localeCompare(b))),
+    'the derived node base-type table'
+  );
 }
 
 /** One `Child: 'Parent',` line per entry, in the object literal's indentation. */
@@ -141,10 +174,10 @@ export function renderFromCatalog() {
  */
 export function renderFromResourceBases() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  return renderResourceModule(
-    JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')),
-    catalog.godotVersion ?? 'unknown'
-  );
+  // Arrives already flattened, so unlike the node side there is no chain whose
+  // shape rules a cycle out — it is asserted here instead.
+  const bases = assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+  return renderResourceModule(bases, catalog.godotVersion ?? 'unknown');
 }
 
 // Only write when run as a CLI, so the test can import the derivation.

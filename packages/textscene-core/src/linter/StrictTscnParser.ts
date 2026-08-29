@@ -70,11 +70,15 @@ export class StrictTscnParser {
   parse(content: string): StrictParseResult {
     const errors: ParseError[] = [];
 
-    // The node whose body the scan is inside, or null between/outside node
-    // sections. Every refusal raised while it is set is ABOUT that node, and
-    // nothing else in this seam knows which one — the validator is handed a key
-    // and a value.
-    let currentNode: { nodeName: string; nodeType: string } | null = null;
+    // The SECTION whose body the scan is inside, or null between/outside the
+    // sections that own properties. Every refusal raised while it is set is
+    // ABOUT that section, and nothing else in this seam knows which one — the
+    // validator is handed a key and a value.
+    //
+    // A sub-resource counts: `onProperty` below runs the full validator set for
+    // its body, so its own diagnostics need an owner too. The fields keep the
+    // `node*` names `ParseError` publishes.
+    let currentOwner: { nodeName: string; nodeType: string } | null = null;
 
     const observer: ParseObserver = {
       onError: (error) => {
@@ -84,21 +88,36 @@ export class StrictTscnParser {
           line: error.line,
           column: error.column,
           code: error.code,
-          // A malformed HEADING is the line that would have opened a node, so
-          // it belongs to no node — `currentNode` is still the previous one and
-          // must not be borrowed. A malformed property line inside a node body
-          // does belong to it.
-          ...(error.code === 'INVALID_PROPERTY_FORMAT' ? currentNode : null),
+          // A malformed HEADING is the line that would have opened a section,
+          // so it belongs to none — `currentOwner` is still the previous one
+          // and must not be borrowed. A malformed property line inside a
+          // section's body does belong to it.
+          ...(error.code === 'INVALID_PROPERTY_FORMAT' ? currentOwner : null),
         });
       },
 
       onSectionStart: (heading, section, line) => {
         if (section !== 'node') {
-          currentNode = null;
+          // A sub-resource is named by its `id=`, which is what tells one
+          // `[sub_resource type="CircleShape2D"]` from the four beside it — and
+          // resource validators run over its body, so `radius = -1.0` there
+          // reported `<unknown>` and left the author to find it by eye.
+          //
+          // Every other section clears the stamp: `ext_resource` and
+          // `gd_scene`/`gd_resource` carry no validated properties, and a
+          // `[resource]` body is the file's own single resource, which no id
+          // identifies.
+          currentOwner =
+            section === 'sub_resource'
+              ? {
+                  nodeName: heading.attributes.id ?? '<unknown>',
+                  nodeType: heading.attributes.type ?? '<unknown>',
+                }
+              : null;
           return;
         }
 
-        currentNode = {
+        currentOwner = {
           nodeName: heading.attributes.name ?? '<unknown>',
           nodeType: heading.attributes.type ?? '<unknown>',
         };
@@ -110,7 +129,7 @@ export class StrictTscnParser {
             line,
             column: 1,
             code: 'MISSING_NODE_NAME',
-            ...currentNode,
+            ...currentOwner,
           });
         }
         // A heading with none of `type=` / `index=` / `instance=` is LEGAL:
@@ -140,7 +159,7 @@ export class StrictTscnParser {
             line,
             column: 1,
             code: 'MISSING_NODE_IDENTIFIER',
-            ...currentNode,
+            ...currentOwner,
           });
         }
       },
@@ -201,7 +220,7 @@ export class StrictTscnParser {
         if (isNilLiteral(value) && !ownsNilMessage(error)) {
           errors.push({
             ...error,
-            ...currentNode,
+            ...currentOwner,
             severity: 'warning',
             message:
               `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
@@ -209,7 +228,7 @@ export class StrictTscnParser {
           });
           return;
         }
-        errors.push({ ...error, ...currentNode });
+        errors.push({ ...error, ...currentOwner });
       },
     };
 

@@ -16,8 +16,8 @@
 import '../resource/linterValidators.js';
 import { validatorRegistry, type PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
-import { layerBitmask, propertyError, v } from '../../linter/validators/index.js';
-import { dropTrailingComma, indexedKeyRegex, splitTopLevel } from '../../godot/index.js';
+import { arrayLiteralElements, layerBitmask, propertyError, v } from '../../linter/validators/index.js';
+import { dropTrailingComma, splitTopLevel } from '../../godot/index.js';
 
 /**
  * `RS::ShadowCastingSetting`, the same four constants `GeometryInstance3D`
@@ -36,12 +36,14 @@ const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
  * what is stored is not what was written, which is ADR-0032's error row.
  */
 function shapePairs(): PropertyValidator {
-  const literal = v.arrayLiteral('shapes');
+  // `_set` forwards to `_set_item_shapes(int, const Array &)` (mesh_library.cpp:78,
+  // :316), which takes an Array of any element type — so `Array[T]([…])` loads
+  // here as readily as the bare literal Godot writes.
+  const literal = v.arrayLiteral('shapes', { anyElementType: true });
   const validator: PropertyValidator = (key, value, line) => {
     const malformed = literal(key, value, line);
     if (malformed) return malformed;
-    const body = value.trim().slice(1, -1);
-    const elements = dropTrailingComma(splitTopLevel(body));
+    const elements = dropTrailingComma(splitTopLevel(arrayLiteralElements(value)));
     if (elements.length % 2 === 0) return null;
     return propertyError(
       key,
@@ -71,8 +73,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   mesh_cast_shadow: v.enumInt('mesh_cast_shadow', 0, 3, CAST_SHADOW, {
     enforced: 'mesh_library.cpp:66',
   }),
-  // :150, Variant::ARRAY, no hint and no element type. `_get_item_shapes`
-  // (:355-364) builds an untyped Array, so the writer emits no Array[T] wrapper.
+  // :150, Variant::ARRAY, no hint and no element type.
   shapes: shapePairs(),
   // :151, PROPERTY_HINT_RESOURCE_TYPE "NavigationMesh". :199-203 assigns.
   navigation_mesh: v.resourceReference('navigation_mesh'),
@@ -117,43 +118,12 @@ const itemValidator = indexedFamilyValidator({
   },
 });
 
-/**
- * A key carrying a segment BELOW the leaf, with the index and the leaf captured.
- *
- * `_set` reads fixed slices — `get_slicec('/', 1)` for the index and
- * `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — and `get_slicec`
- * returns that slice alone (ustring.cpp:941-964), so `item/0/name/extra` sets
- * item 0's name.
- */
-const TRAILING_SEGMENT_RE = indexedKeyRegex('^item/(#)/([^/]+)/', 'to_int');
-
-/**
- * The family, with the engine's fixed-slice read in front of it.
- *
- * `indexedFamilyValidator` resolves the leaf as EVERYTHING below the index,
- * which is right for every family that reaches it through
- * `PropertyListHelper` — that one splits at the last `/` and drops the write
- * (property_list_helper.cpp:47, :53) — and wrong here, where the write lands.
- *
- * Only a key whose slice 2 IS a leaf is trimmed. Below a leaf `_set` does not
- * recognise, the whole key travels, so the unknown-key diagnostic names what
- * the file carries rather than a prefix of it.
- */
-const itemKeyValidator: PropertyValidator = (key, value, line) => {
-  const match = TRAILING_SEGMENT_RE.exec(key);
-  const engineKey =
-    match && Object.hasOwn(ITEM_LEAVES, match[2]!) ? `item/${match[1]}/${match[2]}` : key;
-  const error = itemValidator(engineKey, value, line);
-  // `propertyError` puts the column at `key.length + 3`, the value's own
-  // position, so a trimmed key would point left of it.
-  return error && engineKey !== key ? { ...error, column: key.length + 3 } : error;
-};
-itemKeyValidator.accepts = itemValidator.accepts;
-itemKeyValidator.grounding = itemValidator.grounding;
-// The bounds live in the leaves, so the grounding sweep has to reach past both
-// this wrapper and the dispatcher behind it.
-itemKeyValidator.leaves = itemValidator.leaves;
-
 // The index follows a `/`, not glued to the prefix, so the plain wildcard is
 // what `findOwnValidator` matches — `item#/*` addresses `item0/name`.
-validatorRegistry.registerAll('MeshLibrary', { 'item/*': itemKeyValidator });
+//
+// The dispatcher already reads the leaf the way `_set` does: under
+// `indexParse: 'to_int'` it cuts the remainder from the RIGHT until a declared
+// leaf appears, which is `get_slicec('/', 2)` restated (mesh_library.cpp:40-41),
+// so `item/0/name/extra` resolves to `name` and `item/0/bogus/extra` stays
+// whole in the unknown-key message.
+validatorRegistry.registerAll('MeshLibrary', { 'item/*': itemValidator });

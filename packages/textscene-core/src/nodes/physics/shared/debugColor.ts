@@ -36,7 +36,7 @@ export function parseDebugColor(raw: string | undefined): Color {
  * The shared `Color` grammar, not a bespoke one. A hand-rolled
  * `[\d.]+`-per-channel regex allowing a three-argument spelling is wrong at both
  * ends: `VariantParser::parse_value` refuses a `Color` whose
- * argument count is not 4 (`variant_parser.cpp:913`), while a channel is a plain
+ * argument count is not 4 (`variant_parser.cpp:914`), while a channel is a plain
  * float, so the negative/overbright, scientific and non-finite forms `rtos_fix`
  * writes (`:2145`) all load and were being reported.
  *

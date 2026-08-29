@@ -333,6 +333,54 @@ describe('CharacterBody3D Linter', () => {
         ruleName: 'characterbody3d-floor-props-in-floating-mode',
       });
     });
+
+    it('warns when slide_on_ceiling is set in FLOATING mode', () => {
+      expectDiagnostic(
+        scene(
+          node('CharacterBody3D', { motion_mode: 1, slide_on_ceiling: false }),
+          collisionShape3d
+        ),
+        {
+          ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode',
+          severity: 'warning',
+          contains: ['FLOATING', 'GROUNDED'],
+        }
+      );
+    });
+
+    it('leaves slide_on_ceiling alone in GROUNDED mode, where its four reads live', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody3D', { motion_mode: 0, slide_on_ceiling: false }),
+          collisionShape3d
+        ),
+        { ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode' }
+      );
+    });
+
+    it('has no grounded-mode arm for wall_min_slide_angle: :300-303 reads it there', () => {
+      // The 2D twin's `_validate_property` hides it in GROUNDED
+      // (character_body_2d.cpp:676); character_body_3d.cpp has no such `else`.
+      expectNoErrors(
+        scene(
+          node('CharacterBody3D', { motion_mode: 0, wall_min_slide_angle: 0.5 }),
+          collisionShape3d
+        )
+      );
+      expectNoDiagnostic(
+        scene(node('CharacterBody3D', { wall_min_slide_angle: 0.5 }), collisionShape3d),
+        { ruleName: 'characterbody3d-wall-min-slide-angle-in-grounded-mode' }
+      );
+    });
+
+    it('reports a zero up_direction once — the validator, with no rule beside it', () => {
+      const diagnostics = lint(
+        scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 0)' }), collisionShape3d)
+      );
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('up_direction');
+    });
   });
 
   describe('Semantic Validation (Collision Layers)', () => {

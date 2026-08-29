@@ -17,6 +17,8 @@
  * which is why the gallery cannot compute it and reads the generated JSON instead.
  */
 
+import { tableLines } from './markdownTable.mjs';
+
 /**
  * The sheet's `Out of range` cell, from the severity each BOUNDED end reports.
  *
@@ -169,17 +171,20 @@ export function renderCoverage(type, coverage) {
     );
     if (own.length) {
       lines.push('');
-      lines.push('| Property | Accepts | Out of range |');
-      lines.push('| --- | --- | --- |');
-      for (const v of own) {
-        // A removed key is not a property with a narrow domain; it is one this
-        // class refuses outright, so it must not read as an accepted value.
-        const accepts = v.unavailable ? '**not available on this type**' : v.accepts;
-        // Blank for a validator with no bound to exceed: a format-only check has
-        // no "out of range", and claiming one would invent a tier it never reports.
-        const tier = v.unavailable ? '' : outOfRangeCell(v.tiers, v.bounds);
-        lines.push(`| \`${v.property}\` | ${accepts} | ${tier} |`);
-      }
+      lines.push(
+        ...tableLines(
+          ['Property', 'Accepts', 'Out of range'],
+          own.map((v) => [
+            `\`${v.property}\``,
+            // A removed key is not a property with a narrow domain; it is one this
+            // class refuses outright, so it must not read as an accepted value.
+            v.unavailable ? '**not available on this type**' : v.accepts,
+            // Blank for a validator with no bound to exceed: a format-only check has
+            // no "out of range", and claiming one would invent a tier it never reports.
+            v.unavailable ? '' : outOfRangeCell(v.tiers, v.bounds),
+          ])
+        )
+      );
     }
   }
 
@@ -190,12 +195,11 @@ export function renderCoverage(type, coverage) {
     return lines.join('\n');
   }
 
-  lines.push('| Rule | Reports | Severity |');
-  lines.push('| --- | --- | --- |');
+  const ruleRows = [];
   for (const rule of rules) {
     const scope = rule.universal ? ' (all nodes)' : rule.viaMatcher ? ' (type-family match)' : '';
     if (rule.emits.length === 0) {
-      lines.push(`| \`${rule.name}\`${scope} | (none) | (none) |`);
+      ruleRows.push([`\`${rule.name}\`${scope}`, '(none)', '(none)']);
       continue;
     }
     // One row per reported name; a name reported at both severities lists both
@@ -206,10 +210,13 @@ export function renderCoverage(type, coverage) {
       severitiesByName.get(e.ruleName).push(e.severity);
     }
     [...severitiesByName].forEach(([ruleName, severities], i) => {
-      lines.push(
-        `| ${i === 0 ? `\`${rule.name}\`${scope}` : ''} | \`${ruleName}\` | ${severities.join(', ')} |`
-      );
+      ruleRows.push([
+        i === 0 ? `\`${rule.name}\`${scope}` : '',
+        `\`${ruleName}\``,
+        severities.join(', '),
+      ]);
     });
   }
+  lines.push(...tableLines(['Rule', 'Reports', 'Severity'], ruleRows));
   return lines.join('\n');
 }

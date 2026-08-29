@@ -16,14 +16,11 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
+import { checkerFor, expectError, expectWarning } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('RichTextLabel', property);
-  expect(validator, `no validator registered for RichTextLabel.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `RichTextLabel.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('RichTextLabel');
 
 /** Every plain boolean property, grouped as linterParser.ts groups them. */
 const BOOLEAN_PROPERTIES = [
@@ -147,15 +144,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns past the enum (4)', () => {
-      const result = check('autowrap_mode', '4');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('autowrap_mode', '4'), 'must be 0-3');
     });
 
     it('warns on a negative value', () => {
-      const result = check('autowrap_mode', '-1');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('autowrap_mode', '-1'), 'must be 0-3');
     });
   });
 
@@ -173,11 +166,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-      expect(check('autowrap_trim_flags', '32')?.severity).toBe('warning');
+      expectWarning(check('autowrap_trim_flags', '32'), 'sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector\'s flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))');
     });
 
     it('rejects a negative value', () => {
-      expect(check('autowrap_trim_flags', '-1')?.severity).toBe('error');
+      expectError(check('autowrap_trim_flags', '-1'), 'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)');
     });
 
     it('rejects a non-numeric value', () => {
@@ -198,15 +191,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns past the ceiling (25): set_tab_size assigns straight through with no clamp', () => {
-      const result = check('tab_size', '25');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('tab_size', '25'), 'must be between 0 and 24');
     });
 
     it('warns below the floor (-1)', () => {
-      const result = check('tab_size', '-1');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('tab_size', '-1'), 'must be between 0 and 24');
     });
   });
 
@@ -222,15 +211,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('errors past the enum (4): ERR_FAIL_INDEX refuses the write', () => {
-      const result = check('horizontal_alignment', '4');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expectError(check('horizontal_alignment', '4'), 'must be 0-3');
     });
 
     it('errors on a negative value', () => {
-      const result = check('horizontal_alignment', '-1');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expectError(check('horizontal_alignment', '-1'), 'must be 0-3');
     });
   });
 
@@ -246,9 +231,7 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('errors past the enum (4)', () => {
-      const result = check('vertical_alignment', '4');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expectError(check('vertical_alignment', '4'), 'must be 0-3');
     });
   });
 
@@ -266,12 +249,12 @@ describe('RichTextLabel strict validators', () => {
       // hint. The setter bare-assigns, so the value LOADS and RUNS: it is
       // unreachable from the inspector, not refused, which is the hint's
       // warning tier rather than the mask's error tier.
-      expect(check('justification_flags', '16')?.severity).toBe('warning');
-      expect(check('justification_flags', '4')?.severity).toBe('warning');
+      expectWarning(check('justification_flags', '16'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
+      expectWarning(check('justification_flags', '4'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });
 
     it('warns on a negative value for the same reason, since no clamp rejects it', () => {
-      expect(check('justification_flags', '-1')?.severity).toBe('warning');
+      expectWarning(check('justification_flags', '-1'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });
 
     it('accepts any subset of the six bits the hint does offer', () => {
@@ -361,15 +344,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns one past the ceiling (128001): the hint closes that end with no or_greater', () => {
-      const result = check('visible_characters', '128001');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('visible_characters', '128001'), 'must be between -1 and 128000');
     });
 
     it('warns below the floor (-2): set_visible_characters assigns straight through with no clamp', () => {
-      const result = check('visible_characters', '-2');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('visible_characters', '-2'), 'must be between -1 and 128000');
     });
   });
 
@@ -383,9 +362,7 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns past the enum (5)', () => {
-      const result = check('visible_characters_behavior', '5');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('visible_characters_behavior', '5'), 'must be 0-4');
     });
   });
 
@@ -402,15 +379,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns above 1: the clamp is guarded, so a preceding visible_characters leaves 3.0 stored', () => {
-      const result = check('visible_ratio', '1.5');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('visible_ratio', '1.5'), 'must be between 0 and 1');
     });
 
     it('warns below 0: the same guard, and the hint is what bounds the inspector', () => {
-      const result = check('visible_ratio', '-0.5');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('visible_ratio', '-0.5'), 'must be between 0 and 1');
     });
   });
 
@@ -426,19 +399,15 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      expect(check('text_direction', '-1')?.severity).toBe('warning');
+      expectWarning(check('text_direction', '-1'), 'must be 0-3');
     });
 
     it('errors past the enum (4)', () => {
-      const result = check('text_direction', '4');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expectError(check('text_direction', '4'), 'must be 0-3');
     });
 
     it('errors below -1 (-2)', () => {
-      const result = check('text_direction', '-2');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('error');
+      expectError(check('text_direction', '-2'), 'must be at least -1');
     });
   });
 
@@ -466,15 +435,11 @@ describe('RichTextLabel strict validators', () => {
     });
 
     it('warns past the enum (7)', () => {
-      const result = check('structured_text_bidi_override', '7');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('structured_text_bidi_override', '7'), 'must be 0-6');
     });
 
     it('warns on a negative value', () => {
-      const result = check('structured_text_bidi_override', '-1');
-      expect(result).not.toBeNull();
-      expect(result?.severity).toBe('warning');
+      expectWarning(check('structured_text_bidi_override', '-1'), 'must be 0-6');
     });
   });
 

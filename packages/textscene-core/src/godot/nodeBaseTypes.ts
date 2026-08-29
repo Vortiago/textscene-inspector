@@ -21,7 +21,8 @@ import { CATALOG_BASE_TYPES } from './nodeBaseTypes.generated.js';
 /**
  * Types Godot 4.6.3's ClassDB does not enumerate, so the catalog cannot supply
  * their base. Each entry needs a reason; an entry for a catalogued type would
- * shadow the engine's own answer, which `nodeBaseTypes.sync.test.ts` rejects.
+ * shadow the engine's own answer, which `linter/baseChainCompleteness.test.ts`
+ * rejects — "is in UNCATALOGUED but the catalog knows its ancestry".
  */
 const UNCATALOGUED: Readonly<Record<string, string>> = {
   // A real class, added after the pinned build: 4.6.3's ClassDB does not know

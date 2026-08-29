@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveAnimations } from './animationResolver';
+import { hasUnresolvableClips, resolveAnimations } from './animationResolver';
 import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
 import { TscnParser } from '../../../parser/TscnParser';
 
@@ -600,5 +600,28 @@ describe('a fractional composite keyframe', () => {
       [0, 0, 0],
       [0, 1.5, 0],
     ]);
+  });
+});
+
+/**
+ * `hasUnresolvableClips` is a SUPPRESSION guard: missing an ExtResource here
+ * lets a caller call a live clip name dangling. Godot's tokenizer discards
+ * every character <= 32 before a token (variant_parser.cpp:415-417) and the
+ * `ExtResource` branch then asks only for the next token to be `(` (:1089-1093),
+ * so the padded spelling is a file that loads.
+ */
+describe('hasUnresolvableClips — the padding Godot discards', () => {
+  const libAt = (data: string): TscnInternalResource[] => [res('Lib', 'AnimationLibrary', { _data: data })];
+
+  it('sees the tight spelling', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": ExtResource("1_walk")\n}'))).toBe(true);
+  });
+
+  it('sees the padded spelling the same way', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": ExtResource ("1_walk")\n}'))).toBe(true);
+  });
+
+  it('still says no for a library holding only SubResource clips', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": SubResource("Anim_walk")\n}'))).toBe(false);
   });
 });

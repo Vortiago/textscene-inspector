@@ -2,16 +2,22 @@
  * Integer combinators, including the enum one.
  *
  * They no longer differ on how strict the PARSE is. One engine behaviour gets
- * one verdict: `_to_int` truncates a fractional literal, and every int slot
- * says so with the same warning, after its own bounds. `strictInt` earns its
- * name on a different axis — it judges the NARROWED int, which is what a
+ * one verdict: `_to_int` truncates a fractional literal and maps a BOOL to 1/0,
+ * and every int slot says so with the same `storedNotWritten` warning, after its
+ * own bounds. `strictInt` earns its name on a different axis — it judges the NARROWED int, which is what a
  * setter's `ERR_FAIL_INDEX` receives — and `lenientInt` is just a bound-free
  * `int`.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { markIntSlot, readIntSlot, slotWidth, truncatedInt, unrepresentableInt } from '../intSlot.js';
+import {
+  markIntSlot,
+  readIntSlot,
+  slotWidth,
+  storedNotWritten,
+  unrepresentableInt,
+} from '../intSlot.js';
 import {
   createEnumValidator,
   createNumericRangeValidator,
@@ -220,7 +226,7 @@ export const integerCombinators = {
       }
       return (
         unrepresentableInt(name, key, value, line, valueCode(name), read.stored) ??
-        truncatedInt(name, key, value, line, valueCode(name), read)
+        storedNotWritten(name, key, value, line, valueCode(name), read)
       );
     },
       'integer'
@@ -267,7 +273,7 @@ export const integerCombinators = {
           endSeverity(opts, belowMin ? 'min' : 'max')
         );
       }
-      return truncatedInt(name, key, value, line, valueErr, read);
+      return storedNotWritten(name, key, value, line, valueErr, read);
     }, numericRange('integer', min, max, opts)), opts, { min, max, enforcedMin, enforcedMax }), width);
   },
 
@@ -290,7 +296,7 @@ export const integerCombinators = {
           if (stored < 0) {
             return propertyError(key, line, `Property '${name}' must be non-negative (got ${stored})`, valueErr, severity);
           }
-          return truncatedInt(name, key, value, line, valueErr, read);
+          return storedNotWritten(name, key, value, line, valueErr, read);
         },
         'integer >= 0'
       ),

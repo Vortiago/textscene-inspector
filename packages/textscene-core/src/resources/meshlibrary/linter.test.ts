@@ -91,6 +91,26 @@ describe('MeshLibrary item family', () => {
   });
 
   /**
+   * `_set` forwards to `_set_item_shapes(int, const Array &)`
+   * (mesh_library.cpp:78, :316), which takes an Array of ANY element type — so
+   * the typed spelling loads and refusing it rejected a file Godot opens. What
+   * `_get_item_shapes` writes is a write-side fact and bounds nothing here.
+   */
+  it('takes the typed Array spelling, and counts pairs inside the wrapper', () => {
+    const identity = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
+    expect(
+      check('item/0/shapes', `Array[Variant]([SubResource("BoxShape3D_a"), ${identity}])`)
+    ).toBeNull();
+    expect(check('item/0/shapes', 'Array[Variant]([])')).toBeNull();
+
+    // Counted off the WRAPPED body: `slice(1, -1)` would read
+    // `rray[Variant]([SubResource("BoxShape3D_a")]` and see one element too.
+    const out = check('item/0/shapes', 'Array[Variant]([SubResource("BoxShape3D_a")])');
+    expect(out?.severity).toBe('error');
+    expect(out?.message).toContain('got 1');
+  });
+
+  /**
    * `navigation_layers` is a `PROPERTY_HINT_LAYERS_3D_NAVIGATION`
    * (mesh_library.cpp:153) over a `uint32_t` setter (mesh_library.h:91) that
    * bare-assigns (:211-215). Thirty-two checkboxes express every 32-bit

@@ -12,7 +12,8 @@
  * each distinct sort-Y becomes a separate tileGroup item at its own rank,
  * interleaving with sibling CanvasItem nodes in the parent's flat sort.
  *
- * The collection is in `ySortItems.ts`, the per-row tile rendering in
+ * The collection is in `ySortItems.ts`, the per-layer TileSet resolution in
+ * `ySortTileSetModels.tsx`, the per-row tile rendering in
  * `TileGroupRenderer.tsx`, and the restoration of what the flattening removed
  * in `LiftedAncestors.tsx`.
  */
@@ -22,10 +23,11 @@ import type { TscnNode } from '../parser/types.js';
 import { useYSortContext, useYSortSlot } from './contexts/YSortContext.js';
 import { Z_INDEX_STEP } from './node2dTransform.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
-import { useTileSetModel } from './useTileSetModel.js';
+import type { TileSetModel } from '../resources/tileset/types.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
 import { collectYSortedItems, ySortItemId, type YSortItem } from './ySortItems.js';
+import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { TileGroupRenderer } from './TileGroupRenderer.js';
 import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
@@ -44,6 +46,30 @@ import { useNodePath } from './contexts/NodePathContext.js';
  */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const parent = useYSortContext();
+
+  // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
+  const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
+  // Each y-sorted layer expands against its OWN grid, so every distinct
+  // `tile_set` in the list is resolved, not just the first one's.
+  const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);
+
+  return (
+    <TileSetModels refs={refs}>
+      {(models) => <SortedChildren node={node} rawItems={rawItems} models={models} />}
+    </TileSetModels>
+  );
+}
+
+/** The sort and re-dispatch, once every y-sorted layer's TileSet is in hand. */
+function SortedChildren({
+  node,
+  rawItems,
+  models,
+}: {
+  node: TscnNode;
+  rawItems: readonly YSortItem[];
+  models: ReadonlyMap<string, TileSetModel>;
+}) {
   // Sorted children are re-dispatched from here rather than from their position
   // in the tree, so their selection paths have to be rebuilt from this node's
   // own path (the dispatcher provided it when it rendered this node).
@@ -52,35 +78,23 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   // y-sort subtrees don't overlap); the slot base is already in the group's z.
   const slot = useYSortSlot();
 
-  // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer).
-  const rawItems = useMemo(() => collectYSortedItems(node, parent, 0), [node, parent]);
-
-  // Resolve the tileset for any y-sorted TileMapLayer child so we can expand
-  // it into per-Y-group items (the dungeon fix).
-  const tileSetRef = useMemo(() => {
-    const tl = rawItems.find(i => i.kind === 'tileGroup' && i.node);
-    if (!tl?.node) return undefined;
-    return (tl.node.properties as TileMapLayerProperties).tile_set;
-  }, [rawItems]);
-  const { model, status } = useTileSetModel(tileSetRef);
-
   // Expand tileGroup items into per-Y-group items using groupBySortY,
   // then flatten (preserving tree-order position of the original layer).
   const items = useMemo<YSortItem[]>(() => {
     const expanded: YSortItem[] = [];
     for (const item of rawItems) {
-      if (item.kind === 'tileGroup' && item.node && model && status === 'loaded') {
+      const grid = item.tileData ? models.get(item.tileData.tileSetRef) : undefined;
+      if (item.kind === 'tileGroup' && item.node && grid) {
         const tp = item.node.properties as TileMapLayerProperties;
         const cells = tp.cells;
         if (cells?.length) {
-          const grid = model;
           const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
           // groupBySortY adds layerYSortOrigin to each cell's sort key itself, so the
           // layer world-Y passed in must NOT include it (else the origin double-counts).
           // Taken from the ITEM, which carries the Y accumulated through every
-          // y_sort_enabled ancestor. `parent` here is the sort root's context,
-          // so recomputing from it would drop those offsets and sort the layer's
-          // rows against a different origin than the siblings it interleaves with.
+          // y_sort_enabled ancestor: recomputing it from the sort root's context
+          // would drop those offsets and sort the layer's rows against a
+          // different origin than the siblings it interleaves with.
           const layerWorldY = item.tileData?.worldY ?? 0;
           const groups: YSortGroup[] = groupBySortY(cells, grid, layerYSortOrigin, layerWorldY);
           for (let g = 0; g < groups.length; g++) {
@@ -103,7 +117,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
       expanded.push(item);
     }
     return expanded;
-  }, [rawItems, model, status]);
+  }, [rawItems, models]);
 
   // Bucket by effectiveZ, sort within each bucket by sortY ascending (stable),
   // then assign rank-based z within each bucket.

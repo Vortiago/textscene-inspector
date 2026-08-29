@@ -11,13 +11,15 @@
  * `PROPERTY_USAGE_NO_EDITOR` only (hidden from the inspector, still reaches a
  * `.tscn`) — so all 11 get a validator.
  *
- * `dragger_visibility` is the one enum; its range comes from
- * `BIND_ENUM_CONSTANT` (DRAGGER_VISIBLE=0, DRAGGER_HIDDEN=1,
- * DRAGGER_HIDDEN_COLLAPSED=2), not the editor hint string, matching
- * `action_mode` in `basebutton/linterParser.ts` — Godot's own
- * `set_dragger_visibility` has no `ERR_FAIL_INDEX` bound either, but the house
- * style validates the authored range regardless of whether the runtime setter
- * enforces it.
+ * `dragger_visibility` is the one enum, and it is HINTED, not enforced: its
+ * range is the three labels of the `PROPERTY_HINT_ENUM` at
+ * `split_container.cpp:1298`, which is the only grounding ADR-0032's tier table
+ * admits here. `set_dragger_visibility` (`split_container.cpp:1103-1109`)
+ * assigns past an equality guard with no `ERR_FAIL_INDEX` and no clamp, so
+ * there is no error tier, and the `BIND_ENUM_CONSTANT` list at `:1308-1310`
+ * grounds nothing on its own — `slider`'s `ticks_position` refuses exactly that
+ * basis. `action_mode` in `basebutton/linterParser.ts` is the same shape and is
+ * grounded the same way, on its hint (`base_button.cpp:570`).
  *
  * Every other member is a plain BOOL or INT with no `PROPERTY_HINT_RANGE`, and
  * none of their setters (`set_collapsed`, `set_dragging_enabled`,

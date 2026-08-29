@@ -262,6 +262,33 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
 }
 
 /**
+ * Read a render target back through `read`, as `ImageData`.
+ *
+ * Deliberately takes the readback as a callback: the GL call is the only part
+ * that needs a renderer, so the buffer arithmetic and the failure contract are
+ * asserted here rather than through a mounted tree.
+ *
+ * ALLOCATION included in the guard, not just the GL call. A viewport within
+ * this previewer's per-axis cap still asks for a gigabyte at 16384x16384, and
+ * the row-flipped copy behind `targetPixelsToImageData` doubles it — a heap
+ * that refuses either owes the caller the `null` this contract defines for
+ * "not ready", never a thrown RangeError.
+ */
+export function readTargetPixels(
+  read: (buffer: Uint8Array) => void,
+  width: number,
+  height: number
+): ImageData | null {
+  try {
+    const buffer = new Uint8Array(width * height * 4);
+    read(buffer);
+    return targetPixelsToImageData(buffer, width, height);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Turn a `readRenderTargetPixels` buffer into `ImageData`.
  *
  * GL hands rows back bottom-up (its framebuffer origin is bottom-left) while

@@ -21,6 +21,16 @@ describe('Container Linter (container-no-script)', () => {
     });
   });
 
+  // `script = null` is a legal literal (variant_parser.cpp:699 reads it to
+  // `Variant()`), and it leaves `get_script().is_null()` true exactly as an
+  // absent key does — so the engine warns for both and so must this rule.
+  it.each(['null', 'nil', ''])('warns on a Container whose script slot is cleared with "%s"', (cleared) => {
+    expectDiagnostic(scene(node('Container', { script: cleared })), {
+      ruleName: 'container-no-script',
+      severity: 'warning',
+    });
+  });
+
   it('never fires on a Container SUBCLASS — the engine guard is get_class() == "Container", exact', () => {
     expectNoDiagnostic(scene(node('VBoxContainer')), { ruleName: 'container-no-script' });
   });

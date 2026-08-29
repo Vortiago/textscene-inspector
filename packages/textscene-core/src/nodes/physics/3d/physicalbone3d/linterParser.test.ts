@@ -23,11 +23,15 @@ function check(property: string, value: string) {
   return validator!(property, value, 1);
 }
 
-/** Assert a `joint_constraints/...` key warns (never errors) for an out-of-range value. */
+/**
+ * Assert a `joint_constraints/...` key warns (never errors) for an out-of-range
+ * value, under the code derived from the WHOLE key: the bare leaf named a key no
+ * file writes, and gave `joint_constraints/damping` and its three axis-prefixed
+ * twins one code between them.
+ */
 function expectRangeWarning(key: string, value: string) {
-  const leaf = key.slice(key.lastIndexOf('/') + 1);
   const error = check(key, value);
-  expect(error?.code, `${key} = ${value}`).toBe(`INVALID_${leaf.toUpperCase()}_VALUE`);
+  expect(error?.code, `${key} = ${value}`).toBe(`INVALID_${key.toUpperCase()}_VALUE`);
   expect(error?.severity, `${key} = ${value}`).toBe('warning');
 }
 
@@ -315,7 +319,7 @@ describe('PhysicalBone3D strict validators', () => {
     it('rejects a non-boolean angular_limit_enabled (physical_bone_3d.cpp:316)', () => {
       expect(check('joint_constraints/angular_limit_enabled', 'true')).toBeNull();
       expect(check('joint_constraints/angular_limit_enabled', 'yes')?.code).toBe(
-        'INVALID_ANGULAR_LIMIT_ENABLED_FORMAT'
+        'INVALID_JOINT_CONSTRAINTS/ANGULAR_LIMIT_ENABLED_FORMAT'
       );
     });
 
@@ -375,7 +379,7 @@ describe('PhysicalBone3D strict validators', () => {
 
     it('rejects a non-boolean value for an axis-prefixed bool leaf', () => {
       expect(check('joint_constraints/x/angular_spring_enabled', '1')?.code).toBe(
-        'INVALID_ANGULAR_SPRING_ENABLED_FORMAT'
+        'INVALID_JOINT_CONSTRAINTS/X/ANGULAR_SPRING_ENABLED_FORMAT'
       );
     });
 
@@ -407,6 +411,36 @@ describe('PhysicalBone3D strict validators', () => {
         max: '16',
         aboveMax: '16.01',
       });
+    });
+  });
+
+  describe('the key a joint_constraints diagnostic names', () => {
+    it('quotes the full key in the message, not the bare leaf', () => {
+      const error = check('joint_constraints/x/linear_limit_damping', '20.0');
+      expect(error?.message).toContain("'joint_constraints/x/linear_limit_damping'");
+      expect(error?.message).not.toContain("'linear_limit_damping'");
+    });
+
+    it('derives a distinct code per axis prefix', () => {
+      const codes = ['', 'x/', 'y/', 'z/'].map(
+        (axis) => check(`joint_constraints/${axis}softness`, '20.0')?.code
+      );
+      expect(codes).toEqual([
+        'INVALID_JOINT_CONSTRAINTS/SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/X/SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/Y/SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/Z/SOFTNESS_VALUE',
+      ]);
+    });
+
+    it('applies the same bound through every axis prefix', () => {
+      // The four tables are instances of one declaration, so only the naming
+      // differs — a bound that moved with the prefix would be a real divergence.
+      for (const axis of ['', 'x/', 'y/', 'z/']) {
+        expect(check(`joint_constraints/${axis}softness`, '0.01'), axis).toBeNull();
+        expect(check(`joint_constraints/${axis}softness`, '16'), axis).toBeNull();
+        expect(check(`joint_constraints/${axis}softness`, '16.01')?.severity, axis).toBe('warning');
+      }
     });
   });
 

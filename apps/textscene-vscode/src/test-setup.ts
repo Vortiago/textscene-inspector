@@ -5,13 +5,13 @@
  *
  * Two jobs, and both have to happen HERE: installing the `vscode` module mock,
  * and clearing every spy between tests. The mock's own pieces live in
- * `vscodeMocks.ts` (the `vi.fn()` namespaces) and `vscodeMockClasses.ts` (the
+ * `vscodeMocks.testkit.ts` (the `vi.fn()` namespaces) and `vscodeMockClasses.testkit.ts` (the
  * classes and enums) — this file assembles them, and re-exports the surface a
  * dozen tests import from `'./test-setup'`.
  */
 
 import { vi, afterEach } from 'vitest';
-import { mockCommands, mockLanguages, mockUri, mockWindow, mockWorkspace } from './vscodeMocks';
+import { mockCommands, mockLanguages, mockUri, mockWindow, mockWorkspace } from './vscodeMocks.testkit';
 import {
   MockDiagnostic,
   MockDiagnosticSeverity,
@@ -26,10 +26,10 @@ import {
   MockSymbolKind,
   MockTextEditorRevealType,
   MockViewColumn,
-} from './vscodeMockClasses';
+} from './vscodeMockClasses.testkit';
 
-export { createMockUri, createMockFileData, createMockDiagnosticCollection } from './vscodeMocks';
-export { setupMockPanel, type MockPanel, type MockWebview } from './mockPanel';
+export { createMockUri, createMockFileData, createMockDiagnosticCollection } from './vscodeMocks.testkit';
+export { setupMockPanel, type MockPanel, type MockWebview } from './mockPanel.testkit';
 export {
   MockDiagnostic,
   MockDiagnosticSeverity,
@@ -40,7 +40,7 @@ export {
   MockPosition,
   MockRange,
   MockSelection,
-} from './vscodeMockClasses';
+} from './vscodeMockClasses.testkit';
 
 // ============================================================================
 // VSCode Module Mock

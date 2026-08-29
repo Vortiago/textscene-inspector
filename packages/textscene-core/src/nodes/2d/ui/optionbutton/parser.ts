@@ -18,6 +18,7 @@ import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
 import { ruleCount, ruleInt } from '../../../../godot/int.js';
 import { indexedElements } from '../../../../godot/index.js';
+import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 
 export function parseOptionButton(
   heading: ParsedHeading,
@@ -37,23 +38,31 @@ export function parseOptionButton(
   // `popup/item_+0/text` are item 0. Building the key forward from the counter
   // found neither and drew the item blank.
   const declared = indexedElements(properties, 'popup/item_', 'is_valid_int');
-  // Dense only as far as anything can OBSERVE. `set_item_count` refuses only a
-  // negative (option_button.cpp:310), so `item_count = 2000000000` is a legal
-  // file, and one slot per index hangs or OOMs the webview and the VS Code
-  // preview with no diagnostic — the linter clears the value, correctly.
+  // Dense only as far as anything can OBSERVE. Nothing past the last index the
+  // file NAMES or `selected` points at differs from an absent item: it renders
+  // blank either way, and the component reads `items[selected]` alone. So the
+  // alignment `selected` needs is preserved, and the tail that carried no
+  // information is not built.
   //
-  // Nothing past the last index the file NAMES or `selected` points at differs
-  // from an absent item: it renders blank either way, and the component reads
-  // `items[selected]` alone. So the alignment `selected` needs is preserved
-  // exactly, and the tail that carried no information is not built.
-  const observed = Math.max(-1, ...declared.keys(), result.selected ?? -1);
-  const slots = Math.min(itemCount, observed + 1);
+  // A loop, not `Math.max(-1, ...declared.keys())`: the spread passes one
+  // ARGUMENT per declared index, and ~10^5 `popup/item_N/*` keys throw
+  // `RangeError: Maximum call stack size exceeded` out of the lenient parser.
+  let observed = -1;
+  for (const index of declared.keys()) if (index > observed) observed = index;
+  const selected = result.selected;
+  if (selected !== undefined && selected > observed) observed = selected;
+  // `selected` is itself an unbounded INT slot — `_select_int` returns early
+  // only below NONE_SELECTED (option_button.cpp:433) — so a bound derived from
+  // it is no bound at all. The previewer's own cap is (countWalk.ts); past it
+  // `items[selected]` is undefined and the component draws the empty text it
+  // already draws for an out-of-range `selected`.
+  const slots = Math.min(itemCount, observed + 1, MAX_WALKED_ELEMENTS);
   const items: OptionItem[] = [];
   for (let i = 0; i < slots; i++) {
     const leaves = declared.get(i);
-    const rawText = leaves?.text;
+    const rawText = leaves?.get('text');
     const text = rawText !== undefined ? unquoteString(rawText) : '';
-    const id = ruleInt(leaves?.id);
+    const id = ruleInt(leaves?.get('id'));
     items.push({ text, id: id ?? i });
   }
 

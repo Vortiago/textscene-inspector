@@ -9,8 +9,8 @@ import { describe, expect, it } from 'vitest';
 import {
   readIntSlot,
   slotWidth,
+  storedNotWritten,
   truncatedComponent,
-  truncatedInt,
   unrepresentableInt,
 } from './intSlot.js';
 
@@ -48,9 +48,9 @@ describe('truncatedComponent', () => {
   });
 });
 
-describe('truncatedInt', () => {
+describe('storedNotWritten', () => {
   it('warns about a fractional scalar at the value code, never the format one', () => {
-    const diagnostic = truncatedInt('hframes', 'hframes', '5.5', 1, 'INVALID_HFRAMES_VALUE', {
+    const diagnostic = storedNotWritten('hframes', 'hframes', '5.5', 1, 'INVALID_HFRAMES_VALUE', {
       asFloat: 5.5,
       stored: 5,
     });
@@ -59,12 +59,12 @@ describe('truncatedInt', () => {
   });
 
   it('says nothing about a whole value or an unstorable one', () => {
-    expect(truncatedInt('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5, stored: 5 })).toBeNull();
+    expect(storedNotWritten('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5, stored: 5 })).toBeNull();
     expect(
-      truncatedInt('hframes', 'hframes', 'inf', 1, 'CODE', { asFloat: Infinity, stored: NaN })
+      storedNotWritten('hframes', 'hframes', 'inf', 1, 'CODE', { asFloat: Infinity, stored: NaN })
     ).toBeNull();
     expect(
-      truncatedInt('hframes', 'hframes', 'nope', 1, 'CODE', { asFloat: null, stored: null })
+      storedNotWritten('hframes', 'hframes', 'nope', 1, 'CODE', { asFloat: null, stored: null })
     ).toBeNull();
   });
 
@@ -73,7 +73,24 @@ describe('truncatedInt', () => {
     // whole and says nothing; this one follows the read it was handed. The
     // message still quotes the LITERAL, which is what the file says.
     expect(
-      truncatedInt('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5.5, stored: 5 })
+      storedNotWritten('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5.5, stored: 5 })
+    ).not.toBeNull();
+  });
+
+  it('warns about a BOOL literal, naming the number the slot stores', () => {
+    const diagnostic = storedNotWritten('hframes', 'hframes', 'true', 1, 'CODE', {
+      asFloat: 1,
+      stored: 1,
+    });
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('stores 1');
+  });
+
+  it('reports the BOOL arm before the fractional one, which a whole 1 clears', () => {
+    // `true` reads as 1: `Number.isInteger` is satisfied, so a fractional-only
+    // implementation returns null here and the conversion goes unreported.
+    expect(
+      storedNotWritten('hframes', 'hframes', 'false', 1, 'CODE', { asFloat: 0, stored: 0 })
     ).not.toBeNull();
   });
 });

@@ -232,7 +232,6 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-viewport-size` (type-family match) | `viewport-size-too-small` | warning |
 <!-- lint:end -->
 
 Strict and lenient parsing diverge only on out-of-range enums: the lenient

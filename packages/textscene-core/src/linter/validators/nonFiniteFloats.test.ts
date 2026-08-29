@@ -16,7 +16,7 @@ import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.j
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
 import { FLOAT_PATTERN_SOURCE } from '../../godot/number.js';
 import { v } from './v.js';
-import { withFiniteGuard } from './v/grounding.js';
+import { withFiniteGuard, withNanGuard } from './v/grounding.js';
 
 const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
 
@@ -271,6 +271,36 @@ describe('a composite with a per-COMPONENT bound', () => {
   it('shows the out-of-range component as a number, never as NaN', () => {
     expect(bounded('size', 'Vector3(inf, 1, 1)', 1)?.message).toContain('Vector3(Infinity, 1, 1)');
   });
+
+  it.each(NON_FINITE)('reports %s in the INTEGER spelling as altered, not as a bound', (value) => {
+    // The float slot's half of the verdict the `Vector2i` slot already pins.
+    // `Vector3i(...)` arguments run `_parse_construct<int32_t>`, whose
+    // identifier branch takes all four through `stor_fix`
+    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` then
+    // narrows the double before the widening into this Vector3 slot ever
+    // happens. The bound cannot see it: the component reads back NaN, and NaN
+    // is below no floor and above no ceiling, so the property said nothing.
+    const reported = bounded('size', `Vector3i(${value}, 1, 1)`, 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.code).toBe('INVALID_SIZE_VALUE');
+    // UB on the float branch (variant.h:369-370), so the result is
+    // architecture-specific and only the alteration is portable.
+    expect(reported?.message).not.toContain('2147483648');
+  });
+
+  it('reports an INT component outside the band int32 round-trips', () => {
+    // Nothing writes `4294967296`; the engine holds the wrap of it, which is
+    // the alteration tier and not a value this linter names.
+    const reported = bounded('size', 'Vector3i(4294967296, 1, 1)', 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.code).toBe('INVALID_SIZE_VALUE');
+  });
+
+  it('leaves an integer spelling every component fits to the bound', () => {
+    // `Vector3i(4294967295, …)` is -1 to the engine, which IS below the floor.
+    expect(bounded('size', 'Vector3i(4294967295, 1, 1)', 1)?.severity).toBe('warning');
+    expect(bounded('size', 'Vector3i(1, 1, 1)', 1)).toBeNull();
+  });
 });
 
 describe('a PACKED array element', () => {
@@ -298,5 +328,67 @@ describe('a PACKED array element', () => {
     expect(points('polygon', 'PackedVector2Array(0, 0, 1abc, 1)', 1)?.code).toBe(
       'INVALID_POLYGON_FORMAT'
     );
+  });
+});
+
+/**
+ * The NaN-only tier, beside the finite one.
+ *
+ * `AudioStreamPlayer::set_volume_db` opens with
+ * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` (audio_stream_player.cpp:70)
+ * and refuses nothing else. Measured on 4.6.3: after `volume_db = -12`, writing
+ * NaN leaves -12 and prints the error, while `inf` and `-inf` are stored
+ * unaltered. `withFiniteGuard` cannot stand in — it would reject two values the
+ * setter keeps — and a range bound covers neither, since every comparison
+ * against NaN is false.
+ */
+describe('a property whose setter guards is_nan alone', () => {
+  const guarded = v.float('volume_db', {
+    min: -80,
+    max: 24,
+    hinted: 'audio_stream_player.cpp:282',
+    nan: 'audio_stream_player.cpp:70',
+  });
+
+  it('rejects nan as an error', () => {
+    const diagnostic = guarded('volume_db', 'nan', 1);
+    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic?.code).toBe('INVALID_VOLUME_DB_VALUE');
+    expect(diagnostic?.message).toContain('must not be NaN');
+  });
+
+  it.each(['inf', '-inf', 'inf_neg'])('reports %s at the hint tier, not as a refusal', (value) => {
+    const diagnostic = guarded('volume_db', value, 1);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('between -80 and 24');
+  });
+
+  it('accepts an ordinary value inside the band', () => {
+    expect(guarded('volume_db', '-12.0', 1)).toBeNull();
+  });
+
+  it('keeps both citations and the hint tier', () => {
+    expect(guarded.grounding).toEqual({
+      kind: 'hinted',
+      cite: 'audio_stream_player.cpp:70, audio_stream_player.cpp:282',
+    });
+    expect(guarded.bounds).toEqual({ min: -80, max: 24 });
+    expect(guarded.tiers).toEqual({ min: 'warning', max: 'warning' });
+  });
+
+  it('keeps the tags a registry sweep selects and recurses on', () => {
+    const inner = v.int('bits');
+    inner.leaves = [v.float('leaf')];
+    const wrapped = withNanGuard(inner, 'bits', 'x.cpp:1');
+    expect(wrapped.intSlot).toEqual(inner.intSlot);
+    expect(wrapped.leaves).toEqual(inner.leaves);
+  });
+
+  it('yields to the wider guard where a slice names both', () => {
+    // `finite` already refuses every spelling `nan` does; wrapping twice would
+    // stack a second citation onto a property with one setter guard.
+    const both = v.float('icon_scale', { finite: 'item_list.cpp:2098', nan: 'x.cpp:1' });
+    expect(both('icon_scale', 'inf', 1)?.message).toContain('finite');
+    expect(both.grounding).toEqual({ kind: 'enforced', cite: 'item_list.cpp:2098' });
   });
 });

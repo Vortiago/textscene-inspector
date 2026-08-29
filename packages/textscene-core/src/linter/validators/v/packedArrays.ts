@@ -6,12 +6,15 @@ import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
 import {
+  packedArrayBody,
   packedArrayForms,
   packedArrayLiteral,
+  packedElementType,
   readerLimitedInt,
   splitTopLevel,
   type IntWidth,
 } from '../../../godot/index.js';
+import { compositeSpellings } from '../../../godot/variantConversion.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
@@ -188,14 +191,6 @@ function firstNonNumericElement(body: string | readonly string[]): string | null
   return null;
 }
 
-/** The element each packed type's non-packed spellings hold, by wrapper name. */
-const ELEMENT_TYPE: Readonly<Record<string, string>> = {
-  PackedVector2Array: 'Vector2',
-  PackedVector3Array: 'Vector3',
-  PackedColorArray: 'Color',
-  PackedFloat32Array: 'float',
-};
-
 /**
  * The first element of a BARE or typed array body Godot could not put in this
  * slot, or null when every one fits.
@@ -207,7 +202,7 @@ const ELEMENT_TYPE: Readonly<Record<string, string>> = {
  */
 function firstBadArrayElement(
   body: string,
-  element: string | undefined,
+  elementCall: RegExp,
   groupSize: number
 ): string | null {
   for (const part of splitTopLevel(body)) {
@@ -217,9 +212,12 @@ function firstBadArrayElement(
       if (!TSCN_FLOAT_RE.test(trimmed)) return trimmed;
       continue;
     }
-    const call = element === undefined ? null : packedArrayLiteral(element).exec(trimmed);
-    // The arity is the slot's own: `[Vector3(0, 0, 0)]` in a Vector2 array is a
-    // conversion Godot does not make, so it stays an offender.
+    const call = elementCall.exec(trimmed);
+    // The ARITY is still the slot's own. `elementCall` carries the same-arity
+    // conversions and no others (`godot/variantConversion.ts`), so
+    // `[Vector2i(0, 0)]` in a Vector2 array is the verbatim read
+    // `Variant::operator Vector2()` performs (`variant.cpp:1751-1756`), while
+    // `[Vector3(0, 0, 0)]` stays an offender.
     if (!call || splitTopLevel(call[1]!).length !== groupSize) return trimmed;
     if (firstNonNumericElement(call[1]!) !== null) return trimmed;
   }
@@ -256,30 +254,32 @@ function packedTupleArray(
   example: string = Array(groupSize).fill('0').join(', ')
 ): PropertyValidator {
   const formatErr = formatCode(name);
-  const [PACKED_RE, ...OTHER_FORMS] = packedArrayForms(wrapper);
-  const element = ELEMENT_TYPE[wrapper];
+  const FORMS = packedArrayForms(wrapper);
+  const element = packedElementType(wrapper);
+  // Per validator, not per element: the spelling is fixed by the slot, and a
+  // Godot-written body carries thousands of elements. It takes the converted
+  // spelling for the same reason the scalar tuple grammar does.
+  const ELEMENT_CALL = packedArrayLiteral(compositeSpellings(element));
   return shape((key, value, line) => {
     // The packed constructor's body is a FLAT argument list; the other two hold
     // one ELEMENT each. Both are values Godot loads into this slot, so the form
     // that matched decides how the body is read rather than whether it is one.
-    const packed = PACKED_RE!.exec(value);
-    const body = packed
-      ? packed[1]!.trim()
-      : (OTHER_FORMS.map((form) => form.exec(value)).find(Boolean)?.[1] ?? undefined)?.trim();
-    if (body === undefined) {
+    const parsed = packedArrayBody(FORMS, value);
+    if (parsed === null) {
       return propertyError(
         key,
         line,
         `Property '${name}' must be a ${wrapper} like ${wrapper}(${example}), ` +
-          `Array[${element ?? wrapper}]([…]) or […], got: ${value}`,
+          `Array[${element}]([…]) or […], got: ${value}`,
         formatErr
       );
     }
+    const { flat, body } = parsed;
     if (body === '') return null;
 
-    const offender = packed
+    const offender = flat
       ? firstNonNumericElement(body)
-      : firstBadArrayElement(body, element, groupSize);
+      : firstBadArrayElement(body, ELEMENT_CALL, groupSize);
     if (offender !== null) {
       return propertyError(
         key,

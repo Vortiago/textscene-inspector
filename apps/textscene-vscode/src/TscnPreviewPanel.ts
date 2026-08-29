@@ -8,7 +8,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { HostToWebviewMessage, WebviewToHostMessage } from './protocol';
+import type { HostToWebviewMessage } from './protocol';
 import { VSCodeResourceProvider } from './providers/VSCodeResourceProvider';
 import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
@@ -26,25 +26,23 @@ export class TscnPreviewPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
   private _currentResource: vscode.Uri;
+  /** Last text read off disk: both the re-read diff and the ready replay read it. */
   private _previousContent: string | undefined;
   private _onDidDispose: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
   /**
-   * Webview-ready handshake (fixes VSCODE-01 race).
+   * Webview-ready handshake.
    *
-   * The HTML mounts the JS bundle asynchronously, which in turn renders
-   * the React tree. React's `useEffect` that installs the `message`
-   * listener does not run synchronously with `createRoot().render(...)`,
-   * so any `postMessage` the extension host sends before the effect
-   * fires is dropped. We work around this by caching the last `loadTscn`
-   * payload here and re-sending it after the webview posts the
-   * `webviewReady` message.
+   * The HTML mounts the JS bundle asynchronously, which in turn renders the
+   * React tree; the `useEffect` installing its `message` listener does not run
+   * synchronously with `createRoot().render(...)`, so a `postMessage` sent
+   * before the effect fires is dropped. Gate the post on this flag and replay
+   * `_previousContent` when the webview posts `webviewReady`.
    */
   private _webviewReady = false;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
-  private _pendingLoadContent: string | undefined;
 
   /**
    * Cached per-panel so `findProjectRoot`'s directory walk and the served
@@ -95,10 +93,13 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
-        if (this._pendingLoadContent !== undefined) {
-          const content = this._pendingLoadContent;
-          this._pendingLoadContent = undefined;
-          this._postMessageToWebview({ type: 'loadTscn', content });
+        // Every REMOUNT posts a fresh ready with an empty React tree — moving
+        // the panel to another editor group is enough. Replay unconditionally
+        // so the invariant "a ready webview holds the current text" holds for
+        // each one; the `_previousContent` diff below swallows any later
+        // re-read otherwise, leaving the preview on "Loading scene…".
+        if (this._previousContent !== undefined) {
+          this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
       },
       error: (msg) => {
@@ -119,7 +120,7 @@ export class TscnPreviewPanel {
     };
 
     this._panel.webview.onDidReceiveMessage(
-      (message: WebviewToHostMessage) => {
+      (message: unknown) => {
         dispatchWebviewMessage(message, handlers);
       },
       null,
@@ -239,13 +240,11 @@ export class TscnPreviewPanel {
       // re-parse + reconcile.
       this._previousContent = textContent;
 
-      // Gate the post on the webview-ready handshake. If the React
-      // tree hasn't installed its `message` listener yet, cache the
-      // payload and let the `webviewReady` handler replay it.
+      // Gate the post on the webview-ready handshake: a React tree that has
+      // not installed its `message` listener yet gets this text from the
+      // `webviewReady` replay instead.
       if (this._webviewReady) {
         this._postMessageToWebview({ type: 'loadTscn', content: textContent });
-      } else {
-        this._pendingLoadContent = textContent;
       }
     } catch (error) {
       vscode.window.showErrorMessage(

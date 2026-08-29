@@ -20,10 +20,18 @@ import { boolSlotValue } from '../godot/index.js';
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 export const UNIQUE_NODE_PREFIX = '%';
 
-/** The node a `%Name` addresses, with the path that reaches it. */
+/** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
 export interface UniqueNameClaim {
   readonly node: TscnNode;
+  /** Where the heading sits in the AUTHORED tree — what a `.tscn`-only walk sees. */
   readonly path: string;
+  /**
+   * Where the node sits once the instanced content its `parent=` addresses INTO
+   * is composed in: `path` with each ancestor's `instanceSubPath` segments
+   * restored. The render tree spells paths this way, so a caller matching a
+   * claim against a rendered node's path wants this one.
+   */
+  readonly livePath: string;
 }
 
 /**
@@ -42,20 +50,29 @@ export function isUniqueNameInOwner(node: TscnNode): boolean {
 /**
  * Every `%Name` claimed in `roots`, depth-first, keyed with the prefix already on.
  *
- * Paths are joined the way the render path's own walks spell them, so a caller can
- * look the result straight up in its `nodeByPath` map.
+ * Paths are joined the way the walks over the same tree spell them, so a caller can
+ * look the result straight up in its `nodeByPath` map — `path` for a walk over the
+ * authored tree, `livePath` for one over the composed render tree.
  */
 export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
   const claims = new Map<string, UniqueNameClaim>();
-  const walk = (nodes: readonly TscnNode[], parentPath: string): void => {
+  const join = (parent: string, segment: string): string =>
+    parent ? `${parent}/${segment}` : segment;
+  // Two accumulators, because the two paths diverge at a node whose `parent=`
+  // descends into instanced content and never re-converge below it. Only that
+  // node carries the marker — `buildSceneTree` registers it at its authored path
+  // so its own descendants resolve normally — so folding it once is exact.
+  const walk = (nodes: readonly TscnNode[], parentPath: string, parentLive: string): void => {
     for (const node of nodes) {
-      const path = parentPath ? `${parentPath}/${node.name}` : node.name;
+      const path = join(parentPath, node.name);
+      const under = node.instanceSubPath ? join(parentLive, node.instanceSubPath) : parentLive;
+      const livePath = join(under, node.name);
       const key = UNIQUE_NODE_PREFIX + node.name;
-      if (isUniqueNameInOwner(node) && !claims.has(key)) claims.set(key, { node, path });
-      walk(node.children, path);
+      if (isUniqueNameInOwner(node) && !claims.has(key)) claims.set(key, { node, path, livePath });
+      walk(node.children, path, livePath);
     }
   };
-  walk(roots, '');
+  walk(roots, '', '');
   return claims;
 }
 
@@ -66,5 +83,21 @@ export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, Unique
 export function uniqueNamePaths(roots: readonly TscnNode[]): Map<string, string> {
   const paths = new Map<string, string>();
   for (const [key, claim] of uniqueNameClaims(roots)) paths.set(key, claim.path);
+  return paths;
+}
+
+/**
+ * The same reduction onto `livePath`, for a caller resolving against the
+ * COMPOSED render tree rather than the authored one.
+ *
+ * Takes the resolved table rather than the roots: the render path memoizes that
+ * table per scene graph and rebuilding it per consumer would walk the whole
+ * scene again on every render.
+ */
+export function uniqueNameLivePaths(
+  claims: ReadonlyMap<string, UniqueNameClaim>
+): ReadonlyMap<string, string> {
+  const paths = new Map<string, string>();
+  for (const [key, claim] of claims) paths.set(key, claim.livePath);
   return paths;
 }

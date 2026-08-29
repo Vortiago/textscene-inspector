@@ -58,7 +58,7 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   const targeted = new Set<number>();
   for (const [index, leaves] of settings) {
     if (index >= count) continue;
-    const raw = leaves.target_node;
+    const raw = leaves.get('target_node');
     if (raw !== undefined && extractNodePath(raw) !== null) targeted.add(index);
   }
   const { listed: missing, total } = unsatisfiedIndices(count, targeted);

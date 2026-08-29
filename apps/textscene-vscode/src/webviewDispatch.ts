@@ -2,10 +2,10 @@
  * Routing for the webview-to-host protocol.
  *
  * Kept apart from the panel so the routing rule — and the untrusted-source
- * guard below — is one testable function rather than a branch of a class.
+ * guards below — are one testable function rather than a branch of a class.
  */
 
-import type { WebviewToHostMessage } from './protocol';
+import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
 
 /**
  * Exhaustive handler table over the webview-to-host protocol union.
@@ -24,16 +24,20 @@ export type WebviewMessageHandlers = {
  * this function, so the two paths cannot drift.
  */
 export function dispatchWebviewMessage(
-  msg: WebviewToHostMessage,
+  msg: unknown,
   handlers: WebviewMessageHandlers
 ): void {
-  // The webview is an untrusted runtime source: a message whose `type` is
-  // outside the protocol union — including inherited-property names like
-  // `__proto__`, `constructor`, or `toString` — has no OWN entry in the
-  // handler table. Gate on hasOwnProperty rather than a truthy lookup: a bare
-  // `handlers[msg.type]` would resolve those inherited members (throwing on
-  // `__proto__`, invoking a builtin on `toString`), whereas this makes every
-  // unknown type fall through silently, matching the old switch's default case.
+  // The webview is an untrusted runtime source, and `onDidReceiveMessage` has
+  // no catch around it: narrow the RECEIVER first, or `postMessage(null)`
+  // throws out of the listener.
+  if (!isWebviewToHostMessage(msg)) {
+    return;
+  }
+  // Then the KEY: a `type` outside the protocol union — including inherited
+  // names like `__proto__`, `constructor` or `toString` — has no OWN entry in
+  // the handler table. Gate on hasOwnProperty rather than a truthy lookup: a
+  // bare `handlers[msg.type]` resolves those inherited members and calls them,
+  // invoking a builtin on `toString` and throwing on `__proto__`.
   if (!Object.prototype.hasOwnProperty.call(handlers, msg.type)) {
     return;
   }

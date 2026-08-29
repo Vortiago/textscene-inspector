@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseGodotInt, ruleInt, storedInt } from './int.js';
+import { parseGodotInt, ruleInt, slotComponents, slotComponentsAltered, storedInt } from './int.js';
 
 describe('an INT-typed literal', () => {
   // `token_text.as_int()` (variant_parser.cpp:489) yields an int64, and
@@ -152,5 +152,55 @@ describe('ruleInt', () => {
   it('stands an absent key in for its default', () => {
     expect(ruleInt(undefined, 1)).toBe(1);
     expect(ruleInt(undefined)).toBeNull();
+  });
+});
+
+describe('slotComponentsAltered — a composite in a FLOAT slot', () => {
+  const parts = (literal: string): string[] =>
+    /\(([^)]*)\)/.exec(literal)![1]!.split(',').map((part) => part.trim());
+  const altered = (literal: string, slot = 'Vector3'): boolean =>
+    slotComponentsAltered(literal, slot, parts(literal));
+
+  it('reports the non-finite the int spelling narrows, which no bound can see', () => {
+    // `_parse_construct<int32_t>` accepts the identifier through `stor_fix`
+    // (variant_parser.cpp:149-159, :577-586) and `_to_int<int32_t>` then
+    // converts the double (variant.h:369-370) — undefined outside int32, so the
+    // engine stores a number the file does not state.
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(altered(`Vector3i(${spelling}, 0, 0)`)).toBe(true);
+    }
+    // And the bound it defeats: NaN is below no minimum and above no maximum.
+    const [x] = slotComponents('Vector3i(inf, 0, 0)', 'Vector3', parts('Vector3i(inf, 0, 0)'));
+    expect(Number.isNaN(x)).toBe(true);
+  });
+
+  it('reports an INT component outside the band int32 round-trips', () => {
+    expect(altered('Vector3i(4294967296, 0, 0)')).toBe(true);
+    expect(altered('Vector3i(-3000000000, 0, 0)')).toBe(true);
+  });
+
+  it('is false for the legal non-finite FLOAT component, which is the whole point', () => {
+    // Godot writes `inf`/`nan` into every real-typed composite and reloads them
+    // (variant_parser.cpp:149-159), so the slot's own spelling alters nothing —
+    // the conflation this predicate exists to break.
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(altered(`Vector3(${spelling}, 0, 0)`)).toBe(false);
+    }
+  });
+
+  it('is false for an int spelling every component fits', () => {
+    expect(altered('Vector3i(3, 4, 5)')).toBe(false);
+    // Wrapping is a spelling Godot's own serialiser writes, not an alteration.
+    expect(altered('Vector3i(4294967295, 0, 0)')).toBe(false);
+    // Truncation toward zero is the `truncatedInt` warning's business, not this.
+    expect(altered('Vector3i(1.5, 0, 0)')).toBe(false);
+  });
+
+  it('answers only for a spelling the slot converts', () => {
+    expect(slotComponentsAltered('Vector2i(inf, 0)', 'Vector2', ['inf', '0'])).toBe(true);
+    expect(slotComponentsAltered('Rect2i(inf, 0, 0, 0)', 'Rect2', ['inf', '0', '0', '0'])).toBe(true);
+    // No conversion is declared between these, so the literal is a format
+    // error the caller reports, never a narrowed component.
+    expect(slotComponentsAltered('Transform2D(inf, 0)', 'Transform2D', ['inf', '0'])).toBe(false);
   });
 });

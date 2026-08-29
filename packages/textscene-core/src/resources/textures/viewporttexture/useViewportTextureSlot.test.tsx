@@ -8,6 +8,9 @@ import { useEffect } from 'react';
 import * as THREE from 'three';
 
 import type { TscnInternalResource } from '../../../parser/types';
+import { TscnParser } from '../../../parser/TscnParser';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import {
   ViewportTextureProvider,
@@ -21,13 +24,20 @@ const viewportTexture: TscnInternalResource = {
   data: { id: 'ViewportTexture_1', viewport_path: 'NodePath("SubViewport")' },
 };
 
+/** A `%Name` JUMP followed by a descent, which only a claim table can resolve. */
+const aliasViewportTexture: TscnInternalResource = {
+  id: 'ViewportTexture_2',
+  type: 'ViewportTexture',
+  data: { id: 'ViewportTexture_2', viewport_path: 'NodePath("%Hud/CombinedViewport")' },
+};
+
 const atlasTexture: TscnInternalResource = {
   id: 'Atlas_1',
   type: 'AtlasTexture',
   data: { id: 'Atlas_1', atlas: 'ExtResource("1")' },
 };
 
-const RESOURCES = [viewportTexture, atlasTexture];
+const RESOURCES = [viewportTexture, aliasViewportTexture, atlasTexture];
 
 /** Publishes `texture` at `path` for as long as it is mounted. */
 function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
@@ -136,6 +146,60 @@ describe('useViewportTextureSlot', () => {
   it('returns null for an absent reference', () => {
     const { resolved } = mount(undefined, 'Root/Screen', 'Root/SubViewport');
     expect(resolved()).toBeNull();
+  });
+
+  /**
+   * `get_node_or_null` treats `%Hud` as a jump to the claimant and descends from
+   * there, so the key is the claimant's own path with the rest appended.
+   * Concatenating the literal built `Root/%Hud/CombinedViewport`, which no
+   * publisher ever registers: the alias a viewport publishes for itself is a
+   * single segment.
+   */
+  describe('a compound %Name viewport path', () => {
+    const scene = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="UI" type="Node3D" parent="."]
+
+[node name="Hud" type="Node3D" parent="UI"]
+unique_name_in_owner = true
+
+[node name="CombinedViewport" type="SubViewport" parent="UI/Hud"]
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+`;
+
+    /** The same mount, with the scene the claim table is resolved against. */
+    function mountInScene(publishAt: string) {
+      const graph = createSceneGraphFromTscnScene({ nodes: new TscnParser().parse(scene).nodes });
+      const seen: (THREE.Texture | null)[] = [];
+      const texture = new THREE.Texture();
+      render(
+        <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+          <ViewportTextureProvider>
+            <Publisher path={publishAt} texture={texture} />
+            <NodePathProvider path="Root/Screen">
+              <Consumer
+                slotRef='SubResource("ViewportTexture_2")'
+                onResolve={(t) => seen.push(t)}
+              />
+            </NodePathProvider>
+          </ViewportTextureProvider>
+        </HierarchyProvider>
+      );
+      return { resolved: () => seen.at(-1) ?? null, texture };
+    }
+
+    it('descends from the claimant to the viewport that published there', () => {
+      const { resolved, texture } = mountInScene('Root/UI/Hud/CombinedViewport');
+      expect(resolved()).toBe(texture);
+    });
+
+    it('does not match the literal join of the alias onto the root', () => {
+      const { resolved } = mountInScene('Root/%Hud/CombinedViewport');
+      expect(resolved()).toBeNull();
+    });
   });
 
   /**

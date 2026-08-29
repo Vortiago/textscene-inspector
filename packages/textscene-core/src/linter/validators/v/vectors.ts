@@ -10,7 +10,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { ruleInt, tupleComponent } from '../commonValidators.js';
-import { slotComponents } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
@@ -136,13 +136,32 @@ export const vectorCombinators = {
           formatCode(name)
         );
       }
+      const captures = [match[1], match[2], match[3]];
+      // Ahead of the bounds, because they cannot express it: an altered
+      // component reads back as NaN, and `NaN < min` and `NaN > max` are both
+      // false, so the bound reported nothing at all about the one literal Godot
+      // does not store as written. Same claim and same tier as the `Vector2i`
+      // slot's own arm, arriving from the opposite direction. The message
+      // quotes the literal and never the stored number: `_to_int`'s float
+      // branch is undefined behaviour (variant.h:369-370) and the wrap of an
+      // out-of-band INT is a value nothing writes.
+      if (slotComponentsAltered(value, 'Vector3', captures)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". ` +
+            'The file loads, but the components are narrowed at parse time to a number the file does not state.',
+          valueCode(name),
+          'error'
+        );
+      }
       // `slotComponents`, not bare `tupleComponent`: `VECTOR3_REGEX` admits the
       // `Vector3i(...)` spelling `can_convert_strict` converts, and its arguments
       // are narrowed through `_parse_construct<int32_t>` BEFORE the widening into
       // this float slot. Read as plain floats, the bound was checked against a
       // number Godot never stores, and the renderer — which does narrow —
       // disagreed with the linter about the same literal.
-      const parts = slotComponents(value, 'Vector3', [match[1], match[2], match[3]], tupleComponent);
+      const parts = slotComponents(value, 'Vector3', captures, tupleComponent);
       const belowMin = min !== undefined && parts.some((c) => c < min);
       const aboveMax = max !== undefined && parts.some((c) => c > max);
       if (belowMin || aboveMax) {

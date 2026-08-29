@@ -6,7 +6,7 @@
  * ERROR: the setter ALTERS the value. `Range::set_max`
  * clamps rather than honours it (scene/gui/range.cpp:229:
  * `double max_validated = MAX(p_max, shared->min);`), and `Range::set_min`
- * clamps the opposite direction the same way (range.cpp:216:
+ * clamps the opposite direction the same way (range.cpp:217:
  * `shared->max = MAX(shared->max, shared->min);`) — so regardless of which
  * property the deserializer applies first, the two setters converge on the
  * same fixed point: `max_value` ends up `MAX(authored max_value, authored

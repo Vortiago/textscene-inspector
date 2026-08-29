@@ -30,12 +30,15 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
   stream: v.resourceReference('stream'),
   // audio_stream_player_3d.cpp:883, PROPERTY_HINT_RANGE "-80,80,suffix:dB" — a
-  // wider ceiling than the 2D/base players' 24. set_volume_db (:552-554)
-  // ERR_FAILs on NaN only and otherwise assigns straight through, so both ends warn.
+  // wider ceiling than the 2D/base players' 24. set_volume_db assigns straight
+  // through, so both ends warn. Its one refusal is
+  // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...): `nan` is dropped, `inf` and
+  // `-inf` are stored unaltered.
   volume_db: v.float('volume_db', {
     min: -80,
     max: 80,
     hinted: 'audio_stream_player_3d.cpp:883',
+    nan: 'audio_stream_player_3d.cpp:553',
   }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
   // against a hint (audio_stream_player_3d.cpp:887) of

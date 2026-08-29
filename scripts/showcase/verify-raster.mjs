@@ -40,6 +40,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';
 import { startFixtureServer } from './raster/fixtureServer.mjs';
 import { runOverlaySuite } from './raster/suiteOverlay.mjs';
@@ -47,12 +48,12 @@ import { runPublisherSuite } from './raster/suitePublisher.mjs';
 import { runSubResourceSuite } from './raster/suiteSubResource.mjs';
 
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
-const OUT = process.env.VERIFY_OUT || 'scripts/showcase/output';
+const OUT = process.env.VERIFY_OUT || join(REPO_ROOT, 'scripts/showcase/output');
 // Bundled Chromium unless told otherwise — same determinism contract as the
 // other showcase harnesses.
 process.env.SHOWCASE_CHANNEL = process.env.SHOWCASE_CHANNEL || 'bundled';
 
-const MODULE_PATH = 'packages/textscene-core/dist/r3f/controls/rasterizeControlSubtree.js';
+const MODULE_PATH = join(REPO_ROOT, 'packages/textscene-core/dist/r3f/controls/rasterizeControlSubtree.js');
 
 mkdirSync(OUT, { recursive: true });
 

@@ -5,8 +5,9 @@
  * inherits its whole validator set, so parsing through Node3D validated `mesh`,
  * `skin` and the material overrides and then discarded them, leaving the
  * inspector blank for the properties the sheet advertises.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Not drawn yet: `index.r3f.ts` registers the Node3D base under
+ * `renderIntent: 'pending'`, so the badge reports the gap while `visible` and
+ * the 3D-workspace placement still behave.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

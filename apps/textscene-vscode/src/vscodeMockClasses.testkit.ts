@@ -5,7 +5,7 @@
  * classes and its enums.
  *
  * Nothing here holds a module-level spy — the stateful namespaces `afterEach`
- * clears live in `vscodeMocks.ts`. Both are assembled into the module mock by
+ * clears live in `vscodeMocks.testkit.ts`. Both are assembled into the module mock by
  * `test-setup.ts`, which is the file vitest actually loads.
  */
 
@@ -47,9 +47,24 @@ export class MockSelection {
 export class MockEventEmitter {
   private listeners: Array<(...args: any[]) => void> = [];
 
-  event = (listener: (...args: any[]) => void): { dispose: ReturnType<typeof vi.fn> } => {
-    this.listeners.push(listener);
-    return { dispose: vi.fn() };
+  // The real `vscode.Event` is `(listener, thisArgs?, disposables?)` and pushes
+  // the subscription it returns into `disposables`; a one-argument mock leaves
+  // every `_disposables` array a caller passes empty.
+  event = (
+    listener: (...args: any[]) => void,
+    thisArgs?: any,
+    disposables?: Array<{ dispose: () => void }>
+  ): { dispose: ReturnType<typeof vi.fn> } => {
+    const bound = thisArgs == null ? listener : listener.bind(thisArgs);
+    this.listeners.push(bound);
+    const subscription = {
+      dispose: vi.fn(() => {
+        const index = this.listeners.indexOf(bound);
+        if (index !== -1) this.listeners.splice(index, 1);
+      }),
+    };
+    disposables?.push(subscription);
+    return subscription;
   };
 
   fire(...args: any[]) {

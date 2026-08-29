@@ -57,45 +57,13 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
-import { parseTransform3D } from '../../../../utils/transform.js';
-import { isEqualApprox, isZeroApprox } from '../../../../godot/math.js';
+import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
 const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
 const HOLE_PUNCH_RULE = 'openxrcompositionlayer-hole-punch-sort-order';
-
-/**
- * `Basis::is_orthonormal()` (basis.cpp:103-108): each COLUMN unit length,
- * every pair of columns perpendicular. `parseTransform3D` returns Godot's
- * Basis ROWS (`utils/transform.ts` docblock), so column `i` is component `i`
- * picked from each of the three rows.
- *
- * Returns `null` when the literal does not parse: a malformed `transform` is
- * `linterParser.ts`'s job (inherited from Node3D), not this rule's.
- */
-function isOrthonormalTransform(raw: string): boolean | null {
-  let transform;
-  try {
-    transform = parseTransform3D(raw);
-  } catch {
-    return null;
-  }
-  const { basis_x, basis_y, basis_z } = transform;
-  const col0 = { x: basis_x.x, y: basis_y.x, z: basis_z.x };
-  const col1 = { x: basis_x.y, y: basis_y.y, z: basis_z.y };
-  const col2 = { x: basis_x.z, y: basis_y.z, z: basis_z.z };
-  const dot = (a: typeof col0, b: typeof col0) => a.x * b.x + a.y * b.y + a.z * b.z;
-  return (
-    isEqualApprox(dot(col0, col0), 1) &&
-    isEqualApprox(dot(col1, col1), 1) &&
-    isEqualApprox(dot(col2, col2), 1) &&
-    isZeroApprox(dot(col0, col1)) &&
-    isZeroApprox(dot(col0, col2)) &&
-    isZeroApprox(dot(col1, col2))
-  );
-}
 
 function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // No applicability check here: RuleRegistry has already filtered by the

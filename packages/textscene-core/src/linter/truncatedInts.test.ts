@@ -3,7 +3,7 @@
  *
  * `_to_int` truncates on the way INTO the setter (`variant.h:369-370`), so
  * `hframes = 5.5` stores 5 and the value the engine holds is not the value the
- * file states. ADR-0032 gives that its own tier, and `truncatedInt` is the one
+ * file states. ADR-0032 gives that its own tier, and `storedNotWritten` is the one
  * implementation of it — but it is applied by each combinator by hand, so a
  * hand-rolled int slot drops out of the tier in silence. Both bit-field
  * combinators and `GridMap.cell_octant_size` did.

@@ -525,6 +525,33 @@ sub_emitter = NodePath("../SubEmitter")
 `);
     });
 
+    // `_attach_sub_emitter` casts the node it walked to and then drops it when
+    // it IS this node: `if (sen && sen != this)` (gpu_particles_3d.cpp:485-486).
+    // The path resolves and is stored, so nothing is refused — the emitter just
+    // never becomes its own sub-emitter.
+    it.each(['NodePath(".")', 'NodePath("../Particles")'])(
+      'warns when sub_emitter %s points back at the node itself',
+      (path) => {
+        expectDiagnostic(
+          `[gd_scene format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="process_1"]
+
+[node name="World" type="Node3D"]
+
+[node name="Particles" type="GPUParticles3D" parent="."]
+process_material = SubResource("process_1")
+sub_emitter = ${path}
+`,
+          {
+            ruleName: 'gpuparticles3d-sub-emitter-self',
+            severity: 'warning',
+            contains: ['points back at', 'Particles'],
+          }
+        );
+      }
+    );
+
     it('should pass when sub_emitter is empty NodePath', () => {
       expectClean(`[gd_scene format=3]
 

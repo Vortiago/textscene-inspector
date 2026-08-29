@@ -102,4 +102,33 @@ describe('literals are not comments', () => {
     expect(out).not.toContain('note');
     expect(out).toHaveLength(src.length);
   });
+
+  it('does not start a regex scan at a self-closing JSX tag', () => {
+    // `} />` is the close tag's twin: the `/` follows the `}` of the last
+    // expression attribute, and reading it as a regex opener consumed the
+    // rest of the line, trailing comment included.
+    expect(commentSpans('const el = <Foo bar={1} />; // note').map((s) => s.text)).toEqual([
+      '// note',
+    ]);
+    expect(commentSpans('<Foo style={{a:1}} />; /* blk */').map((s) => s.text)).toEqual([
+      '/* blk */',
+    ]);
+  });
+
+  it('still reads a division and a JSX expression child as code, not as a regex', () => {
+    // The counterpart to the two above: dropping `}` must not stop the lexer
+    // seeing the comment after an ordinary expression.
+    expect(commentSpans('const el = <div>{x}</div>; // note').map((s) => s.text)).toEqual([
+      '// note',
+    ]);
+    expect(commentSpans('arr[0] / 2; // note').map((s) => s.text)).toEqual(['// note']);
+  });
+
+  it('does not let an apostrophe in JSX text open a string past its line', () => {
+    // A quoted string cannot hold a raw newline, so an unterminated one ends
+    // with its line. Running past it let `Don't` swallow every comment up to
+    // the next `'` anywhere in the file.
+    const src = "const el = <p>Don't</p>;\n// note\nconst b = 1;";
+    expect(commentSpans(src).map((s) => s.text)).toEqual(['// note']);
+  });
 });

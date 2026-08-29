@@ -195,6 +195,24 @@ describe('BoneTwistDisperser3D semantic rules', () => {
     );
   });
 
+  it('measures against the length a refused setting_count leaves behind, not the authored one', () => {
+    // `set_setting_count` opens with `ERR_FAIL_COND(p_count < 0)`
+    // (bone_twist_disperser_3d.cpp:650), so the write never lands and `settings`
+    // keeps the empty length it loaded with. Naming -1 would report a size the
+    // engine never held, beside the `enforced:` validator that already errored.
+    const found = lint(
+      scene(
+        node('BoneTwistDisperser3D', {
+          setting_count: -1,
+          'settings/0/twist_from_rest': true,
+        })
+      )
+    ).filter((d) => d.ruleName === 'bonetwistdisperser3d-setting-index-out-of-range');
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('setting_count (0)');
+    expect(found[0]!.message).not.toContain('-1');
+  });
+
   it('says nothing about a malformed setting_count, which its validator owns', () => {
     expectNoDiagnostic(
       scene(

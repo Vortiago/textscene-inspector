@@ -34,16 +34,19 @@ enforce nothing.
 
 ## Decision
 
-A diagnostic may exist in exactly one of three tiers, decided by the engine source.
+A slice's property lands in exactly one of three tiers, decided by the engine
+source: **error**, **warning** or **nothing**. The fourth row below is not one of
+them and must not be declared on a property — it is the shared post-pass that
+runs over every int slot, described under "A binding-layer conversion" below.
 
 | Tier | Grounding | Verdict |
 | --- | --- | --- |
 | **error** | The setter refuses or alters the value: an `ERR_FAIL*`, or a clamp/mask that silently changes what was written. | error |
 | **warning** | The value lies outside what the property's own UI-control hint permits: `PROPERTY_HINT_RANGE`, `PROPERTY_HINT_LAYERS_*` or `PROPERTY_HINT_FLAGS` in its `ADD_PROPERTY`. | warning |
-| **conversion** | The Variant binding narrows the literal on the way IN, so the setter never sees what was written: `_to_int` truncating `5.5` to 5 (`variant.h:369-370`). | warning |
 | **nothing** | `PROPERTY_HINT_NONE`, no hint, both hint ends open, or a bound that exists only in the class-reference prose. | no rule |
+| **conversion** — shared, never declared by a slice | The Variant binding narrows the literal on the way IN, so the setter never sees what was written: `_to_int` truncating `5.5` to 5 (`variant.h:369-370`). | warning |
 
-Three rules govern reading the hint:
+The rules that decide which row a property lands in:
 
 - **`,or_greater` opens the MAX end and `,or_less` opens the MIN end.** An open end
   can never produce a diagnostic. Both open means the property gets none at all.
@@ -103,8 +106,9 @@ Two consequences, both load-bearing:
   `FORMAT_VERSION_COMPAT = 3` (`:48`) the saver's default; ONE 4.6.3 saver
   writes both, choosing per file on whether a `PackedVector4Array` or a
   >64-byte `PackedByteArray` is present (`resource_format_text.cpp:1724-1732`,
-  `:1770`, `:1798`). Neither is legacy — 44 of the vendored Godot demo scenes
-  are `format=4` and 802 are `format=3`. A header declaring no format is current
+  `:1770`, `:1798`). Neither is legacy — the vendored Godot demo projects
+  (`scenes/demos`, `scenes/isometric`) ship both spellings side by side, and
+  4.6.3 opens either. A header declaring no format is current
   too (`} else { format_version = FORMAT_VERSION; }`, `:1147-1148`). A ceiling
   check would begin firing on legitimately-current files the moment a later
   engine raises `FORMAT_VERSION`, so there is none.

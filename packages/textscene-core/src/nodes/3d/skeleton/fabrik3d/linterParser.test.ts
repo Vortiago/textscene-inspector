@@ -17,14 +17,11 @@ import { ValidatorRegistry, validatorRegistry } from '../../../../linter/Validat
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry';
 import { NODE_BASE_TYPES, baseChain } from '../../../../godot/nodeBaseTypes';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
+import { checkerFor } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('FABRIK3D', property);
-  expect(validator, `no validator registered for FABRIK3D.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `FABRIK3D.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('FABRIK3D');
 
 /**
  * Set exactly ONE, from the source rather than from expectation: list the keys
@@ -55,6 +52,10 @@ describe('FABRIK3D strict validators', () => {
     // reasoned. `fixtureLint` owns the whole-registry version but needs the
     // barrel, so it cannot run while sibling slices are being written; this
     // checks the same file against whatever this test imported.
+    //
+    // With no own keys that is the INHERITED validators only — `linterParser`
+    // imports the parent chain — so it covers what IterateIK3D up declares and
+    // becomes this slice's own claim the moment KEYS gains an entry.
     expectFixtureClean('unit-fabrik-3d.tscn');
   });
 

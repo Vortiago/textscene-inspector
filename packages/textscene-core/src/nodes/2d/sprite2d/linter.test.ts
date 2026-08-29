@@ -92,25 +92,28 @@ describe('Sprite2D Linter', () => {
         prop: 'hframes',
         valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['hframes', 'integer 1-16384'] },
-          { value: -1, contains: ['hframes', 'integer 1-16384'] },
+          { value: 0, contains: ['hframes', 'between 1 and 16384'] },
+          { value: -1, contains: ['hframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'vframes',
         valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['vframes', 'integer 1-16384'] },
-          { value: -1, contains: ['vframes', 'integer 1-16384'] },
+          { value: 0, contains: ['vframes', 'between 1 and 16384'] },
+          { value: -1, contains: ['vframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'frame',
         valid: [5, 0],
         with: { hframes: 3, vframes: 2 },
+        // A reject node carries no grid, so `sprite2d-frame-range` fires beside
+        // the validator on any index above 0. Naming the phase pins each case to
+        // the diagnostic it is about.
         invalid: [
-          { value: -1, contains: ['frame', 'non-negative'] },
-          { value: 1.5, contains: ['frame'] },
+          { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
+          { value: 1.5, ruleName: 'strict-parser', contains: ['frame'] },
         ],
       },
       {
@@ -126,7 +129,7 @@ describe('Sprite2D Linter', () => {
     ]);
 
     describe('ADR-0032 tiering: enforced floor, hinted ceiling', () => {
-      // set_hframes ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:323); nothing
+      // set_hframes ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:344); nothing
       // enforces the 16384 hint (sprite_2d.cpp:543) but the format is real.
       it('errors below the enforced hframes floor', () => {
         expectDiagnostic(scene(node('Sprite2D', { hframes: 0 })), {
@@ -247,6 +250,35 @@ describe('Sprite2D Linter', () => {
         )
       );
     });
+
+    // Godot replays a node's properties in FILE order (packed_scene.cpp:492), so
+    // a grid written below `frame` is still 1x1 when set_frame's ERR_FAIL_INDEX
+    // runs. Measured on 4.6.3: this body loads on frame 0.
+    it('errors when hframes is written below frame', () => {
+      expectDiagnostic(scene(node('Sprite2D', { frame: 3, hframes: 4, vframes: 1 })), {
+        ruleName: 'sprite2d-frame-range',
+        severity: 'error',
+        contains: ['Frame 3 is out of range', 'hframes=1', 'file order'],
+      });
+    });
+
+    it('passes on the same values with the grid written above frame', () => {
+      expectClean(
+        scene(
+          node('Sprite2D', { texture: 'SubResource("tex_1")', hframes: 4, vframes: 1, frame: 3 }),
+          '[sub_resource type="Texture2D" id="tex_1"]'
+        )
+      );
+    });
+
+    it('stays loud when the unusable grid literal is written below frame', () => {
+      // Only the keys ABOVE `frame` decide the grid, so a literal phase 1
+      // already reports does not silence the rule from below it.
+      expectDiagnostic(scene(node('Sprite2D', { frame: 5, hframes: '1e20' })), {
+        ruleName: 'sprite2d-frame-range',
+        contains: ['out of range'],
+      });
+    });
   });
 
   describe('Semantic Validation (Frame Coords Range)', () => {
@@ -275,6 +307,19 @@ describe('Sprite2D Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(1);
       const coordErrors = diagnostics.filter(d => d.ruleName === 'sprite2d-frame-coords-range');
       expect(coordErrors).toHaveLength(2);
+    });
+
+    // Same replay order, same guard (sprite_2d.cpp:312). Measured on 4.6.3:
+    // this body raises ERR_FAIL_INDEX and keeps frame_coords at (0, 0).
+    it('errors when hframes is written below frame_coords', () => {
+      expectDiagnostic(
+        scene(node('Sprite2D', { frame_coords: 'Vector2i(3, 0)', hframes: 4 })),
+        {
+          ruleName: 'sprite2d-frame-coords-range',
+          severity: 'error',
+          contains: ['frame_coords.x (3)', 'hframes=1', 'file order'],
+        }
+      );
     });
 
     it('should pass when frame_coords is within range', () => {

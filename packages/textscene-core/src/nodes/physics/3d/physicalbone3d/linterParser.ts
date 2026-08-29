@@ -35,7 +35,11 @@ const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 
 /**
  * `joint_constraints/<leaf>` (or, for SixDOFJointData, `joint_constraints/<x|y|z>/<leaf>`)
- * validators, keyed by the trailing leaf name once any axis segment is stripped.
+ * validators, keyed by the trailing leaf name once any axis segment is stripped
+ * and built for the key PREFIX that was stripped — `v.float` bakes the name it
+ * is handed into the message and into the codes `formatCode`/`valueCode`
+ * derive, so a table built from the bare leaf quotes `damping` at a file that
+ * wrote `joint_constraints/x/damping`.
  *
  * A validator only ever sees a single key and value, never the sibling
  * `joint_type` that decides which JointData subclass actually owns a given
@@ -51,57 +55,57 @@ const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
 // value unconditionally (only gated on whether the live joint RID matches its
 // own type, for the PhysicsServer3D call, not for the stored field), so every
 // bound in this table is hinted, never enforced.
-const JOINT_CONSTRAINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+const jointConstraintLeaves = (p: string): Readonly<Record<string, PropertyValidator>> => ({
   // PinJointData::_get_property_list — physical_bone_3d.cpp:160-162
-  damping: v.float('damping', { min: 0.01, max: 8.0, hinted: 'physical_bone_3d.cpp:161' }),
-  impulse_clamp: v.float('impulse_clamp', {
+  damping: v.float(`${p}damping`, { min: 0.01, max: 8.0, hinted: 'physical_bone_3d.cpp:161' }),
+  impulse_clamp: v.float(`${p}impulse_clamp`, {
     min: 0.0,
     max: 64.0,
     hinted: 'physical_bone_3d.cpp:162',
   }),
   // bias: union of PinJointData (0.01-0.99, physical_bone_3d.cpp:160) and
   // ConeJointData (0.01-16.0, physical_bone_3d.cpp:235)
-  bias: v.float('bias', { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:235' }),
+  bias: v.float(`${p}bias`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:235' }),
 
   // ConeJointData::_get_property_list — physical_bone_3d.cpp:233-237. Degrees
   // genuinely are on the wire here: ConeJointData::_set/_get (:171-175, :204-206)
   // do their own deg_to_rad/rad_to_deg, unlike ConeTwistJoint3D's set_param,
   // so no v.radians conversion belongs on these two.
-  swing_span: v.float('swing_span', { min: -180, max: 180, hinted: 'physical_bone_3d.cpp:233' }),
+  swing_span: v.float(`${p}swing_span`, { min: -180, max: 180, hinted: 'physical_bone_3d.cpp:233' }),
   // twist_span hint carries both or_less and or_greater: both ends are soft
   // editor bounds, so the real value is unbounded (physical_bone_3d.cpp:234)
-  twist_span: v.float('twist_span'),
-  softness: v.float('softness', { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:236' }),
-  relaxation: v.float('relaxation', { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:237' }),
+  twist_span: v.float(`${p}twist_span`),
+  softness: v.float(`${p}softness`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:236' }),
+  relaxation: v.float(`${p}relaxation`, { min: 0.01, max: 16.0, hinted: 'physical_bone_3d.cpp:237' }),
 
   // HingeJointData::_get_property_list — physical_bone_3d.cpp:316-321 — the
   // enabled/upper/lower/softness leaves are shared verbatim (same bound) with
   // SliderJointData's angular_limit_* and SixDOFJointData's per-axis leaves;
   // all three subclasses do their own deg_to_rad, so angles stay plain floats.
-  angular_limit_enabled: v.boolean('angular_limit_enabled'),
-  angular_limit_upper: v.float('angular_limit_upper', {
+  angular_limit_enabled: v.boolean(`${p}angular_limit_enabled`),
+  angular_limit_upper: v.float(`${p}angular_limit_upper`, {
     min: -180,
     max: 180,
     hinted: 'physical_bone_3d.cpp:317',
   }),
-  angular_limit_lower: v.float('angular_limit_lower', {
+  angular_limit_lower: v.float(`${p}angular_limit_lower`, {
     min: -180,
     max: 180,
     hinted: 'physical_bone_3d.cpp:318',
   }),
   // angular_limit_bias: HingeJointData only.
-  angular_limit_bias: v.float('angular_limit_bias', {
+  angular_limit_bias: v.float(`${p}angular_limit_bias`, {
     min: 0.01,
     max: 0.99,
     hinted: 'physical_bone_3d.cpp:319',
   }),
-  angular_limit_softness: v.float('angular_limit_softness', {
+  angular_limit_softness: v.float(`${p}angular_limit_softness`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:320',
   }),
   // angular_limit_relaxation: HingeJointData only.
-  angular_limit_relaxation: v.float('angular_limit_relaxation', {
+  angular_limit_relaxation: v.float(`${p}angular_limit_relaxation`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:321',
@@ -110,29 +114,29 @@ const JOINT_CONSTRAINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // SliderJointData::_get_property_list — physical_bone_3d.cpp:432-442
   // linear_limit_upper/lower carry NO PROPERTY_HINT_RANGE at all (not even a
   // soft one) in both SliderJointData and SixDOFJointData: unbounded.
-  linear_limit_upper: v.float('linear_limit_upper'),
-  linear_limit_lower: v.float('linear_limit_lower'),
-  linear_limit_softness: v.float('linear_limit_softness', {
+  linear_limit_upper: v.float(`${p}linear_limit_upper`),
+  linear_limit_lower: v.float(`${p}linear_limit_lower`),
+  linear_limit_softness: v.float(`${p}linear_limit_softness`, {
     min: 0.01,
     max: 16.0,
     hinted: 'physical_bone_3d.cpp:434',
   }),
-  linear_limit_restitution: v.float('linear_limit_restitution', {
+  linear_limit_restitution: v.float(`${p}linear_limit_restitution`, {
     min: 0.01,
     max: 16.0,
     hinted: 'physical_bone_3d.cpp:435',
   }),
-  linear_limit_damping: v.float('linear_limit_damping', {
+  linear_limit_damping: v.float(`${p}linear_limit_damping`, {
     min: 0,
     max: 16.0,
     hinted: 'physical_bone_3d.cpp:436',
   }),
-  angular_limit_restitution: v.float('angular_limit_restitution', {
+  angular_limit_restitution: v.float(`${p}angular_limit_restitution`, {
     min: 0.01,
     max: 16.0,
     hinted: 'physical_bone_3d.cpp:441',
   }),
-  angular_limit_damping: v.float('angular_limit_damping', {
+  angular_limit_damping: v.float(`${p}angular_limit_damping`, {
     min: 0,
     max: 16.0,
     hinted: 'physical_bone_3d.cpp:442',
@@ -140,40 +144,54 @@ const JOINT_CONSTRAINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // SixDOFJointData::_get_property_list per-axis leaves — physical_bone_3d.cpp:680-704
   // (angular_limit_enabled/upper/lower/softness above are this struct's leaves too)
-  linear_limit_enabled: v.boolean('linear_limit_enabled'),
-  linear_spring_enabled: v.boolean('linear_spring_enabled'),
-  linear_spring_stiffness: v.float('linear_spring_stiffness'),
-  linear_spring_damping: v.float('linear_spring_damping'),
-  linear_equilibrium_point: v.float('linear_equilibrium_point'),
-  linear_restitution: v.float('linear_restitution', {
+  linear_limit_enabled: v.boolean(`${p}linear_limit_enabled`),
+  linear_spring_enabled: v.boolean(`${p}linear_spring_enabled`),
+  linear_spring_stiffness: v.float(`${p}linear_spring_stiffness`),
+  linear_spring_damping: v.float(`${p}linear_spring_damping`),
+  linear_equilibrium_point: v.float(`${p}linear_equilibrium_point`),
+  linear_restitution: v.float(`${p}linear_restitution`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:693',
   }),
-  linear_damping: v.float('linear_damping', {
+  linear_damping: v.float(`${p}linear_damping`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:694',
   }),
-  angular_restitution: v.float('angular_restitution', {
+  angular_restitution: v.float(`${p}angular_restitution`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:699',
   }),
-  angular_damping: v.float('angular_damping', {
+  angular_damping: v.float(`${p}angular_damping`, {
     min: 0.01,
     max: 16,
     hinted: 'physical_bone_3d.cpp:700',
   }),
-  erp: v.float('erp'),
-  angular_spring_enabled: v.boolean('angular_spring_enabled'),
-  angular_spring_stiffness: v.float('angular_spring_stiffness'),
-  angular_spring_damping: v.float('angular_spring_damping'),
-  angular_equilibrium_point: v.float('angular_equilibrium_point'),
-};
+  erp: v.float(`${p}erp`),
+  angular_spring_enabled: v.boolean(`${p}angular_spring_enabled`),
+  angular_spring_stiffness: v.float(`${p}angular_spring_stiffness`),
+  angular_spring_damping: v.float(`${p}angular_spring_damping`),
+  angular_equilibrium_point: v.float(`${p}angular_equilibrium_point`),
+});
 
 const JOINT_CONSTRAINTS_PREFIX = 'joint_constraints/';
 const AXIS_PREFIX_RE = /^[xyz]\//;
+
+/**
+ * One leaf table per key prefix the dispatcher can see.
+ *
+ * A closed set of four: only SixDOFJointData nests its leaves, and only under a
+ * single `x`/`y`/`z` segment, so anything else falls through to the unknown-leaf
+ * branch below rather than reaching a table.
+ */
+const LEAF_TABLES: ReadonlyMap<string, Readonly<Record<string, PropertyValidator>>> = new Map(
+  ['', 'x/', 'y/', 'z/'].map((axis) => [
+    axis,
+    jointConstraintLeaves(`${JOINT_CONSTRAINTS_PREFIX}${axis}`),
+  ])
+);
 
 /** Dispatches a `joint_constraints/...` key to the validator for its leaf name. */
 /**
@@ -187,12 +205,12 @@ const AXIS_PREFIX_RE = /^[xyz]\//;
  */
 const jointConstraintsValidator: PropertyValidator = accepts((key, value, line) => {
   const rest = key.slice(JOINT_CONSTRAINTS_PREFIX.length);
-  const leafName = rest.replace(AXIS_PREFIX_RE, '');
+  const axis = AXIS_PREFIX_RE.exec(rest)?.[0] ?? '';
+  const leafName = rest.slice(axis.length);
+  const table = LEAF_TABLES.get(axis) ?? {};
   // hasOwn, so a leaf named `toString` cannot resolve an inherited function and
   // get called as a validator. The key is text the `.tscn` chooses.
-  const leaf = Object.hasOwn(JOINT_CONSTRAINT_LEAVES, leafName)
-    ? JOINT_CONSTRAINT_LEAVES[leafName]
-    : undefined;
+  const leaf = Object.hasOwn(table, leafName) ? table[leafName] : undefined;
   if (!leaf) {
     return keyShapeError(
       key,
@@ -205,11 +223,14 @@ const jointConstraintsValidator: PropertyValidator = accepts((key, value, line) 
 }, 'joint-type-dependent constraint (float or bool — see PinJointData/ConeJointData/HingeJointData/SliderJointData/SixDOFJointData)');
 // This dispatcher performs no comparison of its own: its only rejection is an
 // unrecognised leaf NAME, a format concern. Every magnitude bound lives in the
-// `JOINT_CONSTRAINT_LEAVES` table, so the table is exposed for the sweep to
-// recurse through: tagging the dispatcher alone would vouch for bounds it never
-// looks at.
+// leaf tables, so all four are exposed for the sweep to recurse through —
+// tagging the dispatcher alone would vouch for bounds it never looks at, and
+// exposing one table would leave the three axis-prefixed instances that can
+// equally fire unswept.
 jointConstraintsValidator.formatOnly = true;
-jointConstraintsValidator.leaves = Object.values(JOINT_CONSTRAINT_LEAVES);
+jointConstraintsValidator.leaves = [...LEAF_TABLES.values()].flatMap((table) =>
+  Object.values(table)
+);
 
 validatorRegistry.registerAll('PhysicalBone3D', {
   // physical_bone_3d.cpp:709-745 — virtual STRING_NAME property (_get_property_list/

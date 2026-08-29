@@ -13,14 +13,11 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../linter/testing/fixtureCheck';
+import { checkerFor, expectError, expectWarning } from '../../../linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('NavigationAgent3D', property);
-  expect(validator, `no validator registered for NavigationAgent3D.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `NavigationAgent3D.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('NavigationAgent3D');
 
 /**
  * Every key NavigationAgent3D binds via `ADD_PROPERTY`, across the
@@ -142,9 +139,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_desired_distance', '5.0')).toBeNull();
     });
     it('warns below the hinted floor of 0.1 (bare assignment, cpp:591-597)', () => {
-      const err = check('path_desired_distance', '0.05');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_desired_distance', '0.05'), 'must be >= 0.1.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('path_desired_distance', '0.1')).toBeNull();
@@ -156,9 +151,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('target_desired_distance', '2.0')).toBeNull();
     });
     it('warns below the hinted floor of 0.1', () => {
-      const err = check('target_desired_distance', '0');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('target_desired_distance', '0'), 'must be >= 0.1.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('target_desired_distance', '0.1')).toBeNull();
@@ -170,9 +163,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_height_offset', '0.0')).toBeNull();
     });
     it('warns below the hinted floor of -100 (pure bare assignment, cpp:626-628)', () => {
-      const err = check('path_height_offset', '-101');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_height_offset', '-101'), 'must be >= -100.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('path_height_offset', '-100')).toBeNull();
@@ -184,9 +175,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_max_distance', '5.0')).toBeNull();
     });
     it('warns below the hinted floor of 0.01 (bare assignment, cpp:693-699)', () => {
-      const err = check('path_max_distance', '0.001');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_max_distance', '0.001'), 'must be >= 0.01.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('path_max_distance', '0.01')).toBeNull();
@@ -210,9 +199,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('pathfinding_algorithm', '0')).toBeNull();
     });
     it('warns on any other value (bare assignment, hint lists one member)', () => {
-      const err = check('pathfinding_algorithm', '1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('pathfinding_algorithm', '1'), 'must be 0-0');
     });
   });
 
@@ -221,9 +208,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_postprocessing', '1')).toBeNull();
     });
     it('warns above the enum ceiling', () => {
-      const err = check('path_postprocessing', '3');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_postprocessing', '3'), 'must be 0-2');
     });
     it('accepts the ceiling, NONE (2) (edge)', () => {
       expect(check('path_postprocessing', '2')).toBeNull();
@@ -235,9 +220,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_metadata_flags', '7')).toBeNull();
     });
     it('warns on a bit outside the hinted 3 (bare assignment keeps it, cpp:561-567)', () => {
-      const err = check('path_metadata_flags', '8');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_metadata_flags', '8'), 'sets a bit the inspector\'s flag list does not offer; it lists only PATH_METADATA_INCLUDE_TYPES (1) | PATH_METADATA_INCLUDE_RIDS (2) | PATH_METADATA_INCLUDE_OWNERS (4). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });
     it('accepts zero, no flags (edge)', () => {
       expect(check('path_metadata_flags', '0')).toBeNull();
@@ -259,9 +242,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('simplify_epsilon', '1.0')).toBeNull();
     });
     it('errors on negative (setter clamps: MAX(0.0, p_epsilon), cpp:513)', () => {
-      const err = check('simplify_epsilon', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('simplify_epsilon', '-1'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('simplify_epsilon', '0')).toBeNull();
@@ -273,9 +254,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_return_max_length', '50.0')).toBeNull();
     });
     it('errors on negative (setter clamps: MAX(0.0, p_length), cpp:522)', () => {
-      const err = check('path_return_max_length', '-0.01');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('path_return_max_length', '-0.01'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('path_return_max_length', '0')).toBeNull();
@@ -287,9 +266,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_return_max_radius', '25.0')).toBeNull();
     });
     it('errors on negative (setter clamps: MAX(0.0, p_radius), cpp:531)', () => {
-      const err = check('path_return_max_radius', '-5');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('path_return_max_radius', '-5'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('path_return_max_radius', '0')).toBeNull();
@@ -301,9 +278,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_search_max_polygons', '2048')).toBeNull();
     });
     it('warns on negative (bare assignment, hint floor is advisory)', () => {
-      const err = check('path_search_max_polygons', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('path_search_max_polygons', '-1'), 'must be >= 0.');
     });
     it('accepts exactly zero, meaning unlimited (edge)', () => {
       expect(check('path_search_max_polygons', '0')).toBeNull();
@@ -315,9 +290,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('path_search_max_distance', '10.0')).toBeNull();
     });
     it('errors on negative (setter clamps: MAX(0.0, p_distance), cpp:549; no hint at all)', () => {
-      const err = check('path_search_max_distance', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('path_search_max_distance', '-1'), 'must be >= 0.');
     });
     it('accepts exactly zero, meaning unlimited (edge)', () => {
       expect(check('path_search_max_distance', '0')).toBeNull();
@@ -353,9 +326,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('height', '2.0')).toBeNull();
     });
     it('errors on negative (ERR_FAIL_COND_MSG(p_height < 0.0, ...), cpp:618)', () => {
-      const err = check('height', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('height', '-1'), 'must be at least 0');
     });
     // Three bands: the setter refuses below 0 (:618), the hint floors at 0.01
     // (:173), so [0, 0.01) loads and only warns.
@@ -374,9 +345,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('radius', '0.75')).toBeNull();
     });
     it('errors on negative (ERR_FAIL_COND_MSG(p_radius < 0.0, ...), cpp:608)', () => {
-      const err = check('radius', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('radius', '-1'), 'must be at least 0');
     });
     // Three bands: the setter refuses below 0 (:608), the hint floors at 0.01
     // (:174), so [0, 0.01) loads and only warns.
@@ -395,9 +364,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('neighbor_distance', '50.0')).toBeNull();
     });
     it('warns below the hinted floor of 0.1', () => {
-      const err = check('neighbor_distance', '0');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('neighbor_distance', '0'), 'must be >= 0.1.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('neighbor_distance', '0.1')).toBeNull();
@@ -409,9 +376,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('max_neighbors', '10')).toBeNull();
     });
     it('warns below the hinted floor of 1 (bare assignment, cpp:655-663)', () => {
-      const err = check('max_neighbors', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('warning');
+      expectWarning(check('max_neighbors', '-1'), 'must be >= 1.');
     });
     it('accepts exactly the floor (edge)', () => {
       expect(check('max_neighbors', '1')).toBeNull();
@@ -423,9 +388,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('time_horizon_agents', '1.5')).toBeNull();
     });
     it('errors on negative (ERR_FAIL_COND_MSG(p_time_horizon < 0.0, ...), cpp:666)', () => {
-      const err = check('time_horizon_agents', '-0.1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('time_horizon_agents', '-0.1'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('time_horizon_agents', '0')).toBeNull();
@@ -437,9 +400,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('time_horizon_obstacles', '0.5')).toBeNull();
     });
     it('errors on negative (ERR_FAIL_COND_MSG(p_time_horizon < 0.0, ...), cpp:675)', () => {
-      const err = check('time_horizon_obstacles', '-0.1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('time_horizon_obstacles', '-0.1'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('time_horizon_obstacles', '0')).toBeNull();
@@ -451,9 +412,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('max_speed', '5.0')).toBeNull();
     });
     it('errors on negative (ERR_FAIL_COND_MSG(p_max_speed < 0.0, ...), cpp:684)', () => {
-      const err = check('max_speed', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('max_speed', '-1'), 'must be at least 0');
     });
     // Three bands: the setter refuses below 0 (:684), the hint floors at 0.01
     // (:179), so [0, 0.01) loads and only warns.
@@ -516,14 +475,10 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('avoidance_priority', '0.5')).toBeNull();
     });
     it('errors below 0 (ERR_FAIL_COND_MSG(p_priority < 0.0, ...), cpp:1058)', () => {
-      const err = check('avoidance_priority', '-0.1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('avoidance_priority', '-0.1'), 'must be between 0.0 and 1.0 inclusive.');
     });
     it('errors above 1 (ERR_FAIL_COND_MSG(p_priority > 1.0, ...), cpp:1059)', () => {
-      const err = check('avoidance_priority', '1.1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('avoidance_priority', '1.1'), 'must be between 0.0 and 1.0 inclusive.');
     });
     it('accepts both inclusive ends (edge)', () => {
       expect(check('avoidance_priority', '0')).toBeNull();
@@ -570,9 +525,7 @@ describe('NavigationAgent3D strict validators', () => {
       expect(check('debug_path_custom_point_size', '5.0')).toBeNull();
     });
     it('errors on negative (setter clamps under DEBUG_ENABLED: MAX(0.0, p_point_size), cpp:1121)', () => {
-      const err = check('debug_path_custom_point_size', '-1');
-      expect(err).not.toBeNull();
-      expect(err!.severity).toBe('error');
+      expectError(check('debug_path_custom_point_size', '-1'), 'must be >= 0.');
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('debug_path_custom_point_size', '0')).toBeNull();
@@ -597,9 +550,7 @@ describe('NavigationAgent3D strict validators', () => {
       // navigation_agent_3d.cpp:213 forwards to set_time_horizon_agents, whose
       // ERR_FAIL_COND_MSG (:666) refuses a negative value outright.
       expect(check('time_horizon', '0')).toBeNull();
-      const error = check('time_horizon', '-1');
-      expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      const error = expectError(check('time_horizon', '-1'), 'must be >= 0.');
       expect(error!.message).toContain("'time_horizon'");
       expect(error!.message).not.toContain('time_horizon_agents');
     });
@@ -610,9 +561,7 @@ describe('NavigationAgent3D strict validators', () => {
       // bounds it — a warning, and only at the floor.
       expect(check('agent_height_offset', '-100')).toBeNull();
       expect(check('agent_height_offset', '5000')).toBeNull();
-      const error = check('agent_height_offset', '-101');
-      expect(error).not.toBeNull();
-      expect(error!.severity).toBe('warning');
+      const error = expectWarning(check('agent_height_offset', '-101'), 'must be >= -100.');
       expect(error!.message).toContain("'agent_height_offset'");
       expect(error!.message).not.toContain('path_height_offset');
     });

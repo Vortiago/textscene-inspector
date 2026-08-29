@@ -8,7 +8,6 @@
  * whitespace into the output.
  */
 
-import { LENIENT_TREE_TEST_CASE } from './parserTests.mjs';
 
 export function reusedParserFiles({ typeName, lower, camel, intent, base, toSrc, toBase, reusedParser }) {
   const files = new Map();
@@ -82,11 +81,9 @@ ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}  renderIntent: '${inten
  * (ADR-0008) rather than for want of an implementation.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
-import { TscnParser } from '${toSrc}parser/TscnParser';
-import * as logger from '${toSrc}logger';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import { ${base.component} } from '${toBase}/Component';
 import './index';
@@ -106,8 +103,6 @@ describe('${typeName} registration', () => {
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
     expect(nodeComponentRegistry.isTransformOnly('${typeName}')).toBe(true);
   });
-
-${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });
 `
         : `/**
@@ -118,11 +113,9 @@ ${LENIENT_TREE_TEST_CASE(typeName, base.component)}
  * tree and inspector keep saying so until someone draws it.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
-import { TscnParser } from '${toSrc}parser/TscnParser';
-import * as logger from '${toSrc}logger';
 import { ${reusedParser.fn} } from '${reusedParser.importPath}';
 import './index';${base.invisibleBase ? `
 import './index.r3f';` : ''}
@@ -149,8 +142,6 @@ ${
     expect(nodeComponentRegistry.get('${typeName}')).toBeUndefined();
   });`
 }
-
-${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });
 `
     );

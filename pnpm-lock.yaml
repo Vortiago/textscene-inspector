@@ -132,7 +132,7 @@ importers:
         specifier: ^17.8.0
         version: 17.8.0
       happy-dom:
-        specifier: ^20.11.1
+        specifier: 'catalog:'
         version: 20.11.1
       husky:
         specifier: ^9.1.7
@@ -275,6 +275,9 @@ importers:
       '@testing-library/user-event':
         specifier: 'catalog:'
         version: 14.6.1(@testing-library/dom@10.4.1)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.2
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14

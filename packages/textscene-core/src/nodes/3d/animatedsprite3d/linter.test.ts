@@ -98,6 +98,18 @@ describe('AnimatedSprite3D semantic rule', () => {
       );
     });
 
+    // Godot writes a StringName with an `&` prefix, so the raw text is not the
+    // name: interpolating it printed `"&"run""`, naming a string that appears
+    // nowhere as spelled. `literalText` takes the jacket off, as the CONDITION
+    // beside it already does.
+    it('names the animation as Godot holds it, not as the literal is spelled', () => {
+      const found = lint({ animation: '&"run"' }).find(
+        (d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes'
+      );
+      expect(found?.message).toContain(`'animation' is set to "run"`);
+      expect(found?.message).not.toContain('&');
+    });
+
     it('stays quiet when both animation and sprite_frames are set', () => {
       const diagnostics = lint({ animation: '&"walk"', sprite_frames: 'SubResource("frames_1")' });
       expect(

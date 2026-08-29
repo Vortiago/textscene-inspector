@@ -22,12 +22,15 @@ const MIX_TARGET = { 0: 'STEREO', 1: 'SURROUND', 2: 'CENTER' };
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),
   // audio_stream_player.cpp:282, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both
-  // ends closed. set_volume_db (:69-71) ERR_FAILs on NaN only and otherwise
-  // assigns straight through, so out of range warns.
+  // ends closed, and set_volume_db assigns straight through, so out of range
+  // warns. Its one refusal is ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...):
+  // `nan` is dropped and the field keeps its previous value, while `inf` and
+  // `-inf` are stored unaltered.
   volume_db: v.float('volume_db', {
     min: -80,
     max: 24,
     hinted: 'audio_stream_player.cpp:282',
+    nan: 'audio_stream_player.cpp:70',
   }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
   // against a hint (audio_stream_player.cpp:284) of

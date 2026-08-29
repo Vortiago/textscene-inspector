@@ -30,13 +30,21 @@ function bare(props: Record<string, PropValue> = {}): string {
 }
 
 /**
- * An AnimationPlayer with one Animation carrying a single 'audio' track whose
+ * An AnimationMixer with one Animation carrying a single 'audio' track whose
  * NodePath targets `targetName`, plus an AudioStreamPlayer2D of that name with
  * no `stream` of its own — the `coin.tscn` `Pickup` shape (its stream arrives
  * through the track's `clips`, not the node's own `stream`). Uses the
  * empty-name default library (`libraries/ =`), the form Godot actually writes.
+ *
+ * `mixerType` is a parameter because `libraries`, `root_node` and the audio
+ * track cache are all AnimationMixer's, so an AnimationTree feeds the target
+ * exactly as an AnimationPlayer does.
  */
-function drivenByAudioTrack(targetName: string, playerProps: Record<string, PropValue> = {}): string {
+function drivenByAudioTrack(
+  targetName: string,
+  playerProps: Record<string, PropValue> = {},
+  mixerType = 'AnimationPlayer'
+): string {
   return scene(
     audioStream,
     `[sub_resource type="Animation" id="anim1"]
@@ -55,7 +63,7 @@ _data = {
 &"picked": SubResource("anim1")
 }`,
     node('Node2D', {}, { name: 'Root' }),
-    node('AnimationPlayer', { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
+    node(mixerType, { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
     node('AudioStreamPlayer2D', playerProps, { name: 'Pickup', parent: '.' })
   );
 }
@@ -103,12 +111,34 @@ describe('AudioStreamPlayer2D Linter', () => {
         },
         {
           // audio_stream_player_2d.cpp:430 hints "-80,24,suffix:dB", closed at both
-          // ends; outside it warns (set_volume_db :209-211 only refuses NaN).
+          // ends; set_volume_db assigns straight through, so outside it warns.
           prop: 'volume_db',
           valid: [-80.0, 0, 24],
           invalid: [
             { value: -80.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
             { value: 24.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
+          ],
+        },
+        {
+          // audio_stream_player_2d.cpp:210,
+          // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.")
+          // is the setter's only refusal. Measured on 4.6.3: after
+          // `volume_db = -12`, writing NaN leaves -12 and prints the error, while
+          // `inf` and `-inf` are stored unaltered — so this is a NaN-only tier,
+          // not the finite guard, and a range bound covers neither end of it.
+          prop: 'volume_db',
+          invalid: [
+            { value: 'nan', contains: ['volume_db', 'must not be NaN'], severity: 'error' },
+            {
+              value: 'inf',
+              contains: ['volume_db', 'between -80 and 24'],
+              severity: 'warning',
+            },
+            {
+              value: 'inf_neg',
+              contains: ['volume_db', 'between -80 and 24'],
+              severity: 'warning',
+            },
           ],
         },
         {
@@ -223,9 +253,16 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
 
       it('stays silent when an AnimationPlayer audio track targets this node', () => {
-        // animation_mixer.cpp:889-897 builds its own polyphonic playback for
+        // animation_mixer.cpp:891-898 builds its own polyphonic playback for
         // the track's target and never reads the node's `stream`.
         expectClean(drivenByAudioTrack('Pickup', { autoplay: true }));
+      });
+
+      it('stays silent for an AnimationTree too, which shares that cache', () => {
+        // The suppression is grounded on AnimationMixer, so it must ask the
+        // chain: an exact `AnimationPlayer` test warned about a node the engine
+        // does feed.
+        expectClean(drivenByAudioTrack('Pickup', { autoplay: true }, 'AnimationTree'));
       });
 
       it('still warns when the audio track targets a DIFFERENT node', () => {

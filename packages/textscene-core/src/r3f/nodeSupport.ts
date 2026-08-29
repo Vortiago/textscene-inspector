@@ -1,37 +1,19 @@
 /**
- * Shared "does the previewer handle this node type?" check for the scene tree
- * and the inspector. A node is supported when it has a parser registration, a
- * render component, is the base `Node`, or is a GLB-synthesised display type
- * (created programmatically, not authored — the GLB scene root and the nodes
- * standing in for a GLB's internal hierarchy). Without the component-registry
- * and GLB checks, render-only types like `GLBSceneRoot` were wrongly flagged
- * "Not implemented" even though they render.
+ * What the viewport will actually do with a node type — the three-state the
+ * scene tree and the inspector badge on.
  */
 
-import { nodeRegistry } from '../core/NodeRegistry.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 
-export function isRenderableNodeType(type: string): boolean {
-  return (
-    type === 'Node' ||
-    nodeRegistry.getRegistration(type) !== null ||
-    // Covers the GLB-synthesised types and every component registration, so
-    // those conditions live in one place.
-    rendersOwnVisual(type) !== 'not-implemented'
-  );
-}
-
 /**
- * What the viewport will actually do with this type — the three-state the tree
- * and inspector badge on.
+ * The badge's answer for `type`.
  *
- * `isRenderableNodeType` answers "do we know it?", and a *parser* registration
- * is enough to satisfy it. That conflates two very different situations once
- * broad parse coverage exists: a Timer draws nothing because drawing nothing is
- * correct, while a ProgressBar draws nothing because nobody has implemented it.
- * Reporting both as renderable would quietly retire the "Not implemented" badge
- * for every unimplemented type the parser learns to read.
+ * A *parser* registration says nothing about drawing, and conflating the two
+ * hides a gap: a Timer draws nothing because drawing nothing is correct, while
+ * a ProgressBar draws nothing because nobody has implemented it. Reading a
+ * parser registration as renderable retires the "Not implemented" badge for
+ * every unimplemented type the parser learns to read.
  *
  * - `'draws'` — a component is registered and produces visible output.
  * - `'transform-only'` — a component is registered and deliberately draws

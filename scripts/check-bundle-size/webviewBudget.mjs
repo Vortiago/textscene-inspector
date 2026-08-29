@@ -17,12 +17,11 @@ import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 // The ceiling guards against an accidental import pulling a whole library into
 // the canvas-paint path. It is not a cap on deliberate, measured growth: a
 // parser is registered for every one of Godot's instantiable node types and
-// each registration is bundled code even though its linter half is not, so the
-// closure sits in the high 500s of KB gzipped and no tighter ceiling would fail
-// on a real regression rather than on the next slice.
-// MAIN_BASELINE_GZ (the pre-merge measurement of `main`) feeds only the
-// informational delta-vs-main report line.
-const MAIN_BASELINE_GZ = 247_543;
+// each registration is bundled code even though its linter half is not, so no
+// tighter ceiling would fail on a real regression rather than on the next slice.
+// MEASURED_GZ is that closure as last measured here, and the report's delta is
+// read against it — growth inside the headroom is invisible in a PASS line.
+const MEASURED_GZ = 607_514; // 8-file closure, measured 2026-08-29
 const BUDGET_GZ = 700_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. These appear when
@@ -151,7 +150,7 @@ export function checkWebviewBudget(enforce) {
     buffers.push(buf);
   }
   const totalGz = gzipSync(Buffer.concat(buffers)).length;
-  const overBaseline = totalGz - MAIN_BASELINE_GZ;
+  const sinceMeasured = totalGz - MEASURED_GZ;
 
   console.log('\n=== VS Code webview initial-paint bundle ===');
   console.log(`Files (static-import closure): ${closure.size}`);
@@ -163,8 +162,10 @@ export function checkWebviewBudget(enforce) {
   }
   console.log(`Total raw:        ${formatKb(totalRaw)}  (${totalRaw} B)`);
   console.log(`Total gzipped:    ${formatKb(totalGz)}  (${totalGz} B)`);
-  console.log(`Main baseline:    ${formatKb(MAIN_BASELINE_GZ)}  (${MAIN_BASELINE_GZ} B)`);
-  console.log(`Delta vs main:    ${overBaseline >= 0 ? '+' : ''}${formatKb(overBaseline)}  (${overBaseline} B)`);
+  console.log(`Last measured:    ${formatKb(MEASURED_GZ)}  (${MEASURED_GZ} B)`);
+  console.log(
+    `Growth since:     ${sinceMeasured >= 0 ? '+' : ''}${formatKb(sinceMeasured)}  (${sinceMeasured} B)`
+  );
   console.log(`Budget absolute:  ${formatKb(BUDGET_GZ)}  (${BUDGET_GZ} B)`);
 
   const overBudget = totalGz - BUDGET_GZ;

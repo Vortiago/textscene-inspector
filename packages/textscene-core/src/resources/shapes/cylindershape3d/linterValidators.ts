@@ -1,9 +1,5 @@
 /**
  * Strict parser validation for CylinderShape3D's OWN properties.
- *
- * `mid_height` is deliberately absent: its `ADD_PROPERTY` carries
- * `PROPERTY_USAGE_NONE`, so Godot never serialises it and no `.tscn` can hold
- * it. See cylinder_shape_3d.cpp.
  */
 
 // Registers the Shape3D tier this class inherits from, and through it the

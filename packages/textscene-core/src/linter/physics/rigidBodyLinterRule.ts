@@ -18,7 +18,7 @@ import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
-import { slotComponents } from '../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
 import { tupleComponent } from '../validators/commonValidators.js';
 import { boolSlotValue } from '../../godot/index.js';
 
@@ -42,14 +42,20 @@ const RIGID_BODY_SCALE_TOLERANCE = 0.05;
  * unlike Node3D, Node2D's `transform` ADD_PROPERTY carries
  * `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written by the engine.
  */
-function parseScale2D(raw: string | undefined): { x: number; y: number } {
+function parseScale2D(raw: string | undefined): { x: number; y: number } | null {
   if (raw === undefined) return { x: 1, y: 1 };
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
+  const captures = [match[1], match[2]];
+  // `null`, not the NaN `slotComponents` answers with: the engine stores a
+  // number the file does not state, and none this rule may name — `_to_int`'s
+  // float branch is undefined behaviour (variant.h:369-370). The NaN reached
+  // the message, which printed `scale (NaN, 5)` at the author.
+  if (slotComponentsAltered(raw, 'Vector2', captures)) return null;
   // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
   // converts, whose arguments are narrowed to int32 before the widening, so
   // `Vector2i(0.5, 1)` scales by the (0, 1) the engine stores.
-  const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
+  const [x, y] = slotComponents(raw, 'Vector2', captures, tupleComponent);
   return { x: x!, y: y! };
 }
 
@@ -173,15 +179,18 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // reading `scale` directly reproduces it without composing a matrix.
     // Reaches PhysicalBone2D too, which inherits this check unchanged
     // (physical_bone_2d.cpp:109, `RigidBody2D::get_configuration_warnings()`).
-    if (dim === '2D') {
-      const scale = parseScale2D(rawProps.scale);
-      const sx = Math.abs(scale.x);
-      const sy = Math.abs(scale.y);
+    // `null` when a component is narrowed at parse time: the rule then has no
+    // scale it may quote, so it reports none. `v.vector2('scale')` on Node2D is
+    // a shape check today and says nothing about that literal either.
+    const scale2D = dim === '2D' ? parseScale2D(rawProps.scale) : null;
+    if (scale2D !== null) {
+      const sx = Math.abs(scale2D.x);
+      const sy = Math.abs(scale2D.y);
       if (Math.abs(sx - 1) > RIGID_BODY_SCALE_TOLERANCE || Math.abs(sy - 1) > RIGID_BODY_SCALE_TOLERANCE) {
         diagnostics.push({
           severity: 'warning',
           message:
-            `${node.type} '${node.name}' has scale (${scale.x}, ${scale.y}). ` +
+            `${node.type} '${node.name}' has scale (${scale2D.x}, ${scale2D.y}). ` +
             'Size changes to RigidBody2D will be overridden by the physics engine when running. ' +
             'Change the size in its children collision shapes instead.',
           nodeName: node.name,

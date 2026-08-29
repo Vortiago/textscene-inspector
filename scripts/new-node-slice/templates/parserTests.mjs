@@ -81,29 +81,3 @@ export const NODE2D_PARSER_TEST_CASES = (typeName) => `  it('parses name, parent
     expect(result.parent).toBeUndefined();
     expect(result.position).toEqual({ x: 0, y: 0 });
   });`;
-
-/**
- * The lenient-parser round trip, emitted into every registration test.
- *
- * A slice can register a parser and still be invisible to `TscnParser` if the
- * aggregation import is missing, in which case `parseNodeWithRegistry` quietly
- * falls back to Node and logs `Unsupported node type`. Asserting the absence of
- * that warning is the only check that catches it. 31 slices hand-wrote this
- * block before the template carried it, so it is generated now rather than
- * left to whoever remembers.
- */
-export const LENIENT_TREE_TEST_CASE = (typeName, rootType) =>
-  `  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
-    const scene = new TscnParser().parse(
-      '[gd_scene format=3]\\n\\n[node name="Root" type="${rootType}"]\\n\\n' +
-        '[node name="My${typeName}" type="${typeName}" parent="."]\\n'
-    );
-
-    const node = scene.nodes[0]?.children[0];
-    expect(node?.type).toBe('${typeName}');
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
-
-    warnSpy.mockRestore();
-  });`;

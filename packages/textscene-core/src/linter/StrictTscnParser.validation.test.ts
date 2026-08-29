@@ -50,8 +50,7 @@ visible = invalid_value
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should not validate properties in sub_resources', () => {
-      // Sub_resource properties are not type-validated
+    it('validates a sub_resource body against its own heading type', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="1"]
@@ -62,10 +61,56 @@ size = Vector3(1, 2, 3)
 
       const result = parser.parse(content);
 
-      // Sub_resources are parsed but properties aren't validated
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
       expect(result.scene!.internalResources).toHaveLength(1);
+    });
+  });
+
+  /**
+   * Which of a file's sub-resources a refusal is about.
+   *
+   * `[sub_resource]` bodies run the full validator set, so the resource slices'
+   * bounds fire here — and a scene routinely carries several sub-resources of
+   * ONE type, which only the heading's `id=` tells apart. Reporting every one
+   * of those as `<unknown>` left the author to find the offending block by eye.
+   */
+  describe('sub-resource attribution', () => {
+    const content = `[gd_scene load_steps=3 format=3]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 8.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2"]
+radius = -1.0
+
+[node name="Root" type="Node2D"]
+`;
+
+    it('names the sub-resource by its id and type', () => {
+      const errors = parser.parse(content).errors;
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.nodeName).toBe('CircleShape2D_2');
+      expect(errors[0]?.nodeType).toBe('CircleShape2D');
+    });
+
+    it('does not leak a sub-resource name onto the node that follows it', () => {
+      const errors = parser.parse(`${content}invalidproperty\n`).errors;
+      const malformed = errors.find((e) => e.code === 'INVALID_PROPERTY_FORMAT');
+
+      expect(malformed?.nodeName).toBe('Root');
+      expect(malformed?.nodeType).toBe('Node2D');
+    });
+
+    it('leaves a .tres [resource] body unattributed, since no id names it', () => {
+      const tres = `[gd_resource type="Environment" format=3]
+
+[resource]
+background_mode = 99
+`;
+
+      expect(parser.parse(tres).errors[0]?.nodeName).toBeUndefined();
     });
   });
 

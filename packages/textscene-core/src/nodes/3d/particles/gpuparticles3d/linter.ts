@@ -117,13 +117,28 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
           nodeType: node.type,
           ruleName: 'valid-gpuparticles3d-sub-emitter',
         });
+      } else if (target.status === 'found' && target.node === node) {
+        // The OTHER half of `if (sen && sen != this)`
+        // (gpu_particles_3d.cpp:485-486): a path back to this very node passes
+        // the cast and is then dropped by the identity test, so the emitter
+        // never becomes its own sub-emitter. Checked before the type arm
+        // because a self path always passes it.
+        diagnostics.push({
+          severity: 'warning',
+          message: `Sub-emitter property points back at '${node.name}' itself. Godot keeps the path and emits no sub-particles.`,
+          nodeName: node.name,
+          nodeType: node.type,
+          ruleName: 'gpuparticles3d-sub-emitter-self',
+        });
       } else if (target.status === 'found' && target.node.type !== 'GPUParticles3D') {
         // A separate rule name from the dangling case above, because the two
-        // are different ADR-0032 tiers. The path RESOLVES here; what says it
-        // must resolve to a GPUParticles3D is only the property's
-        // PROPERTY_HINT_NODE_PATH_VALID_TYPES, which constrains the inspector's
-        // node picker. Godot stores the path either way and simply emits
-        // nothing, so this is a hint violation - a warning.
+        // are different ADR-0032 tiers. The path RESOLVES here; nothing refuses
+        // or alters it — `_attach_sub_emitter` casts the node it walked to and
+        // simply skips the attach when the cast fails
+        // (gpu_particles_3d.cpp:485-486). The property's
+        // PROPERTY_HINT_NODE_PATH_VALID_TYPES only constrains the inspector's
+        // node picker and grounds nothing, so this is the engine-inert tier - a
+        // warning.
         diagnostics.push({
           severity: 'warning',
           message: `Sub-emitter property points to a ${target.node.type} node, but must point to a GPUParticles3D node. Godot keeps the path and emits no sub-particles.`,
@@ -178,9 +193,22 @@ const gpuParticles3DValidationRule: LintRule = {
         },
       },
       {
+        ruleName: 'gpuparticles3d-sub-emitter-self',
+        severity: 'warning',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'gpu_particles_3d.cpp:486',
+          unused: 'the `sen != this` arm skips the attach, so no sub-emitter is set',
+        },
+      },
+      {
         ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
         severity: 'warning',
-        grounding: { kind: 'engine', at: 'gpu_particles_3d.cpp:823' },
+        grounding: {
+          kind: 'engine-inert',
+          at: 'gpu_particles_3d.cpp:485',
+          unused: 'the cast to GPUParticles3D fails, so no sub-emitter is set',
+        },
       },
     ],
   },

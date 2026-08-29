@@ -57,6 +57,10 @@
  *   writes no key at all. Flagging its absence would demand a line the engine
  *   never emits.
  * - `editor-only` — the class or the check is `TOOLS_ENABLED`.
+ * - `engine-unreachable` — the `push_back` is live source, but no value of the
+ *   field it tests can satisfy the condition, so Godot never raises it. A rule
+ *   here would report a warning the engine does not, on a scene the engine is
+ *   happy with. Say which line makes the state unreachable.
  *
  * ## Keeping the table honest
  *

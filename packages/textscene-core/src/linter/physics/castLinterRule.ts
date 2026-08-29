@@ -19,7 +19,7 @@ import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
 
 /** Which of the two cast families — they differ only by the `shape` property. */
 export type CastKind = 'Ray' | 'Shape';
@@ -103,9 +103,13 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       reportArm(diagnostics, arm, node, message);
 
     // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml — identical across all
-    // four: collide_with_areas false, collide_with_bodies true.
-    const withAreas = boolSlotValue((props.collide_with_areas ?? 'false')) === true;
-    const withBodies = boolSlotValue((props.collide_with_bodies ?? 'true')) === true;
+    // four: collide_with_areas false, collide_with_bodies true. The default
+    // stands in for an UNREADABLE value as much as for an absent one: a spelling
+    // `can_convert_strict` refuses never reaches the slot, so the flag keeps the
+    // class default and phase 1 already reports the text. Collapsing that to
+    // false accused a `RayCast2D` whose `collide_with_bodies` is still on.
+    const withAreas = boolSlotValue(props.collide_with_areas) ?? false;
+    const withBodies = boolSlotValue(props.collide_with_bodies) ?? true;
     if (!withAreas && !withBodies) {
       report(arms.noCollideTarget, `${type} '${node.name}' has both 'collide_with_areas' and 'collide_with_bodies' set to false. It can never report a collision with anything.`);
     }
@@ -114,7 +118,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     // first character it cannot use and misses an exponent-written zero. All
     // four setters take uint32_t (ray_cast_2d.h:81, shape_cast_2d.h:91,
     // ray_cast_3d.h:100, shape_cast_3d.h:106).
-    const mask = ruleInt(props.collision_mask ?? '', null, 'uint32');
+    const mask = ruleInt(props.collision_mask, null, 'uint32');
     if (mask === 0) {
       report(arms.zeroMask, `${type} '${node.name}' has 'collision_mask' set to 0. It is on no collision layers and will never detect anything.`);
     }
@@ -132,7 +136,9 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
         // that is not a reference names no id, so the strict parser's format
         // diagnostic is the whole story and this stays silent.
         report(arms.unresolvedShape, `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`);
-      } else if (shape.kind === 'resolved' && shape.type === 'ConcavePolygonShape3D') {
+      } else if (shape.kind === 'resolved' && descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
+        // `descendsFromClass`, not an exact name: `shape_cast_3d.cpp:188` tests
+        // `Object::cast_to<ConcavePolygonShape3D>(*shape)`, which a subclass passes.
         report(arms.concaveShape, `${type} '${node.name}' uses a ConcavePolygonShape3D. Godot does not support concave shapes here and reports no collisions.`);
       }
     }

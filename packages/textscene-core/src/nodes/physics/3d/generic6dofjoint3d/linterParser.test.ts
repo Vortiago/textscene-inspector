@@ -9,12 +9,12 @@
  * (nodes/physics/joints/shared/linter.ts) already covers node_a/node_b.
  *
  * Bounds are quoted from the governing Godot source line beside every case.
- * Every group is wildcard-dispatched (`<group>_<axis>/*`) onto ONE shared
- * leaf table per group, because Godot's x/y/z `ADD_PROPERTYI` calls carry
- * byte-identical `PropertyInfo` per leaf — so a case exercised on axis `x`
- * proves the bound for `y` and `z` too. Each `describe` below still picks a
- * DIFFERENT axis per group, so the axis-stripping regex itself is exercised
- * against all three letters, not just `x`.
+ * Every group is wildcard-dispatched (`<group>_<axis>/*`) onto a per-axis
+ * instance of one leaf table, because Godot's x/y/z `ADD_PROPERTYI` calls
+ * carry byte-identical `PropertyInfo` per leaf — so a case exercised on axis
+ * `x` proves the BOUND for `y` and `z` too, while the message and code each
+ * name their own axis. Each `describe` below picks a DIFFERENT axis per group,
+ * so the axis-stripping regex is exercised against all three letters.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -50,7 +50,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
 
     it('rejects a non-boolean enabled flag', () => {
-      expect(check('linear_limit_x/enabled', 'maybe')?.code).toBe('INVALID_ENABLED_FORMAT');
+      expect(check('linear_limit_x/enabled', 'maybe')?.code).toBe(
+        'INVALID_LINEAR_LIMIT_X/ENABLED_FORMAT'
+      );
     });
 
     it('accepts upper_distance/lower_distance unbounded (PROPERTY_HINT_NONE, no range)', () => {
@@ -64,7 +66,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
       (leaf) => {
         expect(check(`linear_limit_x/${leaf}`, '0.01')).toBeNull();
         expect(check(`linear_limit_x/${leaf}`, '16')).toBeNull();
-        const code = `INVALID_${leaf.toUpperCase()}_VALUE`;
+        const code = `INVALID_LINEAR_LIMIT_X/${leaf.toUpperCase()}_VALUE`;
         for (const outside of ['0', '16.01']) {
           const error = check(`linear_limit_x/${leaf}`, outside);
           expect(error?.code, outside).toBe(code);
@@ -83,7 +85,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       expect(check('linear_motor_y/target_velocity', 'fast')?.code).toBe(
-        'INVALID_TARGET_VELOCITY_FORMAT'
+        'INVALID_LINEAR_MOTOR_Y/TARGET_VELOCITY_FORMAT'
       );
     });
   });
@@ -105,7 +107,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     // one shared by leaf name across the whole node.
     it('accepts a value linear_limit/damping would reject, proving the groups do not share a bound', () => {
       expect(check('linear_spring_z/damping', '0')).toBeNull();
-      expect(check('linear_limit_z/damping', '0')?.code).toBe('INVALID_DAMPING_VALUE');
+      expect(check('linear_limit_z/damping', '0')?.code).toBe('INVALID_LINEAR_LIMIT_Z/DAMPING_VALUE');
     });
   });
 
@@ -123,9 +125,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
     it('warns past ±π radians (the ±180° hint converted) rather than erroring', () => {
       const upper = check('angular_limit_x/upper_angle', '4.0');
       const lower = check('angular_limit_x/lower_angle', '-4.0');
-      expect(upper?.code).toBe('INVALID_UPPER_ANGLE_VALUE');
+      expect(upper?.code).toBe('INVALID_ANGULAR_LIMIT_X/UPPER_ANGLE_VALUE');
       expect(upper?.severity).toBe('warning');
-      expect(lower?.code).toBe('INVALID_LOWER_ANGLE_VALUE');
+      expect(lower?.code).toBe('INVALID_ANGULAR_LIMIT_X/LOWER_ANGLE_VALUE');
       expect(lower?.severity).toBe('warning');
     });
 
@@ -134,7 +136,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
       (leaf) => {
         expect(check(`angular_limit_x/${leaf}`, '0.01')).toBeNull();
         expect(check(`angular_limit_x/${leaf}`, '16')).toBeNull();
-        const code = `INVALID_${leaf.toUpperCase()}_VALUE`;
+        const code = `INVALID_ANGULAR_LIMIT_X/${leaf.toUpperCase()}_VALUE`;
         for (const outside of ['0', '16.01']) {
           const error = check(`angular_limit_x/${leaf}`, outside);
           expect(error?.code, outside).toBe(code);
@@ -154,7 +156,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
       }
       expect(check('angular_limit_x/restitution', '0.01')).toBeNull();
       expect(check('angular_limit_x/restitution', '16')).toBeNull();
-      expect(check('angular_limit_x/restitution', '16.01')?.code).toBe('INVALID_RESTITUTION_VALUE');
+      expect(check('angular_limit_x/restitution', '16.01')?.code).toBe(
+        'INVALID_ANGULAR_LIMIT_X/RESTITUTION_VALUE'
+      );
     });
 
     it('accepts force_limit/erp unbounded', () => {
@@ -188,8 +192,43 @@ describe('Generic6DOFJoint3D strict validators', () => {
     it('warns past ±π radians (±180° hint, radian-converted) rather than erroring', () => {
       expect(check('angular_spring_z/equilibrium_point', '0.3')).toBeNull();
       const error = check('angular_spring_z/equilibrium_point', '4.0');
-      expect(error?.code).toBe('INVALID_EQUILIBRIUM_POINT_VALUE');
+      expect(error?.code).toBe('INVALID_ANGULAR_SPRING_Z/EQUILIBRIUM_POINT_VALUE');
       expect(error?.severity).toBe('warning');
+    });
+  });
+
+  describe('the key a diagnostic names', () => {
+    // The dispatcher forwards the full key, so the message and the derived
+    // codes must too. Naming the bare leaf quoted a key the file never wrote,
+    // and collapsed six `softness` keys and four differently-bounded `damping`
+    // keys onto one code each.
+    it('quotes the full key in the message, not the bare leaf', () => {
+      const error = check('linear_limit_y/softness', '20.0');
+      expect(error?.message).toContain("'linear_limit_y/softness'");
+      expect(error?.message).not.toContain("'softness'");
+    });
+
+    it('derives a distinct code per axis', () => {
+      const codes = ['x', 'y', 'z'].map((axis) => check(`linear_limit_${axis}/softness`, '20.0')?.code);
+      expect(codes).toEqual([
+        'INVALID_LINEAR_LIMIT_X/SOFTNESS_VALUE',
+        'INVALID_LINEAR_LIMIT_Y/SOFTNESS_VALUE',
+        'INVALID_LINEAR_LIMIT_Z/SOFTNESS_VALUE',
+      ]);
+    });
+
+    it('derives a distinct code per group, so two `damping` bounds are told apart', () => {
+      // linear_limit/damping is 0.01-16 and angular_limit/damping is too, while
+      // both spring groups leave it unbounded — one code for all four left a
+      // consumer unable to say which bound fired.
+      expect(check('linear_limit_x/damping', '20.0')?.code).toBe(
+        'INVALID_LINEAR_LIMIT_X/DAMPING_VALUE'
+      );
+      expect(check('angular_limit_x/damping', '20.0')?.code).toBe(
+        'INVALID_ANGULAR_LIMIT_X/DAMPING_VALUE'
+      );
+      expect(check('linear_spring_x/damping', '20.0')).toBeNull();
+      expect(check('angular_spring_x/damping', '20.0')).toBeNull();
     });
   });
 
@@ -243,10 +282,13 @@ describe('Generic6DOFJoint3D strict validators', () => {
       }
     });
 
-    it('shares one dispatcher instance across all three axes per group', () => {
-      // Confirms tagging one instance covers all 18 registrations, not just 6.
-      expect(dispatcher('linear_limit_x/*')).toBe(dispatcher('linear_limit_y/*'));
-      expect(dispatcher('linear_limit_y/*')).toBe(dispatcher('linear_limit_z/*'));
+    it('gives each axis its own dispatcher, so all 18 registrations are tagged', () => {
+      // Per-axis instances, because a leaf's message and codes carry the axis.
+      // The tag is a property of the GROUP, so it must be identical across the
+      // three instances even though they are distinct functions.
+      const axes = ['x', 'y', 'z'].map((axis) => dispatcher(`linear_limit_${axis}/*`));
+      expect(new Set(axes).size).toBe(3);
+      expect(axes.map((d) => d.grounding)).toEqual([axes[0]!.grounding, axes[0]!.grounding, axes[0]!.grounding]);
     });
   });
 

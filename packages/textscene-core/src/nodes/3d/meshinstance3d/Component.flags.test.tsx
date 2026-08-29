@@ -109,7 +109,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.g).toBe(0);
   });
 
-  it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {
+  it('#14 surface_material_override/1 on a primitive mesh is dropped, as Godot drops it', async () => {
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -119,17 +119,21 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
-    // Multi-surface fix: mesh.material is an array — slot 0
-    // defaults to grey placeholder, slot 1 carries the yellow override.
-    // Each surface gets its own material slot in the array, mirroring
-    // the pre-migration imperative renderer's `materials[N]` semantics.
+    // A PrimitiveMesh has one surface (primitive_meshes.cpp:141-147), so
+    // `_set` refuses `idx >= surface_override_materials.size()`
+    // (mesh_instance_3d.cpp:68) and Godot draws the whole box with slot 0.
+    // Honouring the write here made `mesh.material` a length-2 array over a
+    // BoxGeometry's SIX groups, and three renders only the groups whose
+    // `material[materialIndex]` exists — four faces vanished. On a
+    // Plane/Sphere/Capsule/Torus, whose geometries declare no groups at all,
+    // an array material drew nothing whatsoever.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const materials = mesh.material as THREE.MeshStandardMaterial[];
-    expect(Array.isArray(mesh.material)).toBe(true);
-    expect(materials).toHaveLength(2);
-    expect(materials[1]!.color.r).toBe(1);
-    expect(materials[1]!.color.g).toBe(1);
-    expect(materials[1]!.color.b).toBe(0);
+    expect(Array.isArray(mesh.material)).toBe(false);
+    // Godot's default 3D material, not the yellow the refused write named.
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    expect(material.color.r).toBeCloseTo(0.6, 5);
+    expect(material.color.g).toBeCloseTo(0.6, 5);
+    expect(material.color.b).toBeCloseTo(0.6, 5);
   });
 
   it('#15 visible=false propagates to mesh.visible', async () => {

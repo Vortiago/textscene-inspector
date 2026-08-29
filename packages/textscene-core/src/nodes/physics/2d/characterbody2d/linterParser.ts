@@ -6,6 +6,7 @@
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
+import { upDirection } from '../../shared/upDirection.js';
 
 const MOTION_MODE = { 0: 'GROUNDED', 1: 'FLOATING' };
 const PLATFORM_ON_LEAVE = {
@@ -19,7 +20,9 @@ validatorRegistry.registerAll('CharacterBody2D', {
   motion_mode: v.enumInt('motion_mode', 0, 1, MOTION_MODE, {
     hinted: 'character_body_2d.cpp:737',
   }),
-  up_direction: v.vector2('up_direction'),
+  // character_body_2d.cpp:648, ERR_FAIL_COND_MSG(p_up_direction == Vector2()):
+  // the setter refuses the zero vector outright.
+  up_direction: upDirection('2D', 'character_body_2d.cpp:648'),
   slide_on_ceiling: v.boolean('slide_on_ceiling'),
   velocity: v.vector2('velocity'),
   floor_stop_on_slope: v.boolean('floor_stop_on_slope'),

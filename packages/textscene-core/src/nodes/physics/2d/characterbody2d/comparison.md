@@ -48,7 +48,7 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `platform_wall_layers` | 32-bit layer mask (layers 1-32) |  |
 | `safe_margin` | float 0.001-256 | warning |
 | `slide_on_ceiling` | true or false |  |
-| `up_direction` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `up_direction` | Vector2(x, y) other than the zero vector, or the Vector2i spelling Godot converts |  |
 | `velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `wall_min_slide_angle` | radians, 0° to 180° | warning |
 
@@ -59,6 +59,8 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-characterbody2d` | `characterbody2d-needs-collision-shape` | warning |
 |  | `characterbody2d-floor-props-in-floating-mode` | warning |
+|  | `characterbody2d-slide-on-ceiling-in-floating-mode` | warning |
+|  | `characterbody2d-wall-min-slide-angle-in-grounded-mode` | warning |
 <!-- lint:end -->
 
 `velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either

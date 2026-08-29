@@ -1,38 +1,16 @@
 /**
- * isRenderableNodeType — the tree/inspector "supported?" check. Render-only
- * synthesised types (GLBSceneRoot) must count as supported so they aren't
- * flagged "Not implemented" despite rendering.
+ * `rendersOwnVisual` — the tree/inspector badge's three-state. The case that
+ * matters is the middle one: a node that draws nothing ON PURPOSE must not be
+ * reported as a gap, and a node that merely parses must not be reported as
+ * rendering.
  */
 import { describe, it, expect } from 'vitest';
 import './nodes/index'; // side-effect: populate the component registry
 import '../parser/TscnParser'; // side-effect: populate the parser registry
 import { nodeRegistry } from '../core/NodeRegistry';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
-import { isRenderableNodeType, rendersOwnVisual } from './nodeSupport';
+import { rendersOwnVisual } from './nodeSupport';
 
-describe('isRenderableNodeType', () => {
-  it('treats the render-only GLBSceneRoot as supported (it renders)', () => {
-    expect(isRenderableNodeType('GLBSceneRoot')).toBe(true);
-  });
-
-  it('treats a parser-registered node type as supported', () => {
-    expect(isRenderableNodeType('MeshInstance3D')).toBe(true);
-  });
-
-  it('treats the base Node as supported', () => {
-    expect(isRenderableNodeType('Node')).toBe(true);
-  });
-
-  it('flags a genuinely unknown type as unsupported', () => {
-    expect(isRenderableNodeType('TotallyMadeUpNodeType')).toBe(false);
-  });
-});
-
-/**
- * The badge's three-state. The case that matters is the middle one: a node that
- * draws nothing ON PURPOSE must not be reported as a gap, and a node that merely
- * parses must not be reported as rendering.
- */
 describe('rendersOwnVisual', () => {
   it('reports a node with real geometry as drawing', () => {
     expect(rendersOwnVisual('MeshInstance3D')).toBe('draws');
@@ -59,12 +37,11 @@ describe('rendersOwnVisual', () => {
     expect(rendersOwnVisual('GLBSceneRoot')).toBe('draws');
   });
 
-  it('separates from isRenderableNodeType once a type is parsed but not drawn', () => {
-    // The whole reason this function exists. `Window` is parsed and fully
-    // validated, so `isRenderableNodeType` says yes; nothing draws it, so the
-    // badge must still say "not implemented". Before this split, a parser
-    // registration alone silently cleared that badge.
-    expect(isRenderableNodeType('Window')).toBe(true);
+  it('reports a parsed-but-undrawn type as not-implemented', () => {
+    // The whole reason this function exists: `Window` is parsed and fully
+    // validated, and nothing draws it, so the badge must still say "not
+    // implemented". A parser registration alone must never clear it.
+    expect(nodeRegistry.getRegistration('Window')).not.toBeNull();
     expect(rendersOwnVisual('Window')).toBe('not-implemented');
   });
 

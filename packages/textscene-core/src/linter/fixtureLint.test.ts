@@ -23,6 +23,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
+import { isGodotTextResourcePath } from '../godot/index.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 
@@ -118,15 +119,13 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 const NEGATIVE_FIXTURE_COUNT = 3;
 
 /**
- * Both text formats Godot writes. A `.tres` carries its type in the
- * `[gd_resource]` header rather than a section heading, and validates against
- * the same registry a `[sub_resource]` block does — so leaving it out of this
- * sweep left the resource slices' own fixtures ungated.
+ * Both text formats Godot writes, via the predicate the CLI walk and the
+ * editor's document filter also use — a `.tres` validates against the same
+ * registry a `[sub_resource]` block does, so leaving it out left the resource
+ * slices' own fixtures ungated.
  */
 function tscnFiles(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.tscn') || f.endsWith('.tres'))
-    .sort();
+  return readdirSync(dir).filter(isGodotTextResourcePath).sort();
 }
 
 /** Diagnostics for one file, linted once and reused by all three sweeps below. */

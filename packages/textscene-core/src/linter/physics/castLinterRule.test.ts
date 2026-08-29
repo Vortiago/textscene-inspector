@@ -68,6 +68,21 @@ describe.each(CASTS)('%s semantic rules', (type) => {
     expectNoDiagnostic(cast(), { ruleName: `${prefix}-no-collide-target` });
   });
 
+  it('reads an unstorable flag as its default, in both directions', () => {
+    // `can_convert_strict` refuses a VECTOR2 source for a BOOL target, so the
+    // write never lands: `collide_with_bodies` is still true and the cast is
+    // live. Collapsing the unreadable value to false accused it.
+    expectNoDiagnostic(cast({ collide_with_bodies: 'Vector2(1, 0)' }), {
+      ruleName: `${prefix}-no-collide-target`,
+    });
+    // The same reading the other way: `collide_with_areas` defaults to FALSE,
+    // so an unstorable value there leaves the pair dead and the warning stands.
+    expectDiagnostic(cast({ collide_with_areas: '"yes"', collide_with_bodies: false }), {
+      ruleName: `${prefix}-no-collide-target`,
+      severity: 'warning',
+    });
+  });
+
   it('warns on a zero collision mask', () => {
     expectDiagnostic(cast({ collision_mask: 0 }), {
       ruleName: `${prefix}-zero-mask`,

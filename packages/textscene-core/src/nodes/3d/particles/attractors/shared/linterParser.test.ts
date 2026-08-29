@@ -24,4 +24,17 @@ describe('GPUParticlesAttractor3D shared validators', () => {
     const missing = KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
     expect(missing).toEqual([]);
   });
+
+  /**
+   * `attenuation` is PROPERTY_HINT_EXP_EASING (gpu_particles_collision_3d.cpp:901),
+   * whose hint text Godot reads only for the `attenuation`/`positive_only` flag
+   * tokens — the numbers are discarded (editor_properties.cpp:3944-3953). With
+   * `positive_only` false the inspector offers Ease In-Out / Ease Out-In
+   * (:1905-1907), so a negative is a value Godot's own editor writes.
+   */
+  it.each(['-1', '-0.5', '0', '8', '64', 'inf'])('accepts attenuation %s', (value) => {
+    const validator = validatorRegistry.findValidator('GPUParticlesAttractorSphere3D', 'attenuation');
+    expect(validator, 'no validator registered for attenuation').not.toBeNull();
+    expect(validator!('attenuation', value, 1)).toBeNull();
+  });
 });

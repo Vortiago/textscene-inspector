@@ -74,4 +74,28 @@ unique_name_in_owner = true
     const claims = uniqueNameClaims(new TscnParser().parse(SRC).nodes);
     expect(claims.get('%Target')?.node.type).toBe('Node3D');
   });
+
+  it('spells livePath through the instanced content a parent= descends into', () => {
+    // `buildSceneTree` can only anchor `parent="Bike/Body"` at the instance node
+    // and records `Body` as the remainder, so the authored tree has the claimant
+    // one level up from where the composed tree draws it.
+    const into = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://bike.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Bike" parent="." instance=ExtResource("1")]
+
+[node name="Sight" type="Node2D" parent="Bike/Body"]
+unique_name_in_owner = true
+`;
+    const claim = uniqueNameClaims(new TscnParser().parse(into).nodes).get('%Sight');
+    expect(claim?.path).toBe('Root/Bike/Sight');
+    expect(claim?.livePath).toBe('Root/Bike/Body/Sight');
+  });
+
+  it('leaves livePath equal to path where nothing is instanced', () => {
+    const claims = uniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    expect(claims.get('%Nested')?.livePath).toBe('Root/Target/Nested');
+  });
 });

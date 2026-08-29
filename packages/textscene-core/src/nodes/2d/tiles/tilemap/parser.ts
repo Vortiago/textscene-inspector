@@ -36,20 +36,23 @@ export function parseTileMap(
 
 function parseLayer(
   index: number,
-  props: Record<string, string>,
+  props: ReadonlyMap<string, string>,
   format: number
 ): TileMapLayerData {
   // `layer_0/name = "Ground"` — the raw value keeps its quotes. An empty one
   // never lands: `set_name` opens with `ERR_FAIL_COND(p_name.is_empty())`
   // (node.cpp:1432), leaving the name `_set` gave the layer when it built it,
   // `vformat("Layer%d", index)` (tile_map.cpp:706).
-  const rawName = props.name === undefined ? undefined : unquoteString(props.name);
+  const rawNameValue = props.get('name');
+  const rawName = rawNameValue === undefined ? undefined : unquoteString(rawNameValue);
+  const tileData = props.get('tile_data');
+  const modulate = props.get('modulate');
   const layer: TileMapLayerData = {
     name: rawName || `Layer${index}`,
-    enabled: boolOr(props.enabled, true),
-    zIndex: intOr(props.z_index, 0),
-    cells: props.tile_data ? decodeLegacyTileData(props.tile_data, format) : [],
+    enabled: boolOr(props.get('enabled'), true),
+    zIndex: intOr(props.get('z_index'), 0),
+    cells: tileData ? decodeLegacyTileData(tileData, format) : [],
   };
-  if (props.modulate) layer.modulate = parseColor(props.modulate);
+  if (modulate) layer.modulate = parseColor(modulate);
   return layer;
 }

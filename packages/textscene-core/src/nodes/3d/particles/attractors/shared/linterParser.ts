@@ -23,9 +23,13 @@ validatorRegistry.registerAll('GPUParticlesAttractor3D', {
   // "-128,128,0.01,or_greater,or_less": both ends soft, so no bound. A negative
   // strength repels rather than attracts.
   strength: v.float('strength'),
-  // :901, PROPERTY_HINT_EXP_EASING "0,8,0.01". set_attenuation:868-871 is a
-  // bare assignment.
-  attenuation: v.nonNegativeFloat('attenuation', { hinted: 'gpu_particles_collision_3d.cpp:901' }),
+  // :901, PROPERTY_HINT_EXP_EASING: no range is stated, so no bound. The hint
+  // text "0,8,0.01" is read only for the `attenuation`/`positive_only` flag
+  // tokens and its numbers are discarded (editor_properties.cpp:3944-3953), so
+  // `positive_only` stays false and the inspector offers the Ease In-Out /
+  // Ease Out-In presets (:1905-1907), which write NEGATIVE values.
+  // set_attenuation:868-871 is a bare assignment.
+  attenuation: v.float('attenuation'),
   // :902, PROPERTY_HINT_RANGE "0,1,0.01", no or_greater: a hard 0-1.
   // set_directionality:877-881 is a bare assignment.
   directionality: v.float('directionality', {

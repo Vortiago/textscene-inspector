@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
+import { checkerFor, expectError, expectWarning } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
 
 /** Label's own members, doc/classes/Label.xml minus the two `overrides="Control"` entries. */
@@ -43,12 +44,8 @@ const OWN_KEYS = [
 /** The pre-4.0 spellings `Label::_set` still accepts (label.cpp:1002, :1005). */
 const DEPRECATED_KEYS = ['align', 'valign'];
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('Label', property);
-  expect(validator, `no validator registered for Label.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `Label.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('Label');
 
 describe('Label strict validators', () => {
   it('declares exactly its own 22 members plus the two pre-4.0 spellings', () => {
@@ -101,9 +98,7 @@ describe('Label strict validators', () => {
     });
 
     it('rejects 4, past the ERR_FAIL_INDEX(idx, 4) the setter enforces (label.cpp:1065)', () => {
-      const error = check('horizontal_alignment', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('horizontal_alignment', '4'), 'must be 0-3');
     });
 
     it('rejects a negative value', () => {
@@ -118,9 +113,7 @@ describe('Label strict validators', () => {
     });
 
     it('rejects 4, past the ERR_FAIL_INDEX(idx, 4) the setter enforces (label.cpp:1085)', () => {
-      const error = check('vertical_alignment', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('vertical_alignment', '4'), 'must be 0-3');
     });
   });
 
@@ -131,9 +124,7 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) on 4, one past the enum — set_autowrap_mode (label.cpp:37-52) bare-assigns', () => {
-      const error = check('autowrap_mode', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('autowrap_mode', '4'), 'must be 0-3');
     });
   });
 
@@ -151,11 +142,11 @@ describe('Label strict validators', () => {
     });
 
     it('warns on BREAK_TRIM_INDENT, which the setter keeps but the hint omits', () => {
-      expect(check('autowrap_trim_flags', '32')?.severity).toBe('warning');
+      expectWarning(check('autowrap_trim_flags', '32'), 'sets BREAK_TRIM_INDENT (32), which the engine keeps but the inspector\'s flag list does not offer (it lists only BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128))');
     });
 
     it('rejects a negative value', () => {
-      expect(check('autowrap_trim_flags', '-1')?.severity).toBe('error');
+      expectError(check('autowrap_trim_flags', '-1'), 'accepts only the bits BREAK_TRIM_INDENT (32) | BREAK_TRIM_START_EDGE_SPACES (64) | BREAK_TRIM_END_EDGE_SPACES (128); -1 sets bits outside the mask, which Godot drops on assignment (Godot stores 224)');
     });
 
     it('rejects a non-numeric value', () => {
@@ -170,7 +161,7 @@ describe('Label strict validators', () => {
       // set_justification_flags (label.cpp:79-93) bare-assigns with no mask, so
       // 255 LOADS unaltered. But label.cpp:1437 offers only {1,2,8,32,64,128},
       // so bits 4 and 16 are unreachable from the inspector: warning, not error.
-      expect(check('justification_flags', '255')?.severity).toBe('warning');
+      expectWarning(check('justification_flags', '255'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });
 
     it('accepts 235, the OR of every bit the hint does offer', () => {
@@ -213,9 +204,7 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) on 7, one past the enum — set_text_overrun_behavior (label.cpp:1239-1252) bare-assigns', () => {
-      const error = check('text_overrun_behavior', '7');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('text_overrun_behavior', '7'), 'must be 0-6');
     });
   });
 
@@ -229,9 +218,7 @@ describe('Label strict validators', () => {
     });
 
     it('errors on a literal longer than one character — set_ellipsis_char (label.cpp:1258-1275) truncates it (label.cpp:1260-1262)', () => {
-      const error = check('ellipsis_char', '"..."');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('ellipsis_char', '"..."'), 'must be at most one character, got 3 characters: "..."');
     });
 
     it('rejects an unquoted value as a format error', () => {
@@ -291,15 +278,11 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) above the 999 hint ceiling — only the hint states it', () => {
-      const error = check('lines_skipped', '1500');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('lines_skipped', '1500'), 'must be between 0 and 999');
     });
 
     it('errors below 0 — set_lines_skipped refuses a negative outright', () => {
-      const error = check('lines_skipped', '-1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('lines_skipped', '-1'), 'must be between 0 and 999');
     });
   });
 
@@ -310,15 +293,11 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) below -1 — set_max_lines_visible (label.cpp:1361-1369) has no ERR_FAIL or clamp at all', () => {
-      const error = check('max_lines_visible', '-5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('max_lines_visible', '-5'), 'must be between -1 and 999');
     });
 
     it('warns (not errors) above the 999 hint ceiling', () => {
-      const error = check('max_lines_visible', '1500');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('max_lines_visible', '1500'), 'must be between -1 and 999');
     });
   });
 
@@ -337,15 +316,11 @@ describe('Label strict validators', () => {
     });
 
     it('warns one past the ceiling (128001) — the hint closes that end with no or_greater', () => {
-      const error = check('visible_characters', '128001');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('visible_characters', '128001'), 'must be between -1 and 128000');
     });
 
     it('warns (not errors) below -1 — set_visible_characters (label.cpp:1285-1299) has no ERR_FAIL or clamp at all', () => {
-      const error = check('visible_characters', '-2');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('visible_characters', '-2'), 'must be between -1 and 128000');
     });
   });
 
@@ -356,9 +331,7 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) on 5, one past the enum', () => {
-      const error = check('visible_characters_behavior', '5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('visible_characters_behavior', '5'), 'must be 0-4');
     });
   });
 
@@ -370,15 +343,11 @@ describe('Label strict validators', () => {
     });
 
     it('warns above 1: the clamp is guarded, so a preceding visible_characters leaves 3.0 stored', () => {
-      const error = check('visible_ratio', '1.5');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('visible_ratio', '1.5'), 'must be between 0 and 1');
     });
 
     it('warns below 0: the same guard, and the hint is what bounds the inspector', () => {
-      const error = check('visible_ratio', '-0.1');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('visible_ratio', '-0.1'), 'must be between 0 and 1');
     });
   });
 
@@ -389,19 +358,15 @@ describe('Label strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      expect(check('text_direction', '-1')?.severity).toBe('warning');
+      expectWarning(check('text_direction', '-1'), 'must be 0-3');
     });
 
     it('errors on 4, past the ERR_FAIL_COND the setter enforces (label.cpp:1140)', () => {
-      const error = check('text_direction', '4');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('text_direction', '4'), 'must be 0-3');
     });
 
     it('errors on -2, past the ERR_FAIL_COND on the other side', () => {
-      const error = check('text_direction', '-2');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('error');
+      expectError(check('text_direction', '-2'), 'must be at least -1');
     });
   });
 
@@ -426,9 +391,7 @@ describe('Label strict validators', () => {
     });
 
     it('warns (not errors) on 7, one past the enum', () => {
-      const error = check('structured_text_bidi_override', '7');
-      expect(error).not.toBeNull();
-      expect(error?.severity).toBe('warning');
+      expectWarning(check('structured_text_bidi_override', '7'), 'must be 0-6');
     });
   });
 
@@ -471,9 +434,7 @@ describe('Label strict validators', () => {
 
     it('errors past the enum, which ERR_FAIL_INDEX refuses', () => {
       // label.cpp:1065, `ERR_FAIL_INDEX((int)p_alignment, 4)`.
-      const error = check('align', '5');
-      expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      expectError(check('align', '5'), 'must be 0-3');
     });
 
     it('names the deprecated key, not the canonical one', () => {
@@ -497,9 +458,7 @@ describe('Label strict validators', () => {
 
     it('errors past the enum, which ERR_FAIL_INDEX refuses', () => {
       // label.cpp:1085, `ERR_FAIL_INDEX((int)p_alignment, 4)`.
-      const error = check('valign', '4');
-      expect(error).not.toBeNull();
-      expect(error!.severity).toBe('error');
+      const error = expectError(check('valign', '4'), 'must be 0-3');
       expect(error!.message).toContain("'valign'");
       expect(error!.message).not.toContain('vertical_alignment');
     });

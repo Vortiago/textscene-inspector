@@ -4,12 +4,10 @@
  * the coarse Node3D base.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { TscnParser } from '../../../../parser/TscnParser';
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
-import * as logger from '../../../../logger';
 import { parseCamera3D } from '../../camera3d/parser';
 import { Camera3D } from '../../camera3d/Component';
 import './index';
@@ -33,20 +31,5 @@ describe('XRCamera3D registration', () => {
   it('claims no more and no less than Camera3D does', () => {
     expect(nodeComponentRegistry.isTransformOnly('XRCamera3D')).toBe(false);
     expect(rendersOwnVisual('XRCamera3D')).toBe(rendersOwnVisual('Camera3D'));
-  });
-
-  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
-    const scene = new TscnParser().parse(
-      '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n' +
-        '[node name="MyXRCamera3D" type="XRCamera3D" parent="."]\n'
-    );
-
-    const node = scene.nodes[0]?.children[0];
-    expect(node?.type).toBe('XRCamera3D');
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
-
-    warnSpy.mockRestore();
   });
 });

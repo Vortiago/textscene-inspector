@@ -9,7 +9,14 @@
  * terminal position instead.
  */
 
-import { accepts, keyShapeError, nilShapeError, propertyError, v } from '../../linter/validators/index.js';
+import {
+  accepts,
+  arrayLiteralElements,
+  keyShapeError,
+  nilShapeError,
+  propertyError,
+  v,
+} from '../../linter/validators/index.js';
 import { dropTrailingComma, indexedKeyRegex, isNilLiteral, splitTopLevel } from '../../godot/index.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
@@ -127,9 +134,12 @@ patternValidator.leaves = [patternResource];
  * own format validator so the diagnostic names the level rather than the group.
  */
 const PROXY_LEVELS: Readonly<Record<string, PropertyValidator>> = {
-  source_level: v.arrayLiteral('source_level'),
-  coords_level: v.arrayLiteral('coords_level'),
-  alternative_level: v.arrayLiteral('alternative_level'),
+  // `_set` gates on the Variant TYPE alone — `p_value.get_type() != Variant::ARRAY`
+  // (tile_set.cpp:3971) — and a typed Array IS `Variant::ARRAY`, so
+  // `Array[int]([0, 4, 2, 4])` loads exactly as the bare literal does.
+  source_level: v.arrayLiteral('source_level', { anyElementType: true }),
+  coords_level: v.arrayLiteral('coords_level', { anyElementType: true }),
+  alternative_level: v.arrayLiteral('alternative_level', { anyElementType: true }),
 };
 
 /**
@@ -149,8 +159,7 @@ export const tileProxyValidator: PropertyValidator = accepts((key, value, line) 
   }
   const bad = PROXY_LEVELS[level]!(key, value, line);
   if (bad) return bad;
-  const body = value.trim().slice(1, -1);
-  const elements = dropTrailingComma(splitTopLevel(body));
+  const elements = dropTrailingComma(splitTopLevel(arrayLiteralElements(value)));
   if (elements.length % 2 === 0) return null;
   return propertyError(
     key,

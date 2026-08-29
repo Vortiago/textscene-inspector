@@ -1,18 +1,20 @@
 /**
  * SoftBody3D registration: parsed and validated, not yet rendered.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * The Node3D base registered under `renderIntent: 'pending'` is the point:
+ * `rendersOwnVisual` reports 'not-implemented' so the tree and inspector keep
+ * saying so, while `visible` and the 3D-only workspace placement still work —
+ * neither of which survives an absent registration.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
+import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
+import { drawsInWorkspace } from '../../../../r3f/nodeWorkspaceVisibility';
 import { parseMeshInstance3D } from '../../../3d/meshinstance3d/parser';
-import { TscnParser } from '../../../../parser/TscnParser';
-import * as logger from '../../../../logger';
 import './index';
+import './index.r3f';
 
 describe('SoftBody3D registration', () => {
   it('reuses MeshInstance3D\'s parser, the ancestor that reads its properties', () => {
@@ -21,22 +23,13 @@ describe('SoftBody3D registration', () => {
     expect(registration!.parser).toBe(parseMeshInstance3D);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.get('SoftBody3D')).toBeUndefined();
+  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SoftBody3D')).toBe('pending');
+    expect(rendersOwnVisual('SoftBody3D')).toBe('not-implemented');
   });
 
-  it('lands in the lenient parser tree with its type preserved and no fallback warning', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
-    const scene = new TscnParser().parse(
-      '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n' +
-        '[node name="MySoftBody3D" type="SoftBody3D" parent="."]\n'
-    );
-
-    const node = scene.nodes[0]?.children[0];
-    expect(node?.type).toBe('SoftBody3D');
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
-
-    warnSpy.mockRestore();
+  it('stays out of the 2D canvas, which an absent registration would not', () => {
+    expect(drawsInWorkspace('SoftBody3D', '3d')).toBe(true);
+    expect(drawsInWorkspace('SoftBody3D', '2d')).toBe(false);
   });
 });

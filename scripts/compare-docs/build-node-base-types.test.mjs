@@ -40,8 +40,29 @@ describe('deriveBaseTypes', () => {
     expect(table).toEqual({ Timer: 'Node' });
   });
 
-  it('tolerates a node whose chain is absent', () => {
-    expect(deriveBaseTypes([{ name: 'Orphan' }])).toEqual({});
+  it('refuses a node whose chain is absent, rather than emitting no base for it', () => {
+    // The silence the `--chain` ClassDB check cannot reach: the name IS in the
+    // catalog, so every spelling check passes, while the type lands in
+    // NODE_BASE_TYPES with no base and inherits not one validator.
+    expect(() => deriveBaseTypes([{ name: 'Orphan' }])).toThrow(/Orphan has no chain/);
+    expect(() => deriveBaseTypes([{ name: 'Orphan', chain: [] }])).toThrow(/Orphan has no chain/);
+  });
+
+  it('exempts Node, which has nowhere above it to go', () => {
+    expect(deriveBaseTypes([{ name: 'Node', chain: ['Object'] }])).toEqual({});
+  });
+
+  it('refuses a table a base-walk could not leave', () => {
+    // Two chains can agree on every hop and still close a loop between them.
+    // Every consumer bounds its own walk, so the cycle would not hang anything
+    // — it would silently truncate an ancestry, which is the failure this
+    // whole table exists to prevent.
+    expect(() =>
+      deriveBaseTypes([
+        { name: 'X', chain: ['A', 'B'] },
+        { name: 'Y', chain: ['B', 'A'] },
+      ])
+    ).toThrow(/has a cycle: walking up from/);
   });
 
   it('throws when two chains disagree about a class parent', () => {
@@ -74,9 +95,14 @@ describe('deriveBaseTypes', () => {
     // The capture can now answer, so the two are compared rather than one of
     // them being trusted.
     const bases = JSON.parse(readFileSync(RESOURCE_BASES, 'utf8'));
+    // `seen` so a cyclic capture fails this assertion instead of hanging the run.
     const derived = (name) => {
       const chain = [];
-      for (let c = bases[name]; c !== undefined; c = bases[c]) chain.push(c);
+      const seen = new Set([name]);
+      for (let c = bases[name]; c !== undefined && !seen.has(c); c = bases[c]) {
+        seen.add(c);
+        chain.push(c);
+      }
       return chain;
     };
     for (const { name, chain } of RESOURCE_CLASSES) {

@@ -12,14 +12,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { validatorRegistry } from '../../../linter/ValidatorRegistry';
+import { checkerFor, expectError, expectWarning } from '../../../linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
+/** `Node3D.<property>`'s registered validator; `nodeType` re-aims it at a subclass. */
 function check(property: string, value: string, nodeType = 'Node3D') {
-  const validator = validatorRegistry.findValidator(nodeType, property);
-  expect(validator, `no validator registered for ${nodeType}.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
+  return checkerFor(nodeType)(property, value);
 }
 
 describe('Node3D transform validators', () => {
@@ -36,10 +34,8 @@ describe('Node3D transform validators', () => {
 
     it('rejects non-numeric components', () => {
       // The shape the deleted edge-invalid-transform.tscn fixture carried.
-      const error = check('transform', 'Transform3D(invalid, values, here)');
-      expect(error).not.toBeNull();
-      expect(error?.code).toBe('INVALID_TRANSFORM_FORMAT');
-      expect(error?.severity).toBe('error');
+      const error = expectError(check('transform', 'Transform3D(invalid, values, here)'), 'Transform3D');
+      expect(error.code).toBe('INVALID_TRANSFORM_FORMAT');
     });
 
     it('rejects a component count other than twelve', () => {
@@ -89,13 +85,11 @@ describe('Node3D transform validators', () => {
     // `ERR_FAIL_INDEX(int32_t(p_order), 6)` — two enums in the same file,
     // adjacent, different tiers. Out of range is a WARNING, not an error.
     it('warns rather than errors outside the enum, unlike rotation_order', () => {
-      const below = check('rotation_edit_mode', '-1');
-      const above = check('rotation_edit_mode', '3');
+      const below = expectWarning(check('rotation_edit_mode', '-1'), 'must be 0-2');
+      const above = expectWarning(check('rotation_edit_mode', '3'), 'must be 0-2');
       // The VALUE code, not just severity, proves the enum-range branch ran.
-      expect(below?.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
-      expect(above?.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
-      expect(below?.severity).toBe('warning');
-      expect(above?.severity).toBe('warning');
+      expect(below.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
+      expect(above.code).toBe('INVALID_ROTATION_EDIT_MODE_VALUE');
     });
   });
 });

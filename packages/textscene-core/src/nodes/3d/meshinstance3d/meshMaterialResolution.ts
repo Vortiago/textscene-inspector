@@ -53,53 +53,48 @@ export function resolveExtArrayMeshPath(
 }
 
 /**
- * Resolve the material(s) the mesh should render with. Returns an array
- * indexed by surface — element 0 always corresponds to surface 0.
- * Single-surface meshes return a length-1 array; multi-surface meshes
- * return a length-N array with `undefined` for unpopulated slots (the
- * caller's SecondarySurfaceMaterial renders a default placeholder).
+ * The material a PRIMITIVE mesh renders with — one slot, because a
+ * PrimitiveMesh has exactly one surface (`primitive_meshes.cpp:141-147`).
+ * `null` when nothing this previewer can draw fills it.
+ *
+ * `surface_material_override/N` for N > 0 is therefore not a slot at all:
+ * `_mesh_changed` sizes `surface_override_materials` to the mesh's surface
+ * count (`mesh_instance_3d.cpp:407`) and `_set` returns false for
+ * `idx >= surface_override_materials.size()` (`mesh_instance_3d.cpp:68`), so
+ * Godot drops the write and draws the whole mesh with slot 0.
  *
  * `material_override` wins over BOTH the per-surface override and the mesh's
- * own material, on EVERY surface, which is the order the renderer resolves in:
+ * own material, which is the order the renderer resolves in:
  * `_geometry_instance_add_surface` takes `material_override` ahead of the
  * material handed to it (`render_forward_clustered.cpp:4206`), and the caller
  * already chose `surface_materials[j]` over the mesh's own
- * (`render_forward_clustered.cpp:4267`). The per-surface override is therefore
- * only reachable while `material_override` is unset.
+ * (`render_forward_clustered.cpp:4267`).
+ *
+ * Each term falls through on the SOURCE, not on the raw reference: a
+ * `Ref<Material>` that does not load is null in Godot too, and the next layer
+ * is then what the surface keeps — the same rule `ArrayMeshSurfaces` renders
+ * its surfaces by.
  */
-export function resolveMaterialSubResources(
+export function resolvePrimitiveMaterialSlot(
   properties: MeshInstance3DProperties,
-  internalResources: readonly TscnInternalResource[]
-): Array<TscnInternalResource | undefined> {
-  const overrides = properties.surfaceMaterialOverrides;
-  const surfaceSlots =
-    overrides && overrides.size > 0
-      ? Math.max(...Array.from(overrides.keys()), 0) + 1
-      : 1;
-
-  // Slot 0 alone falls back to the mesh's own material: a primitive mesh
-  // declares one `material`, which is surface 0's.
-  const meshOwn = findMeshOwnMaterial(properties.mesh, internalResources);
-
-  // Every term goes through `heldRef`: a cleared slot must fall THROUGH the
-  // chain, and each of the three is raw parser text.
-  const override = heldRef(properties.materialOverride);
-
-  const result: Array<TscnInternalResource | undefined> = new Array(surfaceSlots);
-  for (let i = 0; i < surfaceSlots; i++) {
-    const ref =
-      override ?? heldRef(overrides?.get(i)) ?? (i === 0 ? heldRef(meshOwn) : undefined);
-    result[i] = resolveStandardMaterial(ref, internalResources);
-  }
-  return result;
+  internalResources: readonly TscnInternalResource[],
+  externalResources: readonly TscnExternalResource[]
+): MaterialSlotSource | null {
+  const source = (ref: string | undefined) =>
+    resolveMaterialSlotSource(ref, internalResources, externalResources);
+  return (
+    source(properties.materialOverride) ??
+    source(properties.surfaceMaterialOverrides?.get(0)) ??
+    source(findMeshOwnMaterial(properties.mesh, internalResources))
+  );
 }
 
 /**
- * Where an ArrayMesh surface's material comes from: the scene's own
+ * Where a material slot's material comes from: the scene's own
  * `[sub_resource]`, or a `res://` path the pipeline loads.
  *
- * The two channels `ArrayMeshSurfaces` already renders through, named so
- * `material_override` can fill either one for every surface at once.
+ * The two channels the renderers fill a slot through, named so one reference
+ * can fill either.
  */
 export interface MaterialSlotSource {
   /** A StandardMaterial3D declared in this scene, already resolved. */
@@ -109,14 +104,13 @@ export interface MaterialSlotSource {
 }
 
 /**
- * `material_override` as a slot source, or `null` when it names nothing this
- * previewer can draw.
+ * One authored material reference as a slot source, or `null` when it names
+ * nothing this previewer can draw.
  *
- * `resolveMaterialSubResources` above answers the same question for a PRIMITIVE
- * mesh, whose surface count comes off the override map. An ArrayMesh's surfaces
- * come from the decoded mesh instead, so its material slots are built in
- * `ArrayMeshSurfaces` and need the override in the shape that renderer takes.
- * `render_forward_clustered.cpp:4206` is the precedence it stands ahead of.
+ * Shared by every material slot a MeshInstance3D fills: the primitive mesh's
+ * single slot above, and `material_override` in the shape `ArrayMeshSurfaces`
+ * takes it — that renderer builds its slots off the decoded mesh's surfaces
+ * rather than off the node's properties.
  *
  * `null` for a reference that names no material, deliberately: to Godot the
  * property is a `Ref<Material>`, so a reference that does not load as one is
@@ -135,7 +129,7 @@ export interface MaterialSlotSource {
  * is a STRING, which `can_convert_strict` refuses for an OBJECT slot
  * (`variant.cpp:731-737`), so the write is dropped.
  */
-export function resolveMaterialOverrideSource(
+export function resolveMaterialSlotSource(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]

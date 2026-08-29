@@ -92,9 +92,12 @@ describe('AnimationTree Linter', () => {
       });
 
       it('should reject plain string tree_root', () => {
+        // The unresolved-resource rule fires on the same property, so the
+        // format claim names its own rule.
         expectDiagnostic(scene(node('AnimationTree', { tree_root: 'invalid' })), {
           prop: 'tree_root',
-          contains: ['tree_root'],
+          ruleName: 'strict-parser',
+          contains: ['must be a resource reference'],
         });
       });
     });

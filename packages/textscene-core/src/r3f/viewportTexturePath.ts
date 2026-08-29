@@ -13,6 +13,7 @@
 
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
 import type { TscnNode } from '../parser/types.js';
+import { resolveRelativePath } from '../utils/nodePath.js';
 import {
   UNIQUE_NODE_PREFIX,
   isUniqueNameInOwner,
@@ -41,19 +42,38 @@ export function resolveViewportTexturePath(value: string | undefined): string | 
  * own path already begins at that root, so its first segment supplies it and no
  * further context is needed.
  *
+ * A `%Name` segment is a JUMP, not a literal name: `get_node_or_null` looks it
+ * up in the owner's claim table and DESCENDS from whatever it finds, so
+ * `NodePath("%Hud/CombinedViewport")` addresses a node under the `%Hud`
+ * claimant. `uniquePaths` is that table reduced to live paths
+ * (`uniqueNameLivePaths`), which is how the registry spells its keys.
+ *
+ * Without a claim table, and for a `%Name` the table has no entry for, the
+ * literal join stands: a publisher registers its own single-segment `%Name`
+ * alias too, and that alias is the only thing that can answer content composed
+ * in from an instanced sub-scene, which never appears in the authored roots the
+ * table is built from.
+ *
  * Returns null when there is no consumer path (mounted outside a
- * `NodePathProvider`) or no viewport path — better to resolve nothing than to
- * key the registry at a path nobody published.
+ * `NodePathProvider`), no viewport path, or an absolute one — `/root/…`
+ * measures from the live SceneTree, which a static parse does not model. Better
+ * to resolve nothing than to key the registry at a path nobody published.
  */
 export function viewportTextureRegistryKey(
   consumerPath: string | null,
-  viewportPath: string
+  viewportPath: string,
+  uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
   if (!consumerPath || viewportPath === '') return null;
   const root = consumerPath.split('/')[0];
   if (!root) return null;
   // `NodePath(".")` names the viewport itself — the scene root here, not a child.
   if (viewportPath === '.') return root;
+  if (viewportPath.startsWith('/')) return null;
+  if (uniquePaths && viewportPath.includes(UNIQUE_NODE_PREFIX)) {
+    const jumped = resolveRelativePath(root, viewportPath, uniquePaths);
+    if (jumped) return jumped;
+  }
   return `${root}/${viewportPath}`;
 }
 
@@ -70,15 +90,14 @@ export function viewportTextureRegistryKey(
  * with the same name, and `_acquire_unique_name_in_owner` refuses to overwrite
  * an existing entry — the first registers and the later node has its own flag
  * cleared (node.cpp:2225-2231). `claims` is that resolved table, `%Name` to the
- * winning NODE, and a loser publishing the alias anyway meant the registry kept
+ * winner, and a loser publishing the alias anyway meant the registry kept
  * whichever mounted LAST: a consumer quad sampling the wrong sub-viewport.
  *
- * Matched on node identity, not on the path spelling: the table is built from
- * the AUTHORED tree, where a heading whose `parent=` descends into instanced
- * content hangs off the instance node itself, while the render path this
- * publisher carries has the grafted segments in it. Comparing the two strings
- * read the sole claimant of a `%Name` inside instanced content as a loser and
- * withheld its alias.
+ * Matched on the claim's `livePath` — where the node sits once instanced content
+ * is composed in, which is how the render path this publisher carries is spelled.
+ * Neither of the other two spellings survives that composition: the authored
+ * `path` lacks the grafted segments, and node identity is lost because both the
+ * Instance root merge and the graft hand the publisher a fresh object.
  *
  * Absent from the table is not the same as losing. Content composed in from an
  * instanced sub-scene never appears in the authored roots the table is built
@@ -94,7 +113,7 @@ export function viewportTextureUniqueNameKey(
   if (!isUniqueNameInOwner(node)) return null;
   const key = `${UNIQUE_NODE_PREFIX}${node.name}`;
   const winner = claims?.get(key);
-  if (winner !== undefined && winner.node !== node) return null;
+  if (winner !== undefined && winner.livePath !== path) return null;
   const root = path.split('/')[0];
   return root ? `${root}/${key}` : null;
 }

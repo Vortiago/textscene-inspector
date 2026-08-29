@@ -24,9 +24,9 @@ validatorRegistry.registerAll('Sprite2D', {
   region_filter_clip_enabled: v.boolean('region_filter_clip_enabled'),
   // sprite_2d.cpp:543 hints "1,16384,1" — no or_greater/or_less, hard both ends.
   // set_hframes (sprite_2d.cpp:344) ERR_FAIL_COND_MSGs below 1; the ceiling is
-  // hint-only, never setter-enforced. `strictInt` (not `int`) because only it
-  // wires a per-end severity through to the underlying validator.
-  hframes: v.strictInt('hframes', {
+  // hint-only, never setter-enforced. Same combinator, numbers and tiers as the
+  // Sprite3D twin (sprite_3d.cpp:924/:1014), which reads the identical hint.
+  hframes: v.int('hframes', {
     min: 1,
     max: 16384,
     enforced: { min: 'sprite_2d.cpp:344' },
@@ -34,16 +34,17 @@ validatorRegistry.registerAll('Sprite2D', {
   }),
   // sprite_2d.cpp:544, same shape as hframes: set_vframes (sprite_2d.cpp:323)
   // ERR_FAIL_COND_MSGs below 1, the 16384 ceiling is hint-only.
-  vframes: v.strictInt('vframes', {
+  vframes: v.int('vframes', {
     min: 1,
     max: 16384,
     enforced: { min: 'sprite_2d.cpp:323' },
     hinted: { max: 'sprite_2d.cpp:544' },
   }),
   // sprite_2d.cpp:545 carries no hint at all; set_frame (sprite_2d.cpp:296)
-  // ERR_FAIL_INDEXes against `vframes * hframes`, a cross-property bound this
-  // per-property validator can't see, so only the >=0 floor is checked here.
-  frame: v.strictNonNegativeInt('frame', { enforced: 'sprite_2d.cpp:296' }),
+  // ERR_FAIL_INDEXes against `vframes * hframes`, whose value depends on the
+  // grid as set at that point in FILE order — a cross-property bound `linter.ts`
+  // owns. Only the >=0 floor is checkable here.
+  frame: v.int('frame', { min: 0, enforced: 'sprite_2d.cpp:296' }),
   // set_frame_coords (sprite_2d.cpp:312-313) ERR_FAIL_INDEXes both components
   // against hframes/vframes, which fails below 0 as well as at/above the frame
   // count. Only the floor is checkable here: the ceiling is a sibling property.

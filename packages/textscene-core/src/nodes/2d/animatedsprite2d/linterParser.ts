@@ -30,10 +30,14 @@ import { v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('AnimatedSprite2D', {
   sprite_frames: v.resourceReference('sprite_frames'),
   animation: v.stringName('animation'),
-  // animated_sprite_2d.cpp:674 carries no hint at all; set_frame_and_progress
-  // (animated_sprite_2d.cpp:368-369) clamps a negative frame to 0, which
-  // `enforced` treats the same as an ERR_FAIL (a silently-corrected write).
-  frame: v.strictNonNegativeInt('frame', { enforced: 'animated_sprite_2d.cpp:368' }),
+  // animated_sprite_2d.cpp:674 carries no hint at all. A negative frame never
+  // reaches storage by either route through set_frame_and_progress: with no
+  // SpriteFrames the function returns before writing anything
+  // (animated_sprite_2d.cpp:360-362), and with one the negative arm assigns 0
+  // (:368-369). Both are the silently-corrected write `enforced` names.
+  // The empty-slot half is not only about negatives — EVERY frame is dropped
+  // there — and that needs the sibling key, so `linter.ts` owns it.
+  frame: v.strictNonNegativeInt('frame', { enforced: 'animated_sprite_2d.cpp:360-369' }),
   speed_scale: v.float('speed_scale'),
   centered: v.boolean('centered'),
   offset: v.vector2('offset'),

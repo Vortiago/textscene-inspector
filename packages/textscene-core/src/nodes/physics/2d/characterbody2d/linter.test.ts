@@ -13,6 +13,7 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   runPropertyValidation,
+  type PropValue,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -31,7 +32,8 @@ describe('CharacterBody2D Linter', () => {
             floor_block_on_wall: true,
             floor_max_angle: 0.785398,
             floor_snap_length: 0.1,
-            wall_min_slide_angle: 0.261799,
+            // No `wall_min_slide_angle`: GROUNDED strips it
+            // (character_body_2d.cpp:676), so it earns its own inert warning.
             platform_on_leave: 0,
             platform_floor_layers: 4294967295,
             platform_wall_layers: 0,
@@ -102,8 +104,15 @@ describe('CharacterBody2D Linter', () => {
       },
       {
         prop: 'wall_min_slide_angle',
+        // FLOATING, the only mode that reads it in 2D.
+        with: { motion_mode: 1 },
         valid: [0, 0.261799, 0.785398, 1.5708, 2.0, 3.14159],
-        invalid: [{ value: 4.0, contains: ['radians'] }, { value: -0.1 }],
+        // Named, because the reject scenes carry no `with`: GROUNDED is the
+        // default, so the inert-key warning stands beside the range one.
+        invalid: [
+          { value: 4.0, contains: ['radians'], ruleName: 'strict-parser' },
+          { value: -0.1, ruleName: 'strict-parser' },
+        ],
       },
       {
         prop: 'platform_on_leave',
@@ -288,6 +297,77 @@ describe('CharacterBody2D Linter', () => {
         { ruleName: 'characterbody2d-floor-props-in-floating-mode' }
       );
     });
+
+    it('warns when slide_on_ceiling is set in FLOATING mode', () => {
+      expectDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, slide_on_ceiling: false }),
+          collisionShape2d
+        ),
+        {
+          ruleName: 'characterbody2d-slide-on-ceiling-in-floating-mode',
+          severity: 'warning',
+          contains: ['FLOATING', 'GROUNDED'],
+        }
+      );
+    });
+
+    it('leaves slide_on_ceiling alone in GROUNDED mode, where its four reads live', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 0, slide_on_ceiling: false }),
+          collisionShape2d
+        ),
+        { ruleName: 'characterbody2d-slide-on-ceiling-in-floating-mode' }
+      );
+    });
+
+    // Annotated, not inferred: the second entry would otherwise widen the union
+    // to `motion_mode?: undefined`, which `PropValue` excludes.
+    const grounded: Record<string, PropValue>[] = [
+      { motion_mode: 0, wall_min_slide_angle: 0.5 },
+      { wall_min_slide_angle: 0.5 },
+    ];
+    it.each(grounded)(
+      'warns when wall_min_slide_angle is set in GROUNDED mode (%o)',
+      (props) => {
+        expectDiagnostic(scene(node('CharacterBody2D', props), collisionShape2d), {
+          ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode',
+          severity: 'warning',
+          contains: ['GROUNDED', 'FLOATING'],
+        });
+      }
+    );
+
+    it('leaves wall_min_slide_angle alone in FLOATING mode, its only reader', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, wall_min_slide_angle: 0.5 }),
+          collisionShape2d
+        ),
+        { ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode' }
+      );
+    });
+
+    it('says nothing about up_direction in FLOATING mode: move_and_slide reads it either way', () => {
+      // character_body_2d.cpp:106-107, ahead of the mode branch, so the same
+      // `_validate_property` line that strips the keys above does not make it inert.
+      expectNoErrors(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, up_direction: 'Vector2(0, -1)' }),
+          collisionShape2d
+        )
+      );
+    });
+
+    it('reports a zero up_direction once — the validator, with no rule beside it', () => {
+      const diagnostics = lint(
+        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, 0)' }), collisionShape2d)
+      );
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('up_direction');
+    });
   });
 
   describe('Edge Cases', () => {
@@ -318,7 +398,8 @@ describe('CharacterBody2D Linter', () => {
             floor_block_on_wall: true,
             floor_max_angle: 0.785398,
             floor_snap_length: 0.1,
-            wall_min_slide_angle: 0.261799,
+            // No `wall_min_slide_angle`: GROUNDED strips it
+            // (character_body_2d.cpp:676), so it earns its own inert warning.
             platform_on_leave: 0,
             platform_floor_layers: 4294967295,
             platform_wall_layers: 0,

@@ -131,6 +131,21 @@ transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
       expect(found[0]!.severity).toBe('warning');
     });
 
+    it.each(['inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {
+      // A legal literal (variant_parser.cpp:149-157). The column's
+      // length_squared() is inf (or NaN, which no comparison calls 1), so
+      // basis.cpp:107 answers false and openxr_composition_layer.cpp:769
+      // pushes the warning.
+      const content = `[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="Layer" type="OpenXRCompositionLayerQuad" parent="."]
+transform = Transform3D(${spelling}, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+`;
+      expect(ruleDiagnostics(new Linter().lint(content), ORTHONORMAL_RULE)).toHaveLength(1);
+    });
+
     it('warns on a sheared basis', () => {
       const content = `[gd_scene format=3]
 

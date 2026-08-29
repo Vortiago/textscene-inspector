@@ -121,6 +121,25 @@ describe('CollisionPolygon2D Linter', () => {
     );
   });
 
+  // The bare and typed spellings load into the same packed slot, one vertex per
+  // element, so the count and the warning are the constructor form's.
+  it.each([
+    ['bare', '[Vector2(0, 0), Vector2(10, 10)]'],
+    ['typed', 'Array[Vector2]([Vector2(0, 0), Vector2(10, 10)])'],
+  ])('warns on a %s-array polygon with too few points', (_form, polygon) => {
+    expectDiagnostic(
+      scene(
+        node('StaticBody2D', {}, { name: 'Root' }),
+        node('CollisionPolygon2D', { polygon }, { parent: '.' })
+      ),
+      {
+        ruleName: 'collisionpolygon2d-insufficient-points',
+        severity: 'warning',
+        contains: ["'Solids'"],
+      }
+    );
+  });
+
   it("does not warn with exactly 2 points in 'Segments' build mode", () => {
     expectClean(
       scene(

@@ -20,9 +20,17 @@ export function useFileDrop(onFiles: (files: readonly File[]) => void): FileDrop
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
+  // A drag carrying no files is someone else's — dragging a selection inside
+  // the Source textarea to move it is the everyday case. `preventDefault()`
+  // cancels the browser's own handling of it, so the check comes FIRST in
+  // every handler that calls it.
+  function carriesFiles(e: ReactDragEvent): boolean {
+    return e.dataTransfer.types.includes('Files');
+  }
+
   function handleDragEnter(e: ReactDragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
-    if (!e.dataTransfer.types.includes('Files')) return;
     dragCounterRef.current += 1;
     setDragActive(true);
   }
@@ -30,16 +38,19 @@ export function useFileDrop(onFiles: (files: readonly File[]) => void): FileDrop
   // Required so the browser's default "reject the drop" behavior doesn't
   // win — without this, `onDrop` never fires.
   function handleDragOver(e: ReactDragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
   }
 
   function handleDragLeave(e: ReactDragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
     dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
     if (dragCounterRef.current === 0) setDragActive(false);
   }
 
   function handleDrop(e: ReactDragEvent) {
+    if (!carriesFiles(e)) return;
     e.preventDefault();
     dragCounterRef.current = 0;
     setDragActive(false);

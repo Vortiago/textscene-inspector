@@ -68,7 +68,9 @@ Strict parsing format-checks all 11 of SplitContainer's own members —
 none of `scene/gui/split_container.cpp`'s `ADD_PROPERTY` entries carries
 `PROPERTY_USAGE_NONE` (the deprecated singular `split_offset` is
 `PROPERTY_USAGE_NO_EDITOR` only, so it still reaches a `.tscn`). `dragger_visibility`
-is the one enum, bounded 0–2 from its `BIND_ENUM_CONSTANT`s; every other member
+is the one enum, bounded 0–2 by the three labels of the `PROPERTY_HINT_ENUM` at
+`split_container.cpp:1298` — a warning, since `set_dragger_visibility`
+(`split_container.cpp:1103-1109`) assigns unconditionally; every other member
 is a plain bool or int with no `PROPERTY_HINT_RANGE`, and none of their setters
 clamps — `set_split_offset`/`set_split_offsets` store the pixel offset exactly as
 authored, with no `first > second`-style collapse for a rule to warn about — so

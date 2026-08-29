@@ -26,7 +26,7 @@ import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
@@ -89,19 +89,20 @@ const settingLeafValidator = indexedFamilyValidator({
 /**
  * The joint sub-tree, which the shared dispatcher cannot reach.
  *
- * `indexedFamilyValidator` splits at the LAST `/` and requires everything
- * between the prefix and that slash to be an integer, so for
- * `settings/0/joints/1/rotation_axis` it reads an index of `0/joints/1` and
- * gives up. One more level of nesting is one more level than the shape it
- * mirrors ever has.
+ * `indexedFamilyValidator` splits at the FIRST `/` past the prefix
+ * (`indexedFamily.ts:214-219`) and hands everything below it over as one leaf
+ * NAME, so `settings/0/joints/1/rotation_axis` reaches it as the leaf
+ * `joints/1/rotation_axis`, which no leaf table can declare — the second index
+ * has to be matched, not named. One more level of nesting is one more level than
+ * the shape it mirrors ever has.
  *
- * Both index halves are `[^/]+`, not digits: `_set` reads each with a bare
- * `get_slicec(...).to_int()` and no validity gate (:37, :44), so a spelling
- * `is_valid_int` rejects still resolves to a setting and a joint and the write
- * lands there. Demanding digits handed those keys back to ChainIK3D, which
- * knows none of these leaves and accepted every value on them.
+ * Both index halves go through `indexedKeyRegex` under `to_int`: `_set` reads
+ * each with a bare `get_slicec(...).to_int()` and no validity gate (:37, :44),
+ * so a spelling `is_valid_int` rejects still resolves to a setting and a joint
+ * and the write lands there. Demanding digits handed those keys back to
+ * ChainIK3D, which knows none of these leaves and accepted every value on them.
  */
-const JOINT_KEY = /^settings\/([^/]+)\/joints\/[^/]+\/(.+)$/;
+const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 
 /**
  * `settings/…` on IterateIK3D, which is HALF of a family ChainIK3D also builds.

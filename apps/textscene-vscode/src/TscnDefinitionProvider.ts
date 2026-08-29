@@ -83,16 +83,9 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
         continue;
       }
 
-      // Extract id attribute from heading
-      // Matches: id="value" or id='value'
-      //
-      // Anchored on a non-attribute-name character, because `uid` ENDS in `id`:
-      // unanchored, a Godot 4.x heading like
-      // `[ext_resource type="Texture2D" uid="uid://b18l6iy" path="…" id="1"]`
-      // captures the uid, `definitionId === resourceId` never holds, and
-      // Go-to-Definition returns null. 1143 of the 1295 ext_resource headings in
-      // this repo's own scenes/ write uid= before id=; sub_resource headings
-      // carry no uid, which is why it read as "sometimes works".
+      // Extract the id attribute: id="value" or id='value'. Anchored on a
+      // non-attribute-name character because `uid` ENDS in `id` — unanchored,
+      // an `uid="uid://b18l6iy"` earlier in the heading matches instead.
       const idMatch = line.match(/(?:^|[^\w-])id\s*=\s*["']([^"']+)["']/);
 
       if (!idMatch) {

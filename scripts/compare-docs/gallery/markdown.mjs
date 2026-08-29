@@ -6,6 +6,7 @@
 
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { isDivider, splitRow } from '../markdownTable.mjs';
 import { REPO_ROOT } from '../sheetSources.mjs';
 import { NOTES_TYPE } from './vocabulary.mjs';
 
@@ -124,14 +125,10 @@ export function renderBody(body) {
 }
 
 function renderTable(rows) {
-  const cells = (r) =>
-    r
-      .trim()
-      .replace(/^\||\|$/g, '')
-      .split('|')
-      .map((c) => c.trim());
-  const isDivider = (r) => /^[\s|:-]+$/.test(r);
-  const body = rows.filter((r) => !isDivider(r));
+  // The generator's own splitter: a cell carrying an escaped `|` is one cell on
+  // both sides, so a row cannot pass the sheet and still break the page.
+  const cells = splitRow;
+  const body = rows.filter((r) => !isDivider(r.trim()));
   const [head, ...rest] = body;
   const th = cells(head).map((c) => `<th>${inline(c)}</th>`).join('');
   const trs = rest

@@ -82,8 +82,12 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
  * whole authored tree, which the shell already has, so the answer is read from
  * there rather than guessed per publisher. Undefined outside the shell, where
  * there is no tree and the flag is all that is knowable.
+ *
+ * Exported for the CONSUMER side too: a `viewport_path` naming a `%Name` has to
+ * resolve against the same table the publisher registered under, and a second
+ * copy of this memo would answer on a different tree.
  */
-function useUniqueNameClaims(): ReadonlyMap<string, UniqueNameClaim> | undefined {
+export function useUniqueNameClaims(): ReadonlyMap<string, UniqueNameClaim> | undefined {
   const graph = useOptionalHierarchy()?.sceneGraph;
   return useMemo(() => {
     const roots = graph?.scenes.get(graph.rootScene)?.nodes;

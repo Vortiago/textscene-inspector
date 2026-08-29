@@ -106,7 +106,7 @@ describe('replace — upload supersedes pending debounce', () => {
 
     const { result, rerender } = renderHook(
       (props: { fixtureFile: string; uploadedTscnName: string | null }) => useSceneSource(props),
-      { initialProps: { fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null } }
+      { initialProps: { fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null as string | null } }
     );
 
     await waitFor(() => {

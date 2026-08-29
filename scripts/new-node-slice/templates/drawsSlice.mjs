@@ -9,7 +9,6 @@
  * The indentation below is the emitted file's, not this module's.
  */
 
-import { LENIENT_TREE_TEST_CASE } from './parserTests.mjs';
 
 export function drawsFiles({ typeName, lower, camel, base, toSrc, toBase, reusedParser }) {
   const files = new Map();
@@ -17,19 +16,19 @@ export function drawsFiles({ typeName, lower, camel, base, toSrc, toBase, reused
       'types.ts',
       `/**
  * ${typeName}-specific type definitions.
- * Convert the alias to an interface extending ${base.propsType} when the
+ * Convert the alias to an interface extending ${reusedParser.propsType} when the
  * node grows its own parsed properties.
  */
 
-import type { ${base.propsType} } from '${toBase}/types';
+import type { ${reusedParser.propsType} } from '${reusedParser.typesPath}';
 
-export type ${typeName}Properties = ${base.propsType};
+export type ${typeName}Properties = ${reusedParser.propsType};
 `
     );
     files.set(
       'parser.ts',
       `/**
- * ${typeName} parser — extends the ${base.component} base parse.
+ * ${typeName} parser — extends the ${reusedParser.fn} parse.
  */
 
 import type { ParsedHeading } from '${toSrc}parser/utils';
@@ -40,7 +39,7 @@ export function parse${typeName}(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): ${typeName}Properties {
-  const baseProperties = ${base.parser}(heading, properties);
+  const baseProperties = ${reusedParser.fn}(heading, properties);
   return {
     ...baseProperties,
   };
@@ -140,21 +139,19 @@ ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
 export { ${typeName} };
 `
     );
-    // The registration test the other two shapes already carry. Without it a
-    // `draws` slice never loads either aggregation barrel, so a dropped import
-    // in `parser/TscnParser.ts` or `r3f/nodes/index.ts` leaves every co-located
-    // test green while the type falls back to Node at runtime.
+    // The registration test the other two shapes already carry: it imports
+    // `./index` itself, so it proves the slice's own self-registration and
+    // says nothing about the aggregation barrels. `parserBarrelCompleteness`
+    // owns the barrel question, from the one position that can ask it.
     files.set(
       `${lower}.test.ts`,
       `/**
- * ${typeName} registration — the slice is wired into both aggregation barrels.
+ * ${typeName} registration — its parser and its component self-register on import.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '${toSrc}core/NodeRegistry';
 import { nodeComponentRegistry } from '${toSrc}r3f/NodeComponentRegistry';
-import { TscnParser } from '${toSrc}parser/TscnParser';
-import * as logger from '${toSrc}logger';
 import { parse${typeName} } from './parser';
 import { ${typeName} } from './Component';
 import './index';
@@ -170,8 +167,6 @@ describe('${typeName} registration', () => {
   it('registers its own component, so it reads as drawing', () => {
     expect(nodeComponentRegistry.get('${typeName}')).toBe(${typeName});
   });
-
-${LENIENT_TREE_TEST_CASE(typeName, base.component)}
 });
 `
     );

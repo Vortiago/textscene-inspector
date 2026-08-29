@@ -16,18 +16,45 @@ import type * as THREE from 'three';
 import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { StandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/types';
-import type { TextureState } from '../../../resources/textures/applyTextureState';
+import {
+  isMaterialOwnedTexture,
+  type TextureState,
+} from '../../../resources/textures/applyTextureState';
 import { useViewportTextureSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTexturePins } from '../../../resources/useProceduralTexture';
 import { repackAnisotropyFlowmap } from '../../../resources/textures/repackFlowmap';
 import {
-  effectiveSlot,
   materialTextureState,
   resolveProceduralTextures,
   transformedTexture,
   TEXTURE_PROPERTIES,
 } from './meshTextureSlots';
 import { useMeshTextureSlots } from './useMeshTextureSlots';
+
+/**
+ * The texture this slot's material samples, and its lifetime.
+ *
+ * A material whose UV transform, filter or wrapping diverges from the shared
+ * source samples a CLONE, and three keys its GPU upload on exactly the sampler
+ * parameters the clone changes — so the clone gets an upload of its own that
+ * disposing the original would never free. Without this every re-parse (one per
+ * keystroke in the source pane) left another uploaded clone behind.
+ *
+ * `isMaterialOwnedTexture` is the tag the cloner leaves and the only thing that
+ * separates ours from the loader cache's: disposing a shared source here would
+ * pull it out from under every other material sampling the same path.
+ */
+function useTransformedTexture(
+  texture: THREE.Texture | undefined,
+  state: TextureState | null
+): THREE.Texture | undefined {
+  const transformed = useMemo(() => transformedTexture(texture, state), [texture, state]);
+  useEffect(() => {
+    if (!transformed || !isMaterialOwnedTexture(transformed)) return undefined;
+    return () => transformed.dispose();
+  }, [transformed]);
+  return transformed;
+}
 
 export interface MeshMaterialTextures {
   albedoMap: THREE.Texture | undefined;
@@ -87,23 +114,18 @@ export function useMeshMaterialTextures(
     internalResources
   );
 
-  const albedoMap = useMemo(
-    () =>
-      transformedTexture(
-        viewportAlbedo
-          ? { value: viewportAlbedo }
-          : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
-        textureState
-      ),
-    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureState]
+  // One `??` chain per slot, in the precedence at the top of this file: a
+  // synchronously-resolved procedural texture stands ahead of the async slot
+  // for the same map. The TEXTURE is the dependency, never its wrapper — both
+  // the slot object and `proceduralTextures` are re-created on every re-parse,
+  // and a fresh clone per keystroke is the whole cost being avoided.
+  const albedoMap = useTransformedTexture(
+    viewportAlbedo ?? proceduralTextures.albedo_texture ?? textureSlots.albedo_texture?.value,
+    textureState
   );
-  const normalMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        textureState
-      ),
-    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureState]
+  const normalMap = useTransformedTexture(
+    proceduralTextures.normal_texture ?? textureSlots.normal_texture?.value,
+    textureState
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
@@ -111,45 +133,25 @@ export function useMeshMaterialTextures(
   // (BLUE / GREEN). Faithful for grayscale or matching-channel (ORM) maps; a
   // RED-packed map with differing channels would misread. A true fix needs
   // runtime channel-swizzling.
-  const roughnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        textureState
-      ),
-    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureState]
+  const roughnessMap = useTransformedTexture(
+    proceduralTextures.roughness_texture ?? textureSlots.roughness_texture?.value,
+    textureState
   );
-  const metalnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        textureState
-      ),
-    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureState]
+  const metalnessMap = useTransformedTexture(
+    proceduralTextures.metallic_texture ?? textureSlots.metallic_texture?.value,
+    textureState
   );
-  const emissiveMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        textureState
-      ),
-    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureState]
+  const emissiveMap = useTransformedTexture(
+    proceduralTextures.emission_texture ?? textureSlots.emission_texture?.value,
+    textureState
   );
-  const aoMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        textureState
-      ),
-    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
+  const aoMap = useTransformedTexture(
+    proceduralTextures.ao_texture ?? textureSlots.ao_texture?.value,
+    textureState
   );
-  const displacementMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        textureState
-      ),
-    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureState]
+  const displacementMap = useTransformedTexture(
+    proceduralTextures.heightmap_texture ?? textureSlots.heightmap_texture?.value,
+    textureState
   );
   // Depend on the two values the repack actually reads, not on their wrappers:
   // `materialScalars` and the slot object are re-created on every re-parse and
@@ -166,26 +168,14 @@ export function useMeshMaterialTextures(
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [anisotropyStrength, anisotropyFlowmap]);
 
-  const anisotropyMap = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, textureState),
-    [repackedFlowmap, textureState]
-  );
+  const anisotropyMap = useTransformedTexture(repackedFlowmap, textureState);
 
-  // The repack allocates its own pixel buffer, so it is disposed on the same
-  // terms as the procedural DataTextures above. Dispose the UV-transformed
-  // texture too, and not only the repack it came from: a non-identity uv1_scale
-  // makes `transformedTexture` hand back a CLONE, and the clone is what the
-  // material samples. three keys its GPU texture on the sampler parameters, and
-  // the clone changes wrapS/wrapT, so it gets an upload of its own while the
-  // original is never uploaded at all — disposing only the original frees
-  // nothing. Both are ours to release; when the transform is identity they are
-  // the same object and one dispose is enough.
-  useEffect(() => {
-    return () => {
-      repackedFlowmap?.dispose();
-      if (anisotropyMap !== repackedFlowmap) anisotropyMap?.dispose();
-    };
-  }, [repackedFlowmap, anisotropyMap]);
+  // The repack allocates its own pixel buffer rather than going through the
+  // cloner, so it carries no ownership tag and is freed here outright; the
+  // UV-transformed clone the material actually samples is freed by
+  // `useTransformedTexture`. At an identity transform the two are the same
+  // object, untagged, and this one dispose is the whole of it.
+  useEffect(() => () => repackedFlowmap?.dispose(), [repackedFlowmap]);
 
   // If any requested slot resolved to `unavailable`, surface the FIRST
   // such path as the placeholder label. Listing more than one would

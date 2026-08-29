@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
+import { checkerFor } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
 // The fixture's parent placement (linter.ts, valid-openxrvisibilitymask-parent)
 // requires an XRCamera3D sibling in the same file. `expectFixtureClean` only
@@ -21,12 +22,8 @@ import './linterParser';
 import '../../camera3d/linterParser';
 import '../../camera3d/linter';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('OpenXRVisibilityMask', property);
-  expect(validator, `no validator registered for OpenXRVisibilityMask.${property}`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/** `OpenXRVisibilityMask.<property>`'s registered validator, invoked at line 1. */
+const check = checkerFor('OpenXRVisibilityMask');
 
 /**
  * Set exactly ONE, from the source rather than from expectation: list the keys
@@ -77,6 +74,10 @@ describe('OpenXRVisibilityMask strict validators', () => {
     // reasoned. `fixtureLint` owns the whole-registry version but needs the
     // barrel, so it cannot run while sibling slices are being written; this
     // checks the same file against whatever this test imported.
+    //
+    // With no own keys that is the INHERITED validators only — `linterParser`
+    // imports the parent chain — so it covers what GeometryInstance3D up declares and
+    // becomes this slice's own claim the moment KEYS gains an entry.
     expectFixtureClean('unit-open-xr-visibility-mask.tscn');
   });
 

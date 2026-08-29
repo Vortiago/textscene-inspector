@@ -9,7 +9,7 @@
  * can have. Both harnesses share them for that reason.
  */
 
-/** `tscn-web-source-pane` in apps/textscene-web/src/r3f-main.tsx. */
+/** `tscn-web-source-pane` in apps/textscene-web/src/sourcePane.ts. */
 export const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
 /** `FRAME_ON_OPEN_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx. */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';

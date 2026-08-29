@@ -42,7 +42,7 @@ export interface Grounding {
 }
 
 /**
- * A `Grounding` that may also name an `ERR_FAIL_COND(!is_finite(...))`.
+ * A `Grounding` that may also name a setter guard on the special float literals.
  *
  * Separate from `Grounding` because only the FLOAT combinators can honour it:
  * an int slot cannot hold a non-finite at all (it is altered at parse), and a
@@ -53,11 +53,20 @@ export interface Grounding {
  *
  * `inf` and `nan` are legal TSCN float literals that Godot writes and reloads
  * (`variant_parser.cpp:150-155`), so the shared numeric validator accepts them.
- * Exactly five setters in `scene/` refuse one, and each names its guard here.
+ * A setter that refuses one names its guard here — and the two guards are
+ * different rules, not degrees of the same one, so a property carrying the
+ * narrower one must not be given the wider.
  */
 export interface FiniteGrounding extends Grounding {
   /** `file:line` of an `ERR_FAIL_COND(!is_finite(...))` in the setter. */
   finite?: string;
+  /**
+   * `file:line` of a `Math::is_nan` guard in a setter that stores `inf` and
+   * `-inf` unaltered — `AudioStreamPlayer::set_volume_db`'s
+   * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` and its 2D/3D twins.
+   * `finite` subsumes it and wins where both are given.
+   */
+  nan?: string;
 }
 
 /** The citation covering one end of a bound, if the grounding names it. */
@@ -99,32 +108,38 @@ export function shape(validator: PropertyValidator, description: string): Proper
 }
 
 /**
- * Reject `inf` / `-inf` / `inf_neg` / `nan` ahead of the range check, for the
- * handful of setters that open with `ERR_FAIL_COND(!is_finite(...))`.
+ * Reject the special float literals a setter refuses, ahead of the range check.
  *
- * It runs FIRST because a range check cannot express it: `Infinity > max` is
- * true so a bounded property would report the wrong reason, and every NaN
- * comparison is false so an unbounded one would report nothing at all.
+ * It runs FIRST because a range check cannot express either refusal: `Infinity
+ * > max` is true, so a bounded property would report the wrong reason, and every
+ * NaN comparison is false, so an unbounded one would report nothing at all.
+ *
+ * One implementation for both guards because the tag forwarding below is the
+ * part that breaks silently — a wrapper that drops `leaves` or `intSlot` takes
+ * the slot out of a registry sweep rather than failing it — and two copies of it
+ * drift.
  */
-export function withFiniteGuard(
+function withLiteralGuard(
   validator: PropertyValidator,
   name: string,
-  cite: string
+  cite: string,
+  refuses: (parsed: number) => boolean,
+  requirement: string
 ): PropertyValidator {
   const guarded: PropertyValidator = (key, value, line) => {
     const parsed = parseGodotFloat(value);
-    if (parsed !== null && !Number.isFinite(parsed)) {
+    if (parsed !== null && refuses(parsed)) {
       return propertyError(
         key,
         line,
-        `Property '${name}' must be finite; Godot's setter refuses "${value.trim()}"`,
+        `Property '${name}' ${requirement}; Godot's setter refuses "${value.trim()}"`,
         valueCode(name)
       );
     }
     return validator(key, value, line);
   };
   guarded.accepts = validator.accepts;
-  // The wrapper only adds a finiteness branch ahead of the range checks, so the
+  // The wrapper only adds a literal branch ahead of the range checks, so the
   // bounded ends, their tiers and the NUMBERS stay the inner validator's.
   // `bounds` is what `hintImplementationParity` compares against the engine's
   // hint, so dropping it took the property out of that comparison and counted
@@ -142,17 +157,39 @@ export function withFiniteGuard(
   // real value and owes a citation — which is exactly what `formatOnly` denies.
   //
   // Keep BOTH citations when the property also carries a range bound, the same
-  // rule `ground` follows: the finite guard and the range guard are separate
+  // rule `ground` follows: the literal guard and the range guard are separate
   // lines in the setter, and dropping either makes it uncheckable.
   const inner = validator.grounding?.cite;
   guarded.grounding = {
-    // The inner kind wins where there is one. The finite branch is always an
+    // The inner kind wins where there is one. The literal branch is always an
     // error and says so directly, so stamping `enforced` unconditionally would
     // only mislabel a `hinted:` bound whose range branch still warns.
     kind: validator.grounding?.kind ?? 'enforced',
     cite: inner && inner !== cite ? `${cite}, ${inner}` : cite,
   };
   return guarded;
+}
+
+/** Reject all four non-finite spellings: `ERR_FAIL_COND(!is_finite(...))`. */
+export function withFiniteGuard(
+  validator: PropertyValidator,
+  name: string,
+  cite: string
+): PropertyValidator {
+  return withLiteralGuard(validator, name, cite, (n) => !Number.isFinite(n), 'must be finite');
+}
+
+/**
+ * Reject `nan` ALONE, for a setter guarded by `Math::is_nan` rather than by
+ * `!is_finite`. `inf` and `-inf` reach the field unaltered there, so the finite
+ * guard cannot stand in: it would reject two values Godot stores.
+ */
+export function withNanGuard(
+  validator: PropertyValidator,
+  name: string,
+  cite: string
+): PropertyValidator {
+  return withLiteralGuard(validator, name, cite, Number.isNaN, 'must not be NaN');
 }
 
 /** Apply `withFiniteGuard` only when the caller named a guard. */
@@ -162,6 +199,15 @@ export function maybeFinite(
   validator: PropertyValidator
 ): PropertyValidator {
   return opts.finite ? withFiniteGuard(validator, name, opts.finite) : validator;
+}
+
+/** Apply `withNanGuard` only when the caller named the narrower guard alone. */
+export function maybeNan(
+  name: string,
+  opts: FiniteGrounding,
+  validator: PropertyValidator
+): PropertyValidator {
+  return opts.nan && !opts.finite ? withNanGuard(validator, name, opts.nan) : validator;
 }
 
 /**

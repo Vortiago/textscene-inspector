@@ -30,6 +30,55 @@ function gridCount(raw: string | undefined): number | null {
   return count === null ? null : Math.max(1, count);
 }
 
+/** The grid a write is judged against, and whether the file states a bigger one below it. */
+interface AppliedGrid {
+  hframes: number;
+  vframes: number;
+  /** An `hframes`/`vframes` line sits BELOW the key, so its value is not in effect yet. */
+  late: boolean;
+}
+
+/**
+ * The grid Godot holds at the moment it replays `key`, or `null` for a literal
+ * no rule can use.
+ *
+ * `SceneState::instantiate` walks a node's stored properties in the order the
+ * FILE lists them (packed_scene.cpp:369-492, over the list
+ * resource_format_text.cpp:304 appends to as it scans), so an `hframes` line
+ * below `frame` is still at its default of 1 when `set_frame`'s ERR_FAIL_INDEX
+ * runs. sprite_2d.cpp:543-545 is the order Godot SAVES in, which binds nothing
+ * a hand-authored body has to follow. Measured on 4.6.3: a body of `frame = 3`
+ * then `hframes = 4` raises the ERR_FAIL_INDEX and loads on frame 0.
+ *
+ * Only the keys ABOVE `key` are read, so an unusable literal below it stops
+ * nothing: its own diagnostic is `linterParser.ts`'s.
+ */
+function gridWhenApplied(rawProps: Record<string, string>, key: string): AppliedGrid | null {
+  const grid: AppliedGrid = { hframes: 1, vframes: 1, late: false };
+  let seenKey = false;
+  for (const [written, raw] of Object.entries(rawProps)) {
+    if (written === key) {
+      seenKey = true;
+      continue;
+    }
+    const axis = written === 'hframes' ? 'hframes' : written === 'vframes' ? 'vframes' : null;
+    if (axis === null) continue;
+    if (seenKey) {
+      grid.late = true;
+      continue;
+    }
+    const count = gridCount(raw);
+    if (count === null) return null;
+    grid[axis] = count;
+  }
+  return grid;
+}
+
+/** Why the grid a write was judged against is smaller than the one the file ends up with. */
+function lateGridHint(key: string): string {
+  return ` Godot applies properties in file order, so an 'hframes'/'vframes' line below '${key}' is not in effect yet; move it above.`;
+}
+
 /**
  * Validate Sprite2D semantic rules (resource references, frame validation, etc.)
  */
@@ -65,21 +114,22 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // `set_frame` opens with ERR_FAIL_INDEX (sprite_2d.cpp:296), and `hframes`
-  // and `vframes` are declared ahead of `frame` (:543-545), so the guard sees
-  // the authored grid and the out-of-range write is refused at load, not at
-  // some later runtime call.
+  // `set_frame` opens with ERR_FAIL_INDEX (sprite_2d.cpp:296) against the grid
+  // Godot holds when the write is replayed, which `gridWhenApplied` reads in
+  // file order. The refusal happens at load, not at some later runtime call.
   if (rawProps.frame !== undefined) {
     const frame = ruleInt(rawProps.frame);
-    const hframes = gridCount(rawProps.hframes);
-    const vframes = gridCount(rawProps.vframes);
+    const grid = gridWhenApplied(rawProps, 'frame');
 
-    if (frame !== null && hframes !== null && vframes !== null) {
-      const maxFrame = hframes * vframes;
+    if (frame !== null && grid !== null) {
+      const maxFrame = grid.hframes * grid.vframes;
       if (frame >= maxFrame) {
         diagnostics.push({
           severity: 'error',
-          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
+          message:
+            `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${grid.hframes}, vframes=${grid.vframes}). ` +
+            `Godot refuses the assignment, so the sprite loads on frame 0.` +
+            (grid.late ? lateGridHint('frame') : ''),
           nodeName: node.name,
           nodeType: node.type,
           ruleName: 'sprite2d-frame-range',
@@ -95,23 +145,29 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     const coords = matchVector2i(rawProps.frame_coords);
     if (coords) {
       const { x: coordX, y: coordY } = coords;
-      const hframes = gridCount(rawProps.hframes);
-      const vframes = gridCount(rawProps.vframes);
+      // Both ERR_FAIL_INDEXes (sprite_2d.cpp:312-313) read the same replayed
+      // grid `frame` does, so the file order governs here too.
+      const grid = gridWhenApplied(rawProps, 'frame_coords');
 
-      if (hframes !== null && vframes !== null) {
-        if (coordX >= hframes) {
+      if (grid !== null) {
+        const late = grid.late ? lateGridHint('frame_coords') : '';
+        if (coordX >= grid.hframes) {
           diagnostics.push({
             severity: 'error',
-            message: `frame_coords.x (${coordX}) is out of range. Maximum is ${hframes - 1} (hframes=${hframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
+            message:
+              `frame_coords.x (${coordX}) is out of range. Maximum is ${grid.hframes - 1} (hframes=${grid.hframes}). ` +
+              `Godot refuses the assignment, so the sprite loads on frame 0.${late}`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'sprite2d-frame-coords-range',
           });
         }
-        if (coordY >= vframes) {
+        if (coordY >= grid.vframes) {
           diagnostics.push({
             severity: 'error',
-            message: `frame_coords.y (${coordY}) is out of range. Maximum is ${vframes - 1} (vframes=${vframes}). Godot refuses the assignment, so the sprite loads on frame 0.`,
+            message:
+              `frame_coords.y (${coordY}) is out of range. Maximum is ${grid.vframes - 1} (vframes=${grid.vframes}). ` +
+              `Godot refuses the assignment, so the sprite loads on frame 0.${late}`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'sprite2d-frame-coords-range',

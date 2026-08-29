@@ -256,6 +256,19 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
     expect(only(SKEW_RULE, content)).toEqual([]);
   });
 
+  it('says nothing when a transform component is narrowed at parse time', () => {
+    // `Vector2i(...)` arguments run `_parse_construct<int32_t>`, whose
+    // identifier branch reads `inf` through `stor_fix`
+    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` then
+    // narrows it (variant.h:369-370). Godot composes an unskewed transform from
+    // whatever int32 it lands on; the NaN that stood in for it made
+    // `hasZeroGlobalSkew` answer false and report skew that is not there.
+    const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = 10.0\nscale = Vector2i(inf, 1)\n`;
+    expect(only(SKEW_RULE, content)).toEqual([]);
+    expect(only(NON_UNIFORM_RULE, content)).toEqual([]);
+    expect(only(SCALE_RULE, content)).toEqual([]);
+  });
+
   it('says nothing on a plain rotation (no skew) at a non-trivial angle, when radius > 0', () => {
     // A pure rotation must never read as skew, however the trig rounds.
     const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = 10.0\nrotation = 0.3927\n`;

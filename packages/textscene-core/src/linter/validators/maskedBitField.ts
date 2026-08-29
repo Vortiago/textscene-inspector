@@ -33,7 +33,7 @@ import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import type { Severity } from '../types.js';
-import { markIntSlot, readIntSlot, truncatedInt } from './intSlot.js';
+import { markIntSlot, readIntSlot, storedNotWritten } from './intSlot.js';
 import { formatCode, valueCode } from './v/codes.js';
 
 /**
@@ -119,9 +119,9 @@ function bitField(
         return propertyError(key, line, arm.message(num), valueCode(name), arm.severity);
       }
     }
-    // Last, after every arm: a value that is both fractional and outside the
-    // mask has the arm's diagnostic to report, and that outranks this one.
-    return truncatedInt(name, key, value, line, valueCode(name), read);
+    // Last, after every arm: a value that is both stored differently and
+    // outside the mask has the arm's diagnostic, and that outranks this one.
+    return storedNotWritten(name, key, value, line, valueCode(name), read);
   }, `bit mask of ${describeBits(opts.labels, opts.arms[0].bits)}`);
 
   validator.grounding = opts.grounding;

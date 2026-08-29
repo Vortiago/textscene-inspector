@@ -6,7 +6,13 @@
  * Godot beside our renderer, per node type, under a drag-slider.
  *
  *   node scripts/compare-docs/build-gallery.mjs                # -> docs/comparison/index.html, images referenced
+ *   node scripts/compare-docs/build-gallery.mjs --check        # fail if the committed copy is stale
  *   node scripts/compare-docs/build-gallery.mjs --inline --out /tmp/gallery.html   # self-contained (artifact/preview)
+ *
+ * The committed copy is what `docs/comparison/README.md` sends a reader to, and
+ * nothing else regenerates it — the web build stages its own into `dist/`. So
+ * `--check` is the only thing standing between it and the sheets it was built
+ * from; `pnpm validate` and CI run it.
  *
  * The sheets carry only content (see SHEET-STANDARD.md); everything visual is
  * decided here, so re-styling the gallery never touches a sheet and refreshing
@@ -22,17 +28,23 @@
  * status/category words, and `page`/`styles`/`client` are the document itself.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
 import { build } from './gallery/build.mjs';
 import { parseSheet } from './gallery/sheetParsing.mjs';
 
 function parseArgs(argv) {
-  const args = { inline: false, fragment: false, out: join(REPO_ROOT, 'docs/comparison/index.html') };
+  const args = {
+    inline: false,
+    fragment: false,
+    check: false,
+    out: join(REPO_ROOT, 'docs/comparison/index.html'),
+  };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--inline') args.inline = true;
     else if (argv[i] === '--fragment') args.fragment = true;
+    else if (argv[i] === '--check') args.check = true;
     else if (argv[i] === '--out') args.out = argv[++i];
     else throw new Error(`Unknown flag ${argv[i]}`);
   }
@@ -61,9 +73,21 @@ function main() {
   }
   const { html, missing } = build(sheets, args.inline, args.fragment);
 
-  mkdirSync(dirname(args.out), { recursive: true });
-  writeFileSync(args.out, html);
-  console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
+  const rel = relative(REPO_ROOT, args.out);
+  const where = rel && !rel.startsWith('..') ? rel : args.out;
+  if (args.check) {
+    const current = existsSync(args.out) ? readFileSync(args.out, 'utf8') : null;
+    if (current === html) {
+      console.log(`[gallery] ${where} is up to date (${sheets.length} sheet(s)).`);
+    } else {
+      console.error(`[gallery] ${where} is STALE — run \`pnpm docs:gallery\`.`);
+      process.exitCode = 1;
+    }
+  } else {
+    mkdirSync(dirname(args.out), { recursive: true });
+    writeFileSync(args.out, html);
+    console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
+  }
   if (missing.length) {
     console.error(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
     for (const m of missing) console.error(`  ${m}`);

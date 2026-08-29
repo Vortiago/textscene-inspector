@@ -18,7 +18,10 @@ describe('indexedElements', () => {
       'to_int'
     );
     expect([...elements.keys()]).toEqual([0]);
-    expect(elements.get(0)).toEqual({ individual_config: 'true', 'radius/value': '0.5' });
+    expect([...elements.get(0)!]).toEqual([
+      ['individual_config', 'true'],
+      ['radius/value', '0.5'],
+    ]);
   });
 
   it('resolves a non-numeric index the way to_int does', () => {
@@ -61,7 +64,7 @@ describe('indexedElements', () => {
       'settings/',
       'to_int'
     );
-    expect(elements.get(0)).toEqual({ 'joints/1/bone': '"A"' });
+    expect([...elements.get(0)!]).toEqual([['joints/1/bone', '"A"']]);
   });
 
   it('ignores a key with no leaf below the index, and one with no index', () => {
@@ -79,7 +82,7 @@ describe('indexedElements', () => {
       'settings/',
       'to_int'
     );
-    expect(elements.get(0)?.bone).toBe('"Second"');
+    expect(elements.get(0)?.get('bone')).toBe('"Second"');
   });
 
   it('seats no element for a multi-slash key under is_valid_int', () => {
@@ -92,8 +95,32 @@ describe('indexedElements', () => {
   });
 
   it('still nests a to_int family, whose leaf is everything below the index', () => {
-    expect(
-      indexedElements({ 'settings/0/joints/1/bone': '2' }, 'settings/', 'to_int').get(0)
-    ).toEqual({ 'joints/1/bone': '2' });
+    expect([
+      ...indexedElements({ 'settings/0/joints/1/bone': '2' }, 'settings/', 'to_int').get(0)!,
+    ]).toEqual([['joints/1/bone', '2']]);
+  });
+
+  it('keeps a leaf named __proto__, which an object literal swallowed', () => {
+    // The leaf is raw `.tscn` text. Assigned onto an object literal it invoked
+    // `Object.prototype`'s setter, so the authored write vanished and the
+    // element came back looking empty.
+    const elements = indexedElements(
+      { 'settings/0/__proto__': '"polluted"' },
+      'settings/',
+      'to_int'
+    );
+    expect(elements.get(0)?.get('__proto__')).toBe('"polluted"');
+    expect([...elements.get(0)!.keys()]).toEqual(['__proto__']);
+  });
+
+  it('answers undefined for a prototype-named leaf nothing wrote', () => {
+    // On an object literal `leaves.constructor` and `leaves.toString` answered
+    // with a FUNCTION out of a value typed as a string, and the caller then
+    // called `.startsWith` on it.
+    const elements = indexedElements({ 'settings/0/bone': '"A"' }, 'settings/', 'to_int');
+    const leaves = elements.get(0)!;
+    for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
+      expect(leaves.get(name)).toBeUndefined();
+    }
   });
 });

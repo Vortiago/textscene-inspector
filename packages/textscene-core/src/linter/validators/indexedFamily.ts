@@ -55,16 +55,27 @@
  * {@link toIntIndex} this dispatcher does, because `to_int` resolves a
  * non-numeric index to a real element rather than to no index at all.
  *
- * Citations stay at the CALL SITE, passed in rather than written here, for two
- * reasons: each class enforces at its own `file:line`, and
+ * A class's OWN citations stay at the call site, passed in rather than written
+ * here, for two reasons: each class enforces at its own `file:line`, and
  * `rangeAdvisoryGrounding.test.ts` scrapes `cite: '…'` literals out of source, so
- * a helper that owned the citation would blind that check everywhere at once.
+ * a helper that owned them would blind that check everywhere at once. The one
+ * exception is {@link IS_VALID_INT_CITE}, which is not a class's fact at all —
+ * every `PropertyListHelper` family shares that single guard, and a parameter
+ * for it would be one string copied to every call site.
  */
 
 import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { IS_VALID_INT_RE, toIntIndex, type IndexParse } from '../../godot/index.js';
+
+/**
+ * The `is_valid_int` gate — the ONE citation this file owns, because it is the
+ * HELPER's fact rather than any class's: `_get_property` returns nullptr,
+ * `_set` returns false and the write is DROPPED. That is a real value refused
+ * at ADR-0032's error tier, so the arm below must not hide behind `formatOnly`.
+ */
+const IS_VALID_INT_CITE = 'property_list_helper.cpp:53-55';
 
 export interface IndexedFamilyOptions {
   /** The glued prefix, e.g. `item_` for `item_0/text`, `popup/item_` for MenuButton. */
@@ -135,10 +146,10 @@ export interface IndexedFamilyOptions {
   accepts?: string;
   /**
    * The negative-index branch, when the class routes writes through the helper
-   * that refuses one. Omitting it does NOT leave the dispatcher format-only: the
-   * key comes back as an unrecognised one instead, which names the leaf rather
-   * than the index. A slice whose semantic rule also claims the negative band
-   * then reports one refusal twice, so the two must not both cover it.
+   * that refuses one. Omitting it still reports the key — as an unrecognised
+   * one, which names the leaf rather than the index. A slice whose semantic
+   * rule also claims the negative band then reports one refusal twice, so the
+   * two must not both cover it.
    */
   negativeIndex?: {
     /** `file:line` of the guard that refuses it. Pass a literal, not a variable. */
@@ -250,11 +261,20 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     return leaf(key, value, line);
   }, opts.accepts ?? describes);
 
-  if (negativeIndex) {
-    validator.grounding = { kind: 'enforced', cite: negativeIndex.cite };
+  const cites = [
+    // The index gate refuses a real value, so an `is_valid_int` family is
+    // grounded whether or not the class also declares a negative-index branch.
+    ...(gatesOnValidInt ? [IS_VALID_INT_CITE] : []),
+    ...(negativeIndex ? [negativeIndex.cite] : []),
+  ];
+  if (cites.length > 0) {
+    // Two cites where two guards can fire, the way `patternValidator` names
+    // both of TileSet's (`resources/tileset/sourceValidators.ts`).
+    validator.grounding = { kind: 'enforced', cite: cites.join(', ') };
   } else {
-    // Only an unrecognised key shape or leaf name is rejected, which is a format
-    // concern; every magnitude bound lives in the leaves.
+    // A `to_int` class resolves every index text to SOME element, so nothing
+    // above refuses a real value: only an unrecognised key shape or leaf name
+    // is rejected. Every magnitude bound lives in the leaves.
     validator.formatOnly = true;
   }
   validator.leaves = Object.values(leaves);

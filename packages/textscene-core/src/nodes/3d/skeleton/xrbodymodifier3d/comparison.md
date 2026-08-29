@@ -37,7 +37,7 @@ Strict parsing format-checks these `XRBodyModifier3D` properties, plus 2 inherit
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `body_tracker` | quoted string or &"name" |  |
-| `body_update` | bit mask of BODY_UPDATE_UPPER_BODY (1) | BODY_UPDATE_LOWER_BODY (2) | BODY_UPDATE_HANDS (4) |  |
+| `body_update` | bit mask of BODY_UPDATE_UPPER_BODY (1) \| BODY_UPDATE_LOWER_BODY (2) \| BODY_UPDATE_HANDS (4) |  |
 | `bone_update` | enum 0-1 (BONE_UPDATE_FULL/BONE_UPDATE_ROTATION_ONLY) | error |
 
 | Rule | Reports | Severity |

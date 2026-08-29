@@ -14,7 +14,7 @@
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
-import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
+import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/index.js';
@@ -116,7 +116,10 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
   const hasNode3DContent = (nodes: readonly TscnNode[]): boolean =>
     nodes.some((child) => {
       if (child.type === 'SubViewport') return false;
-      if (TWO_D_UI_TYPES.has(child.type)) {
+      // Godot's question (`is2DUIType`), not the DOM registry's mirror: this
+      // decides whether a raster host mounts at all, so a Control with no
+      // component of its own — `Tree`, `ProgressBar` — must still reach one.
+      if (is2DUIType(child.type)) {
         sawDom = true;
         return hasNode3DContent(child.children);
       }

@@ -67,7 +67,7 @@
  * projects precisely because its rule read the canonical key alone.
  */
 
-import { IS_VALID_INT_RE, literalText } from './string.js';
+import { literalText } from './string.js';
 import { TSCN_FLOAT_RE } from './number.js';
 
 /**
@@ -131,10 +131,18 @@ type AliasRow = string | { readonly to: string; readonly applies: (raw: string) 
  * Whether a serialised value is the INT or FLOAT variant `Variant::is_num()`
  * accepts. A quoted `"1"` is a STRING and a `true` is a BOOL; neither is num,
  * so neither forwards.
+ *
+ * The tokenizer's grammar alone, never `is_valid_int`: the two differ on
+ * exactly the leading `+`, which `String::is_valid_int` skips but `get_token`
+ * does not. Only `-` is consumed before the digit test
+ * (`variant_parser.cpp:420-424`), so `+` falls through to "Unexpected
+ * character" (`:508-510`) and `mode = +5` fails the whole file's load. Reading
+ * it as numeric renamed the key to `blend_mode`, which left the validator
+ * registered under the deprecated spelling silent and put a property name the
+ * author's file does not contain into the diagnostic.
  */
 function isNumericLiteral(raw: string): boolean {
-  const bare = raw.trim();
-  return IS_VALID_INT_RE.test(bare) || TSCN_FLOAT_RE.test(bare);
+  return TSCN_FLOAT_RE.test(raw.trim());
 }
 
 /** Nested plain literals to nested Maps, so no lookup can reach a prototype. */

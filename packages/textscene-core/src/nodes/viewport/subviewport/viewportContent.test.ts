@@ -48,6 +48,18 @@ describe('viewportContentKind', () => {
   });
 
   /**
+   * `ProgressBar` is a `Range`, so Godot calls it 2D UI, but this previewer
+   * ships no DOM component for it. Reading the component mirror here made the
+   * viewport `'empty'`, which both publishers skip — nothing registers a target
+   * and a `ViewportTexture` naming the path resolves null forever.
+   */
+  it('classifies a Control with no DOM component of its own as dom', () => {
+    expect(
+      viewportContentKind(viewport('\n[node name="Bar" type="ProgressBar" parent="Viewport"]'))
+    ).toBe('dom');
+  });
+
+  /**
    * An instance node has no type until its sub-scene resolves. Godot's own
    * viewport demos instance 3D sub-scenes (`3d_in_2d.tscn` instances
    * `robot_3d.tscn`), so a bare one is assumed to be 3D content.

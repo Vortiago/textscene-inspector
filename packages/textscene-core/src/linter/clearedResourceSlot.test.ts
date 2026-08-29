@@ -181,6 +181,12 @@ const SLOTS: Slot[] = [
       expected: [],
     },
   ]),
+  // The script slot, where the engine's own test is `get_script().is_null()`
+  // (container.cpp:210) — true for a cleared slot, so the warning is owed for
+  // both spellings and not only for the absent key.
+  ...at('nodes/2d/ui/container/linter.ts', [
+    { type: 'Container', prop: 'script', expected: ['warning container-no-script'] },
+  ]),
   ...at('nodes/3d/animatedsprite3d/linter.ts', [
     {
       type: 'AnimatedSprite3D',

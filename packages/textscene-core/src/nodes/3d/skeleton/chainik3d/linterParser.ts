@@ -48,18 +48,19 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 const SETTINGS_PREFIX = 'settings/';
 
 /**
  * `joints/<j>/bone` and `joints/<j>/bone_name`, at any index.
  *
- * The index is `[^/]+`, not digits: `_set` has no `joints` branch at all, so
- * every spelling falls to the same `return false` (chain_ik_3d.cpp:62-63) and
- * the index text decides nothing here. Only the two leaf names do.
+ * The index position is the `to_int` segment, not digits: `_set` has no `joints`
+ * branch at all, so every spelling falls to the same `return false`
+ * (chain_ik_3d.cpp:62-63) and the index text decides nothing here. Only the two
+ * leaf names do.
  */
-const JOINT_BONE_RE = /^joints\/[^/]+\/(?:bone|bone_name)$/;
+const JOINT_BONE_RE = indexedKeyRegex('^joints/#/(?:bone|bone_name)$', 'to_int');
 
 /**
  * The joint list is DERIVED, never written.

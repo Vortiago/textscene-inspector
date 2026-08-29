@@ -87,13 +87,33 @@ stream = "res://sound.ogg"
 
   describe('volume_db validation', () => {
     // audio_stream_player.cpp:282 hints "-80,24,suffix:dB", closed at both ends;
-    // set_volume_db (:69-71) only refuses NaN, so outside it warns.
+    // set_volume_db assigns straight through, so outside it warns.
     it('warns, not errors, one step past each end of the hint', () => {
       for (const value of ['-80.1', '24.1']) {
         const error = check('volume_db', value);
         expect(error).not.toBeNull();
         expect(error!.severity).toBe('warning');
         expect(error!.message).toContain('between -80 and 24');
+      }
+    });
+
+    // audio_stream_player.cpp:70,
+    // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.").
+    // Measured on 4.6.3: after `volume_db = -12`, writing NaN leaves -12 and
+    // prints the error, while `inf` and `-inf` are stored unaltered. A range
+    // bound cannot cover it — every comparison against NaN is false, so the
+    // refusal produced no diagnostic at all.
+    it('errors on nan, which the setter refuses', () => {
+      const error = check('volume_db', 'nan');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('must not be NaN');
+    });
+
+    it('still only warns on inf, which the setter stores', () => {
+      for (const value of ['inf', '-inf', 'inf_neg']) {
+        const error = check('volume_db', value);
+        expect(error?.severity, value).toBe('warning');
+        expect(error?.message, value).toContain('between -80 and 24');
       }
     });
 

@@ -31,7 +31,7 @@ Strict parsing format-checks these `Node` properties. A malformed value is alway
 | `process_priority` | integer |  |
 | `process_thread_group` | enum 0-2 (PROCESS_THREAD_GROUP_INHERIT/PROCESS_THREAD_GROUP_MAIN_THREAD/PROCESS_THREAD_GROUP_SUB_THREAD) | warning |
 | `process_thread_group_order` | integer |  |
-| `process_thread_messages` | integer |  |
+| `process_thread_messages` | bit mask of FLAG_PROCESS_THREAD_MESSAGES (1) \| FLAG_PROCESS_THREAD_MESSAGES_PHYSICS (2) |  |
 | `unique_name_in_owner` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import '../../../../r3f/nodes/index'; // side-effect: component registrations
 import '../../../../parser/TscnParser'; // side-effect: parser registrations
-import { isRenderableNodeType } from '../../../../r3f/nodeSupport';
+import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
@@ -48,8 +48,8 @@ async function render(node: TscnNode) {
 }
 
 describe('VehicleWheel3D registration', () => {
-  it('is reported as supported, so no "Not Implemented" badge', () => {
-    expect(isRenderableNodeType('VehicleWheel3D')).toBe(true);
+  it('is reported as drawing, so no "Not Implemented" badge', () => {
+    expect(rendersOwnVisual('VehicleWheel3D')).toBe('draws');
   });
 
   it('honours visible = false, hiding itself and its wheel mesh', async () => {

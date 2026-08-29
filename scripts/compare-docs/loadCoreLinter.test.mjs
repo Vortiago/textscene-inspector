@@ -5,18 +5,26 @@
  * 22.15/23.5; `engines` requires >=24). Both are invisible to every other test.
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { join } from 'node:path';
+import { requireFreshDist } from '../distFreshness.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const DIST = join(here, '../../packages/textscene-core/dist/linter/index.js');
-const built = existsSync(DIST);
+const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
 // The first import pulls the whole linter barrel (every slice self-registers),
 // which comfortably exceeds vitest's 5s default; later tests hit the cache.
-describe.skipIf(!built)('loadCoreLinter', { timeout: 30_000 }, () => {
+describe('loadCoreLinter', { timeout: 30_000 }, () => {
+  // Not `existsSync(dist)`: that cannot tell a fresh build from one predating
+  // the very change being measured, and it SKIPS rather than fails, so a run
+  // with no build at all reads green over a guard that never executed.
+  //
+  // In `beforeAll`, never at module scope: it walks a tree a concurrent
+  // `tsc --build` may be writing, and a throw during module evaluation surfaces
+  // as a vitest collection error instead of the actionable message.
+  beforeAll(() => {
+    requireFreshDist(CORE, 'the docs generators');
+  });
+
   it('loads the built registries with every slice self-registered', async () => {
     const { loadCoreLinter } = await import('./loadCoreLinter.mjs');
     const core = await loadCoreLinter();

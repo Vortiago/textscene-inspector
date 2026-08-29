@@ -7,7 +7,7 @@
  * so the closure of the audit's Tier-1 list reads as a single block.
  *
  * Audit slot numbers from STRICT-VERIFICATION.md Section 1:
- *   14a — surface_material_override slot N>0 → mesh.material[N]
+ *   14a — surface_material_override, sized by the mesh's surface count
  *   16a — cast_shadow=2 → material.shadowSide === DoubleSide
  *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
  *   38a — ao_texture → material.aoMap is a THREE.Texture
@@ -338,7 +338,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(cam.position.z).toBeCloseTo(5 - 2, 5);
   });
 
-  it('audit slot 14a — surface_material_override slot 0 + slot 1 → mesh.material is a length-2 array', async () => {
+  it('audit slot 14a — surface_material_override slot 0 applies, slot 1 is refused', async () => {
     const surfaceMap = new Map<number, string>([
       [0, 'SubResource("MatA")'],
       [1, 'SubResource("MatB")'],
@@ -359,16 +359,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
+    // A BoxMesh is a PrimitiveMesh with one surface
+    // (primitive_meshes.cpp:141-147), so `_set` refuses slot 1
+    // (mesh_instance_3d.cpp:68) and the box draws slot 0 on all six of its
+    // groups. Splitting it into a length-2 array left four faces unrendered,
+    // because three skips a group whose `material[materialIndex]` is undefined.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const surfaceMaterials = mesh.material as unknown as Array<{
-      color: { r: number; g: number };
-    }>;
-    expect(Array.isArray(surfaceMaterials)).toBe(true);
-    expect(surfaceMaterials).toHaveLength(2);
-    expect(surfaceMaterials[0]!.color.r).toBe(1);
-    expect(surfaceMaterials[0]!.color.g).toBe(0);
-    expect(surfaceMaterials[1]!.color.r).toBe(0);
-    expect(surfaceMaterials[1]!.color.g).toBe(1);
+    expect(Array.isArray(mesh.material)).toBe(false);
+    const material = mesh.material as unknown as { color: { r: number; g: number } };
+    expect(material.color.r).toBe(1);
+    expect(material.color.g).toBe(0);
   });
 
   it('audit slot 93a — Label3D billboard=ENABLED → mesh.userData.billboardMode set + useFrame copies camera.quaternion', async () => {

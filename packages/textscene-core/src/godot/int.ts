@@ -412,9 +412,15 @@ export function slotComponents(
    * matched with. `slotTupleRegex` is finite-only, so `matchedFloat` is the
    * default; the linter's `makeFloatTupleRegex` also admits `inf`/`nan`, and
    * `parseFloat` answers NaN for all four of those spellings — which would turn
-   * every comparison against a legal `inf` component false. The int branch is
-   * shared either way: `_parse_construct<int32_t>` refuses a non-finite
-   * argument outright.
+   * every comparison against a legal `inf` component false.
+   *
+   * It settles the FLOAT branch only. `_parse_construct<int32_t>` takes a
+   * non-finite argument as readily as a finite one — `stor_fix`
+   * (`variant_parser.cpp:149-159`) answers the identifiers `inf`/`-inf`/
+   * `inf_neg`/`nan` with a double, and the branch calling it (`:577-586`) is the
+   * one every constructor runs — so NaN in the result means either a legal
+   * non-finite float component or an int component the engine altered. A caller
+   * that must tell those apart asks {@link slotComponentsAltered}.
    */
   readFloat: (text: string) => number = matchedFloat
 ): number[] {
@@ -422,4 +428,37 @@ export function slotComponents(
   return captures.map((capture) =>
     asInt ? (storedInt(capture) ?? NaN) : readFloat(capture ?? '')
   );
+}
+
+/**
+ * Whether the `i`-suffixed spelling in a FLOAT slot narrows a component to a
+ * number the file does not state.
+ *
+ * The third state {@link slotComponents} has no room for. Its NaN says only "do
+ * not compare this", and a legal `Vector3(nan, 0, 0)` answers to it exactly as
+ * an altered `Vector3i(inf, 0, 0)` does — so a bound reading the array alone
+ * stays silent on the one that IS a defect, since every comparison against NaN
+ * is false either way.
+ *
+ * True only for the converted spelling, and for two kinds of component. A
+ * non-finite one reads (`variant_parser.cpp:149-159`, `:577-586`) and is then
+ * narrowed by `_to_int<int32_t>`, undefined behaviour outside int32's range
+ * (`variant.h:369-370`). One past int32's round-tripping band — `4294967296` —
+ * reads as an INT variant and wraps to a value nothing writes. Either way the
+ * engine stores a number the file does not name, which is the alteration
+ * ADR-0032 puts at the error tier, and neither number is namable: the first is
+ * architecture-specific, the second is the wrap this module refuses to invent.
+ * So a caller reports the ALTERATION and quotes the literal.
+ *
+ * Same reader as {@link slotComponents}, on the same captures, so the pair
+ * cannot answer differently about one component.
+ */
+export function slotComponentsAltered(
+  literal: string,
+  /** The slot's own type name, e.g. `Vector2` — NOT the spelling in the file. */
+  floatTypeName: string,
+  captures: readonly (string | undefined)[]
+): boolean {
+  if (!isConvertedSpelling(floatTypeName, compositeTypeName(literal))) return false;
+  return captures.some((capture) => storedInt(capture) === null);
 }

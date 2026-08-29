@@ -50,14 +50,20 @@ import './linterParser.js';
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '${toSrc}linter/ValidatorRegistry';
 import { expectFixtureClean } from '${toSrc}linter/testing/fixtureCheck';
+import { checkerFor } from '${toSrc}linter/testing/validatorCheck';
 import './linterParser';
 
-/** The error a validator returns for a value, or null when it accepts it. */
-function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('${typeName}', property);
-  expect(validator, \`no validator registered for ${typeName}.\${property}\`).not.toBeNull();
-  return validator!(property, value, 1);
-}
+/**
+ * \`${typeName}.<property>\`'s registered validator, invoked at line 1.
+ *
+ * Assert a rejection with \`expectError\` / \`expectWarning\` from the same module,
+ * never with \`severity\` alone: the ADR-0032 tier is derived inside the validator
+ * from its own \`enforced:\` / \`hinted:\` declaration, so a flipped one stays
+ * self-consistent and every registry-wide guard agrees with it. Both helpers
+ * require a substring of the message, which is where the bound's own number and
+ * wording live — the second file the tier claim needs.
+ */
+const check = checkerFor('${typeName}');
 
 /**
  * Set exactly ONE, from the source rather than from expectation: list the keys
@@ -96,6 +102,10 @@ describe('${typeName} strict validators', () => {
     // reasoned. \`fixtureLint\` owns the whole-registry version but needs the
     // barrel, so it cannot run while sibling slices are being written; this
     // checks the same file against whatever this test imported.
+    //
+    // With no own keys that is the INHERITED validators only — \`linterParser\`
+    // imports the parent chain — so it covers what ${chain} up declares and
+    // becomes this slice's own claim the moment KEYS gains an entry.
     expectFixtureClean('unit-${kebabName}.tscn');
   });
 

@@ -62,6 +62,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | `valid-animatedsprite2d-resources` | `animatedsprite2d-requires-spriteframes` | warning |
 |  | `valid-animatedsprite2d-resources` | error |
 |  | `animatedsprite2d-animation-no-spriteframes` | error |
+|  | `animatedsprite2d-frame-no-spriteframes` | error |
 <!-- lint:end -->
 
 `speed_scale`, `frame_progress`, and `autoplay` are validated by strict but never

@@ -10,7 +10,7 @@
  * tree order, so multiple children are legal rather than suspicious.
  *
  * 2. `SubViewportContainer::get_configuration_warnings()`
- * (subviewport_container.cpp:268-286) also checks:
+ * (subviewport_container.cpp:269-288) also checks:
  *
  *     if (get_default_cursor_shape() != Control::CURSOR_ARROW) {
  *         warnings.push_back(RTR("The default mouse cursor shape of
@@ -27,11 +27,8 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom, isCatalogedType } from '../../../../godot/nodeBaseTypes.js';
+import { CURSOR_ARROW, CURSOR_MAX } from '../../../../godot/control.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-
-// control.h:100-119, Control::CursorShape: CURSOR_ARROW = 0 .. CURSOR_HELP = 16.
-const CURSOR_ARROW = 0;
-const CURSOR_MAX = 17;
 
 function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -66,7 +63,9 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   const cursorRaw = props.mouse_default_cursor_shape;
   if (cursorRaw !== undefined) {
     // In range, not merely non-null: a non-finite reads as NaN and `99` reads
-    // as 99, and neither is a CursorShape (0-16, control.h:180-197).
+    // as 99, and neither is a CursorShape. Out of range is Control's `enforced:`
+    // validator's error (control.cpp:2877); a second diagnostic here would
+    // double-report it.
     const cursor = ruleInt(cursorRaw);
     const isShape = cursor !== null && cursor >= 0 && cursor < CURSOR_MAX;
     if (isShape && cursor !== CURSOR_ARROW) {

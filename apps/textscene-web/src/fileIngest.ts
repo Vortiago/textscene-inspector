@@ -72,6 +72,12 @@ export function createFileIngest(
   }
 
   return async function handleFilesUpload(files: readonly File[]) {
+    // Nothing arrived, so nothing failed: an empty batch is a no-op, not the
+    // "no .tscn among them" error the resource-only branch below would raise.
+    if (files.length === 0) {
+      return;
+    }
+
     const missingPaths = missingPathsRef.current;
     const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
 

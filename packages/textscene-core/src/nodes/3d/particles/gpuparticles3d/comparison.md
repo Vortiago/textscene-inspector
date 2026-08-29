@@ -83,6 +83,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 |  | `valid-gpuparticles3d-resources` | error |
 |  | `gpuparticles3d-no-draw-pass-mesh` | warning |
 |  | `valid-gpuparticles3d-sub-emitter` | error |
+|  | `gpuparticles3d-sub-emitter-self` | warning |
 |  | `gpuparticles3d-sub-emitter-wrong-type` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |

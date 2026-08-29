@@ -86,7 +86,11 @@ export function particlesProcess(
       }
     } else if (!p.active) {
       continue;
-    } else if (p.time >= p.lifetime) {
+    } else if (p.time > p.lifetime) {
+      // Strictly past, as in the engine (cpu_particles_2d.cpp:971): an age that
+      // has only REACHED its lifetime is still drawn. `>=` kills a frame early
+      // wherever the step divides the lifetime exactly, and pins `tv` to the far
+      // end of every curve and ramp.
       p.active = false;
       tv = 1.0;
     } else {

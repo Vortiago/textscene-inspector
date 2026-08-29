@@ -177,6 +177,17 @@ export const RESOURCE_REF_RE = new RegExp(`^${RESOURCE_REF_BODY}$`);
 export const SUB_RESOURCE_REF_ANYWHERE_RE = new RegExp(SUB_RESOURCE_REF_BODY);
 
 /**
+ * An `ExtResource(` call ANYWHERE in a value — a discriminator, not a parse.
+ *
+ * For a caller asking only "does this value reach outside the file", where the
+ * id is nobody's business. The body deliberately stops at the `(`: a
+ * SUPPRESSION check wants the superset, and the quoted-id body would drop the
+ * legacy integer spelling `ExtResource(1)` that the tight `includes` it replaces
+ * did match.
+ */
+export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
+
+/**
  * The path inside a `NodePath("…")` literal, or null when the value is not one.
  *
  * `NodePath("")` yields `''`, not null: an empty path is a real serialised value with
@@ -233,10 +244,45 @@ const PACKED_ELEMENT_TYPE: Readonly<Record<string, string>> = {
  * caller can test the match index to know which body it has.
  */
 export function packedArrayForms(packedTypeName: string): readonly RegExp[] {
-  const element = PACKED_ELEMENT_TYPE[packedTypeName] ?? packedTypeName;
+  const element = packedElementType(packedTypeName);
   return [
     packedArrayLiteral(packedTypeName),
     new RegExp(`^${WS}Array${WS}\\[${WS}${element}${WS}\\]${WS}\\(${WS}\\[([\\s\\S]*)\\]${WS}\\)${WS}$`),
     ARRAY_LITERAL_RE,
   ];
+}
+
+/**
+ * The type each element of the bare and typed bodies is spelled with, and the
+ * `T` the typed wrapper names.
+ */
+export function packedElementType(packedTypeName: string): string {
+  return PACKED_ELEMENT_TYPE[packedTypeName] ?? packedTypeName;
+}
+
+/** Which body shape a packed value carries, and the body itself, trimmed. */
+export interface PackedArrayBody {
+  /** The packed constructor's FLAT argument list, rather than one element per comma. */
+  flat: boolean;
+  body: string;
+}
+
+/**
+ * The body of `value` under whichever of {@link packedArrayForms} matches it, or
+ * null when none does.
+ *
+ * Takes the forms rather than a type name so a reader keeps the three RegExps at
+ * module scope, and turns the packed form's match INDEX into the flag the caller
+ * actually branches on — the one fact every reader of a packed slot needs and
+ * the one each of them was restating.
+ */
+export function packedArrayBody(
+  forms: readonly RegExp[],
+  value: string
+): PackedArrayBody | null {
+  for (let i = 0; i < forms.length; i++) {
+    const match = forms[i]!.exec(value);
+    if (match) return { flat: i === 0, body: match[1]!.trim() };
+  }
+  return null;
 }

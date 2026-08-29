@@ -19,9 +19,10 @@
 
 /* global window */ // the addInitScript callback below runs in the browser
 
-import { launchShowcaseBrowser } from './browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
+import { launchShowcaseBrowser } from './browser.mjs';
 import { collectFailures } from './verify2d/assertions.mjs';
 import { readOverlayStats, readSurface } from './verify2d/pageStats.mjs';
 import { TARGETS } from './verify2d/targets.mjs';
@@ -29,7 +30,7 @@ import { TARGETS } from './verify2d/targets.mjs';
 // Gitignored by default: the gate runs often, and overwriting the committed
 // showcase captures would drop binary diffs into unrelated changes. Point
 // VERIFY_OUT at docs/showcase/verify to refresh those deliberately.
-const OUT = process.env.VERIFY_OUT || 'scripts/showcase/output';
+const OUT = process.env.VERIFY_OUT || join(REPO_ROOT, 'scripts/showcase/output');
 const BASE = process.env.SHOWCASE_URL || 'http://localhost:4173';
 // Bundled Chromium unless told otherwise: this is a gate, and the repo's
 // determinism contract is the lockfile-pinned browser, never system Chrome.

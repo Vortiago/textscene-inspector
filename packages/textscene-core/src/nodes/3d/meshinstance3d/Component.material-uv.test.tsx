@@ -183,4 +183,55 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
     expect(mat.metalnessMap?.repeat.x).toBe(4);
     expect(mat.emissiveMap?.repeat.x).toBe(4);
   });
+
+  it('disposes every UV-transformed clone on unmount, and no shared source', async () => {
+    // Each clone changes wrapS/wrapT, and three keys its GPU upload on exactly
+    // those — so every clone is an upload of its own that disposing the source
+    // would never free. Re-parsing on each keystroke made one set per character.
+    // The sources belong to the loader's cache and must survive: disposing one
+    // pulls it out from under every other material sampling the same path.
+    const fake = createFakeResourceLoader();
+    const sources = [A_PATH, N_PATH, R_PATH].map((path) => {
+      const texture = tex();
+      fake.textures.seed(path, texture);
+      return texture;
+    });
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+            sub('StandardMaterial3D', 'Mat', {
+              albedo_texture: 'ExtResource("1")',
+              normal_enabled: 'true',
+              normal_texture: 'ExtResource("2")',
+              roughness_texture: 'ExtResource("3")',
+              uv1_scale: 'Vector3(3, 3, 1)',
+            }),
+          ]}
+          externalResources={[ext('1', A_PATH), ext('2', N_PATH), ext('3', R_PATH)]}
+        >
+          <MeshInstance3D node={makeNode()} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial;
+    const clones = [mat.map!, mat.normalMap!, mat.roughnessMap!];
+    // Clones, not the cached sources: only the UV transform sets `repeat`.
+    for (const clone of clones) expect(clone.repeat.x).toBe(3);
+    expect(clones.some((c) => sources.includes(c))).toBe(false);
+
+    const disposed = new Set<THREE.Texture>();
+    for (const texture of [...clones, ...sources]) {
+      texture.addEventListener('dispose', () => disposed.add(texture));
+    }
+
+    await renderer.unmount();
+
+    for (const clone of clones) expect(disposed.has(clone)).toBe(true);
+    for (const source of sources) expect(disposed.has(source)).toBe(false);
+  });
 });

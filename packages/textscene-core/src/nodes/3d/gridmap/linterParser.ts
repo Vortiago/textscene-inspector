@@ -16,7 +16,7 @@ import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 import {
   markIntSlot,
   readIntSlot,
-  truncatedInt,
+  storedNotWritten,
   unrepresentableInt,
 } from '../../../linter/validators/intSlot.js';
 
@@ -153,7 +153,7 @@ const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) =>
     );
   }
   // Last, after both bounds: an out-of-range value has a diagnostic of its own.
-  return truncatedInt(
+  return storedNotWritten(
     'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', read
   );
 }, 'integer, nonzero, 1-1024 hinted');
