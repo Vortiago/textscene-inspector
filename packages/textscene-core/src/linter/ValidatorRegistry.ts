@@ -108,6 +108,11 @@ export class ValidatorRegistry {
   }
 
   /**
+   * @internal — like {@link ValidatorRegistry.typesWithRegistrations}, this
+   * enumerates what the registry holds without naming a type, which is
+   * `registryPopulation.ts`'s alone. A discipline enforced on one of two
+   * equivalent doors is one the next author walks around without noticing.
+   *
    * Types declaring a removal, which is NOT a subset of
    * `registeredTypes('declaring')`: `HBoxContainer` only takes `vertical` away and
    * registers no validator of its own, so it appears in `unavailable` alone. A
@@ -158,7 +163,7 @@ export class ValidatorRegistry {
    *   Deliberately untagged: see {@link ValidatorFn}. A caller introspecting a
    *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
-  findValidator(nodeType: string, propertyKey: string): ValidatorFn | null {
+  declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
     // A hop counter, not a visited Set: this runs for every property of every
     // node, and the Set was an allocation on every call including every miss.
     // The table is derived from ClassDB ancestry, so it is acyclic by
@@ -187,20 +192,18 @@ export class ValidatorRegistry {
   }
 
   /**
-   * The same resolution, as the DECLARATION rather than as something to call.
+   * The same resolution, as something to CALL.
    *
-   * Same object, wider type. Two questions share one walk and differ only in
-   * what the caller may then read: running a validator needs no tags, and
-   * reading a tag is introspection that belongs to a sweep. Keeping them apart
-   * at the type level is what stops a hand-assembled roots-only population from
-   * compiling — `findValidator(...).intSlot` no longer type-checks.
-   *
-   * A method rather than a free function because scratch registries are driven
-   * through it: `ValidatorRegistry.*.test.ts` and `shadowCopyScan` both build
-   * their own registry to prove a guard bites.
+   * A `PropertyValidator` is a `ValidatorFn` with tags, so narrowing needs no
+   * assertion — the walk above returns the wide type and this hands back the
+   * narrow one. Two questions share one walk and differ only in what the caller
+   * may then read: running a validator needs no tags, and reading a tag is
+   * introspection that belongs to a sweep. Keeping them apart at the type level
+   * is what stops a hand-assembled roots-only population from compiling —
+   * `findValidator(...).intSlot` does not type-check.
    */
-  declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
-    return this.findValidator(nodeType, propertyKey) as PropertyValidator | null;
+  findValidator(nodeType: string, propertyKey: string): ValidatorFn | null {
+    return this.declarationFor(nodeType, propertyKey);
   }
 
   /**

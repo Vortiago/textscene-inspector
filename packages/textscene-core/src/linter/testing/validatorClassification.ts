@@ -33,9 +33,7 @@ const UNGROUNDABLE: ReadonlySet<string> = new Set<string>();
  * wildcard key would otherwise cover every leaf it dispatches to.
  */
 function ungroundedLabels(exempt: ReadonlySet<string>, roots?: readonly Root[]): string[] {
-  return everyValidatorLabel(isUnclassified, roots ? { roots } : {}).filter(
-    (l) => !exempt.has(l)
-  );
+  return everyValidatorLabel(isUnclassified, { roots }).filter((l) => !exempt.has(l));
 }
 
 /** Every registered validator that declares none of the three classification tags. */

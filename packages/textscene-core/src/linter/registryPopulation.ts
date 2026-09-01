@@ -54,8 +54,16 @@ export interface Subject {
   readonly validator: PropertyValidator;
 }
 
-/** A validator to start a walk from, and the label to report it under. */
-export interface Root {
+/**
+ * A validator to start a walk from, and the label to report it under.
+ *
+ * A root MAY carry the registration it came from; `registryRoots` fills those in
+ * and an injected fixture usually does not. Declared rather than sniffed off the
+ * object, so the walk reads them by type instead of casting — and a root that
+ * carries none leaves the subject's site fields empty rather than having them
+ * invented by splitting its label.
+ */
+export interface Root extends Partial<RegisteredKey> {
   readonly label: string;
   readonly validator: PropertyValidator;
 }
@@ -63,15 +71,24 @@ export interface Root {
 /** How a walk is scoped and how it refuses to be vacuous. */
 export interface WalkOptions {
   /**
-   * Walk exactly these instead of the live registry. The seam a guard uses to
-   * prove its own bite against scratch validators rather than resting on
-   * whatever the registry happens to hold.
+   * Walk exactly these instead of the registry's own registrations. The seam a
+   * guard uses to prove its own bite against scratch validators rather than
+   * resting on whatever the registry happens to hold.
    */
   readonly roots?: readonly Root[];
   /**
-   * Fail below this many subjects. The floor belongs where the population is
-   * NAMED — a sweep that forgot `import './index.js'` otherwise reports an
-   * empty offender list and passes.
+   * Walk this registry rather than the live singleton, as both sibling
+   * populations already allow. Without it a test driving a scratch registry had
+   * to rebuild the root list by hand — the recomposition this module exists to
+   * make unnecessary, in the module's own test.
+   */
+  readonly registry?: ValidatorRegistry;
+  /**
+   * Fail below this many validators VISITED. Counted before `keep`, because
+   * every real sweep's `keep` is an offender filter whose expected answer is
+   * `[]` — flooring the kept subjects would ask nothing, and could only ever be
+   * satisfied by passing 0. A sweep that forgot `import './index.js'` walks
+   * nothing and now says so.
    */
   readonly atLeast?: number;
 }
@@ -134,8 +151,9 @@ export function everyValidator(
   keep: (validator: PropertyValidator) => boolean,
   opts: WalkOptions = {}
 ): readonly Subject[] {
-  const roots = opts.roots ?? registryRoots();
+  const roots = opts.roots ?? registryRoots(opts.registry ?? validatorRegistry);
   const out: Subject[] = [];
+  let visited = 0;
   /** Declaration validators already reported, by function identity. */
   const seen = new Set<PropertyValidator>();
   /** Removal roots already reported, by the pair that actually distinguishes them. */
@@ -144,6 +162,7 @@ export function everyValidator(
   const visit = (at: Site, validator: PropertyValidator, label: string, depth: number): void => {
     if (seen.has(validator)) return;
     seen.add(validator);
+    visited++;
     if (keep(validator)) out.push({ ...at, label, depth, validator });
     validator.leaves?.forEach((leaf, index) => visit(at, leaf, `${label}[${index}]`, depth + 1));
   };
@@ -154,15 +173,18 @@ export function everyValidator(
       const pair = `${at.nodeType}\u0000${at.key}`;
       if (seenRemovals.has(pair)) continue;
       seenRemovals.add(pair);
-      if (keep(root.validator)) out.push({ ...at, label: root.label, depth: 0, validator: root.validator });
+      visited++;
+      if (keep(root.validator)) {
+        out.push({ ...at, label: root.label, depth: 0, validator: root.validator });
+      }
       continue;
     }
     visit(at, root.validator, root.label, 0);
   }
 
-  if (opts.atLeast !== undefined && out.length < opts.atLeast) {
+  if (opts.atLeast !== undefined && visited < opts.atLeast) {
     throw new Error(
-      `registry population is ${out.length}, below the floor of ${opts.atLeast}. ` +
+      `registry population is ${visited}, below the floor of ${opts.atLeast}. ` +
         `Was the linter barrel imported (\`import './index.js'\`) before the sweep?`
     );
   }
@@ -173,19 +195,14 @@ export function everyValidator(
 type Site = Pick<Subject, 'nodeType' | 'key' | 'kind'>;
 
 /**
- * A root's registration. Injected roots carry only a label, so the pair is read
- * back off it — every scratch label a guard writes is already `Type.key`.
+ * A root's registration, or empty for a fixture that names none. Never guessed
+ * from the label: the module mints that grammar and does not also parse it back.
  */
-function siteOf(root: Root): Site {
-  const carried = root as Partial<RegisteredKey>;
-  if (carried.nodeType !== undefined && carried.key !== undefined) {
-    return { nodeType: carried.nodeType, key: carried.key, kind: carried.kind ?? 'declaration' };
-  }
-  const dot = root.label.indexOf('.');
-  return dot === -1
-    ? { nodeType: root.label, key: '', kind: 'declaration' }
-    : { nodeType: root.label.slice(0, dot), key: root.label.slice(dot + 1), kind: 'declaration' };
-}
+const siteOf = (root: Root): Site => ({
+  nodeType: root.nodeType ?? '',
+  key: root.key ?? '',
+  kind: root.kind ?? 'declaration',
+});
 
 /** The same walk, labels only and sorted — a sweep that only NAMES what it found. */
 export function everyValidatorLabel(
@@ -198,10 +215,10 @@ export function everyValidatorLabel(
 }
 
 /** Every registration the registry resolves, as walk roots. */
-function registryRoots(): readonly (Root & RegisteredKey)[] {
+function registryRoots(registry: ValidatorRegistry): readonly (Root & RegisteredKey)[] {
   const roots: (Root & RegisteredKey)[] = [];
-  for (const { nodeType, key, kind } of registeredKeys()) {
-    const validator = validatorRegistry.declarationFor(nodeType, key);
+  for (const { nodeType, key, kind } of registeredKeys(registry)) {
+    const validator = registry.declarationFor(nodeType, key);
     if (validator) roots.push({ label: `${nodeType}.${key}`, validator, nodeType, key, kind });
   }
   return roots;

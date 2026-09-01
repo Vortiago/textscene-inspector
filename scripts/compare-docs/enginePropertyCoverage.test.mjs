@@ -76,7 +76,7 @@ const EXPECTED_UNVALIDATED = 4;
  * the load-bearing members outright.
  */
 function coveredClasses(nodeRegistry, declaringTypes) {
-  return new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes('declaring')]);
+  return new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes]);
 }
 
 // Loading the built barrel (every slice self-registers) comfortably exceeds
@@ -129,7 +129,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('scopes to the classes this repo claims, named rather than only derived', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes);
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'));
     // NAMED, because the scope is derived from the very registry this ledger
     // audits: deregistering a class removes its rows from the count instead of
     // failing it. Measured — 262 of the 266 contribute no unvalidated property,
@@ -157,7 +157,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('the unvalidated-property ledger has not grown', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes);
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'));
 
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);

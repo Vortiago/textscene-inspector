@@ -285,14 +285,12 @@ import '../nodes/os/statusindicator/index.linter.js';
 export { Linter } from './Linter.js';
 export { StrictTscnParser } from './StrictTscnParser.js';
 export { validatorRegistry } from './ValidatorRegistry.js';
-// The three populations, re-exported because the `.mjs` ledgers under `scripts/`
-// load the built package and must reach them the same way the package does.
-export {
-  registeredTypes,
-  registeredKeys,
-  everyValidator,
-  everyValidatorLabel,
-} from './registryPopulation.js';
+// Re-exported because four `.mjs` ledgers under `scripts/` load the built
+// package and scope their coverage by it: `coverage-report/collect.mjs`,
+// `compare-docs/loadCoreLinter.test.mjs`, `enginePropertyCoverage.test.mjs` and
+// `resourcePropertyCoverage.test.mjs`. The rest of the module is reachable by
+// direct import in-package and stays off the published surface.
+export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { SEVERITY_ORDER } from './types.js';
 

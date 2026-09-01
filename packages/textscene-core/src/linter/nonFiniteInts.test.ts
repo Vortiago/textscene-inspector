@@ -80,7 +80,7 @@ describe('a literal an INT slot cannot hold', () => {
         validator.leaves === undefined &&
         INT_PROSE.test(validator.accepts ?? '') &&
         !validator.intSlot,
-      { atLeast: 0 }
+      { atLeast: 2000 }
     );
     expect(untagged).toEqual([]);
   });

@@ -81,13 +81,30 @@ describe('everyValidator', () => {
   it('carries the registration at every depth, so no caller parses a label', () => {
     const nested = dispatcher([leaf()]);
     const found = everyValidator(() => true, {
-      roots: [{ label: 'Type.settings/*', validator: dispatcher([nested]) }],
+      roots: [
+        {
+          label: 'Type.settings/*',
+          validator: dispatcher([nested]),
+          nodeType: 'Type',
+          key: 'settings/*',
+          kind: 'declaration',
+        },
+      ],
     });
     expect(found.map((s) => [s.label, s.nodeType, s.key, s.depth])).toEqual([
       ['Type.settings/*', 'Type', 'settings/*', 0],
       ['Type.settings/*[0]', 'Type', 'settings/*', 1],
       ['Type.settings/*[0][0]', 'Type', 'settings/*', 2],
     ]);
+  });
+
+  it('leaves the site empty for a fixture that names none, rather than guessing', () => {
+    // The label is minted here; parsing it back would be the module inventing a
+    // registration a scratch root never claimed.
+    const [only] = everyValidator(() => true, {
+      roots: [{ label: 'Guard.probe', validator: leaf() }],
+    });
+    expect([only!.nodeType, only!.key]).toEqual(['', '']);
   });
 
   it('reports both removed keys when one type removes two for the same reason', () => {
@@ -98,15 +115,14 @@ describe('everyValidator', () => {
     const reason = { reason: 'the base takes it away', cite: 'box_container.cpp:1' };
     registry.registerUnavailable('Twins', { first: reason, second: { ...reason } });
 
-    const roots = registeredKeys(registry).map(({ nodeType, key, kind }) => ({
-      label: `${nodeType}.${key}`,
-      validator: registry.findValidator(nodeType, key)!,
-      nodeType,
-      key,
-      kind,
-    }));
-    expect(roots[0]!.validator).toBe(roots[1]!.validator); // the memoisation, stated
-    expect(everyValidatorLabel(() => true, { roots })).toEqual(['Twins.first', 'Twins.second']);
+    // The memoisation, stated: same reason and cite, so literally one function.
+    expect(registry.declarationFor('Twins', 'first')).toBe(
+      registry.declarationFor('Twins', 'second')
+    );
+    expect(everyValidatorLabel(() => true, { registry })).toEqual([
+      'Twins.first',
+      'Twins.second',
+    ]);
   });
 
   it('fails loudly below its floor rather than reporting an empty offender list', () => {

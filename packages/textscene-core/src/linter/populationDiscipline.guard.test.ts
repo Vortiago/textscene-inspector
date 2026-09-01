@@ -56,31 +56,64 @@ const everyFile = (): string[] =>
     'populationDiscipline scan'
   );
 
+/**
+ * The offence, spelled once: a file that enumerates a population AND reads a
+ * declaration off it has rebuilt the roots-only walk. Two spellings of this can
+ * drift, which is how a scraping guard here has lost its bite before.
+ */
+const namesBothHalves = ({ body }: { body: string }): boolean =>
+  body.includes('registeredTypes') && body.includes('declarationFor');
+
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
-const bodyOf = (file: string): string => stripComments(readFileSync(file, 'utf8'));
+
+/** Every identifier any arm below asks about. */
+const TELLS = ['typesWithRegistrations', 'getTypesWithRemovals', 'registeredTypes', 'declarationFor', 'getOwnKeys', 'findValidator'];
+
+/**
+ * Raw text first, comments stripped only for a file that can possibly hit.
+ *
+ * `stripComments` blanks characters in place and never inserts text, so a raw
+ * miss can never become a stripped hit — the prefilter is sound by
+ * construction. 271 of 3,355 files carry any of these names; stripping all of
+ * them cost ~425ms per core run and retained 12.6 MB for six `includes`.
+ */
+function scanned(): { at: string; body: string }[] {
+  const out: { at: string; body: string }[] = [];
+  for (const file of everyFile()) {
+    const raw = readFileSync(file, 'utf8');
+    if (!TELLS.some((tell) => raw.includes(tell))) continue;
+    out.push({ at: label(file), body: stripComments(raw) });
+  }
+  return out;
+}
 
 describe('enumerating the registry belongs to one module', () => {
-  const files = everyFile()
-    .map((file) => ({ at: label(file), body: bodyOf(file) }))
-    .filter(({ at }) => at !== SELF);
+  const files = scanned().filter(({ at }) => at !== SELF);
 
   it('scans a population that cannot quietly empty', () => {
     // A rename that moved these files out of the scrape would otherwise leave
     // the guard passing over nothing — the way this repo has lost a scraping
     // guard before.
-    expect(files.length).toBeGreaterThan(1500);
+    // `everyFile` already floors the WALK at 1500; this floors what survives the
+    // prefilter, so a rename of every tell would empty the scan loudly.
+    expect(files.length).toBeGreaterThan(100);
     for (const owner of OWNERS) {
       expect(files.some(({ at }) => at === owner), `${owner} is outside the scan`).toBe(true);
     }
   });
 
-  it('keeps the raw enumerator inside the two files that define the seam', () => {
-    const reached = files
-      .filter(({ body }) => body.includes('typesWithRegistrations'))
-      .map(({ at }) => at)
-      .sort();
-    expect(reached).toEqual([...OWNERS].sort());
-  });
+  it.each(['typesWithRegistrations', 'getTypesWithRemovals'])(
+    'keeps the %s enumerator inside the two files that define the seam',
+    (enumerator) => {
+      // BOTH doors: a discipline enforced on one of two equivalent enumerators
+      // is one the next author walks around without noticing.
+      const reached = files
+        .filter(({ body }) => body.includes(enumerator))
+        .map(({ at }) => at)
+        .sort();
+      expect(reached).toEqual([...OWNERS].sort());
+    }
+  );
 
   it('lets nobody else recompose a population and then read declarations off it', () => {
     // `registeredTypes(...) x getOwnKeys x declarationFor` is the one spelling
@@ -88,7 +121,7 @@ describe('enumerating the registry belongs to one module', () => {
     // file is the tell.
     const offenders = files
       .filter(({ at }) => !OWNERS.includes(at) && !(at in ALLOWED))
-      .filter(({ body }) => body.includes('registeredTypes') && body.includes('declarationFor'))
+      .filter(namesBothHalves)
       .map(({ at }) => at);
     expect(
       offenders,
@@ -99,17 +132,51 @@ describe('enumerating the registry belongs to one module', () => {
   it('holds no exemption that exempts nothing', () => {
     const stale = Object.keys(ALLOWED).filter((at) => {
       const file = files.find((f) => f.at === at);
-      return !file || !(file.body.includes('registeredTypes') && file.body.includes('declarationFor'));
+      return !file || !namesBothHalves(file);
     });
     expect(stale).toEqual([]);
   });
 
-  it('never casts a lookup back into a declaration', () => {
+  /**
+   * Widening a lookup back into a declaration, in the two spellings source text
+   * can see: the assertion, and the annotated assignment.
+   *
+   * Honest limit: `PropertyValidator` is an intersection of a call signature
+   * with all-OPTIONAL tags, so `ValidatorFn` is structurally assignable to it
+   * and passing a lookup straight into a `PropertyValidator`-typed slot needs
+   * neither spelling. Only a branded `PropertyValidator` closes that, and
+   * branding costs 84 errors across 56 files. These two arms catch the
+   * deliberate widening; the slot case is open and stated rather than implied.
+   */
+  const LAUNDERS = [
+    /\bas\s+PropertyValidator\b/,
+    /:\s*PropertyValidator(?:\s*\|\s*null)?\s*=\s*(?:\w+\.)?findValidator\(/,
+  ];
+
+  it('never widens a lookup back into a declaration', () => {
     const offenders = files
       .filter(({ at }) => !OWNERS.includes(at))
-      .filter(({ body }) => /findValidator\([^)]*\)[^;]*\bas\s+PropertyValidator\b/.test(body))
+      .filter(({ body }) => LAUNDERS.some((re) => re.test(body)))
       .map(({ at }) => at);
-    expect(offenders).toEqual([]);
+    expect(offenders, 'ask `declarationFor`, which says it is introspecting').toEqual([]);
+  });
+
+  it('bites on both spellings, so the empty result above is not a dead pattern', () => {
+    // The positive control this arm went without: every other arm here is an
+    // equality or has a floor, and a pattern that matches nothing passes
+    // whether or not the offence exists.
+    const cast = 'const v = findValidator(t, k) as PropertyValidator;';
+    const annotated = 'const v: PropertyValidator | null = findValidator(t, k);';
+    for (const sample of [cast, annotated]) {
+      expect(LAUNDERS.some((re) => re.test(sample)), sample).toBe(true);
+    }
+    expect(LAUNDERS.some((re) => re.test('const v = findValidator(t, k);'))).toBe(false);
+    // A new validator whose BODY calls a lookup is not a widening of one —
+    // `boneconstraint3d/linterParser.ts` delegates exactly like this.
+    const delegate =
+      'const d: PropertyValidator = (key, value, line) => ' +
+      'validatorRegistry.findValidator(T, key)?.(key, value, line) ?? null;';
+    expect(LAUNDERS.some((re) => re.test(delegate))).toBe(false);
   });
 
   it('leaves the scaffolded slice shape alone', () => {

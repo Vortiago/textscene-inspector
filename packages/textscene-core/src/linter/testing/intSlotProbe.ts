@@ -45,12 +45,11 @@ export interface IntSlot {
  */
 export function taggedIntSlots(): IntSlot[] {
   return everyValidator((validator) => validator.intSlot !== undefined).map(
-    ({ label, validator }) => ({
-      at: label,
-      // The dispatcher's own key: a leaf reads `name` from its closure and uses
-      // `key` only to address the diagnostic, so any key it routes for will do.
-      key: label.slice(label.indexOf('.') + 1).replace(/\[\d+\]$/, ''),
-      validator,
-    })
+    // `key` is the registration the root resolved under, carried at every depth
+    // — a leaf reads `name` from its closure and uses `key` only to address the
+    // diagnostic, so the dispatcher's own key is what it wants. Derived from the
+    // label instead, it read `settings/*[0]` at depth 2: the same two values,
+    // disagreeing.
+    ({ label, key, validator }) => ({ at: label, key, validator })
   );
 }

@@ -92,8 +92,10 @@ describe('bound grounding', () => {
   it('gives every grounded bound a source citation', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
     // unverifiable claim an invented threshold makes.
-    expect(registeredKeys().length).toBeGreaterThan(1500);
-    expect(everyValidatorLabel(citesNoEngineLocation)).toEqual([]);
+    // The floor rides on the sweep: 2000 validators examined, none uncited.
+    // Asserted beside it, a separate key count could pass while the walk that
+    // matters examined nothing.
+    expect(everyValidatorLabel(citesNoEngineLocation, { atLeast: 2000 })).toEqual([]);
   });
 });
 
