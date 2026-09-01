@@ -559,7 +559,7 @@ describe('Camera2D Linter', () => {
   });
 });
 
-describe('Camera2D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+describe('Camera2D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot zoom component', () => {
     expectClean(scene(node('Camera2D', { zoom: 'Vector2(0.5, 2.)' })));
   });

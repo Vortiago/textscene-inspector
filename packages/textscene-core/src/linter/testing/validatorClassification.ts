@@ -17,14 +17,13 @@ import type { PropertyValidator } from '../ValidatorRegistry.js';
  * The one bound that cannot be grounded against the pinned reference, with the
  * reason.
  *
- * `AreaLight3D` postdates Godot 4.6.3 and appears nowhere in it, so there is no
- * ADD_PROPERTY hint and no setter to cite. The current class reference gives
- * `area_range` a default of 5.0 but never its hint, and a default is not a
- * bound. Guessing a citation would be worse than admitting there is none, so
- * the bound stays ungrounded and named here rather than hidden in a count; it
- * becomes citable the day the reference pin moves.
+ * Empty, and meant to stay that way. A bound nobody can cite is not an
+ * exemption to record but a bound ADR-0032 puts at the "nothing" tier: a hint
+ * can only warn, only a setter can error, and a class absent from the pinned
+ * reference offers neither. The validator drops the bound instead of being
+ * listed here.
  */
-const UNGROUNDABLE: ReadonlySet<string> = new Set(['AreaLight3D.area_range']);
+const UNGROUNDABLE: ReadonlySet<string> = new Set<string>();
 
 /**
  * Every key that resolves to a validator, declarations AND removals.
@@ -131,11 +130,11 @@ function registryRoots(): Root[] {
 }
 
 /** The sweep, with the exemption set as a parameter so it can be emptied. */
-function ungroundedLabels(exempt: ReadonlySet<string>): string[] {
+function ungroundedLabels(exempt: ReadonlySet<string>, roots?: readonly Root[]): string[] {
   // The exemption is applied to the LABEL after the walk, never inside `keep`:
   // excusing a validator must not excuse the subtree behind it, and one exempt
   // wildcard key would otherwise cover every leaf it dispatches to.
-  return sweepValidators(isUnclassified).filter((l) => !exempt.has(l));
+  return sweepValidators(isUnclassified, roots ?? registryRoots()).filter((l) => !exempt.has(l));
 }
 
 /**
@@ -189,7 +188,16 @@ export function rangeWithoutTiers(): string[] {
  * label means. A dead entry is worse than none: it silently pre-forgives the
  * next validator to be registered under that exact name.
  */
-export function staleUngroundable(entries: ReadonlySet<string> = UNGROUNDABLE): string[] {
-  const ungrounded = new Set(ungroundedLabels(new Set()));
+export function staleUngroundable(
+  entries: ReadonlySet<string> = UNGROUNDABLE,
+  /**
+   * What the labels are resolved against. The live registry by default; a test
+   * supplies scratch roots because the ungrounded population is empty by
+   * policy, so against the registry alone every label is stale and the arm that
+   * must NOT report has no live subject to stand on.
+   */
+  roots?: readonly Root[]
+): string[] {
+  const ungrounded = new Set(ungroundedLabels(new Set(), roots));
   return [...entries].filter((label) => !ungrounded.has(label)).sort();
 }

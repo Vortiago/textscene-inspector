@@ -688,7 +688,7 @@ describe('Skeleton3D Linter', () => {
   });
 });
 
-describe('Skeleton3D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+describe('Skeleton3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot bone rotation component', () => {
     expectNoErrors(
       scene(node('Skeleton3D', { 'bones/0/rotation': 'Quaternion(0.5, 0, 0, 1.)' })),

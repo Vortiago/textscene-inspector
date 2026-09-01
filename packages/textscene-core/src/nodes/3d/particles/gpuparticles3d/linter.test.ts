@@ -711,7 +711,7 @@ interp_to_end = 0.3
   });
 });
 
-describe('GPUParticles3D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+describe('GPUParticles3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot visibility_aabb component', () => {
     // Isolate the strict-parser format check (a bare node also trips the
     // unrelated process_material semantic requirement).

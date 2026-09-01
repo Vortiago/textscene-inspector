@@ -59,11 +59,27 @@ describe('resolveMaterialSlotSource', () => {
     expect(resolve('ExtResource("9_gone")')).toBeNull();
   });
 
-  it('is no override for a sub-resource that is not a StandardMaterial3D', () => {
-    // The slot renders StandardMaterial3D scalars; anything else has no scalars
-    // to read, and claiming the override would drop the surface's own material.
-    expect(resolve('SubResource("Shader_1")')).toBeNull();
+  it('fills the slot for a Material sub-resource this previewer cannot draw', () => {
+    // A ShaderMaterial loads in Godot and replaces what is under it, so the
+    // slot is TAKEN. Neither channel is set, which paints the default — falling
+    // through instead would draw the layer the engine hides.
+    expect(resolve('SubResource("Shader_1")')).toEqual({});
+  });
+
+  it('is no override for a sub-resource id the scene never declares', () => {
     expect(resolve('SubResource("Missing_1")')).toBeNull();
+  });
+
+  it('is no override for a sub-resource that is no Material at all', () => {
+    // A `Ref<Material>` that cannot hold what the reference names is null in
+    // Godot too, so the layer below it is what the surface keeps.
+    expect(
+      resolveMaterialSlotSource(
+        'SubResource("Box_9")',
+        [{ id: 'Box_9', type: 'BoxMesh', data: {} }],
+        EXTERNAL
+      )
+    ).toBeNull();
   });
 
   it('is no override for a bare null literal', () => {
@@ -93,6 +109,16 @@ describe('resolveMaterialSlotSource', () => {
     // unloadable `Ref<Material>` does in Godot.
     expect(resolve('ExtResource("2_tex")')).toBeNull();
   });
+
+  it('fills the slot for a declared material whose file it cannot build', () => {
+    // The heading names a Material, so Godot loads it and the slot is taken;
+    // only the drawing is missing, and the chain must not step past it.
+    expect(
+      resolveMaterialSlotSource('ExtResource("6_binary")', [], [
+        { id: '6_binary', path: 'res://body.material', type: 'Material' },
+      ])
+    ).toEqual({});
+  });
 });
 
 describe('resolvePrimitiveMaterialSlot', () => {
@@ -119,6 +145,25 @@ describe('resolvePrimitiveMaterialSlot', () => {
 
   it('takes the override ahead of the mesh-own material', () => {
     expect(resolveSlot('SubResource("Mat_1")')).toEqual({ subResource: material });
+  });
+
+  it('an undrawable override still hides the mesh-own material', () => {
+    // `material_override` wins over the mesh's own material in Godot
+    // (`render_forward_clustered.cpp:4206`), and an ORMMaterial3D is a
+    // BaseMaterial3D that loads there. Falling through to the mesh's red
+    // material would draw the one surface Godot is covering up.
+    expect(
+      resolvePrimitiveMaterialSlot(
+        {
+          name: 'Mesh',
+          mesh: 'SubResource("Box_1")',
+          surfaceMaterialOverrides: new Map<number, string>(),
+          materialOverride: 'SubResource("Orm_1")',
+        },
+        [boxMesh, material, { id: 'Orm_1', type: 'ORMMaterial3D', data: {} }],
+        EXTERNAL
+      )
+    ).toEqual({});
   });
 
   it("a null override is no override, so the mesh's own material survives", () => {

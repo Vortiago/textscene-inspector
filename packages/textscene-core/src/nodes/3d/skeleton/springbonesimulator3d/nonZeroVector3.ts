@@ -8,6 +8,7 @@ import { VECTOR3_REGEX, accepts, propertyError } from '../../../../linter/valida
 import { formatCode, valueCode } from '../../../../linter/validators/v/codes.js';
 import { CMP_EPSILON } from '../../../../godot/index.js';
 import { tupleComponent } from '../../../../linter/validators/commonValidators.js';
+import { slotComponents, slotComponentsAltered } from '../../../../godot/int.js';
 
 /**
  * A gravity direction, which the setter refuses outright when it is zero.
@@ -41,7 +42,25 @@ export function nonZeroVector3(name: string, cite: string): PropertyValidator {
         formatCode(name),
       );
     }
-    const components = [match[1], match[2], match[3]].map(tupleComponent);
+    const captures = [match[1], match[2], match[3]];
+    // Ahead of the zero test, which cannot express it: an altered component
+    // reads back NaN and `Math.abs(NaN) < CMP_EPSILON` is false. The message
+    // quotes the literal, never the stored number — `_to_int`'s float branch is
+    // undefined behaviour (variant.h:369-370).
+    if (slotComponentsAltered(value, 'Vector3', captures)) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' has a component Godot cannot store in the integer ` +
+          `spelling it is written in, got: "${value}". The file loads, but the ` +
+          `components are narrowed at parse time to a number the file does not state`,
+        code,
+      );
+    }
+    // `slotComponents`: VECTOR3_REGEX admits the `Vector3i(...)` spelling Godot
+    // converts, whose arguments are narrowed to int32 before the widening, so
+    // `Vector3i(0.5, 0.5, 0.5)` IS the zero vector the setter refuses.
+    const components = slotComponents(value, 'Vector3', captures, tupleComponent);
     if (components.every((c) => Math.abs(c) < CMP_EPSILON)) {
       return propertyError(
         key,

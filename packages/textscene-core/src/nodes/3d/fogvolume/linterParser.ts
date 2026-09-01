@@ -18,6 +18,7 @@
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, tupleComponent, v, VECTOR3_REGEX } from '../../../linter/validators/index.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /**
@@ -57,7 +58,24 @@ const sizeValidator: PropertyValidator = (key, value, line) => {
   // The literals as written beside the numbers: `NaN`/`Infinity` are not
   // spellings a `.tscn` can carry, so echoing them named no text to change.
   const written = `Vector3(${[match[1], match[2], match[3]].map((t) => t!.trim()).join(', ')})`;
-  const parts = [match[1], match[2], match[3]].map(tupleComponent);
+  const captures = [match[1], match[2], match[3]];
+  // Ahead of both floors, which cannot express it: an altered component reads
+  // back NaN, and `NaN < 0` and `NaN < 0.01` are both false. The message quotes
+  // the literal, never the stored number — `_to_int`'s float branch is
+  // undefined behaviour (variant.h:369-370).
+  if (slotComponentsAltered(value, 'Vector3', captures)) {
+    return propertyError(
+      key,
+      line,
+      `Property 'size' has a component Godot cannot store in the integer spelling it is written in, got: ${written}. The file loads, but the components are narrowed at parse time to a number the file does not state.`,
+      'INVALID_SIZE_VALUE'
+    );
+  }
+  // `slotComponents`, not bare `tupleComponent`: VECTOR3_REGEX admits the
+  // `Vector3i(...)` spelling `can_convert_strict` converts, whose arguments are
+  // narrowed through `_parse_construct<int32_t>` before the widening into this
+  // float slot, so both floors were compared against a number Godot never holds.
+  const parts = slotComponents(value, 'Vector3', captures, tupleComponent);
   if (parts.some((component) => component < 0)) {
     return propertyError(
       key,

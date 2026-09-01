@@ -12,6 +12,7 @@ import { v, VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/ind
 import { propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { isZeroApprox } from '../../../godot/index.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
@@ -26,10 +27,22 @@ const zoomValidator: PropertyValidator = (key, value, line) => {
     return propertyError(key, line, `Property 'zoom' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`, 'INVALID_ZOOM_FORMAT');
   }
 
-  const x = tupleComponent(match[1]);
-  const y = tupleComponent(match[2]);
+  const captures = [match[1], match[2]];
+  // Ahead of the zero check, which cannot express it: an altered component
+  // reads back NaN and `isZeroApprox(NaN)` is false. The message quotes the
+  // literal, never the stored number — `_to_int`'s float branch is undefined
+  // behaviour (variant.h:369-370).
+  if (slotComponentsAltered(value, 'Vector2', captures)) {
+    return propertyError(key, line, `Property 'zoom' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". The file loads, but the components are narrowed at parse time to a number the file does not state.`, 'INVALID_ZOOM_VALUE');
+  }
 
-  if (isZeroApprox(x) || isZeroApprox(y)) {
+  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
+  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
+  // narrowed through `_parse_construct<int32_t>` before the widening, so
+  // `Vector2i(0.5, 1)` reaches set_zoom as the (0, 1) it ERR_FAIL_COND_MSGs on.
+  const [x, y] = slotComponents(value, 'Vector2', captures, tupleComponent);
+
+  if (isZeroApprox(x!) || isZeroApprox(y!)) {
     return propertyError(key, line, `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.`, 'INVALID_ZOOM_VALUE');
   }
   return null;

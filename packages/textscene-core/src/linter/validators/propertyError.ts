@@ -32,6 +32,10 @@ export function propertyError(
  * type's zero value instead, and there is no slot. Reach for this wherever the
  * branch producing the error never looked at `value`; see
  * {@link ParseError.keyVerdict}.
+ *
+ * Error-tier by construction, so it takes no `severity`: the key names no slot,
+ * so the value reaches no property and is nowhere — the ADR-0032 error tier.
+ * A hint bounds a slot that exists, and there is none to bound.
  */
 export function keyShapeError(
   key: string,
@@ -51,6 +55,10 @@ export function keyShapeError(
  * slot holds the type's zero, which is what a slot whose CONVERSION discards
  * the null does, not one whose setter refuses it. See
  * {@link ParseError.nilVerdict}.
+ *
+ * Error-tier by construction, so it takes no `severity`: an `ERR_FAIL_COND` is
+ * the setter refusing the write, which is the ADR-0032 error tier by
+ * definition. Nothing is stored, so no hint has anything to say about it.
  */
 export function nilShapeError(
   key: string,

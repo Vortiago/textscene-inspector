@@ -54,12 +54,10 @@ describe('AreaLight3D Linter', () => {
       },
       {
         prop: 'area_range',
-        valid: [2.0],
-        invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5.0, contains: ['greater than 0'] },
-          { value: 'invalid', contains: ['must be a number'] },
-        ],
+        // 0 and negatives are VALID: nothing in the pinned reference refuses
+        // them, so only the format check stands.
+        valid: [2.0, 0, -5.0],
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
       },
       {
         prop: 'area_size',

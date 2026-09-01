@@ -193,11 +193,16 @@ describe('the classification guard bites', () => {
 
   it('names an UNGROUNDABLE label that resolves to nothing, or to a grounded bound', () => {
     // Both ways an entry dies: its type or key goes away, and its validator
-    // gains the citation that was missing. The grounded control is the removal
-    // this file already pins a cite for below.
+    // gains the citation that was missing.
+    //
+    // The live control is a scratch root, not a registered key: the ungrounded
+    // population is empty by policy, so against the registry alone EVERY label
+    // is stale and the arm that must not report would pass vacuously.
+    const stillUngrounded: PropertyValidator = () => null;
     expect(
       staleUngroundable(
-        new Set(['NoSuchType.no_such_key', 'HBoxContainer.vertical', 'AreaLight3D.area_range'])
+        new Set(['NoSuchType.no_such_key', 'HBoxContainer.vertical', 'Scratch.ungrounded']),
+        [{ label: 'Scratch.ungrounded', validator: stillUngrounded }]
       )
     ).toEqual(['HBoxContainer.vertical', 'NoSuchType.no_such_key']);
   });

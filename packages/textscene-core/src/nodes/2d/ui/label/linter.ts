@@ -26,6 +26,7 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
+import { slotComponents } from '../../../../godot/int.js';
 
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
 const AUTOWRAP_OFF = 0;
@@ -35,7 +36,13 @@ function isZeroOrAbsentSize(raw: string | undefined): boolean {
   if (raw === undefined) return true;
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return false;
-  return tupleComponent(match[1]) === 0 && tupleComponent(match[2]) === 0;
+  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
+  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
+  // narrowed to int32 before the widening, so `Vector2i(0.5, 0.5)` IS the zero
+  // size Godot stores. A component the engine alters reads back NaN, which
+  // fails `=== 0` and leaves the size treated as set — the quiet direction.
+  const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
+  return x === 0 && y === 0;
 }
 
 function checkLabelAutowrap(context: RuleContext): Diagnostic[] {

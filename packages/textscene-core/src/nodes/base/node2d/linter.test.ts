@@ -480,7 +480,7 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   });
 });
 
-describe('Node2D Linter — the tokenizer float grammar (#190 #7 follow-up)', () => {
+describe('Node2D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot scale component', () => {
     expectClean(scene(node('Node2D', { scale: 'Vector2(0.5, 2.)' })));
   });

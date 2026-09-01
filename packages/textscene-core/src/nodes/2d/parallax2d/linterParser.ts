@@ -31,6 +31,7 @@ import {
   tupleComponent,
   v,
 } from '../../../linter/validators/index.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 
 /**
  * `repeat_size`'s floor is enforced: the setter clamps a negative component up
@@ -58,7 +59,25 @@ const repeatSizeValidator: PropertyValidator = (key, value, line) => {
       'INVALID_REPEAT_SIZE_FORMAT'
     );
   }
-  const parts = [match[1], match[2]].map(tupleComponent);
+  const captures = [match[1], match[2]];
+  // Ahead of the floor, which cannot express it: an altered component reads
+  // back NaN and `NaN < 0` is false. The message quotes the literal, never the
+  // stored number — `_to_int`'s float branch is undefined behaviour
+  // (variant.h:369-370).
+  if (slotComponentsAltered(value, 'Vector2', captures)) {
+    return propertyError(
+      key,
+      line,
+      `Property 'repeat_size' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". The file loads, but the components are narrowed at parse time to a number the file does not state.`,
+      'INVALID_REPEAT_SIZE_VALUE'
+    );
+  }
+  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
+  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
+  // narrowed through `_parse_construct<int32_t>` before the widening, so
+  // `Vector2i(-0.5, 0)` reaches the setter as the (0, 0) it leaves unclamped —
+  // read as floats it reported a clamp on a file Godot loads unaltered.
+  const parts = slotComponents(value, 'Vector2', captures, tupleComponent);
   if (parts.some((component) => component < 0)) {
     return propertyError(
       key,

@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { v } from './v.js';
 
-describe('float-tuple validators accept the renderer float grammar (#190 drift fix)', () => {
+describe('float-tuple validators accept the renderer float grammar', () => {
   describe('v.packedVector2Array', () => {
     const check = (value: string) => v.packedVector2Array('polygon')('polygon', value, 1);
 

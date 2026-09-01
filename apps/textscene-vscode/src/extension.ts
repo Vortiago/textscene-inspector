@@ -9,6 +9,7 @@ import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
+import { isUri } from './uriArgument';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -42,14 +43,18 @@ export function activate(context: vscode.ExtensionContext) {
     // passes nothing.
     vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
       // `resource` is whatever VS Code hands the handler, which the signature
-      // describes rather than enforces: an argument with no string `fsPath`
-      // falls back to the active editor, the same path the palette entry takes,
-      // rather than throwing out of the command. The fallback arm is typed
-      // rather than checked, so the test below keeps its own optional chain.
-      const target =
-        typeof resource?.fsPath === 'string'
-          ? resource
-          : vscode.window.activeTextEditor?.document.uri;
+      // describes rather than enforces: an argument that is not a Uri falls
+      // back to the active editor, the same path the palette entry takes,
+      // rather than throwing out of the command.
+      //
+      // `scheme` as well as `fsPath`, because the panel map is keyed on
+      // `toString()`: a bare `{ fsPath }` object passes an `fsPath`-only test
+      // and then stringifies to `'[object Object]'`, so every such value
+      // collides on ONE entry and the second preview steals the first's panel.
+      // `instanceof Uri` is not available here — the mocked namespace is a plain
+      // object, not a constructor — and keying on `fsPath` instead would merge
+      // `file:///a.tscn` with `git:/a.tscn`, which are distinct panels today.
+      const target = isUri(resource) ? resource : vscode.window.activeTextEditor?.document.uri;
       if (target?.fsPath?.endsWith('.tscn')) {
         getOrCreatePanel(target);
       } else {

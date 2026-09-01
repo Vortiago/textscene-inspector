@@ -70,10 +70,12 @@ export function resolveExtArrayMeshPath(
  * already chose `surface_materials[j]` over the mesh's own
  * (`render_forward_clustered.cpp:4267`).
  *
- * Each term falls through on the SOURCE, not on the raw reference: a
- * `Ref<Material>` that does not load is null in Godot too, and the next layer
- * is then what the surface keeps — the same rule `ArrayMeshSurfaces` renders
- * its surfaces by.
+ * Each term falls through on whether GODOT would fill the slot, not on whether
+ * this previewer can draw what fills it. A `Ref<Material>` that does not load
+ * is null in Godot too and the next layer is then what the surface keeps; a
+ * material that loads there but that nothing here draws still OCCUPIES the
+ * slot, so it ends the chain and the surface renders the default rather than
+ * the layer below — the same rule `ArrayMeshSurfaces` renders its surfaces by.
  */
 export function resolvePrimitiveMaterialSlot(
   properties: MeshInstance3DProperties,
@@ -102,6 +104,17 @@ export interface MaterialSlotSource {
   /** A `res://` path to an external material `.tres`. */
   readonly path?: string;
 }
+
+/**
+ * A slot Godot fills with a material this previewer cannot build.
+ *
+ * Neither channel is set, which is the shape `ExternalMaterialSlot` already
+ * paints its default white for. It is a SOURCE rather than a `null` because the
+ * distinction the chain turns on is whether the ENGINE fills the slot: an
+ * ORMMaterial3D or a ShaderMaterial loads there perfectly well, so nothing
+ * below it is reachable, and falling through would draw the layer Godot hides.
+ */
+const UNDRAWABLE_MATERIAL: MaterialSlotSource = {};
 
 /**
  * One authored material reference as a slot source, or `null` when it names
@@ -139,7 +152,17 @@ export function resolveMaterialSlotSource(
   const subResource = resolveStandardMaterial(held, internalResources);
   if (subResource) return { subResource };
   const parsed = parseResourceReference(held);
-  if (parsed?.type !== 'ExtResource') return null;
+  if (!parsed) return null;
+  if (parsed.type === 'SubResource') {
+    // Reached only once `resolveStandardMaterial` has declined, so the
+    // sub-resource is either absent or some other class. Absent is null in
+    // Godot too; any other Material subclass — ORMMaterial3D, ShaderMaterial —
+    // loads there and fills the slot, and only the drawing of it is missing.
+    const declared = findSubResource(internalResources, parsed.id);
+    if (!declared) return null;
+    return descendsFromClass(declared.type, 'Material') ? UNDRAWABLE_MATERIAL : null;
+  }
+  if (parsed.type !== 'ExtResource') return null;
   const declared = externalResources.find((r) => r.id === parsed.id);
   if (!declared) return null;
   // A heading with no `type` at all is hand-written — Godot's saver always
@@ -147,7 +170,10 @@ export function resolveMaterialSlotSource(
   // signal left and the lenient parser attempts the override rather than
   // dropping it.
   if (declared.type !== '' && !descendsFromClass(declared.type, 'Material')) return null;
-  return isMaterialPath(declared.path) ? { path: declared.path } : null;
+  // The heading says a material; whether the pipeline can BUILD one from the
+  // file it points at decides between drawing it and drawing the default, never
+  // between filling the slot and leaving it open.
+  return isMaterialPath(declared.path) ? { path: declared.path } : UNDRAWABLE_MATERIAL;
 }
 
 function findMeshOwnMaterial(
