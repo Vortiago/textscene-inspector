@@ -248,6 +248,40 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
   });
 
+  // The two wrappers compose: Godot's CanvasTexture draws whatever its
+  // `diffuse_texture` is, and that can be an AtlasTexture. Resolving the atlas
+  // against the OUTER ref sees a CanvasTexture, finds no atlas, and hands back
+  // the whole sheet — the region silently ignored — so the unwrap has to happen
+  // first and the atlas resolve has to run on what it produces.
+  it('crops an AtlasTexture that is reached through a CanvasTexture', () => {
+    const sheet = new THREE.Texture();
+    sheet.image = { width: 128, height: 128 };
+    const externalResources: TscnExternalResource[] = [
+      { id: '1', type: 'Texture2D', path: 'res://sheet.png' },
+    ];
+    const nested: TscnInternalResource[] = [
+      {
+        id: 'AtlasTexture_cell',
+        type: 'AtlasTexture',
+        data: { atlas: 'ExtResource("1")', region: 'Rect2(32, 32, 64, 64)' },
+      },
+      {
+        id: 'CanvasTexture_atlas',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("AtlasTexture_cell")' },
+      },
+    ];
+
+    const { result } = renderHook(
+      () => useTexture2D('SubResource("CanvasTexture_atlas")', externalResources, nested),
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet }) }
+    );
+
+    expect(result.current.missing).toBe(false);
+    // The whole sheet coming back unchanged is the failure this pins.
+    expect(result.current.texture).not.toBe(sheet);
+  });
+
   it('reports a reference it cannot resolve as missing', () => {
     const { result } = renderHook(
       () => useTexture2D('ExtResource("404")', [], gradientResources),

@@ -7,7 +7,7 @@
  * application.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Sprite3D } from './Component';
@@ -457,4 +457,43 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mesh.instance.position.x).toBe(3);
     expect(mesh.instance.position.z).toBe(-1);
   });
+
+  // The region/frame path CLONES the loaded texture so it can carry its own
+  // offset/repeat, and that clone belongs to this component. The source does
+  // not: it is the loader's cached entry, shared with every other node
+  // sampling the same file, so disposing it would blank them all.
+  describe('texture ownership on unmount', () => {
+    it('disposes the clone it made, and leaves the shared source alone', async () => {
+      const tex = makeTexture(64, 64);
+      const sourceDispose = vi.spyOn(tex, 'dispose');
+      const renderer = await render({
+        node: makeNode({ texture: 'ExtResource("1_tex")', hframes: 2, vframes: 2, frame: 1 }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        cached: [{ path: TEXTURE_PATH, texture: tex }],
+      });
+      const clone = (findMesh(renderer.scene).material as THREE.MeshBasicMaterial).map!;
+      expect(clone).not.toBe(tex);
+      const cloneDispose = vi.spyOn(clone, 'dispose');
+
+      await renderer.unmount();
+
+      expect(cloneDispose).toHaveBeenCalled();
+      expect(sourceDispose).not.toHaveBeenCalled();
+    });
+
+    it('disposes nothing when it borrowed the source unchanged', async () => {
+      const tex = makeTexture(64, 64);
+      const sourceDispose = vi.spyOn(tex, 'dispose');
+      const renderer = await render({
+        node: makeNode({ texture: 'ExtResource("1_tex")' }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        cached: [{ path: TEXTURE_PATH, texture: tex }],
+      });
+
+      await renderer.unmount();
+
+      expect(sourceDispose).not.toHaveBeenCalled();
+    });
+  });
+
 });

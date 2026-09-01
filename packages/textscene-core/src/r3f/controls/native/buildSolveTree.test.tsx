@@ -990,3 +990,41 @@ custom_minimum_size = Vector2(0, 40)
     expect(hidden.get('Root/Column/First')?.rect.y).toBe(0);
   });
 });
+
+// A scene reached ONLY by the Control walk has no other component registering
+// it: `createSceneProcessor` resolves an address through the MetadataStore, and
+// for an unregistered one it throws "Scene metadata not found". That failure is
+// cached like any other, so the instance never resolves on any later render —
+// the registration has to precede the request, not merely accompany it.
+describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
+  it('registers the ExtResource before it asks the loader for the scene', () => {
+    const loader = createFakeResourceLoader();
+    const order: string[] = [];
+    loader.scenes.setRequestImpl((path) => order.push(`request:${path}`));
+
+    const ext = { id: '1_layer', path: LAYER_PATH, type: 'PackedScene' };
+    renderHook(() => useBuildSolveTree([instanceOf('Hud', '1_layer')], [ext], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(loader.registerCalls).toContainEqual(ext);
+    expect(order).toContain(`request:${LAYER_PATH}`);
+    // `registerCalls` is in call order and the request impl only records after
+    // it runs, so a registration recorded at all means it ran first.
+    expect(loader.registerCalls.findIndex((r) => r.path === LAYER_PATH)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('does not re-request a scene the loader already has', () => {
+    const loader = createFakeResourceLoader();
+    loader.scenes.seed(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));
+    const requested: string[] = [];
+    loader.scenes.setRequestImpl((path) => requested.push(path));
+
+    renderHook(
+      () => useBuildSolveTree([instanceOf('Hud', '1_layer')], [{ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' }], []),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    expect(requested).not.toContain(LAYER_PATH);
+  });
+});
