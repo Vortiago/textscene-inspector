@@ -360,7 +360,8 @@ describe('labelMinimumSize — meta carries the shaped TextLayoutResult when aut
 
   it('the meta layout is uppercase-transformed exactly like the size half', () => {
     const meta = minMeta(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx()) as TextLayoutResult;
-    expect(meta.lines[0]?.text).toBe('AB');
+    // Trailing ZWSP is Label's own per-paragraph terminator (`label.cpp:164`).
+    expect(meta.lines[0]?.text).toBe(`AB${'\u200b'}`);
   });
 
   it('attaches NO meta when autowrap is ON — the unwrapped shape behind the height substitute is not what a box-constrained painter needs', () => {

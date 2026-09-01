@@ -469,3 +469,66 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     expect(shapedTextSizeWidthPx(layout.widthPx)).toBe(257);
   });
 });
+
+// --- Label's paragraph pre-split -------------------------------------------
+// `Label::_shape` does NOT hand the whole string to the line breaker. It splits
+// on `paragraph_separator` first — `txt.split(ps)` keeps empty entries — and
+// gives each paragraph its own shaped text, terminated with a ZERO WIDTH SPACE
+// (`label.cpp:158-166`, `para.text = str + String::chr(0x200B)`). That
+// terminator is what makes an empty paragraph a LINE: the break loop's guard
+// (`text_server.cpp:948`) drops a range whose start equals its end, so a
+// paragraph with no glyph at all would vanish, while one holding a single ZWSP
+// survives at zero width.
+//
+// Scoped to Label deliberately. Label3D shapes the whole string in one pass
+// (`label_3d.cpp:485,530`), and `TextParagraph` — Button's and LineEdit's path
+// — neither splits nor appends a terminator, so their blank lines really do
+// collapse in Godot.
+describe('shapeText — paragraphSeparator (Label::_shape)', () => {
+  const para = (text: string): ReturnType<typeof shapeText> =>
+    shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+      paragraphSeparator: '\n',
+    });
+
+  it('keeps the empty paragraph between two hard breaks as its own line', () => {
+    const layout = para('a\n\nb');
+    expect(layout.lines).toHaveLength(3);
+    expect(layout.lines[1]!.widthPx).toBe(0);
+  });
+
+  it('keeps every empty paragraph in a run of them', () => {
+    expect(para('x\n\ny\n\nz').lines).toHaveLength(5);
+  });
+
+  it('keeps the trailing empty paragraph a final separator produces', () => {
+    // `split` yields ["a", ""] — the second entry is still a paragraph.
+    expect(para('a\n').lines).toHaveLength(2);
+  });
+
+  // The tail push ends at `range.y` — the end of the SHAPED text, terminator
+  // included, with no end-trim (`text_server.cpp:1185-1200`). So the last line
+  // of every paragraph really does carry the ZWSP in Godot too. It advances
+  // nothing and has no atlas bitmap, so it costs no width and paints nothing.
+  it('carries the terminator on the line without moving any visible metric', () => {
+    const opts = { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 };
+    const split = shapeText('AAAA BBBB', { ...opts, paragraphSeparator: '\n' });
+    const unsplit = shapeText('AAAA BBBB', opts);
+    expect(split.lines[0]!.text).toBe(`AAAA BBBB${'\u200b'}`);
+    expect(split.widthPx).toBe(unsplit.widthPx);
+    expect(split.lines[0]!.glyphs.at(-1)!.advance).toBe(0);
+    expect(split.lines[0]!.glyphs.at(-1)!.glyph).toBeNull();
+  });
+
+  it('is off by default — the callers whose engine counterpart never splits', () => {
+    expect(shapeText('a\n\nb', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+    }).lines).toHaveLength(2);
+  });
+});

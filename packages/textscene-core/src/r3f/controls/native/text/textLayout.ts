@@ -155,6 +155,24 @@ export interface ShapeTextOptions {
    * this module's own doc has why.
    */
   fontMetrics?: FontMetrics;
+  /**
+   * `Label.paragraph_separator`. When set, the text is split on it FIRST and
+   * every paragraph is shaped and line-broken on its own, each terminated with
+   * a ZERO WIDTH SPACE — `Label::_shape` (`label.cpp:158-166`), where
+   * `txt.split(ps)` keeps empty entries and `para.text = str + chr(0x200B)`.
+   * The terminator is what gives an empty paragraph a line at all: the break
+   * loop drops a range whose start equals its end (`text_server.cpp:948`), so
+   * a paragraph holding no glyph would vanish while one holding the ZWSP
+   * survives at zero width.
+   *
+   * Absent for every other caller, and that is the ported rule's own scope,
+   * not an omission: Label3D shapes the whole string in one pass
+   * (`label_3d.cpp:485,530`) and `TextParagraph` — Button's and LineEdit's
+   * path — neither splits nor terminates, so a blank line really does collapse
+   * for them. Label's own separator property is not parsed today; `'\n'` is
+   * the engine default the callers pass.
+   */
+  paragraphSeparator?: string;
 }
 
 /** One glyph's placement within its line, in target-font-size px. */
@@ -626,6 +644,34 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
 }
 
 /** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`, against `options.fontMetrics` (default `OPEN_SANS_FONT_METRICS`). */
+/** `String::chr(0x200B)`, the per-paragraph terminator `Label::_shape` appends (`label.cpp:164`). */
+const PARAGRAPH_TERMINATOR = '\u200b';
+
+interface ShapedParagraph {
+  text: string;
+  /** Index of this paragraph's first character in the whole (post-uppercase) text. */
+  offset: number;
+  terminated: boolean;
+}
+
+/**
+ * `txt.split(ps)` (`label.cpp:159`) — empty entries KEPT, which is the whole
+ * point: a run of separators is a run of blank lines. With no separator the
+ * text is one unterminated paragraph, exactly what the single-pass callers get.
+ */
+function splitParagraphs(text: string, separator: string | undefined): ShapedParagraph[] {
+  if (separator === undefined || separator === '') {
+    return [{ text, offset: 0, terminated: false }];
+  }
+  const out: ShapedParagraph[] = [];
+  let offset = 0;
+  for (const part of text.split(separator)) {
+    out.push({ text: part, offset, terminated: true });
+    offset += part.length + separator.length;
+  }
+  return out;
+}
+
 export function shapeText(text: string, options: ShapeTextOptions): TextLayoutResult {
   const {
     fontSizePx,
@@ -635,6 +681,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     lineSpacingPx,
     fontSizePxAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
+    paragraphSeparator,
   } = options;
   const transformed = uppercase ? text.toUpperCase() : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
@@ -647,8 +694,6 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // `fontSizePxAt` (keyed by a caller who built it off the SAME transformed
   // text — RichTextLabel has no `uppercase` support today, but this keeps the
   // contract honest for whichever text control adds it next) still lines up.
-  const breakGlyphs = toBreakGlyphs(transformed, fontSizePx, fontMetrics, fontSizePxAt);
-  const ranges = shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags);
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   // Atlas bitmaps only exist for the ONE font `openSansAtlas.ts` bakes —
@@ -657,24 +702,34 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // module's own doc for the full reasoning.
   const isAtlasFont = fontMetrics.kind === 'atlas';
 
-  const lines: TextLineLayout[] = ranges.map(([start, end]) => {
-    const clampedEnd = Math.min(end, transformed.length);
-    const lineText = transformed.slice(start, clampedEnd);
-    let penX = 0;
-    const glyphs: GlyphPlacement[] = [];
-    for (let idx = start; idx < clampedEnd; idx++) {
-      const ch = transformed[idx]!;
-      const bg = breakGlyphs[idx]!;
-      glyphs.push({
-        char: ch,
-        x: penX,
-        advance: bg.advance,
-        glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
-      });
-      penX += bg.advance;
+  const lines: TextLineLayout[] = [];
+  for (const para of splitParagraphs(transformed, paragraphSeparator)) {
+    // The terminator rides the shaped text but not the source string, so
+    // `fontSizePxAt` — keyed by index into the WHOLE text — is offset back to
+    // it, and the one index past the paragraph's end resolves to its last size.
+    const sizeAt = fontSizePxAt
+      ? (i: number): number => fontSizePxAt(para.offset + Math.min(i, para.text.length - 1))
+      : undefined;
+    const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
+    const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt);
+    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags)) {
+      const clampedEnd = Math.min(end, paraText.length);
+      let penX = 0;
+      const glyphs: GlyphPlacement[] = [];
+      for (let idx = start; idx < clampedEnd; idx++) {
+        const ch = paraText[idx]!;
+        const bg = breakGlyphs[idx]!;
+        glyphs.push({
+          char: ch,
+          x: penX,
+          advance: bg.advance,
+          glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+        });
+        penX += bg.advance;
+      }
+      lines.push({ text: paraText.slice(start, clampedEnd), glyphs, widthPx: penX });
     }
-    return { text: lineText, glyphs, widthPx: penX };
-  });
+  }
 
   const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
   const heightPx = lines.length * linePitchPx;

@@ -46,6 +46,15 @@ export const LABEL_THEME_FONT_KEY = 'font';
 export const LABEL_LINE_SPACING_PX = 3;
 
 /**
+ * `Label.paragraph_separator`'s default (`label.cpp:158`, `paragraph_separator`
+ * `c_unescape`'d). Label splits on it BEFORE line-breaking and shapes each
+ * paragraph on its own, which is what keeps an empty one as a blank line — see
+ * `ShapeTextOptions.paragraphSeparator`. The property itself is not parsed
+ * today, so every Label shapes at the engine default.
+ */
+export const LABEL_PARAGRAPH_SEPARATOR = '\n';
+
+/**
  * Label's own default-theme font colour — opaque white, a DIFFERENT literal
  * from the `control_font_color` gray (`Color(0.875, 0.875, 0.875)`,
  * `godotDefaultTheme.ts`'s `DEFAULT_FONT_COLOR`) most other widget types read:
@@ -199,6 +208,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
     lineSpacingPx,
     uppercase: props.uppercase,
     fontMetrics,
+    paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
   });
   const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
   const height = Math.max(measuredY, fontHeightPx);

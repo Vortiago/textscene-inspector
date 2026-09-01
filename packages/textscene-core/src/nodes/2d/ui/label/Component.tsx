@@ -56,6 +56,7 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   LABEL_LINE_SPACING_PX,
+  LABEL_PARAGRAPH_SEPARATOR,
   LABEL_THEME_FONT_KEY,
   labelShapingWidthPx,
   labelTextTheme,
@@ -106,6 +107,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
       lineSpacingPx: LABEL_LINE_SPACING_PX,
       uppercase: props.uppercase,
       fontMetrics,
+      paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
     });
   }, [cachedLayout, text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase, fontMetrics]
   );
