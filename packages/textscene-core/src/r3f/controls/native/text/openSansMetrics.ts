@@ -143,8 +143,7 @@ export function getAscentPx(fontSizePx: number): number {
  * - `modules/text_server_adv/text_server_adv.cpp:1515-1516` — ascent AND
  *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
  *   summing (not a raw float sum, THEN rounded once — that undershoots by
- *   ~1px system-wide, confirmed against real Godot pixels
- *   S2).
+ *   ~1px system-wide, confirmed against real Godot pixels).
  * - `scene/theme/default_theme.cpp:392` — Label's `line_spacing` theme
  *   constant is `Math::round(3 * scale)`; `lineSpacingPx` defaults to 3 (UI
  *   scale 1.0).

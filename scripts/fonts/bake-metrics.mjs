@@ -437,8 +437,7 @@ export function getAscentPx(fontSizePx: number): number {
  * - \`modules/text_server_adv/text_server_adv.cpp:1515-1516\` — ascent AND
  *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
  *   summing (not a raw float sum, THEN rounded once — that undershoots by
- *   ~1px system-wide, confirmed against real Godot pixels, packet P10 spike
- *   S2).
+ *   ~1px system-wide, confirmed against real Godot pixels).
  * - \`scene/theme/default_theme.cpp:392\` — Label's \`line_spacing\` theme
  *   constant is \`Math::round(3 * scale)\`; \`lineSpacingPx\` defaults to 3 (UI
  *   scale 1.0).
@@ -591,7 +590,7 @@ export const OPEN_SANS_ATLAS_INFO: OpenSansAtlasInfo = ${JSON.stringify(atlasInf
  */
 export const OPEN_SANS_ATLAS_GLYPHS: Record<string, OpenSansGlyph> = ${JSON.stringify(glyphsByChar)};
 
-/** MSDF atlas texture (\`distanceField.fieldType: "msdf"\`), inline so it rides \`img-src ... data:\` under the VS Code webview CSP (ADR-0003; packet P10 spike S1). */
+/** MSDF atlas texture (\`distanceField.fieldType: "msdf"\`), inline so it rides \`img-src ... data:\` under the VS Code webview CSP (ADR-0003). */
 export const OPEN_SANS_ATLAS_PNG_DATA_URL = ${JSON.stringify(pngDataUrl)};
 `;
 }
