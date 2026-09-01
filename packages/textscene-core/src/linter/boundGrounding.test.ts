@@ -21,15 +21,14 @@ import { validatorRegistry } from './ValidatorRegistry.js';
 import { v } from './validators/v.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
 import {
-  classifiableKeys,
   isUnclassified,
   rangeWithoutTiers,
   staleUngroundable,
-  sweepValidators,
   unclassifiedKeys,
 } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
+import { everyValidatorLabel, registeredKeys } from './registryPopulation.js';
 
 /**
  * Types whose validators are all still unclassified.
@@ -79,7 +78,7 @@ describe('bound grounding', () => {
     // zero is satisfied just as well by a registry that never loaded. Covers
     // hand-rolled validators too: one that never goes through the DSL declares
     // neither tag, so it lands here however many real values it rejects.
-    expect(classifiableKeys().length).toBeGreaterThan(1500);
+    expect(registeredKeys().length).toBeGreaterThan(1500);
     expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
   });
 
@@ -93,8 +92,8 @@ describe('bound grounding', () => {
   it('gives every grounded bound a source citation', () => {
     // The citation is the whole point: `enforced` without a `file:line` is the
     // unverifiable claim an invented threshold makes.
-    expect(classifiableKeys().length).toBeGreaterThan(1500);
-    expect(sweepValidators(citesNoEngineLocation)).toEqual([]);
+    expect(registeredKeys().length).toBeGreaterThan(1500);
+    expect(everyValidatorLabel(citesNoEngineLocation)).toEqual([]);
   });
 });
 
@@ -171,9 +170,9 @@ describe('the classification guard bites', () => {
     dispatcher.leaves = [leaf];
 
     expect(
-      sweepValidators(citesNoEngineLocation, [
-        { label: 'Generic6DOFJoint3D.linear_limit_x/*', validator: dispatcher },
-      ])
+      everyValidatorLabel(citesNoEngineLocation, {
+        roots: [{ label: 'Generic6DOFJoint3D.linear_limit_x/*', validator: dispatcher }],
+      })
     ).toEqual(['Generic6DOFJoint3D.linear_limit_x/*[0]']);
   });
 
@@ -187,7 +186,9 @@ describe('the classification guard bites', () => {
     outer.leaves = [leaf, leaf];
 
     expect(
-      sweepValidators(citesNoEngineLocation, [{ label: 'Type.key/*', validator: outer }])
+      everyValidatorLabel(citesNoEngineLocation, {
+        roots: [{ label: 'Type.key/*', validator: outer }],
+      })
     ).toEqual(['Type.key/*[0]']);
   });
 
@@ -213,7 +214,7 @@ describe('the classification guard bites', () => {
     // as a nested loop inside that list visited zero of them while the count
     // still read 0. This asserts the key list itself, which is what the
     // classification test consumes.
-    const swept = classifiableKeys().map(({ nodeType, key }) => `${nodeType}.${key}`);
+    const swept = registeredKeys().map(({ nodeType, key }) => `${nodeType}.${key}`);
     expect(validatorRegistry.getRegisteredNodeTypes()).not.toContain('HBoxContainer');
     expect(swept).toContain('HBoxContainer.vertical');
     expect(swept).toContain('VSplitContainer.vertical');
@@ -229,7 +230,7 @@ describe('the classification guard bites', () => {
     // against Godot's own hint — so a validator with only the first enforces a
     // range that no guard can check against the engine, and silently counts as
     // an unimplemented end while being fully implemented.
-    expect(sweepValidators((val) => val.tiers !== undefined && val.bounds === undefined)).toEqual(
+    expect(everyValidatorLabel((val) => val.tiers !== undefined && val.bounds === undefined)).toEqual(
       []
     );
   });

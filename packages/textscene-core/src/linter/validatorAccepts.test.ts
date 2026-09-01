@@ -15,7 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { sweepValidators } from './testing/validatorClassification.js';
+import { everyValidatorLabel } from './registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 describe('validator `accepts` metadata', () => {
@@ -30,13 +30,13 @@ describe('validator `accepts` metadata', () => {
     // that reaches roots only, so a validator behind a wildcard dispatcher
     // could ship untagged and render an empty Accepts cell with nothing
     // failing. Its own docblock names this shape as the bug it exists to stop.
-    const untagged = sweepValidators((validator) => !validator.accepts);
+    const untagged = everyValidatorLabel((validator) => !validator.accepts);
 
     expect(untagged).toEqual([]);
   });
 
   it('sweeps past the roots, so a leaf cannot hide from the tag check', () => {
-    const all = sweepValidators(() => true);
+    const all = everyValidatorLabel(() => true);
     const roots = types.flatMap((type) => validatorRegistry.getOwnKeys(type));
     expect(all.length).toBeGreaterThan(roots.length);
   });

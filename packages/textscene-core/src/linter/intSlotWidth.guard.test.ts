@@ -48,7 +48,7 @@ import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
-import { collectValidators } from './testing/validatorClassification.js';
+import { everyValidator } from './registryPopulation.js';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/index.js';
 import './index.js'; // side-effect: every slice registers its validators
@@ -270,7 +270,7 @@ function registryDeclarations(): Declarations {
   // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`)
   // had no declaration to compare a read against, and every read of one was
   // `continue`d — skipped, not failed.
-  for (const { label, validator } of collectValidators((v) => v.intSlot !== undefined)) {
+  for (const { label, validator } of everyValidator((v) => v.intSlot !== undefined)) {
     const width = validator.intSlot?.width;
     if (width === undefined) continue;
     const { nodeType, key } = registeredKeyOf(label);
@@ -473,7 +473,7 @@ describe('the registered key a sweep label names', () => {
   it('reaches every depth the live registry actually holds', () => {
     // The floor that makes the nested case above non-hypothetical: if the
     // registry ever stopped nesting, the strip could regress unnoticed.
-    const depths = collectValidators((v) => v.intSlot !== undefined).map(
+    const depths = everyValidator((v) => v.intSlot !== undefined).map(
       ({ label }) => (label.match(/\[\d+\]/g) ?? []).length
     );
     expect(Math.max(...depths)).toBeGreaterThanOrEqual(2);

@@ -8,7 +8,7 @@
  * while testing nothing.
  */
 
-import { collectValidators } from './validatorClassification.js';
+import { everyValidator } from '../registryPopulation.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;
@@ -44,7 +44,7 @@ export interface IntSlot {
  * and it dedupes a leaf shared by two dispatchers.
  */
 export function taggedIntSlots(): IntSlot[] {
-  return collectValidators((validator) => validator.intSlot !== undefined).map(
+  return everyValidator((validator) => validator.intSlot !== undefined).map(
     ({ label, validator }) => ({
       at: label,
       // The dispatcher's own key: a leaf reads `name` from its closure and uses

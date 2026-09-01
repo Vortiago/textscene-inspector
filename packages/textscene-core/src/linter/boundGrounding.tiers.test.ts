@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { v } from './validators/v.js';
 import { outerEndIsReachable } from './validators/v/grounding.js';
-import { collectValidators } from './testing/validatorClassification.js';
+import { everyValidator } from './registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { layerBitmask } from './validators/layerBitmask.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
@@ -191,7 +191,7 @@ describe('an end no value can reach reports at the setter\'s tier', () => {
     // `boundGrounding.test.ts` had already been migrated; this one had not.
     const wrong: string[] = [];
     let examined = 0;
-    for (const { label, validator } of collectValidators(
+    for (const { label, validator } of everyValidator(
       (candidate) => candidate.bounds !== undefined && candidate.tiers !== undefined
     )) {
       const bounds = validator.bounds!;

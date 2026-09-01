@@ -21,7 +21,7 @@ import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import { classifiableKeys } from './testing/validatorClassification.js';
+import { everyValidator, registeredKeys } from './registryPopulation.js';
 import { keyShapeError } from './validators/propertyError.js';
 import './index.js'; // side-effect: every slice registers its validators
 
@@ -119,34 +119,30 @@ function sweep(): { offenders: Offender[]; probes: number; exempt: number } {
   let probes = 0;
   let exempt = 0;
 
-  // Recursive and deduped, like `collectValidators`: a leaf can itself be a
-  // dispatcher (BoneTwistDisperser3D's `settings/*` holds a whole family), and
-  // one leaf instance is shared between dispatchers.
-  const visit = (
-    nodeType: string,
-    key: string,
-    validator: PropertyValidator,
-    seen: Set<PropertyValidator>
-  ): void => {
-    if (seen.has(validator)) return;
-    seen.add(validator);
-    probes++;
-    const found = offence(nodeType, key, validator);
-    if (found) offenders.push(found);
-    // The exemption arm firing is what says the sweep still reaches refusals:
-    // an empty registry drives `probes` and `exempt` to zero together.
-    const nilError = validator(key, 'null', 1);
-    if (nilError && ownsNilMessage(nilError)) exempt++;
-    for (const leaf of validator.leaves ?? []) visit(nodeType, key, leaf, seen);
-  };
-
-  // `classifiableKeys`, not `getOwnKeys`: removals are the third population and
-  // a removal-only type never appears in the validator map at all.
-  for (const { nodeType, key: pattern } of classifiableKeys()) {
+  // One walk per PROBE KEY, each with its own dedupe scope. That scope is the
+  // whole difference from every other sweep here: the question is what
+  // `ParseError` a KEY produces, so a leaf instance shared between dispatchers
+  // must be revisited under each key that reaches it, not reported once.
+  // `everyValidator`'s injected-roots seam gives exactly that — one execution,
+  // one set — without a hand-rolled recursion that can drift from the shared one.
+  //
+  // `registeredKeys`, not `getOwnKeys`: removals are the third population and a
+  // removal-only type never appears in the validator map at all.
+  for (const { nodeType, key: pattern } of registeredKeys()) {
     for (const key of probeKeys(pattern)) {
       const validator = validatorRegistry.findValidator(nodeType, key);
       if (!validator) continue;
-      visit(nodeType, key, validator, new Set());
+      for (const { validator: reached } of everyValidator(() => true, {
+        roots: [{ label: `${nodeType}.${key}`, validator }],
+      })) {
+        probes++;
+        const found = offence(nodeType, key, reached);
+        if (found) offenders.push(found);
+        // The exemption arm firing is what says the sweep still reaches
+        // refusals: an empty registry drives `probes` and `exempt` to zero.
+        const nilError = reached(key, 'null', 1);
+        if (nilError && ownsNilMessage(nilError)) exempt++;
+      }
     }
   }
   return { offenders, probes, exempt };
@@ -174,7 +170,7 @@ describe('key-shape refusals declare themselves on the error', () => {
 
   it('every nested segment still reaches a refusal', () => {
     for (const segment of NESTED_SEGMENTS) {
-      const reached = classifiableKeys().some(({ nodeType, key: pattern }) =>
+      const reached = registeredKeys().some(({ nodeType, key: pattern }) =>
         probeKeys(pattern)
           .filter((key) => key.includes(`/${segment}/`))
           .some((key) => {

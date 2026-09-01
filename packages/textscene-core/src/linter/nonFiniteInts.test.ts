@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { probe, taggedIntSlots } from './testing/intSlotProbe.js';
-import { collectValidators } from './testing/validatorClassification.js';
+import { everyValidatorLabel } from './registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** The four spellings Godot's tokenizer resolves (`variant_parser.cpp:701-707`). */
@@ -71,24 +71,17 @@ describe('a literal an INT slot cannot hold', () => {
     // into it — so an unanchored `Vector2i` matched every FLOAT Vector2 slot
     // and reported 111 of them as untagged int slots.
     const INT_PROSE = /integer|^enum |bit mask|layer mask|^Vector[234]i|^Rect2i|PackedInt32Array|int array/;
-    // `collectValidators`, not `getRegisteredNodeTypes() x getOwnKeys()`: that
-    // walk reaches ROOTS only, so ~400 leaf validators behind wildcard
-    // dispatchers sat outside the tripwire — and a leaf is exactly where a
-    // hand-applied `markIntSlot` goes missing. Being the walk the probe sweep
-    // does NOT share is this check's whole job; it was sharing a different
-    // blind spot instead.
-    const untagged = collectValidators(
-      // A wildcard DISPATCHER describes its family, not a slot — its leaves are
-      // the int slots and carry the tag. `settings/#/*` says "bit masks" about
-      // what it routes to. The filter is per-validator; the walk still descends
-      // through the dispatcher to reach them.
+    // A wildcard DISPATCHER describes its family, not a slot — its leaves are
+    // the int slots and carry the tag. `settings/#/*` says "bit masks" about
+    // what it routes to. The filter is per-validator; the walk still descends
+    // through the dispatcher to reach them.
+    const untagged = everyValidatorLabel(
       (validator) =>
         validator.leaves === undefined &&
         INT_PROSE.test(validator.accepts ?? '') &&
-        !validator.intSlot
-    )
-      .map(({ label }) => label)
-      .sort();
+        !validator.intSlot,
+      { atLeast: 0 }
+    );
     expect(untagged).toEqual([]);
   });
 

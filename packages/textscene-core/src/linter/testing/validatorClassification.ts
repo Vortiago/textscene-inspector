@@ -10,8 +10,8 @@
  * exactly that reason.
  */
 
-import { validatorRegistry } from '../ValidatorRegistry.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
+import { everyValidatorLabel, type Root } from '../registryPopulation.js';
 
 /**
  * The one bound that cannot be grounded against the pinned reference, with the
@@ -26,115 +26,21 @@ import type { PropertyValidator } from '../ValidatorRegistry.js';
 const UNGROUNDABLE: ReadonlySet<string> = new Set<string>();
 
 /**
- * Every key that resolves to a validator, declarations AND removals.
+ * The sweep, with the exemption set as a parameter so it can be emptied.
  *
- * Removals are the third population: `getOwnKeys` deliberately omits them (a
- * removal is not a declaration), so a sweep built on it alone cannot see a
- * rejection that refuses every value of the key outright.
+ * The exemption is applied to the LABEL after the walk, never inside `keep`:
+ * excusing a validator must not excuse the subtree behind it, and one exempt
+ * wildcard key would otherwise cover every leaf it dispatches to.
  */
-export function classifiableKeys(): { nodeType: string; key: string }[] {
-  const out: { nodeType: string; key: string }[] = [];
-  for (const nodeType of validatorRegistry.getRegisteredNodeTypes()) {
-    for (const key of validatorRegistry.getOwnKeys(nodeType)) out.push({ nodeType, key });
-  }
-  // A separate walk, not a nested loop: a type that ONLY removes never appears
-  // in the validator map, so folding removals into the loop above visited none
-  // of them.
-  for (const nodeType of validatorRegistry.getTypesWithRemovals()) {
-    for (const key of Object.keys(validatorRegistry.getOwnRemovals(nodeType))) {
-      out.push({ nodeType, key });
-    }
-  }
-  return out;
+function ungroundedLabels(exempt: ReadonlySet<string>, roots?: readonly Root[]): string[] {
+  return everyValidatorLabel(isUnclassified, roots ? { roots } : {}).filter(
+    (l) => !exempt.has(l)
+  );
 }
 
-/**
- * Every registered validator that declares none of the three classification tags,
- * counting a wildcard dispatcher's leaves as separate validators.
- *
- * Without the recursion a dispatcher's own tag would vouch for every bound
- * behind it: `Generic6DOFJoint3D` registers 18 wildcard keys covering 27 leaf
- * validators, and the sweep saw 18 functions.
- */
+/** Every registered validator that declares none of the three classification tags. */
 export function unclassifiedKeys(): string[] {
   return ungroundedLabels(UNGROUNDABLE);
-}
-
-/**
- * Every registered validator and every leaf behind a wildcard dispatcher, with
- * the label each is reported under, sorted.
- *
- * One walker for every registry-wide validator sweep. A second copy of it drifted
- * within hours of being written: `boundGrounding`'s citation sweep grew a
- * cycle-safety `Set` that this one lacked, so a shared leaf instance was walked
- * once there and repeatedly here. `keep` is the only thing a sweep should have
- * to supply.
- */
-export function sweepValidators(
-  keep: (validator: PropertyValidator) => boolean,
-  roots: readonly Root[] = registryRoots()
-): string[] {
-  return collectValidators(keep, roots)
-    .map(({ label }) => label)
-    .sort();
-}
-
-/**
- * The same walk, keeping the validator beside its label.
- *
- * A sweep that only needs to NAME what it found takes `sweepValidators`; one
- * that has to CALL what it found — the non-finite int probe does — needs the
- * object. Sharing the walk is the point: the int sweep built its own population
- * from `getOwnKeys` and never descended `leaves`, so every slot behind a
- * wildcard dispatcher was outside it.
- */
-export function collectValidators(
-  keep: (validator: PropertyValidator) => boolean,
-  /**
-   * What to walk. Defaults to the live registry; a test passes scratch
-   * validators so the walk itself can be proven to reach leaves and to dedupe,
-   * without the guard's bite resting on whatever the registry happens to hold.
-   */
-  roots: readonly Root[] = registryRoots()
-): Root[] {
-  const out: Root[] = [];
-  // A leaf instance can be shared between dispatchers, so a plain recursion
-  // reports it once per parent.
-  const seen = new Set<PropertyValidator>();
-
-  const visit = (validator: PropertyValidator, label: string): void => {
-    if (seen.has(validator)) return;
-    seen.add(validator);
-    if (keep(validator)) out.push({ label, validator });
-    validator.leaves?.forEach((leaf, index) => visit(leaf, `${label}[${index}]`));
-  };
-
-  for (const { label, validator } of roots) visit(validator, label);
-  return out;
-}
-
-/** A validator and the label a sweep reports it under. */
-export interface Root {
-  label: string;
-  validator: PropertyValidator;
-}
-
-/** Every `Type.key` the registry resolves, as sweep roots. */
-function registryRoots(): Root[] {
-  const roots: Root[] = [];
-  for (const { nodeType, key } of classifiableKeys()) {
-    const validator = validatorRegistry.findValidator(nodeType, key);
-    if (validator) roots.push({ label: `${nodeType}.${key}`, validator });
-  }
-  return roots;
-}
-
-/** The sweep, with the exemption set as a parameter so it can be emptied. */
-function ungroundedLabels(exempt: ReadonlySet<string>, roots?: readonly Root[]): string[] {
-  // The exemption is applied to the LABEL after the walk, never inside `keep`:
-  // excusing a validator must not excuse the subtree behind it, and one exempt
-  // wildcard key would otherwise cover every leaf it dispatches to.
-  return sweepValidators(isUnclassified, roots ?? registryRoots()).filter((l) => !exempt.has(l));
 }
 
 /**
@@ -174,7 +80,7 @@ const STATES_A_RANGE = /^(?:float|integer) (?:-?[\d.]+-|>= |<= )|^enum -?\d+-/;
  * element type — and have no ends to report.
  */
 export function rangeWithoutTiers(): string[] {
-  return sweepValidators(
+  return everyValidatorLabel(
     (v) => v.accepts !== undefined && STATES_A_RANGE.test(v.accepts) && v.tiers === undefined
   );
 }
