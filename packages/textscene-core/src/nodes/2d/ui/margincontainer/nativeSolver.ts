@@ -5,7 +5,7 @@
  * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) that
  * handler calls. MarginContainer draws nothing itself — it only insets its
  * children by four theme-constant margins — so this module has no visual
- * counterpart; `NativeComponent.tsx` renders nothing and the walker paints
+ * counterpart; `Component.tsx` renders nothing and the walker paints
  * children as siblings.
  *
  * Every child is fit through BOTH axes of `fit_child_in_rect`, always —
@@ -82,8 +82,9 @@ export const marginContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
  */
 export const marginContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const m = marginsOf(n);
-  const w = contentRect.w - m.left - m.right;
-  const h = contentRect.h - m.top - m.bottom;
+  // `int w`/`int h` (`margin_container.cpp`) narrows the PADDED result, not the rect.
+  const w = Math.trunc(contentRect.w - m.left - m.right);
+  const h = Math.trunc(contentRect.h - m.top - m.bottom);
   // Every returned rect is relative to THIS container's own top-left, not its
   // parent's — exactly like `computeAnchoredRect` only ever reads
   // `parentRect.w`/`.h`, never its position. `contentRect.x`/`.y` carry this

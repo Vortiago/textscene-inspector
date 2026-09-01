@@ -6,7 +6,7 @@
  * `_get_valid_range`, `_resort`, `get_minimum_size`) plus the shared
  * `Container::fit_child_in_rect` every placed child still goes through.
  *
- * SCOPE: two children only (this packet's explicit boundary — the modern engine
+ * SCOPE: two children only (a deliberate boundary — the modern engine
  * supports N children and N-1 draggers via `split_offsets`/`valid_children`, ported
  * here only for the two-child case every fixture and the deprecated single
  * `split_offset` property already commit to). With exactly two children,
@@ -86,7 +86,7 @@ export interface SplitChildInput {
  * `custom_minimum_size` (not the full recursive `combined_minimum_size` the
  * registered solver computes via `SolveContext`), so the SAME formula runs in
  * both places; only the min-size INPUT'S precision differs. See
- * `hsplitcontainer/NativeComponent.tsx`'s module doc for why that gap is
+ * `hsplitcontainer/Component.tsx`'s module doc for why that gap is
  * bounded and, today, invisible.
  */
 export interface SplitAxisChild {
@@ -132,8 +132,9 @@ export function computeSplitDraggerPosition(
     wished = 0;
   }
 
-  const lo = first.minSize;
-  const hi = size - separation - second.minSize;
+  // `_get_valid_range` narrows the size and both minimums with `(int)`.
+  const lo = Math.trunc(first.minSize);
+  const hi = Math.trunc(size) - separation - Math.trunc(second.minSize);
   const raw = collapsed ? wished : wished + splitOffset;
   return godotClamp(raw, lo, hi);
 }
@@ -148,7 +149,7 @@ export function computeSplitDraggerPosition(
  *   with one child is an ordinary single-child wrapper.
  * - 2 children: the split.
  *
- * More than two is out of this packet's scope (see module doc); callers pass
+ * More than two is out of scope (see module doc); callers pass
  * at most two (the registry adapter below slices to the first two sortable
  * children, mirroring the DOM `SplitContainerComponent.tsx`).
  */
@@ -187,7 +188,11 @@ export function resortSplitContainer(
   }
 
   const [c0, c1] = children as readonly [SplitChildInput, SplitChildInput];
-  const size = vertical ? containerSize.height : containerSize.width;
+  // `const Size2i new_size = get_size()` (`split_container.cpp`); the one-child
+  // branch above stays full-precision, as Godot's does.
+  const mainSize = Math.trunc(vertical ? containerSize.height : containerSize.width);
+  const crossSize = Math.trunc(vertical ? containerSize.width : containerSize.height);
+  const size = mainSize;
 
   const draggerPos = computeSplitDraggerPosition(
     size,
@@ -199,12 +204,12 @@ export function resortSplitContainer(
   );
 
   const rect0: Rect2 = vertical
-    ? { x: 0, y: 0, w: containerSize.width, h: draggerPos }
-    : { x: 0, y: 0, w: draggerPos, h: containerSize.height };
+    ? { x: 0, y: 0, w: crossSize, h: draggerPos }
+    : { x: 0, y: 0, w: draggerPos, h: crossSize };
   const secondStart = draggerPos + separation;
   const rect1: Rect2 = vertical
-    ? { x: 0, y: secondStart, w: containerSize.width, h: size - secondStart }
-    : { x: secondStart, y: 0, w: size - secondStart, h: containerSize.height };
+    ? { x: 0, y: secondStart, w: crossSize, h: size - secondStart }
+    : { x: secondStart, y: 0, w: size - secondStart, h: crossSize };
 
   return [
     fitChildInRect(rect0, c0.minSize, c0.hSizeFlags, c0.vSizeFlags),
@@ -227,13 +232,14 @@ export function splitContainerMinimumSize(
   let mainAxis = 0;
   let crossAxis = 0;
 
+  // `minimum[axis] += (int)min_size[axis]` / `minimum[other] = (int)MAX(...)`.
   for (const size of childMinSizes) {
     if (vertical) {
-      crossAxis = Math.max(crossAxis, size.x);
-      mainAxis += size.y;
+      crossAxis = Math.trunc(Math.max(crossAxis, size.x));
+      mainAxis += Math.trunc(size.y);
     } else {
-      crossAxis = Math.max(crossAxis, size.y);
-      mainAxis += size.x;
+      crossAxis = Math.trunc(Math.max(crossAxis, size.y));
+      mainAxis += Math.trunc(size.x);
     }
   }
   if (childMinSizes.length >= 2) mainAxis += separation;
@@ -251,7 +257,7 @@ export interface SplitSeparationTheme {
 
 /**
  * `SplitContainer::_get_separation` (`split_container.cpp:305-316`),
- * restricted to the `DRAGGER_VISIBLE`/`DRAGGER_HIDDEN` path this packet
+ * restricted to the `DRAGGER_VISIBLE`/`DRAGGER_HIDDEN` path this solver
  * models (no `touch_dragger_enabled`, out of scope with dragging): `0` for
  * `DRAGGER_HIDDEN_COLLAPSED`, else the theme separation floored against the
  * grabber icon's own extent along the split axis.
@@ -259,7 +265,7 @@ export interface SplitSeparationTheme {
  * Exported (not just the registry adapter below) so a Native painter can
  * resolve the SAME separation the layout used for the actual child rects,
  * without a second theme-reading implementation to drift from this one — see
- * `hsplitcontainer/NativeComponent.tsx`'s module doc for why it needs to.
+ * `hsplitcontainer/Component.tsx`'s module doc for why it needs to.
  */
 export function resolveSplitSeparation(props: SplitContainerProperties, theme: SplitSeparationTheme): number {
   if (props.draggerVisibility === DRAGGER_HIDDEN_COLLAPSED) return 0;
@@ -314,7 +320,7 @@ export function isSplitContainerLayoutMeta(value: unknown): value is SplitContai
  * `isSortableControl` — an invisible child is skipped entirely, same as every
  * other container solver in this codebase); a third+ sortable child is simply
  * absent from the returned map, which `controlRectSolver.ts` floors to a
- * zero rect — this packet's explicit two-child scope (see module doc).
+ * zero rect — the deliberate two-child scope (see module doc).
  */
 export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
   return (n, children, contentRect, ctx) => {
@@ -395,7 +401,7 @@ export interface SplitGrabberTheme {
  * authored scene: the grabber icon is invisible in a still-frame render unless
  * a scene explicitly disables `autohide`, exactly like the real editor/game
  * viewport before the pointer ever touches the boundary. Verified against
- * `pnpm ref:godot` on `unit-split-container.tscn`: probing the gap between
+ * `pnpm ref:godot` on a probe scene: probing the gap between
  * every row's two ColorRects reads back the plain backdrop colour, never the
  * grabber's gray.
  *

@@ -457,7 +457,11 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
     const orderedKeys = ['offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'grow_horizontal', 'layout_mode'];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     expect(result.anchors).toEqual([0, 0, 0, 0]);
-    expect(result.offsets).toEqual([0, 0, 0, 0]);
+    // `PRESET_MODE_KEEP_SIZE` keeps `get_size()`, and the four `set_offset` calls
+    // above already gave this orphan a `size_cache` of 200x120 — `_size_changed`
+    // writes it OUTSIDE the `is_inside_tree()` guard. So the reset moves the node
+    // to the origin at its existing size, it does not collapse it.
+    expect(result.offsets).toEqual([0, 0, 200, 120]);
     expect(result.growHorizontal).toBe(1); // TOP_LEFT's own table entry, GROW_DIRECTION_END
     expect(result.growVertical).toBe(1);
   });

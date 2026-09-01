@@ -30,6 +30,9 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import { buildFontResource } from '../fonts/font/loadFont';
 import type { FontResource } from '../fonts/font/types';
 
+/** Ceiling for a peer font load, far above any real fetch — see `ResourceLoader.peerLoad`. */
+const FONT_PEER_TIMEOUT_MS = 30_000;
+
 export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus
@@ -39,14 +42,24 @@ export function createFontProcessor(
   // returned, so the closure over the not-yet-assigned binding is safe.
   let processor: ResourceProcessor<FontResource>;
 
+  // Addresses already on this walk. `base_font`/`fallbacks` can name a sibling
+  // that names them back; an unguarded cycle parks two `once` awaits that can
+  // never settle each other, wedging both loads for the session. The sync
+  // sibling `resolveInlineFontResource` carries the same guard.
+  const visiting = new Set<string>();
+
   const loadFont = async (address: string): Promise<FontResource | null> => {
     const cached = processor.getCached(address);
     if (cached !== undefined) return cached;
+    if (visiting.has(address)) return null;
+    visiting.add(address);
     processor.request(address);
     try {
-      return await eventBus.once<FontResource>('font', 'loaded', address);
+      return await eventBus.once<FontResource>('font', 'loaded', address, FONT_PEER_TIMEOUT_MS);
     } catch {
       return null;
+    } finally {
+      visiting.delete(address);
     }
   };
 

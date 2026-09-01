@@ -176,20 +176,39 @@ export function resolveOffsets(
  * simulation (below) can apply it as one EVENT in a sequence instead of
  * duplicating the arithmetic.
  *
- * `KEEP_SIZE` reads `get_size()`, which is (0, 0) on a node that has never
- * been in a tree — so only the wide (`MINSIZE_PRESETS`) presets carry a
- * non-zero `new_size`. Parenthesised, and written as `0 - …` rather than a
+ * `KEEP_SIZE` reads `get_size()` — `sizeAtPresetTime`, which the file-order
+ * replay supplies from the orphan `size_cache` and the editor-save-order path
+ * leaves at (0, 0) because the preset precedes every offset there.
+ * Parenthesised, and written as `0 - …` rather than a
  * unary minus: the fallback is the WHOLE expression (`??` binds looser than
  * `*`), and `0 - x` keeps a zero-size begin edge at +0 — negative zero is a
  * distinct value to a deep-equality assertion.
  */
 function presetDerivedOffsets(
   preset: number,
-  presetTimeMinimumSize: () => { x: number; y: number }
+  presetTimeMinimumSize: () => { x: number; y: number },
+  sizeAtPresetTime: { x: number; y: number } = { x: 0, y: 0 }
 ): [number, number, number, number] {
   const [al, at, ar, ab] = PRESET_ANCHORS[preset]!;
-  const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : { x: 0, y: 0 };
+  const size = MINSIZE_PRESETS.has(preset) ? presetTimeMinimumSize() : sizeAtPresetTime;
   return [0 - size.x * al, 0 - size.y * at, size.x * (1 - ar), size.y * (1 - ab)];
+}
+
+/**
+ * `get_size()` for a node that has never been in a tree. `Control::_size_changed`
+ * writes `data.size_cache` OUTSIDE its `is_inside_tree()` guard, so an earlier
+ * `set_offset` gives an orphan a real size: with a zero parent rect every
+ * `edge_pos` is the offset itself, floored at the combined minimum.
+ */
+function orphanSizeCache(
+  state: ControlLayoutState,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): { x: number; y: number } {
+  const min = presetTimeMinimumSize();
+  return {
+    x: Math.max(state.offsets[2] - state.offsets[0], min.x),
+    y: Math.max(state.offsets[3] - state.offsets[1], min.y),
+  };
 }
 
 /** `Control::GrowDirection` (`control.h:59-62`). */
@@ -328,12 +347,16 @@ function initialControlLayoutState(): ControlLayoutState {
  * has no `stored_layout_mode` check of its own).
  *
  * TOP_LEFT is preset 0, not a `MINSIZE_PRESETS` member, so `KEEP_SIZE`'s
- * `new_size` is always `get_size()` — (0, 0) while the node is orphan — and
- * the reset always lands on exactly the struct defaults.
+ * `new_size` is `get_size()` — the orphan `size_cache` any earlier `set_offset`
+ * already wrote, not zero (see `orphanSizeCache`).
  */
-function applyLayoutModePositionReset(state: ControlLayoutState): void {
+function applyLayoutModePositionReset(
+  state: ControlLayoutState,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): void {
+  const sizeAtPresetTime = orphanSizeCache(state, presetTimeMinimumSize);
   state.anchors = [...STRUCT_DEFAULT_ANCHORS];
-  state.offsets = [...STRUCT_DEFAULT_OFFSETS];
+  state.offsets = presetDerivedOffsets(0, presetTimeMinimumSize, sizeAtPresetTime);
   state.growHorizontal = PRESET_GROW_HORIZONTAL[0]!;
   state.growVertical = PRESET_GROW_VERTICAL[0]!;
 }
@@ -356,8 +379,9 @@ function applyAnchorsPreset(
 ): void {
   const anchors = PRESET_ANCHORS[preset];
   if (!anchors) return;
+  const sizeAtPresetTime = orphanSizeCache(state, presetTimeMinimumSize);
   state.anchors = [...anchors];
-  state.offsets = presetDerivedOffsets(preset, presetTimeMinimumSize);
+  state.offsets = presetDerivedOffsets(preset, presetTimeMinimumSize, sizeAtPresetTime);
   state.growHorizontal = PRESET_GROW_HORIZONTAL[preset]!;
   state.growVertical = PRESET_GROW_VERTICAL[preset]!;
 }
@@ -437,7 +461,9 @@ export function resolveControlLayout(
     if (key === 'layout_mode') {
       if (p.layoutMode === undefined) continue; // unparseable — no event
       state.storedLayoutMode = p.layoutMode;
-      if (state.storedLayoutMode === STRUCT_DEFAULT_LAYOUT_MODE) applyLayoutModePositionReset(state);
+      if (state.storedLayoutMode === STRUCT_DEFAULT_LAYOUT_MODE) {
+        applyLayoutModePositionReset(state, presetTimeMinimumSize);
+      }
       continue;
     }
     if (key === 'anchors_preset') {

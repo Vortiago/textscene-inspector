@@ -65,13 +65,19 @@ export function useTexture2D(
   // An AtlasTexture does not hold pixels, it windows another texture's — so the
   // slot's own reference is replaced by the sheet's for the resolution below,
   // and the window is applied to whatever that yields.
-  const atlas = useMemo(
-    () => resolveAtlasTextureRef(ref, internalResources),
+  // Unwrapped BEFORE the atlas lookup: a CanvasTexture may wrap an AtlasTexture,
+  // and testing the raw ref would see only the wrapper and lose the window.
+  const unwrapped = useMemo(
+    () => unwrapCanvasTextureRef(ref, internalResources),
     [ref, internalResources]
   );
+  const atlas = useMemo(
+    () => resolveAtlasTextureRef(unwrapped, internalResources),
+    [unwrapped, internalResources]
+  );
   const sourceRef = useMemo(
-    () => unwrapCanvasTextureRef(atlas ? atlas.texture.atlas : ref, internalResources),
-    [atlas, ref, internalResources]
+    () => unwrapCanvasTextureRef(atlas ? atlas.texture.atlas : unwrapped, internalResources),
+    [atlas, unwrapped, internalResources]
   );
 
   // Procedural first: it is described entirely by the scene, so it needs no

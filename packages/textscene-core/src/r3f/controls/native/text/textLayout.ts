@@ -436,12 +436,17 @@ function toBreakGlyphs(
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
+    const cp = ch.codePointAt(0)!;
+    const hardBreak = isLinebreak(cp);
     glyphs.push({
       start: i,
       end: i + 1,
-      advance: glyphAdvancePx(ch, sizeAt(i), metrics),
-      isSpace: isWhitespace(ch.codePointAt(0)!),
-      isHardBreak: isLinebreak(ch.codePointAt(0)!),
+      // A break grapheme and U+200B carry no advance in Godot; the baked charset
+      // has no entry for either, so the metrics fallback would give them an
+      // average-width one that the overflow test then spends on a spurious wrap.
+      advance: hardBreak || cp === 0x200b ? 0 : glyphAdvancePx(ch, sizeAt(i), metrics),
+      isSpace: isWhitespace(cp),
+      isHardBreak: hardBreak,
     });
   }
   // Kerning narrows/widens the gap BETWEEN a pair; folding it into the

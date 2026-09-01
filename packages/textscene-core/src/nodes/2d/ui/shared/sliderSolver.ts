@@ -101,7 +101,11 @@ export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeVa
  * always is here (`2 * round(margin * scale)`), but the separate truncation
  * is transcribed anyway for fidelity to the source.
  */
-export function sliderTrackRect(vertical: boolean, size: Vec2, theme: NativeTheme): Rect2 {
+/** `Size2i size = get_size()` — every draw formula below reads the narrowed size. */
+const size2i = (size: Vec2): Vec2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
+
+export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeTheme): Rect2 {
+  const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;
   if (vertical) {
     return { x: Math.trunc(size.x / 2) - Math.trunc(thickness / 2), y: 0, w: thickness, h: size.y };
@@ -124,7 +128,8 @@ export function sliderTrackRect(vertical: boolean, size: Vec2, theme: NativeThem
  * vertical branch calls `Math::round` explicitly on BOTH its origin and its
  * size — that asymmetry is Godot's own, not an inconsistency introduced here.
  */
-export function sliderGrabberAreaRect(vertical: boolean, size: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+export function sliderGrabberAreaRect(vertical: boolean, rawSize: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+  const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;
   const grabber = theme.sliderGrabberSize;
   // `grabber->get_height() / 2` / `get_width() / 2` are INTEGER divisions in
@@ -155,11 +160,12 @@ export function sliderGrabberAreaRect(vertical: boolean, size: Vec2, ratio: numb
  * At `ratio = 0` (value = min_value) a HORIZONTAL grabber's LEFT edge sits at
  * `x = 0` and a VERTICAL grabber's BOTTOM edge sits at `y + h = size.height`;
  * at `ratio = 1` (value = max_value) the opposite edge is flush with the
- * opposite side of the rect — the two pinned positions this packet's own
- * brief calls out, since an off-by-a-grabber-width error is invisible at
+ * opposite side of the rect — the two positions worth pinning, since an
+ * off-by-a-grabber-width error is invisible at
  * `ratio = 0` and wrong everywhere else.
  */
-export function sliderGrabberRect(vertical: boolean, size: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+export function sliderGrabberRect(vertical: boolean, rawSize: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+  const size = size2i(rawSize);
   const grabber = theme.sliderGrabberSize;
   if (vertical) {
     const areasize = size.y - grabber;
@@ -169,7 +175,8 @@ export function sliderGrabberRect(vertical: boolean, size: Vec2, ratio: number, 
   }
   const areasize = size.x - grabber;
   const x = Math.trunc(ratio * areasize);
-  const y = Math.trunc(size.y / 2 - grabber / 2);
+  // Two SEPARATE integer divisions (`slider.cpp:363`), as the vertical branch above.
+  const y = Math.trunc(size.y / 2) - Math.trunc(grabber / 2);
   return { x, y, w: grabber, h: grabber };
 }
 
@@ -196,11 +203,12 @@ export function sliderGrabberRect(vertical: boolean, size: Vec2, ratio: number, 
  */
 export function sliderTickRects(
   vertical: boolean,
-  size: Vec2,
+  rawSize: Vec2,
   indices: readonly number[],
   tickCount: number,
   theme: NativeTheme
 ): Rect2[] {
+  const size = size2i(rawSize);
   const grabber = theme.sliderGrabberSize;
   const along = theme.sliderTickBox;
   const cross = SLIDER_TICK_CROSS_AXIS;

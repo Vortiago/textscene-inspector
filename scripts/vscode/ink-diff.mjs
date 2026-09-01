@@ -27,6 +27,12 @@ for (let i = 0; i < args.length; i++) {
   else if (args[i] === '--threshold') threshold = Number(args[++i]);
   else positional.push(args[i]);
 }
+// An unvalidated NaN makes every `delta > threshold` false, so the proof would
+// report two arbitrarily different captures as identical and exit 0.
+if (!Number.isFinite(threshold) || threshold < 0) {
+  console.error(`--threshold must be a non-negative number, got ${JSON.stringify(threshold)}`);
+  process.exit(2);
+}
 if (positional.length !== 2) {
   console.error('Usage: ink-diff.mjs <a.png> <b.png> [--out diff.png] [--threshold n]');
   process.exit(2);

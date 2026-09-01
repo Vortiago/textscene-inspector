@@ -110,7 +110,16 @@ function selfClosingText(name: string, value: string | undefined): string | null
   if (SELF_CLOSING_SILENT.has(name)) return '';
   if (name !== 'char') return null;
   const codePoint = parseInt(value ?? '', 16);
-  if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return '';
+  // The surrogate range is inside 0..0x10FFFF but has no scalar value, so
+  // `String.fromCodePoint` would emit the lone surrogate this guard exists to suppress.
+  if (
+    !Number.isFinite(codePoint) ||
+    codePoint < 0 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+  ) {
+    return '';
+  }
   return String.fromCodePoint(codePoint);
 }
 

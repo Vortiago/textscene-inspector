@@ -4,11 +4,11 @@
  * `texture_rect.cpp:107-133`), registered via
  * `controlSolverRegistry.registerMinimumSize`, and the `stretch_mode`
  * draw-rect math (`TextureRect::_notification`'s `NOTIFICATION_DRAW`,
- * `:33-100`) `NativeComponent.tsx` paints. Also the sampler-property mapping
+ * `:33-100`) `Component.tsx` paints. Also the sampler-property mapping
  * (`CanvasItem::TextureFilter`/`TextureRepeat`, `scene/main/canvas_item.h`)
  * and the flip_h/flip_v UV mirror, since all of it is pure per-node math with
  * no THREE/React dependency — the same "no THREE" convention every other
- * `native/` SOLVER module keeps (painting lives in `NativeComponent.tsx`).
+ * `native/` SOLVER module keeps (painting lives in `Component.tsx`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -77,7 +77,11 @@ const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
  */
 export const textureRectMinimumSize: MinimumSizeFn = (n, ctx) => {
   const textureSize = n.textureSize;
-  if (!textureSize) return { x: 0, y: 0 };
+  // A cached texture whose image has no dimensions yields a non-null 0x0 size, and
+  // the PROPORTIONAL branches below divide by it — the same degenerate input
+  // `textureRectDraw` guards against, whose NaN would spread through the
+  // combined minimum into every sibling's rect.
+  if (!textureSize || textureSize.x <= 0 || textureSize.y <= 0) return { x: 0, y: 0 };
   const props = n.node.properties as TextureRectProperties;
   const tentative = ctx.tentativeRect?.(n);
   // `get_size().y` (:117,120) / `get_size().x` (:125,128) — this node's OWN

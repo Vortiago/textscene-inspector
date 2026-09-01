@@ -102,7 +102,7 @@ function resolveStyleBoxes(
 
 interface ForestResult {
   tree: SolveNode[];
-  pendingScenes: string[];
+  pendingScenes: TscnExternalResource[];
   pendingTextures: string[];
   pendingThemes: string[];
   pendingFonts: string[];
@@ -125,7 +125,7 @@ function buildForest(
   projectThemeRef: string | undefined,
   hiddenNodePaths: ReadonlySet<string>
 ): ForestResult {
-  const pendingScenes = new Set<string>();
+  const pendingScenes = new Map<string, TscnExternalResource>();
   const pendingTextures = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
@@ -232,7 +232,7 @@ function buildForest(
     if (inline) return inline;
 
     // `resolveTexture2DPath`, not `resolveExtResourcePath`: the painters resolve
-    // the same property through it (`texturerect/NativeComponent.tsx`), so it
+    // the same property through it (`texturerect/Component.tsx`), so it
     // also unwraps a `SubResource(...)` texture. Resolving only ExtResource here
     // would give such a node a minimum size of (0, 0) while it still PAINTS —
     // inside a box or grid container it collapses to nothing and draws over its
@@ -272,7 +272,15 @@ function buildForest(
       const path = joinPath(parentPath, node.name);
 
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
-      if (scenePath && sceneCache.getCached(scenePath) === undefined) pendingScenes.add(scenePath);
+      if (scenePath && sceneCache.getCached(scenePath) === undefined) {
+        // The ExtResource itself, not just the path: `createSceneProcessor` throws
+        // "Scene metadata not found" for an unregistered address and the failure is
+        // cached permanently, so the registration must precede the request.
+        const parsed = node.instance ? parseResourceReference(node.instance) : null;
+        const entry =
+          parsed?.type === 'ExtResource' ? ext.find((r) => r.id === parsed.id) : undefined;
+        if (entry) pendingScenes.set(scenePath, entry);
+      }
 
       const groups = liveChildGroups(node, scope, sceneCache);
       const mergedGroup = groups.find((g) => g.origin === 'merged');
@@ -375,7 +383,7 @@ function buildForest(
   );
   return {
     tree,
-    pendingScenes: [...pendingScenes],
+    pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
@@ -448,7 +456,10 @@ export function useBuildSolveTree(
   // during it, matching `useResource`'s own request-in-effect convention.
   useEffect(() => {
     if (!loader) return;
-    for (const path of pendingScenes) loader.scenes.request(path);
+    for (const entry of pendingScenes) {
+      loader.register({ id: entry.id, path: entry.path, type: entry.type });
+      loader.scenes.request(entry.path);
+    }
     for (const path of pendingTextures) loader.textures.request(path);
     for (const path of pendingThemes) loader.themes.request(path);
     for (const path of pendingFonts) loader.fonts.request(path);

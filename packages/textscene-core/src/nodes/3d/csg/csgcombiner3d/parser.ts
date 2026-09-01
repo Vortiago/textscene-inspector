@@ -12,9 +12,14 @@ export function parseCSGCombiner3D(
   const result: CSGCombiner3DProperties = { ...parseNode3D(heading, properties) };
 
   // Not routed through finishCsgParse: that helper also copies the `material` path, which a
-  // combiner does not have (it is a CSGShape3D, not a CSGPrimitive3D).
+  // combiner does not have (it is a CSGShape3D, not a CSGPrimitive3D). Everything else that
+  // helper copies must still be read here, or it is silently dropped for this type.
   const operation = parseOptionalInt(properties.operation);
   if (operation !== undefined) result.operation = operation;
+
+  // `CSGShape3D : GeometryInstance3D` (`modules/csg/csg_shape.h:47`).
+  const castShadow = parseOptionalInt(properties.cast_shadow);
+  if (castShadow !== undefined) result.castShadow = castShadow;
 
   return result;
 }
