@@ -51,6 +51,17 @@ describe('readHeaderFormat', () => {
     expect(readHeaderFormat('[gd_scene format=-1]\n')?.format).toBe(-1);
   });
 
+  it('reads the bare-exponent spellings Godot loads, which `Number` calls NaN', () => {
+    // `READING_EXP` takes a sign and ZERO digits (variant_parser.cpp:466-472),
+    // so `2e` and `1e-` load as 2 and 1. `Number('2e')` is NaN, which is the
+    // ABSENT case, and absent means CURRENT — so reading the field with
+    // `Number` linted a format-2 file against a grammar it predates, the same
+    // defect the `\d+`-only read had.
+    expect(readHeaderFormat('[gd_scene format=2e]\n')?.format).toBe(2);
+    expect(readHeaderFormat('[gd_scene format=1e-]\n')?.format).toBe(1);
+    expect(readHeaderFormat('[gd_scene format=5.e2]\n')?.format).toBe(500);
+  });
+
   it('stops at an unreadable header rather than advancing past it', () => {
     // `edge-malformed-bracket.tscn`'s shape. Advancing would hand the caller an
     // `[ext_resource …]` line and let it answer for the file.

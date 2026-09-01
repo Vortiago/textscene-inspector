@@ -192,8 +192,10 @@ export function orthoFrameForCamera2D(
   const width = size.x > 0 ? size.x : 1;
   const height = size.y > 0 ? size.y : 1;
   const view = camera2DView(framing, worldPosition, { x: width, y: height });
-  const halfWidth = width / view.zoom / 2;
-  const halfHeight = height / view.zoom / 2;
+  // The framed extent the view already computed, per axis. Re-deriving it from
+  // one magnification dropped the Y zoom.
+  const halfWidth = view.size.x / 2;
+  const halfHeight = view.size.y / 2;
   return {
     left: -halfWidth,
     right: halfWidth,

@@ -84,6 +84,15 @@ describe('VSCodeResourceProvider', () => {
       ).rejects.toThrow(/Path traversal detected/);
     });
 
+    it('refuses a sibling directory whose path merely starts with the root spelling', async () => {
+      // The boundary is the SEPARATOR, not the prefix: `/workspace-secrets/...`
+      // starts with `/workspace`, so a bare `startsWith` admitted every sibling
+      // of the workspace and read it into the webview.
+      await expect(
+        provider.loadResource('res://../../workspace-secrets/key.pem', 'PackedScene')
+      ).rejects.toThrow(/Path traversal detected/);
+    });
+
     it('should handle paths without res:// prefix', async () => {
       const content = 'shader code';
       const mockData = createMockFileData(content);

@@ -11,7 +11,7 @@
  */
 
 import { parseHeading } from '../parser/utils.js';
-import { FLOAT_RE } from '../godot/number.js';
+import { parseGodotFloat } from '../godot/number.js';
 
 /**
  * The newest format this linter does not lint.
@@ -64,9 +64,13 @@ export interface HeaderFormat {
  * is the ABSENT-format case (`:1147-1148`, defaulting to the CURRENT version)
  * — so a legacy file was linted against a grammar it predates.
  *
- * `FLOAT_RE` is the shared engine grammar rather than a rebuilt one, and the
- * read is still not `Number(raw)`: that takes `format=` as 0 and would call an
- * empty attribute the oldest format there is.
+ * `parseGodotFloat` is the shared Variant reader rather than a rebuilt one, and
+ * the read is not `Number(raw)`: `Number` takes `format=` as 0 and would call
+ * an empty attribute the oldest format there is, and it takes the
+ * bare-exponent spellings Godot's `READING_EXP` admits — `2e` and `1e-`, which
+ * load as 2 and 1 — as NaN, which is the ABSENT case and defaults to the
+ * CURRENT version. So `[gd_scene format=2e]` was linted against a grammar it
+ * predates.
  */
 export function readHeaderFormat(content: string): HeaderFormat | null {
   // Walked with `indexOf` rather than `split('\n')`: the answer is always on the
@@ -88,8 +92,12 @@ export function readHeaderFormat(content: string): HeaderFormat | null {
     // Unreadable text falls through to a normal lint, matching the parser's own
     // leniency. `1e999` parses and overflows, so the finite check is on the
     // RESULT — a grammar cannot catch it. See the note above `readHeaderFormat`.
-    const parsed = raw !== undefined && FLOAT_RE.test(raw) ? Number(raw) : NaN;
-    const format = Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+    // The shared reader applies the anchored grammar itself and answers `null`
+    // for text Godot's tokenizer cannot read, including the empty attribute.
+    // `inf`/`nan` are grammatical and come back non-finite, which the check
+    // below folds into the same `null`.
+    const parsed = raw === undefined ? null : parseGodotFloat(raw);
+    const format = parsed !== null && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     return { format, line };
   }
   return null;

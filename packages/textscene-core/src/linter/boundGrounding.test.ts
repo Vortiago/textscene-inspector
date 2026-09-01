@@ -232,9 +232,14 @@ describe('the classification guard bites', () => {
     // against Godot's own hint — so a validator with only the first enforces a
     // range that no guard can check against the engine, and silently counts as
     // an unimplemented end while being fully implemented.
-    expect(everyValidatorLabel((val) => val.tiers !== undefined && val.bounds === undefined)).toEqual(
-      []
-    );
+    // The floor rides on the sweep, for the reason the citation sweep above
+    // states: an offender filter's expected answer is `[]`, so a walk that
+    // reached nothing is indistinguishable from a clean one.
+    expect(
+      everyValidatorLabel((val) => val.tiers !== undefined && val.bounds === undefined, {
+        atLeast: 2000,
+      })
+    ).toEqual([]);
   });
 
   it('reaches removals, which getOwnKeys deliberately omits', () => {

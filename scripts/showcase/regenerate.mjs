@@ -20,7 +20,10 @@ import {
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
-const PORT = 4188; // uncommon fixed port so we know the URL without parsing stdout
+// Uncommon fixed port so we know the URL without parsing stdout, overridable
+// because `assertPortFree` tells the user to override it — a caller that names
+// no variable prints the shared default and sends them round the loop again.
+const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
 
 function spawnNode(args, env) {
   return new Promise((resolve, reject) => {
@@ -34,7 +37,7 @@ function spawnNode(args, env) {
 // 200 from the stranger — every .webm, poster and 2D screenshot below would be
 // recorded against a foreign build, exiting 0. Every other `startPreview` caller
 // checks first.
-await assertPortFree(PORT);
+await assertPortFree(PORT, 'SHOWCASE_PORT');
 const { proc, baseUrl } = startPreview(PORT);
 let exitCode = 0;
 try {

@@ -104,7 +104,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
   });
 
   describe('aspect_ratio', () => {
-    // cylinder.cpp:144, ERR_FAIL_COND(p_aspect_ratio <= 0): enforced floor.
+    // openxr_composition_layer_cylinder.cpp:144, ERR_FAIL_COND(p_aspect_ratio <= 0): enforced floor.
     // The hint's own floor (:73, "0,100") is 0 INCLUSIVE, so the setter is the
     // stricter of the two and every value the hint would warn on is refused
     // first — there is no warned band under the floor.
@@ -116,7 +116,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
     it('accepts the smallest positive value the setter allows', () => {
       expect(check('aspect_ratio', '0.001')).toBeNull();
     });
-    // cylinder.cpp:73 hints "0,100": hinted-only ceiling, since the setter
+    // openxr_composition_layer_cylinder.cpp:73 hints "0,100": hinted-only ceiling, since the setter
     // never caps it.
     it('accepts the hinted ceiling and warns past it', () => {
       expect(check('aspect_ratio', '100')).toBeNull();
@@ -125,7 +125,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
   });
 
   describe('central_angle', () => {
-    // cylinder.cpp:157, ERR_FAIL_COND(p_central_angle <= 0). The hint
+    // openxr_composition_layer_cylinder.cpp:157, ERR_FAIL_COND(p_central_angle <= 0). The hint
     // (:74) opens both ends via or_less/or_greater, so nothing warns.
     it('accepts any positive radian value, however large', () => {
       expect(check('central_angle', '0.01')).toBeNull();
@@ -138,7 +138,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
   });
 
   describe('fallback_segments', () => {
-    // cylinder.cpp:170, ERR_FAIL_COND(p_fallback_segments == 0).
+    // openxr_composition_layer_cylinder.cpp:170, ERR_FAIL_COND(p_fallback_segments == 0).
     it('accepts a positive count', () => {
       expect(check('fallback_segments', '16')).toBeNull();
     });

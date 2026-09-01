@@ -30,7 +30,10 @@ describe('validator `accepts` metadata', () => {
     // that reaches roots only, so a validator behind a wildcard dispatcher
     // could ship untagged and render an empty Accepts cell with nothing
     // failing. Its own docblock names this shape as the bug it exists to stop.
-    const untagged = everyValidatorLabel((validator) => !validator.accepts);
+    // The floor rides on THIS walk: the type count asserted above reads the
+    // registration map directly, so it stays green while the walk that matters
+    // reaches nothing and reports every validator tagged.
+    const untagged = everyValidatorLabel((validator) => !validator.accepts, { atLeast: 2000 });
 
     expect(untagged).toEqual([]);
   });

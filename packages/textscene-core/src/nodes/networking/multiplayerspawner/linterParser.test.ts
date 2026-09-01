@@ -111,6 +111,17 @@ describe('MultiplayerSpawner strict validators', () => {
     expect(check('spawn_limit', '-1')?.severity).toBe('warning');
   });
 
+  it('accepts the typed and bare spellings the slot converts', () => {
+    // `can_convert_strict` lists ARRAY as a valid source for
+    // PACKED_STRING_ARRAY (variant.cpp:467-473) and `_set_spawnable_scenes`
+    // (multiplayer_spawner.cpp:146) takes the converted `Vector<String>`. The
+    // getter writing only the packed form bounds nothing a hand-authored file
+    // has to follow.
+    expect(check('_spawnable_scenes', 'Array[String](["res://a.tscn"])')).toBeNull();
+    expect(check('_spawnable_scenes', '["res://a.tscn", "res://b.tscn"]')).toBeNull();
+    expect(check('_spawnable_scenes', '[]')).toBeNull();
+  });
+
   it('accepts an empty and a populated _spawnable_scenes array', () => {
     expect(check('_spawnable_scenes', 'PackedStringArray()')).toBeNull();
     expect(check('_spawnable_scenes', 'PackedStringArray("res://enemy.tscn")')).toBeNull();

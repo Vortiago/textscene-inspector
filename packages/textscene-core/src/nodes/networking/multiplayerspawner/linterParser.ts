@@ -22,16 +22,20 @@
  */
 
 import '../../node/linterParser.js';
-import { packedArrayLiteral } from '../../../godot/index.js';
+import { packedArrayBody, packedArrayForms } from '../../../godot/index.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, shape, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /**
- * `PackedStringArray("res://a.tscn", "uid://abc123", …)` — the getter behind
- * `_spawnable_scenes` (multiplayer_spawner.cpp:137-144) returns a plain
- * `Vector<String>`, not a `TypedArray`, so `Array[String]([…])` never applies
- * here (rule 6: the getter decides the spelling).
+ * A string array in any of the three spellings the slot loads.
+ *
+ * The getter behind `_spawnable_scenes` (multiplayer_spawner.cpp:137-144)
+ * returns a plain `Vector<String>`, so `PackedStringArray(…)` is the only form
+ * Godot WRITES — which bounds nothing a hand-authored file has to follow.
+ * `can_convert_strict` lists ARRAY as a valid source for PACKED_STRING_ARRAY
+ * (variant.cpp:467-473) and `_set_spawnable_scenes` (:146) takes the converted
+ * `Vector<String>`, so `Array[String]([…])` and `["res://a.tscn"]` both load.
  *
  * Format only: `_set_spawnable_scenes` → `add_spawnable_scene` (:97-113) only
  * `ERR_FAIL_COND`s on `ResourceLoader::exists`, and only
@@ -39,26 +43,26 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
  * check on the filesystem, not a value the static linter can ground a bound
  * on, so every element just needs to be a quoted string.
  */
-// The wrapper from the shared builder, so the padding Godot's tokenizer
-// discards (`get_token`, variant_parser.cpp:416-418) is legal here too — the
-// FileDialog.filters twin already accepted it.
-const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
+// The forms from the shared builder, so the padding Godot's tokenizer discards
+// (`get_token`, variant_parser.cpp:416-418) is legal here too — the
+// FileDialog.filters twin already accepted all three.
+const SPAWNABLE_SCENES_FORMS = packedArrayForms('PackedStringArray');
 const QUOTED_ELEMENTS_RE = /^\s*(?:"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*")*\s*)?$/;
 
 function packedStringArray(name: string): PropertyValidator {
   const code = `INVALID_${name.toUpperCase()}_FORMAT`;
   return shape((key, value, line) => {
-    const match = PACKED_STRING_ARRAY_RE.exec(value.trim());
-    if (!match || !QUOTED_ELEMENTS_RE.test(match[1]!)) {
+    const matched = packedArrayBody(SPAWNABLE_SCENES_FORMS, value);
+    if (!matched || !QUOTED_ELEMENTS_RE.test(matched.body)) {
       return propertyError(
         key,
         line,
-        `Property '${name}' must be a PackedStringArray of quoted strings like PackedStringArray("res://a.tscn"), got: ${value}`,
+        `Property '${name}' must be an array of quoted strings like PackedStringArray("res://a.tscn"), Array[String](["res://a.tscn"]) or ["res://a.tscn"], got: ${value}`,
         code
       );
     }
     return null;
-  }, 'PackedStringArray("res://a.tscn", …)');
+  }, 'string array (PackedStringArray(…), Array[String]([…]) or […])');
 }
 
 validatorRegistry.registerAll('MultiplayerSpawner', {

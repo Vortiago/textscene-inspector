@@ -97,7 +97,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
   });
 
   describe('radius', () => {
-    // equirect.cpp:139, ERR_FAIL_COND(p_radius <= 0).
+    // openxr_composition_layer_equirect.cpp:139, ERR_FAIL_COND(p_radius <= 0).
     it('accepts a positive value', () => {
       expect(check('radius', '3')).toBeNull();
     });
@@ -108,7 +108,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
   });
 
   describe('central_horizontal_angle', () => {
-    // equirect.cpp:152, ERR_FAIL_COND(p_angle <= 0). The hint (:77) opens both
+    // openxr_composition_layer_equirect.cpp:152, ERR_FAIL_COND(p_angle <= 0). The hint (:77) opens both
     // ends via or_less/or_greater, so nothing warns.
     it('accepts any positive radian value, however large', () => {
       expect(check('central_horizontal_angle', '0.01')).toBeNull();
@@ -120,7 +120,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
   });
 
   describe('upper_vertical_angle / lower_vertical_angle', () => {
-    // equirect.cpp:165 / :178, ERR_FAIL_COND(p_angle <= 0 || p_angle > (Math::PI
+    // openxr_composition_layer_equirect.cpp:165 / :178, ERR_FAIL_COND(p_angle <= 0 || p_angle > (Math::PI
     // / 2.0)) — a real closed range in radians, where the hint (:78-79) opens
     // both ends with or_less,or_greater and so grounds neither.
     it('accepts values up to PI/2', () => {
@@ -160,7 +160,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
   });
 
   describe('fallback_segments', () => {
-    // equirect.cpp:191, ERR_FAIL_COND(p_fallback_segments == 0).
+    // openxr_composition_layer_equirect.cpp:191, ERR_FAIL_COND(p_fallback_segments == 0).
     it('accepts a positive count', () => {
       expect(check('fallback_segments', '12')).toBeNull();
     });

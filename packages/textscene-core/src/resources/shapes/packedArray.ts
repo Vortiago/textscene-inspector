@@ -53,10 +53,27 @@ function packedTupleFloats(
   forms: readonly RegExp[],
   groupSize: number
 ): Float32Array {
+  return new Float32Array(packedTupleNumbers(value, wrapper, forms, groupSize));
+}
+
+/**
+ * The same read, at DOUBLE precision.
+ *
+ * Split out because the geometry callers want the `Float32Array` a buffer
+ * attribute takes, while a caller that groups the components into typed values
+ * — `Gradient`'s colour stops — must not round them: the `.tres` states
+ * `0.6` and a float32 round-trip reports `0.6000000238418579`.
+ */
+export function packedTupleNumbers(
+  value: string,
+  wrapper: string,
+  forms: readonly RegExp[],
+  groupSize: number
+): number[] {
   const matched = packedArrayBody(forms, value);
   if (!matched) throw new Error(`Invalid ${wrapper} format: ${value}`);
-  if (matched.body === '') return new Float32Array(0);
-  if (matched.flat) return new Float32Array(floatElements(matched.body, wrapper, value));
+  if (matched.body === '') return [];
+  if (matched.flat) return floatElements(matched.body, wrapper, value);
 
   const elementRe = packedArrayLiteral(packedElementType(wrapper));
   const out: number[] = [];
@@ -71,8 +88,11 @@ function packedTupleFloats(
     if (components.length !== groupSize) throw new Error(`Invalid ${wrapper} format: ${value}`);
     out.push(...components);
   }
-  return new Float32Array(out);
+  return out;
 }
+
+/** The forms of a `PackedColorArray` slot, for a caller grouping its components itself. */
+export const PACKED_COLOR_ARRAY_SPELLINGS = PACKED_COLOR_ARRAY_FORMS;
 
 /** Parse a Godot `PackedVector3Array` slot into a flat Float32Array. */
 export function parsePackedVector3Array(value: string): Float32Array {

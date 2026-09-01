@@ -51,7 +51,7 @@ Strict parsing format-checks these `SplitContainer` properties, plus 53 inherite
 | `dragger_visibility` | enum 0-2 (DRAGGER_VISIBLE/DRAGGER_HIDDEN/DRAGGER_HIDDEN_COLLAPSED) | warning |
 | `dragging_enabled` | true or false |  |
 | `split_offset` | integer |  |
-| `split_offsets` | PackedInt32Array(n, n, …) |  |
+| `split_offsets` | int array (PackedInt32Array(…), Array[int]([…]) or […]) |  |
 | `touch_dragger_enabled` | true or false |  |
 | `vertical` | true or false |  |
 

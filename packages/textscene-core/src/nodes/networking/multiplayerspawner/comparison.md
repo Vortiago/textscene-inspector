@@ -31,7 +31,7 @@ Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inhe
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `_spawnable_scenes` | PackedStringArray("res://a.tscn", …) |  |
+| `_spawnable_scenes` | string array (PackedStringArray(…), Array[String]([…]) or […]) |  |
 | `spawn_limit` | integer >= 0 | warning below |
 | `spawn_path` | NodePath("path/to/node") |  |
 

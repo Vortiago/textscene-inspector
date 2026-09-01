@@ -18,6 +18,15 @@ describe('parsePackedFloat32Array', () => {
     ]);
   });
 
+  it('reads the typed and bare spellings the slot converts', () => {
+    // Gradient.offsets is PACKED_FLOAT32_ARRAY (gradient.cpp:80); a scalar
+    // slot's bare and typed bodies are the same comma-separated numbers the
+    // constructor's flat argument list holds.
+    expect(parsePackedFloat32Array('Array[float]([0, 0.5, 1])')).toEqual([0, 0.5, 1]);
+    expect(parsePackedFloat32Array('[0, 0.5, 1]')).toEqual([0, 0.5, 1]);
+    expect(parsePackedFloat32Array('[]')).toEqual([]);
+  });
+
   it('returns an empty array for an empty literal', () => {
     expect(parsePackedFloat32Array('PackedFloat32Array()')).toEqual([]);
   });
@@ -57,6 +66,23 @@ describe('parseColorStops', () => {
       { r: 1, g: 1, b: 1, a: 0.180392 },
       { r: 1, g: 1, b: 1, a: 0 },
     ]);
+  });
+
+  it('reads the typed and bare spellings, whose bodies hold Color() elements', () => {
+    // `can_convert_strict` lists ARRAY as a valid source for PACKED_COLOR_ARRAY
+    // (variant.cpp:467-473) and `Gradient::set_colors` (gradient.cpp:81) takes
+    // the converted array, so both load. Reading only the constructor threw,
+    // `safeColors` swallowed the throw, and the gradient sampled opaque black
+    // with nothing reported.
+    const expected = [
+      { r: 1, g: 0, b: 0, a: 1 },
+      { r: 0, g: 0, b: 1, a: 1 },
+    ];
+    expect(parseColorStops('[Color(1, 0, 0, 1), Color(0, 0, 1, 1)]')).toEqual(expected);
+    expect(
+      parseColorStops('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')
+    ).toEqual(expected);
+    expect(parseColorStops('[]')).toEqual([]);
   });
 
   it('drops a trailing partial quadruple', () => {

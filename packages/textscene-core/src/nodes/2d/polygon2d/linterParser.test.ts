@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
 
 /** The diagnostics of one severity: the error and warning tiers are asserted apart. */
@@ -248,5 +249,28 @@ bones = ["Hip", PackedFloat32Array(0, 0, 0), "Hip/Chest", PackedFloat32Array(1, 
   it('accepts NodePath("…"), the witnessed skeleton spelling (scenes/demos/2d/skeleton/player/player.tscn, polygon_2d.cpp:710 NODE_PATH + NODE_PATH_VALID_TYPES "Skeleton2D")', () => {
     const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\nskeleton = NodePath("../../Skeleton2D")\n`;
     expect(errorsOf(linter.lint(content))).toEqual([]);
+  });
+});
+
+describe('Polygon2D.polygons in the typed-array spelling', () => {
+  const polygons = (value: string) =>
+    validatorRegistry.findValidator('Polygon2D', 'polygons')!('polygons', value, 1);
+
+  it('takes the typed wrapper, which is an Array like any other', () => {
+    // polygon_2d.cpp:720 declares `polygons` Variant::ARRAY and :435-437 assigns
+    // it bare, so `Array[PackedInt32Array]([…])` loads unchanged — and this
+    // repo's own reader already renders those holes.
+    expect(polygons('Array[PackedInt32Array]([PackedInt32Array(0, 1, 2)])')).toBeNull();
+    expect(polygons('Array[PackedInt32Array]([[0, 1, 2], [0, 2, 3]])')).toBeNull();
+  });
+
+  it('still takes the bare spellings', () => {
+    expect(polygons('[PackedInt32Array(0, 1, 2)]')).toBeNull();
+    expect(polygons('[[0, 1, 2]]')).toBeNull();
+    expect(polygons('[]')).toBeNull();
+  });
+
+  it('still refuses a value that is no array at all', () => {
+    expect(polygons('PackedInt32Array(0, 1, 2)')?.code).toBe('INVALID_POLYGONS_FORMAT');
   });
 });

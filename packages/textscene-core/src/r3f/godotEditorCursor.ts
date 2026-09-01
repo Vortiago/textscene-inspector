@@ -61,7 +61,7 @@ export const ZOOM_DISTANCE_MAX = 10000;
 const DISTANCE_DEFAULT = 4;
 
 /** Below this radius the eye sits on the focus point and has no direction. */
-const DEGENERATE_DISTANCE = 1e-6;
+export const DEGENERATE_DISTANCE = 1e-6;
 
 /**
  * Godot's `Cursor`: where the eye orbits (`target`), the pitch (`xRot`) and

@@ -18,6 +18,7 @@ import {
   dropTrailingComma,
   packedArrayLiteral,
   splitTopLevel,
+  TYPED_WRAPPER_RE,
 } from '../../../godot/index.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
@@ -56,7 +57,14 @@ function polygonsValidator(): PropertyValidator {
   // `shape` first for the `accepts` tag, then `markIntSlot`: the index lists are
   // an INT slot, so this rejects a literal Godot's own tokenizer reads.
   return markIntSlot(shape((key, value, line) => {
-    const wrapper = BRACKET_ARRAY_RE.exec(value);
+    // `Array[PackedInt32Array]([…])` IS an Array, and `polygons` is declared
+    // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
+    // so the typed spelling loads unchanged. Rejecting it put the linter in
+    // conflict with this repo's own reader, which renders those holes correctly.
+    const trimmed = value.trim();
+    const typed = TYPED_WRAPPER_RE.exec(trimmed);
+    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
+    const wrapper = BRACKET_ARRAY_RE.exec(literal);
     if (!wrapper) {
       return propertyError(
         key,
@@ -125,7 +133,14 @@ function polygonsValidator(): PropertyValidator {
  */
 function bonesValidator(): PropertyValidator {
   const validator = accepts((key, value, line) => {
-    const wrapper = BRACKET_ARRAY_RE.exec(value);
+    // `Array[PackedInt32Array]([…])` IS an Array, and `polygons` is declared
+    // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
+    // so the typed spelling loads unchanged. Rejecting it put the linter in
+    // conflict with this repo's own reader, which renders those holes correctly.
+    const trimmed = value.trim();
+    const typed = TYPED_WRAPPER_RE.exec(trimmed);
+    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
+    const wrapper = BRACKET_ARRAY_RE.exec(literal);
     if (!wrapper) {
       return propertyError(
         key,

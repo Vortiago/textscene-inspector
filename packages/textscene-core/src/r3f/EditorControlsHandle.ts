@@ -12,12 +12,10 @@ import {
   cursorFromCamera,
   cursorQuaternion,
   orthographicHeight,
+  DEGENERATE_DISTANCE,
   type EditorCursor,
   type ZoomRange,
 } from './godotEditorCursor.js';
-
-/** Eye-on-focus-point: no view direction to derive, so orientation is left as-is. */
-const DEGENERATE_DISTANCE = 1e-6;
 
 /**
  * three's own duck-typing flag rather than `instanceof`: a host app (or a test

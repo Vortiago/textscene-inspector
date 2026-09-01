@@ -145,11 +145,19 @@ export function seamlessNoiseImage(
     }
   }
 
-  // Fill in the centre square, where both skirts overlap.
+  // Fill in the centre square, where both skirts overlap. Each alpha depends on
+  // ONE axis, so both are hoisted out of the inner loop the way the two skirt
+  // passes above already hoist theirs — at `seamless_blend_skirt = 1` on a
+  // 1024x1024 field the centre square is ~1.05M iterations, and computing them
+  // per pixel was ~2.1M smoothstep calls where `skirtWidth + skirtHeight` do.
+  const xAlpha = new Uint8Array(skirtEdgeX - halfWidth);
+  for (let x = halfWidth; x < skirtEdgeX; x++) {
+    xAlpha[x - halfWidth] = Math.trunc(255 * (1 - smoothstep(0.1, 0.9, (x - halfWidth) / skirtWidth)));
+  }
   for (let y = halfHeight; y < skirtEdgeY; y++) {
+    const ypos = Math.trunc(255 * (1 - smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
     for (let x = halfWidth; x < skirtEdgeX; x++) {
-      const xpos = Math.trunc(255 * (1 - smoothstep(0.1, 0.9, (x - halfWidth) / skirtWidth)));
-      const ypos = Math.trunc(255 * (1 - smoothstep(0.1, 0.9, (y - halfHeight) / skirtHeight)));
+      const xpos = xAlpha[x - halfWidth]!;
       const topBlend = alphaBlend(rdSrc(x, y, 'altX'), rdSrc(x, y, 'default'), xpos);
       const bottomBlend = alphaBlend(rdSrc(x, y, 'altXY'), rdSrc(x, y, 'altY'), xpos);
       dest[at(x, y)] = alphaBlend(bottomBlend, topBlend, ypos);

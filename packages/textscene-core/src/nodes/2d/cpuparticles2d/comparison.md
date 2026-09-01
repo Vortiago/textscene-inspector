@@ -180,6 +180,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-cpuparticles2d-preview` | `cpuparticles2d-nondeterministic-emission-shape` | warning |
 |  | `cpuparticles2d-fract-delta-ignored` | warning |
+|  | `valid-cpuparticles2d-resources` | error |
 <!-- lint:end -->
 
 Where strict validation rejects a value, the lenient parser substitutes Godot's

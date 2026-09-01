@@ -6,7 +6,7 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_REGEX, accepts, propertyError } from '../../../../linter/validators/index.js';
 import { formatCode, valueCode } from '../../../../linter/validators/v/codes.js';
-import { CMP_EPSILON } from '../../../../godot/index.js';
+import { CMP_EPSILON, isZeroApprox } from '../../../../godot/index.js';
 import { tupleComponent } from '../../../../linter/validators/commonValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../../../godot/int.js';
 
@@ -61,7 +61,7 @@ export function nonZeroVector3(name: string, cite: string): PropertyValidator {
     // converts, whose arguments are narrowed to int32 before the widening, so
     // `Vector3i(0.5, 0.5, 0.5)` IS the zero vector the setter refuses.
     const components = slotComponents(value, 'Vector3', captures, tupleComponent);
-    if (components.every((c) => Math.abs(c) < CMP_EPSILON)) {
+    if (components.every(isZeroApprox)) {
       return propertyError(
         key,
         line,

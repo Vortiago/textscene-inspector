@@ -14,12 +14,18 @@ export function downloadFilename(uploadedTscnName: string | null, fixtureFile: s
 export function downloadTscn(buffer: string, filename: string): void {
   const blob = new Blob([buffer], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  // Revoked on a later task, never in a `finally`: `click()` only SCHEDULES the
-  // navigation, so tearing the blob URL down synchronously can beat the browser
-  // to fetching it and the download silently never happens.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+  } finally {
+    // Scheduled on a later task rather than revoked inside the `finally`:
+    // `click()` only SCHEDULES the navigation, so tearing the blob URL down
+    // synchronously can beat the browser to fetching it and the download
+    // silently never happens. The `finally` is still needed — a host that
+    // refuses the synthetic click leaves the whole buffer pinned in the
+    // document's blob store for the life of the tab otherwise.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
 }

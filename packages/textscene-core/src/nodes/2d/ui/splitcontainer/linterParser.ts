@@ -33,13 +33,18 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 const SPLIT_OFFSETS_FORMAT = 'INVALID_SPLIT_OFFSETS_FORMAT';
-const SPLIT_OFFSETS_WRAPPER = packedArrayLiteral('PackedInt32Array');
+// All three spellings the slot converts: `can_convert_strict` lists ARRAY as a
+// valid source for PACKED_INT32_ARRAY (variant.cpp:467-473) and
+// `set_split_offsets` (split_container.cpp:1071) takes a `PackedInt32Array`, so
+// the bare and typed arrays are narrowed on the way in exactly as the
+// constructor's elements are — one element grammar covers all three.
+const SPLIT_OFFSETS_FORMS = packedArrayForms('PackedInt32Array');
 
 /**
  * `PackedInt32Array(n, n, …)` — a per-dragger pixel offset list. Unlike
@@ -51,16 +56,16 @@ const SPLIT_OFFSETS_WRAPPER = packedArrayLiteral('PackedInt32Array');
  */
 function splitOffsetsValidator(): PropertyValidator {
   const validator = accepts((key, value, line) => {
-    const match = SPLIT_OFFSETS_WRAPPER.exec(value);
-    if (!match) {
+    const matched = packedArrayBody(SPLIT_OFFSETS_FORMS, value);
+    if (!matched) {
       return propertyError(
         key,
         line,
-        `Property 'split_offsets' must be a PackedInt32Array like PackedInt32Array(0, 60), got: "${value}"`,
+        `Property 'split_offsets' must be an int array like PackedInt32Array(0, 60), Array[int]([0, 60]) or [0, 60], got: "${value}"`,
         SPLIT_OFFSETS_FORMAT
       );
     }
-    const body = match[1]!.trim();
+    const body = matched.body;
     if (body === '') return null;
     // The shared element grammar, as `tilemap` and `polygon2d` already read
     // their PackedInt32Array bodies. A hand-rolled `/^[+-]?\d+$/` is wrong in
@@ -75,7 +80,7 @@ function splitOffsetsValidator(): PropertyValidator {
         value: 'INVALID_SPLIT_OFFSETS_VALUE',
     });
     return bad.error ?? bad.truncated;
-  }, 'PackedInt32Array(n, n, …)');
+  }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
   // An INT slot, not format-only: it rejects a literal the tokenizer reads, so
   // `variant.h:360-377` is its authority. `set_split_offsets`
   // (split_container.cpp:1071) accepts any length and any value, so there is no

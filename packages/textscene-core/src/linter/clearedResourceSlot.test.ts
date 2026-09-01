@@ -137,6 +137,12 @@ const SLOTS: Slot[] = [
       ],
     },
   ]),
+  ...at('nodes/2d/cpuparticles2d/linter.ts', [
+    // Optional, so cleared and absent are both silent — listed because the
+    // defect this guards is a cleared slot reading as a DANGLING reference,
+    // which the error arm beside it would report where absence does not.
+    { type: 'CPUParticles2D', prop: 'texture', expected: [] },
+  ]),
   ...at('nodes/2d/lightoccluder2d/linter.ts', [
     { type: 'LightOccluder2D', prop: 'occluder', expected: ['warning lightoccluder2d-requires-occluder'] },
   ]),

@@ -18,8 +18,12 @@ import { enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { packedArrayLiteral, boolSlotValue} from '../../../godot/index.js';
-import { floatElements } from '../../shapes/packedArray';
+import { packedArrayBody, packedArrayForms, boolSlotValue} from '../../../godot/index.js';
+import {
+  floatElements,
+  packedTupleNumbers,
+  PACKED_COLOR_ARRAY_SPELLINGS,
+} from '../../shapes/packedArray';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -29,36 +33,39 @@ import {
   type GradientTexture2D,
 } from './types';
 
-const PACKED_FLOAT32_ARRAY_RE = packedArrayLiteral('PackedFloat32Array');
-const PACKED_COLOR_ARRAY_RE = packedArrayLiteral('PackedColorArray');
+// All three spellings each slot loads, not the constructor alone.
+// `can_convert_strict` lists ARRAY as a valid source for every PACKED_* type
+// (variant.cpp:467-473), and `Gradient::set_offsets`/`set_colors` take
+// `PackedFloat32Array`/`PackedColorArray` (gradient.cpp:80-81), so
+// `colors = [Color(1, 0, 0, 1), …]` is a file Godot loads. Reading only the
+// constructor threw here, `safeColors` swallowed it, and the gradient sampled
+// as opaque black with nothing reported.
+const OFFSETS_FORMS = packedArrayForms('PackedFloat32Array');
 
-/** Parse a `PackedFloat32Array(a, b, c)` literal into a `number[]`. */
+/** Parse a `PackedFloat32Array` slot, in any of its three spellings, into a `number[]`. */
 export function parsePackedFloat32Array(value: string): number[] {
-  const match = value.match(PACKED_FLOAT32_ARRAY_RE);
-  if (!match) {
+  const matched = packedArrayBody(OFFSETS_FORMS, value);
+  if (!matched) {
     throw new Error(`Invalid PackedFloat32Array format: ${value}`);
   }
-  const inner = match[1]!.trim();
-  if (inner === '') return [];
-  return floatElements(inner, 'PackedFloat32Array', value);
+  // A scalar slot's bare and typed bodies are the same comma-separated numbers
+  // the constructor's flat argument list holds, so one reader covers all three.
+  if (matched.body === '') return [];
+  return floatElements(matched.body, 'PackedFloat32Array', value);
 }
 
 /**
- * Parse a `PackedColorArray(r, g, b, a, r, g, b, a, …)` literal into a
- * `Color[]`. A trailing partial quadruple is dropped.
+ * Parse a `PackedColorArray` slot into a `Color[]`. A trailing partial
+ * quadruple is dropped.
  *
  * Named apart from `parsePackedColorArray` in `resources/shapes/packedArray.ts`,
- * which reads the same literal into a flat `Float32Array`: two exports under
- * one name were two contracts a caller had to pick between by import path.
+ * which reads the same slot into a flat `Float32Array`: two exports under
+ * one name were two contracts a caller had to pick between by import path. The
+ * flat reader is what groups the components here, so the tuple bodies of the
+ * bare and typed spellings are read once rather than in two places.
  */
 export function parseColorStops(value: string): Color[] {
-  const match = value.match(PACKED_COLOR_ARRAY_RE);
-  if (!match) {
-    throw new Error(`Invalid PackedColorArray format: ${value}`);
-  }
-  const inner = match[1]!.trim();
-  if (inner === '') return [];
-  const nums = floatElements(inner, 'PackedColorArray', value);
+  const nums = packedTupleNumbers(value, 'PackedColorArray', PACKED_COLOR_ARRAY_SPELLINGS, 4);
   const colors: Color[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });

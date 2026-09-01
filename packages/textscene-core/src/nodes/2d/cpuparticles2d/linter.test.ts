@@ -211,3 +211,53 @@ describe('CPUParticles2D strict validators', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 });
+
+describe('CPUParticles2D dangling texture', () => {
+  const linter = () => new Linter();
+
+  // `texture` is the emitter's only resource slot (cpu_particles_2d.cpp:1493).
+  // The GPUParticles2D twin and the CPUParticles3D `mesh` slot both error on a
+  // dangling id; this one reported nothing, so the particles rendered
+  // untextured with no diagnostic.
+  it('errors when texture names an id the file never declares', () => {
+    const content =
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n' +
+      '[node name="Fx" type="CPUParticles2D" parent="."]\ntexture = ExtResource("999")\n';
+    const found = linter()
+      .lint(content)
+      .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources');
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('error');
+  });
+
+  it('says nothing when the referenced texture is declared', () => {
+    const content =
+      '[gd_scene load_steps=2 format=3]\n\n' +
+      '[ext_resource type="Texture2D" path="res://p.png" id="1_tex"]\n\n' +
+      '[node name="Root" type="Node2D"]\n\n' +
+      '[node name="Fx" type="CPUParticles2D" parent="."]\ntexture = ExtResource("1_tex")\n';
+    expect(
+      linter()
+        .lint(content)
+        .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources')
+    ).toEqual([]);
+  });
+
+  // Absence is Godot's default form: an emitter with no texture draws a plain
+  // point sprite, so there is nothing to report.
+  it('says nothing when the slot is absent or explicitly cleared', () => {
+    const bare =
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n' +
+      '[node name="Fx" type="CPUParticles2D" parent="."]\namount = 8\n';
+    const cleared =
+      '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n' +
+      '[node name="Fx" type="CPUParticles2D" parent="."]\ntexture = null\n';
+    for (const content of [bare, cleared]) {
+      expect(
+        linter()
+          .lint(content)
+          .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources')
+      ).toEqual([]);
+    }
+  });
+});

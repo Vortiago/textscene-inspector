@@ -18,7 +18,7 @@
  * write `resource_local_to_scene`).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type * as THREE from 'three';
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -101,15 +101,23 @@ export function useViewportTextureSlot(
     viewportPath === null
       ? null
       : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
-  // In an effect, not in the render body. A module-level "already reported" set
+  // In an effect, not in the render body: a module-level "already reported" set
   // written during render is impure, survives every scene switch — so a literal
-  // fixed and re-broken, or the same path in another scene, warned once for the
-  // life of the session — and grows without bound. React's own dependency
-  // comparison is the dedup, and it is scoped to this consumer's mount.
+  // fixed and re-broken warned once for the life of the session — and grows
+  // without bound.
+  //
+  // The dedup keys on the derived SPELLING held in a ref, not on the effect's
+  // dependencies. `uniquePaths` descends from the SceneGraph, which is a fresh
+  // object per re-parse, so dependency comparison alone re-fires the warning on
+  // every debounced keystroke. Same hazard and same answer as the publisher
+  // above, which keys on `viewportTextureUniqueNameKey` rather than the node.
+  const reported = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (consumerPath && viewportPath !== null && uniquePaths) {
-      warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
-    }
+    if (!consumerPath || viewportPath === null || !uniquePaths) return;
+    const spelling = `${consumerPath}\u0000${viewportPath}`;
+    if (reported.current === spelling) return;
+    reported.current = spelling;
+    warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
   }, [consumerPath, viewportPath, uniquePaths]);
   return useViewportTexture(key)?.texture ?? null;
 }

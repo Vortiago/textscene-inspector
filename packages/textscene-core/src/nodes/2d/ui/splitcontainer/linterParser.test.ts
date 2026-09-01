@@ -78,7 +78,17 @@ describe('SplitContainer strict validators', () => {
       expect(check('split_offsets', 'PackedInt32Array()')).toBeNull();
     });
 
-    it('rejects a value missing the PackedInt32Array wrapper', () => {
+    it('accepts the typed and bare spellings the slot converts', () => {
+      // `can_convert_strict` lists ARRAY as a valid source for
+      // PACKED_INT32_ARRAY (variant.cpp:467-473) and `set_split_offsets`
+      // (split_container.cpp:1071) takes a `PackedInt32Array`, so both load —
+      // reading only the constructor reported a legal file as broken.
+      expect(check('split_offsets', 'Array[int]([3, 7])')).toBeNull();
+      expect(check('split_offsets', '[3, 7]')).toBeNull();
+      expect(check('split_offsets', '[]')).toBeNull();
+    });
+
+    it('rejects a value that is no array at all', () => {
       expect(check('split_offsets', '0, 60')).not.toBeNull();
     });
 

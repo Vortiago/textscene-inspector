@@ -187,9 +187,11 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
       ruleName: 'sprite2d-region-configuration',
     });
   } else if (rawProps.region_rect !== undefined && rawProps.region_enabled !== undefined) {
-    // Check if region_enabled is explicitly false
-    const regionEnabled = rawProps.region_enabled.toLowerCase();
-    if (boolSlotValue(regionEnabled) === false) {
+    // Handed to the shared reader unnormalised: `VariantParser` compares the
+    // identifier case-SENSITIVELY (`id == "false"`, variant_parser.cpp:695-697),
+    // so lowercasing first made `region_enabled = FALSE` — a value Godot fails
+    // the load on — read as a boolean the file does not carry.
+    if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
         severity: 'warning',
         message: `Property 'region_rect' is set but 'region_enabled' is false. The region_rect will be ignored.`,
