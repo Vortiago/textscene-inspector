@@ -183,6 +183,9 @@ describe('#203 Download .tscn', () => {
     const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement;
     expect(anchor.download.endsWith('.tscn')).toBe(true);
 
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    // Not yet: `click()` only SCHEDULES the navigation, so the blob URL has to
+    // outlive this turn or the browser can lose the race to fetch it.
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url'));
   });
 });

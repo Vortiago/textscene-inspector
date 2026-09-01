@@ -147,6 +147,17 @@ const SLOTS: Slot[] = [
       expected: ['warning gpuparticles2d-missing-process-material'],
     },
   ]),
+  ...at('nodes/2d/particles/gpuparticles2d/linter.ts', [
+    {
+      type: 'GPUParticles2D',
+      prop: 'process_material',
+      expected: ['warning gpuparticles2d-missing-process-material'],
+    },
+    // Optional, so cleared and absent are both silent — listed because the
+    // defect this guards is a cleared slot reading as a DANGLING reference,
+    // which the error arm beside it would report where absence does not.
+    { type: 'GPUParticles2D', prop: 'texture', expected: ['warning gpuparticles2d-missing-process-material'] },
+  ]),
   ...at('nodes/2d/path2d/linter.ts', [
     { type: 'Path2D', prop: 'curve', expected: ['warning path2d-missing-curve'] },
     // The slot that EXCUSES the warning above, so a cleared one must not excuse

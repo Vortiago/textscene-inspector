@@ -71,6 +71,17 @@ describe('parsePackedInt32Arrays', () => {
     );
   });
 
+  it('extracts the wrapper form whose elements are BARE arrays', () => {
+    // `can_convert_strict` lists ARRAY as a source for every PACKED_* type, so
+    // a typed array of bare element arrays converts element-wise and loads.
+    // Scanned for the constructor alone it matched nothing, and the outer
+    // `Array[` defeated the bare fallback too, so it returned `[]` in silence.
+    expect(parsePackedInt32Arrays('Array[PackedInt32Array]([[0, 1, 2], [0, 2, 3]])')).toEqual([
+      [0, 1, 2],
+      [0, 2, 3],
+    ]);
+  });
+
   it('extracts from the 2D Array[PackedInt32Array]([...]) wrapper form', () => {
     const out = parsePackedInt32Arrays(
       'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7, 8)])'

@@ -18,7 +18,7 @@
  * write `resource_local_to_scene`).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -36,9 +36,6 @@ import { unclaimedUniqueNames } from '../../../utils/nodePath.js';
 import { uniqueNameLivePaths } from '../../../utils/uniqueNames.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
-
-/** Literals already reported, so a re-render does not repeat the message. */
-const reportedDangling = new Set<string>();
 
 /**
  * Report a `viewport_path` whose leading `%Name` nothing in the scene claims, in
@@ -59,9 +56,6 @@ function warnUnclaimedAlias(
   if (!viewportPath.includes('/')) return;
   const unclaimed = unclaimedUniqueNames(viewportPath, uniquePaths);
   if (unclaimed.length === 0) return;
-  const seen = `${consumerPath}\u0000${viewportPath}`;
-  if (reportedDangling.has(seen)) return;
-  reportedDangling.add(seen);
   warn(
     `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
   );
@@ -107,8 +101,15 @@ export function useViewportTextureSlot(
     viewportPath === null
       ? null
       : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
-  if (consumerPath && viewportPath !== null && uniquePaths) {
-    warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
-  }
+  // In an effect, not in the render body. A module-level "already reported" set
+  // written during render is impure, survives every scene switch — so a literal
+  // fixed and re-broken, or the same path in another scene, warned once for the
+  // life of the session — and grows without bound. React's own dependency
+  // comparison is the dedup, and it is scoped to this consumer's mount.
+  useEffect(() => {
+    if (consumerPath && viewportPath !== null && uniquePaths) {
+      warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
+    }
+  }, [consumerPath, viewportPath, uniquePaths]);
   return useViewportTexture(key)?.texture ?? null;
 }

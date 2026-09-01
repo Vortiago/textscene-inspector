@@ -12,6 +12,7 @@ import { checkResourceExists, heldResource } from '../../../linter/resourceCheck
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector2i } from '../../../linter/validators/vectorValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { replayPositions } from '../../../godot/propertyReplay.js';
 
 /**
  * The grid count Godot ACTUALLY holds, or `null` for a literal no rule can use.
@@ -54,19 +55,15 @@ interface AppliedGrid {
  * nothing: its own diagnostic is `linterParser.ts`'s.
  */
 function gridWhenApplied(rawProps: Record<string, string>, key: string): AppliedGrid | null {
-  const grid: AppliedGrid = { hframes: 1, vframes: 1, late: false };
-  let seenKey = false;
-  for (const [written, raw] of Object.entries(rawProps)) {
-    if (written === key) {
-      seenKey = true;
-      continue;
-    }
-    const axis = written === 'hframes' ? 'hframes' : written === 'vframes' ? 'vframes' : null;
-    if (axis === null) continue;
-    if (seenKey) {
-      grid.late = true;
-      continue;
-    }
+  const at = replayPositions(rawProps, key, ['hframes', 'vframes']);
+  const grid: AppliedGrid = {
+    hframes: 1,
+    vframes: 1,
+    late: at.hframes!.late || at.vframes!.late,
+  };
+  for (const axis of ['hframes', 'vframes'] as const) {
+    const raw = at[axis]!.applied;
+    if (raw === undefined) continue;
     const count = gridCount(raw);
     if (count === null) return null;
     grid[axis] = count;

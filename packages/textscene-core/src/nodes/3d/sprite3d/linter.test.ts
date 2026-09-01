@@ -438,3 +438,37 @@ describe('Sprite3D frame_coords with a converted component no int32 holds', () =
   });
 });
 
+
+describe('Sprite3D grid writes, judged in file order like the 2D twin', () => {
+  // `SceneState::instantiate` replays a node's properties in FILE order
+  // (packed_scene.cpp:492), so a grid written below `frame` is still 1x1 when
+  // set_frame's ERR_FAIL_INDEX runs. The declaration order at
+  // sprite_3d.cpp:1014-1016 is the SAVE order and binds nothing here.
+  it('errors when hframes is written below frame', () => {
+    expectDiagnostic(scene(node('Sprite3D', { ...withTexture, frame: 3, hframes: 4 }), textureDef), {
+      ruleName: 'sprite3d-frame-range',
+      severity: 'error',
+      contains: ['Frame 3 is out of range', 'hframes=1', 'file order'],
+    });
+  });
+
+  it('passes on the same values with the grid written above frame', () => {
+    expectClean(
+      scene(node('Sprite3D', { ...withTexture, hframes: 4, vframes: 1, frame: 3 }), textureDef)
+    );
+  });
+
+  it('errors when hframes is written below frame_coords', () => {
+    expectDiagnostic(
+      scene(
+        node('Sprite3D', { ...withTexture, frame_coords: 'Vector2i(3, 0)', hframes: 4 }),
+        textureDef
+      ),
+      {
+        ruleName: 'sprite3d-frame-coords-range',
+        severity: 'error',
+        contains: ['frame_coords.x (3) is out of range', 'hframes=1', 'file order'],
+      }
+    );
+  });
+});

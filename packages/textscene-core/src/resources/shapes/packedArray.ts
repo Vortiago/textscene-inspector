@@ -1,5 +1,6 @@
 import {
   ARRAY_LITERAL_RE,
+  TYPED_WRAPPER_RE,
   packedArrayBody,
   packedArrayCallAnywhere,
   packedArrayForms,
@@ -118,7 +119,15 @@ export function parsePackedInt32Arrays(value: string): number[][] {
     // The OUTER brackets are stripped first: scanning `[...]` over the whole
     // value matches them too, so `[]` — no sub-polygons — read as one empty
     // sub-polygon and the caller drew a degenerate triangle fan.
-    const outer = ARRAY_LITERAL_RE.exec(value.trim());
+    //
+    // `Array[T]([…])` is the third spelling that loads. `can_convert_strict`
+    // lists ARRAY as a source for every PACKED_* type, so a typed array of bare
+    // element arrays converts element-wise; unwrapping it here and then
+    // stripping its inner brackets leaves the same body the bare form scans.
+    const trimmed = value.trim();
+    const typed = TYPED_WRAPPER_RE.exec(trimmed);
+    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
+    const outer = ARRAY_LITERAL_RE.exec(literal);
     if (!outer) return [];
     scanned = outer[1]!;
     re = BARE_INNER_ARRAY_RE;

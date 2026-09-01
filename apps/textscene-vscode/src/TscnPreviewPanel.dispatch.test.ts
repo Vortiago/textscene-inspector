@@ -259,3 +259,44 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
     expect(() => triggerMessage(null)).not.toThrow();
   });
 });
+
+describe('a message whose type is known but whose body is not', () => {
+  const handlers = () => ({
+    webviewReady: vi.fn(),
+    error: vi.fn(),
+    jumpToNode: vi.fn(),
+    loadResource: vi.fn(),
+    resourceNeeded: vi.fn(),
+    log: vi.fn(),
+  });
+
+  it('drops a log with no args array, which the relay would call .map on', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x' }, h);
+    expect(h.log).not.toHaveBeenCalled();
+  });
+
+  it('drops a resourceNeeded with no resource, whose fields the relay reads', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'resourceNeeded' }, h);
+    expect(h.resourceNeeded).not.toHaveBeenCalled();
+  });
+
+  it('drops a jumpToNode whose path is not a string', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'N', path: 7 }, h);
+    expect(h.jumpToNode).not.toHaveBeenCalled();
+  });
+
+  it('still routes a root jumpToNode, whose optional parent is absent', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' }, h);
+    expect(h.jumpToNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('still routes a well-formed log', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x', args: [] }, h);
+    expect(h.log).toHaveBeenCalledTimes(1);
+  });
+});
