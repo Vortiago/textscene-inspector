@@ -239,6 +239,29 @@ interface Declarations {
   forKey(key: string): Declared | undefined;
 }
 
+/**
+ * The registered key a sweep label names, with the leaf path removed.
+ *
+ * A label is `Type.key` at a root and gains one `[i]` per `leaves` hop below
+ * it — and leaves NEST, so `SpringBoneSimulator3D.settings/*[0][3]` carries two.
+ * Stripping a single trailing group left the rest attached and filed the subject
+ * under a key no source read can ever spell, so it was `continue`d rather than
+ * compared: 15 of the 64 leaf int slots, and every int declaration under
+ * `TileSet.terrain_set_#/**`, were invisible to the guard that exists to
+ * compare them.
+ *
+ * The wildcard tail goes too. What a reader spells is the bare prefix
+ * (`properties.settings`), never the registration's pattern.
+ */
+export function registeredKeyOf(label: string): { nodeType: string; key: string } {
+  const [nodeType, ...rest] = label.split('.');
+  const key = rest
+    .join('.')
+    .replace(/(\[\d+\])+$/, '')
+    .replace(/\/\*{1,2}$/, '');
+  return { nodeType: nodeType!, key };
+}
+
 /** The live registry as a {@link Declarations}. */
 function registryDeclarations(): Declarations {
   const byKey = new Map<string, Declared>();
@@ -250,13 +273,10 @@ function registryDeclarations(): Declarations {
   for (const { label, validator } of collectValidators((v) => v.intSlot !== undefined)) {
     const width = validator.intSlot?.width;
     if (width === undefined) continue;
-    // `Type.key` for a root; `Type.key/*[i]` for a leaf. The key half is what a
-    // reader spells, so the leaf suffix is dropped and the type is the owner.
-    const [nodeType, ...rest] = label.split('.');
-    const key = rest.join('.').replace(/\/\*\[\d+\]$/, '');
+    const { nodeType, key } = registeredKeyOf(label);
     const entry = byKey.get(key) ?? { widths: new Set<IntWidth>(), types: [] };
     entry.widths.add(width);
-    entry.types.push(nodeType!);
+    entry.types.push(nodeType);
     byKey.set(key, entry);
   }
   return {
@@ -417,5 +437,46 @@ describe('an int slot is read at the width its validator declares', () => {
 
   it('leaves no read of a split key unattributed', () => {
     expect(treeVerdicts.unattributable).toEqual([]);
+  });
+});
+
+describe('the registered key a sweep label names', () => {
+  it('takes a root label whole', () => {
+    expect(registeredKeyOf('Camera3D.fov')).toEqual({ nodeType: 'Camera3D', key: 'fov' });
+  });
+
+  it('drops one leaf hop and its wildcard tail', () => {
+    expect(registeredKeyOf('Skeleton3D.bones/*[1]')).toEqual({
+      nodeType: 'Skeleton3D',
+      key: 'bones',
+    });
+  });
+
+  it('drops NESTED leaf hops, which a single-group strip left attached', () => {
+    // Leaves nest: a leaf can itself dispatch. Stripping one group filed these
+    // under `settings/*[0]` and `terrain_set_#/**[0]` — keys no source read can
+    // spell — so all 15 depth-2 int slots were `continue`d rather than compared.
+    expect(registeredKeyOf('SpringBoneSimulator3D.settings/*[0][3]')).toEqual({
+      nodeType: 'SpringBoneSimulator3D',
+      key: 'settings',
+    });
+    expect(registeredKeyOf('TileSet.terrain_set_#/**[0][0]')).toEqual({
+      nodeType: 'TileSet',
+      key: 'terrain_set_#',
+    });
+  });
+
+  it('leaves a key containing a dot to the key half, not the type half', () => {
+    expect(registeredKeyOf('Type.a.b')).toEqual({ nodeType: 'Type', key: 'a.b' });
+  });
+
+  it('reaches every depth the live registry actually holds', () => {
+    // The floor that makes the nested case above non-hypothetical: if the
+    // registry ever stopped nesting, the strip could regress unnoticed.
+    const depths = collectValidators((v) => v.intSlot !== undefined).map(
+      ({ label }) => (label.match(/\[\d+\]/g) ?? []).length
+    );
+    expect(Math.max(...depths)).toBeGreaterThanOrEqual(2);
+    expect(depths.filter((d) => d === 2).length).toBeGreaterThan(10);
   });
 });
