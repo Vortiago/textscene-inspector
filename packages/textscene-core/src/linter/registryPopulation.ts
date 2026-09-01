@@ -88,7 +88,7 @@ export function registeredTypes(
   scope: 'declaring' | 'answering',
   registry: ValidatorRegistry = validatorRegistry
 ): readonly string[] {
-  const declaring = registry.getRegisteredNodeTypes();
+  const declaring = registry.typesWithRegistrations();
   if (scope === 'declaring') return declaring;
   return [...new Set([...declaring, ...registry.getTypesWithRemovals()])];
 }
@@ -104,7 +104,7 @@ export function registeredKeys(
   registry: ValidatorRegistry = validatorRegistry
 ): readonly RegisteredKey[] {
   const out: RegisteredKey[] = [];
-  for (const nodeType of registry.getRegisteredNodeTypes()) {
+  for (const nodeType of registry.typesWithRegistrations()) {
     for (const key of registry.getOwnKeys(nodeType)) {
       out.push({ nodeType, key, kind: 'declaration' });
     }
@@ -201,7 +201,7 @@ export function everyValidatorLabel(
 function registryRoots(): readonly (Root & RegisteredKey)[] {
   const roots: (Root & RegisteredKey)[] = [];
   for (const { nodeType, key, kind } of registeredKeys()) {
-    const validator = validatorRegistry.findValidator(nodeType, key);
+    const validator = validatorRegistry.declarationFor(nodeType, key);
     if (validator) roots.push({ label: `${nodeType}.${key}`, validator, nodeType, key, kind });
   }
   return roots;

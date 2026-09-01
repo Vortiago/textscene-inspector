@@ -21,15 +21,14 @@ const NOT_IN_CLASSDB = new Set(['AreaLight3D']);
 export async function collectCoverage() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
   const { nodeRegistry } = await loadCoreParser();
-  const { validatorRegistry } = await loadCoreLinter();
+  const { validatorRegistry, registeredTypes } = await loadCoreLinter();
 
   const registered = new Set(nodeRegistry.getAllTypeNames());
   // A registration entry is not coverage: a slice may call registerAll with an
   // empty map, which is correct for a type Godot gives no own members but
   // indistinguishable from a slice nobody finished. Count declared keys.
   const validated = new Set(
-    validatorRegistry
-      .getRegisteredNodeTypes()
+    registeredTypes('declaring')
       .filter((t) => validatorRegistry.getOwnKeys(t).length > 0)
   );
 

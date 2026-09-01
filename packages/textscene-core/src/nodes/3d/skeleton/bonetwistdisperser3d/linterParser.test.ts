@@ -20,7 +20,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('BoneTwistDisperser3D', property);
+  const validator = validatorRegistry.declarationFor('BoneTwistDisperser3D', property);
   expect(validator, `no validator registered for BoneTwistDisperser3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -216,7 +216,7 @@ describe('the end-bone tail leaves', () => {
   it('resolves through the one dispatcher that owns the sheet Accepts column', () => {
     // Every family key resolves to the same registered wildcard, so the sheet
     // gets one row for `settings/*` and the leaf descriptions sit behind it.
-    const validator = validatorRegistry.findValidator(
+    const validator = validatorRegistry.declarationFor(
       'BoneTwistDisperser3D',
       'settings/0/end_bone_direction'
     );
@@ -367,7 +367,7 @@ describe('the derived read-only leaves', () => {
 
 describe('grounding metadata', () => {
   it('grounds the dispatcher on the index guard the class itself carries', () => {
-    const validator = validatorRegistry.findValidator('BoneTwistDisperser3D', 'settings/*');
+    const validator = validatorRegistry.declarationFor('BoneTwistDisperser3D', 'settings/*');
     expect(validator?.grounding).toEqual({
       kind: 'enforced',
       cite: 'bone_twist_disperser_3d.cpp:39',
@@ -377,7 +377,7 @@ describe('grounding metadata', () => {
   it('classifies every leaf behind the dispatcher', () => {
     // `boundGrounding` recurses through `.leaves`; a leaf declaring neither tag
     // would be counted as un-audited there, so catch it in the slice instead.
-    const validator = validatorRegistry.findValidator('BoneTwistDisperser3D', 'settings/*');
+    const validator = validatorRegistry.declarationFor('BoneTwistDisperser3D', 'settings/*');
     const unclassified: string[] = [];
     const visit = (leaf: NonNullable<typeof validator>, label: string) => {
       if (!leaf.formatOnly && !leaf.grounding) unclassified.push(label);

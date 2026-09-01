@@ -47,6 +47,7 @@ import '../chainik3d/linterParser';
 import '../shared/linterParser';
 import '../skeletonmodifier3d/linterParser';
 import '../../../base/node3d/linterParser';
+import { registeredTypes } from '../../../../linter/registryPopulation.js';
 
 /** `JacobianIK3D.<property>`'s registered validator, invoked at line 1. */
 const check = checkerFor('JacobianIK3D');
@@ -108,7 +109,7 @@ describe('JacobianIK3D strict validators', () => {
     // `getOwnKeys` returns [] both for a type that declares nothing and for one
     // no slice ever registered, so the empty result above proves nothing on its
     // own. This is what separates the two.
-    expect(validatorRegistry.getRegisteredNodeTypes()).toContain('JacobianIK3D');
+    expect(registeredTypes('declaring')).toContain('JacobianIK3D');
   });
 
   it('accepts every value its own fixture carries', () => {

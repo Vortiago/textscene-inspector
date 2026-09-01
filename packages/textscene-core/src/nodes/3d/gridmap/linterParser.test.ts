@@ -11,7 +11,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('GridMap', property);
+  const validator = validatorRegistry.declarationFor('GridMap', property);
   expect(validator, `no validator registered for GridMap.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -137,7 +137,7 @@ describe('GridMap strict validators', () => {
       // What the hint ledger reads: a hand-rolled validator gets no `ground()`
       // call, so an unrecorded bound counts as unimplemented however many
       // values the function rejects.
-      const validator = validatorRegistry.findValidator('GridMap', 'cell_octant_size');
+      const validator = validatorRegistry.declarationFor('GridMap', 'cell_octant_size');
       expect(validator?.bounds).toEqual({ min: 1, max: 1024 });
       expect(validator?.tiers).toEqual({ min: 'warning', max: 'warning' });
     });
@@ -257,7 +257,7 @@ describe('GridMap strict validators', () => {
 });
 
 describe('a fractional cell element beside a grounded error', () => {
-  const check = (value: string) => validatorRegistry.findValidator('GridMap', 'data')!('data', value, 1);
+  const check = (value: string) => validatorRegistry.declarationFor('GridMap', 'data')!('data', value, 1);
 
   it('reports the count error, not the truncation warning', () => {
     // The warning must not short-circuit the grounded checks the caller runs

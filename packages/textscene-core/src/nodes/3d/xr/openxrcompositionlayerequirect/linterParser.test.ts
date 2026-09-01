@@ -17,7 +17,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('OpenXRCompositionLayerEquirect', property);
+  const validator = validatorRegistry.declarationFor('OpenXRCompositionLayerEquirect', property);
   expect(validator, `no validator registered for OpenXRCompositionLayerEquirect.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -147,7 +147,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
     it.each(['upper_vertical_angle', 'lower_vertical_angle'])(
       'holds %s entirely in the enforced slots, leaving both open hint ends of `bounds` open',
       (property) => {
-        const validator = validatorRegistry.findValidator(
+        const validator = validatorRegistry.declarationFor(
           'OpenXRCompositionLayerEquirect',
           property
         );

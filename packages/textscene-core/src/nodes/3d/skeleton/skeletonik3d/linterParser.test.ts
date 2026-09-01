@@ -100,7 +100,7 @@ describe('SkeletonIK3D strict validators', () => {
     // enforced: '…' })` passes a classification sweep and fails this.
     const bounded = validatorRegistry
       .getOwnKeys('SkeletonIK3D')
-      .filter((property) => validatorRegistry.findValidator('SkeletonIK3D', property)?.bounds);
+      .filter((property) => validatorRegistry.declarationFor('SkeletonIK3D', property)?.bounds);
     expect(bounded).toEqual([]);
   });
 });

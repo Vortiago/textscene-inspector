@@ -12,7 +12,7 @@
  * which changes the inherited defaults without re-declaring the properties.
  *
  * So CheckButton binds no property of its own; it registers an empty map so
- * `getRegisteredNodeTypes()` still lists it, and everything from Button up is
+ * `registeredTypes('declaring')` still lists it, and everything from Button up is
  * delivered by the NODE_BASE_TYPES base-walk (see linterParser.test.ts).
  */
 

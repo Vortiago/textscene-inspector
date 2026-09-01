@@ -265,7 +265,7 @@ export function registeredKeyOf(label: string): { nodeType: string; key: string 
 /** The live registry as a {@link Declarations}. */
 function registryDeclarations(): Declarations {
   const byKey = new Map<string, Declared>();
-  // `collectValidators`, not `classifiableKeys()` + `findValidator`: that walk
+  // `everyValidator`, not `registeredKeys()` + `declarationFor`: that walk
   // reaches ROOTS only, so ~60 leaf int slots behind wildcard dispatchers
   // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`)
   // had no declaration to compare a read against, and every read of one was
@@ -280,7 +280,7 @@ function registryDeclarations(): Declarations {
     byKey.set(key, entry);
   }
   return {
-    forClass: (type, key) => validatorRegistry.findValidator(type, key)?.intSlot?.width,
+    forClass: (type, key) => validatorRegistry.declarationFor(type, key)?.intSlot?.width,
     forKey: (key) => byKey.get(key),
   };
 }

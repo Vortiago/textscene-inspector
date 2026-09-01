@@ -29,7 +29,7 @@ describe('loadCoreLinter', { timeout: 30_000 }, () => {
     const { loadCoreLinter } = await import('./loadCoreLinter.mjs');
     const core = await loadCoreLinter();
     expect(core.ruleRegistry.getRules().length).toBeGreaterThan(0);
-    expect(core.validatorRegistry.getRegisteredNodeTypes().length).toBeGreaterThan(0);
+    expect(core.registeredTypes('declaring').length).toBeGreaterThan(0);
   });
 
   it('executes applicability matchers, so unsupported types resolve honestly', async () => {

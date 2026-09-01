@@ -17,7 +17,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('SpringBoneCollisionSphere3D', property);
+  const validator = validatorRegistry.declarationFor('SpringBoneCollisionSphere3D', property);
   expect(validator, `no validator registered for SpringBoneCollisionSphere3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -99,7 +99,7 @@ describe('SpringBoneCollisionSphere3D.radius', () => {
   });
 
   it('grounds the floor in the hint, not in the setter', () => {
-    const validator = validatorRegistry.findValidator('SpringBoneCollisionSphere3D', 'radius');
+    const validator = validatorRegistry.declarationFor('SpringBoneCollisionSphere3D', 'radius');
     expect(validator!.grounding).toEqual({
       kind: 'hinted',
       cite: 'spring_bone_collision_sphere_3d.cpp:61',
@@ -121,7 +121,7 @@ describe('SpringBoneCollisionSphere3D.inside', () => {
   });
 
   it('constrains no value, only the format', () => {
-    const validator = validatorRegistry.findValidator('SpringBoneCollisionSphere3D', 'inside');
+    const validator = validatorRegistry.declarationFor('SpringBoneCollisionSphere3D', 'inside');
     expect(validator!.formatOnly).toBe(true);
     expect(validator!.grounding).toBeUndefined();
   });

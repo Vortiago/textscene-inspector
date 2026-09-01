@@ -29,6 +29,7 @@ import { baseChain } from '../godot/nodeBaseTypes.js';
 import { CHAIN_IK_SETTING_LEAVES } from '../nodes/3d/skeleton/chainik3d/linterParser.js';
 import { BONE_CONSTRAINT_SETTING_LEAVES } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
 import './index.js';
+import { registeredTypes } from './registryPopulation.js';
 
 interface Seam {
   /** The class that owns the leaves under test. */
@@ -103,8 +104,7 @@ function summarise(error: ParseError | null): unknown {
 }
 
 describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
-  const descendants = validatorRegistry
-    .getRegisteredNodeTypes()
+  const descendants = registeredTypes('declaring')
     .filter((type) => type !== seam.base && baseChain(type).includes(seam.base))
     .sort();
 

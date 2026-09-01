@@ -17,7 +17,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('ReflectionProbe', property);
+  const validator = validatorRegistry.declarationFor('ReflectionProbe', property);
   expect(validator, `no validator registered for ReflectionProbe.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -197,7 +197,7 @@ describe('ReflectionProbe strict validators', () => {
     });
 
     it('carries the clamp ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
-      const validator = validatorRegistry.findValidator('ReflectionProbe', 'max_distance');
+      const validator = validatorRegistry.declarationFor('ReflectionProbe', 'max_distance');
       expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 262144 } });
     });
 

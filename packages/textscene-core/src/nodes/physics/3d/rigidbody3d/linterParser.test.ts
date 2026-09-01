@@ -11,7 +11,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
 
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('RigidBody3D', property);
+  const validator = validatorRegistry.declarationFor('RigidBody3D', property);
   expect(validator, `no validator registered for RigidBody3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -103,7 +103,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
     });
 
     it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
-      const validator = validatorRegistry.findValidator('RigidBody3D', 'max_contacts_reported');
+      const validator = validatorRegistry.declarationFor('RigidBody3D', 'max_contacts_reported');
       expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 4096, exclusive: true } });
     });
   });

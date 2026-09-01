@@ -11,12 +11,25 @@ import type { IntWidth } from '../godot/index.js';
 import type { ParseError } from './types.js';
 
 /**
- * Property validator function
+ * What the strict parser needs from a validator: something to CALL.
+ *
+ * Deliberately carries none of the tags below. A registry lookup hands this
+ * type back, so a sweep that assembles its own population from
+ * `findValidator` cannot read `accepts`, `intSlot`, `grounding` or `bounds`
+ * off the result — the composition that reaches ROOTS only, and missed 415
+ * validators five separate times, is a type error rather than a green test.
+ *
+ * A caller that genuinely wants the tags asks `declarationFor`, whose name says
+ * it is introspecting a declaration rather than looking a validator up to run.
+ *
  * @param key - Property key
  * @param value - Property value (raw string)
  * @param line - Line number in source file
  * @returns ParseError if validation fails, null if valid
  */
+export type ValidatorFn = (key: string, value: string, line: number) => ParseError | null;
+
+/** A validator AND what it declares about itself. */
 export type PropertyValidator = ((
   key: string,
   value: string,

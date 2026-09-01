@@ -71,7 +71,7 @@ describe('ChainIK3D shared validators', () => {
   });
 
   it('exposes its leaves so the grounding sweep recurses past the dispatcher', () => {
-    const dispatcher = validatorRegistry.findValidator('ChainIK3D', 'settings/0/joint_count');
+    const dispatcher = validatorRegistry.declarationFor('ChainIK3D', 'settings/0/joint_count');
     expect(dispatcher?.leaves?.length).toBeGreaterThan(0);
     expect(dispatcher?.grounding).toEqual({ kind: 'enforced', cite: 'chain_ik_3d.cpp:39' });
   });

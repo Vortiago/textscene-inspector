@@ -14,13 +14,13 @@
  */
 
 import type { ValidatorRegistry } from '../ValidatorRegistry.js';
+import { registeredTypes } from '../registryPopulation.js';
 
 /** What each registered type declares of its own, as the guard's input. */
 export function ownKeyRegistrations(
   registry: ValidatorRegistry
 ): Array<{ nodeType: string; keys: string[] }> {
-  return registry
-    .getRegisteredNodeTypes()
+  return registeredTypes('declaring', registry)
     .map((nodeType) => ({ nodeType, keys: registry.getOwnKeys(nodeType) }));
 }
 

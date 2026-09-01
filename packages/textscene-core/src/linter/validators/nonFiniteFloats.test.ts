@@ -133,7 +133,7 @@ describe('a property whose setter guards is_finite', () => {
   });
 
   it('keeps the tags a registry sweep selects and recurses on', () => {
-    // `collectValidators` descends `leaves` and the int-slot sweep selects on
+    // `everyValidator` descends `leaves` and the int-slot sweep selects on
     // `intSlot`. A wrapper that drops either takes the slot out of the sweep
     // in silence, so the guard passes by asking a smaller population.
     const inner = v.int('bits');

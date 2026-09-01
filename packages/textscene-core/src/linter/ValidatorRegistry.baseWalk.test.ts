@@ -172,8 +172,8 @@ describe('an inherited member name is not a validator', () => {
       a: { reason: 'fixed by the class', cite: 'f.cpp:1' },
       b: { reason: 'fixed by the class', cite: 'f.cpp:2' },
     });
-    expect(r.findValidator('Thing', 'a')?.grounding?.cite).toBe('f.cpp:1');
-    expect(r.findValidator('Thing', 'b')?.grounding?.cite).toBe('f.cpp:2');
+    expect(r.declarationFor('Thing', 'a')?.grounding?.cite).toBe('f.cpp:1');
+    expect(r.declarationFor('Thing', 'b')?.grounding?.cite).toBe('f.cpp:2');
   });
 
   it('does not resolve them through a removal map either', () => {

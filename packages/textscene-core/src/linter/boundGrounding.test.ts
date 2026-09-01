@@ -28,7 +28,7 @@ import {
 } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
-import { everyValidatorLabel, registeredKeys } from './registryPopulation.js';
+import { everyValidatorLabel, registeredKeys, registeredTypes } from './registryPopulation.js';
 
 /**
  * Types whose validators are all still unclassified.
@@ -210,12 +210,12 @@ describe('the classification guard bites', () => {
 
   it('puts removal-only types in the swept key list, not just in the registry', () => {
     // Every one of the four types declaring a removal registers NO validator of
-    // its own, so none appears in `getRegisteredNodeTypes()`. Sweeping removals
+    // its own, so none appears in `registeredTypes('declaring')`. Sweeping removals
     // as a nested loop inside that list visited zero of them while the count
     // still read 0. This asserts the key list itself, which is what the
     // classification test consumes.
     const swept = registeredKeys().map(({ nodeType, key }) => `${nodeType}.${key}`);
-    expect(validatorRegistry.getRegisteredNodeTypes()).not.toContain('HBoxContainer');
+    expect(registeredTypes('declaring')).not.toContain('HBoxContainer');
     expect(swept).toContain('HBoxContainer.vertical');
     expect(swept).toContain('VSplitContainer.vertical');
   });
@@ -239,7 +239,7 @@ describe('the classification guard bites', () => {
     // HBoxContainer takes `vertical` away from BoxContainer. That refuses every
     // value of a key a scene can carry, so it needs the same citation a bound
     // does, and a sweep over declarations alone would never look at it.
-    const validator = validatorRegistry.findValidator('HBoxContainer', 'vertical');
+    const validator = validatorRegistry.declarationFor('HBoxContainer', 'vertical');
     expect(validatorRegistry.getOwnKeys('HBoxContainer')).not.toContain('vertical');
     expect(Object.keys(validatorRegistry.getOwnRemovals('HBoxContainer'))).toContain('vertical');
     expect(validator?.grounding).toEqual({ kind: 'enforced', cite: 'box_container.cpp:312' });

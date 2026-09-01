@@ -17,7 +17,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('FogVolume', property);
+  const validator = validatorRegistry.declarationFor('FogVolume', property);
   expect(validator, `no validator registered for FogVolume.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -153,7 +153,7 @@ describe('FogVolume strict validators', () => {
       // What the hint ledger reads. A hand-rolled validator gets no `ground()`
       // call, so an unrecorded bound counts as unimplemented however many
       // values the function above rejects.
-      const validator = validatorRegistry.findValidator('FogVolume', 'size');
+      const validator = validatorRegistry.declarationFor('FogVolume', 'size');
       expect(validator?.bounds).toEqual({ min: 0.01 });
       expect(validator?.tiers).toEqual({ min: 'warning' });
     });

@@ -64,7 +64,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     r.registerUnavailable('Mid', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
     r.registerAll('Leaf', { vertical: ok });
     expect(r.findValidator('Leaf', 'vertical')).toBe(ok);
-    expect(r.findValidator('Mid', 'vertical')?.accepts).toBe('not available on this type');
+    expect(r.declarationFor('Mid', 'vertical')?.accepts).toBe('not available on this type');
   });
 
   it('reports the same reach through getUnavailableKeys as through findValidator', () => {
@@ -87,7 +87,7 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     const r = new ValidatorRegistry(CHAIN);
     r.registerAll('Leaf', { vertical: ok });
     r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
-    expect(r.findValidator('Leaf', 'vertical')?.accepts).toBe('not available on this type');
+    expect(r.declarationFor('Leaf', 'vertical')?.accepts).toBe('not available on this type');
     expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
   });
 

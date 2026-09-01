@@ -7,8 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ValidatorRegistry } from './ValidatorRegistry.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
+import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { everyValidator, everyValidatorLabel, registeredKeys, registeredTypes } from './registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
@@ -122,6 +121,24 @@ describe('everyValidator', () => {
     expect(registeredTypes('answering').length).toBeGreaterThan(
       registeredTypes('declaring').length
     );
-    expect(validatorRegistry.getRegisteredNodeTypes().length).toBeGreaterThan(200);
+    expect(registeredTypes('declaring').length).toBeGreaterThan(200);
+  });
+});
+
+describe('the wall itself, pinned at the type level', () => {
+  it('hands back nothing to introspect from a lookup', () => {
+    // The load-bearing line of the whole design, and the one nothing else would
+    // notice losing: widen `findValidator` back to `PropertyValidator` in a
+    // convenience edit and the roots-only population compiles again, silently,
+    // with every call site still green. `@ts-expect-error` reds when the error
+    // it covers STOPS happening, so the reversion fails this test instead.
+    const validator = validatorRegistry.findValidator('Node2D', 'position');
+    // @ts-expect-error a registry lookup is a ValidatorFn: it carries no tags.
+    void validator?.accepts;
+    // @ts-expect-error same, for the tag the recurring defect actually filtered on.
+    void validator?.intSlot;
+
+    // The tags are reachable — by asking for the DECLARATION, which says so.
+    expect(validatorRegistry.declarationFor('Node2D', 'position')?.accepts).toBeDefined();
   });
 });

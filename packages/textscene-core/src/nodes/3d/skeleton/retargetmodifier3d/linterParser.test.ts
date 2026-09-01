@@ -14,7 +14,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('RetargetModifier3D', property);
+  const validator = validatorRegistry.declarationFor('RetargetModifier3D', property);
   expect(validator, `no validator registered for RetargetModifier3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -89,7 +89,7 @@ describe('RetargetModifier3D strict validators', () => {
     });
 
     it('cites the ADD_PROPERTY whose PROPERTY_HINT_FLAGS lists the bits', () => {
-      const validator = validatorRegistry.findValidator('RetargetModifier3D', 'enable');
+      const validator = validatorRegistry.declarationFor('RetargetModifier3D', 'enable');
       expect(validator!.grounding).toEqual({
         kind: 'hinted',
         cite: 'retarget_modifier_3d.cpp:275',
@@ -115,7 +115,7 @@ describe('RetargetModifier3D strict validators', () => {
       // .tscn grammar, and set_profile (:381-386) takes any Ref through
       // _profile_changed with no guard. Whether the id resolves is
       // resourceChecker's question, not a format one.
-      const validator = validatorRegistry.findValidator('RetargetModifier3D', 'profile');
+      const validator = validatorRegistry.declarationFor('RetargetModifier3D', 'profile');
       expect(validator!.formatOnly).toBe(true);
       expect(validator!.grounding).toBeUndefined();
     });

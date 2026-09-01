@@ -23,7 +23,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('Generic6DOFJoint3D', property);
+  const validator = validatorRegistry.declarationFor('Generic6DOFJoint3D', property);
   expect(validator, `no validator registered for Generic6DOFJoint3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -245,7 +245,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     // shared dispatchers needs its own formatOnly/grounding tag even though
     // every leaf above is already individually grounded.
     function dispatcher(key: string) {
-      const validator = validatorRegistry.findValidator('Generic6DOFJoint3D', key);
+      const validator = validatorRegistry.declarationFor('Generic6DOFJoint3D', key);
       expect(validator, `no validator registered for Generic6DOFJoint3D.${key}`).not.toBeNull();
       return validator!;
     }
@@ -302,7 +302,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     const BOTH_ENDS = { min: 0.01, max: 16 };
 
     function reported(key: string) {
-      const validator = validatorRegistry.findValidator('Generic6DOFJoint3D', key);
+      const validator = validatorRegistry.declarationFor('Generic6DOFJoint3D', key);
       expect(validator, `no validator registered for Generic6DOFJoint3D.${key}`).not.toBeNull();
       return validator!;
     }

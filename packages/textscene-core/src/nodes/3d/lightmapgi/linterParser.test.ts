@@ -189,7 +189,7 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('carries the setter ceiling in the enforced slot, leaving the or_greater end of `bounds` open', () => {
-      const validator = validatorRegistry.findValidator('LightmapGI', 'bounces');
+      const validator = validatorRegistry.declarationFor('LightmapGI', 'bounces');
       expect(validator?.bounds).toEqual({ min: 0, enforcedMax: { at: 16 } });
     });
 

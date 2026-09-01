@@ -183,7 +183,7 @@ describe('an end no value can reach reports at the setter\'s tier', () => {
     // or INSIDE it — no value can be outside the hint without the setter having
     // refused it first — so the band the hint's tier would describe is empty
     // and the end must report the setter's `error`.
-    // `collectValidators`, not `getRegisteredNodeTypes() x getOwnKeys()`: the
+    // `everyValidator`, not `registeredTypes('declaring') x getOwnKeys()`: the
     // latter reaches ROOTS only, so the 88 leaf validators behind a wildcard
     // dispatcher — Generic6DOFJoint3D, `PhysicalBone3D.joint_constraints/*`,
     // `MenuButton.popup/item_#/*`, `Skeleton3D.bones/*` — were never examined,

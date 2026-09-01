@@ -33,7 +33,6 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { ruleRegistry } from './RuleRegistry.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
 import {
   declaredRuleNames,
   extractAll,
@@ -45,6 +44,7 @@ import {
 } from './testing/ruleNameScrape.js';
 import './index.js';
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
+import { registeredTypes } from './registryPopulation.js';
 
 describe('lint rule coverage meta-guard', () => {
   const files = ruleFiles();
@@ -97,11 +97,8 @@ describe('validator coverage meta-guard', () => {
     expect(registering.length).toBeGreaterThan(200);
     // Removals are registered separately from validators: a fixed-orientation
     // container adds none of its own, so it is absent from
-    // `getRegisteredNodeTypes()` while being very much alive.
-    const live = new Set([
-      ...validatorRegistry.getRegisteredNodeTypes(),
-      ...validatorRegistry.getTypesWithRemovals(),
-    ]);
+    // `registeredTypes('declaring')` while being very much alive.
+    const live = new Set(registeredTypes('answering'));
     const dead = registering
       .flatMap((e) => e.types.map((t) => ({ t, file: e.file })))
       .filter(({ t }) => !live.has(t))

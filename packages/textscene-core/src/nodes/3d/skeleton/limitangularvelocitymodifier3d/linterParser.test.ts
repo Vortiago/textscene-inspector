@@ -16,7 +16,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string, nodeType = 'LimitAngularVelocityModifier3D') {
-  const validator = validatorRegistry.findValidator(nodeType, property);
+  const validator = validatorRegistry.declarationFor(nodeType, property);
   expect(validator, `no validator registered for ${nodeType}.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -76,13 +76,13 @@ describe('LimitAngularVelocityModifier3D strict validators', () => {
 
   it('reaches every chain leaf through the glued-index wildcard', () => {
     const missing = CHAIN_KEYS.filter(
-      (key) => !validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)
+      (key) => !validatorRegistry.declarationFor('LimitAngularVelocityModifier3D', key)
     );
     expect(missing).toEqual([]);
   });
 
   it('exposes the chain leaves so the grounding sweep recurses past the dispatcher', () => {
-    const dispatcher = validatorRegistry.findValidator(
+    const dispatcher = validatorRegistry.declarationFor(
       'LimitAngularVelocityModifier3D',
       'chains/0/root_bone'
     );
@@ -296,7 +296,7 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
   );
 
   it('grounds the verdict on the fall-through in _set', () => {
-    const validator = validatorRegistry.findValidator(
+    const validator = validatorRegistry.declarationFor(
       'LimitAngularVelocityModifier3D',
       'joints/0/bone'
     );

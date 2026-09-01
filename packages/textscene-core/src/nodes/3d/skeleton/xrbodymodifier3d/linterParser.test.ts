@@ -14,7 +14,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('XRBodyModifier3D', property);
+  const validator = validatorRegistry.declarationFor('XRBodyModifier3D', property);
   expect(validator, `no validator registered for XRBodyModifier3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -80,7 +80,7 @@ describe('XRBodyModifier3D strict validators', () => {
       // Whether a tracker of that name is registered with XRServer is a runtime
       // question no `.tscn` can answer.
       expect(check('body_tracker', '&"/user/custom_body_tracker"')).toBeNull();
-      const validator = validatorRegistry.findValidator('XRBodyModifier3D', 'body_tracker');
+      const validator = validatorRegistry.declarationFor('XRBodyModifier3D', 'body_tracker');
       expect(validator!.formatOnly).toBe(true);
       expect(validator!.grounding).toBeUndefined();
     });
@@ -121,7 +121,7 @@ describe('XRBodyModifier3D strict validators', () => {
     });
 
     it('cites the ADD_PROPERTY whose PROPERTY_HINT_FLAGS lists the bits', () => {
-      const validator = validatorRegistry.findValidator('XRBodyModifier3D', 'body_update');
+      const validator = validatorRegistry.declarationFor('XRBodyModifier3D', 'body_update');
       expect(validator!.grounding).toEqual({
         kind: 'hinted',
         cite: 'xr_body_modifier_3d.cpp:47',
@@ -158,7 +158,7 @@ describe('XRBodyModifier3D strict validators', () => {
     });
 
     it('cites the ERR_FAIL_INDEX in the setter, not the enum hint', () => {
-      const validator = validatorRegistry.findValidator('XRBodyModifier3D', 'bone_update');
+      const validator = validatorRegistry.declarationFor('XRBodyModifier3D', 'bone_update');
       expect(validator!.grounding).toEqual({
         kind: 'enforced',
         cite: 'xr_body_modifier_3d.cpp:80',

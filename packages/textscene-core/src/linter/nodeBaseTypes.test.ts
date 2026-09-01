@@ -9,6 +9,7 @@ import { NODE_BASE_TYPES } from '../godot/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js'; // trigger all validator registrations
+import { registeredTypes } from './registryPopulation.js';
 
 /** Walk base → base to the root, returning the full chain (throws on a cycle). */
 function chain(type: string): string[] {
@@ -69,7 +70,7 @@ describe('NODE_BASE_TYPES', () => {
     // inherited validation, which is what this guards. Which hierarchy a type
     // belongs to is read from the tables, never from a hand-kept list, which a
     // new registration would fail rather than be checked by.
-    for (const type of validatorRegistry.getRegisteredNodeTypes()) {
+    for (const type of registeredTypes('declaring')) {
       const root = validatorRegistry.baseChainOf(type).at(-1) ?? type;
       expect([root, type], `${type} reaches no root`).toContain(
         type in RESOURCE_BASE_TYPES_GENERATED || type === 'Resource' ? 'Resource' : 'Node'

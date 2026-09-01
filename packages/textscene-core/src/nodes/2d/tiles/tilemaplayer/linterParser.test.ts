@@ -13,7 +13,7 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('TileMapLayer', property);
+  const validator = validatorRegistry.declarationFor('TileMapLayer', property);
   expect(validator, `no validator registered for TileMapLayer.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -205,7 +205,7 @@ tile_set = NotARef(1)
 });
 
 describe('tile_map_data element storage', () => {
-  const validator = validatorRegistry.findValidator('TileMapLayer', 'tile_map_data')!;
+  const validator = validatorRegistry.declarationFor('TileMapLayer', 'tile_map_data')!;
 
   it('reports an element no integer slot can hold', () => {
     // The seventh hand-rolled packed-int validator, and the only one not on

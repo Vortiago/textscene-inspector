@@ -73,16 +73,17 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   });
 
   let validatorRegistry;
+  let declaringTypes;
   // 60s, matching the suite option above rather than the 10s hook default.
   // Loading the built barrel is the whole cost of this file, and three ledgers
   // do it at once under a full `--project scripts` run — comfortably fast
   // alone, and over the default when they contend.
   beforeAll(async () => {
-    ({ validatorRegistry } = await loadCoreLinter());
+    ({ validatorRegistry, registeredTypes: declaringTypes } = await loadCoreLinter());
   }, 60_000);
 
   it('scopes to the ancestry of what we register', () => {
-    const covered = coveredClasses(validatorRegistry.getRegisteredNodeTypes(), bases);
+    const covered = coveredClasses(declaringTypes('declaring'), bases);
     // Named, because the scope is derived from what is registered: deleting a
     // registration would drop its rows from the count rather than fail it, so
     // the ledger's zero would survive the coverage going away.
@@ -110,7 +111,7 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   });
 
   it('leaves no property of a claimed resource class unvalidated', () => {
-    const covered = coveredClasses(validatorRegistry.getRegisteredNodeTypes(), bases);
+    const covered = coveredClasses(declaringTypes('declaring'), bases);
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);
     const report = rows.map((r) => `  ${r.cls} (${r.missing.length}): ${r.missing.join(', ')}`);

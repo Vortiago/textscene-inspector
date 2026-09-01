@@ -40,7 +40,7 @@ export interface IntSlot {
  *
  * `getOwnKeys` + `findValidator` is a one-level walk, so a slot reached through
  * a wildcard dispatcher (`settings/#/*`, `layer_#/tile_data`) falls outside the
- * sweep entirely. `collectValidators` is the walk the classification guard uses,
+ * sweep entirely. `everyValidator` is the walk the classification guard uses,
  * and it dedupes a leaf shared by two dispatchers.
  */
 export function taggedIntSlots(): IntSlot[] {

@@ -43,19 +43,19 @@ describe('IKModifier3D shared validators', () => {
   });
 
   it.each(LEAVES)('delivers every key to %s through the base-walk', (nodeType) => {
-    const missing = KEYS.filter((key) => !validatorRegistry.findValidator(nodeType, key));
+    const missing = KEYS.filter((key) => !validatorRegistry.declarationFor(nodeType, key));
     expect(missing).toEqual([]);
   });
 
   it.each(LEAVES)('accepts both boolean spellings of mutable_bone_axes on %s', (nodeType) => {
-    const validator = validatorRegistry.findValidator(nodeType, 'mutable_bone_axes');
+    const validator = validatorRegistry.declarationFor(nodeType, 'mutable_bone_axes');
     expect(validator).not.toBeNull();
     expect(validator!('mutable_bone_axes', 'true', 1)).toBeNull();
     expect(validator!('mutable_bone_axes', 'false', 1)).toBeNull();
   });
 
   it('rejects a non-boolean mutable_bone_axes', () => {
-    const validator = validatorRegistry.findValidator('TwoBoneIK3D', 'mutable_bone_axes');
+    const validator = validatorRegistry.declarationFor('TwoBoneIK3D', 'mutable_bone_axes');
     expect(validator!('mutable_bone_axes', '1', 1)).not.toBeNull();
     expect(validator!('mutable_bone_axes', 'garbage', 1)).not.toBeNull();
   });
@@ -63,7 +63,7 @@ describe('IKModifier3D shared validators', () => {
   it('constrains format only, since the setter assigns straight through', () => {
     // ik_modifier_3d.cpp:156 is a bare assignment plus dirty-flagging, and the
     // ADD_PROPERTY carries no hint, so there is no value to ground a bound on.
-    const validator = validatorRegistry.findValidator('TwoBoneIK3D', 'mutable_bone_axes');
+    const validator = validatorRegistry.declarationFor('TwoBoneIK3D', 'mutable_bone_axes');
     expect(validator!.formatOnly).toBe(true);
     expect(validator!.grounding).toBeUndefined();
   });

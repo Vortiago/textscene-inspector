@@ -182,7 +182,7 @@ describe('OptionButton strict validators', () => {
       expect(validatorRegistry.findValidator('OptionButton', 'popup/item_/text')).toBeNull();
     });
 
-    const dispatcher = validatorRegistry.findValidator('OptionButton', 'popup/item_0/text');
+    const dispatcher = validatorRegistry.declarationFor('OptionButton', 'popup/item_0/text');
 
     it('is registered under its own pattern', () => {
       expect(dispatcher).not.toBeNull();

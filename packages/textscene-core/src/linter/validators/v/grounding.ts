@@ -146,7 +146,7 @@ function withLiteralGuard(
   // it as unimplemented while it was fully implemented.
   guarded.tiers = validator.tiers;
   guarded.bounds = validator.bounds;
-  // The two tags a registry sweep navigates by: `collectValidators` descends
+  // The two tags a registry sweep navigates by: `everyValidator` descends
   // `leaves`, and the int-slot probe selects on `intSlot`. A wrapper that drops
   // either leaves the slot outside the population rather than failing a guard,
   // so the sweep passes by asking about fewer validators than exist.

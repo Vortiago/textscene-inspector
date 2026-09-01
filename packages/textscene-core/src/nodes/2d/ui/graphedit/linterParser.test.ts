@@ -18,7 +18,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('GraphEdit', property);
+  const validator = validatorRegistry.declarationFor('GraphEdit', property);
   expect(validator, `no validator registered for GraphEdit.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -84,7 +84,7 @@ describe('GraphEdit strict validators', () => {
     // both bounded ones carry a `graph_edit.cpp:<line>` citation; an untagged
     // one would be a bound nobody audited.
     const unclassified = validatorRegistry.getOwnKeys('GraphEdit').filter((property) => {
-      const validator = validatorRegistry.findValidator('GraphEdit', property)!;
+      const validator = validatorRegistry.declarationFor('GraphEdit', property)!;
       return !validator.formatOnly && !validator.grounding;
     });
     expect(unclassified).toEqual([]);
@@ -92,7 +92,7 @@ describe('GraphEdit strict validators', () => {
     const groundings = Object.fromEntries(
       validatorRegistry
         .getOwnKeys('GraphEdit')
-        .map((property) => [property, validatorRegistry.findValidator('GraphEdit', property)!.grounding])
+        .map((property) => [property, validatorRegistry.declarationFor('GraphEdit', property)!.grounding])
         .filter(([, grounding]) => grounding !== undefined)
     );
     expect(groundings).toEqual({

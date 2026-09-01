@@ -75,11 +75,8 @@ const EXPECTED_UNVALIDATED = 4;
  * unreadable. Derived from the registries, which is why the test above names
  * the load-bearing members outright.
  */
-function coveredClasses(nodeRegistry, validatorRegistry) {
-  return new Set([
-    ...nodeRegistry.getAllTypeNames(),
-    ...validatorRegistry.getRegisteredNodeTypes(),
-  ]);
+function coveredClasses(nodeRegistry, declaringTypes) {
+  return new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes('declaring')]);
 }
 
 // Loading the built barrel (every slice self-registers) comfortably exceeds
@@ -98,13 +95,14 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   // One load for the whole file: two independent awaits paid the barrel cost
   // twice and raced the timeout separately.
   let validatorRegistry;
+  let registeredTypes;
   let nodeRegistry;
   // 60s, matching the suite option above rather than the 10s hook default.
   // Loading the built barrel is the whole cost of this file, and three ledgers
   // do it at once under a full `--project scripts` run — comfortably fast
   // alone, and over the default when they contend.
   beforeAll(async () => {
-    ({ validatorRegistry } = await loadCoreLinter());
+    ({ validatorRegistry, registeredTypes } = await loadCoreLinter());
     ({ nodeRegistry } = await loadCoreParser());
   }, 60_000);
 
@@ -131,7 +129,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('scopes to the classes this repo claims, named rather than only derived', () => {
-    const covered = coveredClasses(nodeRegistry, validatorRegistry);
+    const covered = coveredClasses(nodeRegistry, registeredTypes);
     // NAMED, because the scope is derived from the very registry this ledger
     // audits: deregistering a class removes its rows from the count instead of
     // failing it. Measured — 262 of the 266 contribute no unvalidated property,
@@ -159,7 +157,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('the unvalidated-property ledger has not grown', () => {
-    const covered = coveredClasses(nodeRegistry, validatorRegistry);
+    const covered = coveredClasses(nodeRegistry, registeredTypes);
 
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);

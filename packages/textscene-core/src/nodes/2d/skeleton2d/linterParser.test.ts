@@ -14,7 +14,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('Skeleton2D', property);
+  const validator = validatorRegistry.declarationFor('Skeleton2D', property);
   expect(validator, `no validator registered for Skeleton2D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -88,7 +88,7 @@ describe('Skeleton2D strict validators', () => {
       // `modification_stack = p_stack`, and sets the new one up. No ERR_FAIL,
       // no clamp, no null guard — so under ADR-0032 there is no bound to
       // ground and nothing beyond the serialised shape to reject.
-      const validator = validatorRegistry.findValidator('Skeleton2D', 'modification_stack');
+      const validator = validatorRegistry.declarationFor('Skeleton2D', 'modification_stack');
       expect(validator!.formatOnly).toBe(true);
       expect(validator!.grounding).toBeUndefined();
     });

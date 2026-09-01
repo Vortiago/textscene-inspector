@@ -24,6 +24,7 @@ import { NODE_BASE_TYPES, UNCATALOGUED_BASE_TYPES } from '../godot/nodeBaseTypes
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
+import { registeredTypes } from './registryPopulation.js';
 
 /**
  * Godot's real class hierarchy, from the committed catalog. This is the
@@ -113,7 +114,7 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
     // `validatorRegistry`, not `nodeRegistry`: the registry resolves with
     // `CLASS_BASE_TYPES`, so this is the population and the table that actually
     // decide whether a registered key is reachable.
-    const validatorTypes = validatorRegistry.getRegisteredNodeTypes();
+    const validatorTypes = registeredTypes('declaring');
     expect(validatorTypes.length).toBeGreaterThan(registered.length);
 
     const broken = validatorTypes

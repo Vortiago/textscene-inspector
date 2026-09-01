@@ -10,7 +10,7 @@
 
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
-import type { PropertyValidator } from './propertyValidator.js';
+import type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 import {
   buildWildcardIndex,
   matchesIndexedKey,
@@ -20,7 +20,7 @@ import {
 } from './wildcardIndex.js';
 import { unavailableValidator, type Removal } from './unavailableKey.js';
 
-export type { PropertyValidator } from './propertyValidator.js';
+export type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 export type { Removal } from './unavailableKey.js';
 
 /**
@@ -109,7 +109,7 @@ export class ValidatorRegistry {
 
   /**
    * Types declaring a removal, which is NOT a subset of
-   * `getRegisteredNodeTypes()`: `HBoxContainer` only takes `vertical` away and
+   * `registeredTypes('declaring')`: `HBoxContainer` only takes `vertical` away and
    * registers no validator of its own, so it appears in `unavailable` alone. A
    * sweep over the validator map misses every such type entirely.
    */
@@ -154,9 +154,11 @@ export class ValidatorRegistry {
    *
    * @param nodeType - TSCN node type
    * @param propertyKey - Property key to validate
-   * @returns Validator function or null if neither the type nor its bases match
+   * @returns Something to CALL, or null if neither the type nor its bases match.
+   *   Deliberately untagged: see {@link ValidatorFn}. A caller introspecting a
+   *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
-  findValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
+  findValidator(nodeType: string, propertyKey: string): ValidatorFn | null {
     // A hop counter, not a visited Set: this runs for every property of every
     // node, and the Set was an allocation on every call including every miss.
     // The table is derived from ClassDB ancestry, so it is acyclic by
@@ -182,6 +184,23 @@ export class ValidatorRegistry {
       type = this.baseOf(type);
     }
     return null;
+  }
+
+  /**
+   * The same resolution, as the DECLARATION rather than as something to call.
+   *
+   * Same object, wider type. Two questions share one walk and differ only in
+   * what the caller may then read: running a validator needs no tags, and
+   * reading a tag is introspection that belongs to a sweep. Keeping them apart
+   * at the type level is what stops a hand-assembled roots-only population from
+   * compiling — `findValidator(...).intSlot` no longer type-checks.
+   *
+   * A method rather than a free function because scratch registries are driven
+   * through it: `ValidatorRegistry.*.test.ts` and `shadowCopyScan` both build
+   * their own registry to prove a guard bites.
+   */
+  declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
+    return this.findValidator(nodeType, propertyKey) as PropertyValidator | null;
   }
 
   /**
@@ -254,9 +273,13 @@ export class ValidatorRegistry {
   }
 
   /**
-   * Node types that currently have validators registered
+   * Node types that currently have validators registered.
+   *
+   * @internal — `registryPopulation.ts` is the only caller. Enumerating what the
+   * registry holds WITHOUT naming a type is that module's alone; reaching this
+   * directly is how a sweep comes to assemble the roots-only population by hand.
    */
-  getRegisteredNodeTypes(): string[] {
+  typesWithRegistrations(): string[] {
     return [...this.validators.keys()];
   }
 

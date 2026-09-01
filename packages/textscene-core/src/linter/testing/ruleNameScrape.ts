@@ -83,7 +83,7 @@ const RULE_NAME_RE = /^\s*name:\s*'([^']+)'/gm;
  * orientation `BoxContainer` exposes) calls only `registerUnavailable`, so
  * matching `registerAll` alone dropped six slices out of every sweep built on
  * this constant. Note that a removal is registered apart from the validators,
- * so such a type is absent from `getRegisteredNodeTypes()` and a consumer
+ * so such a type is absent from `registeredTypes('declaring')` and a consumer
  * comparing against the live registry must union `getTypesWithRemovals()` in.
  */
 export const REGISTER_ALL_RE = /register(?:All|Unavailable)\(\s*'([^']+)'/g;

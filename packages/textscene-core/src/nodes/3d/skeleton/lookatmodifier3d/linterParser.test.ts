@@ -19,7 +19,7 @@ import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
 function check(property: string, value: string) {
-  const validator = validatorRegistry.findValidator('LookAtModifier3D', property);
+  const validator = validatorRegistry.declarationFor('LookAtModifier3D', property);
   expect(validator, `no validator registered for LookAtModifier3D.${property}`).not.toBeNull();
   return validator!(property, value, 1);
 }
@@ -268,7 +268,7 @@ describe('LookAtModifier3D strict validators', () => {
 
     it('records where each open-ended bound comes from', () => {
       for (const property of ['origin_safe_margin', 'duration']) {
-        const validator = validatorRegistry.findValidator('LookAtModifier3D', property);
+        const validator = validatorRegistry.declarationFor('LookAtModifier3D', property);
         expect(validator?.grounding?.kind).toBe('hinted');
         expect(validator?.grounding?.cite).toMatch(/look_at_modifier_3d\.cpp:\d+/);
       }
@@ -356,7 +356,7 @@ describe('LookAtModifier3D strict validators', () => {
 
     it('grounds every angle bound in the ADD_PROPERTY that states it', () => {
       for (const property of [...HALF_TURN_ANGLES, ...FULL_TURN_ANGLES]) {
-        const validator = validatorRegistry.findValidator('LookAtModifier3D', property);
+        const validator = validatorRegistry.declarationFor('LookAtModifier3D', property);
         // Hinted, never enforced: every angle setter (look_at_modifier_3d.cpp:283-377)
         // is a bare assignment, so the hint governs the inspector alone.
         expect(validator?.grounding?.kind, property).toBe('hinted');

@@ -193,7 +193,7 @@ describe('base-chain imports', () => {
   it('registers only names the base table knows', () => {
     // A name absent from `CLASS_BASE_TYPES` has no chain to walk, so the sweep
     // below skips it — and a skipped slice reads exactly like a clean one. The
-    // registry-side sweep cannot close this: `getRegisteredNodeTypes()` excludes
+    // registry-side sweep cannot close this: `registeredTypes('declaring')` excludes
     // a type whose whole contribution is a removal, which is the half of the
     // population that reaches this file and nothing else.
     const unknown = [...owners]
