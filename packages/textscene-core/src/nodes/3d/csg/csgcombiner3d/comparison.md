@@ -104,6 +104,7 @@ Strict parsing format-checks these `CSGCombiner3D` properties, plus 16 inherited
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `operation` |
 
 | Rule | Reports | Severity |
