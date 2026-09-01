@@ -56,7 +56,7 @@ describe('OPEN_SANS_ATLAS_GLYPHS', () => {
 
   it('places the space glyph at zero visible size but with a nonzero advance', () => {
     // msdf-bmfont-xml emits an empty (0x0) bitmap for whitespace and warns
-    // "No bitmap for character ' '" — verified in this packet's bake run —
+    // "No bitmap for character ' '" — verified in the bake run —
     // but xadvance still carries its hmtx-derived width.
     expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.width).toBe(0);
     expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.height).toBe(0);

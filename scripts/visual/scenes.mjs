@@ -239,15 +239,11 @@ export const GOLDEN_SCENES = [
   // authored pose, but the fixtures exist to be played, so they stay out of
   // the stability-gated visual set (same rationale as Label3D above).
   { name: 'mixed-nodes', file: 'integration-mixed-nodes.tscn' },
-  // NOT rebaselined, deliberately, unlike material-features above. The same
-  // Godot arbitration ran here and came back the other way: over the 801 px
-  // where baseline and render disagree, the BASELINE measures 33.1% closer to
-  // Godot, so the render is the worse of the two and rewriting the baseline
-  // would freeze a regression. The pixels are scattered rather than one
-  // object, and we are too bright exactly where Godot is darkest (mean over
-  // them: Godot 79.6, baseline 101.8, ours 119.9), which reads as specular or
-  // edge sampling rather than the global colour shift that moved
-  // material-features.
+  // NOT rebaselined, deliberately: arbitrated against Godot and the BASELINE
+  // came back closer than the render, so rewriting it would freeze a
+  // regression. The disagreement is scattered and reads as specular or edge
+  // sampling rather than a global colour shift, so a move here wants its own
+  // arbitration rather than being accepted with a batch.
   { name: 'hallway-mockup', file: 'example-hallway-mockup.tscn' },
   // Instance root merge (ADR-0013): two instances of unit-instance-child.tscn
   // collapse into Area3D coins at x=±1.5. Pins the rendered pixels of a

@@ -189,8 +189,7 @@ function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: V
 /**
  * `Control::get_combined_minimum_size` (`control.cpp:1744-1758`):
  * `max(get_minimum_size(), custom_minimum_size)`. `get_minimum_size()` is the
- * registered type's own contribution (`(0, 0)` for an unregistered/leaf
- * type — this packet registers none).
+ * registered type's own contribution (`(0, 0)` for an unregistered/leaf type).
  */
 export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
   return combinedMinimumSizeWithMeta(n, ctx).size;

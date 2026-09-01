@@ -2,7 +2,7 @@
  * Shared composite-button logic: draw-state resolution, StyleBox chrome
  * picking/tinting, and the icon/text content-layout math
  * (`Button::_notification`'s `NOTIFICATION_DRAW` and
- * `Button::_fit_icon_size`, `scene/gui/button.cpp`). `Button` (packet P14) is
+ * `Button::_fit_icon_size`, `scene/gui/button.cpp`). `Button` is
  * the first consumer; `CheckBox`/`OptionButton` — both `Button` subclasses in
  * Godot itself — reuse this rather than re-deriving it, so this module is
  * deliberately Button-generic: every input is a plain value the caller
@@ -217,7 +217,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   const hSeparation = Math.max(0, hSeparationRaw);
 
   // Button itself never sets `_internal_margin` (that is an OptionButton/
-  // CheckBox concern, out of this packet's scope), so the box after
+  // CheckBox concern), so the box after
   // stylebox margins is the full "custom element size" with no further inset.
   const customElementSize: Vec2 = {
     x: rectSize.x - styleMargin.left - styleMargin.right,

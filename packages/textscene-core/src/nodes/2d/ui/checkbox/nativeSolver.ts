@@ -11,18 +11,18 @@
  * drawn. So unlike Button this solver never builds/tints a `StyleBoxFlatData`
  * at all: `theme.contentMargin` (already the exact `round(4*scale)` literal
  * `cbx_empty` uses) stands in for it directly, uniformly on all four sides,
- * and `NativeComponent.tsx` draws no chrome mesh.
+ * and `Component.tsx` draws no chrome mesh.
  *
  * CheckBox reserves space for its check icon via Button's OWN
  * `_internal_margin` mechanism (`Button::_set_internal_margin`,
  * `check_box.cpp:96-101`) — `buttonBase.ts`'s `layoutButtonContent`
  * explicitly does not model that (Button itself never triggers it: its doc
- * calls it "an OptionButton/CheckBox concern, out of this packet's scope"),
+ * calls it "an OptionButton/CheckBox concern"),
  * so this module ports the icon+text placement math itself rather than
  * force-fitting CheckBox's fixed left-icon arrangement through Button's
  * generic icon parameter.
  *
- * Pure data + functions, no THREE/React — painting is `NativeComponent.tsx`'s job.
+ * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -57,7 +57,7 @@ import type { CheckBoxProperties } from './types';
  */
 export const CHECKBOX_THEME_FONT_KEY = 'font';
 
-// Re-exported so NativeComponent.tsx can build on the shared, Button-generic
+// Re-exported so Component.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
 export { fitIconSize, tintColor };
 
@@ -73,7 +73,7 @@ export { fitIconSize, tintColor };
  * NOT only while a mouse physically holds it down. `disabled` still wins
  * outright (`DRAW_DISABLED`, checked first in the source).
  *
- * Verified against `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d`:
+ * Verified against `pnpm ref:godot a probe scene --mode 2d`:
  * the checked (`button_pressed=true`), non-disabled row's label reads pure
  * white (255,255,255) at probe (527,298) — `font_pressed_color`, not the
  * 0.875-gray a merely-`DRAW_NORMAL` label would read.

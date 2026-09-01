@@ -23,7 +23,7 @@
  * gap is real but bounded, and today invisible everywhere:
  * `isSplitGrabberVisible` is false for every scene that does not override
  * `theme_override_constants/autohide` to `0` (its own doc — verified against
- * `pnpm ref:godot` on `unit-split-container.tscn`: the gap between every
+ * `pnpm ref:godot` on a probe scene: the gap between every
  * row's two ColorRects reads back the plain backdrop colour, never the
  * grabber's gray). So the only pixels the FALLBACK could ever mis-place are
  * the (already invisible by default) icon's own — the two ACTUAL child

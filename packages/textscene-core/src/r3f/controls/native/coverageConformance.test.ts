@@ -38,7 +38,7 @@ import { solveNode } from './testing/solveNode';
  * `SubViewportContainer` is deliberately NOT in this set despite the name:
  * its only valid children are `SubViewport` nodes, which are not `Control`s
  * at all and never reach the generic Control solve (`buildSolveTree.ts` skips
- * a viewport boundary and its `NativeComponent.tsx` positions each
+ * a viewport boundary and its `Component.tsx` positions each
  * `SubViewport` itself via `stretch`/`stretch_shrink`, not `fit_child_in_rect`).
  * Registering a no-op `containerLayout` for it would be pure ceremony, not a
  * fix — confirmed against real Godot's own `SubViewportContainer`, which

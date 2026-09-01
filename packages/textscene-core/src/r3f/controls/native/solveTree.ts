@@ -1,9 +1,8 @@
 /**
  * `SolveNode` — the Control rect solver's input shape. Built by the
- * `liveSceneTree`-based walker (packet P3, `native/buildSolveTree.ts`); this
- * module only defines the type, so the solver (this packet) and the walker
- * (P3) can be developed against the same contract without either depending on
- * the other's implementation.
+ * `liveSceneTree`-based walker (`native/buildSolveTree.ts`); this module only
+ * defines the type, so the solver and the walker share one contract without
+ * either depending on the other's implementation.
  *
  * Pure data, no React, no THREE.
  */

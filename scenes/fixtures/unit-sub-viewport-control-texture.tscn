@@ -23,9 +23,10 @@
 ; one flat fill. Text does not match Godot's — it bundles Open Sans SemiBold and
 ; the overlay is system-fonts-only (ADR-0003).
 ;
-; Deliberately NOT a visual golden: the raster's text is system-font-dependent,
-; and both numbers above are asserted directly instead, in `verify-raster.mjs`
-; suite C — the browser harness ADR-0024 exists for.
+; NOT currently gated: the harness that asserted both numbers above was retired
+; with the DOM overlay, and nothing replaced it. The bundled MSDF atlas and baked
+; metrics have since removed the system-font dependence that kept this out of the
+; golden set, so it can now become one.
 
 [gd_scene format=3]
 

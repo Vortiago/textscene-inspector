@@ -3,9 +3,8 @@
  * pattern, reused via `createTypeRegistry` exactly like
  * `ControlComponentRegistry.ts`). A type with no registration is a leaf: its
  * minimum size is `(0, 0)` and it imposes no layout on its children (they
- * solve as free/anchored Controls against its own rect). Per-type
- * registration is later packets' work (P6a onward) — this packet registers
- * none.
+ * solve as free/anchored Controls against its own rect). Each slice registers
+ * its own solver on import.
  *
  * Pure data + functions, no React, no THREE.
  */
@@ -17,10 +16,10 @@ import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 
 /**
- * Measures a run of text at a given font size. `null` until the text engine
- * (packet P11) lands, so any minimum-size/layout function that needs text
- * metrics before then must treat an absent measurer as "no text contributes
- * to this measurement" rather than throw.
+ * Measures a run of text at a given font size. `null` where no text engine is
+ * wired, so any minimum-size/layout function that needs text metrics must treat
+ * an absent measurer as "no text contributes to this measurement" rather than
+ * throw.
  */
 /**
  * `lineSpacingPx` is the caller's OWN theme constant, and defaults to 0 —

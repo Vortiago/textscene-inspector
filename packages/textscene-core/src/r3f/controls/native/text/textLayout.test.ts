@@ -1,6 +1,6 @@
 /**
  * `shapeText` — a framework-free port of Godot's Label line-shaping, against
- * the vendored Open Sans SemiBold atlas/metrics (packet P10). Every expected
+ * the vendored Open Sans SemiBold atlas/metrics. Every expected
  * pixel width below is hand-derived from `openSansMetrics.ts`'s
  * `OPEN_SANS_METRICS.advanceWidths[ch]` (the font's own `hmtx` advance width,
  * design units) put through the target font size — an independent source of
@@ -171,7 +171,7 @@ describe('shapeText — a character outside the baked charset', () => {
 
 describe('shapeText — kerning plumbing', () => {
   // OpenSans_SemiBold carries only mark/mkmk GPOS features -- zero ASCII kern
-  // pairs -- but the table must still be wired in generically (per packet P10's
+  // pairs -- but the table must still be wired in generically (per the
   // vendoring notes) so a future bold/italic synthesis or a different theme
   // font, which DOES have pairs, does not need a shape change downstream.
   // Injecting a synthetic pair into the real (mutable, exported) metrics

@@ -4,7 +4,7 @@
  * and `get_line_height` (`:111-136`); plus the theme-override key mapping
  * (`font_size`/`font_color`) and default colour Label reads. Registered via
  * `controlSolverRegistry.registerMinimumSize`. Pure per-node math, no
- * THREE/React — painting is `NativeComponent.tsx`'s job.
+ * THREE/React — painting is `Component.tsx`'s job.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -91,7 +91,7 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
  * - autowrap OFF (`:992-996`): `minsize + min_style` — `min_style` is zero
  *   for Label's default `StyleBoxEmpty` (`theme_cache.normal_style`,
  *   `default_theme.cpp:379`) and not modelled here (no `theme_override_styles`
- *   chrome for Label in this packet's scope). `minsize.width` is the WIDEST
+ *   chrome for Label). `minsize.width` is the WIDEST
  *   unwrapped line (`:252-257`, only computed for OFF); `minsize.height`
  *   is `_update_visible`'s per-line sum (below).
  * - autowrap ON (`:984-991`): ALWAYS `Size2(1, height)` — a wrapping Label's

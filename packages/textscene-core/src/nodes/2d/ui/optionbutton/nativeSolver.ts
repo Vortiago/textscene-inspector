@@ -16,11 +16,9 @@
  * `default_margin` vertical content margins — DIFFERENT numbers from Button's
  * own uniform margin, already exposed as `theme.optionButtonMarginX/Y`
  * (`godotDefaultTheme.ts`) precisely so this module never re-derives them.
- * `optionButtonStyleBoxes` only ASSEMBLES a `StyleBoxFlatData` from those
- * already-scaled numbers plus `theme.styleFill` (mirroring, not importing,
- * `nativeTheme.ts`'s own private `flatStyleBox` helper — `NativeTheme` has no
- * `widgets.optionButton` entry of its own, so this module builds its OWN
- * rather than adding one there).
+ * `nativeTheme.ts` composes those already-scaled numbers into
+ * `theme.widgets.optionButton`, which this module reads rather than
+ * re-deriving.
  *
  * The chevron arrow is NEVER run through `Button::_fit_icon_size`/
  * `icon_max_width` (`OptionButton::get_minimum_size`/`_notification` read
@@ -35,7 +33,7 @@
  * LEFT-aligned text offset below never needs it: it drops straight out of
  * the general formula, not a simplification this port introduces.
  *
- * Pure data + functions, no THREE/React — painting is `NativeComponent.tsx`'s job.
+ * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -64,7 +62,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
 
-// Re-exported so NativeComponent.tsx can build on the shared, Button-generic
+// Re-exported so Component.tsx can build on the shared, Button-generic
 // pieces without importing `buttonBase.ts` a second time under a different name.
 export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
 export type { ButtonDrawState };

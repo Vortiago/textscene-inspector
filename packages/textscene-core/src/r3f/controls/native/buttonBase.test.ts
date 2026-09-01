@@ -1,6 +1,6 @@
 /**
  * `buttonBase.ts` — the shared composite (StyleBox chrome + text + icon)
- * logic `nodes/2d/ui/button/nativeSolver.ts` and `NativeComponent.tsx` build
+ * logic `nodes/2d/ui/button/nativeSolver.ts` and `Component.tsx` build
  * on. Expected numbers below are hand-derived from `Button::_notification`'s
  * `NOTIFICATION_DRAW` (`scene/gui/button.cpp:203-465`) and
  * `Button::_fit_icon_size` (`:469-479`), NOT recomputed the way the

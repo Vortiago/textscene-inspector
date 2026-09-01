@@ -6,7 +6,7 @@ describe('OPEN_SANS_METRICS', () => {
   it('pins the font-wide scalars independently extracted from the vendored font', () => {
     // Independently measured with fontkit 2.0.4 against OpenSans_SemiBold
     // (decompressed from the vendored woff2 with wawoff2), ahead of and
-    // separate from this packet's own bake script — packet P10 spike S2
+    // separate from the bake script
     // findings, `metrics.json`.
     expect(OPEN_SANS_METRICS.unitsPerEm).toBe(2048);
     expect(OPEN_SANS_METRICS.ascent).toBe(2189);

@@ -96,7 +96,7 @@ export function getFontAscentPx(metrics: Pick<FontMetrics, 'ascent' | 'unitsPerE
  * - `modules/text_server_adv/text_server_adv.cpp:1515-1516` — ascent AND
  *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
  *   summing (not a raw float sum, THEN rounded once — that undershoots by
- *   ~1px system-wide, confirmed against real Godot pixels, packet P10 spike
+ *   ~1px system-wide, confirmed against real Godot pixels
  *   S2). THIS is the one rule every `FontMetrics` implementation must go
  *   through rather than reimplement: an implementation that computed its own
  *   pitch from a raw float sum of its ascent+descent would silently drop the

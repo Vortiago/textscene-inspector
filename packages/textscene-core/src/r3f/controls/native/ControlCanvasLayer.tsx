@@ -20,7 +20,7 @@
  * this mount point is the Control tree's equivalent root, so it scans the
  * SAME root list rather than inheriting anything from the world canvas's own
  * provider (a `CanvasLayer` node further down gets its OWN fresh scope from
- * its `Native` painter, `canvaslayer/NativeComponent.tsx` — this one never
+ * its `Native` painter, `canvaslayer/Component.tsx` — this one never
  * reaches inside one, matching `canvasModulateColor`'s own "does not descend
  * into a CanvasLayer" rule).
  */

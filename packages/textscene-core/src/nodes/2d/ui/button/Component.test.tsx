@@ -164,7 +164,7 @@ describe('<Button> (isolated painter contract)', () => {
 
   it(
     'uses control_font_disabled_color (alpha 0.5) for the DISABLED label — the exact theme constant, ' +
-      'not the DOM overlay\'s 0.6-opacity approximation this packet\'s comparison.md documents closing',
+      'not the DOM overlay\'s 0.6-opacity approximation comparison.md documents closing',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi', disabled: true })} rect={RECT} renderOrder={0} />

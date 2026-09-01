@@ -38,7 +38,7 @@
  * shaped extent), but it does not: Godot's own reference camera never sees
  * that extent either, and matching a richer estimate measurably made this
  * renderer's own framing WORSE, not better. Measured directly, on
- * `unit-torus-mesh.tscn`, via a bootstrap that wrote `_scene_bounds()`
+ * a probe scene, via a bootstrap that wrote `_scene_bounds()`
  * (`scripts/godot-ref/run.mjs`) at two points — immediately after
  * `add_child()` (mirroring `_place_camera`, which runs synchronously,
  * before any frame settles) and again after `_settle()` (mirroring

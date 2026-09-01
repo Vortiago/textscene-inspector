@@ -14,7 +14,7 @@
  * established ordering.
  *
  * CLIPPING. `Control::clip_contents` is never modelled generically in this
- * codebase (`ScrollContainer`, packet P16, is the one type that opts a
+ * codebase (`ScrollContainer` is the one type that opts a
  * SUBTREE into it); `LineEdit` instead clips only the single run it draws
  * ITSELF, to `layoutLineEditContent`'s own `contentRect` (the rect inset by
  * the ACTIVE stylebox's margins — `ofs_max`/`x_ofs`'s box in

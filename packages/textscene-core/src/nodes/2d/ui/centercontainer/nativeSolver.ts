@@ -3,7 +3,7 @@
  * `CenterContainer::get_minimum_size` and its `NOTIFICATION_SORT_CHILDREN`
  * handler (`scene/gui/center_container.cpp`), plus the shared
  * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) that
- * handler calls. CenterContainer draws nothing itself; `NativeComponent.tsx`
+ * handler calls. CenterContainer draws nothing itself; `Component.tsx`
  * renders nothing and the walker paints children as siblings.
  *
  * The one property this container adds beyond Control — `use_top_left`

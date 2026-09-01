@@ -4,7 +4,7 @@
  * (`font_size`/`font_color`/`font_uneditable_color`/`font_placeholder_color`)
  * and the default colours LineEdit reads. Registered via
  * `controlSolverRegistry.registerMinimumSize`. Pure per-node math, no
- * THREE/React — painting is `NativeComponent.tsx`'s job, and the StyleBox
+ * THREE/React — painting is `Component.tsx`'s job, and the StyleBox
  * this module picks by draw state is `nativeTheme.ts`'s `widgets.lineEdit`
  * (a P27 addition to that shared theme, since no earlier packet needed
  * LineEdit's own `normal`/`read_only` boxes).
@@ -197,7 +197,7 @@ export interface LineEditContentLayout {
  * the horizontal `switch (alignment)` picking `x_ofs`, and the vertical
  * `y_area`/`y_ofs` centring — RTL and `scroll_offset` (always `0` in a static
  * preview with no caret/scroll state) are not modelled, matching every other
- * out-of-scope LineEdit feature this packet excludes.
+ * LineEdit feature this solver does not model.
  *
  * Every `int(...)` cast in the source TRUNCATES toward zero, not `Math.floor`
  * — `Math.trunc` is used throughout below rather than `Math.floor`, which

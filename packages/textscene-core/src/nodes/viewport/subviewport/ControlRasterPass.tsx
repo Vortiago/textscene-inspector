@@ -24,7 +24,7 @@
  * `render_canvas` loop), so a Control target holds POST-tonemap, ordinary
  * sRGB canvas values with no curve of its own; the curve applies exactly
  * ONCE, on whatever surface consumes this target. Measured on
- * `unit-sub-viewport-control-texture.tscn` through Godot 4.6.3: a
+ * a probe scene through Godot 4.6.3: a
  * Color(0.5, 0.5, 0.5) ColorRect reaches the consuming quad as rgb(162), one
  * FILMIC application of the ADR-0025 preview environment; a pre-tonemapped
  * target would land near rgb(196). So this pass forces `NoToneMapping` for

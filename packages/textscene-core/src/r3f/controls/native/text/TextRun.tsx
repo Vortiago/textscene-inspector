@@ -312,7 +312,7 @@ function buildTextRun(
     // hdr_2d` off, `rendering_server.cpp:3771`/`texture_storage.cpp:754`)
     // would suggest, and unlike every OTHER 2D-canvas-drawn texture (icons,
     // sprites, TextureRect images). Measured before deciding, not inferred:
-    // magnifying this raster (`unit-control-scene-font-magnified.tscn`, whose
+    // magnifying this raster (a probe scene, whose
     // header has the full arbitration) showed `NoColorSpace` producing a
     // 5/255 dip BELOW the backdrop at the glyph edge that Godot's OWN render
     // of the SAME scene never shows (a perfectly monotonic ramp) — the tag

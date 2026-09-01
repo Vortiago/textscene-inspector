@@ -19,8 +19,8 @@
  *
  * Plain SFNT — TrueType-outline (`sfntVersion` 0x00010000 or `'true'`),
  * OpenType-CFF (`'OTTO'`), and a TrueType Collection's FIRST face (`'ttcf'`,
- * per the `ttc_header` "font 0" offset). This covers every `.ttf`/`.otf` in
- * the demo corpus — 31 of 33 font references. The remaining 2 are `.woff2`:
+ * per the `ttc_header` "font 0" offset). That covers every `.ttf`/`.otf`;
+ * `.woff2` is not read here.
  * WOFF2's table data is Brotli-compressed (`wOF2` container), and neither
  * `DecompressionStream` (no browser exposes a `'brotli'` format) nor a
  * bundled decompressor (the CSP blocks WASM entirely — no `unsafe-eval`) can

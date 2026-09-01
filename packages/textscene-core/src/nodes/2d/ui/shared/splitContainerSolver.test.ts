@@ -130,7 +130,7 @@ describe('computeSplitDraggerPosition — unit-split-container-vertical.tscn row
 });
 
 // --- The clamp — no fixture row exercises a nonzero minimum, so these are ---
-// synthetic custom_minimum_size cases per this packet's own testing guidance.
+// synthetic custom_minimum_size cases.
 
 describe('computeSplitDraggerPosition — CLAMP against synthetic custom_minimum_size', () => {
   it('split_offset pushed below the first child minimum clamps up to it', () => {

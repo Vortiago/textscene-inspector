@@ -6,7 +6,7 @@
  * (`scene/theme/default_theme.cpp:1194-1211`); plus the bbcode-subset →
  * styled-run split the native painter draws from. Registered via
  * `controlSolverRegistry.registerMinimumSize`. Pure per-node math, no
- * THREE/React — painting is `NativeComponent.tsx`'s job.
+ * THREE/React — painting is `Component.tsx`'s job.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -378,7 +378,7 @@ export function fontSizePxAtFromRuns(styledRuns: readonly StyledTextRun[]): (cha
  * port) — there is no formula converting one to the other, so this value is
  * TUNED against a real Godot 4.6.3 measurement rather than derived.
  *
- * Measured on `unit-rich-text-label.tscn`'s `[b]Bold[/b]` span (`pnpm
+ * Measured on the probe scene's `[b]Bold[/b]` span (`pnpm
  * ref:godot` / `pnpm ref:ours`, a horizontal transect through the 'l' stem —
  * a single vertical stroke, so its half-max-crossing width is the stroke
  * thickness directly, uncontaminated by any neighbouring glyph): Godot's own

@@ -6,7 +6,7 @@
  * (`font_size`/`font_color`/`font_disabled_color`) and the two default
  * colours Button reads. Registered via
  * `controlSolverRegistry.registerMinimumSize`. Pure per-node math, no
- * THREE/React — painting is `NativeComponent.tsx`'s job, and the
+ * THREE/React — painting is `Component.tsx`'s job, and the
  * icon/text content-LAYOUT math (draw-time positions) lives in the shared
  * `r3f/controls/native/buttonBase.ts` this module also uses for the
  * StyleBox/icon-sizing pieces.

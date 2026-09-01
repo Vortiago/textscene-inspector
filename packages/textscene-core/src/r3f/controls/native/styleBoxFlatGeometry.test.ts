@@ -1,7 +1,7 @@
 /**
  * `styleBoxFlatGeometry` — ported from `scene/resources/style_box_flat.cpp`'s
  * `StyleBoxFlat::draw` and its `draw_rounded_rectangle` helper (Godot 4.6.3),
- * restricted to this packet's scope: fill, per-corner radii, per-edge
+ * restricted to: fill, per-corner radii, per-edge
  * borders, `border_blend`, `draw_center`, expand margins, anti-aliasing
  * (`anti_aliased`/`aa_size`), `skew` and the drop shadow — each of the last
  * three carrying its own describe block, and every fixture outside those

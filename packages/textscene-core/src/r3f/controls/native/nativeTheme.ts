@@ -17,7 +17,7 @@
  * (`scene/theme/default_theme.cpp::fill_default_theme` scales every length it
  * passes to `make_flat_stylebox`, never a `Color` literal).
  *
- * `widgets` (this packet, P5) composes per-widget `StyleBoxFlatData` structs
+ * `widgets` composes per-widget `StyleBoxFlatData` structs
  * FROM `STYLE_FILL` and `scaledGodotTheme`'s already-scaled numbers — never
  * re-transcribing a colour literal, and reusing `contentMargin`/`cornerRadius`
  * wherever a widget's own `scene/theme/default_theme.cpp` call site passes
@@ -64,7 +64,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
  * `border_blend`/`anti_aliased`/`aa_size`/`corner_detail` are never touched
  * by `make_flat_stylebox`, so they stay at `StyleBoxFlat`'s own defaults;
  * `draw_center` defaults true and no widget built here overrides it (Button's
- * "focus" stylebox does, but focus styles are out of this packet's scope).
+ * "focus" stylebox does, but focus styles are out of scope).
  */
 function flatStyleBox(
   bgColor: ControlColor,
@@ -125,8 +125,8 @@ const LINE_EDIT_NORMAL_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 }
 const LINE_EDIT_READ_ONLY_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.3 };
 
 /**
- * The default-theme StyleBoxFlat structs later packets (Panel/Button/
- * ScrollBar/ScrollContainer) compose their Controls from.
+ * The default-theme StyleBoxFlat structs the Panel/Button/ScrollBar/
+ * ScrollContainer Controls compose from.
  */
 export interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
@@ -181,8 +181,8 @@ export interface NativeThemeWidgets {
    * (`:1261-1263`) is deliberately NOT reproduced here — it only enlarges the
    * INVISIBLE mouse drag hitbox (`SplitContainer::_resort`'s
    * `dragging_area_controls[i]->set_rect`, `split_container.cpp:764-778`),
-   * never the separation band or the icon's own placement, and dragging is
-   * this packet's explicit non-goal.
+   * never the separation band or the icon's own placement; dragging is not
+   * modelled.
    */
   splitContainer: {
     /** `separation` (`default_theme.cpp:1258-1260`) — floored by the grabber icon's own extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */

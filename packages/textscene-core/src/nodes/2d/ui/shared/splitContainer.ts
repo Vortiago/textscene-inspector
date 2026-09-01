@@ -25,7 +25,7 @@ const SIZE_FLAG_EXPAND = 2;
 
 /**
  * `default_theme.cpp`'s `separation` constant for SplitContainer. Measured:
- * `unit-split-container.tscn`'s first row leaves a 12 px gap in Godot 4.6.3.
+ * the probe scene's first row leaves a 12 px gap in Godot 4.6.3.
  */
 export const DEFAULT_SEPARATION = 12;
 
@@ -65,7 +65,7 @@ export function parseSplitContainer(
 
 /**
  * `_get_separation()`. Only DRAGGER_HIDDEN_COLLAPSED removes the gap; plain
- * HIDDEN keeps it, which is the difference `unit-split-container.tscn`'s
+ * HIDDEN keeps it, which is the difference the probe scene's
  * `DraggerCollapsed` row pins (0 px there, 12 px everywhere else).
  */
 export function splitSeparation(props: SplitContainerProperties): number {

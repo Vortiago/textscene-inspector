@@ -9,7 +9,7 @@
  *
  * `scrollContainerScrollBars` is the ONE function both `scrollContainerLayout`
  * (this module, registered as this type's `ContainerLayoutFn`) and
- * `NativeComponent.tsx` (the painter) call: it is the single source of the
+ * `Component.tsx` (the painter) call: it is the single source of the
  * scrollbar geometry (visibility, each bar's own rect, its grabber's rect),
  * so the content-reservation math the layout function needs and the pixels
  * the painter draws can never drift apart into two formulas that happen to
@@ -208,7 +208,7 @@ function grabberExtent(
 
 /**
  * The full scrollbar geometry for one solve of `n` at its own `rect` — the
- * single source `scrollContainerLayout` and `NativeComponent.tsx` both read
+ * single source `scrollContainerLayout` and `Component.tsx` both read
  * (see this module's own doc for why neither may recompute it independently).
  */
 export function scrollContainerScrollBars(

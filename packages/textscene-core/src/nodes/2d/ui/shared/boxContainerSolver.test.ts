@@ -3,7 +3,7 @@
  * no scene cache, no TscnParser (except the one integration test that reads
  * the actual committed fixture). Every expected rect is either:
  *  - measured directly off real Godot 4.6.3 via a `SubViewport` + `get_rect()`
- *    probe (the technique documented for this packet), reproduced here as a
+ *    probe, reproduced here as a
  *    synthetic `custom_minimum_size` input rather than a Label, so a
  *    font-metric regression and a `_resort` regression can never present as
  *    the same failure, or
@@ -50,7 +50,7 @@ function child(overrides: Partial<BoxChildInput> = {}): BoxChildInput {
 
 // --- Both original fixtures, reproduced with synthetic minimum sizes -------
 // (unit-vbox-container.tscn / unit-hbox-container.tscn; rects measured by the
-// probe-project SubViewport + get_rect() oracle documented for this packet.)
+// probe-project SubViewport + get_rect() oracle.)
 
 describe('resortBoxContainer — unit-vbox-container.tscn, reproduced synthetically', () => {
   it('END alignment (no child expands): Top/Bottom land at y=586/625, height 23 each', () => {
