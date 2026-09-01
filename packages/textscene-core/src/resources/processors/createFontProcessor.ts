@@ -42,24 +42,29 @@ export function createFontProcessor(
   // returned, so the closure over the not-yet-assigned binding is safe.
   let processor: ResourceProcessor<FontResource>;
 
-  // Addresses already on this walk. `base_font`/`fallbacks` can name a sibling
-  // that names them back; an unguarded cycle parks two `once` awaits that can
-  // never settle each other, wedging both loads for the session. The sync
-  // sibling `resolveInlineFontResource` carries the same guard.
-  const visiting = new Set<string>();
+  // The addresses whose own `process` is still on the stack — the ANCESTORS of
+  // whatever `loadFont` is resolving right now. `base_font`/`fallbacks` are
+  // ordinary paths, so two files can name each other; the closing leg of such a
+  // cycle would otherwise park on a `once` that only its own caller can settle,
+  // wedging every address on the ring for the session.
+  //
+  // Owned by `process`, deliberately, rather than by `loadFont`: a set that
+  // `loadFont` filled would not hold the address of the resource being built
+  // (it arrived through `request`, not through a peer load), so the leg that
+  // closes the cycle would look unvisited and park anyway. It would also make
+  // two fallbacks naming the SAME file resolve the loser to null, since
+  // `decode.ts` resolves them concurrently.
+  const processing = new Set<string>();
 
   const loadFont = async (address: string): Promise<FontResource | null> => {
     const cached = processor.getCached(address);
     if (cached !== undefined) return cached;
-    if (visiting.has(address)) return null;
-    visiting.add(address);
+    if (processing.has(address)) return null;
     processor.request(address);
     try {
       return await eventBus.once<FontResource>('font', 'loaded', address, FONT_PEER_TIMEOUT_MS);
     } catch {
       return null;
-    } finally {
-      visiting.delete(address);
     }
   };
 
@@ -69,7 +74,14 @@ export function createFontProcessor(
     resourceType: 'font',
     shouldProcess: (_path, data) => data instanceof ArrayBuffer || typeof data === 'string',
     addressesSubResources: true,
-    process: (path, data) => buildFontResource(path, data, loadFont),
+    process: async (path, data) => {
+      processing.add(path);
+      try {
+        return await buildFontResource(path, data, loadFont);
+      } finally {
+        processing.delete(path);
+      }
+    },
   });
 
   return processor;

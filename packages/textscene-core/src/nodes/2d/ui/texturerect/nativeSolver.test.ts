@@ -62,6 +62,17 @@ describe('textureRectMinimumSize (texture_rect.cpp:107-133)', () => {
     expect(textureRectMinimumSize(node({ expandMode: 0 }, TEXTURE), ctx())).toEqual({ x: 320, y: 160 });
   });
 
+  // A texture whose image never got dimensions caches as a REAL entry with a
+  // 0x0 size, not as an absent one, so the null check alone lets it through.
+  // The FIT_*_PROPORTIONAL branches divide by that size, and the resulting NaN
+  // does not stay local: `combinedMinimumSize` maxes it into the parent's
+  // minimum, from where a container hands NaN rects to every sibling.
+  it('treats a degenerate 0x0 texture as no texture, in the branches that divide by it', () => {
+    for (const expandMode of [2, 3, 4, 5]) {
+      expect(textureRectMinimumSize(node({ expandMode }, { x: 0, y: 0 }), ctx())).toEqual({ x: 0, y: 0 });
+    }
+  });
+
   it('is (0, 0) for EXPAND_IGNORE_SIZE (1) (:113-115)', () => {
     expect(textureRectMinimumSize(node({ expandMode: 1 }, TEXTURE), ctx())).toEqual({ x: 0, y: 0 });
   });

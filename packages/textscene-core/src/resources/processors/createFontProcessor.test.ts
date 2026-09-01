@@ -231,4 +231,57 @@ describe('createFontProcessor', () => {
     expect(processor.getCached('res://scripts/thing.gd')).toBeNull();
     expect(processor.isLoading('res://scripts/thing.gd')).toBe(false);
   });
+
+  // `base_font`/`fallbacks` are ordinary ExtResource paths, so nothing stops two
+  // files naming each other — Godot itself merely errors on the pair. Without a
+  // guard each load parks on `eventBus.once` waiting for the other, which is
+  // waiting for it: neither `loaded` nor `failed` ever fires, `isLoading` stays
+  // true for both addresses forever, and the parked subscriptions leak.
+  it('breaks a base_font cycle instead of parking both loads forever', async () => {
+    const cyclic = (other: string): string =>
+      [
+        '[gd_resource type="FontVariation" load_steps=2 format=3]',
+        '',
+        `[ext_resource type="FontFile" path="${other}" id="1"]`,
+        '',
+        '[resource]',
+        'base_font = ExtResource("1")',
+        '',
+      ].join('\n');
+    const { processor, eventBus } = setup({
+      'res://a.tres': cyclic('res://b.tres'),
+      'res://b.tres': cyclic('res://a.tres'),
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://a.tres', 2000);
+    processor.request('res://a.tres');
+    const resource = (await loaded) as FontVariationResource;
+
+    expect(resource.kind).toBe('variation');
+    // The leg that closed the cycle resolves to nothing rather than to a value
+    // that would make the graph look acyclic.
+    expect((resource.baseFont as FontVariationResource | null)?.baseFont ?? null).toBeNull();
+  });
+
+  it('breaks a self-referential base_font', async () => {
+    const { processor, eventBus } = setup({
+      'res://self.tres': [
+        '[gd_resource type="FontVariation" load_steps=2 format=3]',
+        '',
+        '[ext_resource type="FontFile" path="res://self.tres" id="1"]',
+        '',
+        '[resource]',
+        'base_font = ExtResource("1")',
+        '',
+      ].join('\n'),
+    });
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://self.tres', 2000);
+    processor.request('res://self.tres');
+    const resource = (await loaded) as FontVariationResource;
+
+    expect(resource.kind).toBe('variation');
+    expect(resource.baseFont).toBeNull();
+  });
+
 });

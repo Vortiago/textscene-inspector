@@ -481,3 +481,39 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     expect(solved.get('Root/Offset/OffsetBottom')?.rect).toEqual({ x: 0, y: 206, w: 120, h: 94 });
   });
 });
+
+// --- The (int) narrowing SplitContainer applies before it does any arithmetic
+// `_get_valid_range` casts the size and both minimums to int, and
+// `get_minimum_size` accumulates via `minimum[axis] += (int)min_size[axis]`.
+// Every text-derived minimum is fractional, so dropping the casts leaves a
+// surviving fraction that moves a child rect by up to a pixel.
+describe('computeSplitDraggerPosition — (int) narrowing of size and minimums', () => {
+  it('truncates each child minimum on its own before clamping', () => {
+    // lo = (int)10.9 = 10. Keeping the fraction would clamp up to 10.9.
+    const pos = computeSplitDraggerPosition(
+      400.7, 12, axisChild({ minSize: 10.9 }), axisChild({ minSize: 20.9 }), -1000, false
+    );
+    expect(pos).toBe(10);
+  });
+
+  it('truncates the size and the second minimum for the upper bound', () => {
+    // hi = (int)400.7 - 12 - (int)20.9 = 400 - 12 - 20 = 368.
+    const pos = computeSplitDraggerPosition(
+      400.7, 12, axisChild({ minSize: 10.9 }), axisChild({ minSize: 20.9 }), 1000, false
+    );
+    expect(pos).toBe(368);
+  });
+});
+
+describe('splitContainerMinimumSize — (int) accumulation', () => {
+  it('truncates each child minimum before summing the main axis', () => {
+    // 10.9 -> 10, 20.9 -> 20, + separation 12 = 42. Summing raw gives 43.8.
+    const min = splitContainerMinimumSize(false, 12, [{ x: 10.9, y: 5.9 }, { x: 20.9, y: 7.9 }]);
+    expect(min.x).toBe(42);
+  });
+
+  it('truncates the cross-axis maximum too', () => {
+    const min = splitContainerMinimumSize(false, 12, [{ x: 10.9, y: 5.9 }, { x: 20.9, y: 7.9 }]);
+    expect(min.y).toBe(7);
+  });
+});

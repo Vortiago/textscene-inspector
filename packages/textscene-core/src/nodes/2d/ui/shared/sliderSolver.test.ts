@@ -167,3 +167,42 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
     expect(sliderTickRects(false, { x: 300, y: 40 }, [], 0, theme)).toEqual([]);
   });
 });
+
+// --- Size2i narrowing (`Slider::_notification`, NOTIFICATION_DRAW) ----------
+// Every draw formula opens on `Size2i size = get_size()`, so a fractional
+// control size is narrowed ONCE up front and every rect below is integral.
+// A text-derived minimum is fractional in general, which is how a Slider ends
+// up at a non-integer size in the first place.
+describe('slider draw rects — Size2i narrowing', () => {
+  it('narrows the control size before the track rect reads it', () => {
+    const track = sliderTrackRect(false, { x: 200.6, y: 40.9 }, theme);
+    expect(track.w).toBe(200);
+  });
+
+  it('narrows it for the vertical track too', () => {
+    expect(sliderTrackRect(true, { x: 40.9, y: 200.6 }, theme).h).toBe(200);
+  });
+
+  it('narrows it for the tick rects', () => {
+    const ticks = sliderTickRects(false, { x: 200.6, y: 40.9 }, [0, 1], 2, theme);
+    expect(ticks.every((t) => Number.isInteger(t.x) && Number.isInteger(t.y))).toBe(true);
+  });
+});
+
+// `size.height / 2 - grabber->get_height() / 2` (`slider.cpp:363`) — TWO
+// integer divisions on an int size and an int icon height, not one division of
+// the difference. The two agree whenever the grabber is even, which the theme's
+// own 16 is at scale 1; scale 0.95 rounds it to 15 and separates them.
+describe('sliderGrabberRect — the two separate integer divisions', () => {
+  const odd = nativeTheme(0.95);
+
+  it('centres a 15px grabber in a 40px-tall slider at y=13, not 12', () => {
+    expect(odd.sliderGrabberSize).toBe(15);
+    // 40 / 2 = 20; 15 / 2 = 7; 20 - 7 = 13. Fusing them gives trunc(12.5) = 12.
+    expect(sliderGrabberRect(false, { x: 200, y: 40 }, 0, odd).y).toBe(13);
+  });
+
+  it('mirrors it on the vertical axis', () => {
+    expect(sliderGrabberRect(true, { x: 40, y: 200 }, 0, odd).x).toBe(13);
+  });
+});

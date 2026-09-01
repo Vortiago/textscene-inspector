@@ -112,6 +112,18 @@ describe('parseBBCodeRuns', () => {
       expect(parseBBCodeRuns('[lb]b[rb]')).toEqual([{ text: '[b]', tags: [] }]);
     });
 
+    // A surrogate code point is inside 0..0x10FFFF but is not a scalar value:
+    // `String.fromCodePoint` would emit a lone surrogate, which is exactly the
+    // ill-formed output the range guard exists to suppress.
+    it('emits nothing for a surrogate [char=], which is in range but has no scalar value', () => {
+      expect(parseBBCodeRuns('[char=D800]')).toEqual([]);
+      expect(parseBBCodeRuns('[char=DFFF]')).toEqual([]);
+    });
+
+    it('still emits an astral code point, which is above the surrogate range', () => {
+      expect(parseBBCodeRuns('[char=1F600]')).toEqual([{ text: '\u{1F600}', tags: [] }]);
+    });
+
     it('emits the code point [char=hex] names (`:5623-5626`, `hex_to_int`)', () => {
       expect(parseBBCodeRuns('[char=2764]')).toEqual([{ text: '\u2764', tags: [] }]);
     });

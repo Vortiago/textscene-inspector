@@ -160,6 +160,24 @@ describe('marginContainerLayout', () => {
     expect(rects.get('Leaf')).toEqual({ x: 10, y: 20, w: 84, h: 53 });
   });
 
+  // `int w = ...; int h = ...` (`margin_container.cpp`) narrows the PADDED
+  // result, after the margins come off — not the incoming rect. A container
+  // sized from a text minimum is fractional, so the two differ in practice.
+  it('narrows the padded box, not the rect it came from', () => {
+    const child = leaf('Leaf', { customMinimumSize: { x: 0, y: 0 } });
+    const n = container(
+      'M',
+      { themeOverrideConstants: { margin_left: 5, margin_top: 5, margin_right: 5, margin_bottom: 5 } },
+      [child]
+    );
+    // 100.6 - 5 - 5 = 90.6 -> 90. Narrowing the rect first would give 90 too,
+    // so the height picks a fraction that survives the margins: 60.4 - 10 = 50.4.
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 100.6, h: 60.4 }, ctx())
+    );
+    expect(rects.get('Leaf')).toEqual({ x: 5, y: 5, w: 90, h: 50 });
+  });
+
   it('omits an invisible child from the solved rects (margin_container.cpp:99-102, as_sortable_control default VISIBLE_IN_TREE)', () => {
     const child = leaf('Hidden', { customMinimumSize: { x: 10, y: 10 }, visible: false });
     const n = container(
