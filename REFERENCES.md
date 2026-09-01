@@ -52,7 +52,7 @@ resolve a path into the checkout — `scripts/godot-source-decoupling.test.mjs` 
 that, and deleting the clone must leave `pnpm validate` unchanged.
 
 Every `file.cpp:line` in the code is 4.6.3-relative, and there are a lot of them —
-~3,500 distinct pairs across ~400 engine files in `packages/textscene-core/src` alone:
+~4,400 distinct pairs across ~470 engine files in `packages/textscene-core/src` alone:
 
 ```bash
 grep -rhoE '[a-z0-9_]+\.(cpp|h|glsl):[0-9]+' packages/textscene-core/src | sort -u | wc -l

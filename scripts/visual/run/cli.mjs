@@ -33,7 +33,25 @@ export function parseArgs(argv) {
 }
 
 /** The scenes this run covers: all of them, or the one `--scene` named. */
+/**
+ * The floor every other ledger in this repo carries, and the one harness that
+ * owns the largest artifact set did not: `GOLDEN_SCENES` is the spread of eight
+ * per-chapter arrays, so a chapter that empties — or a rename that leaves an
+ * exported array nothing accumulates into — silently shortens the run.
+ * `summarize([])` counts no failures, so the harness printed `PASS: 0/0 scenes`
+ * and exited 0 with 145 committed baselines guarded by nothing.
+ */
+const MIN_GOLDEN_SCENES = 100;
+
 export function selectScenes(opts) {
+  if (GOLDEN_SCENES.length < MIN_GOLDEN_SCENES) {
+    console.error(
+      `[visual] only ${GOLDEN_SCENES.length} golden scene(s) registered, below the ` +
+        `floor of ${MIN_GOLDEN_SCENES}. A chapter under scripts/visual/scenes/ is ` +
+        `empty or no longer reaches the manifest.`
+    );
+    process.exit(2);
+  }
   if (!opts.scene) return GOLDEN_SCENES;
   const scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
   if (scenes.length === 0) {

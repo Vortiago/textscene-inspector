@@ -144,6 +144,23 @@ describe('stalenessMessage', () => {
     expect(stalenessMessage(root)).toBeNull();
   });
 
+  it('passes on a newer test kit, which the program does not contain', () => {
+    // `**/*.testkit.ts` is in the package tsconfig's `exclude`, so `tsc --build`
+    // no-ops and leaves the stamp where it is: a complaint raised by one of
+    // these could never be cleared by the remedy it prints, and every
+    // dist-reading gate would stay blocked until an unrelated source edit.
+    const root = datedCore({
+      'dist/index.js': MID,
+      'tsconfig.tsbuildinfo': MID,
+      // A compiled source too, and OLDER than the stamp: without it the walk
+      // finds no subject and complains for an unrelated reason.
+      'src/index.ts': OLD,
+      'src/nodes/3d/meshinstance3d/arrayMeshSurfaces.testkit.ts': NEW,
+    });
+
+    expect(stalenessMessage(root)).toBeNull();
+  });
+
   it('reports a source newer than the stamp, naming it and the remedy', () => {
     const root = datedCore({
       'dist/index.js': NEW,

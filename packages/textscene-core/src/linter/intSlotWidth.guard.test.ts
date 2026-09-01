@@ -48,7 +48,7 @@ import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
-import { classifiableKeys } from './testing/validatorClassification.js';
+import { collectValidators } from './testing/validatorClassification.js';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/index.js';
 import './index.js'; // side-effect: every slice registers its validators
@@ -242,12 +242,21 @@ interface Declarations {
 /** The live registry as a {@link Declarations}. */
 function registryDeclarations(): Declarations {
   const byKey = new Map<string, Declared>();
-  for (const { nodeType, key } of classifiableKeys()) {
-    const width = validatorRegistry.findValidator(nodeType, key)?.intSlot?.width;
+  // `collectValidators`, not `classifiableKeys()` + `findValidator`: that walk
+  // reaches ROOTS only, so ~60 leaf int slots behind wildcard dispatchers
+  // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`)
+  // had no declaration to compare a read against, and every read of one was
+  // `continue`d — skipped, not failed.
+  for (const { label, validator } of collectValidators((v) => v.intSlot !== undefined)) {
+    const width = validator.intSlot?.width;
     if (width === undefined) continue;
+    // `Type.key` for a root; `Type.key/*[i]` for a leaf. The key half is what a
+    // reader spells, so the leaf suffix is dropped and the type is the owner.
+    const [nodeType, ...rest] = label.split('.');
+    const key = rest.join('.').replace(/\/\*\[\d+\]$/, '');
     const entry = byKey.get(key) ?? { widths: new Set<IntWidth>(), types: [] };
     entry.widths.add(width);
-    entry.types.push(nodeType);
+    entry.types.push(nodeType!);
     byKey.set(key, entry);
   }
   return {

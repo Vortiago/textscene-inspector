@@ -23,10 +23,14 @@ export function parseLabel3D(
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     billboard: parseBillboardMode(properties.billboard),
     modulate: parseColor(properties.modulate),
-    outline_size: floatOr(properties.outline_size, 12, 'outline_size'),
+    // `intOr`, not `floatOr`: label_3d.cpp declares both sizes Variant::INT with
+    // an `int` setter, so Godot truncates the fractional part and the renderer
+    // must size the quad by the number the engine holds. Reading them as floats
+    // drew with a value the linter simultaneously reported as dropped.
+    outline_size: intOr(properties.outline_size, 12, 'outline_size'),
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
     double_sided: boolSlotValue(properties.double_sided) !== false, // Godot default true
-    font_size: floatOr(properties.font_size, 32, 'font_size'),
+    font_size: intOr(properties.font_size, 32, 'font_size'),
     line_spacing: floatOr(properties.line_spacing, 0, 'line_spacing'),
     horizontal_alignment: parseHorizontalAlignment(properties.horizontal_alignment),
     no_depth_test: boolSlotValue(properties.no_depth_test) === true,

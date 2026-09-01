@@ -56,9 +56,12 @@ describe('formatCamera3DProperties', () => {
     expect(camera.items).toContainEqual({ label: 'Far', value: '500.0' });
   });
 
-  it('reports Keep Aspect Disabled', () => {
+  it('reports an out-of-range keep_aspect as Keep Height, the mode Godot uses', () => {
+    // `camera_3d.h:50-53` declares two members; `_update_camera_mode` treats
+    // anything that is not KEEP_WIDTH as KEEP_HEIGHT. A "Disabled" label named
+    // a mode the engine has never had.
     const camera = section(formatCamera3DProperties(props({ keep_aspect: '2' })), 'Camera')!;
-    expect(camera.items).toContainEqual({ label: 'Keep Aspect', value: 'Disabled' });
+    expect(camera.items).toContainEqual({ label: 'Keep Aspect', value: 'Keep Height' });
   });
 
   it('omits the Offsets section when h_offset/v_offset/frustum_offset are all zero (default)', () => {

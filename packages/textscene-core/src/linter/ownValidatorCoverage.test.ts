@@ -29,7 +29,7 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain } from '../godot/nodeBaseTypes.js';
+import { baseChain, MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
@@ -168,15 +168,35 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'CompressedTexture2D',
   'ConcavePolygonShape3D', 'ConvexPolygonShape3D', 'Curve', 'Curve2D', 'Curve3D', 'CylinderMesh',
   'FastNoiseLite', 'Gradient', 'GradientTexture2D', 'ImageTexture',
-  'NavigationMesh', 'NavigationPolygon', 'NoiseTexture2D', 'PackedScene', 'PanoramaSkyMaterial',
+  'NavigationMesh', 'NavigationPolygon',
+  // `Noise` and `Texture` are abstract tiers with ZERO `ADD_PROPERTY` calls in
+  // 4.6.3, so there is nothing of their own to validate; they are listed to
+  // record that, not as work.
+  'Noise', 'NoiseTexture2D', 'PackedScene', 'PanoramaSkyMaterial',
   'PhysicalSkyMaterial', 'PrismMesh', 'ProceduralSkyMaterial', 'QuadMesh', 'RectangleShape2D',
   'ShaderMaterial', 'Sky', 'SphereMesh', 'SpriteFrames', 'StandardMaterial3D',
-  'StyleBoxEmpty', 'StyleBoxFlat', 'Texture2D', 'TorusMesh', 'ViewportTexture',
+  'StyleBoxEmpty', 'StyleBoxFlat', 'Texture', 'Texture2D', 'TorusMesh', 'ViewportTexture',
 ];
 
-/** Claimed resource types Godot's ClassDB also declares. */
+/**
+ * Claimed resource types Godot's ClassDB also declares, closed over the resource
+ * base chain — the same closure the node half is given, and for the same reason.
+ *
+ * No slice CLAIMS an abstract tier, so the bare intersection could never reach
+ * one: `BaseMaterial3D` (131 own keys), `PrimitiveMesh`, `Material`, `Shape2D`,
+ * `Shape3D` and `Mesh` all sat outside every zero-own-validator ratchet, and
+ * emptying one of them would have stopped hundreds of keys validating with
+ * `unaccounted` and `stale` both still reading `[]`.
+ */
 function claimedResourceClasses(): string[] {
   const claimed = new Set(resourceSliceRegistry.all().flatMap((r) => r.typeNames));
+  for (const type of [...claimed]) {
+    let current: string | undefined = type;
+    for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
+      claimed.add(current);
+      current = RESOURCE_BASE_TYPES_GENERATED[current];
+    }
+  }
   return [...claimed]
     .filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED)
     .sort();
@@ -204,7 +224,7 @@ describe('own-validator coverage for resource slices', () => {
   it('never lets the undeclared resource list grow', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current
     // length is a free slot for the next silently-unvalidated slice.
-    expect(UNDECLARED_RESOURCES.length).toBe(37);
+    expect(UNDECLARED_RESOURCES.length).toBe(39);
   });
 
   it('sweeps a population that cannot quietly empty', () => {

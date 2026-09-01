@@ -21,6 +21,7 @@ import { join } from 'node:path';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { NODE_BASE_TYPES, UNCATALOGUED_BASE_TYPES } from '../godot/nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 
@@ -47,14 +48,18 @@ const CATALOG_CHAINS: ReadonlyMap<string, readonly string[]> = new Map(
  */
 const TERMINAL: ReadonlySet<string> = new Set(['Node']);
 
-/** Walk `type` up the table, returning the chain or the point it broke. */
-function resolveChain(type: string): { chain: string[]; ok: boolean } {
+/** Walk `type` up a table, returning the chain or the point it broke. */
+function resolveIn(
+  table: Readonly<Record<string, string>>,
+  terminal: ReadonlySet<string>,
+  type: string
+): { chain: string[]; ok: boolean } {
   const chain: string[] = [type];
   const seen = new Set<string>([type]);
   let current = type;
 
-  while (!TERMINAL.has(current)) {
-    const parent: string | undefined = NODE_BASE_TYPES[current];
+  while (!terminal.has(current)) {
+    const parent: string | undefined = table[current];
     if (parent === undefined) return { chain, ok: false };
     if (seen.has(parent)) return { chain: [...chain, `${parent} (cycle)`], ok: false };
     seen.add(parent);
@@ -63,6 +68,22 @@ function resolveChain(type: string): { chain: string[]; ok: boolean } {
   }
   return { chain, ok: true };
 }
+
+const resolveChain = (type: string) => resolveIn(NODE_BASE_TYPES, TERMINAL, type);
+
+/**
+ * The table the registry is actually BUILT with, and its terminals.
+ *
+ * A `.tscn` names types from both of Godot's hierarchies and `findValidator`
+ * resolves them through `CLASS_BASE_TYPES`, so a sweep over the node table
+ * alone leaves every Resource class outside the guard: 34 types register
+ * validators without appearing in `nodeRegistry`, and the resource tiers among
+ * them carry hundreds of inherited key registrations that ride entirely on
+ * `RESOURCE_BASE_TYPES_GENERATED` hops. Drop one of those hops and the silence
+ * this file exists to prevent — "nothing fails, nothing warns" — returns for
+ * every leaf under it.
+ */
+const CLASS_TERMINAL: ReadonlySet<string> = new Set(['Node', 'Resource']);
 
 describe('NODE_BASE_TYPES covers every registered node type', () => {
   const registered = nodeRegistry.getAllTypeNames();
@@ -84,6 +105,21 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
     const broken = Object.keys(NODE_BASE_TYPES)
       .filter((type) => !resolveChain(type).ok)
       .map((type) => `${type} is a table entry but does not reach Node`);
+
+    expect(broken).toEqual([]);
+  });
+
+  it('resolves every VALIDATOR-registered type through the merged table', () => {
+    // `validatorRegistry`, not `nodeRegistry`: the registry resolves with
+    // `CLASS_BASE_TYPES`, so this is the population and the table that actually
+    // decide whether a registered key is reachable.
+    const validatorTypes = validatorRegistry.getRegisteredNodeTypes();
+    expect(validatorTypes.length).toBeGreaterThan(registered.length);
+
+    const broken = validatorTypes
+      .map((type) => ({ type, ...resolveIn(CLASS_BASE_TYPES, CLASS_TERMINAL, type) }))
+      .filter((r) => !r.ok)
+      .map((r) => `${r.type}: chain stops at ${r.chain[r.chain.length - 1]}`);
 
     expect(broken).toEqual([]);
   });

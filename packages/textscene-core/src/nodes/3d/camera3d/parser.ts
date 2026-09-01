@@ -43,10 +43,12 @@ function parseProjectionMode(value: string | undefined): ProjectionMode {
   return ProjectionMode.PROJECTION_PERSPECTIVE;
 }
 
+/**
+ * `set_keep_aspect_mode` bare-assigns, and `_update_camera_mode` then treats
+ * anything that is not KEEP_WIDTH as KEEP_HEIGHT — so an out-of-range value
+ * loads and behaves as KEEP_HEIGHT rather than naming a third mode. There is no
+ * third mode: `camera_3d.h:50-53` declares exactly two.
+ */
 function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
-  const num = ruleInt(value);
-  if (num === null) return KeepAspectMode.KEEP_HEIGHT;
-  if (num === 0) return KeepAspectMode.KEEP_WIDTH;
-  if (num === 2) return KeepAspectMode.KEEP_ASPECT_DISABLED;
-  return KeepAspectMode.KEEP_HEIGHT;
+  return ruleInt(value) === 0 ? KeepAspectMode.KEEP_WIDTH : KeepAspectMode.KEEP_HEIGHT;
 }

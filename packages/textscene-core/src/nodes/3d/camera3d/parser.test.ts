@@ -100,12 +100,12 @@ describe('Camera3D Parser', () => {
       expect(props.projection).toBe(ProjectionMode.PROJECTION_FRUSTUM);
     });
 
-    it('should parse KEEP_ASPECT_DISABLED mode', () => {
+    it('reads an out-of-range keep_aspect as KEEP_HEIGHT, as Godot does', () => {
       const props = parseCamera3D(heading('Camera3D', { name: 'Camera' }), {
         keep_aspect: '2',
       });
 
-      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_ASPECT_DISABLED);
+      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
     });
   });
 });

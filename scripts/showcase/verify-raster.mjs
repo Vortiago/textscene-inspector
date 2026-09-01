@@ -41,6 +41,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { requireFreshDist } from '../distFreshness.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';
 import { startFixtureServer } from './raster/fixtureServer.mjs';
 import { runOverlaySuite } from './raster/suiteOverlay.mjs';
@@ -57,6 +58,10 @@ const MODULE_PATH = join(REPO_ROOT, 'packages/textscene-core/dist/r3f/controls/r
 
 mkdirSync(OUT, { recursive: true });
 
+// Freshness, not existence: `existsSync` passes on the PREVIOUS build's file, so
+// the gate would certify suite C's Godot 4.6.3 colour numbers — the only pin on
+// the tonemap pipeline — against a revision that is not in the tree.
+requireFreshDist(join(REPO_ROOT, 'packages/textscene-core'), 'the raster gate');
 if (!existsSync(MODULE_PATH)) {
   console.error(
     `[verify-raster] ${MODULE_PATH} is missing — run \`pnpm --filter @textscene/core build\` first.`

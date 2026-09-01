@@ -10,8 +10,11 @@ Godot `.tscn` parser/linter/renderer (react-three-fiber over three.js). pnpm mon
 - `pnpm type-check:all` — builds `@textscene/core` first; run once in a fresh worktree
   before any per-package check. It does **not** cover test files.
 - `pnpm type-check:tests` — one tsc project per package over the `*.test.ts(x)` files,
-  which every package's build tsconfig excludes. vitest transpiles without checking, so
-  a test can be green and untyped. It runs in `validate` (so the pre-push hook and
+  which most packages' build tsconfigs exclude (`apps/textscene-linter` includes them in
+  its single project, so its script is the same command). vitest transpiles without
+  checking, so a test can be green and untyped. `pnpm -r` SKIPS a package that does not
+  define the script and says nothing, so every package that ships tests must define it —
+  `scripts/typeCheckTestsCoverage.test.mjs` is what keeps that true. It runs in `validate` (so the pre-push hook and
   `release.yml`) and as its own CI step. Run it with the other gates, not at push time.
 - `pnpm test:unit` — full vitest suite, takes minutes. On shell-tool timeout re-run the
   SAME command with a larger `timeout` (ms); a subset never proves the gate.

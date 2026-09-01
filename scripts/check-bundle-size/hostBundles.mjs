@@ -65,7 +65,15 @@ export function checkHostBundles() {
   for (const bundlePath of HOST_BUNDLE_PATHS) {
     const rel = relative(REPO_ROOT, bundlePath);
     if (!existsSync(bundlePath)) {
-      console.warn(`[bundle-size] SKIP: ${rel} not found — build the extension first.`);
+      // FAIL, not SKIP: this is a binary invariant, and an unmeasured bundle is
+      // indistinguishable from a clean one. Renaming an esbuild `outfile` would
+      // otherwise drop it out of the list and leave the check returning success
+      // having inspected nothing — the scraping-guard erosion this repo keeps
+      // hitting, in the one place that is documented as unconditional.
+      console.error(
+        `[bundle-size] FAIL: ${rel} not found, so it was never checked — build the extension first.`
+      );
+      ok = false;
       continue;
     }
 

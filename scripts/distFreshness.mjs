@@ -28,10 +28,12 @@ export const BUILD = 'pnpm --filter @textscene/core build';
  * `tsc` emits `src/**` minus the tests, the test kit and the ambient
  * declarations, so an edit to those is not staleness: a guard that fires on
  * work it cannot be measuring is one people learn to bypass. Mirrors the
- * package tsconfig's `exclude`.
+ * package tsconfig's `exclude`, the `.testkit.ts` glob included — `tsc --build`
+ * no-ops when the program is already current, so a complaint raised by a file
+ * the program does not contain cannot be cleared by the build it prescribes.
  */
 const COMPILED = /\.tsx?$/;
-const NOT_COMPILED = /\.d\.ts$|\.(test|spec)\.tsx?$/;
+const NOT_COMPILED = /\.d\.ts$|\.testkit\.tsx?$|\.(test|spec)\.tsx?$/;
 
 /** Newest kept file under `dir`; `testing/` is the excluded kit, at any depth. */
 export const newest = (dir, keep) => newestMtime(dir, keep, (name) => name !== 'testing');
