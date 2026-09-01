@@ -149,6 +149,11 @@ const SLOTS: Slot[] = [
   ]),
   ...at('nodes/2d/path2d/linter.ts', [
     { type: 'Path2D', prop: 'curve', expected: ['warning path2d-missing-curve'] },
+    // The slot that EXCUSES the warning above, so a cleared one must not excuse
+    // it: the exemption is "a script assigns the curve at runtime", and
+    // `script = null` carries no script to do that. Read raw, `'null'` is a
+    // truthy string and silenced the warning it is listed here to preserve.
+    { type: 'Path2D', prop: 'script', expected: ['warning path2d-missing-curve'] },
   ]),
   ...at('nodes/2d/pointlight2d/linter.ts', [
     { type: 'PointLight2D', prop: 'texture', expected: ['warning pointlight2d-requires-texture'] },

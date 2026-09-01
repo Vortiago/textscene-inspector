@@ -47,10 +47,10 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 | `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) | warning |
 | `points` | PackedVector2Array(x, y, …) |  |
 | `round_precision` | integer 1-32 | error below, warning above |
-| `sharp_limit` | float >= 0 | error below |
+| `sharp_limit` | float >= 0 | error below 0 |
 | `texture` | null, SubResource("id") or ExtResource("id") |  |
 | `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) | warning |
-| `width` | float |  |
+| `width` | float >= 0 | error below 0 |
 | `width_curve` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |

@@ -90,7 +90,11 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
 
     // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
     const collisionMask = rawProps.collision_mask;
-    if (boolSlotValue(monitoring) === true && collisionMask !== undefined) {
+    // `?? true`, not `=== true`: an unreadable value is a write Godot refuses, so
+  // the constructor's `set_monitoring(true)` stands exactly as it does for an
+  // absent key. Reading it as "not monitoring" silenced the warning on the one
+  // file that most needs it.
+  if ((boolSlotValue(monitoring) ?? true) && collisionMask !== undefined) {
       // `ruleInt`, not `parseInt`: the latter stops at the first
       // character it cannot use, so `1e-1` read as 1 and missed the zero mask
       // Godot actually stores. uint32_t setter (collision_object_2d.h:124,

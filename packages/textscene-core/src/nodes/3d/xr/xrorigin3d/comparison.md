@@ -39,7 +39,7 @@ Strict parsing format-checks these `XROrigin3D` properties, plus 17 inherited fr
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `current` | true or false |  |
-| `world_scale` | float 0.01-1000 | error |
+| `world_scale` | float 0.01-1000 | error below 0.01, error above 1000 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

@@ -29,7 +29,11 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
     // A script commonly assigns the curve at runtime — don't warn in that case.
-    if (!rawProps.script) {
+    // The exemption needs a script that actually LOADS: read raw, `'null'` is a
+    // truthy string, so a cleared slot claimed one, and a reference the scene
+    // never declares claimed one too.
+    const script = heldResource(rawProps.script);
+    if (script === undefined || !checkResourceExists(scene, script)) {
       diagnostics.push({
         severity: 'warning',
         message: `Path2D '${node.name}' has no 'curve'. It will draw nothing until a Curve2D is assigned (often set at runtime via script).`,

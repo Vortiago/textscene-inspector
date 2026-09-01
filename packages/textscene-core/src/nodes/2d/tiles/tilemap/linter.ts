@@ -77,12 +77,22 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   type Layer = (typeof layers)[number];
   const isLayerYSorted = ([, leaves]: Layer) => boolSlotValue(leaves.get('y_sort_enabled')) === true;
-  const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.get('z_index'), 0) || 0;
+  // `ruleInt`'s `null` means "no number this rule may name" and must not become
+  // 0: `|| 0` made an unreadable z-index collide with a genuine 0 and reported a
+  // shared Z-index that is in neither the file nor the engine.
+  const layerZIndex = ([, leaves]: Layer) => ruleInt(leaves.get('z_index'), 0);
   const nodeYSorted = boolSlotValue(rawProps.y_sort_enabled) === true; // inherited Node2D key, own node
 
   // tile_map.cpp:850-858
-  const ySortedZIndices = new Set(layers.filter(isLayerYSorted).map(layerZIndex));
-  if (layers.some((layer) => !isLayerYSorted(layer) && ySortedZIndices.has(layerZIndex(layer)))) {
+  const ySortedZIndices = new Set(
+    layers.filter(isLayerYSorted).map(layerZIndex).filter((z) => z !== null)
+  );
+  if (
+    layers.some((layer) => {
+      const z = layerZIndex(layer);
+      return !isLayerYSorted(layer) && z !== null && ySortedZIndices.has(z);
+    })
+  ) {
     diagnostics.push({
       severity: 'warning',
       message: `TileMap '${node.name}' has a Y-sorted layer sharing a Z-index with a non-Y-sorted layer. The non-Y-sorted layer will be Y-sorted as a whole alongside tiles from the Y-sorted layer.`,

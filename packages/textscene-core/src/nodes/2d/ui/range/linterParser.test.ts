@@ -6,11 +6,10 @@
  * instead of at scene parsing, and no fixture text has to be maintained
  * alongside it.
  *
- * Range's own members are all plain FLOAT or BOOL in scene/gui/range.cpp's
- * `ADD_PROPERTY` list — none carries a `PROPERTY_HINT_RANGE` bound (that hint
- * only appears on `ratio`, which is `PROPERTY_USAGE_NONE` and never reaches a
- * .tscn) — so every numeric property here accepts any finite float, matching
- * the format-lenient philosophy already used for Control's anchors/offsets.
+ * No member carries a `PROPERTY_HINT_RANGE` (that hint appears only on `ratio`,
+ * which is `PROPERTY_USAGE_NONE` and never reaches a `.tscn`), so no bound here
+ * is hint-tier. `page` still has one: its SETTER clamps, which is the error
+ * tier whatever the hint says.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -179,5 +178,21 @@ describe('Range strict validators', () => {
 
   it('does not re-register size_flags_vertical — it carries overrides="Control" in Range.xml, so Control already owns it', () => {
     expect(validatorRegistry.getOwnKeys('Range')).not.toContain('size_flags_vertical');
+  });
+});
+
+describe('Range.page, whose setter clamps rather than stores', () => {
+  const page = (value: string) =>
+    validatorRegistry.findValidator('Range', 'page')!('page', value, 1);
+
+  it('reports a negative page, which range.cpp:255 CLAMPs up to 0', () => {
+    const error = page('-1');
+    expect(error?.severity).toBe('error');
+    expect(error?.message).toContain('0');
+  });
+
+  it('takes 0 and any positive page', () => {
+    expect(page('0')).toBeNull();
+    expect(page('12.5')).toBeNull();
   });
 });

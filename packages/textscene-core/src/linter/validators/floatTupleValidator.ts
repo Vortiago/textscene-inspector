@@ -1,8 +1,10 @@
 /** Arity-driven validator for fixed-length float-tuple TSCN values. */
 
 import { compositeSpellings } from '../../godot/variantConversion.js';
+import { slotComponentsAltered } from '../../godot/int.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
+import { valueCode } from './v/codes.js';
 import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 
 /**
@@ -51,13 +53,38 @@ export function floatTupleValidator(
   errorCode: string
 ): PropertyValidator {
   const regex = makeFloatTupleRegex(typeName, arity);
+  // The alteration is reported HERE rather than by each bound that reads the
+  // components, because it is a property of the SPELLING and every float-tuple
+  // slot in the registry is built from this one function. A slot with no bound
+  // at all — `v.vector2('start_position')` — has no other reporter, and the
+  // rules that read such a slot must stay silent about a number the engine
+  // narrowed, so without this the write is dropped by Godot and named nowhere.
+  const alteredCode = valueCode(propertyName);
   return (key, value, line) => {
-    if (!regex.test(value)) {
+    const match = regex.exec(value);
+    if (!match) {
       return propertyError(
         key,
         line,
         `Property '${propertyName}' must be ${expectation}, got: "${value}"`,
         errorCode
+      );
+    }
+    // `compositeSpellings` admits the `i`-suffixed constructor
+    // `can_convert_strict` converts, whose arguments are narrowed through
+    // `_parse_construct<int32_t>` BEFORE the widening into this float slot. A
+    // component that survives that is a value the file states; one that does
+    // not is stored as something the file never names — the ADR-0032 error
+    // tier. The message quotes the literal and never the stored number, which
+    // is architecture-specific (`variant.h:369-370`) or a wrap.
+    if (slotComponentsAltered(value, typeName, match.slice(1, arity + 1))) {
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' has a component Godot cannot store in the ` +
+          `integer spelling it is written in, got: "${value}". The file loads, but ` +
+          `the components are narrowed at parse time to a number the file does not state`,
+        alteredCode
       );
     }
     return null;

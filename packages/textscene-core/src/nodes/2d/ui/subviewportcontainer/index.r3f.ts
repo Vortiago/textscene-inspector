@@ -16,19 +16,15 @@
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node } from '../../../node/Component';
 import { SubViewportContainer } from './Component';
+// The 3D pass-through, which the 3D barrel imports directly: this file cannot
+// be its home, because it pulls the Control component and so only ever loads
+// from the lazy 2D chunk.
+import './nodePassthrough.r3f';
 
 controlComponentRegistry.register({
   typeName: 'SubViewportContainer',
   Component: SubViewportContainer,
-});
-
-nodeComponentRegistry.register({
-  typeName: 'SubViewportContainer',
-  Component: Node,
-  container: true,
 });
 
 export { SubViewportContainer };

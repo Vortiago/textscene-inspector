@@ -18,7 +18,10 @@ validatorRegistry.registerAll('Line2D', {
   // spelling this property ever serialises as. set_points (line_2d.cpp:78-81)
   // is a bare assignment: format-only.
   points: v.packedVector2Array('points'),
-  width: v.float('width'),
+  // line_2d.cpp:93 clamps a negative width up to 0 rather than storing it, so a
+  // negative value is an alteration. The end is the SETTER's: line_2d.cpp:396
+  // declares the property PROPERTY_HINT_NONE, so there are no hint numbers.
+  width: v.float('width', { enforcedMin: { at: 0 }, enforced: { min: 'line_2d.cpp:93' } }),
   // line_2d.cpp:397, OBJECT + RESOURCE_TYPE "Curve" (property name
   // "width_curve", methods set_curve/get_curve, line_2d.cpp:104-116). Bare
   // assignment past a changed-signal (re)connect, no value check: format-only.
@@ -77,7 +80,11 @@ validatorRegistry.registerAll('Line2D', {
   // line_2d.cpp:408 carries no hint at all; set_sharp_limit
   // (line_2d.cpp:243-249) clamps a negative value to 0 (`if (p_limit < 0.f)
   // p_limit = 0.f;`), a silent correction ADR-0032 treats as enforced.
-  sharp_limit: v.float('sharp_limit', { min: 0, enforced: 'line_2d.cpp:244' }),
+  // The same clamp shape as `width`, and line_2d.cpp:408 declares no hint either.
+  sharp_limit: v.float('sharp_limit', {
+    enforcedMin: { at: 0 },
+    enforced: { min: 'line_2d.cpp:244' },
+  }),
   // line_2d.cpp:409 hints "1,32,1" — no or_greater/or_less, hard both ends.
   // set_round_precision clamps below 1 (`_round_precision = MAX(1,
   // p_precision);`, line_2d.cpp:256), enforcing the floor; the 32 ceiling is

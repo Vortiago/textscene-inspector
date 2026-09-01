@@ -88,7 +88,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // before the write, a silently dropped write (ADR-0032), not a value the
   // setter "assigns straight through" the way a hinted bound requires.
   // Enforced, not hinted.
-  checkable: v.enumInt('checkable', 0, 2, ITEM_CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:62' }),
+  checkable: v.enumInt('checkable', 0, 2, ITEM_CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:63' }),
   // menu_button.cpp:218, Variant::BOOL, no hint.
   checked: v.boolean('checked'),
   // menu_button.cpp:219, Variant::INT, PROPERTY_HINT_RANGE

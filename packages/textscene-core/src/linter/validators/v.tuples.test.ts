@@ -247,3 +247,35 @@ describe('a fractional component of an integer composite', () => {
     expect(v.vector2i('size')('size', 'Vector2i(1.0, 2.0)', 1)).toBeNull();
   });
 });
+
+describe('the converted integer spelling in a float slot', () => {
+  // Every float-tuple slot admits `Vector2i(...)`, whose arguments narrow
+  // through `_parse_construct<int32_t>` before the widening. A component that
+  // does not survive that narrowing is stored as a number the file never
+  // states, and a slot with no bound has no other reporter.
+  const startPosition = (value: string) =>
+    v.vector2('start_position')('start_position', value, 1);
+
+  it('reports a component past int32, which wraps to a value nothing writes', () => {
+    const error = startPosition('Vector2i(4294967296, 0)');
+    expect(error?.severity).toBe('error');
+    expect(error?.code).toBe('INVALID_START_POSITION_VALUE');
+    expect(error?.message).toContain('narrowed at parse time');
+  });
+
+  it('reports a non-finite component, which the narrowing leaves undefined', () => {
+    expect(startPosition('Vector2i(inf, 0)')?.code).toBe('INVALID_START_POSITION_VALUE');
+  });
+
+  it('takes a converted component the engine stores unchanged', () => {
+    // `Vector2i(1.5, 0)` reaches the slot as (1, 0) — narrowed, but to a number
+    // int32 round-trips, so the file and the engine agree on what is stored.
+    expect(startPosition('Vector2i(1, 2)')).toBeNull();
+  });
+
+  it('leaves the float spelling own non-finite components alone', () => {
+    // `inf` is a spelling Godot writes into every real-typed composite; only
+    // the INTEGER constructor narrows.
+    expect(startPosition('Vector2(inf, nan)')).toBeNull();
+  });
+});

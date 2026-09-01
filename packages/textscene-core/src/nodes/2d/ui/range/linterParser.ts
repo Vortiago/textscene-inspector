@@ -31,7 +31,10 @@ validatorRegistry.registerAll('Range', {
   // scene/gui/range.cpp:407 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "step"), "set_step", "get_step");
   step: v.float('step'),
   // scene/gui/range.cpp:408 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "page"), "set_page", "get_page");
-  page: v.float('page'),
+  // range.cpp:255 CLAMPs the page into [0, max - min] rather than storing it,
+  // and set_min/set_max keep `max >= min` (range.cpp:217/:229) so the low end is
+  // always 0. The end is the SETTER's — range.cpp:408 declares no hint.
+  page: v.float('page', { enforcedMin: { at: 0 }, enforced: { min: 'range.cpp:255' } }),
   // scene/gui/range.cpp:409 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "value"), "set_value", "get_value");
   value: v.float('value'),
   // scene/gui/range.cpp:411 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "exp_edit"), "set_exp_ratio", "is_ratio_exp");

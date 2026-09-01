@@ -24,7 +24,7 @@ import {
   tupleComponent,
 } from '../../../linter/validators/index.js';
 import { formatCode, valueCode } from '../../../linter/validators/v/codes.js';
-import { slotComponents } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 
 const SHAPE = {
   '2D': { regex: VECTOR2_REGEX, type: 'Vector2', example: 'Vector2(0, -1)', arity: 2 },
@@ -47,10 +47,25 @@ export function upDirection(dim: '2D' | '3D', cite: string): PropertyValidator {
         formatCode('up_direction')
       );
     }
+    const captures = match.slice(1, arity + 1);
+    // Ahead of the zero test, which cannot express it: a narrowed component
+    // reads back NaN, and `NaN === 0` is false, so the one literal Godot does
+    // not store as written went unreported. The message quotes the literal and
+    // never the stored number.
+    if (slotComponentsAltered(value, type, captures)) {
+      return propertyError(
+        key,
+        line,
+        `Property 'up_direction' has a component Godot cannot store in the integer ` +
+          `spelling it is written in, got: "${value}". The file loads, but the ` +
+          'components are narrowed at parse time to a number the file does not state',
+        valueCode('up_direction')
+      );
+    }
     // `slotComponents`, not bare `tupleComponent`: the grammar admits the
     // `${type}i(...)` spelling `can_convert_strict` converts, whose arguments are
     // narrowed to int32 before the widening into this float slot.
-    const components = slotComponents(value, type, match.slice(1, arity + 1), tupleComponent);
+    const components = slotComponents(value, type, captures, tupleComponent);
     if (components.every((component) => component === 0)) {
       return propertyError(
         key,

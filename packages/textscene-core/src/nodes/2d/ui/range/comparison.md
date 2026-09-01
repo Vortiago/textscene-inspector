@@ -46,7 +46,7 @@ Strict parsing format-checks these `Range` properties, plus 53 inherited from Co
 | `exp_edit` | true or false |  |
 | `max_value` | float |  |
 | `min_value` | float |  |
-| `page` | float |  |
+| `page` | float >= 0 | error below 0 |
 | `rounded` | true or false |  |
 | `step` | float |  |
 | `value` | float |  |

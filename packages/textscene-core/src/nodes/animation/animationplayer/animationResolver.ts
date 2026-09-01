@@ -367,6 +367,12 @@ function asString(value: unknown): string | undefined {
 
 function numberOr(value: unknown, fallback: number): number {
   if (typeof value !== 'string') return fallback;
-  return parseGodotFloat(value) ?? fallback;
+  const parsed = parseGodotFloat(value);
+  // `??` catches only null. `inf` and `nan` are legal TSCN float spellings that
+  // `parseGodotFloat` returns as real Infinity/NaN, and they reach three.js as
+  // a clip duration and a blend weight — an infinite `AnimationClip` length, or
+  // a weight that fails every `> EPSILON` test so nothing renders at all. The
+  // documented default is what a value the renderer cannot use falls back to.
+  return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;
 }
 

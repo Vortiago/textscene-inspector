@@ -63,3 +63,21 @@ script = ExtResource("1")
     ).toHaveLength(0);
   });
 });
+
+describe('Path2D missing-curve, and the script slot that excuses it', () => {
+  const path2d = (props: Record<string, string>) => scene(node('Path2D', props));
+
+  it('still warns when the script slot is explicitly cleared', () => {
+    // `'null'` is a truthy string: read raw, a cleared slot claimed a script
+    // that could assign the curve at runtime, and the warning vanished.
+    expectDiagnostic(path2d({ script: 'null' }), { ruleName: 'path2d-missing-curve' });
+  });
+
+  it('warns for a script reference the scene never declares', () => {
+    // The exemption is "a script assigns it at runtime". A dangling reference
+    // loads no script, so there is nothing to assign it.
+    expectDiagnostic(path2d({ script: 'ExtResource("9_gone")' }), {
+      ruleName: 'path2d-missing-curve',
+    });
+  });
+});

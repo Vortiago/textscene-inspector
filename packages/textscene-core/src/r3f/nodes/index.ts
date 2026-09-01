@@ -188,5 +188,8 @@ import '../../nodes/networking/multiplayersynchronizer/index.r3f';
 import '../../nodes/rendering/shaderglobalsoverride/index.r3f';
 import '../../nodes/resources/resourcepreloader/index.r3f';
 import '../../nodes/os/statusindicator/index.r3f';
+// The one Control slice with a 3D-registry entry: its `index.r3f` pulls the DOM
+// component and lives in the lazy 2D chunk, so only the pass-through is taken.
+import '../../nodes/2d/ui/subviewportcontainer/nodePassthrough.r3f';
 
 export { GenericNodeFallback } from '../internal/generic-node-fallback/index';

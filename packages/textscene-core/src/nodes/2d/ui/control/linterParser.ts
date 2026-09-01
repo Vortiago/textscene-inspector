@@ -139,7 +139,10 @@ validatorRegistry.registerAll('Control', {
   size_flags_stretch_ratio: v.nonNegativeFloat('size_flags_stretch_ratio', {
     hinted: 'control.cpp:4277',
   }),
-  custom_minimum_size: v.vector2('custom_minimum_size'),
+  // control.cpp:1729 returns without storing when either component is
+  // non-finite ("Prevent infinite loop"), and the equality early-return above it
+  // can never intercept one, so the write is dropped and the size stays (0, 0).
+  custom_minimum_size: v.vector2('custom_minimum_size', { finite: 'control.cpp:1729' }),
 
   // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3,
   // control.h:65-70). set_focus_mode (control.cpp:2267) is

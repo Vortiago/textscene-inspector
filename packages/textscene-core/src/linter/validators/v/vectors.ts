@@ -30,6 +30,45 @@ import { accepts, endSeverity, ground, shape, type Grounding } from './grounding
 // token and converts it, so a float or exponent component loads and truncates.
 const RECT2I_RE = makeFloatTupleRegex('Rect2i', 4);
 
+/**
+ * Refuse a composite whose float spelling carries a non-finite component,
+ * for a setter that drops the whole write on one.
+ *
+ * The FLOAT spelling only: `slotComponents` already narrows the `i`-suffixed
+ * one, and an integer constructor's non-finite argument is the alteration
+ * `floatTupleValidator` reports, not a refusal this guard owns.
+ */
+function finiteComponents(
+  validator: PropertyValidator,
+  name: string,
+  typeName: string,
+  arity: number,
+  cite: string
+): PropertyValidator {
+  const regex = makeFloatTupleRegex(typeName, arity);
+  const guarded: PropertyValidator = (key, value, line) => {
+    const format = validator(key, value, line);
+    if (format) return format;
+    const match = regex.exec(value);
+    if (!match) return null;
+    if (isConvertedSpelling(typeName, compositeTypeName(value))) return null;
+    const components = match.slice(1, arity + 1).map((c) => tupleComponent(c));
+    if (components.some((c) => !Number.isFinite(c))) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must have finite components; Godot's setter returns ` +
+          `without storing "${value.trim()}"`,
+        valueCode(name)
+      );
+    }
+    return null;
+  };
+  guarded.accepts = validator.accepts;
+  guarded.grounding = { kind: 'enforced', cite };
+  return guarded;
+}
+
 export const vectorCombinators = {
   /** `Rect2i(x, y, w, h)` integer format. */
   rect2i(name: string): PropertyValidator {
@@ -62,12 +101,21 @@ export const vectorCombinators = {
     }, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts'));
   },
 
-  /** `Vector2(x, y)` format. */
-  vector2(name: string): PropertyValidator {
-    return shape(
+  /**
+   * `Vector2(x, y)` format, optionally with a per-COMPONENT finiteness refusal.
+   *
+   * `finite` is not a format check and takes a citation like any other bound:
+   * `inf` and `nan` are spellings Godot writes into every real-typed composite,
+   * so refusing one is only correct where the setter itself does. It is spelled
+   * per component because `withFiniteGuard` reads the value as a SCALAR and a
+   * composite literal is not one.
+   */
+  vector2(name: string, opts: { finite?: string } = {}): PropertyValidator {
+    const format = shape(
       createVector2Validator(name, formatCode(name)),
       'Vector2(x, y), or the Vector2i spelling Godot converts'
     );
+    return opts.finite ? finiteComponents(format, name, 'Vector2', 2, opts.finite) : format;
   },
 
   /**
