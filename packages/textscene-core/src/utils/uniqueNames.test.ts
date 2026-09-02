@@ -212,3 +212,45 @@ unique_name_in_owner = true
     expect(ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
   });
 });
+
+describe('an explicit owner= on a node heading', () => {
+  // The loader resolves an `owner=` NodePath from the scene root and sets it
+  // on the node (resource_format_text.cpp:257-262, packed_scene.cpp NODE_FROM_ID
+  // on `n.owner`), so it decides which table `%Name` registers on.
+  const explicit = `[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Player" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1")]
+
+[node name="Hit" type="Area2D" parent="Enemy/Body" owner="Enemy"]
+unique_name_in_owner = true
+
+[node name="Hud" parent="Enemy" owner="."]
+unique_name_in_owner = true
+`;
+
+  it('is kept as written by both parsers', () => {
+    const lenient = new TscnParser().parse(explicit).nodes[0]!;
+    const strict = strictScene(explicit).nodes[0]!;
+    for (const root of [lenient, strict]) {
+      const enemy = root.children.find((n) => n.name === 'Enemy')!;
+      const hit = enemy.children.find((n) => n.name === 'Hit')!;
+      const hud = enemy.children.find((n) => n.name === 'Hud')!;
+      expect(hit.owner).toBe('Enemy');
+      expect(hud.owner).toBe('.');
+    }
+  });
+
+  it('registers the claim on the named owner, not on this root', () => {
+    const ownership = uniqueNameOwnership(new TscnParser().parse(explicit).nodes);
+    expect(ownership.claims.has('%Hit')).toBe(false);
+    expect(ownership.instanceClaims.get('Player/Enemy')?.map((c) => c.node.name)).toContain('Hit');
+  });
+
+  it('owner="." claims for this root even on an override inside an instance', () => {
+    const ownership = uniqueNameOwnership(new TscnParser().parse(explicit).nodes);
+    expect(ownership.claims.get('%Hud')?.path).toBe('Player/Enemy/Hud');
+  });
+});

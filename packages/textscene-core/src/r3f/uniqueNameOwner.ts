@@ -32,6 +32,8 @@ export interface ClaimOwner {
   readonly roots: readonly TscnNode[];
   /** The owner of the instance node itself — the file its heading is in. Absent for the outer root. */
   readonly parent?: ClaimOwner;
+  /** The live tree, carried by the outer root alone so a table can re-walk it. */
+  readonly ctx?: LiveTreeContext;
 }
 
 /** A composed live path spelled the way `owner`'s own file spells it. */
@@ -66,20 +68,26 @@ interface Candidate {
  * owner found so far, so a consumer inside a not-yet-loaded sub-scene resolves
  * against the outer table until the load lands and the version tick re-asks.
  */
-export function claimOwnerOf(
-  path: string,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): ClaimOwner {
-  const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots };
+interface Walk {
+  /** Owner of the node at the path. */
+  owner: ClaimOwner;
+  /** Owner of the nodes INSIDE it: the instance itself once its roots are loaded. */
+  into: ClaimOwner;
+  node?: TscnNode;
+}
+
+function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): Walk {
+  const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, ctx };
   let candidates: Candidate[] = [
     { group: { origin: 'inline', children: roots, externalResources: ctx.externalResources }, owner: outer },
   ];
   let owner = outer;
+  let into = outer;
   let parentPath = '';
+  let match: TscnNode | undefined;
   for (const segment of path.split('/')) {
-    let match: TscnNode | undefined;
     let found: Candidate | undefined;
+    match = undefined;
     for (const candidate of candidates) {
       match = candidate.group.children.find((n) => n.name === segment);
       if (match) {
@@ -87,7 +95,7 @@ export function claimOwnerOf(
         break;
       }
     }
-    if (!match || !found) return owner;
+    if (!match || !found) return { owner, into: owner };
     const livePath = joinPath(parentPath, segment);
     owner = found.owner;
     // A node the file above grafted in is that file's own, however deep it sits.
@@ -111,9 +119,33 @@ export function claimOwnerOf(
             : owner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
+    into = candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner;
     parentPath = livePath;
   }
-  return owner;
+  return { owner, into, node: match };
+}
+
+/**
+ * The owner a `%Name` written on the node at `path` registers with, and the
+ * table a reference from that node consults.
+ *
+ * Structurally the file the heading is in owns it, except an override heading
+ * inside an instance, which the instance keeps (resource_format_text.cpp:264-265).
+ * An explicit `owner=` replaces that answer: `"."` is the root of the file the
+ * heading is in, anything else the node at that root-relative path, whose own
+ * tree then holds the table.
+ */
+export function claimOwnerOf(
+  path: string,
+  roots: readonly TscnNode[],
+  ctx: LiveTreeContext
+): ClaimOwner {
+  const { owner, node } = walkTo(path, roots, ctx);
+  if (node?.owner === undefined) return owner;
+  // The file an override heading is in is one above the instance that owns it.
+  const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
+  if (node.owner === '.') return file;
+  return walkTo(joinPath(file.path, node.owner), roots, ctx).into;
 }
 
 function cachedSubRoots(
@@ -145,14 +177,26 @@ export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameCl
     if (!claim.livePath.includes('/')) continue;
     table.set(key, { ...claim, livePath: composedPath(owner, claim.livePath) });
   }
-  const parent = owner.parent;
-  const overrides =
-    cachedUniqueNameOwnership(parent.roots).instanceClaims.get(fileLocalPath(parent, owner.path)) ??
-    [];
-  for (const claim of overrides) {
-    const key = UNIQUE_NODE_PREFIX + claim.node.name;
-    if (table.has(key)) continue;
-    table.set(key, { ...claim, livePath: composedPath(parent, claim.livePath) });
+  let outer = owner;
+  while (outer.parent) outer = outer.parent;
+  // A file records an override's claim under the instance IT declares, which is
+  // the nearest owner it can see; the composed tree knows the nearest one there
+  // is, so every ancestor's records are re-keyed by the owner the node has here.
+  // An explicit `owner=` named its table outright and is filed by that key.
+  for (let above: ClaimOwner | undefined = owner.parent; above; above = above.parent) {
+    for (const [key, claims] of cachedUniqueNameOwnership(above.roots).instanceClaims) {
+      for (const claim of claims) {
+        const name = UNIQUE_NODE_PREFIX + claim.node.name;
+        if (table.has(name)) continue;
+        const livePath = composedPath(above, claim.livePath);
+        const ownedBy =
+          claim.node.owner !== undefined || !outer.ctx
+            ? composedPath(above, key)
+            : walkTo(livePath, outer.roots, outer.ctx).owner.path;
+        if (ownedBy !== owner.path) continue;
+        table.set(name, { ...claim, livePath });
+      }
+    }
   }
   return table;
 }

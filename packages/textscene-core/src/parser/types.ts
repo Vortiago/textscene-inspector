@@ -108,6 +108,13 @@ export interface TscnNode {
    * resource, or absent entirely.
    */
   authoredResources?: readonly TscnExternalResource[];
+  /**
+   * The heading's `owner=` NodePath as written, root-relative (`"."` is the
+   * root). The loader resolves it and sets the node's owner
+   * (resource_format_text.cpp:257-262), which decides the table a `%Name`
+   * registers on; Godot's own writer never emits it (packed_scene.cpp:1036-1044).
+   */
+  owner?: string;
   /** External scene instance reference (e.g., ExtResource("1_abc")) */
   instance?: string;
 }

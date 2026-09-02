@@ -164,3 +164,39 @@ describe('ownerClaims', () => {
     expect(ownerClaims(ownerOf('Root/HudInstance/Sprite')).has('%Gear')).toBe(false);
   });
 });
+
+describe('ownership the outer file cannot see', () => {
+  // `Widget` is instanced by hud.tscn, not by this file, so an override of a
+  // node inside it keeps Widget as its owner (resource_format_text.cpp:264-265
+  // leaves the owner alone) and `%Face` registers on Widget's table
+  // (node.cpp:2222-2234): a consumer inside Widget resolves it, one directly
+  // under the HUD instance does not (node.cpp:1930-1938).
+  const nested = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Face" parent="HudInstance/Widget"]
+unique_name_in_owner = true
+
+[node name="Lamp" type="Node2D" parent="." owner="HudInstance"]
+`);
+  const nestedCtx: LiveTreeContext = { ...ctx, externalResources: nested.externalResources };
+  const own = (path: string) => claimOwnerOf(path, nested.nodes, nestedCtx);
+
+  it('files an override inside a sub-scene\u2019s own nested instance under that inner instance', () => {
+    expect(ownerClaims(own('Root/HudInstance/Widget/Knob')).get('%Face')?.livePath).toBe(
+      'Root/HudInstance/Widget/Face'
+    );
+    expect(ownerClaims(own('Root/HudInstance/Sprite')).has('%Face')).toBe(false);
+    expect(ownerClaims(own('Root/Lamp')).has('%Face')).toBe(false);
+  });
+
+  it('gives a consumer with an explicit owner= that owner\u2019s table', () => {
+    const owner = own('Root/Lamp');
+    expect(owner.path).toBe('Root/HudInstance');
+    expect(ownerClaims(owner).has('%Panel')).toBe(true);
+  });
+});

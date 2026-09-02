@@ -130,6 +130,7 @@ export function parseNodeWithRegistry(
     };
 
     if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
+    if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
     // Preserve instance attribute for external scene loading
     if (hasInstanceAttribute) {
@@ -149,6 +150,8 @@ export function parseNodeWithRegistry(
     properties: parsedProps,
     rawProperties: properties,
   };
+
+  if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
   // Capture instance property for external scene references
   // instance can be in heading attributes OR body properties

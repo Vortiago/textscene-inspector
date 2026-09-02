@@ -92,10 +92,11 @@ export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwner
   // which `get_node` from this scene never consults (node.cpp:1930-1938); it
   // is recorded under that instance for the owner's table to pick up. An
   // added node there is owned by this root as usual. An instanced ROOT is this
-  // scene's own root, so its overrides stay claimed. A heading carries no
-  // `owner=` here — neither parser keeps it — and an instance the sub-scene
-  // itself contains is invisible, so an override of a node below one is
-  // recorded one owner too high, under the instance this file declares.
+  // scene's own root, so its overrides stay claimed. An explicit `owner=` on the
+  // heading replaces the structural answer: `"."` is this root, anything else
+  // the node at that root-relative path. An instance the sub-scene itself
+  // contains is invisible here, so an override of a node below one is recorded
+  // under the instance this file declares; the composed owner tables re-key it.
   const walk = (
     nodes: readonly TscnNode[],
     parentPath: string,
@@ -107,13 +108,21 @@ export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwner
       const under = node.instanceSubPath ? join(parentLive, node.instanceSubPath) : parentLive;
       const livePath = join(under, node.name);
       const key = UNIQUE_NODE_PREFIX + node.name;
-      const ownedHere = !(instanceOwner !== null && node.overridesExistingNode === true);
+      const explicitOwner =
+        node.owner === undefined ? undefined : node.owner === '.' ? null : join(roots[0]!.name, node.owner);
+      const claimOwner =
+        explicitOwner !== undefined
+          ? explicitOwner
+          : instanceOwner !== null && node.overridesExistingNode === true
+            ? instanceOwner
+            : null;
+      const ownedHere = claimOwner === null;
       if (ownedHere && instanceOwner !== null) ownedInsideInstances.add(livePath);
       if (isUniqueNameInOwner(node)) {
         if (!ownedHere) {
-          const owned = instanceClaims.get(instanceOwner!) ?? [];
+          const owned = instanceClaims.get(claimOwner) ?? [];
           owned.push({ node, path, livePath });
-          instanceClaims.set(instanceOwner!, owned);
+          instanceClaims.set(claimOwner, owned);
         } else if (!claims.has(key)) {
           claims.set(key, { node, path, livePath });
         }

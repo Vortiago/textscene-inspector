@@ -48,6 +48,7 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
   if (isPropertyOverrideHeading(heading)) {
     node.overridesExistingNode = true;
   }
+  if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
   // Carry an instance reference on the dedicated TscnNode field rather than
   // smuggling a `__instance` key into the property schema. (An `index=`-only
