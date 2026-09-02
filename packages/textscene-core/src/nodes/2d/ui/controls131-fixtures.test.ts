@@ -1,5 +1,5 @@
 /**
- * #131 fixtures contract: the slice ships unit-*.tscn fixtures for OptionButton and
+ * Fixtures contract: the slice ships unit-*.tscn fixtures for OptionButton and
  * CheckBox under scenes/fixtures (named `unit-*` so generate:fixtures categorizes them
  * as "Unit - 2D UI Controls"). Resolves the repo root by walking up to pnpm-workspace.yaml.
  */

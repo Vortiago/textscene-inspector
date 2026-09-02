@@ -1,6 +1,6 @@
 /**
  * Semantic lint rules for TileMapLayer: actionable diagnostics instead of
- * "unknown type" (PRD #74 story 16).
+ * "unknown type".
  */
 import { describe, it, expect } from 'vitest';
 import { lint, expectDiagnostic } from '../../../../linter/testing/testkit';

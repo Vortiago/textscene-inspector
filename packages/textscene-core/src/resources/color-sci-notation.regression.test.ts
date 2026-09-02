@@ -1,5 +1,5 @@
 /**
- * Regression contract for #141 — Color decoders reject scientific-notation channels.
+ * Regression contract: Color decoders must accept scientific-notation channels.
  *
  * The material/Environment `parseColor` and the Environment linter's colour check
  * matched channels with `[\d.]+`, which excludes `e`/`E`/`+`/`-`. So a normal Godot

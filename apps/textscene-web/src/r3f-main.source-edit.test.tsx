@@ -72,7 +72,7 @@ function resetPersistence() {
   } catch {
     // happy-dom may throw in edge cases; ignore.
   }
-  // #221: a fixture switch now writes `?fixture=` back to the URL
+  // A fixture switch writes `?fixture=` back to the URL
   // (history.replaceState) — reset it so one test's switch doesn't leak
   // into the next test's initial mount as a stale deep link.
   window.history.replaceState(null, '', '/');

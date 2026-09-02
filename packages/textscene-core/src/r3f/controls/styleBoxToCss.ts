@@ -7,7 +7,7 @@
  * A box type the slice does not decode (`StyleBoxTexture`, or a reference that
  * resolved to a non-StyleBox) maps to `{}` rather than throwing.
  *
- * `styleBoxToCss` is the type-plus-property-bag entry — the shape the #175
+ * `styleBoxToCss` is the type-plus-property-bag entry — the shape the
  * value-grammar contract pins (`valueDecoderGrammar.contract.test.ts`), which is
  * why it stays even though Controls reach a box by reference through
  * `resolveStyleBox` instead.

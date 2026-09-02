@@ -7,7 +7,7 @@
  * rendering breaker). Extreme-but-nonzero magnitudes are NOT flagged: the
  * renderer draws them and real Godot scenes use near-zero "hide" scales, so
  * erroring on them would re-introduce the parser/linter divergence this base
- * validator (inherited by every Node2D subclass via the base-walk, #143) exists
+ * validator (inherited by every Node2D subclass via the base-walk) exists
  * to remove.
  */
 

@@ -37,6 +37,7 @@ const TRACKER_REF = [
   /\bWI-\d+\b/, // WI-<n>
   /\b(?:issue|fixes|closes|resolves|pr)s?\s*#\d+/i, // issue #<n>, closes #<n>
   /\(#\d+\)/, // (#<n>)
+  /(?<![\w#&])#\d{1,4}(?![\dA-Fa-f])/, // #<n>, but not a hex colour
 ];
 
 function* sourceFiles(dir: string): Generator<string> {

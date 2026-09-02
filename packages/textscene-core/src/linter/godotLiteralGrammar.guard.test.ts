@@ -287,7 +287,7 @@ const I_SLOT_CONSTANT = new RegExp(
   'g'
 );
 
-/** Where `alwaysFloatBranch` sits in each reader's argument list (`godot/int.ts`). */
+/** Where `alwaysFloatBranch` sits in each reader's argument list (`godot/intSlots.ts`). */
 const CONVERTED_ARG: Readonly<Record<string, number>> = { storedInt: 1, ruleInt: 3 };
 
 /**

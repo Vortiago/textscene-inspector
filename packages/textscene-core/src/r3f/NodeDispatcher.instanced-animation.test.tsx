@@ -1,5 +1,5 @@
 /**
- * Acceptance for #114 + ADR-0012/ADR-0013: an AnimationPlayer INSIDE an
+ * Acceptance for ADR-0012/ADR-0013: an AnimationPlayer INSIDE an
  * instanced sub-scene binds the selection-driven Animation transport through
  * the COLLAPSED node path.
  *

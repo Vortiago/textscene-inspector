@@ -16,7 +16,7 @@
  *
  * The hook is the SpriteFrames slice's host adapter: both homes hand the same
  * property bag to `decodeSpriteFrames`, so the decode never learns which one it
- * came from (or, once #110 lands, which serialization).
+ * came from.
  */
 
 import { useMemo } from 'react';

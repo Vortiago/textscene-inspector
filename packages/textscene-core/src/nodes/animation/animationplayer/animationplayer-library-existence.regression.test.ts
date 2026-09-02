@@ -1,5 +1,5 @@
 /**
- * Regression contract for #148 — AnimationPlayer autoplay/current_animation existence checks
+ * Regression contract: AnimationPlayer autoplay/current_animation existence checks
  * are DEAD on real Godot 4 files.
  *
  * The semantic linter resolved clip names only from `anims/<name>` keys (pre-4.0) and gated the
@@ -93,7 +93,7 @@ autoplay = "walk"
 });
 
 /**
- * Contract hardening (#148 follow-up): the original RED contract only pinned the empty-name default
+ * Contract hardening: the original RED contract only pinned the empty-name default
  * library with inline SubResource clips. Reviving the existence checks for that one form let two
  * false-positive regressions through — the check is only meaningful when the clip set is FULLY
  * resolvable, and named libraries reference clips as `<lib>/<clip>`. These pin both, plus the

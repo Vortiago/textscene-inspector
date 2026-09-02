@@ -41,13 +41,12 @@ import { degToRad } from '../../../godot/math.js';
  * `name` — bind by this name. THREE.PropertyBinding reads only the final
  * segment and searches the root's whole subtree, so the ancestors buy nothing;
  * `A/Target` and `B/Target` are indistinguishable to it, and a duplicated name
- * binds to whichever it finds first (#371 proposes exact binding instead).
+ * binds to whichever it finds first.
  *
  * `unbindable` — the path climbs above the animation root, which
  * PropertyBinding cannot reach: its search never leaves the root's subtree, and
  * a literal `..` in a track name is outside its grammar and throws while the
- * action is built. Such a track is dropped with a warning. NOT supported, and
- * #371 is what would actually support it.
+ * action is built. Such a track is dropped with a warning.
  */
 export type TrackBinding =
   | { kind: 'root' }

@@ -8,7 +8,7 @@
  * NO_EDITOR to STORAGE alone). `PackedScene`'s node-property save loop
  * (packed_scene.cpp:108) tests only `PROPERTY_USAGE_STORAGE`, so this key DOES
  * reach a `.tscn` despite being invisible in the inspector; it is not
- * `PROPERTY_USAGE_NONE`, so rule #3 (ADD_PROPERTY governs serialisation, not
+ * `PROPERTY_USAGE_NONE`, so the third rule (ADD_PROPERTY governs serialisation, not
  * PROPERTY_USAGE_NO_EDITOR) applies rather than the "no validator" case.
  *
  * The getter/setter are `_get_resources`/`_set_resources`

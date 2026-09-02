@@ -195,4 +195,4 @@ real parser instead of the decode/build split. Conformance:
 - Comments: non-obvious info only; no issue/WI references in code.
 - Implement completely — no stubs/placeholders/TODOs; do every numbered item, including
   doc-only edits.
-- Commits: conventional, technical, no AI-attribution lines.
+- Commits: conventional, technical.

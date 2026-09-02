@@ -172,7 +172,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     playState: effectiveState,
     selectedClip: isDriving ? transport.selectedClip : null,
     transportTime: transport.time,
-    // #224: the preview speed multiplier stacks on top of the authored
+    // The preview speed multiplier stacks on top of the authored
     // speed_scale — it never replaces it.
     speedScale: (properties.speed_scale ?? 1) * transport.playbackSpeed,
     mixerRef,
