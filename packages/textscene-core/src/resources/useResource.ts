@@ -14,21 +14,15 @@
  *     one parent, so two consumers must not share the same instance.
  */
 import { useContext, useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { TscnScene } from '../parser/types';
-import type { ResourceEventBus, ResourceType as BusResourceType } from './ResourceEventBus';
+import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import { resourceRef } from '../godot/index.js';
+import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
-export type ResourceType =
-  | 'Texture2D'
-  | 'StandardMaterial3D'
-  | 'GLBMesh'
-  | 'PackedScene'
-  | 'Resource'
-  | 'ArrayMesh';
 /**
  * - `pending`     — still loading.
  * - `loaded`      — value present.
@@ -51,57 +45,7 @@ export interface ResourceResult<T> {
   error?: string;
 }
 
-/**
- * Map the public `ResourceType` strings (matching TSCN type names) onto
- * the lowercase namespace strings used by the underlying ResourceEventBus.
- */
-const BUS_TYPE: Record<ResourceType, BusResourceType> = {
-  Texture2D: 'texture',
-  StandardMaterial3D: 'material',
-  GLBMesh: 'glb',
-  PackedScene: 'scene',
-  Resource: 'resource',
-  ArrayMesh: 'arraymesh',
-};
 
-interface ProcessorAccess<T> {
-  /** Read a cached entry: undefined = never requested, null = previously failed, T = loaded. */
-  getCached: (path: string) => T | null | undefined;
-  /** Trigger a load through the FileEventBus → processor pipeline. */
-  request: (path: string) => void;
-  /**
-   * Increment the pin count — a non-zero pin count protects this entry from
-   * LRU eviction for as long as a consumer is mounted against it.
-   */
-  pin: (path: string) => void;
-  /** Decrement the pin count — makes the entry eligible for LRU eviction again. */
-  unpin: (path: string) => void;
-}
-
-/**
- * Return the processor appropriate for the given resource type. Every
- * resource type is a normal `ResourceProcessor<T>` instance on the
- * loader; PackedScene no longer needs its own adapter.
- */
-function getProcessorAccess<T>(
-  loader: NonNullable<ReturnType<typeof useResourceLoader>>,
-  type: ResourceType
-): ProcessorAccess<T> {
-  switch (type) {
-    case 'Texture2D':
-      return loader.textures as unknown as ProcessorAccess<T>;
-    case 'StandardMaterial3D':
-      return loader.materials as unknown as ProcessorAccess<T>;
-    case 'GLBMesh':
-      return loader.glbMeshes as unknown as ProcessorAccess<T>;
-    case 'PackedScene':
-      return loader.scenes as unknown as ProcessorAccess<T>;
-    case 'Resource':
-      return loader.resources as unknown as ProcessorAccess<T>;
-    case 'ArrayMesh':
-      return loader.arrayMeshes as unknown as ProcessorAccess<T>;
-  }
-}
 
 /**
  * Internal: read the loader from context, returning null outside the
@@ -115,7 +59,7 @@ export function useResourceLoader() {
 /**
  * The hook. See file-level docstring for behavioral contract.
  */
-export function useResource<T>(path: string, type: ResourceType): ResourceResult<T> {
+export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
   const missingResources = useMissingResources();
   const [result, setResult] = useState<ResourceResult<T>>(() => ({
@@ -127,7 +71,7 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
   // request can't overwrite state after the consumer changed its
   // arguments. The ref is the source of truth; the deps array on the
   // effect captures the same identity but a closure can outlive a render.
-  const currentRef = useRef<{ path: string; type: ResourceType }>({ path, type });
+  const currentRef = useRef<{ path: string; type: ResourceBusType }>({ path, type });
   currentRef.current = { path, type };
 
   // The ONE clone this hook instance currently holds (GLBMesh only — stays
@@ -161,9 +105,14 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
       return;
     }
 
-    const busType = BUS_TYPE[type];
+    const busType = type;
     const eventBus: ResourceEventBus = loader.eventBus;
-    const access = getProcessorAccess<T>(loader, type);
+    const clonePerConsumer = resourceSliceRegistry.clonesPerConsumer(type);
+    const access = loader.processor<T>(type);
+    if (!access) {
+      setResult({ value: undefined, status: 'unavailable', error: `No processor serves resource bus '${type}'.` });
+      return;
+    }
 
     // Pin the entry so LRU eviction never disposes it while this hook
     // instance is mounted; the cleanup's matching unpin releases it. Safe
@@ -195,9 +144,12 @@ export function useResource<T>(path: string, type: ResourceType): ResourceResult
      * resource type passes the raw value through unchanged.
      */
     const toConsumerValue = (rawValue: unknown): unknown => {
-      if (type === 'GLBMesh' && rawValue instanceof THREE.Object3D) {
+      // The slice that claims the bus says whether its cached value is shared
+      // scene graph state (an Object3D has one parent, so every consumer needs
+      // its own); the flag is read off the value, never `instanceof` across realms.
+      if (clonePerConsumer && (rawValue as { isObject3D?: boolean })?.isObject3D === true) {
         disposePreviousClone();
-        const cloned = cloneWithMaterials(rawValue);
+        const cloned = cloneWithMaterials(rawValue as THREE.Object3D);
         clonedRef.current = cloned;
         return cloned;
       }

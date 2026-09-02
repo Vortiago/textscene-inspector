@@ -21,15 +21,15 @@
  *     instances are composed later by the live scene tree (ADR-0013).
  */
 
-import type { TscnNode, TscnInternalResource } from '../parser/types.js';
-import type { CSGPolygon3DProperties } from '../nodes/3d/csg/csgpolygon3d/types.js';
-import type { Path3DProperties } from '../nodes/paths/path3d/types.js';
-import { joinPath, resolveNodePathLiteral, unclaimedUniqueNames } from '../utils/nodePath.js';
-import { uniqueNamePaths } from '../utils/uniqueNames.js';
-import { findSubResource, parseResourceReference } from '../resources/SubResourceResolver.js';
-import { parseCurve3DPoints } from '../resources/curves/curve3d/index.js';
-import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
-import { warn } from '../logger.js';
+import type { TscnNode, TscnInternalResource } from '../../../../parser/types.js';
+import type { CSGPolygon3DProperties } from './types.js';
+import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
+import { joinPath, resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../utils/nodePath.js';
+import { uniqueNamePaths } from '../../../../utils/uniqueNames.js';
+import { findSubResource, parseResourceReference } from '../../../../resources/SubResourceResolver.js';
+import { parseCurve3DPoints } from '../../../../resources/curves/curve3d/index.js';
+import { globalMatrix3D, matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms.js';
+import { warn } from '../../../../logger.js';
 
 /** Godot's MODE_PATH. */
 const MODE_PATH = 2;

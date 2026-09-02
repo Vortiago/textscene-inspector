@@ -5,9 +5,11 @@
  */
 
 import type React from 'react';
-import type { TscnNode } from '../parser/types';
+import type { TscnInternalResource, TscnNode } from '../parser/types';
 import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
+import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
+import type { YSortItem } from './ySortItems';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -53,7 +55,51 @@ export interface NodeComponentRegistration {
    * gap is not the same as forfeiting the transform space it lives in.
    */
   renderIntent?: 'draws' | 'transform-only' | 'pending';
+  /**
+   * A pass over the whole authored tree that this type needs before the graph
+   * is built, because its component cannot reach the node it names on its own:
+   * a RemoteTransform moving its target, a CSGPolygon3D reading its path. Runs
+   * once per parse, in stage order; a pass registered by two types (the 2D and
+   * 3D relays share one) runs once. See `useParsedScene`.
+   */
+  scenePass?: ScenePassRegistration;
+  /**
+   * Present for a CanvasItem that the y-sort pass decomposes into per-row
+   * groups rather than dispatching whole (a TileMapLayer): what to read off the
+   * node, and the component that draws one group. See `YSortDispatcher`.
+   */
+  ySortGroup?: YSortGroupRegistration;
 }
+
+export interface YSortGroupDescription {
+  tileSetRef: string;
+  /** The layer's own `position.y`, added to the accumulated world Y. */
+  positionY: number;
+  ySortOrigin: number;
+  cells: readonly PlacedCell[] | null;
+}
+
+export interface YSortGroupRegistration {
+  describe: (node: TscnNode) => YSortGroupDescription;
+  Renderer: React.ComponentType<{ item: YSortItem; z: number; band: number; node: TscnNode }>;
+}
+
+/** Every pass takes the parsed roots and hands back the roots to build from. */
+export type ScenePass = (
+  nodes: TscnNode[],
+  internalResources: readonly TscnInternalResource[]
+) => TscnNode[];
+
+/**
+ * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
+ * every transform pass runs before any path pass whatever the barrel order.
+ */
+export interface ScenePassRegistration {
+  stage: 'transforms' | 'paths';
+  run: ScenePass;
+}
+
+const SCENE_PASS_STAGES: readonly ScenePassRegistration['stage'][] = ['transforms', 'paths'];
 
 class NodeComponentRegistryImpl {
   // The whole registration is stored, and every flag is answered from it. Four
@@ -103,12 +149,31 @@ class NodeComponentRegistryImpl {
   }
 
   /** The CSG registration for a type, or undefined when it is not a CSG shape. */
+  getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
+    return this.registry.get(typeName)?.ySortGroup;
+  }
+
   getCsgShape(typeName: string): CsgShapeRegistration | undefined {
     return this.registry.get(typeName)?.csgShape;
   }
 
   getAllTypeNames(): string[] {
     return this.registry.getAllTypeNames();
+  }
+
+  /** The registered passes, each once, in stage order then registration order. */
+  scenePasses(): readonly ScenePass[] {
+    const seen = new Set<ScenePass>();
+    const out: ScenePass[] = [];
+    for (const stage of SCENE_PASS_STAGES) {
+      for (const typeName of this.registry.getAllTypeNames()) {
+        const pass = this.registry.get(typeName)?.scenePass;
+        if (!pass || pass.stage !== stage || seen.has(pass.run)) continue;
+        seen.add(pass.run);
+        out.push(pass.run);
+      }
+    }
+    return out;
   }
 
   clear(): void {

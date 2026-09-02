@@ -30,6 +30,9 @@ import { WARNINGS, type WarningRow } from './configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
+import { declaredRuleNames, ruleFiles } from './testing/ruleNameScrape.js';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 /**
  * Every row still in the `unimplemented` arm, by declaring class and source
@@ -172,5 +175,26 @@ describe('Godot configuration-warning coverage', () => {
       )
       .sort();
     expect(outstanding).toEqual(UNIMPLEMENTED_ROWS);
+  });
+
+  it('every gated row is held to a hidden-node case in the slice that emits it', () => {
+    // `gate` records that Godot wraps the push_back in a visibility check; the
+    // rule reproduces it, and only a hidden-node case in the slice's own test
+    // can see it stop reproducing. The column is the record of who owes one.
+    const fileByMetaName = new Map<string, string>();
+    for (const file of ruleFiles()) for (const name of declaredRuleNames(file)) fileByMetaName.set(name, file);
+    const owing: string[] = [];
+    for (const [declaring, rows] of Object.entries(WARNINGS)) {
+      for (const row of rows) {
+        if (!row.gate || !('rule' in row.verdict)) continue;
+        for (const rule of rulesEmitting(row.verdict.rule)) {
+          const file = fileByMetaName.get(rule.meta.name);
+          const test = file ? join(dirname(file), 'linter.test.ts') : undefined;
+          const covered = test && existsSync(test) && /visible\s*[:=]\s*false/.test(readFileSync(test, 'utf8'));
+          if (!covered) owing.push(`${declaring} ${row.at} → ${rule.meta.name} (${row.gate})`);
+        }
+      }
+    }
+    expect(owing).toEqual([]);
   });
 });

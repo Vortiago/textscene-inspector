@@ -58,7 +58,7 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
   // Only text resources can ever parse; a binary `.res` SpriteFrames would park
   // the load in-flight forever (no processor handles it).
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): SpriteFramesResult => {
     if (!spriteFramesRef) return EMPTY;

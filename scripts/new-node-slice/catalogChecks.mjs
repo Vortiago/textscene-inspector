@@ -38,7 +38,7 @@ export function checkTier(typeName) {
   if (catalog.nodes.some((n) => n.name === typeName)) {
     fail(
       `${typeName} is instantiable, so it is a node type, not an abstract tier. ` +
-        `Scaffold it as an ordinary slice: drop --tier and pass --intent and --chain.`
+        `Scaffold it as an ordinary slice: drop --tier and pass --intent.`
     );
   }
   const heirs = catalog.nodes.filter((n) => (n.chain ?? []).includes(typeName)).map((n) => n.name);
@@ -70,17 +70,17 @@ export function tierParent(typeName) {
 }
 
 /**
- * Check `--chain` against Godot's own answer in the node catalog.
+ * The type's parent, from Godot's own answer in the node catalog.
  *
  * `NODE_BASE_TYPES` is derived from that catalog, so nothing needs writing —
- * the entry for a real Godot type is already there. What `--chain` still buys
+ * the entry for a real Godot type is already there. What the lookup still buys
  * is the one failure the derivation cannot catch: a type name that is not a
  * Godot type at all. A misspelled `Raycast3D` gets no catalog entry, so it gets
  * no base, so the validator walk terminates instantly and the slice is silently
- * unvalidated. Naming the expected parent turns that into an error here rather
- * than a quiet gap discovered waves later.
+ * unvalidated. Refusing the name here turns that into an error rather than a
+ * green scaffold with zero inherited validation.
  */
-export function checkChain(typeName, parent) {
+export function checkChain(typeName) {
   const catalog = loadCatalog();
   const entry = catalog.nodes.find((n) => n.name === typeName);
   if (!entry) {
@@ -90,12 +90,7 @@ export function checkChain(typeName, parent) {
         `Check the spelling, or add it to UNCATALOGUED in godot/nodeBaseTypes.ts with a reason.`
     );
   }
-  const actual = entry.chain?.[0];
-  if (actual !== parent) {
-    fail(
-      `--chain ${parent} disagrees with Godot: ${typeName} derives from ${actual}. ` +
-        `The base-walk uses the catalog, so pass --chain ${actual}.`
-    );
-  }
-  return `${typeName} → ${parent} (derived, already in godot/nodeBaseTypes.generated.ts)`;
+  const parent = entry.chain?.[0];
+  if (!parent) fail(`${typeName} has no parent in the catalog, so nothing can be inherited from.`);
+  return { parent, note: `${typeName} → ${parent} (derived, already in godot/nodeBaseTypes.generated.ts)` };
 }

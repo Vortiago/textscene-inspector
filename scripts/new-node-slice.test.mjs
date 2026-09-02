@@ -7,7 +7,7 @@
  *   - `--intent` must settle the render registration and the sheet status
  *     TOGETHER, because `sheets.test.mjs` asserts they agree and a mismatch
  *     fails the wave rather than the slice.
- *   - `--chain` must be mandatory and must agree with ClassDB. `NODE_BASE_TYPES`
+ *   - the parent class is derived from ClassDB, never typed. `NODE_BASE_TYPES`
  *     is derived from the catalog, so a type name Godot does not know receives
  *     zero inherited validation — no error, no warning.
  *   - a `pending` slice must wire NO render barrel, since the absence of a
@@ -51,41 +51,35 @@ async function dry(args) {
 }
 
 const INVOCATIONS = {
-  noIntent: ['Widget3D', '3d', '--chain', 'Node3D'],
-  badIntent: ['Widget3D', '3d', '--intent', 'maybe', '--chain', 'Node3D'],
-  noChain: ['Widget3D', '3d', '--intent', 'pending'],
-  selfChain: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Widget3D'],
+  noIntent: ['Widget3D', '3d'],
+  badIntent: ['Widget3D', '3d', '--intent', 'maybe'],
   removedFlag: [
-    'Widget3D', '3d', '--intent', 'transform-only', '--chain', 'Node3D', '--transform-only',
+    'Widget3D', '3d', '--intent', 'transform-only', '--transform-only',
   ],
   controlRendering: [
-    'Container', '2d/ui', '--base', 'control', '--intent', 'transform-only', '--chain', 'Control',
-  ],
+    'Container', '2d/ui', '--base', 'control', '--intent', 'transform-only', ],
   transformOnly: [
-    'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--chain', 'Node3D', '--linter',
+    'RayCast3D', 'physics/3d', '--intent', 'transform-only', '--linter',
   ],
   transformOnly2D: [
-    'RayCast2D', '2d', '--base', 'node2d', '--intent', 'transform-only', '--chain', 'Node2D',
-  ],
+    'RayCast2D', '2d', '--base', 'node2d', '--intent', 'transform-only', ],
   pending: [
-    'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Range', '--linter',
+    'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
   ],
-  draws: ['ShapeCast3D', '3d', '--intent', 'draws', '--chain', 'Node3D'],
+  draws: ['ShapeCast3D', '3d', '--intent', 'draws'],
   // The memorialised case: MeshInstance3D owns a parser.ts, so `--base node3d`
   // and the real ancestry disagree about what a SoftBody3D slice reuses.
-  drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws', '--chain', 'MeshInstance3D'],
+  drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws'],
   controlPending: [
-    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button',
-  ],
-  unknownType: ['Widget3D', '3d', '--intent', 'pending', '--chain', 'Node3D'],
+    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', ],
+  unknownType: ['Widget3D', '3d', '--intent', 'pending'],
   inheritsSkippingEmpty: [
     'AspectRatioContainer', '2d/ui', '--base', 'control', '--intent', 'pending',
-    '--chain', 'Container', '--linter',
+    '--linter',
   ],
   inheritsFromImmediateParent: [
-    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--chain', 'Button', '--linter',
+    'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
   ],
-  wrongChain: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node2D'],
   // A category dir NO real slice occupies. These are dry runs so nothing is
   // written, and the path only has to be free: the scaffold falls back from the
   // canonical `shared/` to a type-named dir when `shared/` is already taken, so
@@ -96,13 +90,13 @@ const INVOCATIONS = {
   tierWithRule: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--rule'],
   tierInstantiable: ['PinJoint2D', 'physics/2d', '--tier'],
   tierUnknown: ['Jiont2D', 'physics/2d', '--tier'],
-  tierWithLeafFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--chain', 'Node3D'],
+  tierWithLeafFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--intent', 'pending'],
   tierWithBaseFlag: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--base', 'node2d'],
-  ruleWithoutTier: ['ShapeCast3D', '3d', '--intent', 'pending', '--chain', 'Node3D', '--rule'],
+  ruleWithoutTier: ['ShapeCast3D', '3d', '--intent', 'pending', '--rule'],
 };
 
 /**
- * Every case names a REAL Godot type, because `--chain` is checked against
+ * Every case names a REAL Godot type, because the parent is derived from
  * ClassDB. Real types get scaffolded as the coverage waves reach them, so
  * nothing here may assume its type is still unscaffolded — hence the
  * before/after snapshot rather than a bare `not.toExist`.
@@ -136,17 +130,6 @@ describe('new-node-slice argument contract', () => {
     expect(results.badIntent.out).toMatch(/--intent is required and must be one of/);
   });
 
-  it('refuses to run without --chain, naming the silent failure it prevents', () => {
-    expect(results.noChain.ok).toBe(false);
-    expect(results.noChain.out).toMatch(/--chain is required/);
-    expect(results.noChain.out).toMatch(/no inherited validation/);
-  });
-
-  it('refuses a --chain that names the type itself', () => {
-    expect(results.selfChain.ok).toBe(false);
-    expect(results.selfChain.out).toMatch(/must be the PARENT class/);
-  });
-
   it('refuses a type name Godot does not know', () => {
     // The base table is derived from the catalog, so an invented or misspelled
     // type gets no entry and no inherited validator — silently. `Widget3D` is
@@ -171,11 +154,6 @@ describe('new-node-slice argument contract', () => {
     const { ok, out } = results.inheritsFromImmediateParent;
     expect(ok).toBe(true);
     expect(out).toMatch(/inherit \.\.\/button\/linterParser\.js/);
-  });
-
-  it('refuses a --chain Godot disagrees with, naming the real parent', () => {
-    expect(results.wrongChain.ok).toBe(false);
-    expect(results.wrongChain.out).toMatch(/ShapeCast3D derives from Node3D/);
   });
 
   it('rejects the removed --transform-only flag instead of silently ignoring it', () => {
@@ -231,7 +209,7 @@ describe('new-node-slice tier mode', () => {
 
   it('refuses leaf flags on a tier, and --rule without one', () => {
     expect(results.tierWithLeafFlag.ok).toBe(false);
-    expect(results.tierWithLeafFlag.out).toMatch(/--chain does not apply to --tier/);
+    expect(results.tierWithLeafFlag.out).toMatch(/--intent does not apply to --tier/);
     // `--base` carries a default, so it is the one of the three that can be
     // passed without changing `opts` in a way the branch could notice.
     expect(results.tierWithBaseFlag.ok).toBe(false);

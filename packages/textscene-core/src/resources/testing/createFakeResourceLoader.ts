@@ -159,6 +159,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const all = Object.values(byType);
 
   const loader = {
+    // The one accessor `useResource` reads a processor through, keyed by bus.
+    processor: (type: ResourceType) => byType[type],
     eventBus,
     metadata,
     textures,

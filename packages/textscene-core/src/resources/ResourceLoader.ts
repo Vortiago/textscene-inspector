@@ -238,6 +238,11 @@ export class ResourceLoader {
   // ---- Type-generic surface ------------------------------------------------
 
   /** Request a resource through the appropriate processor for `type`. */
+  /** The processor serving `type`, for a consumer that reads, requests and pins by path. */
+  processor<T>(type: ResourceType): ResourceProcessor<T> | undefined {
+    return this.processors.get(type) as ResourceProcessor<T> | undefined;
+  }
+
   request(type: ResourceType, path: string): void {
     const proc = this.processors.get(type);
     if (!proc) {

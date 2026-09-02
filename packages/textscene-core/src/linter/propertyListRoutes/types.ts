@@ -10,8 +10,6 @@ export interface RouteRow {
   readonly type: string;
   /** The override that builds the family, `file.cpp:line`, basename only. */
   readonly at: string;
-  /** How the key is built. */
-  readonly route: 'property-list' | 'PropertyListHelper' | 'ADD_ARRAY_COUNT' | 'set-get';
   /** A concrete key of this family, exactly as it lands in a `.tscn`. */
   readonly sample: string;
   readonly verdict:

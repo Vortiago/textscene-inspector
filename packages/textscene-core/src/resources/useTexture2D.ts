@@ -84,7 +84,7 @@ export function useTexture2DSource(
     [procedural, ref, externalResources, internalResources]
   );
   const path = source.path;
-  const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+  const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
 
   if (procedural) return { texture: procedural, path: null, missing: false };
   if (!ref) return { texture: null, path: null, missing: false };

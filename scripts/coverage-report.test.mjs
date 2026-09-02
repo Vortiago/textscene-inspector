@@ -18,12 +18,6 @@
  * `pnpm validate` builds before it tests, so that precheck never fires in CI —
  * it guards the local workflow alone, and its own cases live beside the module
  * it belongs to, in `distFreshness.test.mjs`.
- *
- * Nothing here asserts the wave ORDER `coverage-report/waveOrder.mjs` computes:
- * every catalogued type is registered (240/240), so `missing` is empty and a
- * base-before-subclass sweep over it iterates nothing. The ordering is correct
- * and the report still prints its section — it simply has no subject to be
- * asserted against while the ledger is complete.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';

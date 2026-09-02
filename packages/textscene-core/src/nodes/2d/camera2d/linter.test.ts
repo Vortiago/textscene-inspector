@@ -90,7 +90,7 @@ describe('Camera2D Linter', () => {
       {
         prop: 'limit_left',
         valid: [-1000],
-        invalid: [{ value: 'invalid', contains: ['limit_left', 'integer'] }],
+        invalid: [{ value: 'invalid', contains: ['limit_left', 'must be a number'] }],
       },
       {
         // A fractional limit LOADS — the INT conversion truncates it — but the
@@ -102,12 +102,12 @@ describe('Camera2D Linter', () => {
       {
         prop: 'limit_right',
         valid: [1000],
-        invalid: [{ value: 'abc', contains: ['limit_right', 'integer'] }],
+        invalid: [{ value: 'abc', contains: ['limit_right', 'must be a number'] }],
       },
       {
         prop: 'limit_bottom',
         valid: [500],
-        invalid: [{ value: 'xyz', contains: ['limit_bottom', 'integer'] }],
+        invalid: [{ value: 'xyz', contains: ['limit_bottom', 'must be a number'] }],
       },
       {
         prop: 'position_smoothing_enabled',

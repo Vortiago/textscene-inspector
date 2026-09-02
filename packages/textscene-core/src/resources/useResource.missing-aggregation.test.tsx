@@ -52,7 +52,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     // aggregated missing-paths set under the same provider tree.
     const { result } = renderHook(
       () => {
-        const res = useResource<THREE.Texture>('res://textures/missing.png', 'Texture2D');
+        const res = useResource<THREE.Texture>('res://textures/missing.png', 'texture');
         const { missingPaths } = useMissingResources();
         return { res, missingPaths };
       },
@@ -67,7 +67,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     const Wrapper = makeWrappers(loader);
     const { result } = renderHook(
       () => {
-        const res = useResource<THREE.Texture>('', 'Texture2D');
+        const res = useResource<THREE.Texture>('', 'texture');
         const { missingPaths } = useMissingResources();
         return { res, missingPaths };
       },
@@ -87,7 +87,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     // report effect.
     const { result, rerender } = renderHook(
       ({ path }: { path: string }) => {
-        useResource<THREE.Texture>(path, 'Texture2D');
+        useResource<THREE.Texture>(path, 'texture');
         const { missingPaths } = useMissingResources();
         return missingPaths;
       },
@@ -109,7 +109,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
 
     const { result } = renderHook(
       () => {
-        useResource<THREE.Texture>('res://textures/missing.png', 'Texture2D');
+        useResource<THREE.Texture>('res://textures/missing.png', 'texture');
         const { missingPaths, uploadedPaths } = useMissingResources();
         return { missingPaths, uploadedPaths };
       },
@@ -142,7 +142,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
 
     const { result } = renderHook(
       () => {
-        useResource<THREE.Texture>('res://textures/never-missing.png', 'Texture2D');
+        useResource<THREE.Texture>('res://textures/never-missing.png', 'texture');
         const { missingPaths, uploadedPaths } = useMissingResources();
         return { missingPaths, uploadedPaths };
       },

@@ -46,7 +46,7 @@ function applyMaterial(target: THREE.Object3D, material: THREE.Material): () => 
 }
 
 function GlbPathMaterialOverride({ target, path }: { target: THREE.Object3D; path: string }) {
-  const material = useResource<THREE.Material>(path, 'StandardMaterial3D').value ?? null;
+  const material = useResource<THREE.Material>(path, 'material').value ?? null;
   useEffect(() => (material ? applyMaterial(target, material) : undefined), [target, material]);
   return null;
 }

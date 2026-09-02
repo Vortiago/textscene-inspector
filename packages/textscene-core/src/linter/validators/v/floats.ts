@@ -102,22 +102,9 @@ export const floatCombinators = {
     );
   },
 
-  /** Float ≥ 0. Convenience alias for `v.float(name, { min: 0 })`. */
+  /** `float` with a floor of 0. */
   nonNegativeFloat(name: string, opts: FiniteGrounding = {}): PropertyValidator {
-    return maybeNan(name, opts, maybeFinite(name, opts, ground(
-      accepts(
-        createNumericRangeValidator({
-          propertyName: name,
-          min: 0,
-          errorCodeFormat: formatCode(name),
-          errorCodeValue: valueCode(name),
-          minSeverity: endSeverity(opts, 'min'),
-        }),
-        'float >= 0'
-      ),
-      opts,
-      { min: 0 }
-    )));
+    return floatCombinators.float(name, { ...opts, min: 0 });
   },
 
   /**

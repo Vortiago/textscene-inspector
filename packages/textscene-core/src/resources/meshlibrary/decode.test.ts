@@ -91,7 +91,7 @@ item/7/mesh/0 = ExtResource("8_floor")
   it('addresses an item mesh embedded in the library as a sub-resource path', () => {
     // Godot writes this form when the MeshLibrary carries its own item meshes
     // rather than referencing shared `.tres` files. `meshPath` stays one string,
-    // so GridMap's `useResource(meshPath, 'ArrayMesh')` needs no change.
+    // so GridMap's `useResource(meshPath, 'arraymesh')` needs no change.
     const embedded = `[gd_resource type="MeshLibrary" format=3]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_floor"]

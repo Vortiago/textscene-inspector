@@ -10,14 +10,12 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
   {
     type: 'AudioListener2D',
     at: 'audio_listener_2d.cpp:61-63',
-    route: 'property-list',
     sample: 'current',
     verdict: { validated: true },
   },
   {
     type: 'AudioListener3D',
     at: 'audio_listener_3d.cpp:70-72',
-    route: 'property-list',
     sample: 'current',
     verdict: { validated: true },
   },
@@ -27,7 +25,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // all already registered.
     type: 'Bone2D',
     at: 'skeleton_2d.cpp:85-95',
-    route: 'property-list',
     sample: 'length',
     verdict: { validated: true },
   },
@@ -37,7 +34,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // reaches it.
     type: 'Bone2D',
     at: 'skeleton_2d.cpp:48-49',
-    route: 'set-get',
     sample: 'default_length',
     verdict: {
       declined: 'never-owned',
@@ -48,7 +44,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
   {
     type: 'Skeleton2D',
     at: 'skeleton_2d.cpp:530-536',
-    route: 'property-list',
     sample: 'modification_stack',
     verdict: { validated: true },
   },
@@ -62,14 +57,12 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // registered 'bones/*' wildcard.
     type: 'Skeleton3D',
     at: 'skeleton_3d.cpp:182-208',
-    route: 'property-list',
     sample: 'bones/0/position',
     verdict: { validated: true },
   },
   {
     type: 'PhysicalBone3D',
     at: 'physical_bone_3d.cpp:740-751',
-    route: 'property-list',
     sample: 'bone_name',
     verdict: { validated: true },
   },
@@ -79,7 +72,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // _get_property_list (physical_bone_3d.cpp:681 onward) for the per-axis leaves.
     type: 'PhysicalBone3D',
     at: 'physical_bone_3d.cpp:748-750',
-    route: 'property-list',
     sample: 'joint_constraints/x/angular_limit_enabled',
     verdict: { validated: true },
   },
@@ -89,7 +81,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // resizes/pins with no clamp on the indices themselves.
     type: 'SoftBody3D',
     at: 'soft_body_3d.cpp:176',
-    route: 'property-list',
     sample: 'pinned_points',
     verdict: { validated: true },
   },
@@ -106,7 +97,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // data is actually lost, just this one echo key.)
     type: 'SoftBody3D',
     at: 'soft_body_3d.cpp:178-183',
-    route: 'property-list',
     sample: 'attachments/0/spatial_attachment_path',
     verdict: { validated: true },
   },
@@ -119,7 +109,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // :158 as this row originally had it.
     type: 'GridMap',
     at: 'grid_map.cpp:158',
-    route: 'property-list',
     sample: 'data',
     verdict: { validated: true },
   },
@@ -127,7 +116,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // Conditionally pushed only when baked_meshes.size() > 0 (grid_map.cpp:154-156).
     type: 'GridMap',
     at: 'grid_map.cpp:154-156',
-    route: 'property-list',
     sample: 'baked_meshes',
     verdict: { validated: true },
   },
@@ -138,7 +126,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // ("layer_" + i + "/" + leaf).
     type: 'TileMap',
     at: 'tile_map.cpp:1023-1043',
-    route: 'PropertyListHelper',
     sample: 'layer_0/name',
     verdict: { validated: true },
   },
@@ -147,7 +134,6 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     // (tile_map.cpp:747), NO_EDITOR|INTERNAL (storage-bearing).
     type: 'TileMap',
     at: 'tile_map.cpp:747',
-    route: 'property-list',
     sample: 'format',
     verdict: { validated: true },
   },

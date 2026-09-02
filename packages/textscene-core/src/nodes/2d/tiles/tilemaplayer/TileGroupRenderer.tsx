@@ -7,18 +7,19 @@
  */
 
 import { useMemo, type ReactNode } from 'react';
-import type { TscnNode } from '../parser/types.js';
-import { useCanvasItemTint } from './canvasItemModulate.js';
-import { useCanvasItemMaterial } from './components/canvasItemMaterialContext.js';
-import { useCanvasModulateFor } from './canvasModulate.js';
-import { useCanvasItemLighting } from './lighting2d/useCanvasItemLighting.js';
-import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer.js';
-import { CanvasItemBlendMode } from '../resources/materials/canvasitemmaterial/types.js';
-import { drawnSources, tileSourceZ } from './tileSourceZ.js';
-import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
-import { useTileSetModel } from './useTileSetModel.js';
-import { TileSourceMesh } from './TileSourceMesh.js';
-import { ySortItemId, type YSortItem } from './ySortItems.js';
+import type { TscnNode } from '../../../../parser/types.js';
+import { useCanvasItemTint } from '../../../../r3f/canvasItemModulate.js';
+import { useCanvasItemMaterial } from '../../../../r3f/components/canvasItemMaterialContext.js';
+import { useCanvasModulateFor } from '../../../../r3f/canvasModulate.js';
+import { useCanvasItemLighting } from '../../../../r3f/lighting2d/useCanvasItemLighting.js';
+import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer.js';
+import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types.js';
+import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ.js';
+import type { TileMapLayerProperties } from './types.js';
+import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
+import { TileSourceMesh } from '../../../../r3f/TileSourceMesh.js';
+import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
+import type { YSortGroupDescription } from '../../../../r3f/NodeComponentRegistry.js';
 
 /** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
 export function TileGroupRenderer({ item, z, band, node }: {
@@ -97,4 +98,15 @@ export function TileGroupRenderer({ item, z, band, node }: {
       ))}
     </group>
   );
+}
+
+/** What the y-sort pass needs from a layer, read once per node. */
+export function describeYSortLayer(node: TscnNode): YSortGroupDescription {
+  const props = node.properties as TileMapLayerProperties;
+  return {
+    tileSetRef: props.tile_set ?? '',
+    positionY: props.position?.y ?? 0,
+    ySortOrigin: (props.y_sort_origin as number) ?? 0,
+    cells: props.cells ?? null,
+  };
 }

@@ -15,7 +15,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // the same shared-key shape canvasitem/shared uses for CanvasItem.
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:58-71',
-    route: 'set-get',
     sample: 'anims/Walk',
     verdict: { validated: true },
   },
@@ -25,7 +24,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // Dictionary-shape check only, the same depth GraphEdit's type_names uses.
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:72-81',
-    route: 'set-get',
     sample: 'libraries',
     verdict: { validated: true },
   },
@@ -35,7 +33,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // library is always serialised.
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:129-134',
-    route: 'property-list',
     sample: 'libraries/Main',
     verdict: { validated: true },
   },
@@ -50,7 +47,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // check on the alias than the canonical key would itself be a bug.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:38-39',
-    route: 'set-get',
     sample: 'playback/play',
     verdict: { validated: true },
   },
@@ -60,7 +56,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // storage (object.h:132).
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:130-138',
-    route: 'property-list',
     sample: 'next/Attack',
     verdict: { validated: true },
   },
@@ -73,7 +68,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // so Godot itself loads a non-string/non-number element without complaint.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:144',
-    route: 'property-list',
     sample: 'blend_times',
     verdict: { validated: true },
   },
@@ -83,14 +77,12 @@ export const animationRoutes: readonly RouteRow[] = [
     // ALL already registered.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:54-61',
-    route: 'set-get',
     sample: 'playback_active',
     verdict: { validated: true },
   },
   {
     type: 'AnimationTree',
     at: 'animation_tree.cpp:924-929',
-    route: 'set-get',
     sample: 'process_callback',
     verdict: { validated: true },
   },
@@ -102,7 +94,6 @@ export const animationRoutes: readonly RouteRow[] = [
     // params/*, which already has a deliberately permissive validator.
     type: 'AnimationTree',
     at: 'animation_tree.cpp:969-977',
-    route: 'property-list',
     sample: 'parameters/conditions/idle',
     verdict: { validated: true },
   },

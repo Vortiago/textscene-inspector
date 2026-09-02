@@ -246,7 +246,7 @@ describe('Skeleton3D Linter', () => {
             prop: 'parent',
             severity: 'error',
             // The BOUND, not the format branch: `-2` parses perfectly well.
-            contains: ['integer >= -1'],
+            contains: ['must be >= -1'],
           });
         });
 
@@ -272,7 +272,7 @@ describe('Skeleton3D Linter', () => {
           expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/parent': 'Root' })), {
             prop: 'parent',
             severity: 'error',
-            contains: ['must be an integer'],
+            contains: ['must be a number'],
           });
         });
       });

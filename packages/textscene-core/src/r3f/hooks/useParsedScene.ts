@@ -12,8 +12,7 @@ import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
 import { isGLBPath } from '../../resources/processing/glbProcessing.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
-import { applyRemoteTransforms } from '../remoteTransforms.js';
-import { resolveCsgPolygonPaths } from '../csgPolygonPaths.js';
+import { nodeComponentRegistry } from '../NodeComponentRegistry.js';
 
 export interface ParseResult {
   sceneGraph: SceneGraph | null;
@@ -58,15 +57,13 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 
 /** Wrap a parsed/synthesised TscnScene into a single-scene SceneGraph result. */
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  // Resolve RemoteTransform3D/2D drivers before the graph is built, so the
-  // moved target flows into render, gizmos, bounds, selection, tree and
-  // inspector uniformly (see remoteTransforms.ts).
-  // Then resolve CSGPolygon3D `path_node` references, which likewise name a node the
-  // component cannot reach on its own (see csgPolygonPaths.ts).
-  const nodes = resolveCsgPolygonPaths(
-    applyRemoteTransforms(tscnScene.nodes),
-    tscnScene.internalResources
-  );
+  // Every registered scene pass, transforms before paths: a pass rewrites the
+  // freshly parsed tree so render, gizmos, bounds, selection, tree and inspector
+  // all read its result uniformly. See `NodeComponentRegistration.scenePass`.
+  let nodes = tscnScene.nodes;
+  for (const pass of nodeComponentRegistry.scenePasses()) {
+    nodes = pass(nodes, tscnScene.internalResources);
+  }
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,
     nodes,

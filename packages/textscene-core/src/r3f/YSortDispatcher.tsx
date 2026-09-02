@@ -22,14 +22,13 @@ import { Fragment, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { useYSortContext, useYSortSlot } from './contexts/YSortContext.js';
 import { Z_INDEX_STEP } from './node2dTransform.js';
-import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
 import { collectYSortedItems, ySortItemId, type YSortItem } from './ySortItems.js';
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
-import { TileGroupRenderer } from './TileGroupRenderer.js';
+import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
 // Sorted children go back through the ONE dispatcher rather than a second
 // renderer here: that is what keeps `instance=` sub-scenes, selection
@@ -84,11 +83,12 @@ function SortedChildren({
     const expanded: YSortItem[] = [];
     for (const item of rawItems) {
       const grid = item.tileData ? models.get(item.tileData.tileSetRef) : undefined;
-      if (item.kind === 'tileGroup' && item.node && grid) {
-        const tp = item.node.properties as TileMapLayerProperties;
-        const cells = tp.cells;
+      const group = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type) : undefined;
+      if (item.kind === 'tileGroup' && item.node && grid && group) {
+        const layer = group.describe(item.node);
+        const cells = layer.cells;
         if (cells?.length) {
-          const layerYSortOrigin = (tp.y_sort_origin as number) ?? 0;
+          const layerYSortOrigin = layer.ySortOrigin;
           // groupBySortY adds layerYSortOrigin to each cell's sort key itself, so the
           // layer world-Y passed in must NOT include it (else the origin double-counts).
           // Taken from the ITEM, which carries the Y accumulated through every
@@ -155,14 +155,15 @@ function SortedChildren({
         const sortZ = ((rank + 1) / (K + 1)) * slot.width;
         const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
 
-        if (item.kind === 'tileGroup' && item.node) {
+        const Renderer = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer : undefined;
+        if (item.kind === 'tileGroup' && item.node && Renderer) {
           // The Y-group's whole draw position (z-index bucket + rank) rides the group;
           // its meshes sit at their own per-source sub-step RELATIVE to it (see the
           // group's `position` below), so the rank is applied ONCE.
           return (
             <Fragment key={`tg-${item.node.name}-${ySortItemId(item)}`}>
               <LiftedAncestors liftedPast={item.liftedPast}>
-                <TileGroupRenderer
+                <Renderer
                   item={item}
                   z={fullZ}
                   band={slot.width / (K + 1)}

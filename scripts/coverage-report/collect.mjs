@@ -7,7 +7,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadCoreLinter, loadCoreParser } from '../compare-docs/loadCoreLinter.mjs';
-import { baseClassesOf, byWave } from './waveOrder.mjs';
 
 const CATALOG = join(import.meta.dirname, '../compare-docs/node-catalog.json');
 
@@ -37,13 +36,11 @@ export async function collectCoverage() {
   // value on them, so they are listed rather than left to be inferred.
   const undeclared = [...registered].filter((t) => !validated.has(t)).sort();
 
-  const bases = baseClassesOf(catalog.nodes);
   const catalogued = new Set(catalog.nodes.map((n) => n.name));
 
   const missing = catalog.nodes
     .filter((n) => !registered.has(n.name))
-    .map((n) => ({ ...n, isBase: bases.has(n.name) }))
-    .sort(byWave);
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // A registration for a type Godot's ClassDB never listed is either a node
   // newer than the catalog's engine build or a typo; either way, say so.

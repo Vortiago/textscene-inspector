@@ -124,7 +124,7 @@ export interface IndexedFamilyOptions {
    * matcher declined to route a non-numeric index, and the day it routed one the
    * slice would have rejected a write Godot applies.
    */
-  indexParse?: IndexParse;
+  indexParse: IndexParse;
   /**
    * The family's noun, spliced into `Unknown <describes> property: "…"`. Keep it
    * a bare singular noun (`setting`, `item`, `filter`) — it reads as prose.
@@ -167,7 +167,7 @@ export interface IndexedFamilyOptions {
  */
 export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyValidator {
   const { prefix, leaves, unknownCode, describes, negativeIndex } = opts;
-  const gatesOnValidInt = (opts.indexParse ?? 'is_valid_int') === 'is_valid_int';
+  const gatesOnValidInt = opts.indexParse === 'is_valid_int';
 
   // Both hoisted out of the per-call body. This dispatcher runs once per
   // `<prefix><i>/<leaf>` key, and a single SpringBoneSimulator3D carries about

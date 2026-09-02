@@ -15,7 +15,6 @@ import type { TscnNode } from '../parser/types.js';
 import type { YSortContextValue } from './contexts/YSortContext.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
 
 /** A renderable item collected by the y-sort pass. */
@@ -118,16 +117,17 @@ export function collectYSortedItems(
     const props = child.properties as Record<string, unknown>;
     const isYSort = props.y_sort_enabled === true;
 
-    if (isYSort && child.type === 'TileMapLayer' && nodeComponentRegistry.isCanvasItem(child.type)) {
-      const tileProps = child.properties as TileMapLayerProperties;
+    const group = isYSort ? nodeComponentRegistry.getYSortGroup(child.type) : undefined;
+    if (group && nodeComponentRegistry.isCanvasItem(child.type)) {
+      const layer = group.describe(child);
       items.push({
         sortY: key.sortY,
         effectiveZ: key.effectiveZ,
         treeOrder: order++,
         kind: 'tileGroup',
         tileData: {
-          tileSetRef: tileProps.tile_set ?? '',
-          worldY: parent.parentWorldY + (tileProps.position?.y ?? 0),
+          tileSetRef: layer.tileSetRef,
+          worldY: parent.parentWorldY + layer.positionY,
         },
         node: child,
         liftedPast,

@@ -337,30 +337,3 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
   return validator;
 }
 
-/**
- * Creates a validator for positive integers (> 0)
- * Useful for properties that would cause division by zero if set to 0
- */
-export function createPositiveIntegerValidator(
-  propertyName: string,
-  errorMessage?: string,
-  errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE',
-  /** Severity of the RANGE branch; the FORMAT branch stays an error. */
-  valueSeverity: ParseError['severity'] = 'error'
-): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
-    const read = readIntSlot(value);
-    const num = read.stored;
-    if (num === null) {
-      return propertyError(key, line, `Property '${propertyName}' must be a number, got: "${value}"`, errorCodeFormat);
-    }
-    const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
-    if (refused) return refused;
-    if (num <= 0) {
-      const defaultMsg = `Property '${propertyName}' must be greater than 0 (got ${num}). Zero or negative values cause division by zero.`;
-      return propertyError(key, line, errorMessage || defaultMsg, errorCodeValue, valueSeverity);
-    }
-    return storedNotWritten(propertyName, key, value, line, errorCodeValue, read);
-  };
-}

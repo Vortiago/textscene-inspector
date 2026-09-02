@@ -99,7 +99,7 @@ function DispatchedControl({ node, path }: { node: TscnNode; path: string }): Re
   // composes the sub-scene on its own rather than depending on the 2D world layer
   // (its sibling in Canvas2DStage) having walked the tree first. Requests are
   // deduped by path, so overlapping with that walk costs nothing.
-  useResource<TscnScene>(scenePath ?? '', 'PackedScene');
+  useResource<TscnScene>(scenePath ?? '', 'scene');
   const subScene = scenePath ? sceneCache.getCached(scenePath) : undefined;
   const live = collapseLiveNode(node, externalResources, sceneCache);
 

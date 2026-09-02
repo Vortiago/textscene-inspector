@@ -19,7 +19,7 @@ export function useGlbChildren(node: TscnNode): readonly TscnNode[] | null {
     node.type === GLB_SCENE_ROOT_TYPE
       ? ((node.properties as Record<string, unknown>).glbPath as string | undefined)
       : undefined;
-  const result = useResource<THREE.Object3D>(glbPath ?? '', 'GLBMesh');
+  const result = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
 
   return useMemo(() => {
     if (!glbPath || result.status !== 'loaded' || !result.value) return null;

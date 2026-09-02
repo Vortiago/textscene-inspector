@@ -27,7 +27,7 @@ export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLib
     : null;
   // Only text resources parse; a binary `.res` MeshLibrary would park forever.
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): MeshLibraryModelResult => {
     if (!meshLibraryRef || !tresPath) return { model: null, status: 'unavailable' };

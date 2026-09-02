@@ -6,12 +6,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseTscnContent } from './hooks/useParsedScene';
-import { TscnParser } from '../parser/TscnParser';
-import { uniqueNamePaths } from '../utils/uniqueNames';
-import { decomposeTransform3D, identityTransform3D } from '../utils/transform';
-import type { Node3DProperties } from '../nodes/base/node3d/types';
-import type { Node2DProperties } from '../nodes/base/node2d/types';
+import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
+// The relay pass reaches the pipeline through the registrations, as in the app.
+import './index.r3f';
+import '../../2d/remotetransform2d/index.r3f';
+import { TscnParser } from '../../../parser/TscnParser';
+import { uniqueNamePaths } from '../../../utils/uniqueNames';
+import { decomposeTransform3D, identityTransform3D } from '../../../utils/transform';
+import type { Node3DProperties } from '../../../nodes/base/node3d/types';
+import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 
 function targetTransform3D(content: string, path: string) {
   const { sceneGraph } = parseTscnContent(content, 'res://test.tscn');

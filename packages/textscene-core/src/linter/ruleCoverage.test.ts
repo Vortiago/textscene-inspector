@@ -181,4 +181,15 @@ describe('validator coverage meta-guard', () => {
 
     expect(unreachable.sort()).toEqual([]);
   });
+
+  it('no rule re-checks its own applicability with an early return', () => {
+    // `applicableNodeTypes` / `applicableNodeTypeMatcher` already decide which
+    // nodes reach `check`; a `node.type !== 'X'` guard inside it restates that
+    // decision where the registry cannot see it, and 50 rules once carried one.
+    const guard = /if \(\s*node\.type\s*!==\s*'[A-Za-z0-9]+'\s*\)\s*return \[\];/;
+    const restating = ruleFiles()
+      .filter((f) => guard.test(readFileSync(f, 'utf8')))
+      .map((f) => f.slice(nodesRoot.length + 1));
+    expect(restating).toEqual([]);
+  });
 });

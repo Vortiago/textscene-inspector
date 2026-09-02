@@ -17,7 +17,8 @@ import { reusedParserFiles } from './templates/reusedParser.mjs';
 import { sheetFile } from './templates/sheet.mjs';
 import { kebab, wireImport } from './wiring.mjs';
 
-export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain, linter, dryRun }) {
+export function scaffoldSlice({ typeName, category, base: baseKey, intent, linter, dryRun }) {
+  const { parent: chain, note: chainNote } = checkChain(typeName);
   // `draws` is the only intent that gets its own types/parser/Component; the
   // other two reuse the base parser, so the render half is deferred to whoever
   // implements it (decision: property knowledge lives in linterParser.ts).
@@ -107,8 +108,6 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, chain
       )
     );
   }
-
-  const chainNote = checkChain(typeName, chain);
 
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
   files.set('comparison.md', sheetFile({ typeName, baseKey, intent, fixtureName, imageBasename }));

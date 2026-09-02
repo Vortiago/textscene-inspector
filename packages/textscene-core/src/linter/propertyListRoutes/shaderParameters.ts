@@ -14,7 +14,6 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
     // runtime, from whatever the attached shader declares.
     type: 'CanvasItem',
     at: 'canvas_item.cpp:637-656',
-    route: 'property-list',
     sample: 'instance_shader_parameters/tint',
     verdict: { validated: true },
   },
@@ -23,14 +22,12 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
     // RenderingServer surface instead (visual_instance_3d.cpp:346-364).
     type: 'GeometryInstance3D',
     at: 'visual_instance_3d.cpp:346-364',
-    route: 'property-list',
     sample: 'instance_shader_parameters/roughness_offset',
     verdict: { validated: true },
   },
   {
     type: 'MeshInstance3D',
     at: 'mesh_instance_3d.cpp:101-109',
-    route: 'property-list',
     sample: 'surface_material_override/0',
     verdict: { validated: true },
   },
@@ -41,14 +38,12 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
     // -1..1 PROPERTY_HINT_RANGE (mesh_instance_3d.cpp:103) is never enforced.
     type: 'MeshInstance3D',
     at: 'mesh_instance_3d.cpp:102-103',
-    route: 'property-list',
     sample: 'blend_shapes/Smile',
     verdict: { validated: true },
   },
   {
     type: 'ShaderGlobalsOverride',
     at: 'shader_globals_override.cpp:87-217',
-    route: 'property-list',
     sample: 'params/fog_enabled',
     verdict: { validated: true },
   },
@@ -62,7 +57,6 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
     // no such key exists in this build to validate even in principle.
     type: 'OpenXRCompositionLayer',
     at: 'openxr_composition_layer.cpp:705-716',
-    route: 'property-list',
     sample: 'example_extension/enabled',
     verdict: {
       declined: 'runtime-shaped',

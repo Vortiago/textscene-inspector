@@ -1,7 +1,7 @@
 /**
  * The scaffold's command line. Every rule here exists because the mistake it
  * catches is otherwise SILENT: a missing `--intent` leaves the sheet status and
- * the render registration disagreeing, and a `--chain` Godot does not know
+ * the render registration disagreeing, and a type name Godot does not know
  * leaves the type with no base and therefore no inherited validation.
  */
 
@@ -10,7 +10,7 @@ import { fail } from './paths.mjs';
 
 export function parseArgs(argv) {
   const positional = [];
-  const opts = { base: 'node3d', intent: '', chain: '', linter: false, dryRun: false, tier: false, rule: false };
+  const opts = { base: 'node3d', intent: '', linter: false, dryRun: false, tier: false, rule: false };
   // `--base` carries a default, so its presence is tracked rather than read
   // off `opts`: the tier branch below refuses flags that were PASSED.
   let baseGiven = false;
@@ -18,7 +18,6 @@ export function parseArgs(argv) {
     const a = argv[i];
     if (a === '--base') { opts.base = argv[++i]; baseGiven = true; }
     else if (a === '--intent') opts.intent = argv[++i];
-    else if (a === '--chain') opts.chain = argv[++i];
     else if (a === '--transform-only') {
       // Replaced by `--intent transform-only`, which also settles the render
       // registration and the sheet status. Kept as a hard error rather than an
@@ -34,7 +33,7 @@ export function parseArgs(argv) {
   if (positional.length !== 2) {
     fail(
       'usage: pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending> ' +
-        '--chain <ParentType> [--base node3d|node2d|node|control] [--linter] [--dry-run]\n' +
+        '[--base node3d|node2d|node|control] [--linter] [--dry-run]\n' +
         '   or: pnpm new:node <AbstractType> <category-dir> --tier [--rule] [--dry-run]'
     );
   }
@@ -45,10 +44,9 @@ export function parseArgs(argv) {
   if (opts.tier) {
     // A tier is a validator set for an abstract Godot class: no parser, no
     // component, no fixture, no sheet, because the class cannot appear in a
-    // .tscn. So --intent, --base and --chain are all meaningless here.
+    // .tscn. So --intent and --base are both meaningless here.
     for (const [flag, value] of [
       ['--intent', opts.intent],
-      ['--chain', opts.chain],
       ['--base', baseGiven],
     ]) {
       if (value) fail(`${flag} does not apply to --tier: an abstract class has no slice shape and no leaf chain.`);
@@ -62,14 +60,6 @@ export function parseArgs(argv) {
   if (!INTENTS.includes(opts.intent)) {
     fail(`--intent is required and must be one of ${INTENTS.join('|')}, got: ${opts.intent || '(none)'}`);
   }
-  if (!/^[A-Z][A-Za-z0-9]*$/.test(opts.chain)) {
-    fail(
-      `--chain is required: name the Godot parent class (e.g. --chain Node3D). ` +
-        `Without it the type is absent from NODE_BASE_TYPES and silently receives ` +
-        `no inherited validation. Got: ${opts.chain || '(none)'}`
-    );
-  }
-  if (opts.chain === typeName) fail('--chain must be the PARENT class, not the type itself');
   if (opts.base === 'control' && opts.intent !== 'pending') {
     fail(
       `--base control supports only --intent pending.\n` +

@@ -66,8 +66,8 @@ co-located `*.test.ts(x)` · three entry points:
   `src/r3f/nodes/index.ts`
 
 Scaffold: `pnpm new:node <TypeName> <category-dir> --intent <draws|transform-only|pending>
---chain <ParentType> [--base node3d|node2d|node|control] [--linter]` (creates the
-`unit-*.tscn` fixture and the aggregation imports).
+[--base node3d|node2d|node|control] [--linter]` (creates the `unit-*.tscn` fixture and
+the aggregation imports).
 
 `--intent` settles the slice shape, the render registration and the sheet status
 together, because `sheets.test.mjs` asserts they agree: `draws` = own
@@ -76,10 +76,11 @@ registers `renderIntent: 'transform-only'`, `linter-only`; `pending` = parsed bu
 drawn, registers the base under `renderIntent: 'pending'` (except `--base control`),
 `unimplemented`. The badge reads the declared intent, never the absence of a
 registration: dropping the registration also drops `visible` and puts the type in both
-workspaces. `--chain` names the Godot parent and is
-checked against ClassDB: `NODE_BASE_TYPES` is derived from the node catalog's ancestry
+workspaces. The Godot parent is derived from ClassDB,
+never typed: `NODE_BASE_TYPES` comes from the node catalog's ancestry
 (`pnpm nodes:base-types` → `godot/nodeBaseTypes.generated.ts`), so a type name Godot
-does not know gets no base and silently receives zero inherited validation. A class the
+does not know gets no base and silently receives zero inherited validation, which is
+why the scaffold refuses a name absent from the catalog. A class the
 pinned 4.6.3 ClassDB does not enumerate gets its one hop written by hand in
 `godot/nodeBaseTypes.ts`'s `UNCATALOGUED` table, with the reason beside it —
 `baseChainCompleteness.test.ts` rejects a registered type that is in neither, and an

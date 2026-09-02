@@ -116,10 +116,10 @@ interface GridMapItemProps {
 
 /** All cells sharing one MeshLibrary item, batched into a single InstancedMesh. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
-  const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'ArrayMesh');
+  const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
   // The surface material path only becomes known once the ArrayMesh resolves.
   const materialPath = meshResult.value?.materialPaths[0] ?? '';
-  const materialResult = useResource<THREE.Material>(materialPath, 'StandardMaterial3D');
+  const materialResult = useResource<THREE.Material>(materialPath, 'material');
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged

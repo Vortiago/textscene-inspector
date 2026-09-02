@@ -66,7 +66,7 @@ const SUB_SCENE_PATH = 'res://shared/sub.tscn';
 
 /** Reports the loaded sub-scene's root node name (or the hook status). */
 function SceneStub() {
-  const result = useResource<TscnScene>(SUB_SCENE_PATH, 'PackedScene');
+  const result = useResource<TscnScene>(SUB_SCENE_PATH, 'scene');
   return (
     <div data-testid="scene-stub" data-status={result.status}>
       {result.status === 'loaded' ? result.value!.nodes[0]!.name : result.status}

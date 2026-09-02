@@ -3,7 +3,6 @@
  * Which Godot node types the previewer recognises, and which are still missing.
  *
  *   node scripts/coverage-report.mjs             # full report
- *   node scripts/coverage-report.mjs --next 5    # the next N types to implement
  *   node scripts/coverage-report.mjs --json      # machine-readable
  *
  * State is DERIVED, never written down: the registered set comes from the live
@@ -18,8 +17,8 @@
  * "Registered" means the lenient parser recognises the type, which is the same
  * definition `node-catalog.json` uses for `supported`.
  *
- * The parts live in `coverage-report/`: `collect` (the ledger), `waveOrder`
- * (which type comes next) and `report` (the flags and the printing).
+ * The parts live in `coverage-report/`: `collect` (the ledger) and `report`
+ * (the flags and the printing).
  */
 
 import { pathToFileURL } from 'node:url';

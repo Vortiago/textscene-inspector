@@ -32,6 +32,7 @@ describe('indexedFamilyValidator', () => {
     const leaf = probe();
     const family = indexedFamilyValidator({
       prefix: 'item_',
+      indexParse: 'is_valid_int',
       leaves: { text: leaf },
       unknownCode: 'INVALID_ITEM',
       describes: 'item',
@@ -67,6 +68,7 @@ describe('indexedFamilyValidator', () => {
     const flat = probe();
     const family = indexedFamilyValidator({
       prefix: 'settings/',
+      indexParse: 'is_valid_int',
       leaves: {
         // The `apply_bone` / `apply/axis` pair is the real collision: one class
         // contributes a flat leaf whose name is a prefix of another class's
@@ -109,6 +111,7 @@ describe('indexedFamilyValidator', () => {
       const deep = probe();
       const deepFamily = indexedFamilyValidator({
         prefix: 'settings/',
+        indexParse: 'is_valid_int',
         leaves: { 'a/b/c': deep },
         unknownCode: 'INVALID_SETTING',
         describes: 'setting',
@@ -172,6 +175,7 @@ describe('indexedFamilyValidator', () => {
   describe('the negative-index branch', () => {
     const family = indexedFamilyValidator({
       prefix: 'settings/',
+      indexParse: 'is_valid_int',
       leaves: { 'apply/axis': probe() },
       unknownCode: 'INVALID_SETTING',
       describes: 'setting',
@@ -210,6 +214,7 @@ describe('indexedFamilyValidator', () => {
     it('cites the index gate even with no negative-index branch', () => {
       const family = indexedFamilyValidator({
         prefix: 'item_',
+        indexParse: 'is_valid_int',
         leaves: { relative: v.boolean('relative') },
         unknownCode: 'INVALID_ITEM',
         describes: 'item',
@@ -241,6 +246,7 @@ describe('indexedFamilyValidator', () => {
       const amount = v.float('amount', { min: 0, max: 1, hinted: 'x.cpp:1' });
       const family = indexedFamilyValidator({
         prefix: 'settings/',
+        indexParse: 'is_valid_int',
         leaves: { amount },
         unknownCode: 'INVALID_SETTING',
         describes: 'setting',
@@ -252,6 +258,7 @@ describe('indexedFamilyValidator', () => {
   it('cannot resolve an inherited Object member as a leaf', () => {
     const family = indexedFamilyValidator({
       prefix: 'settings/',
+      indexParse: 'is_valid_int',
       leaves: {},
       unknownCode: 'INVALID_SETTING',
       describes: 'setting',
@@ -319,6 +326,7 @@ describe('indexedFamilyValidator', () => {
       const leaf = probe();
       const family = indexedFamilyValidator({
         prefix: 'item_',
+        indexParse: 'is_valid_int',
         leaves: { text: leaf },
         unknownCode: 'INVALID_ITEM',
         describes: 'item',

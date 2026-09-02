@@ -89,8 +89,8 @@ describe('validator `accepts` metadata', () => {
   });
 
   it('keeps the compact spelling when nothing but the hint states an end', () => {
-    // The same builder feeds a user-visible message; the shortcut is what keeps
-    // `must be integer 1-10 (got -5)` unchanged on ~45 call sites.
+    // The same builder feeds the `accepts` text on ~45 call sites, so the
+    // shortcut is what keeps `integer 1-10` the sheet's spelling.
     expect(validatorRegistry.declarationFor('GeometryInstance3D', 'transparency')?.accepts).toBe(
       'float 0-1'
     );

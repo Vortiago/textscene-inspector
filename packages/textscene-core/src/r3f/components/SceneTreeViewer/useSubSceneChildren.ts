@@ -14,7 +14,7 @@
  *      `res://` path).
  *   2. Resolves the ID against the host scene's externalResources to
  *      get the `res://` path.
- *   3. Routes through `useResource<TscnScene>(scenePath, 'PackedScene')`
+ *   3. Routes through `useResource<TscnScene>(scenePath, 'scene')`
  *      — which kicks off the load on cache miss and returns the cached
  *      scene on hit. Same event-bus + late-arrival flow NodeDispatcher
  *      uses, so the tree updates automatically when the sub-scene
@@ -66,7 +66,7 @@ export function useSubSceneChildren(
   // useResource short-circuits when given an empty path, so passing ''
   // for non-instance rows keeps the hook-call count stable across all
   // tree rows (rules of hooks).
-  const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
+  const result = useResource<TscnScene>(scenePath ?? '', 'scene');
 
   // Memoized so the loaded result keeps a stable identity across re-renders
   // (mirroring useGlbChildren) — callers feed it straight into useMemo deps.

@@ -40,7 +40,7 @@ describe('a pure rename with no validator of its own', () => {
     expect(errors[0]!.severity).toBe('error');
     expect(errors[0]!.message).toContain("'cell_quadrant_size'");
     expect(errors[0]!.message).toContain('rendering_quadrant_size = 0');
-    expect(errors[0]!.message).toContain('must be integer 1-128');
+    expect(errors[0]!.message).toContain('must be between 1 and 128');
     expect(errors[0]!.column).toBe('cell_quadrant_size'.length + 3);
   });
 

@@ -46,12 +46,12 @@
  */
 
 import * as THREE from 'three';
-import type { TscnNode } from '../parser/types.js';
-import type { Node3DProperties } from '../nodes/base/node3d/types.js';
-import type { Node2DProperties, Vector2 } from '../nodes/base/node2d/types.js';
-import { joinPath, resolveNodePathLiteral } from '../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
+import type { TscnNode } from '../../../parser/types.js';
+import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
+import type { Node2DProperties, Vector2 } from '../../../nodes/base/node2d/types.js';
+import { joinPath, resolveNodePathLiteral } from '../../../utils/nodePath.js';
+import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
+import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 

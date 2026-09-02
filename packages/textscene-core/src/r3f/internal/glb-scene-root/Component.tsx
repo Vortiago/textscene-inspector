@@ -74,7 +74,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // populated by createSceneProcessor; cast through unknown so it
   // satisfies the Node3DProperties union the dispatcher carries.
   const props = node.properties as unknown as GLBSceneRootProperties;
-  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'GLBMesh');
+  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
   // BUG 2: the instancing scene's inline override children (e.g.
   // ceiling_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply

@@ -74,7 +74,8 @@ export {
 
 // Resource loading
 export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
-export type { ResourceResult, ResourceStatus, ResourceType } from './resources/useResource';
+export type { ResourceResult, ResourceStatus } from './resources/useResource';
+export type { ResourceBusType } from './resources/sliceRegistration';
 export {
   ResourceLoaderContext,
   ResourceLoaderProvider,

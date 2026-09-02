@@ -136,8 +136,8 @@ function parentPropsType(ownerDir, ancestor, sliceDir) {
  * The parse function a slice should reuse, and the props type it returns.
  *
  * The sibling of `parentLinterParser`, and needed for the same reason: `--base`
- * is a coarse flag (node3d/node2d/node/control) while `--chain` is the real
- * Godot parent. They diverge whenever an ancestor has its OWN typed parser, and
+ * is a coarse flag (node3d/node2d/node/control) while the catalog's parent is
+ * the real Godot parent. They diverge whenever an ancestor has its OWN typed parser, and
  * the split is silent - `SoftBody3D` registered `parseNode3D` while its linter
  * side inherited every MeshInstance3D validator, so `mesh`, `skin` and the
  * material overrides were validated and then discarded, leaving the inspector

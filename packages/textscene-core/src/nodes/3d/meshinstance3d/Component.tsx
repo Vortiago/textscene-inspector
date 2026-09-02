@@ -71,7 +71,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     () => resolveExtArrayMeshPath(properties.mesh, externalResources),
     [properties.mesh, externalResources]
   );
-  const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'ArrayMesh');
+  const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'arraymesh');
 
   // A `[sub_resource type="ArrayMesh"]` of the SCENE: baked surfaces inlined in
   // the `.tscn`, so there is no file to fetch and nothing for the resource

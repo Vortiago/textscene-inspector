@@ -6,11 +6,11 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TscnParser } from '../parser/TscnParser';
+import { TscnParser } from '../../../../parser/TscnParser';
 import { resolveCsgPolygonPaths } from './csgPolygonPaths';
-import * as logger from '../logger';
-import type { CSGPolygon3DProperties } from '../nodes/3d/csg/csgpolygon3d/types';
-import type { TscnNode } from '../parser/types';
+import * as logger from '../../../../logger';
+import type { CSGPolygon3DProperties } from '../../../../nodes/3d/csg/csgpolygon3d/types';
+import type { TscnNode } from '../../../../parser/types';
 
 const CURVE = `[sub_resource type="Curve3D" id="Curve3D_road"]
 _data = {
