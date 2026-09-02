@@ -14,6 +14,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('Area2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -144,7 +145,7 @@ describe('Area2D Linter', () => {
   describe('Semantic Validation (CollisionShape2D Children)', () => {
     it('should warn when Area2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('Area2D')), {
-        ruleName: 'area2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'Area2D',
         contains: ['no CollisionShape2D or CollisionPolygon2D children'],
@@ -166,7 +167,7 @@ describe('Area2D Linter', () => {
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'area2d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -301,7 +302,7 @@ describe('Area2D Linter', () => {
     it('should handle node with no properties', () => {
       const diagnostics = lint(scene(node('Area2D')));
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('area2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -336,7 +337,7 @@ describe('Area2D Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
       const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-detects-nothing');
-      const hasMissingShape = diagnostics.some(d => d.ruleName === 'area2d-needs-collision-shape');
+      const hasMissingShape = diagnostics.some(d => d.ruleName === 'collisionobject2d-needs-collision-shape');
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });
 

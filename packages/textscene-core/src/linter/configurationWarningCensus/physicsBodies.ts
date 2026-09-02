@@ -2,9 +2,8 @@
  * Collision objects and the bodies derived from them.
  *
  * `CollisionObject2D`/`CollisionObject3D` each declare ONE "needs a collision
- * shape" `push_back`, which this repo implements as several per-family rules —
- * so that single engine condition appears here once per family, each row
- * carrying the `appliesTo` slice its rule reaches.
+ * shape" `push_back`, implemented as one rule per dimension that reaches every
+ * subclass through `descendsFrom`.
  */
 import type { WarningRow } from './types.js';
 
@@ -13,26 +12,7 @@ export const physicsBodyWarnings: Readonly<Record<string, readonly WarningRow[]>
     {
       at: 'collision_object_2d.cpp:588',
       says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'area2d-needs-collision-shape' },
-      appliesTo: ['Area2D'],
-    },
-    {
-      at: 'collision_object_2d.cpp:588',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'staticbody2d-needs-collision-shape' },
-      appliesTo: ['StaticBody2D', 'AnimatableBody2D'],
-    },
-    {
-      at: 'collision_object_2d.cpp:588',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'characterbody2d-needs-collision-shape' },
-      appliesTo: ['CharacterBody2D'],
-    },
-    {
-      at: 'collision_object_2d.cpp:588',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'rigidbody2d-needs-collision-shape' },
-      appliesTo: ['RigidBody2D', 'PhysicalBone2D'],
+      verdict: { rule: 'collisionobject2d-needs-collision-shape' },
     },
   ],
 
@@ -40,32 +20,7 @@ export const physicsBodyWarnings: Readonly<Record<string, readonly WarningRow[]>
     {
       at: 'collision_object_3d.cpp:739',
       says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'area3d-needs-collision-shape' },
-      appliesTo: ['Area3D'],
-    },
-    {
-      at: 'collision_object_3d.cpp:739',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'staticbody3d-needs-collision-shape' },
-      appliesTo: ['StaticBody3D', 'AnimatableBody3D'],
-    },
-    {
-      at: 'collision_object_3d.cpp:739',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'characterbody3d-needs-collision-shape' },
-      appliesTo: ['CharacterBody3D'],
-    },
-    {
-      at: 'collision_object_3d.cpp:739',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'rigidbody3d-needs-collision-shape' },
-      appliesTo: ['RigidBody3D', 'VehicleBody3D'],
-    },
-    {
-      at: 'collision_object_3d.cpp:739',
-      says: 'needs a collision shape to detect anything',
-      verdict: { rule: 'physicalbone3d-needs-collision-shape' },
-      appliesTo: ['PhysicalBone3D'],
+      verdict: { rule: 'collisionobject3d-needs-collision-shape' },
     },
     {
       at: 'collision_object_3d.cpp:744',

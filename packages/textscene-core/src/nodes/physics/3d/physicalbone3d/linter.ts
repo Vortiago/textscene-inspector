@@ -1,20 +1,7 @@
 /**
- * Semantic linter rule for PhysicalBone3D.
- *
- * `CollisionObject3D::get_configuration_warnings()` (collision_object_3d.cpp:739)
- *
- *     if (shapes.is_empty()) {
- *         warnings.push_back(RTR("This node has no shape, so it can't collide
- *             or interact with other objects. ..."));
- *     }
- *
- * reaches every CollisionObject3D descendant, but this repo implements that
- * ONE Godot condition as one rule per family (`area3d-needs-collision-shape`,
- * `staticbody3d-needs-collision-shape`, `characterbody3d-needs-collision-shape`,
- * `rigidbody3d-needs-collision-shape`) rather than a single base-walking rule —
- * and PhysicalBone3D, whose chain is PhysicsBody3D -> CollisionObject3D, sits
- * outside all four: it has no `linter.ts` of its own, and no family rule's
- * `applicableNodeTypeMatcher` reaches it. This file is that fifth family.
+ * PhysicalBone3D's own rule: `joint_constraints/*` writes judged against the
+ * JointData live when each line applies. The no-shape configuration warning
+ * (collision_object_3d.cpp:739) reaches it through the CollisionObject3D rule.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -22,12 +9,6 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { JOINT_DATA, jointConstraintOwners, type JointType } from './jointConstraints.js';
-import {
-  hasCollisionShapeChild,
-  collisionShapeTypesPhrase,
-} from '../../../../linter/physics/hasCollisionShapeChild.js';
-
-const RULE_NAME = 'physicalbone3d-needs-collision-shape';
 
 /**
  * `joint_constraints/*` writes, judged against the JointData live when each
@@ -83,17 +64,7 @@ function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, str
 
 function checkPhysicalBone3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const diagnostics = jointConstraintDiagnostics(node, node.properties as unknown as Record<string, string>);
-  if (hasCollisionShapeChild(node, '3D')) return diagnostics;
-
-  diagnostics.push({
-    severity: 'warning',
-    message: `PhysicalBone3D '${node.name}' has no ${collisionShapeTypesPhrase('3D')} children. It has no shape, so it can't collide or interact with other objects.`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: RULE_NAME,
-  });
-  return diagnostics;
+  return jointConstraintDiagnostics(node, node.properties as unknown as Record<string, string>);
 }
 
 const physicalBone3DValidationRule: LintRule = {
@@ -103,7 +74,6 @@ const physicalBone3DValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['PhysicalBone3D'],
     emits: [
-      { ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'physicalbone3d-joint-constraint-without-joint',
         severity: 'error',

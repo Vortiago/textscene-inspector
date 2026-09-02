@@ -4,11 +4,8 @@
  */
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { VECTOR3_REGEX, accepts, propertyError } from '../../../../linter/validators/index.js';
-import { formatCode, valueCode } from '../../../../linter/validators/v/codes.js';
+import { v } from '../../../../linter/validators/index.js';
 import { CMP_EPSILON, isZeroApprox } from '../../../../godot/index.js';
-import { tupleComponent } from '../../../../linter/validators/commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../../godot/int.js';
 
 /**
  * A gravity direction, which the setter refuses outright when it is zero.
@@ -31,48 +28,17 @@ import { slotComponents, slotComponentsAltered } from '../../../../godot/int.js'
  * @param cite - `file:line` of that leaf's own `ERR_FAIL_COND`.
  */
 export function nonZeroVector3(name: string, cite: string): PropertyValidator {
-  const code = valueCode(name);
-  const validator = accepts((key, value, line) => {
-    const match = VECTOR3_REGEX.exec(value);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be Vector3 with 3 numbers like Vector3(0, -1, 0), got: "${value}"`,
-        formatCode(name),
-      );
-    }
-    const captures = [match[1], match[2], match[3]];
-    // Ahead of the zero test, which cannot express it: an altered component
-    // reads back NaN and `Math.abs(NaN) < CMP_EPSILON` is false. The message
-    // quotes the literal, never the stored number — `_to_int`'s float branch is
-    // undefined behaviour (variant.h:369-370).
-    if (slotComponentsAltered(value, 'Vector3', captures)) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' has a component Godot cannot store in the integer ` +
-          `spelling it is written in, got: "${value}". The file loads, but the ` +
-          `components are narrowed at parse time to a number the file does not state`,
-        code,
-      );
-    }
-    // `slotComponents`: VECTOR3_REGEX admits the `Vector3i(...)` spelling Godot
-    // converts, whose arguments are narrowed to int32 before the widening, so
-    // `Vector3i(0.5, 0.5, 0.5)` IS the zero vector the setter refuses.
-    const components = slotComponents(value, 'Vector3', captures, tupleComponent);
-    if (components.every(isZeroApprox)) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must not be the zero vector: Godot's setter fails ` +
-          `ERR_FAIL_COND(is_zero_approx()) and drops the write, and every component ` +
-          `under ${CMP_EPSILON} counts as zero`,
-        code,
-      );
-    }
-    return null;
-  }, 'Vector3(x, y, z), not the zero vector');
-  validator.grounding = { kind: 'enforced', cite };
-  return validator;
+  return v.vector3(name, {
+    components: (components) =>
+      components.every(isZeroApprox)
+        ? {
+            message:
+              `Property '${name}' must not be the zero vector: Godot's setter fails ` +
+              `ERR_FAIL_COND(is_zero_approx()) and drops the write, and every component ` +
+              `under ${CMP_EPSILON} counts as zero`,
+          }
+        : null,
+    accepts: 'Vector3(x, y, z), not the zero vector',
+    enforced: cite,
+  });
 }

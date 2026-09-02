@@ -14,6 +14,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('RigidBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -259,7 +260,7 @@ physics_material_override = ExtResource("ext_mat_1")
   describe('Semantic Validation (CollisionShape3D Children)', () => {
     it('should warn when RigidBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('RigidBody3D', { mass: 1.0 })), {
-        ruleName: 'rigidbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'RigidBody3D',
         contains: ['no CollisionShape3D or CollisionPolygon3D children'],
@@ -281,7 +282,7 @@ physics_material_override = ExtResource("ext_mat_1")
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'rigidbody3d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 

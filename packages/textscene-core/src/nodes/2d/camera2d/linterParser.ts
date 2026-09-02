@@ -8,45 +8,22 @@
 // without this line just the full barrel ever registers it.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v, VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
-import { propertyError } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { v } from '../../../linter/validators/index.js';
 import { isZeroApprox } from '../../../godot/index.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 
 const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
 const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
 
-// camera_2d.cpp:102-105: set_zoom only ERR_FAIL_COND_MSGs on
-// `Math::is_zero_approx(x) || Math::is_zero_approx(y)`, whose own message says
-// "Zoom level must be different from 0 (can be negative)." Negative zoom
-// flips the view and is legal; only a (near-)zero component is not.
-const zoomValidator: PropertyValidator = (key, value, line) => {
-  const match = value.match(VECTOR2_REGEX);
-  if (!match || !match[1] || !match[2]) {
-    return propertyError(key, line, `Property 'zoom' must be Vector2 with 2 numbers like Vector2(1, 1), got: "${value}"`, 'INVALID_ZOOM_FORMAT');
-  }
-
-  const captures = [match[1], match[2]];
-  // Ahead of the zero check, which cannot express it: an altered component
-  // reads back NaN and `isZeroApprox(NaN)` is false. The message quotes the
-  // literal, never the stored number — `_to_int`'s float branch is undefined
-  // behaviour (variant.h:369-370).
-  if (slotComponentsAltered(value, 'Vector2', captures)) {
-    return propertyError(key, line, `Property 'zoom' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". The file loads, but the components are narrowed at parse time to a number the file does not state.`, 'INVALID_ZOOM_VALUE');
-  }
-
-  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
-  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
-  // narrowed through `_parse_construct<int32_t>` before the widening, so
-  // `Vector2i(0.5, 1)` reaches set_zoom as the (0, 1) it ERR_FAIL_COND_MSGs on.
-  const [x, y] = slotComponents(value, 'Vector2', captures, tupleComponent);
-
-  if (isZeroApprox(x!) || isZeroApprox(y!)) {
-    return propertyError(key, line, `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.`, 'INVALID_ZOOM_VALUE');
-  }
-  return null;
-};
+// camera_2d.cpp:104: set_zoom refuses the whole write when either component is
+// zero-approx (ERR_FAIL_COND_MSG), so the camera keeps its previous zoom.
+const zoomValidator = v.vector2('zoom', {
+  components: ([x, y]) =>
+    isZeroApprox(x!) || isZeroApprox(y!)
+      ? { message: `Property 'zoom' components must be non-zero (got Vector2(${x}, ${y})). Godot allows negative zoom (it flips the view); only a (near-)zero component is invalid.` }
+      : null,
+  accepts: 'Vector2(x, y), neither component (near-)zero',
+  enforced: 'camera_2d.cpp:104',
+});
 
 validatorRegistry.registerAll('Camera2D', {
   // camera_2d.cpp:961, ENUM "Fixed Top Left,Drag Center" (2 labels, matches
@@ -97,9 +74,3 @@ validatorRegistry.registerAll('Camera2D', {
   editor_draw_drag_margin: v.boolean('editor_draw_drag_margin'),
 });
 
-// Shown in the generated `## Linting` table of this node's sheet.
-zoomValidator.accepts = 'Vector2(x, y), neither component (near-)zero';
-// Hand-rolled (not built through `v`), so tagged by hand for
-// boundGrounding.test.ts: camera_2d.cpp:104's ERR_FAIL_COND is enforced, so
-// out-of-range stays an error.
-zoomValidator.grounding = { kind: 'enforced', cite: 'camera_2d.cpp:104' };

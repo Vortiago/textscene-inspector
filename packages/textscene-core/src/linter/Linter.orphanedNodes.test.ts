@@ -21,7 +21,7 @@ import {
 import './index.js';
 
 /** A StaticBody2D with no shape — the rule that proves Phase 2 reached a node. */
-const NEEDS_SHAPE = 'staticbody2d-needs-collision-shape';
+const NEEDS_SHAPE = 'collisionobject2d-needs-collision-shape';
 const ORPHAN = 'unresolved-parent-path';
 
 const dangling = scene(

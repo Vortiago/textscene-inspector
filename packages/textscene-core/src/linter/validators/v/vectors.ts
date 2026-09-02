@@ -38,6 +38,52 @@ const RECT2I_RE = makeFloatTupleRegex('Rect2i', 4);
  * one, and an integer constructor's non-finite argument is the alteration
  * `floatTupleValidator` reports, not a refusal this guard owns.
  */
+/**
+ * A per-component predicate on the NARROWED components, for the setters whose
+ * refusal is not a range: a zero axis, a negative component clamped up, a whole
+ * vector the setter drops. Returns the refusal, or null when the value passes.
+ */
+export type ComponentRule = (
+  parts: number[],
+  written: string
+) => { message: string; severity?: 'error' | 'warning' } | null;
+
+/**
+ * Runs `rule` after the format validator, on the components as Godot stores
+ * them (`slotComponents`: the `i`-suffixed spelling is narrowed first). A
+ * format or alteration ERROR wins outright; the truncation WARNING the format
+ * validator draws for a converted spelling yields to a refusal and is otherwise
+ * kept, so an enforced bound is never masked by it.
+ */
+function componentRule(
+  validator: PropertyValidator,
+  name: string,
+  typeName: string,
+  arity: number,
+  rule: ComponentRule,
+  opts: Grounding
+): PropertyValidator {
+  const regex = makeFloatTupleRegex(typeName, arity);
+  const guarded: PropertyValidator = (key, value, line) => {
+    const first = validator(key, value, line);
+    if (first?.severity === 'error') return first;
+    const match = regex.exec(value);
+    if (!match) return first;
+    const parts = slotComponents(value, typeName, match.slice(1, arity + 1), tupleComponent);
+    const refusal = rule(parts, value);
+    if (refusal) return propertyError(key, line, refusal.message, valueCode(name), refusal.severity);
+    return first;
+  };
+  guarded.accepts = validator.accepts;
+  const cites = (end: Grounding['enforced']) =>
+    end === undefined ? [] : typeof end === 'string' ? [end] : [end.min, end.max].filter((c): c is string => !!c);
+  const enforced = cites(opts.enforced);
+  const hinted = cites(opts.hinted).filter((c) => !enforced.includes(c));
+  if (enforced.length > 0) guarded.grounding = { kind: 'enforced', cite: [...enforced, ...hinted].join(', ') };
+  else if (hinted.length > 0) guarded.grounding = { kind: 'hinted', cite: hinted.join(', ') };
+  return guarded;
+}
+
 function finiteComponents(
   validator: PropertyValidator,
   name: string,
@@ -110,12 +156,18 @@ export const vectorCombinators = {
    * per component because `withFiniteGuard` reads the value as a SCALAR and a
    * composite literal is not one.
    */
-  vector2(name: string, opts: { finite?: string } = {}): PropertyValidator {
+  vector2(
+    name: string,
+    opts: { finite?: string; components?: ComponentRule; accepts?: string } & Grounding = {}
+  ): PropertyValidator {
     const format = shape(
       createVector2Validator(name, formatCode(name)),
-      'Vector2(x, y), or the Vector2i spelling Godot converts'
+      opts.accepts ?? 'Vector2(x, y), or the Vector2i spelling Godot converts'
     );
-    return opts.finite ? finiteComponents(format, name, 'Vector2', 2, opts.finite) : format;
+    const ruled = opts.components
+      ? componentRule(format, name, 'Vector2', 2, opts.components, opts)
+      : format;
+    return opts.finite ? finiteComponents(ruled, name, 'Vector2', 2, opts.finite) : ruled;
   },
 
   /**
@@ -141,12 +193,21 @@ export const vectorCombinators = {
     ));
   },
 
-  /** `Vector3(x, y, z)` format. */
-  vector3(name: string): PropertyValidator {
-    return shape(
+  /**
+   * `Vector3(x, y, z)` format, optionally with a per-COMPONENT refusal that is
+   * not a range (see {@link ComponentRule}); a range is `boundedVector3`.
+   */
+  vector3(
+    name: string,
+    opts: { components?: ComponentRule; accepts?: string } & Grounding = {}
+  ): PropertyValidator {
+    const format = shape(
       createVector3Validator(name, formatCode(name)),
-      'Vector3(x, y, z), or the Vector3i spelling Godot converts'
+      opts.accepts ?? 'Vector3(x, y, z), or the Vector3i spelling Godot converts'
     );
+    return opts.components
+      ? componentRule(format, name, 'Vector3', 3, opts.components, opts)
+      : format;
   },
 
   /**
@@ -161,7 +222,7 @@ export const vectorCombinators = {
    *
    * Bounds are inclusive, and either may be omitted. A predicate that is not a
    * range (Camera2D's `zoom` must be non-zero, Node2D's `scale` likewise) is
-   * not this, and stays hand-rolled.
+   * `vector3`'s `components` option, not this.
    */
   boundedVector3(
     name: string,

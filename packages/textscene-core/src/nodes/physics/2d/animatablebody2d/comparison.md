@@ -36,7 +36,7 @@ Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherit
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-staticbody2d` (type-family match) | `staticbody2d-needs-collision-shape` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 `sync_to_physics` is not read by the lenient parser at all: AnimatableBody2D reuses

@@ -1,6 +1,6 @@
 /**
  * Tests for the PhysicalBone3D collision-shape rule
- * (`physicalbone3d-needs-collision-shape`), collision_object_3d.cpp:739 — the
+ * (`collisionobject3d-needs-collision-shape`), collision_object_3d.cpp:739 — the
  * reach gap this slice's `linter.ts` closes (see its docblock).
  */
 
@@ -10,8 +10,9 @@ import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import { Linter } from '../../../../linter/Linter';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
-const RULE = 'physicalbone3d-needs-collision-shape';
+const RULE = 'collisionobject3d-needs-collision-shape';
 
 describe('PhysicalBone3D collision-shape rule', () => {
   it('warns when a PhysicalBone3D has no CollisionShape3D or CollisionPolygon3D descendant', () => {

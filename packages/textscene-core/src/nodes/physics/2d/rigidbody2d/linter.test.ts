@@ -14,6 +14,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('RigidBody2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -226,7 +227,7 @@ physics_material_override = ExtResource("ext_mat_1")
   describe('Semantic Validation (CollisionShape2D Children)', () => {
     it('should warn when RigidBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('RigidBody2D', { mass: 1.0 })), {
-        ruleName: 'rigidbody2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'RigidBody2D',
         contains: ['no CollisionShape2D or CollisionPolygon2D children'],
@@ -248,7 +249,7 @@ physics_material_override = ExtResource("ext_mat_1")
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'rigidbody2d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -421,7 +422,7 @@ physics_material_override = ExtResource("ext_mat_1")
       // The body's semantic warnings arrive alongside those errors. A validator
       // error that withheld the scene would stop the rule phase running at all,
       // making this body look like an errors-only case.
-      expect(diagnostics.some((d) => d.ruleName === 'rigidbody2d-needs-collision-shape')).toBe(
+      expect(diagnostics.some((d) => d.ruleName === 'collisionobject2d-needs-collision-shape')).toBe(
         true
       );
     });

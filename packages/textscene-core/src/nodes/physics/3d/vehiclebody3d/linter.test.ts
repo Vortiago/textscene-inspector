@@ -23,6 +23,7 @@ import '../rigidbody3d/linterParser';
 import '../rigidbody3d/linter';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 /** A VehicleWheel3D child, so the body is a complete vehicle by default. */
 const wheel = node('VehicleWheel3D', { wheel_radius: 0.25 }, { name: 'Wheel1', parent: '.' });
@@ -150,7 +151,7 @@ describe('VehicleBody3D Linter', () => {
 
     it('warns when the body has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), wheel), {
-        ruleName: 'rigidbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
       });
     });
@@ -264,7 +265,7 @@ describe('VehicleBody3D Linter', () => {
       const diagnostics = lint(scene(node('VehicleBody3D', {}, { name: 'Vehicle' })));
       const names = diagnostics.map((d) => d.ruleName);
 
-      expect(names).toContain('rigidbody3d-needs-collision-shape');
+      expect(names).toContain('collisionobject3d-needs-collision-shape');
       expect(names).toContain('vehiclebody3d-needs-wheels');
       expect(new Set(names).size).toBe(names.length);
 

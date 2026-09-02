@@ -3,5 +3,5 @@
  */
 
 import '../../shared/linter.js';
+import '../shared/linter.js';
 import './linterParser.js';
-import './linter.js';

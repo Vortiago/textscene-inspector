@@ -38,7 +38,7 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `floor_max_angle` | radians, 0° to 180° | warning |
 | `floor_snap_length` | float >= 0 | error below |
 | `floor_stop_on_slope` | true or false |  |
-| `max_slides` | integer > 0 | error below |
+| `max_slides` | integer >= 1 | error below |
 | `motion_mode` | enum 0-1 (GROUNDED/FLOATING) | warning |
 | `platform_floor_layers` | 32-bit layer mask (layers 1-32) |  |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
@@ -54,9 +54,9 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-characterbody3d` | `characterbody3d-needs-collision-shape` | warning |
-|  | `characterbody3d-floor-props-in-floating-mode` | warning |
+| `valid-characterbody3d` | `characterbody3d-floor-props-in-floating-mode` | warning |
 |  | `characterbody3d-slide-on-ceiling-in-floating-mode` | warning |
+| `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 CharacterBody3D has no `parser.ts` either: it reuses `parseNode3D` directly,

@@ -46,7 +46,7 @@ describe('joint dead-configuration rule', () => {
   // text alone. These two pin both directions against a real tree.
   it('stays quiet when both ends resolve to real sibling bodies', () => {
     // Scoped to this rule: the bare bodies correctly trip
-    // `staticbody2d-needs-collision-shape`, which is not what this asserts.
+    // `collisionobject2d-needs-collision-shape`, which is not what this asserts.
     expectNoDiagnostic(
       scene(
         node('Node2D', {}, { name: 'Root' }),

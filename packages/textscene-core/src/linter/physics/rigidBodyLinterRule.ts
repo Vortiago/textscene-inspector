@@ -8,10 +8,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import {
-  hasCollisionShapeChild,
-  collisionShapeTypesPhrase,
-} from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
@@ -77,17 +73,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
-
-    // Warning: RigidBody without collision shape is useless
-    if (!hasCollisionShapeChild(node, dim)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${node.type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Rigid bodies need collision shapes to function in physics.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-collision-shape`,
-      });
-    }
 
     // `linear_damp` / `angular_damp` get no advisory: both hints
     // (rigid_body_2d.cpp:763/767 "-1,100,0.001,or_greater",
@@ -199,11 +184,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
-        {
-          ruleName: `${prefix}-needs-collision-shape`,
-          severity: 'warning',
-          grounding: { kind: 'configuration-warning' },
-        },
         {
           ruleName: `${prefix}-max-contacts-without-monitor`,
           severity: 'warning',

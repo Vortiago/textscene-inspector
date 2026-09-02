@@ -45,9 +45,9 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 23 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-rigidbody2d` (type-family match) | `rigidbody2d-needs-collision-shape` | warning |
-|  | `rigidbody2d-max-contacts-without-monitor` | warning |
+| `valid-rigidbody2d` (type-family match) | `rigidbody2d-max-contacts-without-monitor` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 | `valid-physicalbone2d` | `physicalbone2d-missing-skeleton-parent` | warning |
 |  | `physicalbone2d-missing-bone-index` | warning |
 |  | `physicalbone2d-missing-joint-child` | warning |

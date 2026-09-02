@@ -54,7 +54,7 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
       'a Godot 3 file; the single warning IS the fixture, and the errors its pre-4.0 spellings would otherwise draw are what the suppression exists to withhold',
   },
   'unit-unsupported-nodes.tscn': {
-    rules: ['area3d-needs-collision-shape'],
+    rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
   'unit-cpuparticles2d-unpreviewable.tscn': {
@@ -65,11 +65,11 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
     reason: 'named for the two advisories it carries; they are the fixture',
   },
   'unit-instance-child.tscn': {
-    rules: ['area3d-needs-collision-shape'],
+    rules: ['collisionobject3d-needs-collision-shape'],
     reason: "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",
   },
   'unit-csg-combiner.tscn': {
-    rules: ['staticbody3d-needs-collision-shape'],
+    rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
   },
   'unit-csg-mesh.tscn': {

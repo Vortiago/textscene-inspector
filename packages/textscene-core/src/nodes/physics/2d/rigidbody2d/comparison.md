@@ -69,9 +69,9 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-rigidbody2d` (type-family match) | `rigidbody2d-needs-collision-shape` | warning |
-|  | `rigidbody2d-max-contacts-without-monitor` | warning |
+| `valid-rigidbody2d` (type-family match) | `rigidbody2d-max-contacts-without-monitor` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 A non-positive `mass` is reported, because Godot's own setter refuses it rather

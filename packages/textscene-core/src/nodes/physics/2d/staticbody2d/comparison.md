@@ -43,7 +43,7 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-staticbody2d` (type-family match) | `staticbody2d-needs-collision-shape` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 Both collision keys go through `layerBitmask`, so a value outside a 32-bit mask

@@ -31,7 +31,7 @@ const SOURCES: Record<string, string> = {
     node('Node2D', {}, { name: 'Stray' })
   ),
   'root-declares-parent': scene(node('Node2D', {}, { name: 'A', parent: '.' })),
-  'staticbody2d-needs-collision-shape': scene(node('StaticBody2D', {}, { name: 'Root' })),
+  'collisionobject2d-needs-collision-shape': scene(node('StaticBody2D', {}, { name: 'Root' })),
   'strict-parser': scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' })),
   // A rule that hand-builds its diagnostic rather than taking one from an arm:
   // its `nodeName` came off the typed property bag, which carries no `name` —

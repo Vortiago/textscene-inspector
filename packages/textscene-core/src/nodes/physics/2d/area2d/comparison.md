@@ -62,9 +62,9 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-area2d` | `area2d-needs-collision-shape` | warning |
-|  | `area2d-detects-nothing` | warning |
+| `valid-area2d` | `area2d-detects-nothing` | warning |
 |  | `area2d-monitoring-zero-mask` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 The lenient parser only reads `monitoring`, `monitorable`, `collision_layer`, and

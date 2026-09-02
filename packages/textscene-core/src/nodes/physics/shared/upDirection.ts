@@ -16,68 +16,31 @@
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import {
-  VECTOR2_REGEX,
-  VECTOR3_REGEX,
-  accepts,
-  propertyError,
-  tupleComponent,
-} from '../../../linter/validators/index.js';
-import { formatCode, valueCode } from '../../../linter/validators/v/codes.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
-
-const SHAPE = {
-  '2D': { regex: VECTOR2_REGEX, type: 'Vector2', example: 'Vector2(0, -1)', arity: 2 },
-  '3D': { regex: VECTOR3_REGEX, type: 'Vector3', example: 'Vector3(0, 1, 0)', arity: 3 },
-} as const;
+import { v } from '../../../linter/validators/index.js';
+import type { ComponentRule } from '../../../linter/validators/v/vectors.js';
 
 /**
  * @param dim - which twin, and so which literal arity.
  * @param cite - `file:line` of that twin's own `ERR_FAIL_COND_MSG`.
  */
 export function upDirection(dim: '2D' | '3D', cite: string): PropertyValidator {
-  const { regex, type, example, arity } = SHAPE[dim];
-  const validator = accepts((key, value, line) => {
-    const match = regex.exec(value);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property 'up_direction' must be ${type} with ${arity} numbers like ${example}, got: "${value}"`,
-        formatCode('up_direction')
-      );
-    }
-    const captures = match.slice(1, arity + 1);
-    // Ahead of the zero test, which cannot express it: a narrowed component
-    // reads back NaN, and `NaN === 0` is false, so the one literal Godot does
-    // not store as written went unreported. The message quotes the literal and
-    // never the stored number.
-    if (slotComponentsAltered(value, type, captures)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'up_direction' has a component Godot cannot store in the integer ` +
-          `spelling it is written in, got: "${value}". The file loads, but the ` +
-          'components are narrowed at parse time to a number the file does not state',
-        valueCode('up_direction')
-      );
-    }
-    // `slotComponents`, not bare `tupleComponent`: the grammar admits the
-    // `${type}i(...)` spelling `can_convert_strict` converts, whose arguments are
-    // narrowed to int32 before the widening into this float slot.
-    const components = slotComponents(value, type, captures, tupleComponent);
-    if (components.every((component) => component === 0)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'up_direction' must not be the zero vector: Godot's setter fails ` +
-          `ERR_FAIL_COND_MSG(p_up_direction == ${type}()) and drops the write, so the ` +
-          'body keeps its default up direction. Use motion_mode FLOATING instead.',
-        valueCode('up_direction')
-      );
-    }
-    return null;
-  }, `${type}(${arity === 2 ? 'x, y' : 'x, y, z'}) other than the zero vector, or the ${type}i spelling Godot converts`);
-  validator.grounding = { kind: 'enforced', cite };
-  return validator;
+  const type = dim === '2D' ? 'Vector2' : 'Vector3';
+  const components = (rule: ComponentRule) =>
+    dim === '2D'
+      ? v.vector2('up_direction', { components: rule, accepts: accepted(type, 'x, y'), enforced: cite })
+      : v.vector3('up_direction', { components: rule, accepts: accepted(type, 'x, y, z'), enforced: cite });
+  return components((parts) =>
+    parts.every((component) => component === 0)
+      ? {
+          message:
+            `Property 'up_direction' must not be the zero vector: Godot's setter fails ` +
+            `ERR_FAIL_COND_MSG(p_up_direction == ${type}()) and drops the write, so the ` +
+            'body keeps its default up direction. Use motion_mode FLOATING instead.',
+        }
+      : null
+  );
+}
+
+function accepted(type: string, slots: string): string {
+  return `${type}(${slots}) other than the zero vector, or the ${type}i spelling Godot converts`;
 }

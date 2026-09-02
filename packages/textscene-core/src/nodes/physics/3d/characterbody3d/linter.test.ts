@@ -16,6 +16,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('CharacterBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -255,7 +256,7 @@ describe('CharacterBody3D Linter', () => {
   describe('Semantic Validation (CollisionShape3D Children)', () => {
     it('should warn when CharacterBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('CharacterBody3D')), {
-        ruleName: 'characterbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'CharacterBody3D',
         contains: ['no CollisionShape3D or CollisionPolygon3D children'],
@@ -264,7 +265,7 @@ describe('CharacterBody3D Linter', () => {
 
     it('should pass when CharacterBody3D has CollisionShape3D child', () => {
       expectNoDiagnostic(scene(node('CharacterBody3D'), collisionShape3d), {
-        ruleName: 'characterbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
       });
     });
 
@@ -279,7 +280,7 @@ describe('CharacterBody3D Linter', () => {
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'characterbody3d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -290,7 +291,7 @@ describe('CharacterBody3D Linter', () => {
           node('CollisionShape3D', {}, { name: 'Shape1', parent: '.' }),
           node('CollisionShape3D', {}, { name: 'Shape2', parent: '.' })
         ),
-        { ruleName: 'characterbody3d-needs-collision-shape' }
+        { ruleName: 'collisionobject3d-needs-collision-shape' }
       );
     });
   });

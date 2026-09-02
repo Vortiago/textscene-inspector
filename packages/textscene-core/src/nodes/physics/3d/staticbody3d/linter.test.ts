@@ -14,7 +14,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
+import '../shared/linter';
 
 describe('StaticBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -194,7 +194,7 @@ physics_material_override = ExtResource("ext_mat_1")
   describe('Semantic Validation (CollisionShape3D Children)', () => {
     it('should warn when StaticBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('StaticBody3D')), {
-        ruleName: 'staticbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody3D',
         contains: ['no CollisionShape3D or CollisionPolygon3D children'],
@@ -216,7 +216,7 @@ physics_material_override = ExtResource("ext_mat_1")
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'staticbody3d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -288,7 +288,7 @@ input_capture_on_drag = false
       const diagnostics = lint(scene(node('StaticBody3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('staticbody3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {

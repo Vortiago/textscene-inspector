@@ -180,7 +180,7 @@ Strict parsing format-checks these `SubViewportContainer` properties, plus 53 in
 | --- | --- | --- |
 | `mouse_target` | true or false |  |
 | `stretch` | true or false |  |
-| `stretch_shrink` | integer > 0 | error below |
+| `stretch_shrink` | integer >= 1 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

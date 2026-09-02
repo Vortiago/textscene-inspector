@@ -41,7 +41,7 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `floor_max_angle` | radians, 0° to 180° | warning |
 | `floor_snap_length` | float >= 0 | error below |
 | `floor_stop_on_slope` | true or false |  |
-| `max_slides` | integer > 0 | error below |
+| `max_slides` | integer >= 1 | error below |
 | `motion_mode` | enum 0-1 (GROUNDED/FLOATING) | warning |
 | `platform_floor_layers` | 32-bit layer mask (layers 1-32) |  |
 | `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
@@ -57,10 +57,10 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-characterbody2d` | `characterbody2d-needs-collision-shape` | warning |
-|  | `characterbody2d-floor-props-in-floating-mode` | warning |
+| `valid-characterbody2d` | `characterbody2d-floor-props-in-floating-mode` | warning |
 |  | `characterbody2d-slide-on-ceiling-in-floating-mode` | warning |
 |  | `characterbody2d-wall-min-slide-angle-in-grounded-mode` | warning |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 `velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either

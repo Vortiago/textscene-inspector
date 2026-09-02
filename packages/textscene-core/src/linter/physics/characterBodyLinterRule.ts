@@ -9,10 +9,6 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import {
-  hasCollisionShapeChild,
-  collisionShapeTypesPhrase,
-} from './hasCollisionShapeChild.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -37,16 +33,10 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
 
   // Each arm's enabling condition, stated once (see `ruleArms.ts`).
   const arms: RuleArms<
-    | 'needsCollisionShape'
     | 'floorPropsInFloating'
     | 'slideOnCeilingInFloating'
     | 'wallAngleInGrounded'
   > = {
-    needsCollisionShape: {
-      severity: 'warning',
-      ruleName: `${prefix}-needs-collision-shape`,
-      grounding: { kind: 'configuration-warning' },
-    },
     floorPropsInFloating: {
       severity: 'warning',
       ruleName: `${prefix}-floor-props-in-floating-mode`,
@@ -88,10 +78,6 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       reportArm(diagnostics, arm, node, message);
 
     const rawProps = node.properties as unknown as Record<string, string>;
-
-    if (!hasCollisionShapeChild(node, dim)) {
-      report(arms.needsCollisionShape, `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Character bodies need collision shapes to function in physics.`);
-    }
 
     // `floor_snap_length` gets no advisory: its hint (character_body_2d.cpp:749,
     // character_body_3d.cpp:934) ends in `or_greater`, so the high end is open,

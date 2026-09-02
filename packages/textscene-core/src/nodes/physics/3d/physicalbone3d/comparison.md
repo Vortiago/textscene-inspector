@@ -71,8 +71,8 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-physicalbone3d-collision-shape` | `physicalbone3d-needs-collision-shape` | warning |
-|  | `physicalbone3d-joint-constraint-without-joint` | error |
+| `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
+| `valid-physicalbone3d-collision-shape` | `physicalbone3d-joint-constraint-without-joint` | error |
 |  | `physicalbone3d-joint-constraint-wrong-joint-type` | error |
 <!-- lint:end -->
 

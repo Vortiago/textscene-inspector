@@ -14,7 +14,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
+import '../shared/linter';
 
 describe('StaticBody2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -183,7 +183,7 @@ physics_material_override = ExtResource("ext_mat_1")
   describe('Semantic Validation (CollisionShape2D Children)', () => {
     it('should warn when StaticBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('StaticBody2D')), {
-        ruleName: 'staticbody2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody2D',
         contains: ['no CollisionShape2D or CollisionPolygon2D children'],
@@ -205,7 +205,7 @@ physics_material_override = ExtResource("ext_mat_1")
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'staticbody2d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -278,7 +278,7 @@ input_pickable = true
       const diagnostics = lint(scene(node('StaticBody2D')));
       // Should only have warning about missing CollisionShape2D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('staticbody2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {
@@ -310,7 +310,7 @@ describe('the subclasses the matcher reaches', () => {
   it('names AnimatableBody2D, not StaticBody2D, in its own diagnostic', () => {
     const found = expectDiagnostic(
       scene(node('AnimatableBody2D', {}, { name: 'MovingPlatform' })),
-      { ruleName: 'staticbody2d-needs-collision-shape', severity: 'warning' }
+      { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
     );
     expect(found.message).toContain("AnimatableBody2D 'MovingPlatform'");
     expect(found.message).not.toContain('StaticBody2D');

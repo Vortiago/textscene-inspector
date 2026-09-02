@@ -36,7 +36,7 @@ Strict parsing format-checks these `AnimatableBody3D` properties, plus 3 inherit
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-staticbody3d` (type-family match) | `staticbody3d-needs-collision-shape` | warning |
+| `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
 AnimatableBody3D has no `parser.ts` of its own: it registers `parseNode3D` directly

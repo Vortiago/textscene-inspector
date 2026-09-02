@@ -23,15 +23,7 @@
 
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import {
-  accepts,
-  VECTOR2_REGEX,
-  propertyError,
-  tupleComponent,
-  v,
-} from '../../../linter/validators/index.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { v } from '../../../linter/validators/index.js';
 
 /**
  * `repeat_size`'s floor is enforced: the setter clamps a negative component up
@@ -49,47 +41,14 @@ import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
  * way, so this stays consistent with them rather than becoming the one
  * validator that treats a `nan` component as a value error.
  */
-const repeatSizeValidator: PropertyValidator = (key, value, line) => {
-  const match = VECTOR2_REGEX.exec(value);
-  if (!match) {
-    return propertyError(
-      key,
-      line,
-      `Property 'repeat_size' must be Vector2 with 2 numbers like Vector2(0, 0), got: "${value}"`,
-      'INVALID_REPEAT_SIZE_FORMAT'
-    );
-  }
-  const captures = [match[1], match[2]];
-  // Ahead of the floor, which cannot express it: an altered component reads
-  // back NaN and `NaN < 0` is false. The message quotes the literal, never the
-  // stored number — `_to_int`'s float branch is undefined behaviour
-  // (variant.h:369-370).
-  if (slotComponentsAltered(value, 'Vector2', captures)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'repeat_size' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". The file loads, but the components are narrowed at parse time to a number the file does not state.`,
-      'INVALID_REPEAT_SIZE_VALUE'
-    );
-  }
-  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
-  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
-  // narrowed through `_parse_construct<int32_t>` before the widening, so
-  // `Vector2i(-0.5, 0)` reaches the setter as the (0, 0) it leaves unclamped —
-  // read as floats it reported a clamp on a file Godot loads unaltered.
-  const parts = slotComponents(value, 'Vector2', captures, tupleComponent);
-  if (parts.some((component) => component < 0)) {
-    return propertyError(
-      key,
-      line,
-      `Property 'repeat_size' components must be >= 0; Godot's setter clamps a negative component up to 0 (parallax_2d.cpp:165), got: Vector2(${parts.join(', ')})`,
-      'INVALID_REPEAT_SIZE_VALUE'
-    );
-  }
-  return null;
-};
-accepts(repeatSizeValidator, 'Vector2(x, y), each >= 0');
-repeatSizeValidator.grounding = { kind: 'enforced', cite: 'parallax_2d.cpp:165' };
+const repeatSizeValidator = v.vector2('repeat_size', {
+  components: (parts) =>
+    parts.some((component) => component < 0)
+      ? { message: `Property 'repeat_size' components must be >= 0; Godot's setter clamps a negative component up to 0 (parallax_2d.cpp:165), got: Vector2(${parts.join(', ')})` }
+      : null,
+  accepts: 'Vector2(x, y), each >= 0',
+  enforced: 'parallax_2d.cpp:165',
+});
 
 validatorRegistry.registerAll('Parallax2D', {
   // parallax_2d.cpp:288, PROPERTY_HINT_LINK — a bare UI link-toggle hint

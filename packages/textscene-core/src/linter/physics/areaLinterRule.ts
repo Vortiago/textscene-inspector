@@ -8,10 +8,6 @@
 
 import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import {
-  hasCollisionShapeChild,
-  collisionShapeTypesPhrase,
-} from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { boolSlotValue } from '../../godot/index.js';
@@ -37,16 +33,6 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    // Warning: Area without collision shape won't detect anything
-    if (!hasCollisionShapeChild(node, dim)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has no ${collisionShapeTypesPhrase(dim)} children. Areas need collision shapes to detect bodies entering/exiting.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-collision-shape`,
-      });
-    }
 
     // Godot raises no warning for this either — no `get_configuration_warnings()`
     // override checks it. Grounded instead in what the two flags DO
@@ -125,11 +111,6 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        {
-          ruleName: `${prefix}-needs-collision-shape`,
-          severity: 'warning',
-          grounding: { kind: 'configuration-warning' },
-        },
         {
           ruleName: `${prefix}-detects-nothing`,
           severity: 'warning',

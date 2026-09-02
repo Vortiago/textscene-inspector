@@ -40,38 +40,38 @@ export function useMeshTextureSlots(
   // to an empty path).
   const albedoStatus = useResource<THREE.Texture>(
     textureRequests.albedo_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const normalStatus = useResource<THREE.Texture>(
     textureRequests.normal_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const roughnessStatus = useResource<THREE.Texture>(
     textureRequests.roughness_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const metallicStatus = useResource<THREE.Texture>(
     textureRequests.metallic_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const emissionStatus = useResource<THREE.Texture>(
     textureRequests.emission_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   // Parity-audit fix: `ao_texture` now resolves and wires
   // through to `material.aoMap`. Was silently dropped because the slot
   // wasn't in `TEXTURE_PROPERTIES` pre-fix.
   const aoStatus = useResource<THREE.Texture>(
     textureRequests.ao_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const heightmapStatus = useResource<THREE.Texture>(
     textureRequests.heightmap_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const anisotropyFlowmapStatus = useResource<THREE.Texture>(
     textureRequests.anisotropy_flowmap ?? '',
-    'Texture2D'
+    'texture'
   );
 
   const textureSlots = useMemo(

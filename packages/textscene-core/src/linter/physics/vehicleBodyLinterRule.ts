@@ -12,8 +12,8 @@
  * requirement, the mass/damping bounds, the zero layer/mask advisories, and —
  * as of rigid_body_3d.cpp:667's per-axis scale check — the runtime-overridden-
  * scale warning too) exactly once; repeating any of them here would report one
- * condition under two rule names. AnimatableBody3D relies on staticBodyLinterRule
- * the same way.
+ * condition under two rule names. The no-shape warning reaches every
+ * CollisionObject3D through collisionObjectLinterRule the same way.
  *
  * The scale check (`vehiclebody3d-scaled-transform`) is NOT repeated here:
  * `rigidBodyLinterRule` implements rigid_body_3d.cpp:667 and reaches

@@ -14,6 +14,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('Area3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -137,7 +138,7 @@ describe('Area3D Linter', () => {
   describe('Semantic Validation (CollisionShape3D Children)', () => {
     it('should warn when Area3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('Area3D')), {
-        ruleName: 'area3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'Area3D',
         contains: ['no CollisionShape3D or CollisionPolygon3D children'],
@@ -159,7 +160,7 @@ describe('Area3D Linter', () => {
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'area3d-needs-collision-shape', severity: 'warning' }
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -295,7 +296,7 @@ describe('Area3D Linter', () => {
       const diagnostics = lint(scene(node('Area3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('area3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -331,7 +332,7 @@ describe('Area3D Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
       const hasSemanticError = diagnostics.some(d => d.ruleName === 'area3d-detects-nothing');
-      const hasMissingShape = diagnostics.some(d => d.ruleName === 'area3d-needs-collision-shape');
+      const hasMissingShape = diagnostics.some(d => d.ruleName === 'collisionobject3d-needs-collision-shape');
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });
   });
