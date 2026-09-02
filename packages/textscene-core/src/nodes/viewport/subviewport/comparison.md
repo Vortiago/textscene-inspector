@@ -183,18 +183,21 @@ lifetime; a redraw flips `needsUpdate`.
 
 ## Properties exercised
 
+`unit-sub-viewport.tscn`:
+
 | Property | Value | Effect |
 | --- | --- | --- |
 | `size` | `Vector2i(256, 256)` | Render-target size in pixels. Default `Vector2i(512, 512)`. Overwritten by a stretching `SubViewportContainer`. |
-| `own_world_3d` | `true` | Severs the shared `World3D`, so 3D descendants stop drawing in the parent view. The single most consequential property here. |
-| `disable_3d` | `true` | Disables this viewport's own 3D pass. **Does not** hide 3D descendants from the parent view — probe-verified. |
-| `transparent_bg` | `true` | Target clears transparent instead of to the opaque project clear colour. |
-| `render_target_update_mode` | `0`–`4` | When the target re-renders. Default `2` (WHEN_VISIBLE). Forced to ALWAYS by a `SubViewportContainer` parent. |
-| `render_target_clear_mode` | `0`–`2` | How the target clears. Default `0` (ALWAYS). |
-| `handle_input_locally` | `false` | Input routing only; no render effect. Forced to `false` by a `SubViewportContainer` parent. |
-| `size_2d_override` / `_stretch` | `Vector2i(320, 240)` / `true` | 2D-only size override; `(0, 0)` means unused. |
-| `msaa_3d`, `use_debanding`, `canvas_item_default_texture_filter` | enums | Parsed; quality settings the previewer does not reproduce. |
-| `audio_listener_enable_2d`, `gui_embed_subwindows` | booleans | Parsed; no render effect in a static previewer. |
+| `render_target_update_mode` | `4` | When the target re-renders. Default `2` (WHEN_VISIBLE). Forced to ALWAYS by a `SubViewportContainer` parent. |
+
+`unit-sub-viewport-own-world.tscn` adds:
+
+| Property | Value | Effect |
+| --- | --- | --- |
+| `own_world_3d` | `true` | Severs the shared `World3D`, so 3D descendants stop drawing in the parent view. |
+
+`disable_3d = true` disables this viewport's own 3D pass and does **not** hide 3D
+descendants from the parent view (probe-verified); no fixture sets it.
 
 ## Divergences
 

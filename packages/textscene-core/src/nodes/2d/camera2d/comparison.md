@@ -2,8 +2,8 @@
 type: Camera2D
 category: 2D
 status: unreviewed
-fixture: unit-remote-transform-2d.tscn
-image: unit-remote-transform-2d
+fixture: unit-sub-viewport-container-camera-2d.tscn
+# image: unit-sub-viewport-container-camera-2d
 renders_as: a 2D view frame with no drawn geometry
 ---
 

@@ -161,11 +161,17 @@ export function renderCoverage(type, coverage) {
     const scope = checked.length
       ? `these \`${type}\` properties${inheritedNote ? `, plus ${inheritedNote}` : ''}`
       : `the inherited set (${inheritedNote}); \`${type}\` declares none of its own`;
-    const refusalNote = refused.length
-      ? ` \`${type}\` also REFUSES ${refused
-          .map((v) => `\`${v.property}\``)
-          .join(', ')}, which its base declares but this class cannot carry.`
-      : '';
+    // A removal row carries the ancestor that declares the key as `declaredOn`;
+    // one no ancestor declares carries the type itself, and saying "its base
+    // declares" there states an engine fact the engine does not have.
+    const keys = (rows) => rows.map((v) => `\`${v.property}\``).join(', ');
+    const shadowed = refused.filter((v) => v.declaredOn !== type);
+    const outright = refused.filter((v) => v.declaredOn === type);
+    const refusalNote =
+      (shadowed.length
+        ? ` \`${type}\` also REFUSES ${keys(shadowed)}, which its base declares but this class cannot carry.`
+        : '') +
+      (outright.length ? ` \`${type}\` also REFUSES ${keys(outright)} outright.` : '');
     lines.push(
       `Strict parsing format-checks ${scope}. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).${refusalNote}`
     );

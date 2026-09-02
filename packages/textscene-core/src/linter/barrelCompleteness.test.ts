@@ -10,9 +10,8 @@
  * import in the barrel resolves to a file on disk (no stale imports after a
  * slice moves or is deleted).
  *
- * Slices with NO `index.linter.ts` are out of scope by design — e.g. the
- * Control slices (`nodes/2d/ui/*`) are render-only 2D overlay types
- * (ADR-0003) with no validators or rules to register.
+ * A slice with no `index.linter.ts` has no lint code to wire and is out of
+ * scope here; every slice under `nodes/2d/ui/` ships one and is in the barrel.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -29,10 +28,9 @@ const barrelPath = resolve(here, 'index.ts');
 /**
  * Intentional exclusions: barrel specifiers (e.g.
  * `'../nodes/2d/ui/control/index.linter.js'`) for slices whose lint entry
- * point deliberately stays OUT of the barrel. Currently empty — Controls
- * have no index.linter.ts at all, so nothing needs excluding. Add an entry
- * here (with a reason) only when a slice gains lint code that must not ship
- * in the linter bundle.
+ * point deliberately stays OUT of the barrel. Empty: every slice's lint entry
+ * ships in the linter bundle. Add an entry here, with a reason, only when one
+ * must not.
  */
 const ALLOWLIST: string[] = [];
 

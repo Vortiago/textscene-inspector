@@ -1,7 +1,7 @@
 ---
 type: VehicleBody3D
 category: 3D
-status: unreviewed
+status: linter-only
 fixture: unit-physics-vehicle.tscn
 image: unit-physics-vehicle
 renders_as: an invisible transform-only group
