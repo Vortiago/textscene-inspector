@@ -9,20 +9,12 @@
 
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { accepts, propertyError, v } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering.js';
-import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
 import type { LayerLeaf } from '../shared/layerVector.js';
-
-// `\s*` at both ends and before the paren: Godot's tokenizer discards any
-// character <= 32 before a token (variant_parser.cpp:415-417), so a padded
-// `PackedInt32Array ( … )` loads, the same reasoning godot/variantParser.ts
-// states for the NodePath and resource-ref literals.
-const TILE_DATA_RE = packedArrayLiteral('PackedInt32Array');
+import { formatValidator, tileDataValidator } from './tileDataSlots.js';
 
 /**
  * tile_map.h:56-59, VisibilityMode. BIND_ENUM_CONSTANT count is 3
@@ -31,41 +23,6 @@ const TILE_DATA_RE = packedArrayLiteral('PackedInt32Array');
  * name; the "Default,Force Show,Force Hide" hint string is identical.
  */
 const VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' };
-
-/**
- * `layer_<i>/tile_data`: registered `PropertyInfo(Variant::PACKED_INT32_ARRAY,
- * "tile_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR)`
- * (tile_map.cpp:1039), storage-bearing. Shape-only: the format-AWARE decode
- * (triplet layout, which depends on the sibling `format` property this leaf
- * validator cannot see) is `tilemap-invalid-tile-data`'s job
- * (nodes/2d/tiles/tilemap/linter.ts), which already reuses
- * `decodeLegacyTileData`. Duplicating that check here would fire twice on one
- * malformed value.
- */
-const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
-  const match = TILE_DATA_RE.exec(value.trim());
-  if (!match) {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_data' must be a PackedInt32Array like PackedInt32Array(0, 0, 0), got: "${value}"`,
-      'INVALID_TILE_DATA_FORMAT'
-    );
-  }
-  const body = match[1]!.trim();
-  if (body === '') return null;
-  // One pass: unreadable by the tokenizer, or read and then narrowed
-  // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
-  const bad = badIntElement('tile_data', key, line, body, {
-      format: 'INVALID_TILE_DATA_FORMAT',
-      value: 'INVALID_TILE_DATA_VALUE',
-  });
-  return bad.error ?? bad.truncated;
-}, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');
-// An INT slot, not format-only: it rejects a literal the tokenizer reads.
-// The tag never reaches the registry — `indexedFamilyValidator` re-tags the
-// family wrapper — but the `.leaves` sweep in validatorClassification reads it.
-markIntSlot(tileDataValidator);
 
 // Keyed by the shared name list, so a leaf declared in only one of the two
 // places is a compile error rather than a silent divergence between which
@@ -96,7 +53,7 @@ const LAYER_LEAVES: Readonly<Record<LayerLeaf, PropertyValidator>> = {
   }),
   // tile_map.cpp:1037, Variant::BOOL, #ifndef NAVIGATION_2D_DISABLED (on by default).
   navigation_enabled: v.boolean('navigation_enabled'),
-  // tile_map.cpp:1039: see tileDataValidator.
+  // tile_map.cpp:1039: see tileDataSlots.ts.
   tile_data: tileDataValidator,
 };
 
@@ -121,11 +78,8 @@ validatorRegistry.registerAll('TileMap', {
   tile_set: v.resourceReference('tile_set'),
   // tile_map.cpp:747, PROPERTY_HINT_NONE with NO_EDITOR|INTERNAL usage — an
   // internal format-version tag Godot itself always writes, not a normal
-  // ADD_PROPERTY. TileMap::_set (tile_map.cpp:687-691) casts the value
-  // straight into the enum with zero validation (no ERR_FAIL, no clamp,
-  // negative included), so no bound belongs here (ADR-0032 "none"); only the
-  // integer format is checked.
-  format: v.int('format'),
+  // ADD_PROPERTY. See tileDataSlots.ts.
+  format: formatValidator,
   'layer_#/*': layerValidator,
 
   // tile_map.cpp:401-410, bare assignment (also toggles

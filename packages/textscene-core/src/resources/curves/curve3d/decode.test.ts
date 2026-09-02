@@ -27,6 +27,19 @@ describe('parseCurve3DPoints', () => {
     expect(points[1]!.in).toEqual({ x: -4, y: 0, z: 0 });
   });
 
+  // `curve.cpp:2282` converts `p_data["points"]` through the Variant, and ARRAY
+  // is a strict source for PACKED_VECTOR3_ARRAY (variant.cpp:449-478), so both
+  // array spellings load the same two points.
+  it('reads the bare-array and typed-array spellings of points', () => {
+    const bare =
+      '{\n"points": [Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)],\n"tilts": [0, 0]\n}';
+    expect(parseCurve3DPoints(bare)).toHaveLength(2);
+    expect(parseCurve3DPoints(bare)[1]!.position).toEqual({ x: 10, y: 0, z: 0 });
+    const typed =
+      '{\n"points": Array[Vector3]([Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)]),\n"tilts": Array[float]([0, 0])\n}';
+    expect(parseCurve3DPoints(typed)).toHaveLength(2);
+  });
+
   it('reads object-shaped _data and ignores a sibling tilts array (defensive)', () => {
     const points = parseCurve3DPoints({
       points: 'PackedVector3Array(0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,3,0)',

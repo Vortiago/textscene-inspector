@@ -7,7 +7,7 @@
  * sub-resources rather than simple scalars.
  */
 
-import type { Node3DProperties } from '../../base/node3d/types';
+import type { NodeProperties } from '../../node/types';
 
 /** Godot AnimationMixer::AnimationCallbackModeProcess (animation_mixer.h:54) */
 export enum AnimationProcessMode {
@@ -36,7 +36,7 @@ export interface AnimationLibraryRef {
   subResourceId: string;
 }
 
-export interface AnimationPlayerProperties extends Node3DProperties {
+export interface AnimationPlayerProperties extends NodeProperties {
   /** Playback speed multiplier (default: 1.0). */
   speed_scale: number;
 

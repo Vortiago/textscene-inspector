@@ -15,7 +15,7 @@ import './linterParser';
 import './linter';
 
 describe('NavigationRegion2D semantic rules', () => {
-  describe('navigation_polygon reference (valid-navigationregion2d-resources)', () => {
+  describe('navigation_polygon reference (dangling-resource-reference)', () => {
     it('passes when the navigation_polygon reference resolves', () => {
       expectClean(`[gd_scene format=3]
 
@@ -29,14 +29,14 @@ navigation_polygon = ExtResource("1_nav")
     it('errors when a navigation_polygon ExtResource reference is dangling', () => {
       expectDiagnostic(
         scene(node('NavigationRegion2D', { navigation_polygon: 'ExtResource("9_missing")' }, { name: 'Region' })),
-        { ruleName: 'valid-navigationregion2d-resources', severity: 'error', nodeType: 'NavigationRegion2D' }
+        { ruleName: 'dangling-resource-reference', severity: 'error', nodeType: 'NavigationRegion2D' }
       );
     });
 
     it('errors when a navigation_polygon SubResource reference is dangling', () => {
       expectDiagnostic(
         scene(node('NavigationRegion2D', { navigation_polygon: 'SubResource("NavPoly_absent")' }, { name: 'Region' })),
-        { ruleName: 'valid-navigationregion2d-resources', severity: 'error' }
+        { ruleName: 'dangling-resource-reference', severity: 'error' }
       );
     });
   });
@@ -52,7 +52,7 @@ navigation_polygon = ExtResource("1_nav")
 
     it('does not also raise the resource-error rule when navigation_polygon is absent', () => {
       expectNoDiagnostic(scene(node('NavigationRegion2D', {}, { name: 'Region' })), {
-        ruleName: 'valid-navigationregion2d-resources',
+        ruleName: 'dangling-resource-reference',
       });
     });
 

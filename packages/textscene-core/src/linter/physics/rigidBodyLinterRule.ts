@@ -8,7 +8,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists, heldResource } from '../resourceChecker.js';
 import {
   hasCollisionShapeChild,
   collisionShapeTypesPhrase,
@@ -19,7 +18,7 @@ import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
-import { tupleComponent } from '../validators/commonValidators.js';
+import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
 import { boolSlotValue } from '../../godot/index.js';
 
 /**
@@ -74,25 +73,10 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const { node, scene } = context;
+    const { node } = context;
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
-
-    // Check if physics_material_override resource exists (if specified)
-    const physicsMaterial = heldResource(rawProps.physics_material_override);
-    if (physicsMaterial !== undefined) {
-      const resourceExists = checkResourceExists(scene, physicsMaterial);
-      if (!resourceExists) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Physics material resource not found: ${physicsMaterial}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `valid-${prefix}-resources`,
-        });
-      }
-    }
 
     // Warning: RigidBody without collision shape is useless
     if (!hasCollisionShapeChild(node, dim)) {
@@ -112,13 +96,18 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // (2D :425/:435 reject < -1, 3D :443/:453 reject < 0), which
     // linterParser.ts reports as errors.
 
-    // Warning: max_contacts_reported set but contact_monitor=false.
+    // Warning: max_contacts_reported > 0 but contact_monitor=false.
     // The flag gates the contact LIST and the signals, not the reporting itself. `_sync_body_state` writes `contact_count` from the
     // state unconditionally (:155, called at :179 ahead of the guard), and the
     // server's `can_report_contacts()` is `!contacts.is_empty()`, sized by
     // max_contacts_reported alone. Saying the property "won't work" claimed more
     // than the guard supports.
-    if (rawProps.max_contacts_reported !== undefined) {
+    // The VALUE, not the key: 0 is the default (rigid_body_2d.h:85,
+    // rigid_body_3d.h:82) and sizes the contact list to nothing, so a written
+    // 0 leaves no list for the guard to withhold; an unreadable literal never
+    // landed and configures nothing either.
+    const maxContacts = ruleInt(rawProps.max_contacts_reported, 0);
+    if (maxContacts !== null && maxContacts > 0) {
       const contactMonitor = rawProps.contact_monitor;
       if (boolSlotValue(contactMonitor) !== true) {
         diagnostics.push({
@@ -210,15 +199,6 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
-        {
-          ruleName: `valid-${prefix}-resources`,
-          severity: 'error',
-          grounding: {
-            kind: 'no-engine-counterpart',
-            scope: 'dangling-reference',
-            because: 'the physics_material_override id is not declared anywhere in this file',
-          },
-        },
         {
           ruleName: `${prefix}-needs-collision-shape`,
           severity: 'warning',

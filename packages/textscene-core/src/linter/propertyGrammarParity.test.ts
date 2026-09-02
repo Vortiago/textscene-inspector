@@ -27,7 +27,6 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { baseChain } from '../godot/nodeBaseTypes.js';
-import { isDeprecatedPropertyName } from '../godot/index.js';
 import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
 import {
@@ -116,13 +115,6 @@ function findStaleEntries({
       if (readEverywhere(key)) {
         staleSections.push(
           `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
-        );
-      }
-    }
-    for (const key of entry.aliasedRead ?? []) {
-      if (readEverywhere(key)) {
-        staleSections.push(
-          `${nodeType}.aliasedRead['${key}']: now read by the parser under its own name — remove from allowlist`
         );
       }
     }
@@ -271,7 +263,6 @@ describe('property-grammar parity guard', () => {
         ...(entry.parserOnly ?? []),
         ...(entry.linterOnly ?? []),
         ...(entry.renderGap ?? []),
-        ...(entry.aliasedRead ?? []),
       ];
       for (const key of listed) {
         if (key.includes('*') || key.includes('#')) continue;
@@ -284,26 +275,12 @@ describe('property-grammar parity guard', () => {
     ).toEqual([]);
   });
 
-  // What keeps `aliasedRead` from becoming the bucket its two neighbours warn
-  // about: the claim it makes is checkable, so a key that is merely unread
-  // cannot be parked here to silence the guard.
-  it('every aliasedRead key is genuinely a deprecated spelling on its type', () => {
-    const notAliases: string[] = [];
-    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      for (const key of entry.aliasedRead ?? []) {
-        if (!isDeprecatedPropertyName(nodeType, key)) notAliases.push(`${nodeType}.${key}`);
-      }
-    }
-    expect(
-      notAliases,
-      `aliasedRead claims canonicalPropertyName rewrites the key, but these are not aliases on that type — they belong in linterOnly or renderGap:\n  ${notAliases.join('\n  ')}`
-    ).toEqual([]);
-  });
-
   it('no key is claimed as both deliberate scope and a render gap', () => {
+    // Two kinds only: a pre-4.0 spelling is canonicalised before either side
+    // sees it and has no validator of its own, so no alias category exists.
     const conflicts: string[] = [];
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      const deliberate = new Set([...(entry.linterOnly ?? []), ...(entry.aliasedRead ?? [])]);
+      const deliberate = new Set(entry.linterOnly ?? []);
       for (const key of entry.renderGap ?? []) {
         if (deliberate.has(key)) conflicts.push(`${nodeType}: '${key}'`);
       }
@@ -323,7 +300,7 @@ describe('property-grammar parity guard', () => {
   // can only ask "should the renderer be reading this?" about a key one side
   // already declares, so a key the previewer never read becomes VISIBLE the
   // moment a validator exists for it.
-  const EXPECTED_RENDER_GAP_KEYS = 142;
+  const EXPECTED_RENDER_GAP_KEYS = 143;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -363,7 +340,7 @@ describe('property-grammar parity guard', () => {
   // that belongs in a commit message — a slice entering the swept set, or a new
   // base-parser reuser entering the blind spot the docblock above sizes.
   const SWEPT_SLICES = 75;
-  const PARSER_REUSING_SLICES = 173;
+  const PARSER_REUSING_SLICES = 176;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

@@ -226,19 +226,4 @@ validatorRegistry.registerAll('NavigationAgent2D', {
     message: "Property 'debug_path_custom_line_width' must be >= -1.",
     hinted: 'navigation_agent_2d.cpp:188',
   }),
-
-  // --- Pre-4.0-beta-1X spellings (navigation_agent_2d.cpp:198-224) ---
-
-  // navigation_agent_2d.cpp:206 hands `p_value` straight to set_target_position,
-  // so the slot takes the same unconstrained Vector2 `target_position` takes.
-  target_location: v.vector2('target_location'),
-  // navigation_agent_2d.cpp:202 hands `p_value` straight to
-  // set_time_horizon_agents, whose ERR_FAIL_COND_MSG (:602) refuses a negative
-  // value — the same enforced floor `time_horizon_agents` carries, under the
-  // name the scene spells.
-  time_horizon: v.float('time_horizon', {
-    min: 0,
-    message: "Property 'time_horizon' must be >= 0.",
-    enforced: 'navigation_agent_2d.cpp:602',
-  }),
 });

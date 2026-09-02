@@ -91,15 +91,13 @@ sweep's silhouette, not a shape difference.
 ## Linting
 
 <!-- lint:begin CSGPolygon3D -->
-Strict parsing format-checks these `CSGPolygon3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `CSGPolygon3D` properties, plus 1 inherited from CSGPrimitive3D, 6 inherited from CSGShape3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `depth` | float >= 0.01 | error below 0.001, warning below 0.01 |
-| `flip_faces` | true or false |  |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
 | `mode` | enum 0-2 (DEPTH/SPIN/PATH) | warning |
-| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
 | `path_continuous_u` | true or false |  |
 | `path_interval` | float >= 0.01 | warning below |
 | `path_interval_type` | enum 0-1 (DISTANCE/SUBDIVIDE) | warning |

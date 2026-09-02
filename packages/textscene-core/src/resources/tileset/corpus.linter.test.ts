@@ -62,11 +62,16 @@ const CORPUS: Readonly<Record<string, string>> = {
   'sources/25': 'SubResource("TileSetAtlasSource_jm5h0")',
 };
 
+/** Every id the corpus values name, declared ahead of the TileSet so none dangles. */
+const DECLARED = [...new Set(Object.values(CORPUS).flatMap((v) => [...v.matchAll(/SubResource\("([^"]+)"\)/g)].map((m) => m[1]!)))]
+  .map((id) => subResource('Resource', {}, id))
+  .join('\n\n');
+
 describe('TileSet corpus values', () => {
   const props: Record<string, string> = { ...CORPUS };
 
   it('accepts every value Godot itself wrote, in one TileSet', () => {
-    const content = scene(subResource('TileSet', props), node('Node3D', {}, { name: 'Root' }));
+    const content = scene(DECLARED, subResource('TileSet', props), node('Node3D', {}, { name: 'Root' }));
     const errors = lint(content).filter((d) => d.severity === 'error');
     expect(errors.map((d) => d.message)).toEqual([]);
   });
@@ -84,6 +89,7 @@ describe('TileSet corpus values', () => {
   for (const [key, value] of Object.entries(CORPUS)) {
     it(`accepts ${key} = ${value.slice(0, 48)}`, () => {
       const content = scene(
+        DECLARED,
         subResource('TileSet', { [key]: value }),
         node('Node3D', {}, { name: 'Root' })
       );

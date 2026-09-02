@@ -39,7 +39,11 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     at: 'skeleton_2d.cpp:48-49',
     route: 'set-get',
     sample: 'default_length',
-    verdict: { validated: true },
+    verdict: {
+      declined: 'never-owned',
+      because:
+        'A bare alias for `length`; `godot/deprecated.ts` resolves it before any lookup, so the strict parser validates it as `length` and no validator is registered under this spelling.',
+    },
   },
   {
     type: 'Skeleton2D',

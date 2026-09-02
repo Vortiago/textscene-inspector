@@ -68,19 +68,16 @@ export function camera2DView(
   worldPosition: { x: number; y: number },
   viewportSize: { x: number; y: number }
 ): Camera2DView {
-  // `set_zoom` refuses the whole ZERO-APPROX band, not just an exact 0
-  // (`ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) || …)`,
-  // camera_2d.cpp:104), so a refused write leaves the default (1, 1) in place.
-  // A truthiness test caught only `0` and divided the framing by the rest of
-  // the band — `zoom = Vector2(5e-06, 5e-06)` framed a view 200,000x too large.
-  // The slice's own validator already reads it this way (linterParser.ts:45).
-  // Per axis, because Godot's is: `zoom_scale = Vector2(1, 1) / zoom` and the
-  // rect is `screen_size * zoom_scale` (camera_2d.cpp:107, :163). Dividing the
-  // height by `zoom.x` framed the wrong view height AND the wrong centre for
-  // every non-uniform zoom — with `Vector2(2, 1)` on 1152x648, Godot frames
-  // 576x648 and this framed 576x324.
-  const zoom = isZeroApprox(props.zoom.x) ? 1 : props.zoom.x;
-  const zoomY = isZeroApprox(props.zoom.y) ? 1 : props.zoom.y;
+  // `set_zoom` refuses the WHOLE write when either component is zero-approx
+  // (`ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) ||
+  // Math::is_zero_approx(p_zoom.y), …)`, camera_2d.cpp:104), so the default
+  // (1, 1) stays on both axes — `Vector2(0, 2)` frames at (1, 1), not (1, 2).
+  // The slice's own validator reads it the same way (linterParser.ts:45).
+  // Framing is then per axis: `zoom_scale = Vector2(1, 1) / zoom` and the rect
+  // is `screen_size * zoom_scale` (camera_2d.cpp:107, :163).
+  const refused = isZeroApprox(props.zoom.x) || isZeroApprox(props.zoom.y);
+  const zoom = refused ? 1 : props.zoom.x;
+  const zoomY = refused ? 1 : props.zoom.y;
   const viewWidth = viewportSize.x / zoom;
   const viewHeight = viewportSize.y / zoomY;
 

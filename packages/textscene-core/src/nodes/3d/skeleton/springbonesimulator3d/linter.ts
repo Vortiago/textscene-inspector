@@ -47,6 +47,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, indexedKeyRegex, toIntIndex, boolSlotValue} from '../../../../godot/index.js';
@@ -108,7 +109,7 @@ function readBool(raw: string | undefined, fallback: boolean): boolean {
 
 /** `indices` as `0, 2, 5`, ascending, for a message. */
 function list(indices: Set<number>): string {
-  return [...indices].sort((a, b) => a - b).join(', ');
+  return listIndices([...indices].sort((a, b) => a - b));
 }
 
 function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {

@@ -86,12 +86,10 @@ export interface IndexedFamilyOptions {
    * A NESTED leaf is keyed by its full path below the index —
    * `{ 'apply/transform_mode': … }` matches `settings/0/apply/transform_mode`.
    *
-   * A family with a nested leaf must register under the PLAIN `<prefix>*`
-   * wildcard, not the glued-index `<prefix>#/*`: `ValidatorRegistry`'s
-   * `matchesIndexedKey` routes a single leaf segment only, so a nested key
-   * registered under `#/*` reaches this dispatcher never and is silently
-   * accepted. `TwoBoneIK3D`, `IterateIK3D` and `ChainIK3D` already register the
-   * plain form for that reason.
+   * Either wildcard shape routes it: the glued-index `<prefix>#/*` matches
+   * any key with a `/` past the prefix (`wildcardIndex.ts`), so the depth of a
+   * leaf is this dispatcher's question alone. `TwoBoneIK3D`, `IterateIK3D` and
+   * `ChainIK3D` register the plain `<prefix>*` form.
    */
   leaves: Readonly<Record<string, PropertyValidator>>;
   /** Error code for a key whose shape or leaf name is unrecognised. */

@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
 /**
@@ -16,8 +15,7 @@ import { boolSlotValue } from '../../../godot/index.js';
  */
 function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
+  const { node } = context;
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {
@@ -29,21 +27,6 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // A player with no `stream` at all gets no diagnostic: that is the serialised
   // default, audio_stream_player_3d.cpp defines no configuration warning, and a
   // script or an AnimationPlayer audio track may supply the stream instead.
-
-  // ERROR: stream resource doesn't exist. `heldResource`, not a presence check:
-  // `stream = null` and `stream =` are both empty slots that Godot reads as the
-  // absent case, and asking `!== undefined` reported the second one here on top
-  // of the strict parser's own format error.
-  const stream = heldResource(rawProps.stream);
-  if (stream !== undefined && !checkResourceExists(scene, stream)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer3d-missing-stream-resource',
-    });
-  }
 
   // WARNING: emission_angle_degrees without emission_angle_enabled
   if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
@@ -76,19 +59,10 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 const audioStreamPlayer3DValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer3d-properties',
-    description: 'Validates AudioStreamPlayer3D property values, resource references, and logical consistency',
+    description: 'Validates AudioStreamPlayer3D property values and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
     emits: [
-      {
-        ruleName: 'audiostreamplayer3d-missing-stream-resource',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
         severity: 'warning',

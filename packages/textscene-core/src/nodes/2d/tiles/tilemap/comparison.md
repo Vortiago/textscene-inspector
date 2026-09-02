@@ -48,7 +48,7 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 | --- | --- | --- |
 | `collision_animatable` | true or false |  |
 | `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
-| `format` | integer |  |
+| `format` | INT-typed literal (a FLOAT or BOOL spelling is a dropped write, tile_map.cpp:689) |  |
 | `layer_#/*` | layer |  |
 | `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
 | `rendering_quadrant_size` | integer 1-128 | error below, warning above |
@@ -64,7 +64,6 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 |  | `tilemap-layer-y-sort-without-node` | warning |
 |  | `tilemap-node-y-sort-without-layer` | warning |
 |  | `tilemap-requires-tileset` | warning |
-|  | `valid-tilemap-resources` | error |
 |  | `tilemap-unsupported-format` | error |
 |  | `tilemap-invalid-tile-data` | error |
 <!-- lint:end -->

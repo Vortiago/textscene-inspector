@@ -38,30 +38,6 @@ import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
 /**
- * Report a `viewport_path` whose leading `%Name` nothing in the scene claims, in
- * the one case where that is knowable rather than a race.
- *
- * A COMPOUND `%Name/rest` is dead the moment the table lacks the name: a
- * publisher registers its own path and at most its own single-segment `%Name`
- * alias, so no key a consumer can build ever appears and the null is permanent.
- * A BARE `%Name` is left alone — the alias answers it, including for content
- * composed in from an instanced sub-scene, which the authored-tree table has no
- * opinion about, and targets arrive after first paint anyway.
- */
-function warnUnclaimedAlias(
-  consumerPath: string,
-  viewportPath: string,
-  uniquePaths: ReadonlyMap<string, string>
-): void {
-  if (!viewportPath.includes('/')) return;
-  const unclaimed = unclaimedUniqueNames(viewportPath, uniquePaths);
-  if (unclaimed.length === 0) return;
-  warn(
-    `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
-  );
-}
-
-/**
  * Whether a texture reference names a ViewportTexture — the guard a slot uses
  * to skip the file-loading path, which would otherwise resolve it to null and
  * render a missing-resource placeholder over a viewport that is working fine.
@@ -88,15 +64,24 @@ export function useViewportTextureSlot(
   internalResources: readonly TscnInternalResource[]
 ): THREE.Texture | null {
   const consumerPath = useNodePath();
-  const claims = useUniqueNameClaims();
-  // Live paths, not authored ones: the registry is keyed the way the composed
-  // render tree spells a path, which is what a claim's `livePath` carries.
-  const uniquePaths = useMemo(() => (claims ? uniqueNameLivePaths(claims) : undefined), [claims]);
   const resource = resolveSubResourceRef(ref, internalResources);
   const viewportPath =
     resource?.type === VIEWPORT_TEXTURE_TYPE
       ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
       : null;
+  // The consumer's OWNER's table: a `%Name` authored inside an instanced
+  // sub-scene is claimed on that sub-scene's root, which is what this node
+  // resolves through when it sits there (node.cpp:1930-1938). Only for a slot
+  // that holds a ViewportTexture — every texture slot calls this, and the
+  // owner walk is per node.
+  const claims = useUniqueNameClaims(viewportPath === null ? null : consumerPath);
+  // Live paths, not authored ones: the registry is keyed the way the composed
+  // render tree spells a path, which is what a claim's `livePath` carries. Only
+  // for a slot that holds a ViewportTexture — every texture slot calls this.
+  const uniquePaths = useMemo(
+    () => (viewportPath !== null && claims ? uniqueNameLivePaths(claims) : undefined),
+    [claims, viewportPath]
+  );
   const key =
     viewportPath === null
       ? null
@@ -106,18 +91,28 @@ export function useViewportTextureSlot(
   // fixed and re-broken warned once for the life of the session — and grows
   // without bound.
   //
-  // The dedup keys on the derived SPELLING held in a ref, not on the effect's
-  // dependencies. `uniquePaths` descends from the SceneGraph, which is a fresh
-  // object per re-parse, so dependency comparison alone re-fires the warning on
-  // every debounced keystroke. Same hazard and same answer as the publisher
-  // above, which keys on `viewportTextureUniqueNameKey` rather than the node.
+  // The dedup keys on the SPELLING last warned for, held in a ref, not on the
+  // effect's dependencies: `uniquePaths` descends from the SceneGraph, which is
+  // a fresh object per re-parse, so dependency comparison alone re-fires on
+  // every debounced keystroke. The table is re-checked on every run and the
+  // marker cleared once the name is claimed, so the same spelling warns again
+  // when its claimant is renamed away — the table changed, not the text. Same
+  // hazard and same answer as the publisher, which keys on
+  // `viewportTextureUniqueNameKey` rather than the node.
   const reported = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!consumerPath || viewportPath === null || !uniquePaths) return;
+    const unclaimed = unclaimedUniqueNames(viewportPath, uniquePaths);
+    if (unclaimed.length === 0) {
+      reported.current = undefined;
+      return;
+    }
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;
     reported.current = spelling;
-    warnUnclaimedAlias(consumerPath, viewportPath, uniquePaths);
+    warn(
+      `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
+    );
   }, [consumerPath, viewportPath, uniquePaths]);
   return useViewportTexture(key)?.texture ?? null;
 }

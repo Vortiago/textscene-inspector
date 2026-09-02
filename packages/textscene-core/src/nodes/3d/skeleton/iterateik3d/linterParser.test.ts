@@ -170,8 +170,10 @@ describe('the settings/ family IterateIK3D adds', () => {
     expect(check('settings/0/target_node', 'NodePath("../Target")')).toBeNull();
   });
 
-  it('rejects a target_node that is not a NodePath', () => {
-    expect(check('settings/0/target_node', '"../Target"')?.severity).toBe('error');
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it('rejects a target_node that is a StringName', () => {
+    expect(check('settings/0/target_node', '"../Target"')).toBeNull();
+    expect(check('settings/0/target_node', '&"../Target"')?.severity).toBe('error');
   });
 
   it.each(['0', '1', '2', '3', '4'])('accepts rotation_axis %s', (value) => {

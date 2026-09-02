@@ -59,18 +59,18 @@ describe('GPUParticles2D references that name nothing', () => {
 
   it('errors on a process_material id the scene never declares', () => {
     expect(namesOf(scene('process_material = SubResource("pm_nope")\n'))).toContain(
-      'valid-gpuparticles2d-resources'
+      'dangling-resource-reference'
     );
   });
 
   it('errors on a texture id the scene never declares', () => {
     expect(namesOf(scene('texture = ExtResource("7_missing")\n'))).toContain(
-      'valid-gpuparticles2d-resources'
+      'dangling-resource-reference'
     );
   });
 
   it('stays quiet when the reference resolves', () => {
     const content = `[gd_scene format=3]\n\n[sub_resource type="ParticleProcessMaterial" id="Process_1"]\n\n[node name="Fx" type="GPUParticles2D"]\nprocess_material = SubResource("Process_1")\n`;
-    expect(namesOf(content)).not.toContain('valid-gpuparticles2d-resources');
+    expect(namesOf(content)).not.toContain('dangling-resource-reference');
   });
 });

@@ -116,3 +116,20 @@ describe('a non-uniform zoom frames per axis, as the engine does', () => {
     expect(view({ x: 2, y: 2 }).size).toEqual({ x: 576, y: 324 });
   });
 });
+
+describe('a zoom set_zoom refuses leaves the default (1, 1) on BOTH axes', () => {
+  // `ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) || Math::is_zero_approx(p_zoom.y), …)`
+  // (camera_2d.cpp:104) returns before `zoom = p_zoom`, so the whole write is
+  // dropped: one zero component must not let the other take effect.
+  it('frames Vector2(0, 2) at the unzoomed viewport', () => {
+    const view = camera2DView(props({ zoom: { x: 0, y: 2 } }), { x: 0, y: 0 }, VIEWPORT);
+    expect(view.size).toEqual(VIEWPORT);
+    expect(view.zoom).toBe(1);
+  });
+
+  it('frames Vector2(2, 1e-9) at the unzoomed viewport', () => {
+    const view = camera2DView(props({ zoom: { x: 2, y: 1e-9 } }), { x: 0, y: 0 }, VIEWPORT);
+    expect(view.size).toEqual(VIEWPORT);
+    expect(view.zoom).toBe(1);
+  });
+});

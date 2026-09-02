@@ -2,7 +2,19 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
-import { NODE_PATH_LITERAL_RE, RESOURCE_REF_RE, isNilLiteral } from '../../godot/index.js';
+import { isNilLiteral, nodePathLiteral, resourceRef } from '../../godot/index.js';
+
+/**
+ * Every validator built here, so a sweep can ask whether a registered
+ * declaration is a resource SLOT without parsing its `accepts` prose.
+ * Identity-keyed: `shape()` and the registry hand back the same function.
+ */
+const RESOURCE_SLOT_VALIDATORS = new WeakSet<object>();
+
+/** Whether `validator` is one `createResourceReferenceValidator` built. */
+export function isResourceSlotValidator(validator: object): boolean {
+  return RESOURCE_SLOT_VALIDATORS.has(validator);
+}
 
 /**
  * Creates a resource reference validator
@@ -12,7 +24,7 @@ export function createResourceReferenceValidator(
   propertyName: string,
   errorCode: string = 'INVALID_REFERENCE'
 ): (key: string, value: string, line: number) => ParseError | null {
-  return (key, value, line) => {
+  const validator = (key: string, value: string, line: number): ParseError | null => {
     // NIL is legal for every resource slot. Godot's writer normally omits a
     // cleared one instead of emitting `null`, which is a WRITE-side fact and
     // reads as a reason to reject the spelling; it is not one.
@@ -20,24 +32,28 @@ export function createResourceReferenceValidator(
     // `Variant()`, `can_convert_strict` allows NIL -> OBJECT (variant.cpp:543),
     // and a `Ref<T>` setter takes an invalid Ref without complaint, so the value
     // LOADS. Whether the slot ought to be filled is a semantic rule's question.
-    if (!isNilLiteral(value) && !RESOURCE_REF_RE.test(value)) {
+    if (!isNilLiteral(value) && resourceRef(value) === null) {
       return propertyError(key, line, `Property '${propertyName}' must be a resource reference like SubResource("id") or ExtResource("id"), or null, got: "${value}"`, errorCode);
     }
     return null;
   };
+  RESOURCE_SLOT_VALIDATORS.add(validator);
+  return validator;
 }
 
 /**
- * Creates a NodePath validator
- * Validates NodePath("...") format
+ * A NodePath slot: the `NodePath("…")` literal, or the bare `"…"` string
+ * `can_convert_strict` converts into it (`variant.cpp:746-749`). Every reader
+ * of the slot goes through {@link nodePathLiteral}, so what passes here is
+ * what the resolver follows.
  */
 export function createNodePathValidator(
   propertyName: string,
   errorCode: string = 'INVALID_PATH'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
-    if (!NODE_PATH_LITERAL_RE.test(value)) {
-      return propertyError(key, line, `Property '${propertyName}' must be a NodePath like NodePath("path/to/node"), got: "${value}"`, errorCode);
+    if (nodePathLiteral(value) === null) {
+      return propertyError(key, line, `Property '${propertyName}' must be a NodePath like NodePath("path/to/node") or a quoted string, got: "${value}"`, errorCode);
     }
     return null;
   };

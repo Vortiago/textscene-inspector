@@ -63,6 +63,8 @@ stream = ExtResource("1_abc")
     it('should accept SubResource stream reference', () => {
       const content = `[gd_scene format=3]
 
+[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_1"]
+
 [node name="Player" type="AudioStreamPlayer"]
 stream = SubResource("AudioStreamWAV_1")
 `;

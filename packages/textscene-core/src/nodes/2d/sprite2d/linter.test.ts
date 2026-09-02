@@ -10,6 +10,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -173,9 +174,9 @@ describe('Sprite2D Linter', () => {
         severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite2D',
-        ruleName: 'valid-sprite2d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain("'texture'");
     });
 
     it('should pass when texture resource exists (SubResource)', () => {
@@ -548,7 +549,7 @@ describe('Sprite2D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.message.includes('Texture resource not found'))).toBe(true);
+      expect(diagnostics.some(d => d.ruleName === 'dangling-resource-reference')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('frame') && d.message.includes('out of range'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('region_rect') && d.message.includes('ignored'))).toBe(true);
     });
@@ -610,5 +611,31 @@ describe('Sprite2D frame_coords with a converted component no int32 holds', () =
       scene(node('Sprite2D', { hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })),
       { ruleName: 'sprite2d-frame-coords-range', severity: 'error', contains: ['frame_coords.y'] }
     );
+  });
+});
+
+describe('Sprite2D frame re-mapped by a later hframes write (sprite_2d.cpp:358)', () => {
+  // `set_hframes` with `vframes > 1` keeps the frame's row and column on the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body loads on frame 2, not the authored 1.
+  it('warns that the authored frame is stored as another', () => {
+    expectDiagnostic(scene(node('Sprite2D', { vframes: 2, frame: 1, hframes: 2 })), {
+      ruleName: 'sprite2d-frame-remapped',
+      severity: 'warning',
+      contains: ['Frame 1', 'stored as frame 2'],
+    });
+  });
+
+  it('stays quiet when the grid is written above the frame', () => {
+    expectNoDiagnostic(scene(node('Sprite2D', { hframes: 2, vframes: 2, frame: 1 })), {
+      ruleName: 'sprite2d-frame-remapped',
+    });
+  });
+
+  it('stays quiet when only hframes follows, the row being 0', () => {
+    // vframes is still 1 when hframes lands, so the remap branch is skipped.
+    expectNoDiagnostic(scene(node('Sprite2D', { frame: 0, hframes: 2 })), {
+      ruleName: 'sprite2d-frame-remapped',
+    });
   });
 });

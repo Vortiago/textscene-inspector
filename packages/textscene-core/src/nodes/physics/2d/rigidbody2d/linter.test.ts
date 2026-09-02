@@ -188,10 +188,10 @@ physics_material_override = SubResource("mat_1")
       expectDiagnostic(
         scene(node('RigidBody2D', { mass: 1.0, physics_material_override: 'SubResource("nonexistent")' })),
         {
-          ruleName: 'valid-rigidbody2d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'RigidBody2D',
-          contains: ['Physics material resource not found'],
+          contains: ["'physics_material_override'"],
         }
       );
     });
@@ -416,7 +416,7 @@ physics_material_override = ExtResource("ext_mat_1")
       // strict parser stopped withholding the scene: the mass error suppressed
       // the whole rule phase, so a broken resource reference went unreported
       // because an unrelated property had a bad value.
-      expect(errors.some((d) => d.ruleName === 'valid-rigidbody2d-resources')).toBe(true);
+      expect(errors.some((d) => d.ruleName === 'dangling-resource-reference')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
       // The body's semantic warnings arrive alongside those errors. A validator
       // error that withheld the scene would stop the rule phase running at all,

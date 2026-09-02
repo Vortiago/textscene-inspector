@@ -45,14 +45,19 @@ describe('wildcard index', () => {
    * were added: it passes on either side, and states that adding them changed no
    * routing an existing family depends on.
    */
-  it('routes the one-leaf-segment shape exactly as before', () => {
+  it('routes every key with a `/` past the prefix, and nothing without one', () => {
     expect(matchesIndexedKey('item_0/text', 'item_')).toBe(true);
-    // Wider than acceptance: `_get_property` refuses this index, and the
-    // dispatcher is what reports the dropped write.
+    // Wider than acceptance: `_get_property` refuses each of these
+    // (property_list_helper.cpp:53 on the index half, :63 on the leaf), and
+    // the dispatcher is what reports the dropped write.
     expect(matchesIndexedKey('item_x/text', 'item_')).toBe(true);
-    expect(matchesIndexedKey('item_0/deep/text', 'item_')).toBe(false);
+    expect(matchesIndexedKey('item_0/deep/text', 'item_')).toBe(true);
+    expect(matchesIndexedKey('item_0/', 'item_')).toBe(true);
+    expect(matchesIndexedKey('item_/text', 'item_')).toBe(true);
+    // No `/` at all is a different key (`item_count`), never this family's.
     expect(matchesIndexedKey('item_0', 'item_')).toBe(false);
-    expect(matchesIndexedKey('item_/text', 'item_')).toBe(false);
+    expect(matchesIndexedKey('item_count', 'item_')).toBe(false);
+    expect(matchesIndexedKey('other_0/text', 'item_')).toBe(false);
   });
 
   describe('glued index over a nested leaf', () => {
@@ -67,9 +72,15 @@ describe('wildcard index', () => {
       expect(matchesIndexedSubtree('terrain_set_-1/mode', 'terrain_set_')).toBe(true);
     });
 
-    it('refuses a key with no index, no leaf, or another prefix', () => {
-      expect(matchesIndexedSubtree('terrain_set_/mode', 'terrain_set_')).toBe(false);
-      expect(matchesIndexedSubtree('terrain_set_0/', 'terrain_set_')).toBe(false);
+    it('routes an empty index or an empty leaf, which `_set` drops', () => {
+      // `is_valid_int()` refuses the empty index (tile_set.cpp:3893) and an
+      // empty `components[1]` matches no branch (:3897, :3904), so both writes
+      // return false and only the dispatcher can say so.
+      expect(matchesIndexedSubtree('terrain_set_/mode', 'terrain_set_')).toBe(true);
+      expect(matchesIndexedSubtree('terrain_set_0/', 'terrain_set_')).toBe(true);
+    });
+
+    it('refuses a key with no slash past the prefix, or another prefix', () => {
       expect(matchesIndexedSubtree('terrain_set_0', 'terrain_set_')).toBe(false);
       expect(matchesIndexedSubtree('terrain_sets', 'terrain_set_')).toBe(false);
       expect(matchesIndexedSubtree('physics_layer_0/collision_layer', 'terrain_set_')).toBe(false);
@@ -88,8 +99,11 @@ describe('wildcard index', () => {
       expect(matchesTerminalIndex('pattern_-1', 'pattern_')).toBe(true);
     });
 
-    it('refuses a bare prefix, a key with a leaf, or another prefix', () => {
-      expect(matchesTerminalIndex('pattern_', 'pattern_')).toBe(false);
+    it('routes the bare prefix, whose empty index `is_valid_int()` refuses (tile_set.cpp:3995)', () => {
+      expect(matchesTerminalIndex('pattern_', 'pattern_')).toBe(true);
+    });
+
+    it('refuses a key with a leaf, or another prefix', () => {
       expect(matchesTerminalIndex('pattern_0/x', 'pattern_')).toBe(false);
       expect(matchesTerminalIndex('patterns', 'pattern_')).toBe(false);
       expect(matchesTerminalIndex('tile_size', 'pattern_')).toBe(false);

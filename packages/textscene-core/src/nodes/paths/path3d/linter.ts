@@ -16,19 +16,40 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
-import { SUB_RESOURCE_REF_ANYWHERE_RE, packedArrayCallAnywhere } from '../../../godot/index.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
+import {
+  packedArrayBody,
+  packedArrayForms,
+  splitTopLevel,
+  subResourceRefAnywhere,
+} from '../../../godot/index.js';
+import { dictPackedField } from '../../../godot/packedArrayFields.js';
 
-const POINTS_RE = new RegExp(`"points"\\s*:\\s*${packedArrayCallAnywhere('PackedVector3Array').source}`);
-const TILTS_RE = new RegExp(`"tilts"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
+// Both fields convert through the Variant (curve.cpp:2282, :2291), so each takes
+// the three spellings `packedArrayForms` lists.
+const POINTS_RE = dictPackedField('points', 'PackedVector3Array');
+const TILTS_RE = dictPackedField('tilts', 'PackedFloat32Array');
+const POINTS_FORMS = packedArrayForms('PackedVector3Array');
+const TILTS_FORMS = packedArrayForms('PackedFloat32Array');
+
+/**
+ * How many floats a field's value holds: the packed constructor lists them
+ * flat, the two array spellings hold one `groupSize`-float element each.
+ */
+function floatCount(forms: readonly RegExp[], value: string, groupSize: number): number {
+  const matched = packedArrayBody(forms, value);
+  if (!matched || matched.body === '') return 0;
+  const parts = matched.flat ? matched.body.split(',') : splitTopLevel(matched.body);
+  const count = parts.filter((s) => s.trim() !== '').length;
+  return matched.flat ? count : count * groupSize;
+}
 
 /**
  * Validate Path3D semantic rules
  */
 function checkPath3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
+  const { node } = context;
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
@@ -45,19 +66,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
       ruleName: 'path3d-requires-curve',
     });
   } else {
-    // ERROR: Check if curve resource exists in scene
-    const resourceExists = checkResourceExists(scene, curve);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Curve resource not found: ${rawProps.curve}. The referenced Curve3D resource must exist in the scene.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-path3d-resources',
-      });
-    } else {
-      diagnostics.push(...checkCurve3DData(context, curve));
-    }
+    diagnostics.push(...checkCurve3DData(context, curve));
   }
 
   return diagnostics;
@@ -83,8 +92,8 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
  */
 function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] {
   const { node, scene } = context;
-  const id = SUB_RESOURCE_REF_ANYWHERE_RE.exec(curveRef)?.[1];
-  if (!id) return [];
+  const id = subResourceRefAnywhere(curveRef);
+  if (id === null) return [];
 
   const resource = scene.internalResources?.find(
     (r: TscnInternalResource) => r.id === id && r.type === 'Curve3D'
@@ -116,7 +125,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ];
   }
 
-  const floats = pointsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
+  const floats = floatCount(POINTS_FORMS, pointsLiteral[1]!, 3);
   const vector3s = floats / 3;
   if (floats % 3 !== 0 || vector3s % 3 !== 0) {
     return [
@@ -129,7 +138,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
 
   const tiltsLiteral = TILTS_RE.exec(data);
   if (tiltsLiteral) {
-    const tilts = tiltsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
+    const tilts = floatCount(TILTS_FORMS, tiltsLiteral[1]!, 1);
     const expected = vector3s / 3;
     // Too FEW only. `Curve3D::_set_data`'s fill loop is bounded by
     // `points.size()` (curve.cpp:2294) and indexes `rt[i]` inside it, so a short
@@ -166,15 +175,6 @@ const path3DValidationRule: LintRule = {
           kind: 'engine-inert',
           at: 'path_3d.cpp:275',
           unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
-        },
-      },
-      {
-        ruleName: 'valid-path3d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the curve reference names a resource id this file never declares',
         },
       },
       {

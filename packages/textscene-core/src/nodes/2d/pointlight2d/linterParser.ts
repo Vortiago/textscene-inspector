@@ -83,14 +83,4 @@ validatorRegistry.registerAll('PointLight2D', {
   // earlier `nonNegativeFloat` floored at 0 and so let the one genuinely
   // altered value through clean. Both are wrong in opposite directions.
   texture_scale: textureScaleValidator,
-
-  // -- Godot-3 spelling (`PointLight2D::_set`, light_2d.cpp:455-464) ----------
-  // light_2d.cpp:457 forwards `(BlendMode)(int)p_value` to set_blend_mode, a
-  // pure rename onto the tier's `blend_mode`, so it shares that property's
-  // hint (light_2d.cpp:307, ENUM "Add,Subtract,Mix") and its unconditional
-  // setter (light_2d.cpp:190-192): out of range warns, never errors. Declared
-  // by PointLight2D itself, so it registers on the leaf rather than beside
-  // `blend_mode` on the Light2D tier. The forward is guarded on
-  // `p_value.is_num()`, so a non-numeric literal reaches no setter at all.
-  mode: v.enumInt('mode', 0, 2, { 0: 'ADD', 1: 'SUB', 2: 'MIX' }, { hinted: 'light_2d.cpp:307' }),
 });

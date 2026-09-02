@@ -33,7 +33,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // initial frame directly; runtime playback is not modelled.
       'autoplay', 'frame_progress', 'speed_scale',
     ],
-    aliasedRead: ['frames'],
     reason:
       'AnimatedSprite2D linter validates runtime playback properties (autoplay, speed_scale, frame_progress) that the static renderer ignores.',
   },
@@ -147,7 +146,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   NavigationRegion2D: {
     linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
     renderGap: ['enabled', 'use_edge_connections'],
-    aliasedRead: ['navpoly'],
     reason:
       'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },

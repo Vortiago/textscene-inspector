@@ -15,13 +15,15 @@ import {
   expectNoDiagnostic,
   lint,
   node,
-  scene,
+  scene as sceneOf,
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 /** Every range-window test below is about the windows, not the texture. */
 const WITH_TEXTURE = { texture: 'ExtResource("1")' };
+const TEXTURE = '[ext_resource type="Texture2D" path="res://light.png" id="1"]';
+const scene = (...blocks: string[]) => sceneOf(TEXTURE, ...blocks);
 
 describe('PointLight2D z-range — a non-finite bound is not a bound', () => {
   it('says nothing, and never prints NaN', () => {

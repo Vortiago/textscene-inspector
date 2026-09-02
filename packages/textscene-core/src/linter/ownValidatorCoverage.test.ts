@@ -48,6 +48,8 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   CCDIK3D:
     "a solver body; the class is a `_solve_iteration` override alone, parameterised entirely by IterateIK3D's keys",
   CheckBox: 'a themed BaseButton; its constructor only changes inherited defaults',
+  CSGCombiner3D:
+    'a CSGShape3D whose whole class body is `_build_brush` and a constructor (csg_shape.h:194-202, csg_shape.cpp:1072-1077); no _bind_methods, so operation and the collision keys are CSGShape3D\'s',
   CheckButton: 'a themed BaseButton; its constructor only changes inherited defaults',
   Container: 'layout behaviour only, driven entirely by Control keys',
   FABRIK3D:
@@ -104,16 +106,9 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  * Types with own properties in Godot that this repo has not declared yet. Each
  * is a live gap: those properties are accepted unchecked today.
  *
- * Member counts at the time of writing, for scale rather than as an assertion
- * (nothing can verify them without reading `doc/classes` at test time, which
- * `godot-source-decoupling.test.mjs` forbids). Registered leaves: LineEdit 36,
- * RichTextLabel 30, Label 22, ScrollContainer 11, GridContainer 1. (CanvasLayer
- * declares its own eight now, so it left this list.)
- *
- * The tiers below were invisible until this guard closed over the base chain,
- * and each one is worth more than a leaf because its keys reach every
- * descendant: CSGShape3D 7 (every CSG node), PhysicsBody3D 6 — the axis_lock
- * set, reaching all four 3D bodies — and CSGPrimitive3D 1.
+ * Empty. The list is kept because it is the ratchet: a type can be added only
+ * by lengthening the pinned count below, and removing an entry (by declaring
+ * its validators) is the only correct edit.
  *
  * `AnimationMixer` left this list once `anims/<name>`, `libraries` and
  * `libraries/<name>` were declared (propertyListRouteCoverage.test.ts) — but
@@ -123,12 +118,10 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
  * `callback_mode_discrete`, `audio_max_polyphony`, `root_node` — all currently
  * declared only on `AnimationTree`, never on `AnimationMixer` itself, so
  * `AnimationPlayer` inherits none of them) are a real, separate, still-open gap
- * this coarser guard can no longer see once ANY own key exists: it counts
- * types with zero own validators, not missing members by name.
- *
- * Removing an entry (by declaring its validators) is the only correct edit.
+ * this coarser guard cannot see once ANY own key exists: it counts types with
+ * zero own validators, not missing members by name.
  */
-const UNDECLARED: readonly string[] = ['CSGPrimitive3D', 'CSGShape3D', 'PhysicsBody3D'];
+const UNDECLARED: readonly string[] = [];
 
 /**
  * Every type this guard holds to account: the registry, closed over the base
@@ -259,7 +252,7 @@ describe('own-validator coverage', () => {
     // Exact equality, not a ceiling — a ceiling above the current length is a
     // free slot, and an appended gap that moves no constant is exactly what this
     // is here to stop.
-    expect(UNDECLARED.length).toBe(3);
+    expect(UNDECLARED.length).toBe(0);
   });
 
   it('declares validators for Button, whose 13 members were the trigger', () => {
@@ -272,7 +265,15 @@ describe('own-validator coverage', () => {
     // The whole point of closing over the base chain. These appear in no
     // `.tscn` and so in no registry; without the closure an emptied tier would
     // pass this guard silently.
-    for (const tier of ['Light3D', 'CollisionObject2D', 'CollisionObject3D', 'Slider']) {
+    for (const tier of [
+      'Light3D',
+      'CollisionObject2D',
+      'CollisionObject3D',
+      'PhysicsBody3D',
+      'CSGShape3D',
+      'CSGPrimitive3D',
+      'Slider',
+    ]) {
       expect(typesUnderGuard(), `${tier} is not under guard`).toContain(tier);
       expect(validatorRegistry.getOwnKeys(tier), `${tier} declares nothing`).not.toEqual([]);
     }

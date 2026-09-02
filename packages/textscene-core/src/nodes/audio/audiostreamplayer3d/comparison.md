@@ -65,8 +65,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-missing-stream-resource` | error |
-|  | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
+| `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
 |  | `audiostreamplayer3d-emission-filter-not-enabled` | warning |
 <!-- lint:end -->
 

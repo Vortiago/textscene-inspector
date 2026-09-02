@@ -81,9 +81,4 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // sprite_3d.cpp:1141, `if (speed == 0) { return; }`), both doc-documented
   // behaviour rather than a setter guard or a hint, so this stays unbounded.
   speed_scale: v.float('speed_scale'),
-
-  // -- Pre-4.0 spelling (sprite_3d.cpp:1494-1500) -----------------------------
-  // sprite_3d.cpp:1495, a pure rename onto set_sprite_frames, so the same
-  // reference formats as `sprite_frames` above.
-  frames: v.resourceReference('frames'),
 });

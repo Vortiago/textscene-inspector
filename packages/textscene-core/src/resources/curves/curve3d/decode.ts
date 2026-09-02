@@ -20,7 +20,7 @@ import type {
   Curve3DSample,
   Curve3DSampler,
 } from './types';
-import { packedArrayCallAnywhere } from '../../../godot/index.js';
+import { dictPackedField } from '../../../godot/packedArrayFields.js';
 
 const FLOATS_PER_POINT = 9;
 
@@ -55,20 +55,19 @@ export function parseCurve3DPoints(dataValue: unknown): Curve3DControlPoint[] {
 }
 
 /** Built once: a non-global instance carries no `lastIndex`, so it is safe to share. */
-const POINTS_LITERAL_RE = packedArrayCallAnywhere('PackedVector3Array');
+const POINTS_FIELD_RE = dictPackedField('points', 'PackedVector3Array');
 
-/** Pull the `PackedVector3Array(...)` literal out of a `_data` string or object. */
+/**
+ * The `points` value out of a `_data` string or object, in whichever of the
+ * three spellings `parsePackedVector3Array` takes.
+ */
 function extractPointsLiteral(dataValue: unknown): string | null {
-  let source: string | null = null;
-  if (typeof dataValue === 'string') {
-    source = dataValue;
-  } else if (dataValue && typeof dataValue === 'object') {
+  if (typeof dataValue === 'string') return POINTS_FIELD_RE.exec(dataValue)?.[1] ?? null;
+  if (dataValue && typeof dataValue === 'object') {
     const points = (dataValue as { points?: unknown }).points;
-    if (typeof points === 'string') source = points;
+    return typeof points === 'string' ? points : null;
   }
-  if (!source) return null;
-  const match = POINTS_LITERAL_RE.exec(source);
-  return match ? match[0] : null;
+  return null;
 }
 
 /**

@@ -44,7 +44,6 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 17 inheri
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionshape3d` | `collisionshape3d-requires-shape` | warning |
-|  | `valid-collisionshape3d-resources` | error |
 |  | `collisionshape3d-invalid-parent` | warning |
 |  | `collisionshape3d-no-parent` | warning |
 |  | `collisionshape3d-non-uniform-scale` | warning |

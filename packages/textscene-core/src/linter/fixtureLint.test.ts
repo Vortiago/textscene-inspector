@@ -94,11 +94,12 @@ const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[];
 /**
  * Fixtures that must produce >=1 error, read from the one file that lists them.
  *
- * Each is an app-shell or extension INTEGRATION fixture: a selectable, really
- * broken file the VS Code integration suite opens, and that
- * `docs/user-guide-web.md` walks a user through to demonstrate the parse-error
- * banner and the recovery from it. A unit test cannot stand in for them,
- * because the thing under test is the host reacting to a file a user picked.
+ * Each is a file Godot refuses to load: the app-shell and extension
+ * integration fixtures (a selectable, really broken file the VS Code suite
+ * opens, and that `docs/user-guide-web.md` walks a user through to demonstrate
+ * the parse-error banner), and a render fixture carrying a dangling resource
+ * id. A unit test cannot stand in for them, because the thing under test is
+ * the host reacting to a file a user picked.
  *
  * `lint-staged.config.mjs` reads the same JSON to skip them in the pre-commit
  * hook, which would otherwise fail on every commit touching one. Sharing the
@@ -116,7 +117,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 3;
+const NEGATIVE_FIXTURE_COUNT = 4;
 
 /**
  * Both text formats Godot writes, via the predicate the CLI walk and the

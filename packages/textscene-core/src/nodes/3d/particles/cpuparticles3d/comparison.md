@@ -136,7 +136,6 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 | `valid-cpuparticles3d-mesh` | `cpuparticles3d-requires-mesh` | warning |
-|  | `valid-cpuparticles3d-resources` | error |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D` (index.ts), which reads only `transform` and

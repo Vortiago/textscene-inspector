@@ -25,7 +25,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 const TEXTURE_PROPS = [
@@ -37,16 +37,13 @@ const TEXTURE_PROPS = [
 
 function checkDecal(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
+  const { node } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  const referencedTextures = TEXTURE_PROPS.filter((prop) => !resourceSlotIsEmpty(rawProps[prop]));
-
   // A decal with no texture at all projects nothing — valid in Godot, but
   // almost certainly a mistake, so flag it as a warning.
-  if (referencedTextures.length === 0) {
+  if (TEXTURE_PROPS.every((prop) => resourceSlotIsEmpty(rawProps[prop]))) {
     diagnostics.push({
       severity: 'warning',
       message:
@@ -55,19 +52,6 @@ function checkDecal(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'decal-requires-texture',
     });
-  }
-
-  // Each referenced texture must resolve to a declared resource.
-  for (const prop of referencedTextures) {
-    if (!checkResourceExists(scene, rawProps[prop]!)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Texture resource not found: ${rawProps[prop]} (${prop})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-decal-resources',
-      });
-    }
   }
 
   // decal.cpp:188: a Normal/ORM map blends onto the Albedo texture's alpha
@@ -108,19 +92,10 @@ const decalValidationRule: LintRule = {
   meta: {
     name: 'valid-decal-resources',
     description:
-      'Validates Decal texture references resolve, and three of get_configuration_warnings\' own checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
+      'Three of Decal\'s get_configuration_warnings checks: at least one texture, Normal/ORM without Albedo, and an empty Cull Mask',
     category: 'validation',
     emits: [
       { ruleName: 'decal-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-decal-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the texture id is undeclared in the file',
-        },
-      },
       { ruleName: 'decal-normal-orm-without-albedo', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       { ruleName: 'decal-empty-cull-mask', severity: 'warning', grounding: { kind: 'configuration-warning' } },
     ],

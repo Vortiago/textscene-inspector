@@ -118,8 +118,10 @@ describe('VisibleOnScreenEnabler3D.enable_node_path', () => {
     expect(check('enable_node_path', 'NodePath("")')).toBeNull();
   });
 
-  it('rejects a bare quoted string that is not a NodePath literal', () => {
-    expect(check('enable_node_path', '"../Target"')).not.toBeNull();
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it('takes the bare string the slot converts and rejects a StringName', () => {
+    expect(check('enable_node_path', '"../Target"')).toBeNull();
+    expect(check('enable_node_path', '&"../Target"')).not.toBeNull();
   });
 });
 

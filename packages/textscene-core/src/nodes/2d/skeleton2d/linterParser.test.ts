@@ -79,8 +79,12 @@ describe('Skeleton2D strict validators', () => {
       expect(error!.message).toContain('modification_stack');
     });
 
-    it('rejects a reference whose id is unquoted', () => {
-      expect(check('modification_stack', 'SubResource(1)')).not.toBeNull();
+    it('accepts the old-style integer index (resource_format_text.cpp:128)', () => {
+      expect(check('modification_stack', 'SubResource(1)')).toBeNull();
+    });
+
+    it('rejects an id that is neither a string nor a number', () => {
+      expect(check('modification_stack', 'SubResource(abc)')).not.toBeNull();
     });
 
     it('checks format only, because set_modification_stack assigns straight through', () => {

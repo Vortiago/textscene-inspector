@@ -159,8 +159,10 @@ describe('GPUParticles2D strict validators', () => {
       expect(check('sub_emitter', 'NodePath("")')).toBeNull();
     });
 
-    it('rejects a bare string', () => {
-      expect(check('sub_emitter', '"../Other"')?.code).toBe('INVALID_SUB_EMITTER_PATH');
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    it('takes the bare string the slot converts and rejects a StringName', () => {
+      expect(check('sub_emitter', '"../Other"')).toBeNull();
+      expect(check('sub_emitter', '&"../Other"')?.code).toBe('INVALID_SUB_EMITTER_PATH');
     });
   });
 

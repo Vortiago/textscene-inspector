@@ -26,7 +26,7 @@ texture_albedo = ExtResource("1_a")
 
   it('errors when a referenced texture does not resolve', () => {
     expectDiagnostic(scene(node('Decal', { texture_albedo: 'ExtResource("9_missing")' }, { name: 'D' })), {
-      ruleName: 'valid-decal-resources',
+      ruleName: 'dangling-resource-reference',
       severity: 'error',
     });
   });

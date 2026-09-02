@@ -34,11 +34,4 @@ validatorRegistry.registerAll('NavigationLink2D', {
     message: "Property 'travel_cost' must be positive.",
     enforced: 'navigation_link_2d.cpp:321',
   }),
-
-  // -- Pre-4.0 spellings (navigation_link_2d.cpp:82-106) ---------------------
-  // navigation_link_2d.cpp:84 / :88 (`_set`) hand `p_value` straight to
-  // set_start_position / set_end_position, so both take the same unconstrained
-  // Vector2 the modern keys take. Named for the key the scene carries.
-  start_location: v.vector2('start_location'),
-  end_location: v.vector2('end_location'),
 });

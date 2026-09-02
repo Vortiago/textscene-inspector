@@ -69,8 +69,7 @@ Strict parsing format-checks these `RigidBody2D` properties, plus 5 inherited fr
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-rigidbody2d` (type-family match) | `valid-rigidbody2d-resources` | error |
-|  | `rigidbody2d-needs-collision-shape` | warning |
+| `valid-rigidbody2d` (type-family match) | `rigidbody2d-needs-collision-shape` | warning |
 |  | `rigidbody2d-max-contacts-without-monitor` | warning |
 |  | `rigidbody2d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->

@@ -288,8 +288,9 @@ sub_emitter = NodePath("")
 `);
       });
 
+      // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH, so the refused sample is a StringName.
       it('should reject invalid NodePath format', () => {
-        expectDiagnostic(createTestScene('sub_emitter = "invalid"'), {
+        expectDiagnostic(createTestScene('sub_emitter = &"invalid"'), {
           prop: 'sub_emitter',
           contains: ['NodePath'],
         });
@@ -321,7 +322,7 @@ lifetime = 2.0
 [node name="MissingMaterialResource" type="GPUParticles3D"]
 process_material = SubResource("nonexistent")
 `,
-        { prop: 'Process material resource not found' }
+        { prop: "'process_material'", severity: 'error' }
       );
     });
 
@@ -346,7 +347,7 @@ draw_pass_1 = SubResource("mesh_1")
 process_material = SubResource("process_1")
 draw_pass_1 = SubResource("nonexistent_mesh")
 `,
-        { prop: 'Draw pass mesh resource not found' }
+        { prop: "'draw_pass_1'", severity: 'error' }
       );
     });
 
@@ -365,7 +366,7 @@ draw_passes = 3
 draw_pass_1 = SubResource("mesh_1")
 draw_pass_3 = SubResource("nonexistent_mesh")
 `);
-      const errors = diagnostics.filter((d) => d.ruleName === 'valid-gpuparticles3d-resources');
+      const errors = diagnostics.filter((d) => d.ruleName === 'dangling-resource-reference');
       expect(errors).toHaveLength(1);
       expect(errors[0]!.message).toContain('draw_pass_3');
     });
@@ -580,7 +581,7 @@ sub_emitter = NodePath("")
 process_material = SubResource("process_1")
 sub_emitter = NodePath("../Other/Emitter")
 `,
-        { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'error' }
+        { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'warning' }
       );
     });
 

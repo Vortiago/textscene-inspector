@@ -5,7 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   node,
-  scene,
+  scene as sceneOf,
+  subResource,
   lint,
   expectClean,
   expectDiagnostic,
@@ -16,6 +17,12 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+
+/** Every `anims/<name>` id these scenes reference, declared so none dangles. */
+const ANIMATIONS = ['1', '2', '3', 'idle', 'walk', 'run', 'jump', 'attack']
+  .map((id) => subResource('Animation', {}, `Animation_${id}`))
+  .join('\n\n');
+const scene = (...blocks: string[]) => sceneOf(ANIMATIONS, ...blocks);
 
 describe('AnimationPlayer Linter', () => {
   describe('the next/<name> property-list family', () => {
@@ -105,7 +112,7 @@ describe('AnimationPlayer Linter', () => {
     });
 
     runPropertyValidation(
-      { nodeType: 'AnimationPlayer', acceptMode: 'no-error' },
+      { nodeType: 'AnimationPlayer', acceptMode: 'no-error', prefix: [ANIMATIONS] },
       [
         {
           // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater" — BOTH
@@ -168,11 +175,12 @@ describe('AnimationPlayer Linter', () => {
         },
         {
           // animation_mixer.cpp:484 (set_root_node) is a bare assignment; an empty
-          // NodePath is accepted like any other, so only the NodePath("...") shape
-          // is checked.
+          // NodePath is accepted like any other, so only the slot's spellings are
+          // checked: the literal, or the bare string variant.cpp:746-749 converts.
+          // A StringName is not in that list.
           prop: 'root_node',
-          valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")', 'NodePath("")'],
-          invalid: [{ value: '""', contains: ['root_node', 'NodePath'] }],
+          valid: ['NodePath("..")', 'NodePath(".")', 'NodePath("/root/Node")', 'NodePath("")', '""'],
+          invalid: [{ value: '&""', contains: ['root_node', 'NodePath'] }],
         },
       ]
     );
@@ -416,15 +424,16 @@ describe('AnimationPlayer Linter', () => {
         'warning'
       );
 
-      // root_node: '""' is a bare quoted empty string, not NodePath("...") syntax,
-      // so it fails the format check (error) + out-of-hint blend time (warning).
+      // root_node: '&""' is a StringName, which variant.cpp:746-749 does not
+      // convert into a NodePath, so it fails the format check (error) +
+      // out-of-hint blend time (warning).
       // playback_process_mode/method_call_mode no longer produce an error out of
       // range: animation_mixer.cpp:501-525 is a bare assignment for both, so
       // out-of-range is a warning (ADR-0032), not an error.
       expectSeverity(
         scene(
           node('AnimationPlayer', {
-            root_node: '""',
+            root_node: '&""',
             playback_default_blend_time: 5000,
           })
         ),

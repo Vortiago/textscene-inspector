@@ -1,10 +1,9 @@
 /** CSGPolygon3D strict validators for linting. */
 
-import '../../geometryinstance3d/linterParser.js';
+import '../csgprimitive3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
-const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
 const MODE = { 0: 'DEPTH', 1: 'SPIN', 2: 'PATH' };
 const INTERVAL_TYPE = { 0: 'DISTANCE', 1: 'SUBDIVIDE' };
 const PATH_ROTATION = { 0: 'POLYGON', 1: 'PATH', 2: 'PATH_FOLLOW' };
@@ -76,9 +75,5 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   path_u_distance: v.nonNegativeFloat('path_u_distance', { hinted: 'csg_shape.cpp:2612' }),
   path_joined: v.boolean('path_joined'),
   smooth_faces: v.boolean('smooth_faces'),
-  flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
-  // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
-  // CSGShape3D::set_operation:933-937 is a bare assignment.
-  operation: v.enumInt('operation', 0, 2, OPERATION, { hinted: 'csg_shape.cpp:1040' }),
 });

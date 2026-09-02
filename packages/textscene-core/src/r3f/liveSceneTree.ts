@@ -85,11 +85,24 @@ export function collapseLiveNode(
   sceneCache: CachedSceneSource
 ): TscnNode {
   if (!node.instance) return node;
-  const scenePath = resolveInstancePath(node.instance, externalResources);
+  const scope = authoredScope(node, externalResources);
+  const scenePath = resolveInstancePath(node.instance, scope);
   if (!scenePath) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
-  return mergeInstanceRoot(node, cached, externalResources) ?? node;
+  return mergeInstanceRoot(node, cached, scope) ?? node;
+}
+
+/**
+ * The ExtResource table a node's refs resolve against: the one it was authored
+ * in when grafted into another scene's content (as `DispatchedNode` renders it),
+ * else the scope of the group it sits in.
+ */
+function authoredScope(
+  node: TscnNode,
+  groupScope: readonly TscnExternalResource[]
+): readonly TscnExternalResource[] {
+  return node.authoredResources ?? groupScope;
 }
 
 /** A node's live children, paired with the ExtResource scope those children resolve against. */
@@ -144,10 +157,13 @@ export function liveChildGroups(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
+  // A grafted node's subtree keeps the table it was authored in.
+  const scope = authoredScope(node, externalResources);
+
   // A node's own authored children in the incoming (OUTER) scope — the answer
   // for every non-instance case and every not-(yet-)resolvable instance case.
   const inlineOnly = (): LiveChildGroup[] => [
-    { origin: 'inline', children: node.children, externalResources },
+    { origin: 'inline', children: node.children, externalResources: scope },
   ];
 
   // GLBSceneRoot: its children are the loaded GLB's internal nodes. No instance
@@ -156,13 +172,13 @@ export function liveChildGroups(
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
     if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object), externalResources }];
+      return [{ origin: 'glb', children: glbSceneRootChildren(object), externalResources: scope }];
     }
   }
 
   if (!node.instance) return inlineOnly();
 
-  const scenePath = resolveInstancePath(node.instance, externalResources);
+  const scenePath = resolveInstancePath(node.instance, scope);
   if (!scenePath) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
@@ -173,7 +189,7 @@ export function liveChildGroups(
   // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
   // scope. The merged node rides along on the group so a caller needing the
   // collapsed identity (the tree row) reuses this merge instead of re-running it.
-  const merged = mergeInstanceRoot(node, cached, externalResources);
+  const merged = mergeInstanceRoot(node, cached, scope);
   if (merged) {
     return [
       { origin: 'merged', children: merged.children, externalResources: subResources, mergedNode: merged },
@@ -185,7 +201,7 @@ export function liveChildGroups(
   // inline children are authored in the host scene and resolve against its resources.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, externalResources });
+    groups.push({ origin: 'inline', children: node.children, externalResources: scope });
   }
   groups.push({ origin: 'subscene', children: cached.nodes, externalResources: subResources });
   return groups;
@@ -242,7 +258,7 @@ function liveChainLinks(
       }
     }
     if (!match) return null;
-    // The collapsed node uses the scope it lives in (its own group's scope).
+    // The collapsed node uses its group's scope, unless it carries `authoredResources`.
     links.push({
       raw: match,
       collapsed: collapseLiveNode(match, matchScope, ctx.sceneCache),

@@ -18,7 +18,13 @@ import { parseValueArray } from './keyframeValues.js';
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { info, warn } from '../../../logger';
-import { EXT_RESOURCE_CALL_ANYWHERE_RE, NODE_PATH_LITERAL_ANYWHERE_RE, SUB_RESOURCE_REF_BODY, literalText, packedArrayCallAnywhere } from '../../../godot/index.js';
+import {
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
+  dictSubResourceEntries,
+  literalText,
+  packedArrayCallAnywhere,
+} from '../../../godot/index.js';
+import { nodePathLiteral } from '../../../godot/variantParser.js';
 import type { AnimationLibraryRef } from './types';
 
 export type { GodotKeyframeValue } from './keyframeValues.js';
@@ -127,8 +133,6 @@ function audioTrackPaths(data: Record<string, unknown>): string[] {
   return paths;
 }
 
-const SUB_RESOURCE_ENTRY = new RegExp(`"([^"]+)"\\s*:\\s*${SUB_RESOURCE_REF_BODY}`, 'g');
-
 /**
  * Whether any of these libraries holds a clip {@link resolveAnimations} cannot
  * enumerate.
@@ -152,12 +156,15 @@ export function hasUnresolvableClips(
   });
 }
 
+/**
+ * `_data`'s `"name": SubResource(…)` clips. An empty name is skipped:
+ * `add_animation` refuses it (`animation_library.cpp:35-36,48`,
+ * `is_valid_animation_name` — `!(p_name.is_empty() || …)`).
+ */
 function parseLibraryData(dataStr: string): Array<[string, string]> {
-  const entries: Array<[string, string]> = [];
-  for (const match of dataStr.matchAll(SUB_RESOURCE_ENTRY)) {
-    if (match[1] !== undefined && match[2] !== undefined) entries.push([match[1], match[2]]);
-  }
-  return entries;
+  return dictSubResourceEntries(dataStr)
+    .filter(({ key }) => key !== '')
+    .map(({ key, id }) => [key, id]);
 }
 
 function parseAnimation(name: string, resource: TscnInternalResource): GodotAnimation {
@@ -234,10 +241,8 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   return tracks;
 }
 
-/** Extract the inner string of a `NodePath("…")` literal, or null if it isn't one. */
-export function extractNodePathInner(raw: string): string | null {
-  return NODE_PATH_LITERAL_ANYWHERE_RE.exec(raw)?.[1] ?? null;
-}
+/** The path a whole NodePath-slot value names ({@link nodePathLiteral}), or null. */
+export const extractNodePathInner = nodePathLiteral;
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {
   const inner = extractNodePathInner(raw);

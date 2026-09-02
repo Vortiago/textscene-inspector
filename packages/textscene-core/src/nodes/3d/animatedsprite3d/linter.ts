@@ -14,30 +14,21 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
 
 function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
+  const { node } = context;
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  const spriteFrames = heldResource(rawProps.sprite_frames);
-  if (spriteFrames === undefined) {
+  if (heldResource(rawProps.sprite_frames) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimatedSprite3D requires a 'sprite_frames' property. AnimatedSprite3D cannot play animations without a SpriteFrames resource.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite3d-requires-spriteframes',
-    });
-  } else if (!checkResourceExists(scene, spriteFrames)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `SpriteFrames resource not found: ${rawProps.sprite_frames}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-animatedsprite3d-resources',
     });
   }
 
@@ -74,15 +65,6 @@ const animatedSprite3DValidationRule: LintRule = {
     applicableNodeTypes: ['AnimatedSprite3D'],
     emits: [
       { ruleName: 'animatedsprite3d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-animatedsprite3d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'animatedsprite3d-animation-no-spriteframes',
         severity: 'error',

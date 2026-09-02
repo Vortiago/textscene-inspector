@@ -11,17 +11,17 @@
  * does not make.
  *
  * The defect is uniform and easy to reintroduce: `'null'` is a TRUTHY string, so a
- * `!ref` or `ref === undefined` guard steps over it, and `checkResourceExists` then
- * deliberately answers `true` for a cleared slot — so the value falls through both
- * branches and nothing is reported. Twenty-five sites drifted this way one rule at a
- * time, which is why the rule is asserted here once rather than per slice.
+ * `!ref` or `ref === undefined` guard steps over it and the value falls through
+ * every branch with nothing reported. Twenty-five sites drifted this way one rule
+ * at a time, which is why the rule is asserted here once rather than per slice.
  *
  * Each row therefore pins the LITERAL diagnostics, rule name and severity alike, that
  * both spellings must produce. Comparing the two runs to each other cannot see the
  * shared predicate failing open, because that silences both arms equally and the two
  * empty results still match; comparing each to a stated answer can. Severity is part
- * of that answer, since the inverse defect is a rule that INVENTS a dangling-reference
- * error for a slot the author cleared on purpose.
+ * of that answer, since the inverse defect is a cleared slot read as a DANGLING
+ * reference by `danglingResources.ts`, which errors for a slot the author cleared
+ * on purpose.
  *
  * The table's floor is derived, not declared: `SLOTS` must name every property the
  * shared predicates are asked about anywhere in `src`, so a slot cannot be swept
@@ -91,22 +91,6 @@ const SLOTS: Slot[] = [
       expected: ['warning collisionshape3d-requires-shape'],
     },
   ]),
-  // No diagnostic either way: the slot is optional, so a cleared one is silent
-  // for the same reason an absent one is. The pair still belongs here — the
-  // defect this guards against is a cleared slot reading as a DANGLING
-  // reference, which would report where absence does not.
-  ...at('linter/physics/rigidBodyLinterRule.ts', [
-    {
-      type: 'RigidBody2D',
-      prop: 'physics_material_override',
-      expected: ['warning rigidbody2d-needs-collision-shape'],
-    },
-    {
-      type: 'RigidBody3D',
-      prop: 'physics_material_override',
-      expected: ['warning rigidbody3d-needs-collision-shape'],
-    },
-  ]),
   ...at('linter/physics/navigationRegionLinterRule.ts', [
     {
       type: 'NavigationRegion2D',
@@ -137,12 +121,6 @@ const SLOTS: Slot[] = [
       ],
     },
   ]),
-  ...at('nodes/2d/cpuparticles2d/linter.ts', [
-    // Optional, so cleared and absent are both silent — listed because the
-    // defect this guards is a cleared slot reading as a DANGLING reference,
-    // which the error arm beside it would report where absence does not.
-    { type: 'CPUParticles2D', prop: 'texture', expected: [] },
-  ]),
   ...at('nodes/2d/lightoccluder2d/linter.ts', [
     { type: 'LightOccluder2D', prop: 'occluder', expected: ['warning lightoccluder2d-requires-occluder'] },
   ]),
@@ -152,17 +130,6 @@ const SLOTS: Slot[] = [
       prop: 'process_material',
       expected: ['warning gpuparticles2d-missing-process-material'],
     },
-  ]),
-  ...at('nodes/2d/particles/gpuparticles2d/linter.ts', [
-    {
-      type: 'GPUParticles2D',
-      prop: 'process_material',
-      expected: ['warning gpuparticles2d-missing-process-material'],
-    },
-    // Optional, so cleared and absent are both silent — listed because the
-    // defect this guards is a cleared slot reading as a DANGLING reference,
-    // which the error arm beside it would report where absence does not.
-    { type: 'GPUParticles2D', prop: 'texture', expected: ['warning gpuparticles2d-missing-process-material'] },
   ]),
   ...at('nodes/2d/path2d/linter.ts', [
     { type: 'Path2D', prop: 'curve', expected: ['warning path2d-missing-curve'] },
@@ -308,18 +275,6 @@ const SLOTS: Slot[] = [
       prop: 'stream',
       props: { autoplay: true },
       expected: ['warning audiostreamplayer2d-autoplay-without-stream'],
-    },
-  ]),
-  ...at('nodes/audio/audiostreamplayer3d/linter.ts', [
-    {
-      // No autoplay arm on this twin, deliberately: the slice takes an empty
-      // stream as the serialised default and audio_stream_player_3d.cpp
-      // declares no configuration warning for it. The row is here for the
-      // dangling-reference arm and to keep the sweep's coverage total honest.
-      type: 'AudioStreamPlayer3D',
-      prop: 'stream',
-      props: { autoplay: true },
-      expected: [],
     },
   ]),
   ...at('nodes/paths/path3d/linter.ts', [

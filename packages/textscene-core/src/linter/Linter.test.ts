@@ -102,9 +102,10 @@ describe('Linter', () => {
 
       ruleRegistry.register(testRule);
 
-      // `[node type=…]` with no `name=`, not a typeless heading: a heading
-      // stating none of type/index/instance is LEGAL (Godot assumes it was
-      // instantiated, resource_format_text.cpp:218-221) and now warns.
+      // A typeless heading 0: Godot assumes it was instantiated
+      // (resource_format_text.cpp:218-221) and, with no base scene, refuses
+      // the instantiate (packed_scene.cpp:220) — an error that still leaves
+      // the scene to phase 2.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]
@@ -114,7 +115,7 @@ describe('Linter', () => {
 
       const parseError = diagnostics.find(d => d.ruleName === 'strict-parser');
       expect(parseError).toBeDefined();
-      expect(parseError!.severity).toBe('warning');
+      expect(parseError!.severity).toBe('error');
 
       const ruleViolation = diagnostics.find(d => d.ruleName === 'test-combined-rule');
       expect(ruleViolation).toBeDefined();
@@ -141,13 +142,13 @@ invalidproperty
 
       // Semantic rules run alongside parse errors rather than being suppressed
       // by the first one, so the set is not errors-only. The typeless `Root`
-      // heading contributes a WARNING, not an error: Godot's parser reads the
-      // absence as "assume this was instantiated"
-      // (resource_format_text.cpp:218-221).
-      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(2);
+      // heading is an ERROR: Godot reads the absence as "assume this was
+      // instantiated" (resource_format_text.cpp:218-221) and refuses a root
+      // with no base scene (packed_scene.cpp:220).
+      expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
       expect(
         diagnostics.filter(
-          (d) => d.severity === 'warning' && d.message.includes('states no "type="')
+          (d) => d.severity === 'error' && d.message.includes('states no "type="')
         )
       ).toHaveLength(1);
     });

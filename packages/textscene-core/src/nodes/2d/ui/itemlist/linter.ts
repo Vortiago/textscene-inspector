@@ -38,6 +38,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex } from '../../../../godot/index.js';
@@ -74,7 +75,7 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   }
   if (offending.size === 0) return diagnostics;
 
-  const indices = [...offending].sort((a, b) => a - b).join(', ');
+  const indices = listIndices([...offending].sort((a, b) => a - b));
   diagnostics.push({
     severity: 'error',
     message:

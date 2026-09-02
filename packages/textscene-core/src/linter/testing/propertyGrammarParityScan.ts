@@ -10,7 +10,7 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { baseChain } from '../../godot/nodeBaseTypes.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
@@ -90,6 +90,40 @@ export function scrapeParserProps(src: string): Set<string> {
   const bracketRe = /\bproperties\[['"]([^'"]+)['"]\]/g;
   while ((m = bracketRe.exec(src)) !== null) props.add(m[1]!);
   return props;
+}
+
+/**
+ * Every key a parser FILE reads: its own accesses, plus those of each relative
+ * import it hands the whole bag to — `parseAudioBase(properties, ctx)`,
+ * `parseBoxContainer(heading, properties)`, `finishCsgParse(result, properties)`
+ * — followed recursively. A base parser reached this way is scraped too; the
+ * base table walks the chain the type DECLARES, which need not be the one the
+ * parser calls.
+ */
+export function scrapeParserReads(file: string, seen = new Set<string>()): Set<string> {
+  if (seen.has(file)) return new Set();
+  seen.add(file);
+  const src = readFileSync(file, 'utf8');
+  const reads = scrapeParserProps(src);
+  const importRe = /import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = importRe.exec(src)) !== null) {
+    const names = m[1]!.split(',').map((n) => n.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()!);
+    const specifier = m[2]!;
+    for (const name of names) {
+      if (!name || !new RegExp(`\\b${name}\\((?:[^()]*,\\s*)?properties\\s*[,)]`).test(src)) continue;
+      for (const key of scrapeParserReads(resolveImport(file, specifier), seen)) reads.add(key);
+    }
+  }
+  return reads;
+}
+
+/** `./x` or `./x.js` beside `from`, as the `.ts` module it names. */
+function resolveImport(from: string, specifier: string): string {
+  const base = resolve(dirname(from), specifier.replace(/\.js$/, ''));
+  const candidate = [`${base}.ts`, join(base, 'index.ts')].find(existsSync);
+  if (!candidate) throw new Error(`${specifier}, imported by ${from}, resolves to no file`);
+  return candidate;
 }
 
 /**

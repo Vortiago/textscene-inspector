@@ -17,21 +17,13 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../resources/SubResourceResolver';
 import {
   ARRAY_LITERAL_RE,
+  arrayLiteralBody,
+  boolSlotValue,
   dropTrailingComma,
   ruleInt,
   splitTopLevel,
-  SUB_RESOURCE_REF_ANYWHERE_RE,
-  SUB_RESOURCE_REF_BODY,
- boolSlotValue,} from '../../../godot/index.js';
-
-/**
- * `transitions = [&"Start", &"Idle", SubResource("…"), …]` as alternating tokens.
- *
- * Built from the shared reference body rather than spelled out, so the padded
- * form the linter accepts is tokenised here too. `String.match` with a `g`
- * regex resets `lastIndex` itself, so the shared instance is safe to reuse.
- */
-const TRANSITION_TOKEN_RE = new RegExp(`"[^"]*"|${SUB_RESOURCE_REF_BODY}`, 'g');
+  subResourceRefAnywhere,
+} from '../../../godot/index.js';
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =
@@ -114,7 +106,7 @@ export function resolveTreeRoot(
 
 /** Extract the id from a `SubResource("id")` reference. */
 function extractSubResourceId(ref: string): string | null {
-  return SUB_RESOURCE_REF_ANYWHERE_RE.exec(ref)?.[1] ?? null;
+  return subResourceRefAnywhere(ref);
 }
 
 /**
@@ -280,12 +272,18 @@ function resolveStateMachine(
   };
 }
 
-/** Target of a `Start →` transition, else the first authored state. */
+/**
+ * Target of a `Start →` transition, else the first authored state.
+ *
+ * `transitions = [&"Start", &"Idle", SubResource("…"), …]` is split as the
+ * array it is, the way `parseConnections` reads its triples.
+ */
 function pickStartState(
   transitions: string,
   states: StateMachineNode['states']
 ): string | null {
-  const tokens = transitions.match(TRANSITION_TOKEN_RE) ?? [];
+  const body = arrayLiteralBody(transitions);
+  const tokens = body === null ? [] : dropTrailingComma(splitTopLevel(body));
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const from = stripStringName(tokens[i]!);
     if (from === 'Start') return stripStringName(tokens[i + 1]!);

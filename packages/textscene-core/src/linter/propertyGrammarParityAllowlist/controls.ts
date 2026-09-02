@@ -29,7 +29,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
     ],
-    aliasedRead: ['align', 'valign'],
     renderGap: [
       // A LabelSettings resource carries font, size, colour and outline, none of
       // which the overlay's CSS defaults reproduce.
@@ -90,7 +89,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // about how the layout is computed, not what it looks like when done.
       'threaded', 'progress_bar_delay',
     ],
-    aliasedRead: ['bbcode_text'],
     renderGap: [
       // Alignment of the whole document within the control.
       'horizontal_alignment', 'vertical_alignment',
@@ -126,21 +124,18 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Deadzone, wheel step and follow-focus need an interaction to matter; the scroll offsets, the scroll hints and the focus border are all drawn by Godot in a static frame and are not implemented yet.',
   },
 
-  // The container bases have no parser.ts of their own — they reuse parseControl
-  // — so from their own perspective every key they register is linter-only, and
-  // one entry each covers their H/V leaves rather than four near-identical
-  // copies. The leaves' parsers read what they RENDER (the shared
-  // boxContainer/splitContainer helpers handle alignment and offsets for
-  // layout); the rest is editor-side drag tuning a DOM overlay has no use for.
+  // The container bases have no parser.ts of their own, so one entry each
+  // covers their H/V leaves. The leaves read what they RENDER through the
+  // shared boxContainer/splitContainer helpers; the rest is editor-side drag
+  // tuning a DOM overlay has no use for.
   BoxContainer: {
-    linterOnly: ['alignment', 'vertical'],
-    reason: 'Layout base with no parser of its own; the leaves render alignment through the shared boxContainer helper, and `vertical` is fixed by the leaf class so nothing reads it there.',
+    linterOnly: ['vertical'],
+    reason: 'Layout base with no parser of its own; `vertical` is fixed by the leaf class so nothing reads it there.',
   },
 
   SplitContainer: {
     linterOnly: [
-      'collapsed', 'dragging_enabled', 'dragger_visibility', 'touch_dragger_enabled',
-      'split_offset', 'split_offsets', 'vertical',
+      'dragging_enabled', 'touch_dragger_enabled', 'split_offsets', 'vertical',
       'drag_area_margin_begin', 'drag_area_margin_end', 'drag_area_offset',
       'drag_area_highlight_in_editor',
     ],

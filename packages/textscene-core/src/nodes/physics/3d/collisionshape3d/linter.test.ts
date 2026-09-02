@@ -167,10 +167,10 @@ shape = SubResource("shape_1")
         node('CollisionShape3D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
       );
       const resourceError = expectDiagnostic(content, {
-        ruleName: 'valid-collisionshape3d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'CollisionShape3D',
-        contains: ['Shape resource not found'],
+        contains: ["'shape'"],
       });
       expect(resourceError.nodeName).toBe('MissingResource');
     });
@@ -186,7 +186,7 @@ shape = SubResource("shape_1")
         node('StaticBody3D', {}, { name: 'StaticBody' }),
         node('CollisionShape3D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
       );
-      expectNoDiagnostic(content, { ruleName: 'valid-collisionshape3d-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectDiagnostic(content, {
         ruleName: 'strict-parser',
         contains: ['shape', 'resource reference'],

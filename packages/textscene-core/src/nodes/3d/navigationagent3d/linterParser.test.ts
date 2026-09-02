@@ -59,11 +59,6 @@ const KEYS: string[] = [
   'debug_use_custom',
   'debug_path_custom_color',
   'debug_path_custom_point_size',
-  // navigation_agent_3d.cpp:217, :213 and :221, the pre-4.0-beta-1X spellings
-  // of `target_position`, `time_horizon_agents` and `path_height_offset`.
-  'target_location',
-  'time_horizon',
-  'agent_height_offset',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -529,41 +524,6 @@ describe('NavigationAgent3D strict validators', () => {
     });
     it('accepts exactly zero (edge)', () => {
       expect(check('debug_path_custom_point_size', '0')).toBeNull();
-    });
-  });
-
-  describe('the pre-4.0-beta-1X spellings', () => {
-    it('target_location takes the same Vector3 literals target_position takes', () => {
-      // navigation_agent_3d.cpp:217 hands `p_value` straight to set_target_position.
-      expect(check('target_location', 'Vector3(4, 5, 6)')).toBeNull();
-      expect(check('target_location', 'Vector3(inf, -inf, nan)')).toBeNull();
-    });
-
-    it('target_location names itself when it rejects a malformed literal', () => {
-      const error = check('target_location', 'Vector3(4, 5)');
-      expect(error).not.toBeNull();
-      expect(error!.message).toContain("'target_location'");
-      expect(error!.message).not.toContain('target_position');
-    });
-
-    it('time_horizon carries time_horizon_agents\' enforced floor of 0', () => {
-      // navigation_agent_3d.cpp:213 forwards to set_time_horizon_agents, whose
-      // ERR_FAIL_COND_MSG (:666) refuses a negative value outright.
-      expect(check('time_horizon', '0')).toBeNull();
-      const error = expectError(check('time_horizon', '-1'), 'must be >= 0.');
-      expect(error!.message).toContain("'time_horizon'");
-      expect(error!.message).not.toContain('time_horizon_agents');
-    });
-
-    it('agent_height_offset carries path_height_offset\' hinted floor of -100', () => {
-      // navigation_agent_3d.cpp:221 forwards to set_path_height_offset, a bare
-      // assignment (:626-628), so only the hint (:157, "-100.0,100,0.01,or_greater")
-      // bounds it — a warning, and only at the floor.
-      expect(check('agent_height_offset', '-100')).toBeNull();
-      expect(check('agent_height_offset', '5000')).toBeNull();
-      const error = expectWarning(check('agent_height_offset', '-101'), 'must be >= -100.');
-      expect(error!.message).toContain("'agent_height_offset'");
-      expect(error!.message).not.toContain('path_height_offset');
     });
   });
 });

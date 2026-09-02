@@ -149,6 +149,9 @@ describe('CPUParticles2D strict validators', () => {
         'color_ramp = SubResource("2")',
         '',
       ].join('\n')
+    ).replace(
+      '[node name="Root"',
+      '[sub_resource type="Curve" id="1"]\n\n[sub_resource type="Gradient" id="2"]\n\n[node name="Root"'
     );
     expect(errorsOf(content)).toEqual([]);
   });
@@ -225,7 +228,7 @@ describe('CPUParticles2D dangling texture', () => {
       '[node name="Fx" type="CPUParticles2D" parent="."]\ntexture = ExtResource("999")\n';
     const found = linter()
       .lint(content)
-      .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources');
+      .filter((d) => d.ruleName === 'dangling-resource-reference');
     expect(found).toHaveLength(1);
     expect(found[0]!.severity).toBe('error');
   });
@@ -239,7 +242,7 @@ describe('CPUParticles2D dangling texture', () => {
     expect(
       linter()
         .lint(content)
-        .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources')
+        .filter((d) => d.ruleName === 'dangling-resource-reference')
     ).toEqual([]);
   });
 
@@ -256,7 +259,7 @@ describe('CPUParticles2D dangling texture', () => {
       expect(
         linter()
           .lint(content)
-          .filter((d) => d.ruleName === 'valid-cpuparticles2d-resources')
+          .filter((d) => d.ruleName === 'dangling-resource-reference')
       ).toEqual([]);
     }
   });

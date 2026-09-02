@@ -73,7 +73,7 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
       // `accepts` is set by the `v` DSL at construction time, where the bounds
       // are known. A hand-rolled validator has none and renders blank rather
       // than being guessed at.
-      const validator = validatorRegistry.findValidator(current, key);
+      const validator = validatorRegistry.declarationFor(current, key);
       out.push({
         property: key,
         declaredOn: current,

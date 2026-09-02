@@ -177,10 +177,10 @@ describe('CollisionShape2D Linter', () => {
         node('CollisionShape2D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
       );
       const resourceError = expectDiagnostic(content, {
-        ruleName: 'valid-collisionshape2d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'CollisionShape2D',
-        contains: ['Shape resource not found'],
+        contains: ["'shape'"],
       });
       expect(resourceError.nodeName).toBe('MissingResource');
     });
@@ -196,7 +196,7 @@ describe('CollisionShape2D Linter', () => {
         staticBody,
         node('CollisionShape2D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
       );
-      expectNoDiagnostic(content, { ruleName: 'valid-collisionshape2d-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectDiagnostic(content, {
         ruleName: 'strict-parser',
         contains: ['shape', 'resource reference'],

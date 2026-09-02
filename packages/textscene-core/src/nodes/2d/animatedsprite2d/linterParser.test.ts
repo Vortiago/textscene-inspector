@@ -39,8 +39,6 @@ const KEYS: string[] = [
   'offset',
   'flip_h',
   'flip_v',
-  // animated_sprite_2d.cpp:617, the pre-4.0 spelling of `sprite_frames`.
-  'frames',
 ];
 
 /**
@@ -115,23 +113,6 @@ describe('AnimatedSprite2D strict validators', () => {
 
     it('rejects an unquoted identifier', () => {
       expect(check('autoplay', 'idle')).not.toBeNull();
-    });
-  });
-
-  describe('frames, the pre-4.0 spelling of sprite_frames', () => {
-    it('takes the same references sprite_frames takes', () => {
-      // animated_sprite_2d.cpp:617 hands `p_value` straight to
-      // set_sprite_frames, so the slot accepts exactly the same literals.
-      expect(check('frames', 'SubResource("SpriteFrames_walk")')).toBeNull();
-      expect(check('frames', 'ExtResource("1_frames")')).toBeNull();
-      expect(check('frames', 'null')).toBeNull();
-    });
-
-    it('names the deprecated key, not the canonical one, when it rejects', () => {
-      const error = check('frames', 'res://frames.tres');
-      expect(error).not.toBeNull();
-      expect(error!.message).toContain("'frames'");
-      expect(error!.message).not.toContain('sprite_frames');
     });
   });
 });

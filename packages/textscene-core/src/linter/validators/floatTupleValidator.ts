@@ -1,7 +1,8 @@
 /** Arity-driven validator for fixed-length float-tuple TSCN values. */
 
-import { compositeSpellings } from '../../godot/variantConversion.js';
+import { compositeSpellings, compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 import { slotComponentsAltered } from '../../godot/int.js';
+import { truncatedComponent } from './intSlot.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 import { valueCode } from './v/codes.js';
@@ -86,6 +87,13 @@ export function floatTupleValidator(
           `the components are narrowed at parse time to a number the file does not state`,
         alteredCode
       );
+    }
+    // The same narrowing on a component the engine CAN store: `Vector2i(1.5, 2)`
+    // reaches `_parse_construct<int32_t>` (variant_parser.cpp:721-723) and is
+    // stored as `(1, 2)` — the truncation the scalar int slot already warns
+    // about on the same text.
+    if (isConvertedSpelling(typeName, compositeTypeName(value))) {
+      return truncatedComponent(propertyName, key, line, match.slice(1, arity + 1), alteredCode);
     }
     return null;
   };

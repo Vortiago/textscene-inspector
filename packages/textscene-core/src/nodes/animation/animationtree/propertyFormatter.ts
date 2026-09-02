@@ -9,7 +9,6 @@ import {
   CallbackModeDiscrete,
   CallbackModeMethod,
 } from './types';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { nodePathLiteral } from '../../../godot/index.js';
 
 export function formatAnimationTreeProperties(
@@ -51,8 +50,6 @@ export function formatAnimationTreeProperties(
       { label: 'Reset On Save', value: properties.reset_on_save ? 'true' : 'false' },
     ],
   });
-
-  sections.push(...formatNode3DProperties(properties));
 
   return sections;
 }

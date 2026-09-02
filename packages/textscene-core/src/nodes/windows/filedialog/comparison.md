@@ -54,7 +54,7 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `file_filter_toggle_enabled` | true or false |  |
 | `file_mode` | enum 0-4 (OPEN_FILE/OPEN_FILES/OPEN_DIR/OPEN_ANY/SAVE_FILE) | error |
 | `file_sort_options_enabled` | true or false |  |
-| `filename_filter` | quoted string |  |
+| `filename_filter` | quoted string, or the &"…" StringName jacket |  |
 | `filters` | string array (PackedStringArray(…), Array[String]([…]) or […]) |  |
 | `folder_creation_enabled` | true or false |  |
 | `hidden_files_toggle_enabled` | true or false |  |
@@ -64,7 +64,7 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `option_count` | integer >= 0 | error below |
 | `overwrite_warning_enabled` | true or false |  |
 | `recent_list_enabled` | true or false |  |
-| `root_subfolder` | quoted string |  |
+| `root_subfolder` | quoted string, or the &"…" StringName jacket |  |
 | `show_hidden_files` | true or false |  |
 | `use_native_dialog` | true or false |  |
 

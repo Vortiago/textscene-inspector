@@ -35,7 +35,7 @@ mesh = SubResource("1_mesh")
 
   it('errors when the mesh reference does not resolve', () => {
     expectDiagnostic(scene(node('CPUParticles3D', { mesh: 'SubResource("9_missing")' })), {
-      ruleName: 'valid-cpuparticles3d-resources',
+      ruleName: 'dangling-resource-reference',
       severity: 'error',
       nodeType: 'CPUParticles3D',
     });
@@ -50,6 +50,6 @@ mesh = SubResource("1_mesh")
   it('leaves other node types alone', () => {
     const content = scene(node('Node3D', {}));
     expectNoDiagnostic(content, { ruleName: 'cpuparticles3d-requires-mesh' });
-    expectNoDiagnostic(content, { ruleName: 'valid-cpuparticles3d-resources' });
+    expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
   });
 });

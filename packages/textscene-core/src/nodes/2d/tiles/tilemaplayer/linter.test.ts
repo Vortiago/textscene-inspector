@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { lint, expectDiagnostic } from '../../../../linter/testing/testkit';
+import './linterParser';
 import './linter';
 
 const VALID_DATA = 'PackedByteArray("AAAJAAsAAgABAAAABQA=")';
@@ -51,7 +52,7 @@ describe('TileMapLayer lint rules', () => {
   it('errors when the tile_set reference cannot be resolved (dangling id)', () => {
     expectDiagnostic(
       scene(`tile_set = SubResource("TileSet_gone")\ntile_map_data = ${VALID_DATA}`),
-      { ruleName: 'valid-tilemaplayer-resources', severity: 'error' }
+      { ruleName: 'dangling-resource-reference', severity: 'error' }
     );
   });
 

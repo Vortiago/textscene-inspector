@@ -349,15 +349,21 @@ export interface PropertyValidationOptions {
 export function runResourcePropertyValidation(
   resourceType: string,
   cases: PropertyCase[],
-  options: { acceptMode?: AcceptMode } = {}
+  options: {
+    acceptMode?: AcceptMode;
+    /** Blocks placed before the resource in every scene — the resources its reference cases name. */
+    prefix?: string[];
+  } = {}
 ): void {
   const root = node('Node3D', {}, { name: 'Root' });
+  const prefix = options.prefix ?? [];
   for (const propCase of cases) {
     const mode = propCase.acceptMode ?? options.acceptMode ?? 'clean';
     describe(`${resourceType}.${propCase.prop} validation`, () => {
       for (const value of propCase.valid ?? []) {
         it(`accepts ${renderValue(value)}`, () => {
           const content = scene(
+            ...prefix,
             subResource(resourceType, { ...propCase.with, [propCase.prop]: value }),
             root
           );
@@ -367,7 +373,7 @@ export function runResourcePropertyValidation(
       }
       for (const invalid of propCase.invalid ?? []) {
         it(`rejects ${renderValue(invalid.value)}`, () => {
-          const content = scene(subResource(resourceType, { [propCase.prop]: invalid.value }), root);
+          const content = scene(...prefix, subResource(resourceType, { [propCase.prop]: invalid.value }), root);
           expectInvalidCase(content, propCase.prop, invalid);
         });
       }

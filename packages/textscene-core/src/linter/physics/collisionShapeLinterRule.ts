@@ -43,7 +43,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<
     | 'requiresShape'
-    | 'danglingShape'
     | 'invalidParent'
     | 'noParent'
     | 'unusedOneWayMargin'
@@ -58,15 +57,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       severity: 'warning',
       ruleName: `${prefix}-requires-shape`,
       grounding: configWarning,
-    },
-    danglingShape: {
-      severity: 'error',
-      ruleName: `valid-${prefix}-resources`,
-      grounding: {
-        kind: 'no-engine-counterpart',
-        scope: 'dangling-reference',
-        because: 'the shape id is not declared anywhere in this file',
-      },
     },
     invalidParent: {
       severity: 'warning',
@@ -145,10 +135,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
 
     if (shape.kind === 'empty') {
       report(arms.requiresShape, `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`);
-    } else if (shape.kind === 'dangling') {
-      // Only a well-formed reference can be missing. A `not-a-reference` value
-      // names no id, and its format is the strict parser's diagnostic.
-      report(arms.danglingShape, `Shape resource not found: ${rawProps.shape}. The referenced shape resource must exist in the scene.`);
     }
 
     // WARNING: Check if parent is a valid physics body type. Through the

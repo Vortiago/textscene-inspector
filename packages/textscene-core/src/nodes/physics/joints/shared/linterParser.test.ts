@@ -40,9 +40,11 @@ describe('Joint shared validators', () => {
     expect(priority('solver_priority', '9', 1)).not.toBeNull();
   });
 
-  it.each(['node_a', 'node_b'])('takes a NodePath for %s and rejects a bare string', (key) => {
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it.each(['node_a', 'node_b'])('takes a NodePath or a bare string for %s and rejects a StringName', (key) => {
     const validator = validatorRegistry.findValidator('Joint3D', key)!;
     expect(validator(key, 'NodePath("../BodyA")', 1)).toBeNull();
-    expect(validator(key, '"../BodyA"', 1)).not.toBeNull();
+    expect(validator(key, '"../BodyA"', 1)).toBeNull();
+    expect(validator(key, '&"../BodyA"', 1)).not.toBeNull();
   });
 });

@@ -229,6 +229,12 @@ export const vectorCombinators = {
           belowMin ? minSeverity : maxSeverity
         );
       }
+      // After the bounds so an enforced bound is never masked: the converted
+      // spelling's fractional component is stored truncated
+      // (variant_parser.cpp:721-723), the warning `floatTupleValidator` draws.
+      if (isConvertedSpelling('Vector3', compositeTypeName(value))) {
+        return truncatedComponent(name, key, line, captures, valueCode(name));
+      }
       return null;
     }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts, { min, max });
   },

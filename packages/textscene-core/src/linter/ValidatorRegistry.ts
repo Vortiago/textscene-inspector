@@ -5,20 +5,18 @@
  * resolves TO live beside it — `propertyValidator.ts` (what a validator is and
  * declares), `wildcardIndex.ts` (the two wildcard key shapes Godot writes) and
  * `unavailableKey.ts` (a key a type takes away from its base). All three are
- * re-exported here, so no importer moves.
+ * re-exported here, so no importer moves. The resolution walk lives in
+ * `validatorResolution.ts` and the removal rules in `removalKeys.ts`; this file
+ * is the storage and the public surface.
  */
 
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
 import type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
-import {
-  buildWildcardIndex,
-  matchesIndexedKey,
-  matchesIndexedSubtree,
-  matchesTerminalIndex,
-  type WildcardEntry,
-} from './wildcardIndex.js';
-import { unavailableValidator, type Removal } from './unavailableKey.js';
+import { buildWildcardIndex, type WildcardEntry } from './wildcardIndex.js';
+import type { Removal } from './unavailableKey.js';
+import { resolveDeclaration, type RegistryTables } from './validatorResolution.js';
+import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 
 export type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 export type { Removal } from './unavailableKey.js';
@@ -31,6 +29,13 @@ export class ValidatorRegistry {
   private unavailable = new Map<string, Record<string, Removal>>();
   /** Wildcard patterns per type, prefixes pre-sliced. Rebuilt on every registerAll. */
   private wildcards = new Map<string, WildcardEntry[]>();
+  /** The three maps and the base lookup, built once: the walks run per property and allocate nothing. */
+  private readonly tables: RegistryTables = {
+    validators: this.validators,
+    unavailable: this.unavailable,
+    wildcards: this.wildcards,
+    baseOf: (type) => this.baseOf(type),
+  };
 
   /**
    * @param baseTypes - class → base-type map driving the inheritance walk in
@@ -56,6 +61,7 @@ export class ValidatorRegistry {
    * @param validators - Map of property keys to validator functions
    */
   registerAll(nodeType: string, validators: Record<string, PropertyValidator>): void {
+    refuseOverlap(nodeType, Object.keys(validators), this.unavailable, 'removes');
     if (!this.validators.has(nodeType)) {
       this.validators.set(nodeType, {});
     }
@@ -65,37 +71,16 @@ export class ValidatorRegistry {
   }
 
   /**
-   * Declare that `nodeType` REMOVES properties its base chain declares.
-   *
-   * The base-walk can only ever widen what a leaf accepts, so a class that
-   * takes strictly less than its parent cannot be expressed by registering a
-   * validator: whatever it registers still reads as "this key is allowed here".
-   * `HBoxContainer` inherits `vertical` from `BoxContainer` and then fixes the
-   * orientation, so `set_vertical` is `ERR_FAIL_COND_MSG(is_fixed, …)` AND
-   * `_validate_property` clears the key to `PROPERTY_USAGE_NONE`.
-   *
-   * The setter guard is what makes it a removal. `_validate_property` alone is
-   * not: it hides a key from the inspector and the saver while the setter still
-   * accepts the write, so the value is inert rather than invalid and the key
-   * stays inherited. `SpinBox.exp_edit` (spin_box.cpp:648, against
-   * `Range::set_exp_ratio`'s unconditional assign at range.cpp:433) and
-   * `FileDialog.dialog_text` are both that second shape, and neither is
-   * registered as a removal.
-   *
-   * Modelling it as removal rather than as a rejecting validator is what lets
-   * `getOwnKeys` leave the key out (it is not a declaration), the generated
-   * sheet render it as unavailable rather than listing a forbidden key under
-   * "Accepts", and the shadow guard stop carrying allowlist entries for what is
-   * not a shadow.
+   * Declare that `nodeType` REMOVES properties its base chain declares — see
+   * `removalKeys.ts` for what makes a key a removal rather than an inert one.
    *
    * @param nodeType - the concrete type that cannot carry the properties.
-   * @param removals - property key → `{ reason, cite }`. A removal rejects every
-   *   value of a key a scene may legitimately contain, so it makes the same kind
-   *   of claim a bound does and carries the same kind of citation (ADR-0032).
-   *   `reason` is phrased for a scene author and used verbatim in the diagnostic;
-   *   `cite` is the `file:line` of the guard that refuses the write.
+   * @param removals - property key → `{ reason, cite }`; `reason` is used
+   *   verbatim in the diagnostic, `cite` is the `file:line` of the guard that
+   *   refuses the write (ADR-0032).
    */
   registerUnavailable(nodeType: string, removals: Record<string, Removal>): void {
+    refuseOverlap(nodeType, Object.keys(removals), this.validators, 'declares');
     if (!this.unavailable.has(nodeType)) {
       this.unavailable.set(nodeType, {});
     }
@@ -131,65 +116,20 @@ export class ValidatorRegistry {
    * declares it, but a NEARER type re-declaring the key takes it back.
    */
   getUnavailableKeys(nodeType: string): string[] {
-    const keys = new Set<string>();
-    const reDeclared = new Set<string>();
-    const visited = new Set<string>();
-    let type: string | undefined = nodeType;
-    while (type && !visited.has(type)) {
-      visited.add(type);
-      for (const key of Object.keys(this.unavailable.get(type) ?? {})) {
-        if (!reDeclared.has(key)) keys.add(key);
-      }
-      // Added after this hop's removals, so a type that both removes and
-      // declares a key still reports it removed, as findValidator does.
-      for (const key of Object.keys(this.validators.get(type) ?? {})) reDeclared.add(key);
-      type = this.baseOf(type);
-    }
-    return [...keys];
+    return unavailableKeysOf(this.tables, nodeType);
   }
 
   /**
-   * Find a validator for a property, walking the node's base-class chain.
+   * The validator for a property, the owner type first and then each base in
+   * turn (`validatorResolution.ts`).
    *
-   * The owner type is consulted first (exact match, then `*` wildcards), then
-   * each base type in turn (Node3D/Node2D/Control → Node), so a subclass that
-   * registers no validator of its own still inherits its base's — the subclass
-   * always wins on a key both define. Supports wildcard patterns at every level
-   * (e.g. "surface_material_override/*", "theme_override_colors/*").
-   *
-   * @param nodeType - TSCN node type
-   * @param propertyKey - Property key to validate
    * @returns Something to CALL, or null if neither the type nor its bases match.
    *   Deliberately untagged: see {@link ValidatorFn}. A caller introspecting a
    *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
   declarationFor(nodeType: string, propertyKey: string): PropertyValidator | null {
-    // A hop counter, not a visited Set: this runs for every property of every
-    // node, and the Set was an allocation on every call including every miss.
-    // The table is derived from ClassDB ancestry, so it is acyclic by
-    // construction; the bound only stops a malformed hand-built registry from
-    // spinning, which is what the Set was really guarding.
-    let type: string | undefined = nodeType;
-    for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-
-      // Removals and validators resolve in ONE walk: this is the hottest path
-      // in the linter, reached for every property of every node.
-      const removals = this.unavailable.get(type);
-      const removal =
-        removals && Object.prototype.hasOwnProperty.call(removals, propertyKey)
-          ? removals[propertyKey]
-          : undefined;
-      if (removal !== undefined) return unavailableValidator(nodeType, removal);
-
-      // Checked after the removal at the SAME hop, and before moving up: a
-      // removal is not inherited past a descendant that re-declares the key.
-      const validator = this.findOwnValidator(type, propertyKey);
-      if (validator) return validator;
-
-      type = this.baseOf(type);
+      return resolveDeclaration(this.tables, nodeType, propertyKey);
     }
-    return null;
-  }
 
   /**
    * The same resolution, as something to CALL.
@@ -204,57 +144,6 @@ export class ValidatorRegistry {
    */
   findValidator(nodeType: string, propertyKey: string): ValidatorFn | null {
     return this.declarationFor(nodeType, propertyKey);
-  }
-
-  /**
-   * Exact-then-wildcard lookup among a single type's own validators.
-   *
-   * Four wildcard shapes, spelled out in `wildcardIndex.ts`. Which one a
-   * registration is is settled at registration time and read here as
-   * `entry.kind`, so a miss walks a short array and allocates nothing.
-   */
-  private findOwnValidator(nodeType: string, propertyKey: string): PropertyValidator | null {
-    const nodeValidators = this.validators.get(nodeType);
-    if (!nodeValidators) {
-      return null;
-    }
-
-    // Exact match first. `hasOwnProperty`, not a bare index: a node carrying
-    // `toString = 5` would otherwise resolve `Object.prototype.toString`, which
-    // is truthy, and the caller would push its return value into the diagnostic
-    // list in place of a ParseError.
-    if (Object.prototype.hasOwnProperty.call(nodeValidators, propertyKey)) {
-      const exact = nodeValidators[propertyKey];
-      if (exact) return exact;
-    }
-
-    // Then the wildcards, over a list that holds ONLY wildcards with their
-    // prefixes already sliced, so a miss walks a short array and allocates
-    // nothing.
-    const wildcards = this.wildcards.get(nodeType);
-    if (wildcards === undefined) return null;
-    for (const entry of wildcards) {
-      let matches: boolean;
-      switch (entry.kind) {
-        case 'path':
-          matches = propertyKey.startsWith(entry.prefix);
-          break;
-        case 'indexedLeaf':
-          matches = matchesIndexedKey(propertyKey, entry.prefix);
-          break;
-        case 'indexedSubtree':
-          matches = matchesIndexedSubtree(propertyKey, entry.prefix);
-          break;
-        // Named rather than defaulted, so a fifth `WildcardKind` fails to
-        // compile here instead of silently inheriting terminal-index matching.
-        case 'indexedTerminal':
-          matches = matchesTerminalIndex(propertyKey, entry.prefix);
-          break;
-      }
-      if (matches) return entry.validator;
-    }
-
-    return null;
   }
 
   /**

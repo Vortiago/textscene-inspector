@@ -9,8 +9,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import './linterParser';
 
+/** Phase-1 errors only: the references below are format cases, and a declared id is not the question. */
 function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
+  return diagnostics.filter((d) => d.severity === 'error' && d.ruleName === 'strict-parser');
 }
 
 describe('Line2D strict validators', () => {
@@ -89,7 +90,7 @@ end_cap_mode = 2
   });
 
   describe.each(['gradient', 'texture', 'width_curve'] as const)('%s resource reference spellings', (prop) => {
-    it(`accepts SubResource(id) (RESOURCE_REF_RE, godot/variantParser.ts)`, () => {
+    it(`accepts SubResource(id) (resourceRef, godot/resourceRef.ts)`, () => {
       const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource("7")\n`;
       expect(errorsOf(linter.lint(content))).toEqual([]);
     });

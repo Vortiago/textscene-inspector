@@ -3,7 +3,8 @@
  * unique name addresses.
  *
  * `_acquire_unique_name_in_owner` (node.cpp:2222) registers `"%" + name` on the
- * node's OWNER, which for a `.tscn` is the scene root, and refuses to overwrite
+ * node's OWNER — the scene root for every heading this file declares, the
+ * sub-scene root for an override inside instanced content — and refuses to overwrite
  * an existing entry (node.cpp:2225-2231): the first claimant keeps the name and
  * the later one has its flag cleared. So the claim table is exactly the nodes in
  * this file carrying the flag, first one wins, and a `%Name` with no claimant
@@ -48,32 +49,107 @@ export function isUniqueNameInOwner(node: TscnNode): boolean {
 }
 
 /**
- * Every `%Name` claimed in `roots`, depth-first, keyed with the prefix already on.
+ * What one walk over `roots` learns about ownership — the claim table this
+ * root holds, plus the two things a per-owner table over composed instanced
+ * content is built from.
+ */
+export interface UniqueNameOwnership {
+  /** `%Name` → claim, for the nodes this file's root owns. */
+  readonly claims: ReadonlyMap<string, UniqueNameClaim>;
+  /**
+   * Claims on override headings inside instanced content, keyed by the live
+   * path of the instance node whose sub-scene root owns them, in file order.
+   */
+  readonly instanceClaims: ReadonlyMap<string, readonly UniqueNameClaim[]>;
+  /** Live paths of nodes this root owns that sit inside instanced content. */
+  readonly ownedInsideInstances: ReadonlySet<string>;
+}
+
+/**
+ * Every `%Name` claimed in `roots`, depth-first, keyed with the prefix already on,
+ * with the ownership facts the same walk decides.
  *
  * Paths are joined the way the walks over the same tree spell them, so a caller can
  * look the result straight up in its `nodeByPath` map — `path` for a walk over the
  * authored tree, `livePath` for one over the composed render tree.
  */
-export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
+export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwnership {
   const claims = new Map<string, UniqueNameClaim>();
+  const instanceClaims = new Map<string, UniqueNameClaim[]>();
+  const ownedInsideInstances = new Set<string>();
   const join = (parent: string, segment: string): string =>
     parent ? `${parent}/${segment}` : segment;
   // Two accumulators, because the two paths diverge at a node whose `parent=`
   // descends into instanced content and never re-converge below it. Only that
   // node carries the marker — `buildSceneTree` registers it at its authored path
   // so its own descendants resolve normally — so folding it once is exact.
-  const walk = (nodes: readonly TscnNode[], parentPath: string, parentLive: string): void => {
+  // `instanceOwner`: the live path of the nearest ancestor below the root that
+  // is an `instance=` heading in THIS file, or null. A heading under it with
+  // neither `type=` nor `instance=` overrides a node the sub-scene already
+  // owns, and resource_format_text.cpp:264-265 leaves that owner alone
+  // (`owner = 0` only when `!(type == TYPE_INSTANTIATED && instance == -1)`),
+  // so its `%Name` lands on the sub-scene root's table (node.cpp:2222-2233),
+  // which `get_node` from this scene never consults (node.cpp:1930-1938); it
+  // is recorded under that instance for the owner's table to pick up. An
+  // added node there is owned by this root as usual. An instanced ROOT is this
+  // scene's own root, so its overrides stay claimed. A heading carries no
+  // `owner=` here — neither parser keeps it — and an instance the sub-scene
+  // itself contains is invisible, so an override of a node below one is
+  // recorded one owner too high, under the instance this file declares.
+  const walk = (
+    nodes: readonly TscnNode[],
+    parentPath: string,
+    parentLive: string,
+    instanceOwner: string | null
+  ): void => {
     for (const node of nodes) {
       const path = join(parentPath, node.name);
       const under = node.instanceSubPath ? join(parentLive, node.instanceSubPath) : parentLive;
       const livePath = join(under, node.name);
       const key = UNIQUE_NODE_PREFIX + node.name;
-      if (isUniqueNameInOwner(node) && !claims.has(key)) claims.set(key, { node, path, livePath });
-      walk(node.children, path, livePath);
+      const ownedHere = !(instanceOwner !== null && node.overridesExistingNode === true);
+      if (ownedHere && instanceOwner !== null) ownedInsideInstances.add(livePath);
+      if (isUniqueNameInOwner(node)) {
+        if (!ownedHere) {
+          const owned = instanceClaims.get(instanceOwner!) ?? [];
+          owned.push({ node, path, livePath });
+          instanceClaims.set(instanceOwner!, owned);
+        } else if (!claims.has(key)) {
+          claims.set(key, { node, path, livePath });
+        }
+      }
+      const owner = parentPath !== '' && node.instance ? livePath : instanceOwner;
+      walk(node.children, path, livePath, owner);
     }
   };
-  walk(roots, '', '');
-  return claims;
+  walk(roots, '', '', null);
+  return { claims, instanceClaims, ownedInsideInstances };
+}
+
+/** The claim table alone — see {@link uniqueNameOwnership}. */
+export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
+  return uniqueNameOwnership(roots).claims as Map<string, UniqueNameClaim>;
+}
+
+/**
+ * {@link uniqueNameOwnership} built once per tree and shared by every caller
+ * holding the same `roots` array — the linter's NodePath walk and each render
+ * consumer alike. Keyed on the array a parse produces, so a re-parse misses and
+ * an entry dies with its tree.
+ */
+const ownershipCache = new WeakMap<readonly TscnNode[], UniqueNameOwnership>();
+
+export function cachedUniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwnership {
+  let ownership = ownershipCache.get(roots);
+  if (!ownership) {
+    ownership = uniqueNameOwnership(roots);
+    ownershipCache.set(roots, ownership);
+  }
+  return ownership;
+}
+
+export function cachedUniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
+  return cachedUniqueNameOwnership(roots).claims as Map<string, UniqueNameClaim>;
 }
 
 /**

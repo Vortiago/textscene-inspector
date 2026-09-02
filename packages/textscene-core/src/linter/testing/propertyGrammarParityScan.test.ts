@@ -8,8 +8,9 @@
  * linter-only on each descendant — a validator desync where the parser is fine.
  */
 
-import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { baseChain, NODE_BASE_TYPES } from '../../godot/nodeBaseTypes.js';
 import { walk } from './ruleNameScrape.js';
@@ -19,6 +20,7 @@ import {
   findLinterParserDirs,
   findSliceDirs,
   nodesRoot,
+  scrapeParserReads,
 } from './propertyGrammarParityScan.js';
 
 /** The node type each `linterParser.ts` speaks for, keyed by its directory. */
@@ -84,5 +86,75 @@ describe('base-parser lookup', () => {
       (base) => base !== 'Node' && NODE_BASE_TYPES[base] === undefined
     );
     expect(unknown).toEqual([]);
+  });
+});
+
+describe('scrapeParserReads', () => {
+  // A seeded tree, so the follow rule is pinned on its own shape rather than
+  // on which helpers the real parsers happen to delegate to today.
+  const root = mkdtempSync(join(tmpdir(), 'parity-scan-'));
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  const seed = (files: Record<string, string>): string => {
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    }
+    return join(root, 'slice/parser.ts');
+  };
+
+  it('follows a relative import handed the whole property bag, in any argument position', () => {
+    const parser = seed({
+      'slice/parser.ts': [
+        "import { parseHelperBase } from '../shared/helper';",
+        "import { parseNode } from '../node/parser.js';",
+        'export const parse = (heading, properties) => ({',
+        '  ...parseNode(heading, properties),',
+        "  ...parseHelperBase(properties, 'Slice'),",
+        '  own: properties.own_key,',
+        '});',
+      ].join('\n'),
+      'shared/helper.ts': [
+        "import { parseDeeper } from './deeper.js';",
+        'export const parseHelperBase = (properties) => ({',
+        '  helper: properties.helper_key, ...parseDeeper(properties) });',
+      ].join('\n'),
+      'shared/deeper.ts': "export const parseDeeper = (properties) => ({ deep: properties.deep_key });",
+      'node/parser.ts': "export const parseNode = (heading, properties) => ({ base: properties.base_key });",
+    });
+    expect([...scrapeParserReads(parser)].sort()).toEqual([
+      'base_key',
+      'deep_key',
+      'helper_key',
+      'own_key',
+    ]);
+  });
+
+  it('ignores an imported name that is never called with the bag, and a bare specifier', () => {
+    const parser = seed({
+      'slice/parser.ts': [
+        "import { floatOr } from '../shared/values';",
+        "import { parseFromPackage } from 'some-package';",
+        'export const parse = (heading, properties) => ({',
+        '  a: floatOr(properties.a, 0), b: parseFromPackage(properties) });',
+      ].join('\n'),
+      'shared/values.ts': 'export const floatOr = (text, fallback) => text ?? fallback; // properties.never',
+    });
+    expect([...scrapeParserReads(parser)].sort()).toEqual(['a']);
+  });
+
+  it('terminates on an import cycle', () => {
+    const parser = seed({
+      'slice/parser.ts': "import { parseB } from './b'; export const parseA = (properties) => parseB(properties) ?? properties.a;",
+      'slice/b.ts': "import { parseA } from './parser'; export const parseB = (properties) => parseA(properties) ?? properties.b;",
+    });
+    expect([...scrapeParserReads(parser)].sort()).toEqual(['a', 'b']);
+  });
+
+  it('throws on a followed import that resolves to no file', () => {
+    const parser = seed({
+      'slice/parser.ts': "import { parseGone } from './gone'; export const p = (properties) => parseGone(properties);",
+    });
+    expect(() => scrapeParserReads(parser)).toThrow(/gone/);
   });
 });

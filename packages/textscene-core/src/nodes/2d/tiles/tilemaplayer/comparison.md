@@ -57,7 +57,6 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | warning |
-|  | `valid-tilemaplayer-resources` | error |
 |  | `tilemaplayer-invalid-tile-data` | error |
 <!-- lint:end -->
 

@@ -6,7 +6,7 @@
  * (AnimationNodeBlendTree / AnimationNodeStateMachine) for blended playback.
  */
 
-import type { Node3DProperties } from '../../base/node3d/types';
+import type { NodeProperties } from '../../node/types';
 
 /** Godot AnimationTree::AnimationProcessCallback */
 export enum AnimationTreeProcessMode {
@@ -28,7 +28,7 @@ export enum CallbackModeDiscrete {
   FORCE_CONTINUOUS = 2,
 }
 
-export interface AnimationTreeProperties extends Node3DProperties {
+export interface AnimationTreeProperties extends NodeProperties {
   /** SubResource/ExtResource reference to the animation tree root node. */
   tree_root?: string;
 

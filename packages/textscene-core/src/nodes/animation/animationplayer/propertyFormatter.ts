@@ -4,7 +4,6 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { AnimationProcessMode, type AnimationPlayerProperties, MethodCallMode } from './types';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
 export function formatAnimationPlayerProperties(
   properties: AnimationPlayerProperties
@@ -44,8 +43,6 @@ export function formatAnimationPlayerProperties(
       items: [{ label: 'Count', value: '0 — no libraries defined' }],
     });
   }
-
-  sections.push(...formatNode3DProperties(properties));
 
   return sections;
 }

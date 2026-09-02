@@ -53,8 +53,7 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-missing-stream-resource` | error |
-|  | `audiostreamplayer2d-autoplay-without-stream` | warning |
+| `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-autoplay-without-stream` | warning |
 <!-- lint:end -->
 
 Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the

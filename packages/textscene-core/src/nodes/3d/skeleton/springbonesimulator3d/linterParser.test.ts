@@ -31,9 +31,8 @@ function check(property: string, value: string) {
 
 /**
  * Every key SpringBoneSimulator3D registers of its own. `settings/*` is the
- * PLAIN wildcard rather than `settings/#/*`: the family nests
- * (`end_bone/direction`, `joints/<j>/radius`), and `matchesIndexedKey` routes a
- * single leaf segment only.
+ * PLAIN wildcard: the family nests (`end_bone/direction`, `joints/<j>/radius`)
+ * and its own dispatcher reads that depth.
  */
 const KEYS: string[] = ['external_force', 'mutable_bone_axes', 'setting_count', 'settings/*'];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
@@ -375,8 +374,10 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/0/exclude_collisions/2', 'NodePath("")')).toBeNull();
     });
 
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
     it('rejects a non-NodePath', () => {
-      expect(check('settings/0/collisions/0', '"Sphere"')?.severity).toBe('error');
+      expect(check('settings/0/collisions/0', '"Sphere"')).toBeNull();
+      expect(check('settings/0/collisions/0', '&"Sphere"')?.severity).toBe('error');
     });
 
     it('ignores whatever follows a collision index', () => {
@@ -384,7 +385,10 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // then hand the value straight to the setter.
       expect(check('settings/0/collisions/0/extra', 'NodePath("Sphere")')).toBeNull();
       expect(check('settings/0/exclude_collisions/0/extra', 'NodePath("Sphere")')).toBeNull();
-      expect(check('settings/0/collisions/0/extra', '"Sphere"')?.severity).toBe('error');
+      // The value is judged as on the bare key: STRING converts strictly to
+      // NODE_PATH (variant.cpp:746-749), STRING_NAME does not.
+      expect(check('settings/0/collisions/0/extra', '"Sphere"')).toBeNull();
+      expect(check('settings/0/collisions/0/extra', '&"Sphere"')?.severity).toBe('error');
     });
 
     it('claims no floor on either count, since neither setter guards one', () => {

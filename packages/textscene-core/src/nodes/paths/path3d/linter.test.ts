@@ -164,9 +164,9 @@ debug_custom_color = Color(0, 0, 0, 1)
 
       it('should detect non-existent curve resource', () => {
         expectDiagnostic(scene(node('Path3D', { curve: 'SubResource("nonexistent_curve")' })), {
-          ruleName: 'valid-path3d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
-          contains: ['Curve resource not found'],
+          contains: ["'curve'"],
         });
       });
 
@@ -208,7 +208,7 @@ curve = ExtResource("curve_ext")
       // Path3D1: should have curve resource not found error
       const curveError = diagnostics.find(d =>
         d.nodeName === 'Path3D1' &&
-        d.message.includes('Curve resource not found')
+        d.message.includes("'curve'")
       );
       expect(curveError).toBeDefined();
       expect(curveError?.severity).toBe('error');
@@ -337,7 +337,7 @@ curve = SubResource("nonexistent")
       // InvalidPath should have resource not found error
       const resourceError = diagnostics.find(d =>
         d.nodeName === 'InvalidPath' &&
-        d.message.includes('Curve resource not found')
+        d.message.includes("'curve'")
       );
       expect(resourceError).toBeDefined();
     });

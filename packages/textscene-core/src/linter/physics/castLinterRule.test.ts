@@ -107,7 +107,7 @@ describe('the shape-only checks', () => {
 
   it.each(['ShapeCast2D', 'ShapeCast3D'])('errors when %s names a shape the scene lacks', (type) => {
     expectDiagnostic(scene(node(type, { ...LIVE, shape: 'SubResource("nope")' })), {
-      ruleName: `${type.toLowerCase()}-unresolved-shape`,
+      ruleName: 'dangling-resource-reference',
       severity: 'error',
     });
   });
@@ -149,13 +149,11 @@ describe('the shape-only checks', () => {
       'shapecast2d-no-collide-target',
       'shapecast2d-zero-mask',
       'shapecast2d-missing-shape',
-      'shapecast2d-unresolved-shape',
     ]);
     expect(emittedBy('ShapeCast3D')).toEqual([
       'shapecast3d-no-collide-target',
       'shapecast3d-zero-mask',
       'shapecast3d-missing-shape',
-      'shapecast3d-unresolved-shape',
       'shapecast3d-concave-shape',
     ]);
   });

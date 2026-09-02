@@ -79,15 +79,25 @@ describe('parseSprite3D properties', () => {
     expect(props.frame).toBe(5);
   });
 
+  // Under a grid that holds it: `set_frame_coords` ERR_FAIL_INDEXes each
+  // component against hframes/vframes (sprite_3d.cpp:894-895), so the same
+  // pair on the default 1x1 grid is refused and the sprite stays on frame 0.
   it('parses frame_coords as Vector2i', () => {
-    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(2, 1)' });
+    const props = parseSprite3D(HEADING, { hframes: '4', vframes: '2', frame_coords: 'Vector2i(2, 1)' });
     expect(props.frame_coords).toEqual({ x: 2, y: 1 });
+    expect(props.frame).toBe(6);
+  });
+
+  it('holds frame 0 when frame_coords is refused against the 1x1 grid', () => {
+    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(2, 1)' });
+    expect(props.frame_coords).toEqual({ x: 0, y: 0 });
+    expect(props.frame).toBe(0);
   });
 
   it('truncates a float frame_coords the way the INT conversion does', () => {
     // `_parse_construct<int32_t>` (variant_parser.cpp:552-596) takes any number
     // token, so Godot loads this as frame (1, 2) and so must the previewer.
-    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(1.5, 2.5)' });
+    const props = parseSprite3D(HEADING, { hframes: '2', vframes: '3', frame_coords: 'Vector2i(1.5, 2.5)' });
     expect(props.frame_coords).toEqual({ x: 1, y: 2 });
   });
 
@@ -127,5 +137,24 @@ describe('parseSprite3D properties', () => {
     });
     expect(props.transform).toBeDefined();
     expect(props.transform!.origin).toEqual({ x: 5, y: 0, z: -3 });
+  });
+});
+
+describe('frame replayed in file order (sprite_3d.cpp:938)', () => {
+  // Properties apply in the order the file lists them (packed_scene.cpp:369-492).
+  // `set_hframes` with `vframes > 1` re-maps a frame that already landed onto the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body holds frame 2, and draws it.
+  it('draws the re-mapped frame when hframes is written below frame', () => {
+    const props = parseSprite3D(HEADING, { vframes: '2', frame: '1', hframes: '2' });
+    expect(props.frame).toBe(2);
+  });
+
+  it('draws frame 0 when the frame write was refused against the 1x1 grid still in effect', () => {
+    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines ABOVE
+    // set — none — so `frame = 7` is refused and the later hframes finds 0.
+    const props = parseSprite3D(HEADING, { frame: '7', hframes: '2' });
+    expect(props.frame).toBe(0);
+    expect(props.hframes).toBe(2);
   });
 });

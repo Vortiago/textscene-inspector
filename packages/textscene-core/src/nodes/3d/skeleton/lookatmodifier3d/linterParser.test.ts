@@ -134,8 +134,10 @@ describe('LookAtModifier3D strict validators', () => {
       expect(check(property, 'NodePath("")')).toBeNull();
     });
 
-    it.each(['target_node', 'origin_external_node'])('rejects a bare path on %s', (property) => {
-      expect(check(property, '"../Target"')?.code).toBe(
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    it.each(['target_node', 'origin_external_node'])('rejects a StringName on %s', (property) => {
+      expect(check(property, '"../Target"')).toBeNull();
+      expect(check(property, '&"../Target"')?.code).toBe(
         `INVALID_${property.toUpperCase()}_PATH`
       );
     });

@@ -9,7 +9,7 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, layerBitmask, propertyError, v } from '../../../linter/validators/index.js';
-import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, RESOURCE_REF_RE } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, resourceRef } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
@@ -93,7 +93,7 @@ const bakedMeshesValidator: PropertyValidator = accepts((key, value, line) => {
   const body = match[1]!.trim();
   if (body === '') return null;
   for (const entry of dropTrailingComma(splitTopLevel(body))) {
-    if (!RESOURCE_REF_RE.test(entry)) {
+    if (resourceRef(entry) === null) {
       return propertyError(
         key,
         line,

@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
 
 /**
@@ -35,15 +35,12 @@ function spriteFramesWhenApplied(
  */
 function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
+  const { node } = context;
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // Check if sprite_frames resource exists (REQUIRED - AnimatedSprite2D is useless without SpriteFrames)
-  const spriteFrames = heldResource(rawProps.sprite_frames);
-  if (spriteFrames === undefined) {
+  if (heldResource(rawProps.sprite_frames) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`,
@@ -51,18 +48,6 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'animatedsprite2d-requires-spriteframes',
     });
-  } else {
-    // sprite_frames is specified - check if it exists
-    const resourceExists = checkResourceExists(scene, spriteFrames);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `SpriteFrames resource not found: ${rawProps.sprite_frames}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-animatedsprite2d-resources',
-      });
-    }
   }
 
   // `set_animation` clears the name and ERR_FAIL_MSGs whenever the SpriteFrames
@@ -119,20 +104,11 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
 const animatedSprite2DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite2d-resources',
-    description: 'Validates AnimatedSprite2D sprite_frames resources and animation references',
+    description: 'Validates AnimatedSprite2D sprite_frames presence and animation references',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
     emits: [
       { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-animatedsprite2d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'animatedsprite2d-animation-no-spriteframes',
         severity: 'error',

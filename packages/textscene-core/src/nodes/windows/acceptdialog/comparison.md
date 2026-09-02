@@ -36,8 +36,8 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | `dialog_autowrap` | true or false |  |
 | `dialog_close_on_escape` | true or false |  |
 | `dialog_hide_on_ok` | true or false |  |
-| `dialog_text` | quoted string |  |
-| `ok_button_text` | quoted string |  |
+| `dialog_text` | quoted string, or the &"…" StringName jacket |  |
+| `ok_button_text` | quoted string, or the &"…" StringName jacket |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

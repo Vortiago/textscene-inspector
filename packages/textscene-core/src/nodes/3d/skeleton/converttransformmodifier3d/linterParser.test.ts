@@ -25,10 +25,9 @@ function check(property: string, value: string) {
  * hand-rolled `settings/<i>/` family from `_get_property_list` (:125-167), which
  * appears in no macro at all.
  *
- * The family registers under the PLAIN `settings/*` wildcard rather than the
- * glued-index `settings/#/*`: eight of its ten leaves are two segments
- * (`apply/transform_mode`), and `ValidatorRegistry.matchesIndexedKey` routes a
- * single leaf segment only.
+ * The family registers under the PLAIN `settings/*` wildcard. Eight of its ten
+ * leaves are two segments (`apply/transform_mode`); the dispatcher, not the
+ * registry's matcher, reads that depth.
  */
 const KEYS: string[] = ['setting_count', 'settings/*'];
 
@@ -167,10 +166,9 @@ describe('ConvertTransformModifier3D strict validators', () => {
 
     it('leaves a BASE leaf under a non-numeric index alone too', () => {
       // The delegation hop must not re-introduce the false positive the direct
-      // path just lost. BoneConstraint3D registers the glued-index
-      // `settings/#/*`, and `matchesIndexedKey` does not route a non-numeric
-      // index, so the hop resolves to nothing and the key is accepted, which is
-      // what Godot does with it.
+      // path just lost. BoneConstraint3D's `settings/#/*` routes the key, and
+      // its `to_int` parse resolves `x` to setting 0 (bone_constraint_3d.cpp:37),
+      // so the write lands and the value is judged as any other.
       expect(check('settings/x/amount', '0.5')).toBeNull();
     });
 

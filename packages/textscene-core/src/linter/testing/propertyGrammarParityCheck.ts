@@ -18,7 +18,7 @@ import {
   findSliceDirs,
   getInheritedParserProps,
   nodesRoot,
-  scrapeParserProps,
+  scrapeParserReads,
 } from './propertyGrammarParityScan.js';
 
 /** Validator keys registered directly for a node type or any of its ancestors. */
@@ -38,7 +38,7 @@ export interface SliceInfo {
   /** Slice directory relative to src/nodes. */
   slice: string;
   nodeType: string;
-  /** Own scraped props + inherited base parser props. */
+  /** Own scraped props, followed helpers included, + inherited base parser props. */
   parserProps: Set<string>;
   /** Own registered keys + inherited base validator keys. */
   validatorKeys: Set<string>;
@@ -54,12 +54,11 @@ export function collectSlices(): SliceInfo[] {
     const nodeType = extractNodeType(linterSrc);
     if (!nodeType) continue; // shared-helper file — no registerAll
 
-    const parserSrc = readFileSync(join(dir, 'parser.ts'), 'utf8');
     cachedSlices.push({
       slice: dir.slice(nodesRoot.length + 1),
       nodeType,
       parserProps: new Set([
-        ...scrapeParserProps(parserSrc),
+        ...scrapeParserReads(join(dir, 'parser.ts')),
         ...getInheritedParserProps(nodeType),
       ]),
       validatorKeys: getFullValidatorKeys(nodeType),
@@ -95,7 +94,6 @@ export function checkParity(): ParityViolation[] {
       // which is what a reader and the census below need.
       for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
       for (const k of e.renderGap ?? []) allowedLinterOnly.add(k);
-      for (const k of e.aliasedRead ?? []) allowedLinterOnly.add(k);
     }
 
     const parserOnlyNotAllowlisted = [...parserProps]

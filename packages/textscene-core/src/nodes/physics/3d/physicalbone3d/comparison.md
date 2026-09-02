@@ -43,7 +43,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin PhysicalBone3D -->
-Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited from PhysicsBody3D, 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
@@ -72,6 +72,8 @@ Strict parsing format-checks these `PhysicalBone3D` properties, plus 6 inherited
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
 | `valid-physicalbone3d-collision-shape` | `physicalbone3d-needs-collision-shape` | warning |
+|  | `physicalbone3d-joint-constraint-without-joint` | error |
+|  | `physicalbone3d-joint-constraint-wrong-joint-type` | error |
 <!-- lint:end -->
 
 PhysicalBone3D has no `parser.ts` of its own: it registers `parseNode3D` directly

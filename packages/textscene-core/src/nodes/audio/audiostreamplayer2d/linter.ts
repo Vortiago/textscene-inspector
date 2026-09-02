@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -38,21 +38,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // default, audio_stream_player_2d.cpp defines no configuration warning, and a
   // script may assign one at runtime.
 
-  // ERROR: stream resource doesn't exist
-  // `heldResource`, not a presence check: `stream = null` and `stream =` are
-  // both empty slots Godot reads as the absent case, and asking `!== undefined`
-  // reported the second on top of the strict parser's own format error.
-  const stream = heldResource(rawProps.stream);
-  if (stream !== undefined && !checkResourceExists(scene, stream)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer2D will not play audio.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer2d-missing-stream-resource',
-    });
-  }
-
   // WARNING: autoplay enabled but no stream set
   if (boolSlotValue(rawProps.autoplay) === true && streamEmpty && !drivenByAnimation) {
     diagnostics.push({
@@ -73,19 +58,10 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
 const audioStreamPlayer2DValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer2d-properties',
-    description: 'Validates AudioStreamPlayer2D property values, resource references, and logical consistency',
+    description: 'Validates AudioStreamPlayer2D property values and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer2D'],
     emits: [
-      {
-        ruleName: 'audiostreamplayer2d-missing-stream-resource',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'audiostreamplayer2d-autoplay-without-stream',
         severity: 'warning',

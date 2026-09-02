@@ -76,7 +76,16 @@ describe('Light3D shared validators', () => {
       expectNoErrors(scene(node('DirectionalLight3D', { light_energy: 0 })));
     });
 
-    runPropertyValidation({ nodeType: 'DirectionalLight3D' }, [
+    runPropertyValidation(
+      {
+        nodeType: 'DirectionalLight3D',
+        // The `light_projector` reference cases name these.
+        prefix: [
+          '[ext_resource type="Texture2D" path="res://projector.png" id="1_a"]',
+          '[sub_resource type="GradientTexture2D" id="Texture_1"]',
+        ],
+      },
+      [
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
         // guards the param INDEX rather than the value, so a negative energy is

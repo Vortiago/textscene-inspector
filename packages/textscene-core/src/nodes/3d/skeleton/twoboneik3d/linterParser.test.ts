@@ -165,7 +165,9 @@ describe('TwoBoneIK3D settings/<i>/ leaves', () => {
   it('takes NodePath literals for the two node references', () => {
     expect(check('settings/0/target_node', 'NodePath("../Target")')).toBeNull();
     expect(check('settings/0/pole_node', 'NodePath("../Pole")')).toBeNull();
-    expect(check('settings/0/target_node', '"../Target"')).not.toBeNull();
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    expect(check('settings/0/target_node', '"../Target"')).toBeNull();
+    expect(check('settings/0/target_node', '&"../Target"')).not.toBeNull();
   });
 
   it('takes quoted strings for the three bone names', () => {

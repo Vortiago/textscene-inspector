@@ -1,6 +1,6 @@
 /** Utilities for manipulating node paths in the scene tree. */
 
-import { NODE_PATH_LITERAL_ANYWHERE_RE } from '../godot/index.js';
+import { nodePathLiteral } from '../godot/variantParser.js';
 import { UNIQUE_NODE_PREFIX } from './uniqueNames.js';
 
 export function joinPath(parentPath: string, childName: string): string {
@@ -87,8 +87,9 @@ export function resolveNodePathLiteral(
  */
 function relativePathText(raw: string | undefined): string | null {
   if (!raw) return null;
-  const match = NODE_PATH_LITERAL_ANYWHERE_RE.exec(raw);
-  const inner = (match?.[1] ?? raw).trim();
+  // Whole property values arrive here; text that is neither spelling is taken
+  // as the path itself.
+  const inner = (nodePathLiteral(raw) ?? raw).trim();
   if (inner === '' || inner === '.') return null;
   if (inner.startsWith('/')) return null;
   return inner;

@@ -16,6 +16,8 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+// The Environment slice's validators: the `sky` slot inside the sub-resource.
+import '../../../resources/environment/index.linter';
 
 describe('WorldEnvironment Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -187,7 +189,7 @@ environment = SubResource("env_1")
 `;
 
         expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
-        expectNoDiagnostic(content, { ruleName: 'valid-worldenvironment-resources' });
+        expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
         const cleared = expectDiagnostic(content, {
           ruleName: 'worldenvironment-requires-environment',
           severity: 'warning',
@@ -203,9 +205,9 @@ environment = SubResource("env_1")
 environment = SubResource("nonexistent_env")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
+            ruleName: 'dangling-resource-reference',
             severity: 'error',
-            contains: ['Environment resource not found'],
+            contains: ["'environment'"],
           }
         );
       });
@@ -234,9 +236,9 @@ sky = SubResource("Sky_missing")
 environment = SubResource("env_1")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
+            ruleName: 'dangling-resource-reference',
             severity: 'error',
-            contains: ['Sky resource not found'],
+            contains: ["'sky'"],
           }
         );
       });
@@ -268,7 +270,7 @@ background_mode = 1
 [node name="WorldEnvironment" type="WorldEnvironment"]
 environment = SubResource("env_1")
 `,
-          { prop: 'Sky resource not found' }
+          { prop: "'sky'" }
         );
       });
     });
@@ -285,9 +287,9 @@ environment = SubResource("env_1")
 camera_attributes = SubResource("nonexistent_cam")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
+            ruleName: 'dangling-resource-reference',
             severity: 'error',
-            contains: ['Camera attributes resource not found'],
+            contains: ["'camera_attributes'"],
           }
         );
       });
@@ -530,12 +532,10 @@ environment = SubResource("env_1")
 `);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      // Should have environment resource not found error
-      const envError = diagnostics.find(d => d.message.includes('Environment resource not found'));
+      const envError = diagnostics.find(d => d.message.includes("'environment'"));
       expect(envError).toBeDefined();
 
-      // Should have camera attributes warning
-      const camWarning = diagnostics.find(d => d.message.includes('Camera attributes resource not found'));
+      const camWarning = diagnostics.find(d => d.message.includes("'camera_attributes'"));
       expect(camWarning).toBeDefined();
 
       // Should have multiple WorldEnvironment warning
@@ -621,7 +621,7 @@ environment =
 environment = SubResource("env_1")
 `;
       expectDiagnostic(content, { ruleName: 'strict-parser', severity: 'error' });
-      expectNoDiagnostic(content, { ruleName: 'valid-worldenvironment-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
       expectDiagnostic(content, {
         ruleName: 'worldenvironment-requires-environment',
@@ -670,7 +670,7 @@ environment = SubResource("nonexistent")
       // Should have resource not found error for InvalidWorldEnv
       const resourceError = diagnostics.find(d =>
         d.nodeName === 'InvalidWorldEnv' &&
-        d.message.includes('Environment resource not found')
+        d.message.includes("'environment'")
       );
       expect(resourceError).toBeDefined();
 

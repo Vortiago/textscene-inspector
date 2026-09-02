@@ -82,6 +82,24 @@ describe('resolveAnimations — value track parsing (B3)', () => {
   });
 });
 
+describe('resolveAnimations — track path spellings', () => {
+  // `tracks/N/path` is a NodePath slot (`Animation::_set` hands it to
+  // `track_set_path`), and `variant.cpp:746-749` lists STRING as a strict
+  // source for NODE_PATH, so the bare string names the same target.
+  it('reads a bare quoted track path as the NodePath spelling', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': '"Circle:rotation"',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]).toMatchObject({ targetPath: 'Circle', property: 'rotation' });
+  });
+});
+
 describe('resolveAnimations — keyframe values (B4)', () => {
   it('decodes Vector3 keyframe values to number triples', () => {
     const internal = [

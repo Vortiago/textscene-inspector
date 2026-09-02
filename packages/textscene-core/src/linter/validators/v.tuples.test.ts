@@ -144,8 +144,10 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
     ).toBeNull();
   });
 
-  it('nodePath rejects a bare quoted path under the property\'s own code', () => {
-    const err = v.nodePath('skeleton')('skeleton', '"../Armature"', 1);
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it('nodePath takes the bare string the slot converts and rejects a StringName under the property\'s own code', () => {
+    expect(v.nodePath('skeleton')('skeleton', '"../Armature"', 1)).toBeNull();
+    const err = v.nodePath('skeleton')('skeleton', '&"../Armature"', 1);
     expect(err!.code).toBe('INVALID_SKELETON_PATH');
   });
 

@@ -164,9 +164,9 @@ pixel_size = 0.01
         severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite3D',
-        ruleName: 'valid-sprite3d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain("'texture'");
     });
 
     it('should pass when texture resource exists', () => {
@@ -470,5 +470,31 @@ describe('Sprite3D grid writes, judged in file order like the 2D twin', () => {
         contains: ['frame_coords.x (3) is out of range', 'hframes=1', 'file order'],
       }
     );
+  });
+});
+
+describe('Sprite3D frame re-mapped by a later hframes write (sprite_3d.cpp:938)', () => {
+  // `set_hframes` with `vframes > 1` keeps the frame's row and column on the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body loads on frame 2, not the authored 1.
+  it('warns that the authored frame is stored as another', () => {
+    expectDiagnostic(scene(node('Sprite3D', { ...withTexture, vframes: 2, frame: 1, hframes: 2 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
+      severity: 'warning',
+      contains: ['Frame 1', 'stored as frame 2'],
+    });
+  });
+
+  it('stays quiet when the grid is written above the frame', () => {
+    expectNoDiagnostic(scene(node('Sprite3D', { ...withTexture, hframes: 2, vframes: 2, frame: 1 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
+    });
+  });
+
+  it('stays quiet when only hframes follows, the row being 0', () => {
+    // vframes is still 1 when hframes lands, so the remap branch is skipped.
+    expectNoDiagnostic(scene(node('Sprite3D', { ...withTexture, frame: 0, hframes: 2 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
+    });
   });
 });

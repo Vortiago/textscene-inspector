@@ -31,6 +31,18 @@ import { parseGodotFloat } from '../godot/number.js';
  */
 export const LEGACY_FORMAT_CEILING = 2;
 
+/**
+ * Whether a declared format is one this linter declines: `1..LEGACY_FORMAT_CEILING`.
+ *
+ * Bounded at BOTH ends. The engine's only comparison is
+ * `if (format_version > FORMAT_VERSION)` (`resource_format_text.cpp:1141`), so
+ * `format=0` and `format=-1` load under the current grammar and are linted
+ * under it; `null` is the absent attribute, which defaults to current (:1147).
+ */
+export function isLegacyFormat(format: number | null): boolean {
+  return format !== null && format >= 1 && format <= LEGACY_FORMAT_CEILING;
+}
+
 /** A header's declared format version, or `null` where it declares none. */
 export interface HeaderFormat {
   /**

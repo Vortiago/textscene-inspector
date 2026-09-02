@@ -6,8 +6,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../../linter/Linter';
 import './linterParser';
 
+/** Phase-1 errors only: the references below are format cases, and a declared id is not the question. */
 function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
-  return diagnostics.filter((d) => d.severity === 'error');
+  return diagnostics.filter((d) => d.severity === 'error' && d.ruleName === 'strict-parser');
 }
 
 function warningsOf(diagnostics: ReturnType<Linter['lint']>) {

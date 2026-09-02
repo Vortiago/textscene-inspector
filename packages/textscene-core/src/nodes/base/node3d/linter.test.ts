@@ -117,7 +117,8 @@ describe('Node3D Linter', () => {
       {
         prop: 'visibility_parent',
         valid: ['NodePath("")'],
-        invalid: [{ value: '"../ParentNode"', contains: ['visibility_parent', 'NodePath'] }],
+        // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+        invalid: [{ value: '&"../ParentNode"', contains: ['visibility_parent', 'NodePath'] }],
       },
     ]);
 

@@ -41,7 +41,7 @@ Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited fro
 | `drag_margin` | integer 0-128 | warning |
 | `tint_color` | Color(r, g, b, a) |  |
 | `tint_color_enabled` | true or false |  |
-| `title` | quoted string |  |
+| `title` | quoted string, or the &"…" StringName jacket |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

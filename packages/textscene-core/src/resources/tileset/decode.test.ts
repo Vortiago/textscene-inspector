@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
 import { tileSetFromScene, tileSetFromTres } from './decode';
+import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
@@ -364,5 +365,15 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
     );
 
     expect(model?.layout).toBe(10);
+  });
+});
+
+describe('a Godot-3 texture_offset', () => {
+  it('reaches textureOrigin once the scan has renamed it (tile_set.cpp:6701-6704)', () => {
+    const scene = new TscnParser().parse(
+      '[gd_scene format=3]\n\n[sub_resource type="TileSetAtlasSource" id="a"]\n0:0/0 = 0\n0:0/0/texture_offset = Vector2i(3, 4)\n\n[sub_resource type="TileSet" id="ts"]\nsources/0 = SubResource("a")\n\n[node name="R" type="Node"]\n'
+    );
+    const model = tileSetFromScene('SubResource("ts")', scene.internalResources, []);
+    expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 3, y: 4 });
   });
 });

@@ -190,8 +190,10 @@ describe('SkeletonIK3D.target_node', () => {
     expect(check('target_node', 'NodePath("")')).toBeNull();
   });
 
-  it('rejects a bare quoted string', () => {
-    expect(check('target_node', '"../Target"')).not.toBeNull();
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it('takes the bare string the slot converts and rejects a StringName', () => {
+    expect(check('target_node', '"../Target"')).toBeNull();
+    expect(check('target_node', '&"../Target"')).not.toBeNull();
   });
 });
 

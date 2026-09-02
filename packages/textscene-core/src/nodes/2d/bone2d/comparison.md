@@ -53,7 +53,6 @@ Strict parsing format-checks these `Bone2D` properties, plus 12 inherited from N
 | --- | --- | --- |
 | `auto_calculate_length_and_angle` | true or false |  |
 | `bone_angle` | float -360-360 | warning |
-| `default_length` | float 1-1024 | warning |
 | `editor_settings/show_bone_gizmo` | true or false |  |
 | `length` | float 1-1024 | warning |
 | `rest` | Transform2D(6 floats) |  |

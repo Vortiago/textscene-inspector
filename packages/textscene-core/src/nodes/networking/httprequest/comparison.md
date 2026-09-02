@@ -38,7 +38,7 @@ Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited f
 | `accept_gzip` | true or false |  |
 | `body_size_limit` | integer -1-2000000000 | warning |
 | `download_chunk_size` | integer 256-16777216 | error |
-| `download_file` | quoted string |  |
+| `download_file` | quoted string, or the &"…" StringName jacket |  |
 | `max_redirects` | integer -1-64 | warning |
 | `timeout` | float >= 0 | error below |
 | `use_threads` | true or false |  |

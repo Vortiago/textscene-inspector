@@ -9,22 +9,27 @@ import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
 import { ARRAY_LITERAL_RE, TYPED_WRAPPER_RE } from '../../../godot/index.js';
+import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 
 /**
- * One TSCN quoted literal: a quote, an escape-aware body, a closing quote, and
- * nothing after it. The previous `".*"` only checked the first and last
- * character, so it accepted `"Head" junk "Tail"` as a single string.
+ * One TSCN string literal as a STRING slot takes it: an optional StringName
+ * jacket, a quote, an escape-aware body, a closing quote, and nothing after
+ * it. `".*"` only checked the first and last character, so it accepted
+ * `"Head" junk "Tail"` as a single string.
+ *
+ * The tokenizer reads `&"…"` and the 3.x-compatible `@"…"` as one
+ * `TK_STRING_NAME` (`variant_parser.cpp:263-265`), and `variant.cpp:582-587`
+ * lists `STRING_NAME` as a strict source for `STRING` —
+ * `VariantCasterAndValidate` (`binder_common.h:175`) gates a setter argument
+ * on `can_convert_strict` — so `text = &"Hello"` stores `Hello`.
  *
  * `\"` inside the value is honoured. A raw newline is accepted too — the body
  * class permits one — which costs nothing, because StrictTscnParser skips
  * multiline properties before any validator sees them.
- *
- * Measured before tightening: across the corpus (699 files, 1,971 quoted
- * values) this and `".*"` disagree on nothing, so no real scene changes verdict.
  */
-const QUOTED_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
+const QUOTED_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
 const STRING_NAME_RE = /^&?"(?:[^"\\]|\\[\s\S])*"$/;
 
 export const scalarCombinators = {
@@ -34,7 +39,7 @@ export const scalarCombinators = {
   },
 
   /**
-   * Quoted string `"..."` — value must begin and end with a double quote.
+   * Quoted string `"..."`, or the `&"..."` StringName jacket the slot converts.
    * Used for properties like `Label3D.text` that take TSCN string literals.
    */
   quotedString(name: string): PropertyValidator {
@@ -44,7 +49,7 @@ export const scalarCombinators = {
         return propertyError(key, line, `Property '${name}' must be a quoted string, got: ${value}`, code);
       }
       return null;
-    }, 'quoted string');
+    }, 'quoted string, or the &"…" StringName jacket');
   },
 
   /**
@@ -107,7 +112,7 @@ export const scalarCombinators = {
       }
       return null;
     };
-    validator.accepts = 'quoted string, at most one character';
+    validator.accepts = 'quoted string (or the &"…" StringName jacket), at most one character';
     validator.grounding = { kind: 'enforced', cite: opts.enforced };
     return validator;
   },
@@ -165,17 +170,7 @@ export const scalarCombinators = {
 /**
  * The raw ELEMENT text of a value {@link scalarCombinators.arrayLiteral} has
  * already accepted, for a caller that goes on to count or split the elements.
- *
- * Positional, never a second grammar: the shape is vetted, so this only has to
- * know WHERE the elements sit in each spelling. A caller reaching for
- * `value.trim().slice(1, -1)` reads `rray[int]([0, 4` out of
- * `Array[int]([0, 4])` and then counts pairs on text that is not the array —
- * which is why widening the shape and widening its readers is one change.
  */
 export function arrayLiteralElements(value: string): string {
-  const text = value.trim();
-  const wrapped = TYPED_WRAPPER_RE.exec(text);
-  // `Array[` + the captured element type + `](`, then the bare literal, then `)`.
-  const bare = wrapped ? text.slice('Array['.length + wrapped[1]!.length + ']('.length, -1) : text;
-  return ARRAY_LITERAL_RE.exec(bare)?.[1] ?? '';
+  return arrayLiteralBody(value) ?? '';
 }

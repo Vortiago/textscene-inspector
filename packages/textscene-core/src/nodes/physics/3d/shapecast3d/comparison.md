@@ -56,7 +56,6 @@ Strict parsing format-checks these `ShapeCast3D` properties, plus 17 inherited f
 | `valid-shapecast3d` | `shapecast3d-no-collide-target` | warning |
 |  | `shapecast3d-zero-mask` | warning |
 |  | `shapecast3d-missing-shape` | warning |
-|  | `shapecast3d-unresolved-shape` | error |
 |  | `shapecast3d-concave-shape` | warning |
 <!-- lint:end -->
 

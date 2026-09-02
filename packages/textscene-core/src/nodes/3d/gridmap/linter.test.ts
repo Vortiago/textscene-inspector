@@ -31,7 +31,7 @@ cell_size = Vector3(1, 1, 1)
   it('errors when the mesh_library reference does not resolve', () => {
     expectDiagnostic(
       scene(node('GridMap', { mesh_library: 'ExtResource("9_missing")', cell_size: 'Vector3(1, 1, 1)' })),
-      { ruleName: 'valid-gridmap-resources', severity: 'error', nodeType: 'GridMap' }
+      { ruleName: 'dangling-resource-reference', severity: 'error', nodeType: 'GridMap' }
     );
   });
 

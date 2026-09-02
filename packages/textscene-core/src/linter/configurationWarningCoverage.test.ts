@@ -117,6 +117,18 @@ describe('Godot configuration-warning coverage', () => {
     expect(gaps).toEqual([]);
   });
 
+  it('every appliesTo entry names a registered type', () => {
+    // `concreteHeirs` filters the registry BY the list, so a misspelt entry
+    // yields no heirs and the reach check above passes over nothing.
+    const registered = new Set(nodeRegistry.getAllTypeNames());
+    const unknown = Object.entries(WARNINGS).flatMap(([cls, rows]) =>
+      rows.flatMap((row) =>
+        (row.appliesTo ?? []).filter((t) => !registered.has(t)).map((t) => `${cls} ${row.at}: '${t}'`)
+      )
+    );
+    expect(unknown).toEqual([]);
+  });
+
   it('every declaring class is reachable from a registered type', () => {
     const orphans = Object.keys(WARNINGS).filter((cls) => concreteHeirs(cls).length === 0);
     expect(orphans).toEqual([]);

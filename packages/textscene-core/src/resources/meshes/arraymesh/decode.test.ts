@@ -130,6 +130,13 @@ describe('decodeArrayMesh', () => {
     );
   });
 
+  it("resolves a surface's material named by the old-style integer index", () => {
+    // `_parse_sub_resource` takes TK_NUMBER (`resource_format_text.cpp:107`);
+    // the header's `id=3` is read as the string "3" (`:1048`).
+    const mesh = decodeArrayMesh(INDEXED_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
+    expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::3');
+  });
+
   it('decodes the [sub_resource] ArrayMesh a sub-resource path names, not the file body', () => {
     // A `.tres` can hold several ArrayMeshes: the `[resource]` one plus e.g. its
     // `shadow_mesh` as a `[sub_resource]`. Addressed by id, the SUB-RESOURCE's
@@ -204,6 +211,12 @@ roughness = 0.8
 
 [resource]`
 );
+
+/** `OWN_MATERIAL_TRES` with the material declared and referenced by integer index. */
+const INDEXED_MATERIAL_TRES = OWN_MATERIAL_TRES.replace(
+  '"material": SubResource("StandardMaterial3D_shvqh"),',
+  '"material": SubResource(3),'
+).replace('id="StandardMaterial3D_shvqh"', 'id=3');
 
 /** Two surfaces (the wall quad twice) with distinct materials a/b. */
 const TWO_SURFACE_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://two"]

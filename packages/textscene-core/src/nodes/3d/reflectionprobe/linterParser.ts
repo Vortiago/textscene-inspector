@@ -10,13 +10,11 @@
  * `ADD_PROPERTY` calls, one per member below; no `PropertyListHelper`/
  * `register_property`, no `ADD_ARRAY_COUNT`, and no `.compat.inc` for this class.
  *
- * There IS a hand-rolled `_set`/`_get` (reflection_probe.cpp:287-301, both
- * `#ifndef DISABLE_DEPRECATED`) mapping the legacy Godot-3.x key `extents` to
- * `size` (`set_size(extents * 2)`). It has no `ADD_PROPERTY` of its own, is not in
- * the current XML member list, and `parser.ts` (which reuses `parseNode3D`) never
- * reads it either — a load-time-only compat shim for scenes saved by an older
- * Godot, not a current property. Same shape as `TextureRect`'s deprecated
- * `expand`/`ignore_texture_size` keys, and the same call: no validator here.
+ * The deprecated `_set`/`_get` pair (reflection_probe.cpp:287-301) maps the
+ * Godot-3 key `extents` to `set_size(extents * 2)`; `godot/deprecated.ts`
+ * resolves it in the property bag, so every reader sees the doubled `size`.
+ * The `size` validator below never sees the key as written, so a bound on
+ * `extents` itself would be a second, halved copy of it: none is registered.
  */
 
 import '../visualinstance3d/linterParser.js';

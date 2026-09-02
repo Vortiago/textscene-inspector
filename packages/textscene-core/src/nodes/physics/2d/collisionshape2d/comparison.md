@@ -44,7 +44,6 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-collisionshape2d` | `collisionshape2d-requires-shape` | warning |
-|  | `valid-collisionshape2d-resources` | error |
 |  | `collisionshape2d-invalid-parent` | warning |
 |  | `collisionshape2d-no-parent` | warning |
 |  | `collisionshape2d-unused-one-way-margin` | warning |

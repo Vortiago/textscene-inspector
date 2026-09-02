@@ -13,17 +13,11 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import type { ParseError } from '../../../linter/types.js';
-import {
-  ARRAY_LITERAL_RE,
-  dropTrailingComma,
-  packedArrayLiteral,
-  splitTopLevel,
-  TYPED_WRAPPER_RE,
-} from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, dropTrailingComma, packedArrayLiteral, splitTopLevel } from '../../../godot/index.js';
+import { arrayLiteralBody } from '../../../godot/variantParser.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 
-const BRACKET_ARRAY_RE = /^\s*\[([\s\S]*)\]\s*$/;
 const PACKED_INT32_ELEMENT_RE = packedArrayLiteral('PackedInt32Array');
 const BARE_INT_ARRAY_ELEMENT_RE = ARRAY_LITERAL_RE;
 
@@ -61,11 +55,8 @@ function polygonsValidator(): PropertyValidator {
     // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
     // so the typed spelling loads unchanged. Rejecting it put the linter in
     // conflict with this repo's own reader, which renders those holes correctly.
-    const trimmed = value.trim();
-    const typed = TYPED_WRAPPER_RE.exec(trimmed);
-    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
-    const wrapper = BRACKET_ARRAY_RE.exec(literal);
-    if (!wrapper) {
+    const outer = arrayLiteralBody(value);
+    if (outer === null) {
       return propertyError(
         key,
         line,
@@ -73,7 +64,7 @@ function polygonsValidator(): PropertyValidator {
         code
       );
     }
-    const body = wrapper[1]!.trim();
+    const body = outer.trim();
     if (body === '') return null;
     /** The first fractional element seen, held back until every entry is scanned. */
     let truncated: ParseError | null = null;
@@ -137,11 +128,8 @@ function bonesValidator(): PropertyValidator {
     // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
     // so the typed spelling loads unchanged. Rejecting it put the linter in
     // conflict with this repo's own reader, which renders those holes correctly.
-    const trimmed = value.trim();
-    const typed = TYPED_WRAPPER_RE.exec(trimmed);
-    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
-    const wrapper = BRACKET_ARRAY_RE.exec(literal);
-    if (!wrapper) {
+    const outer = arrayLiteralBody(value);
+    if (outer === null) {
       return propertyError(
         key,
         line,
@@ -149,7 +137,7 @@ function bonesValidator(): PropertyValidator {
         'INVALID_BONES_FORMAT'
       );
     }
-    const body = wrapper[1]!.trim();
+    const body = outer.trim();
     const count = body === '' ? 0 : dropTrailingComma(splitTopLevel(body)).length;
     if (count % 2 !== 0) {
       return propertyError(

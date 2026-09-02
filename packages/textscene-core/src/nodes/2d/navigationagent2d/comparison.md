@@ -86,9 +86,7 @@ Strict parsing format-checks these `NavigationAgent2D` properties, plus 10 inher
 | `simplify_epsilon` | float >= 0 | error below |
 | `simplify_path` | true or false |  |
 | `target_desired_distance` | float >= 0.1 | warning below |
-| `target_location` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
 | `target_position` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
-| `time_horizon` | float >= 0 | error below |
 | `time_horizon_agents` | float >= 0 | error below |
 | `time_horizon_obstacles` | float >= 0 | error below |
 | `velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |

@@ -29,30 +29,21 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../../linter/resourceChecker.js';
+import { heldResource } from '../../../../linter/resourceChecker.js';
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
-  const { node, scene } = context;
+  const { node } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  const mesh = heldResource(rawProps.mesh);
-  if (mesh === undefined) {
+  if (heldResource(rawProps.mesh) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: 'Nothing is visible because no mesh has been assigned.',
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'cpuparticles3d-requires-mesh',
-    });
-  } else if (!checkResourceExists(scene, mesh)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Mesh resource not found: ${rawProps.mesh}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-cpuparticles3d-resources',
     });
   }
 
@@ -63,20 +54,11 @@ const cpuParticles3DValidationRule: LintRule = {
   meta: {
     name: 'valid-cpuparticles3d-mesh',
     description:
-      'Flags a CPUParticles3D with no mesh assigned (renders nothing, per get_configuration_warnings) and validates that an assigned mesh reference resolves',
+      'Flags a CPUParticles3D with no mesh assigned (renders nothing, per get_configuration_warnings)',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles3D'],
     emits: [
       { ruleName: 'cpuparticles3d-requires-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-cpuparticles3d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the mesh reference names a resource id this file never declares',
-        },
-      },
     ],
   },
   check: checkCPUParticles3D,

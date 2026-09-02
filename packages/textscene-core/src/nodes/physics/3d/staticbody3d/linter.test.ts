@@ -158,10 +158,10 @@ physics_material_override = SubResource("mat_1")
       expectDiagnostic(
         scene(node('StaticBody3D', { physics_material_override: 'SubResource("nonexistent")' })),
         {
-          ruleName: 'valid-staticbody3d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'StaticBody3D',
-          contains: ['Physics material resource not found'],
+          contains: ["'physics_material_override'"],
         }
       );
     });

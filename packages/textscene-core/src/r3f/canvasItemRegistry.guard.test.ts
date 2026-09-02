@@ -27,10 +27,13 @@ describe('canvasItem registry conformance', () => {
   });
 
   it('never flags 3D content as canvasItem', () => {
-    const wrong = nodeComponentRegistry
+    // The base chain, as above: Decal, FogVolume, GridMap, VoxelGI,
+    // ReflectionProbe, LightmapGI and the OpenXR nodes are Node3D descendants
+    // without the suffix.
+    const node3ds = nodeComponentRegistry
       .getAllTypeNames()
-      .filter((t) => t.endsWith('3D'))
-      .filter((t) => nodeComponentRegistry.isCanvasItem(t));
-    expect(wrong).toEqual([]);
+      .filter((t) => descendsFrom(t, 'Node3D'));
+    expect(node3ds.length).toBeGreaterThan(10);
+    expect(node3ds.filter((t) => nodeComponentRegistry.isCanvasItem(t))).toEqual([]);
   });
 });

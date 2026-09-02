@@ -32,7 +32,7 @@ None visible in this fixture.
 ## Linting
 
 <!-- lint:begin RigidBody3D -->
-Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited from PhysicsBody3D, 6 inherited from CollisionObject3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
@@ -65,8 +65,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-rigidbody3d` (type-family match) | `valid-rigidbody3d-resources` | error |
-|  | `rigidbody3d-needs-collision-shape` | warning |
+| `valid-rigidbody3d` (type-family match) | `rigidbody3d-needs-collision-shape` | warning |
 |  | `rigidbody3d-max-contacts-without-monitor` | warning |
 |  | `rigidbody3d-scale-overridden-at-runtime` | warning |
 <!-- lint:end -->

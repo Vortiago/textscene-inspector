@@ -13,6 +13,8 @@ import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
 import type { RuleContext } from '../../../linter/types';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+import { danglingResourceDiagnostics } from '../../../linter/danglingResources';
+import './linterParser';
 import './linter';
 
 const RULE_NAME = 'valid-animatedsprite3d-properties';
@@ -20,8 +22,8 @@ const RULE_NAME = 'valid-animatedsprite3d-properties';
 /**
  * Build a minimal RuleContext for one AnimatedSprite3D node.
  *
- * `declared` lists the SubResource ids the scene holds, since the
- * dangling-reference arm resolves `sprite_frames` against them.
+ * `declared` lists the SubResource ids the scene holds, which the generic
+ * dangling-resource pass resolves `sprite_frames` against.
  */
 function context(properties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
   const node: TscnNode = {
@@ -71,19 +73,22 @@ describe('AnimatedSprite3D semantic rule', () => {
   });
 
   describe('dangling sprite_frames', () => {
+    // Not this rule's arm: `danglingResources.ts` resolves every registered
+    // resource slot, and `sprite_frames` is one (linterParser.ts).
+    const dangling = (declared: string[]) =>
+      danglingResourceDiagnostics(context({ sprite_frames: 'SubResource("frames_1")' }, declared).scene);
+
     it('errors when the reference names an id the file never declares', () => {
-      const diagnostics = lint({ sprite_frames: 'SubResource("frames_1")' }, []);
-      expect(diagnostics).toContainEqual(
+      expect(dangling([])).toContainEqual(
         expect.objectContaining({
           severity: 'error',
-          ruleName: 'valid-animatedsprite3d-resources',
+          ruleName: 'dangling-resource-reference',
         })
       );
     });
 
     it('stays quiet when the scene declares it', () => {
-      const diagnostics = lint({ sprite_frames: 'SubResource("frames_1")' });
-      expect(diagnostics.some((d) => d.ruleName === 'valid-animatedsprite3d-resources')).toBe(false);
+      expect(dangling(['frames_1'])).toEqual([]);
     });
   });
 

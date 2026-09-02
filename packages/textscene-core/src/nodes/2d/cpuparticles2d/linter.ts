@@ -13,7 +13,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { ruleInt, boolSlotValue} from '../../../godot/index.js';
 
 /**
@@ -36,7 +35,7 @@ const GLOBAL_RNG_SHAPES = new Map<number, string>([
 ]);
 
 function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
-  const { node, scene } = context;
+  const { node } = context;
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;
@@ -68,22 +67,6 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Read at its own `props.texture` call site, because `clearedResourceSlot`
-  // scrapes that spelling and an argument it cannot bracket drops the slot out
-  // of the sweep silently. `texture` is the emitter's only resource slot
-  // (cpu_particles_2d.cpp:1493); the GPU twin and the CPUParticles3D `mesh`
-  // slot both error on a dangling id, and this one reported nothing at all.
-  const texture = heldResource(props.texture);
-  if (texture !== undefined && !checkResourceExists(scene, texture)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Texture resource not found: ${props.texture}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-cpuparticles2d-resources',
-    });
-  }
-
   return diagnostics;
 }
 
@@ -111,15 +94,6 @@ const cpuParticles2DPreviewRule: LintRule = {
           kind: 'no-engine-counterpart',
           scope: 'previewer-limitation',
           because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
-        },
-      },
-      {
-        ruleName: 'valid-cpuparticles2d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the reference names a resource id this file never declares',
         },
       },
     ],

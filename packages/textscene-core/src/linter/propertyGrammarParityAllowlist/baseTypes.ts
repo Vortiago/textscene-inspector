@@ -193,7 +193,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   PointLight2D: {
-    aliasedRead: ['mode'],
     renderGap: [
       // The light's Z, and it is NOT inert in Godot: it reaches the canvas
       // shader as the third light-vector component on two paths — the

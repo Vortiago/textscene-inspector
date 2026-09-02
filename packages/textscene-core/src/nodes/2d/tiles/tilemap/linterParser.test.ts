@@ -60,6 +60,27 @@ tile_set = NotARef(1)
     expect(errors[0]!.message).toContain('tile_set');
   });
 
+  describe('format — stored only from a Variant::INT (tile_map.cpp:688-691), else `return false` (:724)', () => {
+    it('accepts any INT literal, negative included (the cast is unchecked)', () => {
+      expect(checkTopLevel('format', '2')).toBeNull();
+      expect(checkTopLevel('format', '-1')).toBeNull();
+    });
+
+    it('errors on a FLOAT spelling as a dropped write, not a truncation', () => {
+      const error = checkTopLevel('format', '1.0');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('dropped');
+    });
+
+    it('errors on a BOOL spelling the same way', () => {
+      expect(checkTopLevel('format', 'true')?.severity).toBe('error');
+    });
+
+    it('errors on text the tokenizer cannot read', () => {
+      expect(checkTopLevel('format', 'abc')?.severity).toBe('error');
+    });
+  });
+
   describe('layer_<i>/*', () => {
     function check(key: string, value: string) {
       const validator = validatorRegistry.findValidator('TileMap', key);

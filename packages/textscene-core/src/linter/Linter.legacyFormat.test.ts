@@ -96,3 +96,18 @@ describe('a current format header', () => {
     expect(diagnostics.length).toBeGreaterThan(0);
   });
 });
+
+describe('a format at or below zero', () => {
+  // The engine's only comparison is `if (format_version > FORMAT_VERSION)`
+  // (resource_format_text.cpp:1141): no lower bound exists, so `format=0` and
+  // `format=-1` load under the current grammar and are linted under it.
+  const BODY = `
+[node name="Root" type="RigidBody3D"]
+mass = -5
+`;
+  it.each([0, -1])('format=%i is linted, not declined as legacy', (format) => {
+    const diagnostics = linter.lint(`[gd_scene format=${format}]\n${BODY}`);
+    expect(diagnostics.some((d) => d.ruleName === 'legacy-format-version')).toBe(false);
+    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('mass'))).toBe(true);
+  });
+});

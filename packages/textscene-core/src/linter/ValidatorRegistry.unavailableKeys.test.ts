@@ -80,15 +80,17 @@ describe('ValidatorRegistry.registerUnavailable', () => {
     expect(r.getUnavailableKeys('Mid')).toEqual(['vertical']);
   });
 
-  it('keeps a key removed by the same type that declares it', () => {
-    // Ordering within a hop: findValidator checks the removal first, so a type
-    // both removing and declaring a key reports it removed. getUnavailableKeys
-    // must agree rather than letting the declaration cancel the removal.
-    const r = new ValidatorRegistry(CHAIN);
-    r.registerAll('Leaf', { vertical: ok });
-    r.registerUnavailable('Leaf', { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } });
-    expect(r.declarationFor('Leaf', 'vertical')?.accepts).toBe('not available on this type');
-    expect(r.getUnavailableKeys('Leaf')).toEqual(['vertical']);
+  it('refuses one type both declaring and removing a key, in either order', () => {
+    // A registration is a declaration OR a removal; one type holding both
+    // hands `registeredKeys` the removal labelled a declaration and the sweep
+    // a validator it never resolves.
+    const removal = { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } };
+    const declared = new ValidatorRegistry(CHAIN);
+    declared.registerAll('Leaf', { vertical: ok });
+    expect(() => declared.registerUnavailable('Leaf', removal)).toThrow(/Leaf.*vertical/);
+    const removed = new ValidatorRegistry(CHAIN);
+    removed.registerUnavailable('Leaf', removal);
+    expect(() => removed.registerAll('Leaf', { vertical: ok })).toThrow(/Leaf.*vertical/);
   });
 
   it('is cleared with the validators', () => {

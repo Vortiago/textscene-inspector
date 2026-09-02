@@ -165,12 +165,14 @@ describe('CopyTransformModifier3D strict validators', () => {
     });
 
     it('rejects a key that is not <prefix><index>/<leaf>', () => {
-      // The registry's own matcher refuses the shape first, so no validator
-      // claims the key at all: `settings/copy` has no index and `settings/0/`
-      // no leaf, and Godot's `_set` would read neither.
-      for (const malformed of ['settings/copy', 'settings/0/']) {
-        expect(validatorRegistry.findValidator('CopyTransformModifier3D', malformed)).toBeNull();
-      }
+      // `settings/copy` has no `/` past the prefix, so the registry's matcher
+      // routes it to no family and no validator claims it. `settings/0/` has
+      // one and routes: `_set` reads an empty leaf at `get_slicec('/', 2)`
+      // (copy_transform_modifier_3d.cpp:37-40), matches no branch and returns
+      // false — a dropped write the dispatcher reports as an unknown key.
+      expect(validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/copy')).toBeNull();
+      const emptyLeaf = validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/0/');
+      expect(emptyLeaf!('settings/0/', '7', 1)?.code).toBe('INVALID_SETTING_KEY');
       // Handed one anyway — which is what the registered PATTERN itself is when
       // the sweep above validates `settings/#/*` — the dispatcher rejects it
       // rather than forwarding an unparseable key to the base.

@@ -10,9 +10,9 @@
  * site; no PropertyListHelper, ADD_ARRAY_COUNT, or hand-rolled `_set`/`_get`/
  * property-list override exists for this class beyond the `_validate_property`
  * override below (which only ever hides `size`, never adds a key), and the
- * `#ifndef DISABLE_DEPRECATED` `_set`/`_get` pair (fog_volume.cpp:56-70) only
- * reads/writes the retired Godot-3.x `extents` alias, which a current-format
- * `.tscn` never carries.
+ * `#ifndef DISABLE_DEPRECATED` `_set`/`_get` pair (fog_volume.cpp:56-70), whose
+ * Godot-3 `extents` arm `godot/deprecated.ts` resolves to the doubled `size`
+ * in the property bag.
  */
 
 import '../visualinstance3d/linterParser.js';

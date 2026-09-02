@@ -94,9 +94,9 @@ describe('emit grounding', () => {
 
   it('sweeps the whole registry, not an empty set', () => {
     // A guard that silently matches nothing passes everything below it. The
-    // floor sits just under the real population (327 at the time of writing),
+    // floor sits just under the real population (246 at the time of writing),
     // so a failed barrel import or an emptied registry fails HERE.
-    expect(all.length).toBeGreaterThan(250);
+    expect(all.length).toBeGreaterThan(200);
     expect(new Set(all.map((e) => e.rule)).size).toBeGreaterThan(100);
   });
 

@@ -81,7 +81,8 @@ describe('CSGPolygon3D strict validators', () => {
     ['spin_degrees = 360.1', 'spin_degrees'],
     // csg_shape.cpp:2692, ERR_FAIL_COND(p_spin_sides < 3): enforced floor.
     ['spin_sides = 2', 'spin_sides'],
-    ['path_node = "notapath"', 'path_node'],
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    ['path_node = &"notapath"', 'path_node'],
     ['material = "not-a-resource"', 'material'],
   ])('rejects %s', (line, property) => {
     const errors = errorsOf(linter.lint(scene(line)));

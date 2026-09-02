@@ -43,7 +43,10 @@ runResourcePropertyValidation('PlaneMesh', [
     // type that does not convert is the error.
     invalid: [{ value: 'Color(1, 1, 1, 1)', contains: ['lightmap_size_hint'], severity: 'error' }],
   },
-]);
+], {
+  // The reference cases name these, so the declared-id pass stays quiet.
+  prefix: ['[sub_resource type="Material" id="Mat_1"]', '[ext_resource type="Material" path="res://m.tres" id="1_abc"]'],
+});
 
 describe('mesh base validators', () => {
   it('declare each property on the class the engine declares it on', () => {

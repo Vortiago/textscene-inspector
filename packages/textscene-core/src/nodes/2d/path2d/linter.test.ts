@@ -47,7 +47,7 @@ script = ExtResource("1")
 
   it('errors when the curve reference points at a non-existent resource', () => {
     expectDiagnostic(scene(node('Path2D', { curve: 'SubResource("does_not_exist")' })), {
-      ruleName: 'valid-path2d-resources',
+      ruleName: 'dangling-resource-reference',
       severity: 'error',
     });
   });

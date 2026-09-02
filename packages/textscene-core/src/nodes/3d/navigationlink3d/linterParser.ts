@@ -45,11 +45,4 @@ validatorRegistry.registerAll('NavigationLink3D', {
     message: "Property 'travel_cost' must be >= 0.",
     enforced: 'navigation_link_3d.cpp:484',
   }),
-
-  // -- Pre-4.0 spellings (navigation_link_3d.cpp:221-245) --------------------
-  // navigation_link_3d.cpp:223 / :227 (`_set`) hand `p_value` straight to
-  // set_start_position / set_end_position, so both take the same unconstrained
-  // Vector3 the modern keys take. Named for the key the scene carries.
-  start_location: v.vector3('start_location'),
-  end_location: v.vector3('end_location'),
 });

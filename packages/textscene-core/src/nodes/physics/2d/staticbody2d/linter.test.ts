@@ -147,10 +147,10 @@ physics_material_override = SubResource("mat_1")
       expectDiagnostic(
         scene(node('StaticBody2D', { physics_material_override: 'SubResource("nonexistent")' })),
         {
-          ruleName: 'valid-staticbody2d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'StaticBody2D',
-          contains: ['Physics material resource not found'],
+          contains: ["'physics_material_override'"],
         }
       );
     });
@@ -251,7 +251,7 @@ physics_material_override = ExtResource("ext_mat_1")
       // Should have at least one error (format errors may prevent semantic checks)
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
-      const hasResourceError = diagnostics.some(d => d.message.includes('resource not found'));
+      const hasResourceError = diagnostics.some(d => d.message.includes('never declares'));
       // At least one of these errors should be present
       expect(hasCollisionLayerError || hasResourceError).toBe(true);
     });

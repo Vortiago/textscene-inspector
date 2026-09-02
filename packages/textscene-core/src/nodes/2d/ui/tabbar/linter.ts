@@ -44,6 +44,7 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex } from '../../../../godot/index.js';
@@ -110,7 +111,7 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   }
 
   if (offending.size > 0) {
-    const indices = [...offending].sort((a, b) => a - b).join(', ');
+    const indices = listIndices([...offending].sort((a, b) => a - b));
     diagnostics.push({
       severity: 'error',
       message:

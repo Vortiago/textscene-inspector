@@ -16,6 +16,7 @@ import {
   type Grounding,
 } from './grounding.js';
 import type { FloatOpts } from './options.js';
+import { degToRad } from '../../../godot/index.js';
 
 /**
  * How far past a radian bound a value may sit before it is out of range.
@@ -79,9 +80,8 @@ export const floatCombinators = {
    *   range such as `"0,180,…"`.
    */
   radians(name: string, opts: { minDeg?: number; maxDeg: number } & Grounding): PropertyValidator {
-    const max = (opts.maxDeg * Math.PI) / 180 + RADIAN_ROUNDTRIP_EPSILON;
-    const min =
-      opts.minDeg === undefined ? 0 : (opts.minDeg * Math.PI) / 180 - RADIAN_ROUNDTRIP_EPSILON;
+    const max = degToRad(opts.maxDeg) + RADIAN_ROUNDTRIP_EPSILON;
+    const min = opts.minDeg === undefined ? 0 : degToRad(opts.minDeg) - RADIAN_ROUNDTRIP_EPSILON;
     const lowDeg = opts.minDeg ?? 0;
     return ground(
       accepts(

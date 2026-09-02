@@ -32,11 +32,4 @@ validatorRegistry.registerAll('NavigationRegion2D', {
     message: "Property 'travel_cost' must be positive.",
     enforced: 'navigation_region_2d.cpp:127',
   }),
-
-  // -- Pre-release 4.0 spelling (navigation_region_2d.cpp:358-375) -----------
-  // navigation_region_2d.cpp:361 (`_set`) / :369 (`_get`) hand `p_value`
-  // straight to set_navigation_polygon, so the slot takes exactly the same
-  // reference formats. Named `navpoly` so the diagnostic quotes the key the
-  // scene carries.
-  navpoly: v.resourceReference('navpoly'),
 });

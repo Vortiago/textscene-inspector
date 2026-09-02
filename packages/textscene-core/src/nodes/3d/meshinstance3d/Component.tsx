@@ -44,6 +44,7 @@ import {
   resolveMaterialSlotSource,
   resolvePrimitiveMaterialSlot,
   resolveMeshSubResource,
+  type MaterialSlotSource,
 } from './meshMaterialResolution';
 import { useMeshMaterialTextures } from './useMeshMaterialTextures';
 
@@ -103,6 +104,18 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
       ),
     [properties.materialOverride, internalResources, externalResources]
   );
+
+  // `surface_material_override/N` per index, for the ArrayMesh branches; the
+  // primitive branch already folded slot 0 into `materialSlot`.
+  const surfaceOverrides = useMemo(() => {
+    const refs = properties.surfaceMaterialOverrides;
+    if (!refs || refs.size === 0) return undefined;
+    const out: (MaterialSlotSource | null)[] = [];
+    for (const [i, ref] of refs) {
+      out[i] = resolveMaterialSlotSource(ref, internalResources, externalResources);
+    }
+    return out;
+  }, [properties.surfaceMaterialOverrides, internalResources, externalResources]);
 
   const materialScalars = useMemo(
     () =>
@@ -193,6 +206,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <ArrayMeshSurfaces
           mesh={arrayMeshResult.value}
           shadowSide={shadowFlags.shadowSide}
+          surfaceOverrides={surfaceOverrides}
           override={materialOverride}
         />
       </MeshShell>
@@ -211,6 +225,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
             mesh={sceneArrayMesh.resource}
             sceneMaterials={sceneArrayMesh.sceneMaterials}
             shadowSide={shadowFlags.shadowSide}
+            surfaceOverrides={surfaceOverrides}
             override={materialOverride}
           />
         ) : (

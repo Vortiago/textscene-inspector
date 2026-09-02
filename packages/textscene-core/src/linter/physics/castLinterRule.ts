@@ -45,9 +45,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   // (`shape_cast_3d.cpp:188` warns on it); the 2D solver has no such limit.
   const hasShape = kind === 'Shape';
   const configWarning = { kind: 'configuration-warning' } as const;
-  const arms: RuleArms<
-    'noCollideTarget' | 'zeroMask' | 'missingShape' | 'unresolvedShape' | 'concaveShape'
-  > = {
+  const arms: RuleArms<'noCollideTarget' | 'zeroMask' | 'missingShape' | 'concaveShape'> = {
     noCollideTarget: {
       severity: 'warning',
       ruleName: `${prefix}-no-collide-target`,
@@ -71,17 +69,6 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
           severity: 'warning',
           ruleName: `${prefix}-missing-shape`,
           grounding: configWarning,
-        }
-      : undefined,
-    unresolvedShape: hasShape
-      ? {
-          severity: 'error',
-          ruleName: `${prefix}-unresolved-shape`,
-          grounding: {
-            kind: 'no-engine-counterpart',
-            scope: 'dangling-reference',
-            because: 'the shape id is not declared anywhere in this file',
-          },
         }
       : undefined,
     concaveShape:
@@ -129,13 +116,6 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       const shape = resolveResourceSlot(context.scene, props.shape);
       if (shape.kind === 'empty') {
         report(arms.missingShape, `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`);
-      } else if (shape.kind === 'dangling') {
-        // An error, not advice, and the same severity `CollisionShape2D/3D`
-        // already gives a dangling `shape` — the two nodes take the identical
-        // property and a broken reference is equally fatal on either. A value
-        // that is not a reference names no id, so the strict parser's format
-        // diagnostic is the whole story and this stays silent.
-        report(arms.unresolvedShape, `${type} '${node.name}' references ${props.shape} for 'shape', which this scene does not define.`);
       } else if (shape.kind === 'resolved' && descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
         // `descendsFromClass`, not an exact name: `shape_cast_3d.cpp:188` tests
         // `Object::cast_to<ConcavePolygonShape3D>(*shape)`, which a subclass passes.

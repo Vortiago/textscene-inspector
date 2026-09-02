@@ -23,7 +23,10 @@ runResourcePropertyValidation('StandardMaterial3D', [
     valid: ['SubResource("Mat_2")', 'ExtResource("1_abc")'],
     invalid: [{ value: 'res://other.tres', contains: ['next_pass'], severity: 'error' }],
   },
-]);
+], {
+  // The reference cases name these, so the declared-id pass stays quiet.
+  prefix: ['[sub_resource type="Material" id="Mat_2"]', '[ext_resource type="Material" path="res://m.tres" id="1_abc"]'],
+});
 
 describe('Material base validators', () => {
   it('reaches every material leaf, not only the one with a slice', () => {

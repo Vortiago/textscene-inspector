@@ -39,7 +39,6 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 | `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
 | `navigation_polygon` | null, SubResource("id") or ExtResource("id") |  |
-| `navpoly` | null, SubResource("id") or ExtResource("id") |  |
 | `travel_cost` | float >= 0 | error below |
 | `use_edge_connections` | true or false |  |
 
@@ -48,8 +47,7 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-navigationregion2d-resources` | `valid-navigationregion2d-resources` | error |
-|  | `navigationregion2d-requires-navigation-polygon` | warning |
+| `valid-navigationregion2d-resources` | `navigationregion2d-requires-navigation-polygon` | warning |
 <!-- lint:end -->
 
 `navigation_polygon` has no fallback of its own: the parser passes the raw

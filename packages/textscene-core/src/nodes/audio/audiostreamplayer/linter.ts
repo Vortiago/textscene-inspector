@@ -1,14 +1,14 @@
 /**
  * Semantic linter rules for AudioStreamPlayer (non-positional).
  *
- * Unlike the 2D/3D siblings, a streamless player is VALID — the stream can be set
- * at runtime. A dangling stream reference is an error; missing stream is not.
+ * A streamless player is VALID — the stream can be set at runtime — so only
+ * autoplay over an empty slot is reported.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists, heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
+import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -22,21 +22,6 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
   }
 
   const rawProps = node.properties as Record<string, string>;
-
-  // ERROR: stream is set but does not resolve
-  // `heldResource`, not a presence check: `stream = null` and `stream =` are
-  // both empty slots Godot reads as the absent case, and asking `!== undefined`
-  // reported the second on top of the strict parser's own format error.
-  const stream = heldResource(rawProps.stream);
-  if (stream !== undefined && !checkResourceExists(scene, stream)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Stream resource "${stream}" does not exist in scene. AudioStreamPlayer will not play audio.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer-missing-stream-resource',
-    });
-  }
 
   // WARNING: autoplay is on but no stream is set. Godot raises no warning for
   // this: `play_basic()` (audio_stream_player_internal.cpp:137-141) returns a
@@ -69,15 +54,6 @@ const audioStreamPlayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer'],
     emits: [
-      {
-        ruleName: 'audiostreamplayer-missing-stream-resource',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'audiostreamplayer-autoplay-without-stream',
         severity: 'warning',

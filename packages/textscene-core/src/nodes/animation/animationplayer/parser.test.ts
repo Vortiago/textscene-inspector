@@ -212,4 +212,10 @@ describe('parseAnimationPlayer library extraction', () => {
     expect(props.speed_scale).toBe(1.0);
     expect(props.playback_default_blend_time).toBe(0.0);
   });
+
+  it('reads no Node3D field: an AnimationPlayer is a Node (node_3d.cpp:150)', () => {
+    const props = parseAnimationPlayer(HEADING, { visible: 'false', position: 'Vector3(1, 2, 3)' });
+    expect('visible' in props).toBe(false);
+    expect('position' in props).toBe(false);
+  });
 });

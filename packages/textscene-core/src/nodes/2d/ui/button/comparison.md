@@ -49,8 +49,8 @@ Strict parsing format-checks these `Button` properties, plus 10 inherited from B
 | `flat` | true or false |  |
 | `icon` | null, SubResource("id") or ExtResource("id") |  |
 | `icon_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) | warning |
-| `language` | quoted string |  |
-| `text` | quoted string |  |
+| `language` | quoted string, or the &"…" StringName jacket |  |
+| `text` | quoted string, or the &"…" StringName jacket |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) | warning |
 | `vertical_icon_alignment` | enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM) | warning |

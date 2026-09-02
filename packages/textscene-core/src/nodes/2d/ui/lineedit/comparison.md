@@ -78,20 +78,20 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `flat` | true or false |  |
 | `icon_expand_mode` | enum 0-2 (EXPAND_MODE_ORIGINAL_SIZE/EXPAND_MODE_FIT_TO_TEXT/EXPAND_MODE_FIT_TO_LINE_EDIT) | warning |
 | `keep_editing_on_text_submit` | true or false |  |
-| `language` | quoted string |  |
+| `language` | quoted string, or the &"…" StringName jacket |  |
 | `max_length` | integer >= 0 | error below |
 | `middle_mouse_paste_enabled` | true or false |  |
-| `placeholder_text` | quoted string |  |
+| `placeholder_text` | quoted string, or the &"…" StringName jacket |  |
 | `right_icon` | null, SubResource("id") or ExtResource("id") |  |
 | `right_icon_scale` | float 0.1-1 | warning |
 | `secret` | true or false |  |
-| `secret_character` | quoted string, at most one character |  |
+| `secret_character` | quoted string (or the &"…" StringName jacket), at most one character |  |
 | `select_all_on_focus` | true or false |  |
 | `selecting_enabled` | true or false |  |
 | `shortcut_keys_enabled` | true or false |  |
 | `structured_text_bidi_override` | enum 0-6 (STRUCTURED_TEXT_DEFAULT/STRUCTURED_TEXT_URI/STRUCTURED_TEXT_FILE/STRUCTURED_TEXT_EMAIL/STRUCTURED_TEXT_LIST/STRUCTURED_TEXT_GDSCRIPT/STRUCTURED_TEXT_CUSTOM) | warning |
 | `structured_text_bidi_override_options` | Array literal ([...]) |  |
-| `text` | quoted string |  |
+| `text` | quoted string, or the &"…" StringName jacket |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `virtual_keyboard_enabled` | true or false |  |
 | `virtual_keyboard_show_on_focus` | true or false |  |

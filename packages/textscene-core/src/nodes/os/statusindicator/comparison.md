@@ -34,7 +34,7 @@ Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherit
 | --- | --- | --- |
 | `icon` | null, SubResource("id") or ExtResource("id") |  |
 | `menu` | NodePath("path/to/node") |  |
-| `tooltip` | quoted string |  |
+| `tooltip` | quoted string, or the &"…" StringName jacket |  |
 | `visible` | true or false |  |
 
 | Rule | Reports | Severity |

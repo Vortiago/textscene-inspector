@@ -155,7 +155,11 @@ export interface RuleContext {
  * visible next to a principled one.
  */
 export type OutsideEngineScope =
-  /** Names a resource id the file itself never declares. Godot fails the load. */
+  /**
+   * Names a node path or a clip name the file itself never declares. The
+   * engine loads the file and the reference resolves to nothing; a resource id
+   * that dangles is `dangling-resource-reference`'s engine-grounded error.
+   */
   | 'dangling-reference'
   /** Names a `res://` path this project does not contain, or one that cannot be read. */
   | 'unresolvable-path'
@@ -248,8 +252,8 @@ export interface RuleMeta {
    * Every `ruleName`/`severity` pair this rule's `check` can emit.
    *
    * `name` is the REGISTRY key; a single registered rule routinely reports under
-   * many user-visible `ruleName`s (`valid-sprite3d-resources` emits four, one
-   * of them the only error). Those names are the ones a user sees and suppresses,
+   * many user-visible `ruleName`s (`valid-sprite3d-resources` reports under
+   * five, two of them errors). Those names are the ones a user sees and suppresses,
    * and until now nothing could enumerate them: they are string literals inside
    * `check`, and the shared physics factories build theirs by interpolation, so
    * no static scrape reaches them.

@@ -37,11 +37,9 @@ Strict parsing format-checks these `NavigationLink3D` properties, plus 17 inheri
 | --- | --- | --- |
 | `bidirectional` | true or false |  |
 | `enabled` | true or false |  |
-| `end_location` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `end_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `enter_cost` | float >= 0 | error below |
 | `navigation_layers` | 32-bit layer mask (layers 1-32) |  |
-| `start_location` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `start_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `travel_cost` | float >= 0 | error below |
 

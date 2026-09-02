@@ -6,50 +6,11 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { RESOURCE_REF_RE, boolSlotValue} from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/index.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-
-/**
- * Extract resource ID from SubResource("id") or ExtResource("id") format
- */
-function extractResourceId(value: string): string | null {
-  return RESOURCE_REF_RE.exec(value)?.[2] ?? null;
-}
-
-/**
- * Check if a resource exists in the scene
- */
-function resourceExists(scene: TscnScene, resourceRef: string): boolean {
-  if (!scene) return false;
-
-  const resourceId = extractResourceId(resourceRef);
-  if (!resourceId) return false;
-
-  // Check in internalResources (SubResource)
-  // Internal resources store the ID in data.id property
-  if (scene.internalResources) {
-    for (const resource of scene.internalResources) {
-      if (resource.data && resource.data.id === resourceId) {
-        return true;
-      }
-    }
-  }
-
-  // Check in externalResources (ExtResource)
-  if (scene.externalResources) {
-    for (const resource of scene.externalResources) {
-      if (resource.id === resourceId) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
 
 /**
  * Validate AnimationTree semantic rules
@@ -68,26 +29,14 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
 
   // WARNING: tree_root not set (AnimationTree won't do anything without it).
   // A cleared slot (`tree_root = null`) is a set-to-nothing, which is exactly
-  // what this warning is about, so it counts as absent here and as not-dangling
-  // below. One predicate, so the two arms cannot drift apart.
-  const treeRoot = heldResource(rawProps.tree_root);
-  if (treeRoot === undefined) {
+  // what this warning is about, so it counts as absent here.
+  if (heldResource(rawProps.tree_root) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimationTree 'tree_root' is not set. AnimationTree requires a root animation node (AnimationNodeBlendTree or AnimationNodeStateMachine) to function.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animationtree-missing-tree-root',
-    });
-  } else if (!resourceExists(scene, treeRoot)) {
-    // ERROR: tree_root resource doesn't exist in scene
-    const resourceId = extractResourceId(treeRoot);
-    diagnostics.push({
-      severity: 'error',
-      message: `AnimationTree 'tree_root' references resource "${resourceId}" which does not exist in the scene. Ensure the resource is defined in sub_resources or ext_resources.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationtree-tree-root-not-found',
     });
   }
 
@@ -164,15 +113,6 @@ const animationTreeValidationRule: LintRule = {
     applicableNodeTypes: ['AnimationTree'],
     emits: [
       { ruleName: 'animationtree-missing-tree-root', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'animationtree-tree-root-not-found',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the file declares no ExtResource or SubResource carrying that id',
-        },
-      },
       {
         ruleName: 'animationtree-anim-player-not-found',
         severity: 'warning',

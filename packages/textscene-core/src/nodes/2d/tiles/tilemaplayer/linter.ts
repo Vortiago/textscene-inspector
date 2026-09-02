@@ -6,12 +6,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists, resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeTileMapData } from '../shared/tileData.js';
 
 function checkTileMapLayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
+  const { node } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
@@ -22,16 +22,6 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'tilemaplayer-requires-tileset',
-    });
-  }
-
-  if (rawProps.tile_set && !checkResourceExists(scene, rawProps.tile_set)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `TileSet resource not found: ${rawProps.tile_set}`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-tilemaplayer-resources',
     });
   }
 
@@ -62,15 +52,6 @@ const tileMapLayerValidationRule: LintRule = {
           kind: 'engine-inert',
           at: 'tile_map_layer.cpp:224',
           unused: 'a null tile set forces the cleanup path, so nothing is drawn',
-        },
-      },
-      {
-        ruleName: 'valid-tilemaplayer-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the tile_set reference names a resource id this file never declares',
         },
       },
       {

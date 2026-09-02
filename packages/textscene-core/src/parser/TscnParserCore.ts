@@ -8,7 +8,7 @@
  * behaves exactly like the lenient renderer path always has (skip-and-continue recovery).
  */
 
-import { canonicalPropertyName } from '../godot/deprecated.js';
+import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
   TscnNode,
@@ -168,8 +168,8 @@ export class TscnParserCore {
         // Join happens exactly once per value, here — O(total length), not
         // per appended line.
         const value = pendingMultiline.lines.join('\n');
-        currentProperties[canonicalPropertyName(currentOwnerType(), pendingMultiline.key, value)] =
-          value;
+        const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
+        currentProperties[resolved.key] = resolved.value;
         observer?.onProperty?.(
           currentSection,
           currentOwnerType(),
@@ -270,14 +270,19 @@ export class TscnParserCore {
               scanState,
             };
           } else {
-            // Stored under the name the SETTER writes: a pre-4.0 alias like
-            // `frames` is the same field as `sprite_frames` to the engine, so
+            // Stored under the name the SETTER writes and with the literal it
+            // receives: a pre-4.0 alias like `frames` is the same field as
+            // `sprite_frames` to the engine, and `extents` is `size` doubled, so
             // every reader downstream — typed parser, render component and
-            // rule alike — sees one key. The observer still receives the key as
-            // written, because a diagnostic must name what is in the file.
-            currentProperties[
-              canonicalPropertyName(currentOwnerType(), property.key, property.value)
-            ] = property.value;
+            // rule alike — sees one key and one value. The observer still
+            // receives both as written, because a diagnostic must name what is
+            // in the file.
+            const resolved = resolveDeprecatedProperty(
+              currentOwnerType(),
+              property.key,
+              property.value
+            );
+            currentProperties[resolved.key] = resolved.value;
             observer?.onProperty?.(
               currentSection,
               currentOwnerType(),
@@ -299,7 +304,7 @@ export class TscnParserCore {
     const rootWithParent = rootDeclaringParent(origins);
     for (const { node } of orphanedNodes) {
       logger.warn(
-        `Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+        `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
       );
     }
 

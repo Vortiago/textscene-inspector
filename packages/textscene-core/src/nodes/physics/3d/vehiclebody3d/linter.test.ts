@@ -98,7 +98,7 @@ describe('VehicleBody3D Linter', () => {
           wheel,
           collisionShape3d
         ),
-        { ruleName: 'valid-rigidbody3d-resources', severity: 'error' }
+        { ruleName: 'dangling-resource-reference', severity: 'error' }
       );
     });
 
@@ -116,7 +116,7 @@ describe('VehicleBody3D Linter', () => {
         '',
         '[node name="CollisionShape3D" type="CollisionShape3D" parent="."]',
       ].join('\n');
-      expectNoDiagnostic(content, { ruleName: 'valid-rigidbody3d-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
     });
   });
 

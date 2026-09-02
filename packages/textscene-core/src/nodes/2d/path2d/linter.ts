@@ -42,14 +42,6 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
         ruleName: 'path2d-missing-curve',
       });
     }
-  } else if (!checkResourceExists(scene, curve)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `Curve resource not found: ${rawProps.curve}. The referenced Curve2D resource must exist in the scene.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-path2d-resources',
-    });
   }
 
   return diagnostics;
@@ -69,15 +61,6 @@ const path2DValidationRule: LintRule = {
           kind: 'engine-inert',
           at: 'path_2d.cpp:161',
           unused: 'the debug pass has already cleared the mesh and returns without refilling it',
-        },
-      },
-      {
-        ruleName: 'valid-path2d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the curve reference names a resource id this file never declares',
         },
       },
     ],

@@ -414,32 +414,57 @@ describe('PhysicalBone3D strict validators', () => {
     });
   });
 
-  describe('the key a joint_constraints diagnostic names', () => {
-    it('quotes the full key in the message, not the bare leaf', () => {
-      const error = check('joint_constraints/x/linear_limit_damping', '20.0');
-      expect(error?.message).toContain("'joint_constraints/x/linear_limit_damping'");
-      expect(error?.message).not.toContain("'linear_limit_damping'");
+  describe('leaf tables follow the JointData subclass that owns the prefix', () => {
+    // Only SixDOFJointData::_set reads an axis segment (physical_bone_3d.cpp:452-466)
+    // and its arm chain ends `else { return false; }` (:596-598) with arms for
+    // its own 21 leaves alone; the flat subclasses' chains (:133, :202, :283,
+    // :391) never see an axis. PhysicalBone3D::_set then returns false
+    // (:716-724): both keys below are dropped writes under EVERY joint type.
+    it('refuses a Cone leaf under an axis prefix', () => {
+      const error = check('joint_constraints/x/swing_span', '10.0');
+      expect(error?.code).toBe('INVALID_JOINT_CONSTRAINTS_KEY');
+      expect(error?.severity).toBe('error');
     });
 
+    it('refuses a SixDOF-only leaf on the bare prefix', () => {
+      const error = check('joint_constraints/erp', '0.5');
+      expect(error?.code).toBe('INVALID_JOINT_CONSTRAINTS_KEY');
+      expect(error?.severity).toBe('error');
+    });
+
+    it('keeps a leaf both tables declare (Hinge :252, Slider :360, SixDOF :538 angular_limit_upper) in both', () => {
+      expect(check('joint_constraints/angular_limit_upper', '90.0')).toBeNull();
+      expect(check('joint_constraints/y/angular_limit_upper', '90.0')).toBeNull();
+    });
+  });
+
+  describe('the key a joint_constraints diagnostic names', () => {
+    it('quotes the full key in the message, not the bare leaf', () => {
+      const error = check('joint_constraints/x/linear_damping', '20.0');
+      expect(error?.message).toContain("'joint_constraints/x/linear_damping'");
+      expect(error?.message).not.toContain("'linear_damping'");
+    });
+
+    // `angular_limit_softness` is the leaf every prefix declares — Hinge
+    // (:320) and Slider (:440) on the bare prefix, SixDOF (:698) per axis —
+    // under one identical "0.01,16,0.01" hint.
     it('derives a distinct code per axis prefix', () => {
       const codes = ['', 'x/', 'y/', 'z/'].map(
-        (axis) => check(`joint_constraints/${axis}softness`, '20.0')?.code
+        (axis) => check(`joint_constraints/${axis}angular_limit_softness`, '20.0')?.code
       );
       expect(codes).toEqual([
-        'INVALID_JOINT_CONSTRAINTS/SOFTNESS_VALUE',
-        'INVALID_JOINT_CONSTRAINTS/X/SOFTNESS_VALUE',
-        'INVALID_JOINT_CONSTRAINTS/Y/SOFTNESS_VALUE',
-        'INVALID_JOINT_CONSTRAINTS/Z/SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/ANGULAR_LIMIT_SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/X/ANGULAR_LIMIT_SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/Y/ANGULAR_LIMIT_SOFTNESS_VALUE',
+        'INVALID_JOINT_CONSTRAINTS/Z/ANGULAR_LIMIT_SOFTNESS_VALUE',
       ]);
     });
 
     it('applies the same bound through every axis prefix', () => {
-      // The four tables are instances of one declaration, so only the naming
-      // differs — a bound that moved with the prefix would be a real divergence.
       for (const axis of ['', 'x/', 'y/', 'z/']) {
-        expect(check(`joint_constraints/${axis}softness`, '0.01'), axis).toBeNull();
-        expect(check(`joint_constraints/${axis}softness`, '16'), axis).toBeNull();
-        expect(check(`joint_constraints/${axis}softness`, '16.01')?.severity, axis).toBe('warning');
+        expect(check(`joint_constraints/${axis}angular_limit_softness`, '0.01'), axis).toBeNull();
+        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16'), axis).toBeNull();
+        expect(check(`joint_constraints/${axis}angular_limit_softness`, '16.01')?.severity, axis).toBe('warning');
       }
     });
   });

@@ -68,6 +68,32 @@ export const FILE_DIAGNOSTICS = {
     ruleName: 'root-declares-parent',
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
   },
+  /**
+   * A rule threw. Reported once, on the node it ran on, naming the rule and
+   * the error; every other rule still runs. Not an engine claim about the
+   * file: the rule's own findings for that node are simply missing.
+   */
+  ruleCrashed: {
+    severity: 'error',
+    ruleName: 'rule-crashed',
+    grounding: {
+      kind: 'no-engine-counterpart',
+      scope: 'previewer-limitation',
+      because: 'a rule threw instead of reporting; the linter says which one rather than dropping the file',
+    },
+  },
+  /**
+   * A well-formed `SubResource("id")` / `ExtResource("id")` in a registered
+   * resource slot whose id the file never declares. Not a slice's claim: the
+   * loader resolves the reference while tokenising the VALUE, before any
+   * setter, so every slot fails the same way (`danglingResources.ts`). The ext
+   * twin is `resource_format_text.cpp:138`.
+   */
+  danglingResourceReference: {
+    severity: 'error',
+    ruleName: 'dangling-resource-reference',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:113' },
+  },
 } as const satisfies Record<string, RuleArm>;
 
 /**

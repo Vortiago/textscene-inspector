@@ -42,8 +42,10 @@ describe('PhysicalBone2D strict validators', () => {
       expect(check('bone2d_nodepath', 'NodePath("")')).toBeNull();
     });
 
-    it('rejects a bare quoted string (not wrapped in NodePath(...))', () => {
-      const error = check('bone2d_nodepath', '"../Bone2D"');
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    it('accepts the bare string the slot converts and rejects a StringName', () => {
+      expect(check('bone2d_nodepath', '"../Bone2D"')).toBeNull();
+      const error = check('bone2d_nodepath', '&"../Bone2D"');
       expect(error?.code).toBe('INVALID_BONE2D_NODEPATH_PATH');
     });
   });

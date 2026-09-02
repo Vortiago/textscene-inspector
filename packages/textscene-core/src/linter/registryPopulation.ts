@@ -141,11 +141,12 @@ export function registeredKeys(
  * fails it is still walked into, because excusing a validator must not excuse
  * the subtree behind it.
  *
- * Dedupe is by function identity for declarations — one leaf instance can back
- * several dispatchers and must be reported once — but by `(nodeType, key)` for
- * removals, because `unavailableValidator` memoises on reason and cite rather
- * than on the key, so two removed keys sharing both are literally one function
- * and identity dedupe would drop the second label.
+ * Every root is a subject: a registration is reported under its own
+ * `(nodeType, key)` even when its function is also a leaf of another root, or
+ * the same function another type registered (`unavailableValidator` memoises on
+ * reason and cite, so two removed keys are often one function). Only the walk
+ * INTO leaves dedupes, by function identity: one leaf instance can back several
+ * dispatchers and is reported once, under the first path that reaches it.
  */
 export function everyValidator(
   keep: (validator: PropertyValidator) => boolean,
@@ -154,32 +155,28 @@ export function everyValidator(
   const roots = opts.roots ?? registryRoots(opts.registry ?? validatorRegistry);
   const out: Subject[] = [];
   let visited = 0;
-  /** Declaration validators already reported, by function identity. */
+  /** Validators whose leaves have been walked, by function identity. */
   const seen = new Set<PropertyValidator>();
-  /** Removal roots already reported, by the pair that actually distinguishes them. */
-  const seenRemovals = new Set<string>();
 
-  const visit = (at: Site, validator: PropertyValidator, label: string, depth: number): void => {
-    if (seen.has(validator)) return;
-    seen.add(validator);
+  const report = (at: Site, validator: PropertyValidator, label: string, depth: number): void => {
     visited++;
     if (keep(validator)) out.push({ ...at, label, depth, validator });
-    validator.leaves?.forEach((leaf, index) => visit(at, leaf, `${label}[${index}]`, depth + 1));
+  };
+  const descend = (at: Site, validator: PropertyValidator, label: string, depth: number): void => {
+    if (seen.has(validator)) return;
+    seen.add(validator);
+    validator.leaves?.forEach((leaf, index) => {
+      if (seen.has(leaf)) return;
+      const leafLabel = `${label}[${index}]`;
+      report(at, leaf, leafLabel, depth + 1);
+      descend(at, leaf, leafLabel, depth + 1);
+    });
   };
 
   for (const root of roots) {
     const at = siteOf(root);
-    if (at.kind === 'removal') {
-      const pair = `${at.nodeType}\u0000${at.key}`;
-      if (seenRemovals.has(pair)) continue;
-      seenRemovals.add(pair);
-      visited++;
-      if (keep(root.validator)) {
-        out.push({ ...at, label: root.label, depth: 0, validator: root.validator });
-      }
-      continue;
-    }
-    visit(at, root.validator, root.label, 0);
+    report(at, root.validator, root.label, 0);
+    descend(at, root.validator, root.label, 0);
   }
 
   if (opts.atLeast !== undefined && visited < opts.atLeast) {

@@ -32,15 +32,6 @@ const WS = '\\s*';
 const NODE_PATH_BODY = `NodePath${WS}\\(${WS}"([^"]*)"${WS}\\)`;
 
 /**
- * A resource reference, capturing the kind and then the id.
- *
- * The id class is `[^"]+`, matching every resolver that later LOOKS the id up. A copy
- * reading `[\w-]+` made the linter the strictest reader of an id it does not itself
- * resolve, rejecting references the rest of the pipeline handles.
- */
-const RESOURCE_REF_BODY = `(SubResource|ExtResource)${WS}\\(${WS}"([^"]+)"${WS}\\)`;
-
-/**
  * A bare `[…]` array literal, capturing the body.
  *
  * Exported for the two callers that go on to PARSE the body (GridMap's mesh list,
@@ -62,6 +53,26 @@ export const TYPED_OR_BARE_ARRAY_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S
 
 /** A typed `Array[T]([…])` wrapper alone; `[1]` is the element type `T`. */
 export const TYPED_WRAPPER_RE = /^Array\[([^[\]]+)\]\(\[[\s\S]*\]\)$/;
+
+/**
+ * The text between the brackets of a bare `[…]` or a typed `Array[T]([…])`
+ * value, or null when it is neither.
+ *
+ * Positional, never a second grammar: the caller has vetted (or goes on to
+ * vet) the shape, so this only knows WHERE the elements sit in each spelling.
+ * A caller reaching for `value.trim().slice(1, -1)` reads `rray[int]([0, 4`
+ * out of `Array[int]([0, 4])` and then counts pairs on text that is not the
+ * array — which is why the four readers of this body share one reader.
+ */
+export function arrayLiteralBody(value: string): string | null {
+  const text = value.trim();
+  const wrapped = TYPED_WRAPPER_RE.exec(text);
+  // `Array[` + the captured element type + `](`, then the bare literal, then `)`.
+  const bare = wrapped
+    ? text.slice('Array['.length + wrapped[1]!.length + ']('.length, -1).trim()
+    : text;
+  return ARRAY_LITERAL_RE.exec(bare)?.[1] ?? null;
+}
 
 /**
  * A whole `Packed…Array(…)` constructor call, capturing the argument body.
@@ -128,25 +139,6 @@ export function dictNumberField(key: string, global = false): RegExp {
 }
 
 /**
- * A field of a serialised Dictionary whose value is a resource reference;
- * `[1]` is the whole reference. Same padding tolerance as every other builder
- * here — a hand-rolled copy dropped it and a SpriteFrames animation lost half
- * its frames.
- */
-export function dictRefField(key: string, global = false): RegExp {
-  return new RegExp(`"${key}"${WS}:${WS}(${RESOURCE_REF_BODY})`, global ? 'g' : '');
-}
-
-/**
- * A `SubResource("…")` reference alone, capturing the id.
- *
- * Exported as a STRING, not a RegExp, for the one caller that embeds it in a larger
- * alternation: a shared `g`-flagged instance carries `lastIndex` between calls, so
- * handing one out would make two unrelated scans interfere.
- */
-export const SUB_RESOURCE_REF_BODY = `SubResource${WS}\\(${WS}"([^"]+)"${WS}\\)`;
-
-/**
  * A whole value that is NIL, in either of the two spellings Godot reads.
  *
  * `variant_parser.cpp:699` takes `null` and `nil` through ONE arm to `Variant()`,
@@ -164,47 +156,38 @@ export function isNilLiteral(value: string): boolean {
 
 const NIL_LITERAL_RE = /^\s*(?:null|nil)\s*$/;
 
-/** A value that is EXACTLY a `NodePath("…")` literal. No `g` flag, so `.test()` is stateless. */
+/**
+ * A value that is EXACTLY a `NodePath("…")` literal. No `g` flag, so `.test()` is stateless.
+ *
+ * The LITERAL only. A NodePath slot also takes a bare string, which is
+ * {@link nodePathLiteral}'s question; this stays the shape check for an
+ * element inside `Array[NodePath]([…])`.
+ */
 export const NODE_PATH_LITERAL_RE = new RegExp(`^${NODE_PATH_BODY}$`);
 
 /** The first `NodePath("…")` literal ANYWHERE in a value. */
 export const NODE_PATH_LITERAL_ANYWHERE_RE = new RegExp(NODE_PATH_BODY);
 
-/** A value that is EXACTLY a resource reference: `[1]` is the kind, `[2]` the id. */
-export const RESOURCE_REF_RE = new RegExp(`^${RESOURCE_REF_BODY}$`);
-
-/** The first `SubResource("…")` ANYWHERE in a value; `[1]` is the id. */
-export const SUB_RESOURCE_REF_ANYWHERE_RE = new RegExp(SUB_RESOURCE_REF_BODY);
+/** A whole value that is one plain quoted string, capturing the body. */
+const QUOTED_STRING_RE = /^"([^"]*)"$/;
 
 /**
- * An `ExtResource(` call ANYWHERE in a value — a discriminator, not a parse.
- *
- * For a caller asking only "does this value reach outside the file", where the
- * id is nobody's business. The body deliberately stops at the `(`: a
- * SUPPRESSION check wants the superset, and the quoted-id body would drop the
- * legacy integer spelling `ExtResource(1)` that the tight `includes` it replaces
- * did match.
- */
-export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
-
-/**
- * The path inside a `NodePath("…")` literal, or null when the value is not one.
+ * The path a NodePath SLOT stores from this value, or null when it stores none:
+ * the `NodePath("…")` literal, or the bare `"…"` string `can_convert_strict`
+ * converts (`variant.cpp:746-749`: `case NODE_PATH: valid[] = { STRING, NIL }`),
+ * which `Variant::operator NodePath()` (`:2001`) builds the path from. A
+ * StringName is not in that list, so `&"…"` is null here.
  *
  * `NodePath("")` yields `''`, not null: an empty path is a real serialised value with
  * its own meaning (unset), and collapsing it into "not a NodePath" is what let an
  * explicitly cleared key take an absent key's default.
+ *
+ * Neither form decodes escapes: `[^"]*` reads the body as written, which is
+ * what every resolver of the result compares against.
  */
 export function nodePathLiteral(raw: string): string | null {
-  return NODE_PATH_LITERAL_RE.exec(raw)?.[1] ?? null;
-}
-
-/** The kind and id of a resource reference, or null when the value is not one. */
-export function resourceRef(
-  raw: string
-): { kind: 'SubResource' | 'ExtResource'; id: string } | null {
-  const match = RESOURCE_REF_RE.exec(raw);
-  if (!match) return null;
-  return { kind: match[1] as 'SubResource' | 'ExtResource', id: match[2]! };
+  const value = raw.trim();
+  return NODE_PATH_LITERAL_RE.exec(value)?.[1] ?? QUOTED_STRING_RE.exec(value)?.[1] ?? null;
 }
 
 /**

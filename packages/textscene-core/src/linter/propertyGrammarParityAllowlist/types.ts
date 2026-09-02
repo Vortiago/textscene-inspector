@@ -2,9 +2,7 @@
  * The shape of one allowlisted asymmetry.
  *
  * Split out from `propertyGrammarParityAllowlist.ts` so the family parts beside
- * this file can import it without importing the table they are merged into. The
- * three key kinds and why they are three are explained where the table is
- * assembled.
+ * this file can import it without importing the table they are merged into.
  */
 
 export interface AsymmetryEntry {
@@ -31,21 +29,5 @@ export interface AsymmetryEntry {
    * the gap actually closing.
    */
   renderGap?: readonly string[];
-  /**
-   * Validated under a pre-4.0 spelling, and read by the parser under the
-   * modern one: `canonicalPropertyName` (`godot/deprecated.ts`) rewrites the
-   * key in the property bag before the parser sees it, so this scan looks for
-   * a key nothing downstream ever holds.
-   *
-   * Neither of the two above fits, and using either lies. `linterOnly` claims
-   * the property cannot change a frozen frame — false for `frames`, `navpoly`
-   * and `align`, which all change the picture. `renderGap` claims the renderer
-   * does not implement it — also false, since it honours the value under its
-   * current name.
-   *
-   * Self-verifying: `isDeprecatedPropertyName` has to agree that the key is an
-   * alias on this type, so a key that merely goes unread cannot be parked here.
-   */
-  aliasedRead?: readonly string[];
   reason: string;
 }

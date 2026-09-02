@@ -16,6 +16,7 @@ import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.j
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { isNilLiteral } from '../godot/index.js';
+import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
@@ -79,6 +80,9 @@ export class StrictTscnParser {
     // its body, so its own diagnostics need an owner too. The fields keep the
     // `node*` names `ParseError` publishes.
     let currentOwner: { nodeName: string; nodeType: string } | null = null;
+    // `[node]` headings seen so far: heading 0 is the root and takes the
+    // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
+    let nodeHeadings = 0;
 
     const observer: ParseObserver = {
       onError: (error) => {
@@ -132,21 +136,35 @@ export class StrictTscnParser {
             ...currentOwner,
           });
         }
-        // A heading with none of `type=` / `index=` / `instance=` is LEGAL:
-        // Godot's parser takes the absence as a claim rather than as a defect —
-        // `else { type = SceneState::TYPE_INSTANTIATED; //no type? assume this
-        // was instantiated }` (resource_format_text.cpp:218-221). So this is
-        // not a grammar error, and calling it one rejected both canonical
-        // valid shapes: a property override on a child of an `instance=`
-        // sub-scene, and an inherited scene.
+        // A heading without `type=` is TYPE_INSTANTIATED — `//no type? assume
+        // this was instantiated` (resource_format_text.cpp:218-221) — which is
+        // a claim, not a grammar error, and what the two arms below report is
+        // whether the claim can hold.
         //
-        // It stays a WARNING because the claim can still be false, and Godot
-        // says so itself at load — `"… was modified from inside an instance,
-        // but it has vanished."` (packed_scene.cpp:309-311) — when nothing
-        // instantiates the node the heading is standing in for. Godot's writer
-        // emits `index=` for the real cases, so a bare heading is usually the
-        // residue of a sub-scene that failed to resolve.
-        if (
+        // Heading 0: only `instance=` sets the base scene (:236-239; `index=`
+        // at :270-272 changes nothing), and without one the instantiate is
+        // refused — `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED &&
+        // base_scene_idx < 0, …)` (packed_scene.cpp:220).
+        //
+        // Any later heading: a node lacking all three is a property override
+        // on instanced content, which Godot only warns about at load when
+        // nothing instantiates it — `"… was modified from inside an instance,
+        // but it has vanished."` (packed_scene.cpp:309-311).
+        const isRootHeading = nodeHeadings++ === 0;
+        if (isRootHeading && !heading.attributes.type && !heading.attributes.instance) {
+          errors.push({
+            severity: 'error',
+            message:
+              'Root node heading states no "type=" or "instance=", so Godot treats it as a node ' +
+              'from an instanced scene with no base scene and refuses to instantiate the scene ' +
+              '(packed_scene.cpp:220).',
+            line,
+            column: 1,
+            code: 'MISSING_NODE_IDENTIFIER',
+            ...currentOwner,
+          });
+        } else if (
+          !isRootHeading &&
           !heading.attributes.type &&
           !heading.attributes.index &&
           !heading.attributes.instance
@@ -170,11 +188,34 @@ export class StrictTscnParser {
         // ext_resource/gd_scene sections).
         if (isMultiline || !ownerType) return;
 
-        const validator = validatorRegistry.findValidator(ownerType, key);
-        if (!validator) return;
+        // The key as written first; where nothing claims that spelling, the
+        // pair the engine applies — `godot/deprecated.ts` resolves the alias
+        // and transforms the value — and the diagnostic then names both,
+        // because the canonical key appears nowhere in the file.
+        let lookupKey = key;
+        let lookupValue = value;
+        let validator = validatorRegistry.findValidator(ownerType, key);
+        if (!validator) {
+          const resolved = resolveDeprecatedProperty(ownerType, key, value);
+          if (resolved.key === key) return;
+          validator = validatorRegistry.findValidator(ownerType, resolved.key);
+          if (!validator) return;
+          lookupKey = resolved.key;
+          lookupValue = resolved.value;
+        }
 
-        const error = validator(key, value, line);
-        if (!error) return;
+        const found = validator(lookupKey, lookupValue, line);
+        if (!found) return;
+        const error =
+          lookupKey === key
+            ? found
+            : {
+                ...found,
+                // `propertyError` anchors the column on the key it was handed;
+                // rebased so it lands on the value after the key as written.
+                column: found.column - lookupKey.length + key.length,
+                message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
+              };
 
         // `null` is a legal Variant literal anywhere a value is expected
         // (variant_parser.cpp:699), so a per-type "must be a number" / "must be

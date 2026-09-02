@@ -115,12 +115,11 @@ export function resolveResourceSlot(
  * `shape = "hello"` reported that a resource named `hello` was missing, when
  * nothing had asked for one.
  *
- * A CLEARED slot is `true`, because it names nothing on purpose. Every caller
- * uses this to decide whether to report a missing resource, and `null` is a
- * value Godot writes and reloads, so reporting it is a false positive on a file
- * the engine opens. The guard lives here rather than at the two dozen call
- * sites for the same reason the format half lives at its combinator: the rule
- * is general, and the sites that hand-rolled it disagreed.
+ * A CLEARED slot is `true`, because it names nothing on purpose: `null` is a
+ * value Godot writes and reloads. The dangling case itself is
+ * `danglingResources.ts`'s error for every registered slot; this answers a
+ * rule that gates something ELSE on a reference resolving (Path2D's script
+ * exemption).
  *
  * @example
  * ```typescript

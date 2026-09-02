@@ -79,8 +79,10 @@ describe('XRFaceModifier3D strict validators', () => {
       expect(check('target', 'NodePath("../NotAMesh")')).toBeNull();
     });
 
-    it('rejects a bare quoted string that is not a NodePath literal', () => {
-      expect(check('target', '"../MeshInstance3D"')).not.toBeNull();
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    it('takes the bare string the slot converts and rejects a StringName', () => {
+      expect(check('target', '"../MeshInstance3D"')).toBeNull();
+      expect(check('target', '&"../MeshInstance3D"')).not.toBeNull();
     });
   });
 

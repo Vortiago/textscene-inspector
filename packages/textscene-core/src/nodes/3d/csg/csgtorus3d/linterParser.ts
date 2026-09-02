@@ -1,10 +1,8 @@
 /** CSGTorus3D strict validators for linting. */
 
-import '../../geometryinstance3d/linterParser.js';
+import '../csgprimitive3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
 
 // Ranges are Godot's own editor hints (csg_shape.cpp:2072-2075). `transform` is
 // deliberately NOT re-declared: the Node3D base walk supplies it, and a shadow copy
@@ -31,9 +29,5 @@ validatorRegistry.registerAll('CSGTorus3D', {
     hinted: { max: 'csg_shape.cpp:2075' },
   }),
   smooth_faces: v.boolean('smooth_faces'),
-  flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
-  // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
-  // CSGShape3D::set_operation:933-937 is a bare assignment.
-  operation: v.enumInt('operation', 0, 2, OPERATION, { hinted: 'csg_shape.cpp:1040' }),
 });

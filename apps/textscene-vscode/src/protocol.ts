@@ -101,8 +101,12 @@ export type ErrorMessage = {
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
-  /** Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier). */
-  path: string;
+  /**
+   * Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier).
+   * Optional: a legacy webview sends `nodeName` alone, which `webviewDispatch`
+   * admits and the handler answers with its first-name-match fallback.
+   */
+  path?: string;
   /**
    * Raw Godot `parent=` value of the node (`undefined` for root, `"."` for a
    * direct child, else the `/`-joined ancestor path minus the root). Used to

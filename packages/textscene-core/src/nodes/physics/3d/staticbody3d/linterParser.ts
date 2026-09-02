@@ -3,7 +3,7 @@
  * Migrated to the declarative `v` namespace.
  */
 
-import '../../shared/linterParser.js';
+import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 

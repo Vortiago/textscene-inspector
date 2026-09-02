@@ -47,6 +47,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
+import { listIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
@@ -144,7 +145,7 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   }
 
   if (outOfRangeSettings.size > 0) {
-    const indices = [...outOfRangeSettings].sort((a, b) => a - b).join(', ');
+    const indices = listIndices([...outOfRangeSettings].sort((a, b) => a - b));
     diagnostics.push({
       severity: 'error',
       message:

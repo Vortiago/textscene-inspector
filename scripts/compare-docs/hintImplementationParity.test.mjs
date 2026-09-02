@@ -66,17 +66,20 @@ const SETTER_OVERRIDES_HINT = new Map([
   // are reachable, and `enforcedMin`/`enforcedMax` carries the setter's while
   // `min`/`max` keeps the hint's, so nothing needs exempting.
   //
+  // Per END, not per property: the other end of each of these still carries
+  // the hint's number and is compared like any other.
+  //
   // The hint's -1 is the in-memory default the serializer omits; the setter's
   // ERR_FAIL_COND_MSG(p_bone_idx < 0) refuses it outright.
-  ['PhysicalBone2D.bone2d_index', 'physical_bone_2d.cpp:229'],
+  ['PhysicalBone2D.bone2d_index', { end: 'min', cite: 'physical_bone_2d.cpp:229' }],
   // ERR_FAIL_COND(p_count < 1) sits ABOVE the hint's floor of 0.
-  ['GPUParticles3D.draw_passes', 'gpu_particles_3d.cpp:266'],
+  ['GPUParticles3D.draw_passes', { end: 'min', cite: 'gpu_particles_3d.cpp:266' }],
   // A clamp, not a refusal: `p > 4 ? p : 4` means 1..3 are values Godot never
   // stores, so the floor sits ABOVE the hint's.
-  ['CSGSphere3D.radial_segments', 'csg_shape.cpp:1489'],
+  ['CSGSphere3D.radial_segments', { end: 'min', cite: 'csg_shape.cpp:1489' }],
   // `size = p_size.maxf(0.001)` raises anything under 0.001 rather than refusing
   // it, so the altered floor sits ABOVE the hint's 0.
-  ['Decal.size', 'decal.cpp:34'],
+  ['Decal.size', { end: 'min', cite: 'decal.cpp:34' }],
 ]);
 
 /**
@@ -138,9 +141,15 @@ const sameBound = (ours, theirs, tolerance) => Math.abs(ours - theirs) <= tolera
  * by the wrong rule, and when ours is the narrower one it reports an error on a
  * file Godot opens — this repo's recurring defect. Must be empty.
  */
-function mismatches(hint, bounds) {
+/**
+ * Every end where our bound and the hint's disagree, `exemptEnd` (`'min'` or
+ * `'max'`, from `SETTER_OVERRIDES_HINT`) left out.
+ */
+function mismatches(hint, bounds, exemptEnd) {
   const out = [];
-  const { min, max } = bounds ?? {};
+  const { min: ourMin, max: ourMax } = bounds ?? {};
+  const min = exemptEnd === 'min' ? undefined : ourMin;
+  const max = exemptEnd === 'max' ? undefined : ourMax;
   const { lo, hi, tolerance } = hintBounds(hint);
   // No `Number.MIN_VALUE` exemption, and none needed. A setter refusing `<= 0`
   // is spelled `enforcedMin: { at: 0, exclusive: true }`, which leaves the `min`
@@ -265,7 +274,7 @@ async function rangedProperties() {
       if (!hint) continue;
       // A property we validate nowhere is `enginePropertyCoverage`'s subject,
       // not this one: absent coverage is a different claim from wrong coverage.
-      const validator = validatorRegistry.findValidator(nodeType, property.name);
+      const validator = validatorRegistry.declarationFor(nodeType, property.name);
       if (!validator) continue;
       rows.push({ label: `${nodeType}.${property.name}`, hint, bounds: validator.bounds });
     }
@@ -283,7 +292,7 @@ async function enumProperties() {
       if (property.hint !== HINT_ENUM) continue;
       const offered = parseEnumHint(property.hint_string);
       if (!offered) continue;
-      const validator = validatorRegistry.findValidator(nodeType, property.name);
+      const validator = validatorRegistry.declarationFor(nodeType, property.name);
       if (!validator) continue;
       rows.push({ label: `${nodeType}.${property.name}`, offered, bounds: validator.bounds });
     }
@@ -319,9 +328,11 @@ describe('the bound we implement against the bound Godot declared', () => {
     // lining up.
     expect(rows.length).toBeGreaterThan(200);
 
-    const wrong = rows
-      .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
-      .flatMap((r) => mismatches(r.hint, r.bounds).map((d) => `${r.label}: ${d}`));
+    const wrong = rows.flatMap((r) =>
+      mismatches(r.hint, r.bounds, SETTER_OVERRIDES_HINT.get(r.label)?.end).map(
+        (d) => `${r.label}: ${d}`
+      )
+    );
     expect(wrong.sort()).toEqual([]);
   });
 
@@ -331,9 +342,10 @@ describe('the bound we implement against the bound Godot declared', () => {
     // wider than the hint they cited — every one of them reasoning from what
     // the setter accepts, which decides the ERROR tier and not this one.
     expect(enumRows.length).toBeGreaterThan(50);
-    const wrong = enumRows
-      .filter((r) => !SETTER_OVERRIDES_HINT.has(r.label))
-      .flatMap((r) => enumMismatches(r.offered, r.bounds).map((d) => `${r.label}: ${d}`));
+    // No exemption: an override names a range END, which an enum has none of.
+    const wrong = enumRows.flatMap((r) =>
+      enumMismatches(r.offered, r.bounds).map((d) => `${r.label}: ${d}`)
+    );
     expect(wrong.sort()).toEqual([]);
   });
 
@@ -365,10 +377,16 @@ describe('the bound we implement against the bound Godot declared', () => {
 
   it('holds no override for a property that no longer departs from the engine', () => {
     const byLabel = new Map(rows.map((r) => [r.label, r]));
-    const dead = [...SETTER_OVERRIDES_HINT.keys()].filter((label) => {
-      const row = byLabel.get(label);
-      return row === undefined || mismatches(row.hint, row.bounds).length === 0;
-    });
+    // Dead when exempting the named end removes no mismatch.
+    const dead = [...SETTER_OVERRIDES_HINT.entries()]
+      .filter(([label, { end }]) => {
+        const row = byLabel.get(label);
+        if (row === undefined) return true;
+        return (
+          mismatches(row.hint, row.bounds).length === mismatches(row.hint, row.bounds, end).length
+        );
+      })
+      .map(([label]) => label);
     expect(dead).toEqual([]);
   });
 
@@ -376,8 +394,8 @@ describe('the bound we implement against the bound Godot declared', () => {
     // Same standard the bounds themselves are held to: a roster whose reasons
     // cannot be checked is a list of opinions.
     const uncited = [...SETTER_OVERRIDES_HINT.entries()]
-      .filter(([, cite]) => !/^[\w/]+\.(cpp|h):\d+$/.test(cite))
-      .map(([label, cite]) => `${label}: ${cite}`);
+      .filter(([, { end, cite }]) => !['min', 'max'].includes(end) || !/^[\w/]+\.(cpp|h):\d+$/.test(cite))
+      .map(([label, { end, cite }]) => `${label}: ${end} ${cite}`);
     expect(uncited).toEqual([]);
   });
 });

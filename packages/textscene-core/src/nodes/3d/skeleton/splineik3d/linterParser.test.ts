@@ -70,13 +70,15 @@ describe('SplineIK3D strict validators', () => {
   });
 
   describe('settings/<i>/path_3d', () => {
-    it('accepts a NodePath literal', () => {
+    it('accepts a NodePath literal and the bare string the slot converts', () => {
       expect(check('settings/0/path_3d', 'NodePath("../SplinePath")')).toBeNull();
       expect(check('settings/7/path_3d', 'NodePath("")')).toBeNull();
+      // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+      expect(check('settings/0/path_3d', '"../SplinePath"')).toBeNull();
     });
 
-    it('rejects anything that is not a NodePath literal', () => {
-      expect(check('settings/0/path_3d', '"../SplinePath"')).not.toBeNull();
+    it('rejects a StringName and a bare word', () => {
+      expect(check('settings/0/path_3d', '&"../SplinePath"')).not.toBeNull();
       expect(check('settings/0/path_3d', 'definitely-not-a-valid-value')).not.toBeNull();
     });
   });
@@ -147,9 +149,9 @@ describe('SplineIK3D strict validators', () => {
       // a SINGLE leaf segment, so these must resolve to the very same validator
       // a SplineIK3D-free lookup finds, and nothing here may intercept them.
       for (const key of ['settings/0/end_bone/length', 'settings/0/joints/0/bone']) {
-        expect(validatorRegistry.findValidator('SplineIK3D', key)).toBe(
-          validatorRegistry.findValidator('ChainIK3D', key)
-        );
+        const viaSpline = validatorRegistry.findValidator('SplineIK3D', key)!;
+        const viaChain = validatorRegistry.findValidator('ChainIK3D', key)!;
+        expect(viaSpline(key, '"x"', 1)).toEqual(viaChain(key, '"x"', 1));
       }
     });
 

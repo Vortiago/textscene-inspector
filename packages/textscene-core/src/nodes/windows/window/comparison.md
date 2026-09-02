@@ -73,8 +73,8 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `accessibility_description` | quoted string |  |
-| `accessibility_name` | quoted string |  |
+| `accessibility_description` | quoted string, or the &"…" StringName jacket |  |
+| `accessibility_name` | quoted string, or the &"…" StringName jacket |  |
 | `always_on_top` | true or false |  |
 | `borderless` | true or false |  |
 | `content_scale_aspect` | enum 0-4 (IGNORE/KEEP/KEEP_WIDTH/KEEP_HEIGHT/EXPAND) | warning |
@@ -110,7 +110,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `theme_override_icons/*` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_type_variation` | quoted string or &"name" |  |
-| `title` | quoted string |  |
+| `title` | quoted string, or the &"…" StringName jacket |  |
 | `transient` | true or false |  |
 | `transient_to_focused` | true or false |  |
 | `transparent` | true or false |  |

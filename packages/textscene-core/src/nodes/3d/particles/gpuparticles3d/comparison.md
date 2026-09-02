@@ -79,10 +79,8 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-gpuparticles3d-resources` | `gpuparticles3d-missing-process-material` | warning |
-|  | `valid-gpuparticles3d-process-material` | error |
-|  | `valid-gpuparticles3d-resources` | error |
 |  | `gpuparticles3d-no-draw-pass-mesh` | warning |
-|  | `valid-gpuparticles3d-sub-emitter` | error |
+|  | `valid-gpuparticles3d-sub-emitter` | warning |
 |  | `gpuparticles3d-sub-emitter-self` | warning |
 |  | `gpuparticles3d-sub-emitter-wrong-type` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |

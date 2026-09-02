@@ -125,6 +125,47 @@ describe('everyValidator', () => {
     ]);
   });
 
+  it('reports a root whose validator was already reached as a leaf, in either order', () => {
+    // One leaf function registered twice — behind `<group>/*` as a dispatcher
+    // leaf and under `<group>/<leaf>` as an exact key — is two registrations,
+    // so both get a depth-0 subject. Only the walk INTO leaves dedupes.
+    const shared = leaf();
+    const group = {
+      label: 'Type.group/*',
+      validator: dispatcher([shared]),
+      nodeType: 'Type',
+      key: 'group/*',
+      kind: 'declaration',
+    } as const;
+    const exact = {
+      label: 'Type.group/leaf',
+      validator: shared,
+      nodeType: 'Type',
+      key: 'group/leaf',
+      kind: 'declaration',
+    } as const;
+    for (const roots of [[group, exact], [exact, group]]) {
+      const found = everyValidator(() => true, { roots });
+      expect(found.filter((s) => s.depth === 0).map((s) => s.label).sort()).toEqual([
+        'Type.group/*',
+        'Type.group/leaf',
+      ]);
+      expect(found.filter((s) => s.validator === shared && s.depth > 0).length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('yields a depth-0 subject for every registration the live registry resolves', () => {
+    const registered = registeredKeys()
+      .filter(({ nodeType, key }) => validatorRegistry.declarationFor(nodeType, key))
+      .map(({ nodeType, key }) => `${nodeType}.${key}`)
+      .sort();
+    const roots = everyValidator(() => true)
+      .filter((s) => s.depth === 0)
+      .map((s) => s.label)
+      .sort();
+    expect(roots).toEqual(registered);
+  });
+
   it('fails loudly below its floor rather than reporting an empty offender list', () => {
     expect(() => everyValidator(() => true, { roots: [], atLeast: 1 })).toThrow(/below the floor/);
   });

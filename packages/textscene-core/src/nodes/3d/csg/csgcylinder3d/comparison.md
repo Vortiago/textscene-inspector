@@ -38,15 +38,13 @@ None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
 ## Linting
 
 <!-- lint:begin CSGCylinder3D -->
-Strict parsing format-checks these `CSGCylinder3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited from CSGPrimitive3D, 6 inherited from CSGShape3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `cone` | true or false |  |
-| `flip_faces` | true or false |  |
 | `height` | float >= 0.001 | warning below |
 | `material` | null, SubResource("id") or ExtResource("id") |  |
-| `operation` | enum 0-2 (UNION/INTERSECTION/SUBTRACTION) | warning |
 | `radius` | float >= 0.001 | warning below |
 | `sides` | integer 3-64 | error below, warning above |
 | `smooth_faces` | true or false |  |

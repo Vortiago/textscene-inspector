@@ -17,14 +17,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import {
-  checkResourceExists,
-  heldResource,
-  resourceSlotIsEmpty,
-} from '../../../../linter/resourceChecker.js';
+import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
-  const { node, scene } = context;
+  const { node } = context;
   if (!isValidProperties(node.properties)) return [];
 
   const props = node.properties as Record<string, string>;
@@ -41,32 +37,6 @@ function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // A reference that names nothing is the error tier everywhere else in this
-  // linter, and the 3D twin reports it: an empty slot and a dangling id are
-  // different defects, and checking only emptiness let the second through.
-  //
-  // Each slot is read at its own `props.<name>` call site, never through a
-  // variable or a computed key: `clearedResourceSlot.test.ts` scrapes these
-  // exact spellings, and an argument it cannot bracket drops the slot out of
-  // that sweep in silence.
-  const notFound = (key: string, raw: string | undefined): Diagnostic => ({
-    severity: 'error',
-    message: `GPUParticles2D '${key}' resource not found: ${raw}`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'valid-gpuparticles2d-resources',
-  });
-
-  const processMaterial = heldResource(props.process_material);
-  if (processMaterial !== undefined && !checkResourceExists(scene, processMaterial)) {
-    diagnostics.push(notFound('process_material', props.process_material));
-  }
-
-  const texture = heldResource(props.texture);
-  if (texture !== undefined && !checkResourceExists(scene, texture)) {
-    diagnostics.push(notFound('texture', props.texture));
-  }
-
   return diagnostics;
 }
 
@@ -79,15 +49,6 @@ const gpuParticles2DPreviewRule: LintRule = {
     applicableNodeTypes: ['GPUParticles2D'],
     emits: [
       { ruleName: 'gpuparticles2d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-gpuparticles2d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the reference names a resource id this file never declares',
-        },
-      },
     ],
   },
   check: checkGPUParticles2D,

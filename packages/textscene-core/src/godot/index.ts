@@ -92,12 +92,8 @@ export { DEFAULT_ANIMATION_NAME } from './animation.js';
 export { canonicalPropertyName, isDeprecatedPropertyName } from './deprecated.js';
 export {
   ARRAY_LITERAL_RE,
-  EXT_RESOURCE_CALL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
   NODE_PATH_LITERAL_ANYWHERE_RE,
-  RESOURCE_REF_RE,
-  SUB_RESOURCE_REF_ANYWHERE_RE,
-  SUB_RESOURCE_REF_BODY,
   TYPED_OR_BARE_ARRAY_RE,
   TYPED_WRAPPER_RE,
   compositeCallPrefix,
@@ -105,8 +101,17 @@ export {
   packedArrayCallAnywhere,
   packedArrayLiteral,
   nodePathLiteral,
-  resourceRef,
+  arrayLiteralBody,
 } from './variantParser.js';
+export {
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
+  type ResourceRef,
+  dictSubResourceEntries,
+  keyedResourceRefReader,
+  resourceRef,
+  subResourceRefAnywhere,
+} from './resourceRef.js';
+export { dictPackedField } from './packedArrayFields.js';
 export {
   MAX_BASE_CHAIN_HOPS,
   NODE_BASE_TYPES,

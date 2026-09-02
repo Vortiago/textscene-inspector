@@ -239,8 +239,9 @@ bones = ["Hip", PackedFloat32Array(0, 0, 0), "Hip/Chest", PackedFloat32Array(1, 
     });
   });
 
-  it('rejects a malformed skeleton NodePath', () => {
-    const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\nskeleton = "../Skeleton2D"\n`;
+  // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+  it('rejects a StringName skeleton', () => {
+    const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\nskeleton = &"../Skeleton2D"\n`;
     const errors = errorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('skeleton');

@@ -211,7 +211,11 @@ describe('PopupMenu strict validators', () => {
       const negative = validatorRegistry.findValidator('PopupMenu', 'item_-1/text');
       expect(negative).not.toBeNull();
       expect(negative!('item_-1/text', '"x"', 1)?.code).toBe('INVALID_ITEM_INDEX');
-      expect(validatorRegistry.findValidator('PopupMenu', 'item_/text')).toBeNull();
+      // An EMPTY index fails the same `is_valid_int()` gate
+      // (property_list_helper.cpp:53), so the write is dropped and the key
+      // routes to the dispatcher, which reports it as an unknown item key.
+      const empty = validatorRegistry.findValidator('PopupMenu', 'item_/text');
+      expect(empty!('item_/text', '"x"', 1)?.code).toBe('INVALID_ITEM_KEY');
     });
 
     const dispatcher = validatorRegistry.findValidator('PopupMenu', 'item_0/text');

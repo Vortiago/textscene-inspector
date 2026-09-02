@@ -194,3 +194,35 @@ describe('a root heading that declares a parent', () => {
     expect(rootErrors(dangling)).toEqual([]);
   });
 });
+
+describe('a vanished path beside an instantiate refusal', () => {
+  // The re-root at `packed_scene.cpp:208-215` runs inside the loop that
+  // `ERR_FAIL_COND_V_MSG(n.parent == -1, nullptr, …)` (:207) and the root's
+  // own `n.parent != -1` refusal (:218) return out of, so once any heading
+  // refuses the instantiate no re-parent or rename survives to describe.
+  it('does not claim a re-root when another heading is parentless', () => {
+    const [orphan] = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', {}, { name: 'B' }),
+        node('Node2D', {}, { name: 'C', parent: 'Nope' })
+      )
+    );
+    expect(orphan?.nodeName).toBe('C');
+    expect(orphan?.message).not.toContain('re-parents');
+    expect(orphan?.message).not.toContain('Nope#C');
+    expect(orphan?.message).toContain('refuses');
+  });
+
+  it('does not claim a re-root when the root declares a parent', () => {
+    const [orphan] = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'A', parent: '.' }),
+        node('Node2D', {}, { name: 'C', parent: 'Nope' })
+      )
+    );
+    expect(orphan?.nodeName).toBe('C');
+    expect(orphan?.message).not.toContain('re-parents');
+    expect(orphan?.message).toContain('refuses');
+  });
+});

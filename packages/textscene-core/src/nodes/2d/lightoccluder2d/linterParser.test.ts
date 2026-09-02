@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { node, scene, expectClean, expectNoDiagnostic } from '../../../linter/testing/testkit';
+import { node, scene, expectClean, expectNoDiagnostic, lint } from '../../../linter/testing/testkit';
 import { Linter } from '../../../linter/Linter.js';
 import './linterParser';
 
@@ -46,8 +46,8 @@ occluder = ExtResource("1_abc")
 
   it('occluder accepts a dangling SubResource without format error (format-valid but unresolved)', () => {
     // resourceReference only validates format (SubResource/ExtResource syntax);
-    // whether the ref resolves to a declared resource is a semantic rule.
-    expectClean(
+    // the undeclared id is `dangling-resource-reference`'s error alone.
+    const diagnostics = lint(
       `[gd_scene format=3]
 [sub_resource type="OccluderPolygon2D" id="2"]
 polygon = PackedVector2Array(0, 0, 16, 0)
@@ -56,6 +56,7 @@ polygon = PackedVector2Array(0, 0, 16, 0)
 occluder = SubResource("999")
 `
     );
+    expect(diagnostics.map((d) => d.ruleName)).toEqual(['dangling-resource-reference']);
   });
 
   it('does not flag an absent occluder', () => {

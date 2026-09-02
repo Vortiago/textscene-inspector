@@ -45,10 +45,6 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   flip_v: v.boolean('flip_v'),
   frame_progress: v.float('frame_progress'),
   autoplay: v.stringName('autoplay'),
-
-  // -- Pre-4.0 spelling (animated_sprite_2d.cpp:616-618) ----------------------
-  // A pure rename onto set_sprite_frames, so the same reference formats.
-  frames: v.resourceReference('frames'),
 });
 
 // `is_playing` is bound as a METHOD (animated_sprite_2d.cpp:634) and nothing in

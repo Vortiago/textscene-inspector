@@ -47,8 +47,7 @@ Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inher
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-audiostreamplayer-properties` | `audiostreamplayer-missing-stream-resource` | error |
-|  | `audiostreamplayer-autoplay-without-stream` | warning |
+| `valid-audiostreamplayer-properties` | `audiostreamplayer-autoplay-without-stream` | warning |
 <!-- lint:end -->
 
 pitch_scale, volume_db, and the playing/autoplay/stream_paused flags fall back

@@ -1,22 +1,12 @@
 /**
  * The animation tier and the three audio players.
  *
- * Both families are shared-helper cases: `AnimationMixer` has no `parser.ts` of
- * its own, and each audio player's parser delegates to `parseAudioBase`, which
- * a per-file scrape of `properties.X` cannot see.
+ * `AnimationMixer` has no `parser.ts` of its own. The audio players read their
+ * shared keys through `parseAudioBase`, which the scan follows, so only the
+ * keys no player's parser reads at all are listed here.
  */
 
 import type { AsymmetryEntry } from './types.js';
-
-/**
- * Keys read by the parseAudioBase shared helper (not captured by the per-file
- * scrape of each audio player's parser.ts); each linterParser.ts registers
- * them explicitly.
- */
-const AUDIO_BASE_KEYS = [
-  'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
-  'stream_paused', 'bus', 'max_polyphony',
-] as const;
 
 export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
@@ -117,23 +107,24 @@ export const animationAndAudioAsymmetries: Readonly<Record<string, AsymmetryEntr
   },
 
   // -------------------------------------------------------------------------
-  // Audio (parseAudioBase shared-helper pattern)
+  // Audio
   // -------------------------------------------------------------------------
 
   AudioStreamPlayer: {
-    linterOnly: [...AUDIO_BASE_KEYS, 'mix_target', 'playback_type'],
-    reason: 'AudioStreamPlayer reads audio properties via parseAudioBase shared helper (not visible to per-file scrape); linter registers them explicitly. parser/parser.ts delegates entirely to helpers.',
+    // `mix_target` picks the output channels and `playback_type` the
+    // AudioServer sampling path; neither reaches a frame.
+    linterOnly: ['mix_target', 'playback_type'],
+    reason: 'mix_target and playback_type route audio output and never reach a frame; the shared keys are read through parseAudioBase.',
   },
 
   AudioStreamPlayer2D: {
-    linterOnly: AUDIO_BASE_KEYS,
-    reason: 'AudioStreamPlayer2D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
+    reason: 'No asymmetries; every key is read directly or through parseAudioBase.',
   },
 
   AudioStreamPlayer3D: {
     // `playback_type` forwards into the same AudioStreamPlayerInternal setter as
     // its 2D twin's, so both carry it and neither draws anything from it.
-    linterOnly: [...AUDIO_BASE_KEYS, 'playback_type'],
-    reason: 'AudioStreamPlayer3D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly. playback_type selects the AudioServer sampling path and never reaches a frame.',
+    linterOnly: ['playback_type'],
+    reason: 'playback_type selects the AudioServer sampling path and never reaches a frame; the shared keys are read through parseAudioBase.',
   },
 };

@@ -149,9 +149,16 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
  * Drop a property value's surrounding quotes: a value quoted at BOTH ends, and
  * long enough for the two quotes to be distinct. Anything else passes through.
  */
+/**
+ * The body of a quoted literal, with the StringName jacket a STRING slot
+ * converts from: `&"…"` and the 3.x-compatible `@"…"` are one `TK_STRING_NAME`
+ * (`variant_parser.cpp:263-265`), and `variant.cpp:582-587` lists `STRING_NAME`
+ * as a strict source for `STRING`. Anything else passes through unchanged.
+ */
 function stripQuotes(value: string): string {
-  return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
-    ? value.slice(1, -1)
+  const bare = value.startsWith('&') || value.startsWith('@') ? value.slice(1) : value;
+  return bare.length >= 2 && bare.startsWith('"') && bare.endsWith('"')
+    ? bare.slice(1, -1)
     : value;
 }
 
@@ -353,27 +360,35 @@ export function isIncompleteValue(value: string): boolean {
   return isIncompleteState(scanValueChunk(value, INITIAL_SCAN_STATE));
 }
 
+/** The escapes the tokenizer maps to a control character (`variant_parser.cpp:299-312`). */
 const ESCAPE_MAP: Record<string, string> = {
-  '"': '"',
-  '\\': '\\',
-  n: '\n',
-  r: '\r',
+  b: '\b',
   t: '\t',
+  n: '\n',
+  f: '\f',
+  r: '\r',
 };
 
 /**
- * Strip a value's surrounding quotes and decode Godot's string escape sequences
- * (`\n`, `\t`, `\r`, `\\`, `\"`, plus `\uXXXX` / `\UXXXXXX` Unicode — Godot emits
- * those for non-ASCII characters). Non-quoted values pass through unchanged.
+ * Strip a value's surrounding quotes (and the `&"…"` StringName jacket a STRING
+ * slot converts from) and decode Godot's string escapes the way the tokenizer
+ * does: `\b \t \n \f \r` to their control characters, `\uXXXX` / `\UXXXXXX`
+ * to the code point, and every other escaped character to itself
+ * (`variant_parser.cpp:350-351`, `default: res = next` — so `\"`, `\\` and
+ * `\'` all yield the character). Non-quoted values pass through unchanged.
  * A single left-to-right pass so an escaped backslash (`\\u1234`) is decoded as
  * `\` + literal `u1234`, not as a Unicode escape. Used wherever a node parser
  * reads a string property (label/button text, …).
+ *
+ * A `\u` without its hex digits is left as written: the tokenizer's `case 'u'`
+ * reads exactly four hex digits and errors otherwise, never falling through
+ * to the pass-through arm.
  */
 export function unquoteString(value: string): string {
   const unquoted = stripQuotes(value);
   if (!unquoted.includes('\\')) return unquoted;
   return unquoted.replace(
-    /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|["\\nrt])/g,
+    /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g,
     (_match, seq: string) => {
       if (seq[0] === 'u' || seq[0] === 'U') {
         const code = parseInt(seq.slice(1), 16);

@@ -4,24 +4,24 @@
  */
 
 import type * as THREE from 'three';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../r3f/SceneResourcesContext';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
-import type { StandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/types';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import type { MaterialSlotSource } from './meshMaterialResolution';
+import { SceneMaterialSlot } from './SceneMaterialSlot';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { warn } from '../../../logger';
 
 /**
  * A decoded ArrayMesh's geometry plus one material slot per draw group. Each
- * surface's material is resolved through the pipeline by its own
- * `<ExternalMaterialSlot>`, which keeps `useResource` one-per-component (rules of
- * hooks) while still loading textured materials for every surface.
+ * surface's material is loaded by its own slot component — `<ExternalMaterialSlot>`
+ * for a path, `<SceneMaterialSlot>` for a scene sub-resource — which keeps
+ * `useResource` one-per-component (rules of hooks) while still loading textured
+ * materials for every surface.
  *
  * Shared by both ArrayMesh sources — an external `.tres` and a scene's own
  * `[sub_resource]` — because where the bytes came from stops mattering here.
@@ -30,6 +30,7 @@ export function ArrayMeshSurfaces({
   mesh,
   shadowSide,
   sceneMaterials,
+  surfaceOverrides,
   override,
 }: {
   mesh: ArrayMeshResource;
@@ -40,6 +41,13 @@ export function ArrayMeshSurfaces({
    * rather than through the pipeline.
    */
   sceneMaterials?: readonly (TscnInternalResource | undefined)[];
+  /**
+   * `surface_material_override/N`, already resolved per surface index, or null
+   * for an index that names none. Consulted after `material_override` and before
+   * the surface's own material (`get_active_material`,
+   * mesh_instance_3d.cpp:395-400).
+   */
+  surfaceOverrides?: readonly (MaterialSlotSource | null)[];
   /**
    * The node's `material_override`, already resolved, or null when it names
    * none.
@@ -56,48 +64,41 @@ export function ArrayMeshSurfaces({
 }) {
   const surfacePaths = mesh.materialPaths.length > 0 ? mesh.materialPaths : [null];
   const multiSurface = surfacePaths.length > 1;
-  // One source per surface, chosen once: the override fills BOTH channels for
-  // every surface at once, so the mesh's own material is reachable only while
-  // it is unset, and the two channels can never disagree about which won.
-  const sources: MaterialSlotSource[] = surfacePaths.map((path, i) =>
-    override ?? { subResource: sceneMaterials?.[i], path: path ?? undefined }
+  // One source per surface, chosen once in Godot's order: an override fills
+  // BOTH channels of a surface at once, so a lower layer is reachable only while
+  // every layer above it is unset, and the channels never disagree about which
+  // won.
+  const sources: MaterialSlotSource[] = surfacePaths.map(
+    (path, i) =>
+      override ??
+      surfaceOverrides?.[i] ?? { subResource: sceneMaterials?.[i], path: path ?? undefined }
   );
-  // Every slot reading the same sub-resource decodes it once, across renders
-  // too — `parseStandardMaterial3DScalars` walks ~60 property decodes and this
-  // runs inside the render. Keyed on the resource OBJECT, which a re-parse
-  // replaces, so a cache hit can never be stale; a WeakMap so the entry dies
-  // with it.
-  const decoded = useRef<WeakMap<TscnInternalResource, StandardMaterial3DScalars>>(undefined);
-  decoded.current ??= new WeakMap();
-  const scalarsOf = (resource: TscnInternalResource): StandardMaterial3DScalars => {
-    const cache = decoded.current!;
-    const hit = cache.get(resource);
-    if (hit) return hit;
-    const built = parseStandardMaterial3DScalars(resource.data as Record<string, string>);
-    cache.set(resource, built);
-    return built;
-  };
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
       {sources.map((source, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        // A scene-local material is already in hand; only a PATH needs the pipeline.
-        return source.subResource ? (
-          <StandardMaterialSlot
-            key={`surf-${i}`}
-            scalars={scalarsOf(source.subResource)}
-            attach={attach}
-            shadowSide={shadowSide}
-          />
-        ) : (
-          <ExternalMaterialSlot
-            key={`surf-${i}`}
-            path={source.path ?? null}
-            attach={attach}
-            shadowSide={shadowSide}
-          />
-        );
+        const key = `surf-${i}`;
+        // A scene-local material is already in hand; a PATH needs the pipeline.
+        if (source.subResource) {
+          return (
+            <SceneMaterialSlot
+              key={key}
+              subResource={source.subResource}
+              attach={attach}
+              shadowSide={shadowSide}
+            />
+          );
+        }
+        if (source.path) {
+          return (
+            <ExternalMaterialSlot key={key} path={source.path} attach={attach} shadowSide={shadowSide} />
+          );
+        }
+        // Neither channel: no material, or one this previewer cannot build.
+        // Godot draws the hardcoded default shader for the former, and the
+        // primitive path already answers both with the same grey slot.
+        return <StandardMaterialSlot key={key} scalars={null} attach={attach} shadowSide={shadowSide} />;
       })}
     </>
   );
@@ -133,7 +134,12 @@ export function useSceneArrayMeshGeometry(
   // re-concatenated per render.
   const surfacesRaw = resource?.type === 'ArrayMesh' ? resource.data['_surfaces'] : undefined;
   const key = typeof surfacesRaw === 'string' ? surfacesRaw : null;
-  const extKey = JSON.stringify(externalResources.map((r) => [r.id, r.path]));
+  // Only for a mesh that has surfaces to key: every MeshInstance3D renders
+  // through this hook, and the table is re-serialised per render otherwise.
+  const extKey = useMemo(
+    () => (key === null ? null : JSON.stringify(externalResources.map((r) => [r.id, r.path]))),
+    [key, externalResources]
+  );
 
   const built = useMemo(() => {
     if (resource?.type !== 'ArrayMesh' || key === null) return null;

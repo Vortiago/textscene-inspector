@@ -9,13 +9,12 @@
  * MOUSE_FILTER_PASS, set in the constructor) so it is skipped here; the other
  * five own members below all lack `overrides=` and get a validator.
  *
- * `texture_rect.h` also declares a deprecated `_set` override
- * (`#ifndef DISABLE_DEPRECATED`) that redirects the legacy keys `expand` and
- * `ignore_texture_size` into `expand_mode = EXPAND_IGNORE_SIZE`. Neither key
- * has an `ADD_PROPERTY` of its own and neither appears in the current
- * doc/classes/TextureRect.xml member list, so this is a load-time compat
- * shim for scenes saved by an older Godot, not a current property: it gets no
- * validator, matching the parser, which also never reads either key.
+ * The deprecated `_set` override (texture_rect.cpp:171-173) forwards the
+ * Godot-3 keys `expand` and `ignore_texture_size` to `expand_mode =
+ * EXPAND_IGNORE_SIZE` when `bool(p_value)` holds and drops them otherwise;
+ * `godot/deprecated.ts` resolves both in the property bag, so the parser reads
+ * the result under `expand_mode`. Neither key gets a validator: the arm takes
+ * any Variant and refuses nothing, so there is no bound to report.
  *
  * `texture_rect.h` declares no `_get`/`_get_property_list`, so there are no
  * other dynamic/hidden-but-serialised keys beyond the five `ADD_PROPERTY`

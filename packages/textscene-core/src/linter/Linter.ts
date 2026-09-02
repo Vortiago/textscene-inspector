@@ -3,14 +3,13 @@
  */
 
 import type { TscnScene, TscnNode } from '../parser/types.js';
+import { orphanDiagnostics } from './orphanDiagnostics.js';
+import { danglingResourceDiagnostics } from './danglingResources.js';
 import { SEVERITY_ORDER, type Diagnostic, type RuleContext, type ParseError } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
-import { LEGACY_FORMAT_CEILING, readHeaderFormat } from './headerFormat.js';
-import {
-  FILE_DIAGNOSTICS,
-  STRICT_PARSER_RULE_NAME,
-} from './fileDiagnostics.js';
+import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
+import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 
 export class Linter {
@@ -44,6 +43,7 @@ export class Linter {
     // Phase 2: Semantic validation (only if parsing succeeded)
     if (parseResult.scene) {
       for (const d of orphanDiagnostics(parseResult.scene)) diagnostics.push(d);
+      for (const d of danglingResourceDiagnostics(parseResult.scene)) diagnostics.push(d);
       for (const d of this.lintScene(parseResult.scene)) diagnostics.push(d);
     }
 
@@ -69,7 +69,7 @@ export class Linter {
    */
   private legacyFormatDiagnostic(content: string): Diagnostic | null {
     const header = readHeaderFormat(content);
-    if (!header || header.format === null || header.format > LEGACY_FORMAT_CEILING) return null;
+    if (!header || !isLegacyFormat(header.format)) return null;
     return armDiagnostic(
       FILE_DIAGNOSTICS.legacyFormat,
       { name: '<unknown>', type: '<unknown>' },
@@ -146,7 +146,22 @@ export class Linter {
       // Appended one at a time: a rule that walks an indexed family reports
       // per index, and spreading 130,000 arguments exceeds the call limit —
       // which threw out of `lint` and returned NO diagnostics for the file.
-      for (const diagnostic of rule.check(context)) diagnostics.push(diagnostic);
+      // A throw anywhere in one rule is that rule's own diagnostic, and the
+      // walk goes on: no host catches around `lint`, so an uncaught throw
+      // drops every diagnostic of the file, phase 1 included.
+      try {
+        for (const diagnostic of rule.check(context)) diagnostics.push(diagnostic);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        diagnostics.push(
+          armDiagnostic(
+            FILE_DIAGNOSTICS.ruleCrashed,
+            node,
+            `Rule '${rule.meta.name}' threw while linting '${node.name}': ${reason}. ` +
+              'Its own findings for this node are missing; every other rule ran.'
+          )
+        );
+      }
     }
 
     // Recursively lint children
@@ -161,74 +176,4 @@ export class Linter {
   private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
     return diagnostics.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
   }
-}
-
-/**
- * Godot's own name for a re-parented orphan: the vanished path with `./`
- * stripped and every `/` turned into `@`, then `#` and the node's own name
- * (`packed_scene.cpp:212`, `:561-563`).
- */
-function reparentedName(parentPath: string, name: string): string {
-  return `${parentPath.replace(/^\.\//, '').replaceAll('/', '@')}#${name}`;
-}
-
-/**
- * One diagnostic per `[node]` heading the tree build could not place.
- *
- * Phase 2 walks the tree, so a node missing from it — together with every
- * descendant, whose own path resolves only through it — is skipped by every
- * semantic rule with nothing said. Phase 1 is unaffected: property validation
- * happens during the scan, so the claim below is exactly that narrow.
- *
- * Both tiers and both citations are declared in `fileDiagnostics.ts`, where
- * `emitsGrounding` sweeps them beside the registry's own arms. Godot warns and
- * recovers from a vanished path, and refuses the instantiate outright for a
- * second parentless heading — which is why one is a warning and the other an
- * error. The rename spelling is `:561-563`, one line below the re-root.
- */
-function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
-  const rootOrigin = scene.rootWithParent;
-  const rootRefusal: Diagnostic[] = rootOrigin
-    ? [
-        armDiagnostic(
-          FILE_DIAGNOSTICS.rootDeclaresParent,
-          rootOrigin.node,
-          `Root node '${rootOrigin.node.name}' declares parent="${rootOrigin.declaredParent}", ` +
-            'which only a non-root heading may do. The file loads, but Godot refuses to ' +
-            'instantiate the scene from it at all.',
-          { line: rootOrigin.line, column: 1 }
-        ),
-      ]
-    : [];
-
-  // Heading 0 is dropped here rather than reported twice: `packed_scene.cpp`
-  // reads `if (i > 0) { … } else { … }`, and BOTH claims below live in the
-  // `i > 0` arm — the missing-parent refusal at `:207`, and the vanished-path
-  // warning with its `nparent = ret_nodes[0]` re-root at `:208-215`. Heading 0
-  // takes the `else`, so it is refused outright by the diagnostic above and no
-  // rename is performed on it to describe. It is stranded only when its own
-  // path resolves against nothing AND a later heading is parentless, which is
-  // the case that reported both.
-  const stranded = (scene.orphanedNodes ?? []).filter((origin) => origin !== rootOrigin);
-
-  return rootRefusal.concat(
-    stranded.map(({ node, line, declaredParent }) => {
-      // The heading's own attribute, not `node.parent`: both parsers drop an
-      // empty `parent=""`, while the loader keeps it — `add_node_path` returns
-      // an index for any value the field carries (`packed_scene.cpp:2307-2311`),
-      // so `n.parent` is never `-1` for one and the refusal cannot apply to it.
-      const missing = declaredParent === undefined;
-      return armDiagnostic(
-        missing ? FILE_DIAGNOSTICS.nodeWithoutParent : FILE_DIAGNOSTICS.unresolvedParentPath,
-        node,
-        missing
-          ? `Node '${node.name}' declares no 'parent', which only the scene's root node may omit. ` +
-              'The file loads, but Godot cannot instantiate the scene from it at all.'
-          : `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
-              `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent, node.name)}". ` +
-              'No semantic rule ran on it or on anything parented below it.',
-        { line, column: 1 }
-      );
-    })
-  );
 }

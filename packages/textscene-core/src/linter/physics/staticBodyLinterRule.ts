@@ -6,7 +6,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists } from '../resourceChecker.js';
 import {
   hasCollisionShapeChild,
   collisionShapeTypesPhrase,
@@ -21,25 +20,7 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const { node, scene } = context;
-
-
-    // Access raw properties from the node (Record<string, string>)
-    const rawProps = node.properties as unknown as Record<string, string>;
-
-    // Check if physics_material_override resource exists (if specified)
-    if (rawProps.physics_material_override) {
-      const resourceExists = checkResourceExists(scene, rawProps.physics_material_override);
-      if (!resourceExists) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Physics material resource not found: ${rawProps.physics_material_override}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `valid-${prefix}-resources`,
-        });
-      }
-    }
+    const { node } = context;
 
     // Warning: StaticBody without collision shape is useless
     if (!hasCollisionShapeChild(node, dim)) {
@@ -73,15 +54,6 @@ export function makeStaticBodyLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
       emits: [
-        {
-          ruleName: `valid-${prefix}-resources`,
-          severity: 'error',
-          grounding: {
-            kind: 'no-engine-counterpart',
-            scope: 'dangling-reference',
-            because: 'the physics_material_override id is not declared anywhere in this file',
-          },
-        },
         {
           ruleName: `${prefix}-needs-collision-shape`,
           severity: 'warning',

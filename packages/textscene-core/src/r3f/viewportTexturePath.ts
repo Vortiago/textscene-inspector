@@ -45,14 +45,14 @@ export function resolveViewportTexturePath(value: string | undefined): string | 
  * A `%Name` segment is a JUMP, not a literal name: `get_node_or_null` looks it
  * up in the owner's claim table and DESCENDS from whatever it finds, so
  * `NodePath("%Hud/CombinedViewport")` addresses a node under the `%Hud`
- * claimant. `uniquePaths` is that table reduced to live paths
- * (`uniqueNameLivePaths`), which is how the registry spells its keys.
+ * claimant. `uniquePaths` is the CONSUMER'S OWNER'S table reduced to live paths
+ * (`uniqueNameLivePaths`), which is how the registry spells its keys, and a
+ * `%Name` it lacks addresses nothing (node.cpp:1930-1938) — null, never the
+ * literal join, which would hit the alias a sub-viewport under another owner
+ * publishes for itself.
  *
- * Without a claim table, and for a `%Name` the table has no entry for, the
- * literal join stands: a publisher registers its own single-segment `%Name`
- * alias too, and that alias is the only thing that can answer content composed
- * in from an instanced sub-scene, which never appears in the authored roots the
- * table is built from.
+ * Without a claim table the literal join stands: outside the shell the alias a
+ * publisher registers for its own single-segment `%Name` is all there is.
  *
  * Returns null when there is no consumer path (mounted outside a
  * `NodePathProvider`), no viewport path, or an absolute one — `/root/…`
@@ -71,8 +71,7 @@ export function viewportTextureRegistryKey(
   if (viewportPath === '.') return root;
   if (viewportPath.startsWith('/')) return null;
   if (uniquePaths && viewportPath.includes(UNIQUE_NODE_PREFIX)) {
-    const jumped = resolveRelativePath(root, viewportPath, uniquePaths);
-    if (jumped) return jumped;
+    return resolveRelativePath(root, viewportPath, uniquePaths);
   }
   return `${root}/${viewportPath}`;
 }
@@ -82,9 +81,10 @@ export function viewportTextureRegistryKey(
  *
  * `viewport_path` is resolved with `get_node_or_null` (viewport.cpp:198), so
  * `NodePath("%Name")` addresses the same viewport as its path does — a second
- * spelling, not a second viewport. `viewportTextureRegistryKey` builds the
- * consumer's key by joining the literal to the scene root, so the publisher
- * answers it by registering that join too.
+ * spelling, not a second viewport. A consumer with no claim table builds its
+ * key by joining the literal to the scene root (`viewportTextureRegistryKey`),
+ * so the publisher answers it by registering that join too; one with a table
+ * resolves the jump to the publisher's own path and never reads the alias.
  *
  * The flag on the node is a CLAIM, not the answer. Two nodes may both carry it
  * with the same name, and `_acquire_unique_name_in_owner` refuses to overwrite
@@ -99,11 +99,10 @@ export function viewportTextureRegistryKey(
  * `path` lacks the grafted segments, and node identity is lost because both the
  * Instance root merge and the graft hand the publisher a fresh object.
  *
- * Absent from the table is not the same as losing. Content composed in from an
- * instanced sub-scene never appears in the authored roots the table is built
- * from, and its `%Name` is owned by that sub-scene's own root, so an entry this
- * table has no opinion about is published as before. So is every caller with no
- * table at all — outside the shell there is no tree to resolve against.
+ * Absent from the table is not the same as losing: an entry the table has no
+ * opinion about is published as before, as is every caller with no table at
+ * all — outside the shell there is no tree to resolve against, and the alias
+ * is the only key a bare `%Name` can reach there.
  */
 export function viewportTextureUniqueNameKey(
   node: TscnNode,

@@ -10,6 +10,7 @@ import { describe, it } from 'vitest';
 import {
   node,
   scene,
+  subResource,
   expectClean,
   expectDiagnostic,
   runPropertyValidation,
@@ -111,7 +112,10 @@ describe('Control Linter', () => {
 
     it('accepts a SubResource theme_override_styles reference', () => {
       expectClean(
-        scene(node('Control', { 'theme_override_styles/panel': 'SubResource("StyleBoxFlat_1")' }))
+        scene(
+          subResource('StyleBoxFlat', {}, 'StyleBoxFlat_1'),
+          node('Control', { 'theme_override_styles/panel': 'SubResource("StyleBoxFlat_1")' })
+        )
       );
     });
 
@@ -305,7 +309,7 @@ describe('Control Linter', () => {
 
   describe('theme (nullable resource slot)', () => {
     it('accepts a SubResource("id") theme', () => {
-      expectClean(scene(node('Control', { theme: 'SubResource("Theme_1")' })));
+      expectClean(scene(subResource('Theme', {}, 'Theme_1'), node('Control', { theme: 'SubResource("Theme_1")' })));
     });
 
     it('accepts the literal null — an instance override clearing an inherited theme writes this (control.cpp:2986-3009, variant_parser.cpp:2184-2187)', () => {

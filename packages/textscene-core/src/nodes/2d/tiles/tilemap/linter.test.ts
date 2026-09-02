@@ -3,7 +3,8 @@
  * of "unknown type" (PRD #74 story 16).
  */
 import { describe, it, expect } from 'vitest';
-import { lint, expectDiagnostic } from '../../../../linter/testing/testkit';
+import { lint, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
+import './linterParser';
 import './linter';
 
 function scene(nodeProps: string, resources = ''): string {
@@ -32,7 +33,7 @@ describe('TileMap lint rules', () => {
   it('errors when the tile_set resource reference cannot be resolved', () => {
     expectDiagnostic(
       scene(`tile_set = ExtResource("99")\nformat = 2\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)`),
-      { ruleName: 'valid-tilemap-resources', severity: 'error' }
+      { ruleName: 'dangling-resource-reference', severity: 'error' }
     );
   });
 
@@ -135,6 +136,59 @@ describe('TileMap lint rules', () => {
       const diagnostics = lint(scene(`y_sort_enabled = true\nlayer_1/name = "Bare"`));
       expect(diagnostics.filter((d) => d.ruleName === 'tilemap-node-y-sort-without-layer')).toHaveLength(1);
     });
+  });
+});
+
+describe('format, read as it stood when each layer loaded', () => {
+  // `TileMap::_set` stores `format` only from a `Variant::INT`
+  // (tile_map.cpp:688-691) and otherwise falls through to `return false`
+  // (:724): a FLOAT or BOOL spelling is a dropped write and the member keeps
+  // its initial TILE_MAP_DATA_FORMAT_3 (tile_map.h:64). Probed on 4.6.3:
+  // `format = 1.0` above a one-cell layer loads that cell.
+  it('reports a FLOAT-spelled format once, as a dropped write, and still decodes the data at 2', () => {
+    const diagnostics = lint(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1.0\nlayer_0/tile_data = PackedInt32Array(0, 0)`,
+        TILESET_RESOURCES
+      )
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'tilemap-unsupported-format')).toEqual([]);
+    const onFormat = diagnostics.filter((d) => d.message.includes("'format'"));
+    expect(onFormat.map((d) => d.severity)).toEqual(['error']);
+    expect(onFormat[0]!.message).toContain('dropped');
+    expect(diagnostics.filter((d) => d.ruleName === 'tilemap-invalid-tile-data')).toHaveLength(1);
+  });
+
+  // Properties apply in file order (packed_scene.cpp:369-492): a `format`
+  // below `layer_0/tile_data` reaches `_set` after the data has already been
+  // decoded at 2. Probed on 4.6.3: the layer keeps its cell.
+  it('stays quiet about a legacy format written below the tile data it would have governed', () => {
+    expectNoDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)\nformat = 1`,
+        TILESET_RESOURCES
+      ),
+      { ruleName: 'tilemap-unsupported-format' }
+    );
+  });
+
+  it('errors on the same legacy format written above the tile data', () => {
+    expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      { ruleName: 'tilemap-unsupported-format', severity: 'error' }
+    );
+  });
+});
+
+describe('tile data phase 1 already refused', () => {
+  it('reports a malformed tile_data literal exactly once', () => {
+    const diagnostics = lint(
+      scene(`tile_set = SubResource("TileSet_a")\nlayer_0/tile_data = PackedInt32Array(a)`, TILESET_RESOURCES)
+    );
+    expect(diagnostics.filter((d) => d.message.includes('tile_data'))).toHaveLength(1);
   });
 });
 

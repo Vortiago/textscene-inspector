@@ -37,7 +37,10 @@ import {
   type ReactNode,
 } from 'react';
 import type { TscnNode } from '../../parser/types.js';
-import { uniqueNameClaims, type UniqueNameClaim } from '../../utils/uniqueNames.js';
+import { useResourceLoader } from '../../resources/useResource.js';
+import { cachedUniqueNameClaims, type UniqueNameClaim } from '../../utils/uniqueNames.js';
+import { claimOwnerOf, ownerClaims } from '../uniqueNameOwner.js';
+import { liveTreeContext, useLiveTreeVersion } from '../useLiveSceneTree.js';
 import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import type * as THREE from 'three';
@@ -75,7 +78,8 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
 }
 
 /**
- * The scene's resolved `%Name` table, or undefined when no scene is in context.
+ * The resolved `%Name` table the node at `path` resolves against, or undefined
+ * when no scene is in context.
  *
  * The flag on a node says it CLAIMED a name, not that it holds one — two nodes
  * may claim the same one and only the first keeps it. Resolving that needs the
@@ -83,16 +87,30 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
  * there rather than guessed per publisher. Undefined outside the shell, where
  * there is no tree and the flag is all that is knowable.
  *
- * Exported for the CONSUMER side too: a `viewport_path` naming a `%Name` has to
- * resolve against the same table the publisher registered under, and a second
- * copy of this memo would answer on a different tree.
+ * Per OWNER, not per scene: a name is registered on the claimant's owner
+ * (node.cpp:2222-2234) and looked up through the caller's (node.cpp:1930-1938),
+ * so a node inside an instanced sub-scene reads that sub-scene root's table
+ * and an outer node never does. Without a path, the outer root's table — one
+ * shared object per tree, so every consumer's lookup is a lookup rather than a
+ * walk. With one, re-derived on the loader's version tick, since the owner of
+ * a node inside a sub-scene is only knowable once that sub-scene has loaded;
+ * without one there is nothing to re-derive, so no subscription either.
  */
-export function useUniqueNameClaims(): ReadonlyMap<string, UniqueNameClaim> | undefined {
+export function useUniqueNameClaims(
+  path?: string | null
+): ReadonlyMap<string, UniqueNameClaim> | undefined {
   const graph = useOptionalHierarchy()?.sceneGraph;
+  const loader = useResourceLoader();
+  const version = useLiveTreeVersion(path ? loader : null);
   return useMemo(() => {
-    const roots = graph?.scenes.get(graph.rootScene)?.nodes;
-    return roots ? uniqueNameClaims(roots) : undefined;
-  }, [graph]);
+    const live = liveTreeContext(graph, loader);
+    if (!live) return undefined;
+    if (!path) return cachedUniqueNameClaims(live.roots);
+    return ownerClaims(claimOwnerOf(path, live.roots, live.ctx));
+    // `version` is the cache-buster for the loader's scene cache, which the
+    // owner walk reads and which is mutated outside React.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph, loader, version, path]);
 }
 
 /**
@@ -109,7 +127,7 @@ export function usePublishViewportTexture(
   entry: ViewportTextureEntry
 ): void {
   const register = useRegisterViewportTexture();
-  const claims = useUniqueNameClaims();
+  const claims = useUniqueNameClaims(path);
   // The derived key, not the node, so a re-parse that changes node identity
   // without changing the spelling does not withdraw and republish the target.
   const alias = viewportTextureUniqueNameKey(node, path, claims);

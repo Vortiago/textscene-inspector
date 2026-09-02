@@ -127,8 +127,9 @@ describe('float-tuple validators accept the renderer float grammar', () => {
 
     it('accepts the &-prefixed StringName form Godot actually saves', () => {
       expect(name('&"Head"')).toBeNull();
-      // A StringName is not a plain string; quotedString must still reject it.
-      expect(quoted('&"Head"')).not.toBeNull();
+      // variant.cpp:582-587: STRING_NAME is a strict source for STRING, so the
+      // jacket loads into a string slot too.
+      expect(quoted('&"Head"')).toBeNull();
     });
 
     it('honours an escaped quote inside the value', () => {

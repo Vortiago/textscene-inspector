@@ -1,5 +1,5 @@
 /**
- * Tests for MeshInstance3D linter (strict parser + semantic rules)
+ * Tests for MeshInstance3D linting (strict parser + the generic dangling-resource pass)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,6 @@ import {
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
 
 describe('MeshInstance3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -164,16 +163,16 @@ describe('MeshInstance3D Linter', () => {
         severity: 'error',
         nodeName: 'MissingMesh',
         nodeType: 'MeshInstance3D',
-        ruleName: 'valid-meshinstance3d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Mesh resource not found');
+      expect(diagnostics[0]!.message).toContain("'mesh'");
     });
 
     it('reports nothing for a cleared mesh slot', () => {
       // `mesh = null` is an emptied slot, not a dangling reference: Godot writes
       // it and reloads it, so reporting a missing resource is a false error.
       const content = scene(node('MeshInstance3D', { mesh: 'null' }, { name: 'ClearedMesh' }));
-      expectNoDiagnostic(content, { ruleName: 'valid-meshinstance3d-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectClean(content);
     });
 
@@ -191,7 +190,7 @@ describe('MeshInstance3D Linter', () => {
         scene(
           node('MeshInstance3D', { material_override: 'SubResource("nonexistent_material")' }, { name: 'MissingMaterial' })
         ),
-        { prop: 'Material override resource not found', contains: ['Material override resource not found'] }
+        { prop: "'material_override'", severity: 'error' }
       );
     });
 
@@ -200,7 +199,7 @@ describe('MeshInstance3D Linter', () => {
         scene(
           node('MeshInstance3D', { material_overlay: 'SubResource("nonexistent_overlay")' }, { name: 'MissingOverlay' })
         ),
-        { prop: 'Material overlay resource not found', contains: ['Material overlay resource not found'] }
+        { prop: "'material_overlay'", severity: 'error' }
       );
     });
 
@@ -209,7 +208,7 @@ describe('MeshInstance3D Linter', () => {
         scene(node('MeshInstance3D', { skin: 'SubResource("nonexistent_skin")' }, { name: 'MissingSkin' }))
       );
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]!.message).toContain('Skin resource not found');
+      expect(diagnostics[0]!.message).toContain("'skin'");
     });
 
     it('should detect missing surface material override resource', () => {
@@ -221,10 +220,7 @@ describe('MeshInstance3D Linter', () => {
             { name: 'MissingSurfaceMat' }
           )
         ),
-        {
-          prop: 'Surface material override resource not found',
-          contains: ['Surface material override resource not found'],
-        }
+        { prop: "'surface_material_override/0'", severity: 'error' }
       );
     });
 
@@ -241,10 +237,7 @@ describe('MeshInstance3D Linter', () => {
             { name: 'TrailingSurfaceMat' }
           )
         ),
-        {
-          prop: 'Surface material override resource not found',
-          contains: ['for surface 0'],
-        }
+        { prop: "'surface_material_override/0/extra'", severity: 'error' }
       );
     });
   });
@@ -349,7 +342,7 @@ describe('MeshInstance3D Linter', () => {
       // The missing resource is the only complaint: the index itself is unbounded.
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.severity).toBe('error');
-      expect(diagnostics[0]?.message).toContain('resource not found');
+      expect(diagnostics[0]?.message).toContain('never declares');
     });
   });
 
@@ -426,7 +419,7 @@ describe('MeshInstance3D surface-override index grammar', () => {
     // reference is a real one.
     expectDiagnostic(
       scene(node('MeshInstance3D', { 'surface_material_override/x1': 'SubResource("mat_missing")' })),
-      { ruleName: 'valid-meshinstance3d-resources', severity: 'error', contains: ['surface 1'] }
+      { ruleName: 'dangling-resource-reference', severity: 'error', contains: ["'surface_material_override/x1'"] }
     );
   });
 });

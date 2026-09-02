@@ -3,12 +3,16 @@
  *
  * Extracts playback configuration and clip names from the raw TSCN
  * properties map. Clips are stored as `anims/<name> = SubResource(...)` keys.
+ *
+ * A plain Node: a Node3D below it finds no Node3D parent
+ * (node_3d.cpp:150, `data.parent = Object::cast_to<Node3D>(get_parent())`),
+ * so the chain is `parseNode`, which carries no `visible` or placement fields.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
-import { literalText, resourceRef, SUB_RESOURCE_REF_BODY } from '../../../godot/index.js';
+import { dictSubResourceEntries, literalText, resourceRef } from '../../../godot/index.js';
 import {
   type AnimationLibraryRef,
   AnimationProcessMode,
@@ -20,7 +24,7 @@ export function parseAnimationPlayer(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): AnimationPlayerProperties {
-  const baseProps = parseNode3D(heading, properties);
+  const baseProps = parseNode(heading, properties);
 
   const libraries = extractLibraries(properties);
 
@@ -66,15 +70,6 @@ export function isActive(properties: Record<string, string>): boolean {
   return boolOr(properties.active ?? properties.playback_active, true);
 }
 
-// Entries of the dictionary form `libraries = { "<name>": SubResource("id"), … }`.
-// Only inline SubResource libraries are captured; ExtResource entries point to
-// external (often binary .res) libraries the previewer can't resolve.
-//
-// Built from the shared reference body: both patterns here were written without
-// whitespace tolerance, so a padded `SubResource ("id")` that the linter passes
-// yielded no library at all and the animations silently went missing.
-const DICT_LIBRARY_ENTRY = new RegExp(`"([^"]*)"\\s*:\\s*${SUB_RESOURCE_REF_BODY}`, 'g');
-
 export function extractLibraries(properties: Record<string, string>): AnimationLibraryRef[] {
   const libraries: AnimationLibraryRef[] = [];
 
@@ -90,10 +85,12 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
 
   // Dictionary form (Godot 4's actual serialization), possibly multi-line:
   //   libraries = { "": SubResource("AnimationLibrary_x"), "combat": SubResource("…") }
+  // Only inline SubResource libraries are captured; ExtResource entries point to
+  // external (often binary .res) libraries the previewer can't resolve.
   const dict = properties.libraries;
   if (dict !== undefined) {
-    for (const match of dict.matchAll(DICT_LIBRARY_ENTRY)) {
-      libraries.push({ name: match[1]!, subResourceId: match[2]! });
+    for (const { key, id } of dictSubResourceEntries(dict)) {
+      libraries.push({ name: key, subResourceId: id });
     }
   }
 

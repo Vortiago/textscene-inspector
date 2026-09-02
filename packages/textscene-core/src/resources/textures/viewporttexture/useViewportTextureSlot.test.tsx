@@ -2,7 +2,7 @@
  * The consumer half of the ViewportTexture seam: a texture slot that names a
  * node instead of a file.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { useEffect } from 'react';
 import * as THREE from 'three';
@@ -17,6 +17,7 @@ import {
   useRegisterViewportTexture,
 } from '../../../r3f/contexts/ViewportTextureContext';
 import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextureSlot';
+import { setLogAdapter } from '../../../logger';
 
 const viewportTexture: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -240,3 +241,63 @@ function ConsumerWith({
   onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources));
   return null;
 }
+
+/**
+ * The unclaimed-alias warning keys its dedup on the SPELLING, so a re-parse of
+ * the same text stays quiet — but the answer for one spelling changes when the
+ * claimant is renamed underneath it, and that edit must be reported.
+ */
+describe('the unclaimed-alias warning under a changed claim table', () => {
+  afterEach(() => setLogAdapter(null));
+
+  const sceneWith = (hudName: string) => `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="UI" type="Node3D" parent="."]
+
+[node name="${hudName}" type="Node3D" parent="UI"]
+unique_name_in_owner = true
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+`;
+  const graphOf = (hudName: string) =>
+    createSceneGraphFromTscnScene({ nodes: new TscnParser().parse(sceneWith(hudName)).nodes });
+
+  const tree = (hudName: string) => (
+    <HierarchyProvider value={{ sceneGraph: graphOf(hudName), panelId: 'p' }}>
+      <ViewportTextureProvider>
+        <NodePathProvider path="Root/Screen">
+          <Consumer slotRef='SubResource("ViewportTexture_2")' onResolve={() => {}} />
+        </NodePathProvider>
+      </ViewportTextureProvider>
+    </HierarchyProvider>
+  );
+
+  it('warns once the claimant is renamed away, and once only per spelling', () => {
+    const warn = vi.fn();
+    setLogAdapter({ trace() {}, debug() {}, info() {}, warn, error() {} });
+
+    const { rerender } = render(tree('Hud'));
+    expect(warn).not.toHaveBeenCalled();
+
+    rerender(tree('Hud2'));
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toContain('%Hud');
+
+    // A re-parse of the same text: same spelling, still unclaimed, no repeat.
+    rerender(tree('Hud2'));
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns again when the name is claimed and then lost a second time', () => {
+    const warn = vi.fn();
+    setLogAdapter({ trace() {}, debug() {}, info() {}, warn, error() {} });
+
+    const { rerender } = render(tree('Hud2'));
+    expect(warn).toHaveBeenCalledTimes(1);
+    rerender(tree('Hud'));
+    rerender(tree('Hud2'));
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+});

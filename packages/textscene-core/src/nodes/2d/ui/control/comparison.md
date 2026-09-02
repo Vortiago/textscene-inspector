@@ -55,11 +55,11 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | --- | --- | --- |
 | `accessibility_controls_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
 | `accessibility_described_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
-| `accessibility_description` | quoted string |  |
+| `accessibility_description` | quoted string, or the &"…" StringName jacket |  |
 | `accessibility_flow_to_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
 | `accessibility_labeled_by_nodes` | Array[NodePath]([NodePath("path"), …]) or [NodePath("path"), …] |  |
 | `accessibility_live` | enum 0-2 (OFF/POLITE/ASSERTIVE) | warning |
-| `accessibility_name` | quoted string |  |
+| `accessibility_name` | quoted string, or the &"…" StringName jacket |  |
 | `anchor_bottom` | float |  |
 | `anchor_left` | float |  |
 | `anchor_right` | float |  |
@@ -105,7 +105,7 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `theme_override_styles/*` | null, SubResource("id") or ExtResource("id") |  |
 | `theme_type_variation` | quoted string or &"name" |  |
 | `tooltip_auto_translate_mode` | enum 0-2 (INHERIT/ALWAYS/DISABLED) | warning |
-| `tooltip_text` | quoted string |  |
+| `tooltip_text` | quoted string, or the &"…" StringName jacket |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

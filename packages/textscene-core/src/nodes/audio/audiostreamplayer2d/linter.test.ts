@@ -226,10 +226,10 @@ describe('AudioStreamPlayer2D Linter', () => {
     describe('missing stream resource error', () => {
       it('should error when stream resource does not exist', () => {
         expectDiagnostic(bare({ stream: 'ExtResource("nonexistent")' }), {
-          ruleName: 'audiostreamplayer2d-missing-stream-resource',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'AudioStreamPlayer2D',
-          contains: ['does not exist', 'ExtResource("nonexistent")'],
+          contains: ['never declares', 'ExtResource("nonexistent")'],
         });
       });
 

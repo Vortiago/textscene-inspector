@@ -73,26 +73,44 @@ describe('parseSpriteFramesAnimations', () => {
     expect(map.get('up')!.loop).toBe(false);
   });
 
-  it('defaults speed to 5 and loop to true when absent (Godot defaults)', () => {
-    // `struct Anim { double speed = 5.0; bool loop = true; }` — sprite_frames.h:45-47.
-    const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "name": &"default"}]'
-    );
-    const a = map.get('default')!;
-    expect(a.fps).toBe(5);
-    expect(a.loop).toBe(true);
+  it('drops an animation dict lacking "speed" or "loop", as the loader does', () => {
+    // `ERR_CONTINUE(!d.has("speed")); ERR_CONTINUE(!d.has("loop"))`
+    // (sprite_frames.cpp:201-202): the dict never becomes an animation, and the
+    // `Anim` struct defaults are never reached for a loaded one.
+    const frames = '[{"duration": 1.0, "texture": ExtResource("9")}]';
+    expect(
+      parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "loop": true}]`).size
+    ).toBe(0);
+    expect(
+      parseSpriteFramesAnimations(`[{"frames": ${frames}, "name": &"a", "speed": 5.0}]`).size
+    ).toBe(0);
   });
 
-  it('names an animation "default" when the dict carries no name', () => {
+  it('drops an animation dict lacking "name", keeping its neighbours', () => {
+    // `ERR_CONTINUE(!d.has("name"))` (sprite_frames.cpp:200).
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "speed": 5.0}]'
+      '[{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "loop": true, "speed": 5.0}, ' +
+        '{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "loop": true, "name": &"kept", "speed": 5.0}]'
     );
-    expect([...map.keys()]).toEqual(['default']);
+    expect([...map.keys()]).toEqual(['kept']);
+  });
+
+  it('drops an animation dict lacking "frames"', () => {
+    // `ERR_CONTINUE(!d.has("frames"))` (sprite_frames.cpp:203).
+    const map = parseSpriteFramesAnimations('[{"loop": true, "name": &"a", "speed": 5.0}]');
+    expect(map.size).toBe(0);
+  });
+
+  it('keeps an animation whose "frames" key holds no array, with zero frames', () => {
+    // The key is present, so :203 passes; `Array frames = d["frames"]` of a
+    // non-array Variant is an empty Array (:208), and the animation is stored.
+    const map = parseSpriteFramesAnimations('[{"frames": null, "loop": true, "name": &"a", "speed": 5.0}]');
+    expect(map.get('a')!.frames).toEqual([]);
   });
 
   it('captures per-frame durations parallel to frames', () => {
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 2.0, "texture": ExtResource("1")}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0}]'
+      '[{"frames": [{"duration": 2.0, "texture": ExtResource("1")}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
     expect(map.get('x')!.durations).toEqual([2, 0.5]);
   });
@@ -102,14 +120,14 @@ describe('parseSpriteFramesAnimations', () => {
     // A 0-duration frame BLINKS in Godot (0.01/fps); rounding it up to a full
     // frame time instead made such a frame linger 100x too long.
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 0.0, "texture": ExtResource("1")}, {"duration": 1.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0}]'
+      '[{"frames": [{"duration": 0.0, "texture": ExtResource("1")}, {"duration": 1.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
     expect(map.get('x')!.durations).toEqual([SPRITE_FRAME_MINIMUM_DURATION, 1]);
   });
 
   it('falls back to 1.0 for a malformed duration (no Godot counterpart)', () => {
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.2.3, "texture": ExtResource("1")}], "name": &"x", "speed": 4.0}]'
+      '[{"frames": [{"duration": 1.2.3, "texture": ExtResource("1")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
     expect(map.get('x')!.durations).toEqual([1]);
   });
@@ -119,21 +137,9 @@ describe('parseSpriteFramesAnimations', () => {
     // spells infinity `inf`, so Godot writes this file. The scan must consume
     // the literal to stay paired with the frames; only the VALUE falls back.
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 3.0, "texture": ExtResource("1")}, {"duration": inf, "texture": ExtResource("2")}, {"duration": 2.0, "texture": ExtResource("3")}], "name": &"x", "speed": 4.0}]'
+      '[{"frames": [{"duration": 3.0, "texture": ExtResource("1")}, {"duration": inf, "texture": ExtResource("2")}, {"duration": 2.0, "texture": ExtResource("3")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
     expect(map.get('x')!.durations).toEqual([3, 1, 2]);
-  });
-
-  it('defaults only the frame that lacks a duration, keeping its neighbours', () => {
-    // Godot always writes a duration per frame (sprite_frames.cpp:185) and its
-    // reader drops a frame that lacks one; the preview keeps the frame instead
-    // and shows it for the default 1.0. Reading each frame DICT is what keeps
-    // that local: the count guard this replaced saw a short duration list and
-    // discarded the authored 3.0 along with it.
-    const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"texture": ExtResource("1")}, {"duration": 3.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0}]'
-    );
-    expect(map.get('x')!.durations).toEqual([1, 3]);
   });
 
   it('keeps a frame whose texture slot is null, with its authored duration', () => {
@@ -144,7 +150,7 @@ describe('parseSpriteFramesAnimations', () => {
     // it here shortened the animation AND, via the frame-count guard,
     // flattened every authored duration to 1.
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 0.5, "texture": ExtResource("1")}, {"duration": 3.0, "texture": null}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"blink", "speed": 1.0}]'
+      '[{"frames": [{"duration": 0.5, "texture": ExtResource("1")}, {"duration": 3.0, "texture": null}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"blink", "speed": 1.0, "loop": true}]'
     );
     const blink = map.get('blink')!;
     expect(blink.frames).toEqual(['ExtResource("1")', null, 'ExtResource("2")']);
@@ -154,20 +160,58 @@ describe('parseSpriteFramesAnimations', () => {
   it('reads `nil` in a texture slot the same way, the reader\'s other spelling', () => {
     // `variant_parser.cpp:699` takes `null` and `nil` through one arm.
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 2.0, "texture": nil}], "name": &"x"}]'
+      '[{"frames": [{"duration": 2.0, "texture": nil}], "name": &"x", "loop": true, "speed": 5.0}]'
     );
     expect(map.get('x')!.frames).toEqual([null]);
     expect(map.get('x')!.durations).toEqual([2]);
   });
 
-  it('gives a frame dict with no texture key a blank slot rather than dropping it', () => {
-    // Godot drops it (`ERR_CONTINUE(!f.has("texture"))`, sprite_frames.cpp:222);
-    // keeping it holds the remaining frames at the indices the file spells.
+  it('drops a frame dict with no texture key, as the loader does', () => {
+    // `ERR_CONTINUE(!f.has("texture"))` (sprite_frames.cpp:222): the dict never
+    // becomes a frame, so the ones after it shift down an index.
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.0}, {"duration": 4.0, "texture": ExtResource("1")}], "name": &"x"}]'
+      '[{"frames": [{"duration": 1.0}, {"duration": 4.0, "texture": ExtResource("1")}], "name": &"x", "loop": true, "speed": 5.0}]'
     );
-    expect(map.get('x')!.frames).toEqual([null, 'ExtResource("1")']);
-    expect(map.get('x')!.durations).toEqual([1, 4]);
+    expect(map.get('x')!.frames).toEqual(['ExtResource("1")']);
+    expect(map.get('x')!.durations).toEqual([4]);
+  });
+
+  it('drops a frame dict with no duration key, the line below it', () => {
+    // `ERR_CONTINUE(!f.has("duration"))` (sprite_frames.cpp:223).
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [{"texture": ExtResource("1")}, {"duration": 3.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0, "loop": true}]'
+    );
+    expect(map.get('x')!.frames).toEqual(['ExtResource("2")']);
+    expect(map.get('x')!.durations).toEqual([3]);
+  });
+
+  it('loads a bare resource ref as a 1.0 frame, the pre-4.0 spelling', () => {
+    // `#ifndef DISABLE_DEPRECATED`: `Ref<Resource> res = frames[j]; if
+    // (res.is_valid()) { Frame frame = { res, 1.0 }; … continue; }`
+    // (sprite_frames.cpp:210-217), ahead of the dict read.
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [SubResource("1"), {"duration": 1.0}, {"duration": 2.0, "texture": SubResource("1")}], "name": &"x", "loop": true, "speed": 5.0}]'
+    );
+    expect(map.get('x')!.frames).toEqual(['SubResource("1")', 'SubResource("1")']);
+    expect(map.get('x')!.durations).toEqual([1, 2]);
+  });
+
+  it('reads an ExtResource bare ref with the padding the tokenizer discards', () => {
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [ ExtResource( "7" ) , {"duration": 0.5, "texture": ExtResource("8")}], "name": &"x", "loop": true, "speed": 5.0}]'
+    );
+    expect(map.get('x')!.frames).toEqual(['ExtResource( "7" )', 'ExtResource("8")']);
+    expect(map.get('x')!.durations).toEqual([1, 0.5]);
+  });
+
+  it('drops a bare element that is neither a ref nor a dict', () => {
+    // `Ref<Resource> res = null` is invalid, and `Dictionary f = null` is an
+    // empty dict with no `texture` key (sprite_frames.cpp:212, :220-222).
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [null, 3, {"duration": 2.0, "texture": ExtResource("1")}], "name": &"x", "loop": true, "speed": 5.0}]'
+    );
+    expect(map.get('x')!.frames).toEqual(['ExtResource("1")']);
+    expect(map.get('x')!.durations).toEqual([2]);
   });
 
   it('does not leak nested frame dicts into the animation split', () => {
@@ -177,14 +221,14 @@ describe('parseSpriteFramesAnimations', () => {
 
   it('handles a single-line single-animation form', () => {
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "name": &"default", "speed": 5.0}]'
+      '[{"frames": [{"duration": 1.0, "texture": ExtResource("9")}], "name": &"default", "speed": 5.0, "loop": true}]'
     );
     expect(map.get('default')!.frames).toEqual(['ExtResource("9")']);
   });
 
   it('keeps a SubResource frame ref raw for the AtlasTexture slice to resolve', () => {
     const map = parseSpriteFramesAnimations(
-      '[{"frames": [{"duration": 1.0, "texture": SubResource("AtlasTexture_0ik14")}], "name": &"x"}]'
+      '[{"frames": [{"duration": 1.0, "texture": SubResource("AtlasTexture_0ik14")}], "name": &"x", "loop": true, "speed": 5.0}]'
     );
     expect(map.get('x')!.frames).toEqual(['SubResource("AtlasTexture_0ik14")']);
   });

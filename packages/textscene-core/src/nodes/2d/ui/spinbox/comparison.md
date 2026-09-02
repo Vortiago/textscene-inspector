@@ -39,9 +39,9 @@ Strict parsing format-checks these `SpinBox` properties, plus 9 inherited from R
 | `custom_arrow_round` | true or false |  |
 | `custom_arrow_step` | float >= 0 | warning below |
 | `editable` | true or false |  |
-| `prefix` | quoted string |  |
+| `prefix` | quoted string, or the &"…" StringName jacket |  |
 | `select_all_on_focus` | true or false |  |
-| `suffix` | quoted string |  |
+| `suffix` | quoted string, or the &"…" StringName jacket |  |
 | `update_on_text_changed` | true or false |  |
 
 | Rule | Reports | Severity |

@@ -68,7 +68,6 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `agent_height_offset` | float >= -100 | warning below |
 | `avoidance_enabled` | true or false |  |
 | `avoidance_layers` | 32-bit layer mask (layers 1-32) |  |
 | `avoidance_mask` | 32-bit layer mask (layers 1-32) |  |
@@ -97,9 +96,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `simplify_epsilon` | float >= 0 | error below |
 | `simplify_path` | true or false |  |
 | `target_desired_distance` | float >= 0.1 | warning below |
-| `target_location` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `target_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
-| `time_horizon` | float >= 0 | error below |
 | `time_horizon_agents` | float >= 0 | error below |
 | `time_horizon_obstacles` | float >= 0 | error below |
 | `use_3d_avoidance` | true or false |  |

@@ -140,14 +140,17 @@ describe('indexed wildcard routing mirrors the engine', () => {
     expect(r.findValidator('Menu', 'item_-/text')).not.toBeNull();
   });
 
-  it('still refuses an EMPTY index, and a leaf below another slash', () => {
+  it('routes an EMPTY index, an empty leaf and a nested leaf, which the helper drops', () => {
     const { r } = registryWithItems();
-    expect(r.findValidator('Menu', 'item_/text')).toBeNull();
-    // `#/*` addresses ONE leaf segment: `rsplit("/", true, 1)` puts
-    // `item_0/deep` in the index half (property_list_helper.cpp:47), which is
-    // not an index, so the helper never resolves it and no family owns it.
-    expect(r.findValidator('Menu', 'item_0/deep/text')).toBeNull();
-    expect(r.findValidator('Menu', 'item_x/deep/text')).toBeNull();
+    // `rsplit("/", true, 1)` puts `item_0/deep` in the index half
+    // (property_list_helper.cpp:47), which fails `is_valid_int()` (:53) as
+    // the empty index does; an empty leaf resolves no property (:63). Each
+    // is a dropped write, and only the dispatcher can report it.
+    for (const key of ['item_/text', 'item_0/', 'item_0/deep/text', 'item_x/deep/text']) {
+      expect(r.findValidator('Menu', key), key).not.toBeNull();
+    }
+    // No `/` past the prefix is a different key, not a member of the family.
+    expect(r.findValidator('Menu', 'item_count')).toBeNull();
   });
 });
 

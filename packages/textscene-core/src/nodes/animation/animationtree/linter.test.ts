@@ -126,7 +126,8 @@ describe('AnimationTree Linter', () => {
             'NodePath("/root/AnimPlayer")',
           ],
           invalid: [
-            { value: '"../AnimationPlayer"', contains: ['anim_player', 'NodePath'] },
+            // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+            { value: '&"../AnimationPlayer"', contains: ['anim_player', 'NodePath'] },
             { value: 'AnimationPlayer', contains: ['anim_player'] },
           ],
         },
@@ -162,12 +163,12 @@ describe('AnimationTree Linter', () => {
       {
         prop: 'root_motion_track',
         valid: ['NodePath("")', 'NodePath("Skeleton3D:Root")', 'NodePath("../Skeleton/Root")'],
-        invalid: [{ value: '"Skeleton3D:Root"', contains: ['root_motion_track', 'NodePath'] }],
+        invalid: [{ value: '&"Skeleton3D:Root"', contains: ['root_motion_track', 'NodePath'] }],
       },
       {
         prop: 'advance_expression_base_node',
         valid: ['NodePath("..")'],
-        invalid: [{ value: '".."', contains: ['advance_expression_base_node', 'NodePath'] }],
+        invalid: [{ value: '&".."', contains: ['advance_expression_base_node', 'NodePath'] }],
       },
       {
         // Two tiers: animation_mixer.cpp:542 ERR_FAILs outside 0..128, the hint
@@ -227,7 +228,7 @@ describe('AnimationTree Linter', () => {
               anim_player: 'NodePath("../AnimationPlayer")',
             })
           ),
-          { prop: 'tree_root', severity: 'error', contains: ['does not exist', 'NonExistent_1'] }
+          { prop: 'tree_root', severity: 'error', contains: ['never declares', 'NonExistent_1'] }
         );
       });
 

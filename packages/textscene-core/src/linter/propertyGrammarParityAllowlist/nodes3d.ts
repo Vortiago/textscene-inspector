@@ -66,7 +66,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   NavigationRegion3D: {
     linterOnly: ['navigation_layers', 'enter_cost', 'travel_cost'],
     renderGap: ['enabled', 'use_edge_connections'],
-    aliasedRead: ['navmesh'],
     reason:
       'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },
@@ -148,7 +147,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'simplify_path', 'time_horizon_agents', 'time_horizon_obstacles',
       'use_3d_avoidance', 'velocity',
     ],
-    aliasedRead: ['target_location', 'time_horizon', 'agent_height_offset'],
     reason:
       "NavigationAgent3D's pathfinding and avoidance parameters are simulation inputs to NavigationServer3D, and its debug_* set draws only under DEBUG_ENABLED; neither changes a still frame, so parser.ts reads none of them.",
   },
@@ -166,39 +164,19 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       "NavigationObstacle3D's velocity and vertices are avoidance-simulation and nav-mesh-carving inputs, drawn only under the debug flags, so parser.ts reads neither.",
   },
 
-  CSGBox3D: {
+  // CSGShape3D validates for all seven CSG nodes and has no parser of its own.
+  CSGShape3D: {
     linterOnly: [
-      // CSG parsers call finishCsgParse which reads material/operation from
-      // shared helper; linter registers them explicitly per slice but they
-      // are not visible to the per-file parser scrape.
-      'material', 'operation',
+      // Physics only: no frozen frame changes with them.
+      'use_collision', 'collision_layer', 'collision_mask', 'collision_priority',
     ],
-    reason: 'CSG parsers read material/operation via finishCsgParse shared helper (not scrape-visible in parser.ts); linter registers them explicitly.',
-  },
-
-  CSGCylinder3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGSphere3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGTorus3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGMesh3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGPolygon3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    renderGap: [
+      // csg_shape.cpp:692-694 skips MikkTSpace when false, so a normal-mapped
+      // material shades a CSG mesh differently; the previewer always derives
+      // tangents.
+      'calculate_tangents',
+    ],
+    reason: 'The CSG base has no parser; the collision keys drive physics only, and calculate_tangents = false changes normal-mapped shading the previewer does not reproduce.',
   },
 
   // GeometryInstance3D is a transform-only slice with no parser.ts of its own,

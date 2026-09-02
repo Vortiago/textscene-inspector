@@ -50,7 +50,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `caret_multiple` | true or false |  |
 | `caret_type` | enum 0-1 (CARET_TYPE_LINE/CARET_TYPE_BLOCK) | warning |
 | `context_menu_enabled` | true or false |  |
-| `custom_word_separators` | quoted string |  |
+| `custom_word_separators` | quoted string, or the &"…" StringName jacket |  |
 | `deselect_on_focus_loss_enabled` | true or false |  |
 | `drag_and_drop_selection_enabled` | true or false |  |
 | `draw_control_chars` | true or false |  |
@@ -62,11 +62,11 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `highlight_all_occurrences` | true or false |  |
 | `highlight_current_line` | true or false |  |
 | `indent_wrapped_lines` | true or false |  |
-| `language` | quoted string |  |
+| `language` | quoted string, or the &"…" StringName jacket |  |
 | `middle_mouse_paste_enabled` | true or false |  |
 | `minimap_draw` | true or false |  |
 | `minimap_width` | integer |  |
-| `placeholder_text` | quoted string |  |
+| `placeholder_text` | quoted string, or the &"…" StringName jacket |  |
 | `scroll_fit_content_height` | true or false |  |
 | `scroll_fit_content_width` | true or false |  |
 | `scroll_horizontal` | integer >= 0 | error below |
@@ -80,7 +80,7 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `structured_text_bidi_override_options` | Array literal ([...]) |  |
 | `syntax_highlighter` | null, SubResource("id") or ExtResource("id") |  |
 | `tab_input_mode` | true or false |  |
-| `text` | quoted string |  |
+| `text` | quoted string, or the &"…" StringName jacket |  |
 | `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
 | `use_custom_word_separators` | true or false |  |
 | `use_default_word_separators` | true or false |  |

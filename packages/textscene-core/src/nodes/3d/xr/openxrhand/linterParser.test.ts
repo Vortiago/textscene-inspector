@@ -100,8 +100,10 @@ describe('OpenXRHand strict validators', () => {
       expect(check('hand_skeleton', 'NodePath("NotASkeleton")')).toBeNull();
     });
 
-    it('rejects a bare quoted string that is not a NodePath literal', () => {
-      expect(check('hand_skeleton', '"Skeleton3D"')).not.toBeNull();
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    it('takes the bare string the slot converts and rejects a StringName', () => {
+      expect(check('hand_skeleton', '"Skeleton3D"')).toBeNull();
+      expect(check('hand_skeleton', '&"Skeleton3D"')).not.toBeNull();
     });
   });
 

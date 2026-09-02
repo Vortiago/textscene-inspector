@@ -26,6 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
+import { CHECKOUT_CONTROLS, ENV_CONTROLS } from './godot-source-decoupling.controls.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
@@ -33,21 +34,41 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
  * Naming the checkout at all implies resolving it. Prose in REFERENCES.md is the
  * one place that must, since it tells a human how to create it.
  *
+ * Four spellings: a versioned tag directory, the `repos/godot` clone location,
+ * and a `godot` directory followed by one of the engine's top-level
+ * directories — as a slash path or as `join()` segments.
+ *
  * URLs are excluded rather than allowlisted: `godotLinks.mjs` builds
- * `api.github.com/repos/godotengine/godot/...` to resolve documentation links,
+ * `https://api.github.com/repos/godotengine/godot/...` to resolve documentation links,
  * which is a network fetch of a public API and the opposite of a local-path
  * dependency. A URL can never be the checkout.
  */
-const CHECKOUT_RE = /godot-4\.\d+(\.\d+)?(-stable)?\b|[\\/]repos[\\/]godot/;
+const ENGINE_DIRS = 'scene|core|doc|modules|servers|main|platform|editor';
+const CHECKOUT_RE = new RegExp(
+  [
+    'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',
+    '[\\\\/]repos[\\\\/]godot',
+    `\\bgodot[\\\\/](?:${ENGINE_DIRS})\\b`,
+    `['"]godot['"]\\s*,\\s*['"](?:${ENGINE_DIRS})['"]`,
+  ].join('|')
+);
 const URL_RE = /https?:\/\//;
-const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.test.mjs']);
+const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.controls.mjs']);
 
 /**
  * The other way in is the environment. A citation cannot come from `process.env`,
- * so any such variable exists to locate the checkout at run time.
+ * so any `GODOT_*` variable READ exists to locate the checkout at run time,
+ * whatever its suffix. `GODOT_BIN` alone is exempt: a path to the godot binary
+ * is a tool. Anchored on the read — `env.X`, `env['X']`, shell `$X` — because
+ * the bare name also spells this repo's own constants (`GODOT_PI`).
+ *
+ * The shell form is not read in script files: there `${GODOT_X}` is a template
+ * literal interpolating one of those constants.
  */
-const ENV_RE = /\bGODOT_(SRC|SOURCE|SOURCES|ROOT|CHECKOUT|ENGINE)\b/;
-const ENV_ALLOWED = new Set(['scripts/godot-source-decoupling.test.mjs']);
+const ENV_RE = /\benv(?:\.|\[['"])GODOT_(?!BIN\b)[A-Z_]+\b/;
+const SHELL_ENV_RE = /\$\{?GODOT_(?!BIN\b)[A-Z_]+\b/;
+const SCRIPT_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+const ENV_ALLOWED = new Set(['scripts/godot-source-decoupling.controls.mjs']);
 
 /** Binary and generated payloads: scanning them is slow and meaningless. */
 const SKIP_EXT = new Set([
@@ -118,8 +139,11 @@ function offenders(re, allowed, scanned = SCANNED) {
 const checkoutHits = (allowed, scanned) =>
   offenders(CHECKOUT_RE, allowed, scanned).filter((h) => !URL_RE.test(h.text));
 
-const envHits = (allowed, scanned) =>
-  offenders(ENV_RE, allowed, scanned).filter((h) => extname(h.file).toLowerCase() !== '.md');
+const envHits = (allowed, scanned) => {
+  const ext = (h) => extname(h.file).toLowerCase();
+  const shell = offenders(SHELL_ENV_RE, allowed, scanned).filter((h) => !SCRIPT_EXT.has(ext(h)));
+  return [...offenders(ENV_RE, allowed, scanned), ...shell].filter((h) => ext(h) !== '.md');
+};
 
 /**
  * Both sweeps with the allowlist open, read once for every assertion below.
@@ -129,65 +153,6 @@ const envHits = (allowed, scanned) =>
  */
 const ALL_CHECKOUT_HITS = checkoutHits(new Set());
 const ALL_ENV_HITS = envHits(new Set());
-
-/**
- * Synthetic files fed to those sweeps, so the controls below prove what the
- * patterns catch without depending on what the repo happens to contain. They
- * stay in-memory and inside this file, which the allowlists already cover:
- * a scratch file on disk carrying these strings would be a real violation.
- *
- * Every row has to be able to fail. A tag row names a version OTHER than the
- * current pin, or the whole arm could be rewritten as the `4.6.3` literal and
- * still pass; `4.10` fails a `\d` that is not `\d+`; the backslash row fails a
- * separator class narrowed to `/`.
- */
-const CHECKOUT_CONTROLS = [
-  {
-    file: 'scratch/tag-current.ts',
-    hit: true,
-    body: "readFileSync('/home/dev/godot-4.6.3/scene/3d/light_3d.cpp')",
-  },
-  {
-    file: 'scratch/tag-next.ts',
-    hit: true,
-    body: "readFileSync('/home/dev/godot-4.7.0/scene/3d/light_3d.cpp')",
-  },
-  { file: 'scratch/tag-two-part.mjs', hit: true, body: "const root = '/opt/godot-4.10/doc';" },
-  {
-    file: 'scratch/repos-posix.ts',
-    hit: true,
-    body: "join(HOME, '/repos/godot/doc/classes/Range.xml')",
-  },
-  {
-    file: 'scratch/repos-windows.ts',
-    hit: true,
-    body: 'join(HOME, "\\repos\\godot\\doc\\classes\\Range.xml")',
-  },
-  // Citing where a bound came from is the encouraged practice, not a hit.
-  {
-    file: 'scratch/citation.ts',
-    hit: false,
-    body: '// scene/3d/camera_3d.cpp:682\n// default per doc/classes/Range.xml',
-  },
-  {
-    file: 'scratch/doc-link.mjs',
-    hit: false,
-    body: "const tree = 'https://api.github.com/repos/godotengine/godot/git/trees/master';",
-  },
-];
-
-/** One row per `ENV_RE` alternative: two of six would leave the rest rewritable. */
-const ENV_CONTROLS = [
-  { file: 'scratch/env-src.ts', hit: true, body: 'const root = process.env.GODOT_SRC;' },
-  { file: 'scratch/env-source.ts', hit: true, body: 'const root = process.env.GODOT_SOURCE;' },
-  { file: 'scratch/env-sources.ts', hit: true, body: 'const root = process.env.GODOT_SOURCES;' },
-  { file: 'scratch/env-root.ts', hit: true, body: 'const root = process.env.GODOT_ROOT;' },
-  { file: 'scratch/env-checkout.mjs', hit: true, body: 'process.env.GODOT_CHECKOUT ?? ""' },
-  { file: 'scratch/env-engine.mjs', hit: true, body: 'process.env.GODOT_ENGINE ?? ""' },
-  // A path to the godot BINARY is a tool, and prose may name the variable.
-  { file: 'scratch/env-binary.ts', hit: false, body: "process.env.GODOT_BIN ?? 'godot'" },
-  { file: 'scratch/env-prose.md', hit: false, body: 'Export `GODOT_SRC` before authoring.' },
-];
 
 const expectedHits = (controls) => controls.filter((c) => c.hit).map((c) => c.file);
 const hitFiles = (hits) => [...new Set(hits.map((h) => h.file))];

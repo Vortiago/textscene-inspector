@@ -44,7 +44,7 @@ describe('AudioStreamPlayer semantic rules', () => {
     expectDiagnostic(
       scene(node('AudioStreamPlayer', { stream: 'ExtResource("9_missing")' }, { name: 'Player' })),
       {
-        ruleName: 'audiostreamplayer-missing-stream-resource',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'AudioStreamPlayer',
       }

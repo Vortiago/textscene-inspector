@@ -7,19 +7,17 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
 
 function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
+  const { node } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
   // If mesh_library is absent, flag as a warning — valid in Godot but the
   // GridMap will render nothing and likely isn't visible.
-  const meshLibrary = heldResource(rawProps.mesh_library);
-  if (meshLibrary === undefined) {
+  if (heldResource(rawProps.mesh_library) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message:
@@ -27,14 +25,6 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'gridmap-requires-mesh-library',
-    });
-  } else if (!checkResourceExists(scene, meshLibrary)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `MeshLibrary resource not found: ${rawProps.mesh_library} (mesh_library)`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-gridmap-resources',
     });
   }
 
@@ -44,8 +34,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
 const gridMapValidationRule: LintRule = {
   meta: {
     name: 'valid-gridmap-resources',
-    description:
-      'Validates GridMap mesh_library reference resolves and flags missing mesh_library as a warning',
+    description: 'Flags a GridMap with no mesh_library as a warning',
     category: 'validation',
     emits: [
       {
@@ -55,15 +44,6 @@ const gridMapValidationRule: LintRule = {
           kind: 'engine-inert',
           at: 'grid_map.cpp:676',
           unused: 'every cell is skipped while the library is null, so the map draws nothing',
-        },
-      },
-      {
-        ruleName: 'valid-gridmap-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the mesh_library id is undeclared in the file',
         },
       },
     ],

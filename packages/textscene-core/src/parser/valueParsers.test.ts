@@ -218,8 +218,10 @@ describe('parseNodePathLiteral', () => {
   it('returns an empty string for an empty NodePath("") literal (edge case)', () => {
     expect(parseNodePathLiteral('NodePath("")')).toBe('');
   });
-  it('returns null for a value that is not a NodePath literal (error path)', () => {
-    expect(parseNodePathLiteral('"../Camera2D"')).toBeNull();
+  // variant.cpp:746-749 lists STRING as a strict source for NODE_PATH, so the
+  // bare string is the same path; an unquoted word is no spelling at all.
+  it('reads the bare string a NodePath slot converts, and null for anything else', () => {
+    expect(parseNodePathLiteral('"../Camera2D"')).toBe('../Camera2D');
     expect(parseNodePathLiteral('../Camera2D')).toBeNull();
   });
   it('returns null for an absent value, without warning', () => {

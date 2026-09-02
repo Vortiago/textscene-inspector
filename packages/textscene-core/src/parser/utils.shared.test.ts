@@ -53,6 +53,24 @@ describe('unquoteString', () => {
     expect(unquoteString('"music \\u266a"')).toBe('music ♪'); // ♪
     expect(unquoteString('"emoji \\U01F600"')).toBe('emoji \u{1F600}'); // 😀
   });
+  // `variant_parser.cpp:299-300` and `:308-309`: `case 'b': res = 8` and
+  // `case 'f': res = 12`; `:350-351` `default: res = next` passes any other
+  // escaped character through as itself.
+  it('decodes \\b and \\f, and passes an unknown escape through as the character', () => {
+    expect(unquoteString('"\\b"')).toBe('\b');
+    expect([...unquoteString('"\\b"')]).toHaveLength(1);
+    expect(unquoteString('"\\f"')).toBe('\f');
+    expect(unquoteString('"It\\\'s"')).toBe("It's");
+    expect(unquoteString('"a\\/b"')).toBe('a/b');
+  });
+  // `variant_parser.cpp:263-265` tokenizes `&"…"` and `@"…"` as a StringName,
+  // and `variant.cpp:582-587` lists STRING_NAME as a strict source for STRING,
+  // so the jacket reaches the setter as its text.
+  it('strips the StringName jacket in both spellings', () => {
+    expect(unquoteString('&"Hello"')).toBe('Hello');
+    expect(unquoteString('@"Hello"')).toBe('Hello');
+    expect(unquoteString('&"a\\nb"')).toBe('a\nb');
+  });
   it('treats an escaped backslash before u as literal (\\\\u1234 → \\u1234)', () => {
     expect(unquoteString('"a\\\\u1234"')).toBe('a\\u1234');
   });

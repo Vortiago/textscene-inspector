@@ -34,6 +34,15 @@ describe('nodePath utilities', () => {
     });
   });
 
+  describe('resolveNodePathLiteral with a bare string', () => {
+    // `variant.cpp:746-749` lists STRING as a strict source for NODE_PATH, so
+    // `remote_path = "Target"` resolves exactly as `NodePath("Target")` does.
+    it('resolves the quoted string a NodePath slot converts', () => {
+      expect(resolveNodePathLiteral('Root/Relay', '"Target"')).toBe('Root/Relay/Target');
+      expect(resolveNodePathLiteral('Root/Relay', '"../Other"')).toBe('Root/Other');
+    });
+  });
+
   describe('resolveNodePathLiteral with unique names', () => {
     // `%Target` is claimed by the node at Root/Target; nothing claims `%Absent`.
     const claims = new Map([['%Target', 'Root/Target']]);

@@ -68,15 +68,24 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 const EXPECTED_UNVALIDATED = 4;
 
 /**
- * The classes this ledger measures: only ones this repo already claims.
+ * The classes this ledger measures: only ones this repo already claims, closed
+ * over the base chain.
  *
  * An unregistered type's properties are the coverage ledger's business, not
  * this guard's, and mixing the two populations would make both numbers
  * unreadable. Derived from the registries, which is why the test above names
  * the load-bearing members outright.
+ *
+ * The closure is what reaches an abstract tier that declares NOTHING: it
+ * registers no parser and no validator, so neither seed sees it, and its
+ * engine properties (`CSGShape3D` had six, `PhysicsBody3D` six) sat outside the
+ * count while every heir read as covered. Same walk `resourcePropertyCoverage`
+ * applies to its hierarchy.
  */
-function coveredClasses(nodeRegistry, declaringTypes) {
-  return new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes]);
+function coveredClasses(nodeRegistry, declaringTypes, baseChainOf) {
+  const covered = new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes]);
+  for (const cls of [...covered]) for (const ancestor of baseChainOf(cls)) covered.add(ancestor);
+  return covered;
 }
 
 // Loading the built barrel (every slice self-registers) comfortably exceeds
@@ -129,7 +138,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('scopes to the classes this repo claims, named rather than only derived', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'));
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) => validatorRegistry.baseChainOf(cls));
     // NAMED, because the scope is derived from the very registry this ledger
     // audits: deregistering a class removes its rows from the count instead of
     // failing it. Measured — 262 of the 266 contribute no unvalidated property,
@@ -147,6 +156,11 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
       'Camera3D',
       'MeshInstance3D',
       'Viewport',
+      // Reached only through the closure: nothing instantiates them and,
+      // emptied, nothing would register them either.
+      'CSGShape3D',
+      'CSGPrimitive3D',
+      'PhysicsBody3D',
     ]) {
       expect([...covered]).toContain(cls);
     }
@@ -157,7 +171,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('the unvalidated-property ledger has not grown', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'));
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) => validatorRegistry.baseChainOf(cls));
 
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);

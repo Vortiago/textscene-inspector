@@ -147,7 +147,6 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-decal-resources` | `decal-requires-texture` | warning |
-|  | `valid-decal-resources` | error |
 |  | `decal-normal-orm-without-albedo` | warning |
 |  | `decal-empty-cull-mask` | warning |
 <!-- lint:end -->

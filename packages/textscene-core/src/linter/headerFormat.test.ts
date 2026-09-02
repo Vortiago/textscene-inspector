@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readHeaderFormat } from './headerFormat.js';
+import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
 
 describe('readHeaderFormat', () => {
   it('reads the version and the line off a plain header', () => {
@@ -73,5 +73,15 @@ describe('readHeaderFormat', () => {
     expect(readHeaderFormat('[ext_resource type="Texture2D" id="1"]\n')).toBeNull();
     expect(readHeaderFormat('not a scene at all\n')).toBeNull();
     expect(readHeaderFormat('')).toBeNull();
+  });
+});
+
+describe('isLegacyFormat', () => {
+  it('declines only 1 and 2: the engine has no lower bound, so 0 and below load as current', () => {
+    // `if (format_version > FORMAT_VERSION)` (resource_format_text.cpp:1141)
+    // is the loader's only comparison.
+    expect([-1, 0, 1, 2, 3, 4, null].map(isLegacyFormat)).toEqual([
+      false, false, true, true, false, false, false,
+    ]);
   });
 });

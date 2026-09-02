@@ -34,7 +34,7 @@ describe('NavigationRegion3D semantic rules', () => {
     expectDiagnostic(
       scene(node('NavigationRegion3D', { navigation_mesh: 'ExtResource("9_missing")' }, { name: 'Region' })),
       {
-        ruleName: 'valid-navigationregion3d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'NavigationRegion3D',
       }
@@ -45,7 +45,7 @@ describe('NavigationRegion3D semantic rules', () => {
     expectDiagnostic(
       scene(node('NavigationRegion3D', { navigation_mesh: 'SubResource("NavMesh_absent")' }, { name: 'Region' })),
       {
-        ruleName: 'valid-navigationregion3d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
       }
     );
@@ -53,7 +53,7 @@ describe('NavigationRegion3D semantic rules', () => {
 
   it('does not flag a region that omits navigation_mesh entirely as a dangling reference', () => {
     expectNoDiagnostic(scene(node('NavigationRegion3D', {}, { name: 'Region' })), {
-      ruleName: 'valid-navigationregion3d-resources',
+      ruleName: 'dangling-resource-reference',
     });
   });
 

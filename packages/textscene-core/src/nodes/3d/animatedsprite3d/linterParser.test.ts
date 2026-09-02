@@ -34,8 +34,6 @@ const KEYS: string[] = [
   'frame',
   'frame_progress',
   'speed_scale',
-  // sprite_3d.cpp:1495, the pre-4.0 spelling of `sprite_frames`.
-  'frames',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -202,23 +200,6 @@ describe('AnimatedSprite3D strict validators', () => {
 
     it('rejects a non-numeric value', () => {
       expect(check('speed_scale', 'fast')).not.toBeNull();
-    });
-  });
-
-  describe('frames, the pre-4.0 spelling of sprite_frames', () => {
-    it('takes the same references sprite_frames takes', () => {
-      // sprite_3d.cpp:1495 hands `p_value` straight to set_sprite_frames, so
-      // the slot accepts exactly the same literals.
-      expect(check('frames', 'SubResource("SpriteFrames_walk")')).toBeNull();
-      expect(check('frames', 'ExtResource("1_frames")')).toBeNull();
-      expect(check('frames', 'null')).toBeNull();
-    });
-
-    it('names the deprecated key, not the canonical one, when it rejects', () => {
-      const error = check('frames', 'res://frames.tres');
-      expect(error).not.toBeNull();
-      expect(error!.message).toContain("'frames'");
-      expect(error!.message).not.toContain('sprite_frames');
     });
   });
 });

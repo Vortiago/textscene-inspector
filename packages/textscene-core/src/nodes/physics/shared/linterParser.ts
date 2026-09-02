@@ -9,8 +9,9 @@
  * `NODE_BASE_TYPES` carries every hop of Godot's ancestry, so a validator
  * registered on an intermediate reaches its subclasses.
  *
- * `PhysicsBody2D`/`PhysicsBody3D` sit between these and the concrete bodies and
- * bind no properties at all, so they get no tier.
+ * `PhysicsBody2D` sits between `CollisionObject2D` and the concrete bodies and
+ * binds no properties at all, so it gets no tier; `PhysicsBody3D` binds
+ * `axis_lock_*` and owns `3d/shared/`.
  *
  * One owner, because copying these into each leaf is how they drift:
  * `collision_layer` and `collision_mask` reached four declarations per

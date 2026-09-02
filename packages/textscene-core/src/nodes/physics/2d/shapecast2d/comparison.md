@@ -55,7 +55,6 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 | `valid-shapecast2d` | `shapecast2d-no-collide-target` | warning |
 |  | `shapecast2d-zero-mask` | warning |
 |  | `shapecast2d-missing-shape` | warning |
-|  | `shapecast2d-unresolved-shape` | error |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so none of

@@ -8,7 +8,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../../linter/resourceChecker.js';
+import { heldResource } from '../../../../linter/resourceChecker.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 
@@ -28,8 +28,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 
   // WARNING: a material-less emitter is valid (the material can be assigned
   // at runtime) but renders no particles until one is set.
-  const processMaterial = heldResource(rawProps.process_material);
-  if (processMaterial === undefined) {
+  if (heldResource(rawProps.process_material) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `GPUParticles3D has no 'process_material' set. Particles will not render until one is assigned`,
@@ -37,46 +36,6 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'gpuparticles3d-missing-process-material',
     });
-  } else {
-    // Check if process_material resource exists
-    const resourceExists = checkResourceExists(scene, processMaterial);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Process material resource not found: ${rawProps.process_material}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-gpuparticles3d-process-material',
-      });
-    }
-  }
-
-  // Every draw pass, not just the first. `_validate_property`
-  // (gpu_particles_3d.cpp:462-467) clears PROPERTY_USAGE_NONE for every index
-  // under `draw_passes`, so draw_pass_2..4 are ordinary serialised keys the
-  // moment an author raises the count — and a dangling id in one fails the load
-  // exactly like draw_pass_1. Naming the four keys rather than scraping them
-  // gives index order for free and ignores a `draw_pass_9` Godot never writes.
-  //
-  // `null` is the serialised form of an EMPTY pass, which `draw_passes = 2` with
-  // one mesh writes and Godot reloads without complaint
-  // (`scenes/demos/3d/particles/test.tscn`), so it is skipped rather than read
-  // as a reference that failed to resolve.
-  const drawPasses: [key: string, ref: string][] = [];
-  for (const key of DRAW_PASS_KEYS) {
-    const mesh = heldResource(rawProps[key]);
-    if (mesh !== undefined) drawPasses.push([key, mesh]);
-  }
-  for (const [key, raw] of drawPasses) {
-    if (!checkResourceExists(scene, raw)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Draw pass mesh resource not found for '${key}': ${raw}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-gpuparticles3d-resources',
-      });
-    }
   }
 
   // gpu_particles_3d.cpp:342-363: `meshes_found` scans every draw_pass_N mesh
@@ -87,9 +46,9 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   // `draw_pass_N` key is in scope regardless of what `draw_passes` says here —
   // this stays a simple "no key at all has a mesh" scan rather than also
   // re-deriving that bound. `meshes_found` tests `is_valid()`, so the `null` an
-  // empty pass serialises to is not a mesh — the same exclusion the loop above
-  // makes, which is why both read the one list.
-  if (drawPasses.length === 0) {
+  // empty pass serialises to is not a mesh (`draw_passes = 2` with one mesh
+  // writes it, and Godot reloads it without complaint).
+  if (DRAW_PASS_KEYS.every((key) => heldResource(rawProps[key]) === undefined)) {
     diagnostics.push({
       severity: 'warning',
       message:
@@ -100,10 +59,14 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // sub_emitter must reference an existing GPUParticles3D node; empty/non-NodePath
-  // means "no sub-emitter". `resolveNodePath` declines — `unknowable`, its only
-  // decline — whenever the walk touches content another file declares, so
-  // neither arm below fires on a target this file cannot classify.
+  // sub_emitter names a GPUParticles3D node; empty/non-NodePath means "no
+  // sub-emitter". All three arms below are the engine-inert tier:
+  // `_attach_sub_emitter` walks the path with `get_node_or_null` and skips the
+  // attach when the node is missing (`if (n)`, gpu_particles_3d.cpp:484), the
+  // cast fails (:485) or the target is this node (:486) — nothing is refused
+  // or altered, so each is a warning. `resolveNodePath` declines —
+  // `unknowable`, its only decline — whenever the walk touches content another
+  // file declares, so no arm fires on a target this file cannot classify.
   if (rawProps.sub_emitter) {
     const subEmitterPath = extractNodePath(rawProps.sub_emitter);
     if (subEmitterPath) {
@@ -111,8 +74,8 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 
       if (target.status === 'missing') {
         diagnostics.push({
-          severity: 'error',
-          message: `Sub-emitter node not found: NodePath("${subEmitterPath}")`,
+          severity: 'warning',
+          message: `Sub-emitter node not found: NodePath("${subEmitterPath}"). Godot keeps the path and emits no sub-particles.`,
           nodeName: node.name,
           nodeType: node.type,
           ruleName: 'valid-gpuparticles3d-sub-emitter',
@@ -131,14 +94,11 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
           ruleName: 'gpuparticles3d-sub-emitter-self',
         });
       } else if (target.status === 'found' && target.node.type !== 'GPUParticles3D') {
-        // A separate rule name from the dangling case above, because the two
-        // are different ADR-0032 tiers. The path RESOLVES here; nothing refuses
-        // or alters it — `_attach_sub_emitter` casts the node it walked to and
-        // simply skips the attach when the cast fails
-        // (gpu_particles_3d.cpp:485-486). The property's
+        // The path RESOLVES here; `_attach_sub_emitter` casts the node it
+        // walked to and skips the attach when the cast fails
+        // (gpu_particles_3d.cpp:485). The property's
         // PROPERTY_HINT_NODE_PATH_VALID_TYPES only constrains the inspector's
-        // node picker and grounds nothing, so this is the engine-inert tier - a
-        // warning.
+        // node picker and grounds nothing.
         diagnostics.push({
           severity: 'warning',
           message: `Sub-emitter property points to a ${target.node.type} node, but must point to a GPUParticles3D node. Godot keeps the path and emits no sub-particles.`,
@@ -159,37 +119,19 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 const gpuParticles3DValidationRule: LintRule = {
   meta: {
     name: 'valid-gpuparticles3d-resources',
-    description: 'Validates GPUParticles3D resource references, draw-pass meshes, and sub-emitter paths',
+    description: 'Validates GPUParticles3D process material and draw-pass mesh presence, and sub-emitter paths',
     category: 'validation',
     applicableNodeTypes: ['GPUParticles3D'],
     emits: [
       { ruleName: 'gpuparticles3d-missing-process-material', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-gpuparticles3d-process-material',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the process_material reference names a resource id this file never declares',
-        },
-      },
-      {
-        ruleName: 'valid-gpuparticles3d-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the draw pass mesh reference names a resource id this file never declares',
-        },
-      },
       { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'valid-gpuparticles3d-sub-emitter',
-        severity: 'error',
+        severity: 'warning',
         grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the sub_emitter NodePath names a node this scene never declares',
+          kind: 'engine-inert',
+          at: 'gpu_particles_3d.cpp:484',
+          unused: 'get_node_or_null finds nothing and the attach is skipped, so no sub-emitter is set',
         },
       },
       {

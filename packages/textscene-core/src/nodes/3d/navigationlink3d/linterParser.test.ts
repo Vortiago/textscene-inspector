@@ -35,10 +35,6 @@ const KEYS: string[] = [
   'end_position',
   'enter_cost',
   'travel_cost',
-  // navigation_link_3d.cpp:223 and :227, the pre-4.0 spellings of
-  // `start_position` and `end_position`.
-  'start_location',
-  'end_location',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -221,27 +217,6 @@ describe('NavigationLink3D strict validators', () => {
       expect(check('travel_cost', 'inf')).toBeNull();
       expect(check('travel_cost', 'nan')).toBeNull();
       expect(check('travel_cost', 'inf_neg')?.severity).toBe('error');
-    });
-  });
-
-  describe('start_location and end_location, the pre-4.0 spellings', () => {
-    it('take the same Vector3 literals their modern names take', () => {
-      // navigation_link_3d.cpp:223 and :227 hand `p_value` straight to
-      // set_start_position / set_end_position.
-      expect(check('start_location', 'Vector3(1, 2, 3)')).toBeNull();
-      expect(check('end_location', 'Vector3(1, 2, 3)')).toBeNull();
-    });
-
-    it('accept inf/nan components, since neither setter carries a finite guard', () => {
-      expect(check('start_location', 'Vector3(inf, -inf, nan)')).toBeNull();
-      expect(check('end_location', 'Vector3(inf, -inf, nan)')).toBeNull();
-    });
-
-    it('name the deprecated key when they reject a malformed literal', () => {
-      const error = check('start_location', 'Vector3(1, 2)');
-      expect(error).not.toBeNull();
-      expect(error!.message).toContain("'start_location'");
-      expect(error!.message).not.toContain('start_position');
     });
   });
 });

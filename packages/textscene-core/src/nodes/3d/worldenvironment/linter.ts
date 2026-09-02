@@ -7,11 +7,11 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
-import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver.js';
+import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 
 /**
  * The three first-wins groups a WorldEnvironment can join, one per resource
@@ -55,23 +55,6 @@ function resourceRefId(held: string | undefined): string | undefined {
 }
 
 /**
- * Resolve the `sky` reference stored inside the Environment SubResource that a
- * WorldEnvironment references. Only SubResource environment references can be
- * inspected (ExtResource environments live in another file); returns undefined
- * when the environment isn't a local SubResource or carries no sky property.
- */
-function getEnvironmentSkyReference(
-  scene: TscnScene,
-  environmentRef: string
-): string | undefined {
-  const parsed = parseResourceReference(environmentRef);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-  const env = findSubResource(scene.internalResources ?? [], parsed.id);
-  const sky = env?.data?.sky;
-  return typeof sky === 'string' ? sky : undefined;
-}
-
-/**
  * Validate WorldEnvironment semantic rules
  */
 function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
@@ -82,18 +65,16 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // One question per slot, asked once: an absent key, an empty value and a bare
-  // `null` are one state to every `Ref` below, so each gate reads the held
-  // reference rather than the raw text.
-  const environment = heldResource(rawProps.environment);
-  const cameraAttributes = heldResource(rawProps.camera_attributes);
-
   // Godot's guard is a conjunction: `environment.is_null() &&
   // camera_attributes.is_null()` (world_environment.cpp:187). EITHER resource
   // gives the node a visible effect, so a camera_attributes-only
   // WorldEnvironment is a valid configuration the engine says nothing about.
-  // Testing `environment` alone warned about exactly those scenes.
-  if (environment === undefined && cameraAttributes === undefined) {
+  // An absent key, an empty value and a bare `null` are one state to a `Ref`,
+  // so each gate reads the held reference rather than the raw text.
+  if (
+    heldResource(rawProps.environment) === undefined &&
+    heldResource(rawProps.camera_attributes) === undefined
+  ) {
     diagnostics.push({
       severity: 'warning',
       message: `WorldEnvironment has neither an 'environment' nor a 'camera_attributes' resource, so it has no visible effect.`,
@@ -101,49 +82,6 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'worldenvironment-requires-environment',
     });
-  }
-
-  // Guarded on its own presence rather than chained to the warning above: since
-  // that warning became a conjunction, "no environment" no longer implies the
-  // node was reported, and a camera_attributes-only node would have reached here
-  // with nothing to resolve.
-  if (environment !== undefined) {
-    if (!checkResourceExists(scene, environment)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Environment resource not found: ${environment}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-worldenvironment-resources',
-      });
-    } else {
-      // The Environment subresource may reference a Sky subresource; existence-check
-      // it like the environment reference itself (the render parser reads sky too).
-      const skyRef = getEnvironmentSkyReference(scene, environment);
-      if (skyRef && !checkResourceExists(scene, skyRef)) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Sky resource not found: ${skyRef}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-worldenvironment-resources',
-        });
-      }
-    }
-  }
-
-  // Check if camera_attributes resource exists (if specified - this is optional)
-  if (cameraAttributes !== undefined) {
-    const resourceExists = checkResourceExists(scene, cameraAttributes);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Camera attributes resource not found: ${cameraAttributes}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-worldenvironment-resources',
-      });
-    }
   }
 
   // world_environment.cpp:195-205 warns when `<slot>.is_valid()` and the world's
@@ -199,20 +137,11 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
 const worldEnvironmentValidationRule: LintRule = {
   meta: {
     name: 'valid-worldenvironment',
-    description: 'Validates WorldEnvironment resource references and ensures only one WorldEnvironment exists',
+    description: 'Validates WorldEnvironment resource presence and which WorldEnvironment wins each first-wins group',
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
     emits: [
       { ruleName: 'worldenvironment-requires-environment', severity: 'warning', grounding: { kind: 'configuration-warning' } },
-      {
-        ruleName: 'valid-worldenvironment-resources',
-        severity: 'error',
-        grounding: {
-          kind: 'no-engine-counterpart',
-          scope: 'dangling-reference',
-          because: 'the environment, sky or camera_attributes id is undeclared in the file',
-        },
-      },
       {
         ruleName: 'single-worldenvironment',
         severity: 'warning',

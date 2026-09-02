@@ -1,6 +1,4 @@
 import {
-  ARRAY_LITERAL_RE,
-  TYPED_WRAPPER_RE,
   packedArrayBody,
   packedArrayCallAnywhere,
   packedArrayForms,
@@ -10,6 +8,7 @@ import {
   parseGodotInt,
   splitTopLevel,
 } from '../../godot/index.js';
+import { arrayLiteralBody } from '../../godot/variantParser.js';
 
 const PACKED_VECTOR3_ARRAY_FORMS = packedArrayForms('PackedVector3Array');
 const PACKED_VECTOR2_ARRAY_FORMS = packedArrayForms('PackedVector2Array');
@@ -144,12 +143,9 @@ export function parsePackedInt32Arrays(value: string): number[][] {
     // lists ARRAY as a source for every PACKED_* type, so a typed array of bare
     // element arrays converts element-wise; unwrapping it here and then
     // stripping its inner brackets leaves the same body the bare form scans.
-    const trimmed = value.trim();
-    const typed = TYPED_WRAPPER_RE.exec(trimmed);
-    const literal = typed ? trimmed.slice(trimmed.indexOf('(') + 1, -1).trim() : trimmed;
-    const outer = ARRAY_LITERAL_RE.exec(literal);
-    if (!outer) return [];
-    scanned = outer[1]!;
+    const outer = arrayLiteralBody(value);
+    if (outer === null) return [];
+    scanned = outer;
     re = BARE_INNER_ARRAY_RE;
   }
   re.lastIndex = 0;

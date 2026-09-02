@@ -258,12 +258,9 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('draw_pass_1', 'SubResource("TubeTrailMesh_slq55")')).toBeNull();
     });
 
-    // THE regression test for last week's false positive: the semantic rule
-    // (linter.ts, `valid-gpuparticles3d-resources`) once read the literal
-    // `null` as a dangling reference and errored on this exact scene. Fixing
-    // the RULE without a FORMAT validator here would have left this same
-    // string one lint pass away from being rejected again the moment
-    // anything routed it through `findValidator` first.
+    // `danglingResources.ts` reads a literal `null` as an empty slot, never as
+    // a dangling reference; the FORMAT validator here accepts the spelling on
+    // its own, so no pass routed through `findValidator` can reject it.
     it.each(['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'])(
       '%s accepts the literal null — the empty-pass spelling scenes/demos/3d/particles/test.tscn:903 ships (`draw_pass_2 = null`)',
       (property) => {

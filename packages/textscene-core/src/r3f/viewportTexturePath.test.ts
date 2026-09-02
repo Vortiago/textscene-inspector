@@ -91,12 +91,13 @@ describe('viewportTextureRegistryKey', () => {
     });
 
     /**
-     * The alias a publisher registers for itself is the only key that can answer
-     * content composed in from an instanced sub-scene, which never appears in
-     * the authored roots the table is built from.
+     * The table is the consumer's owner's, and a name it lacks addresses nothing
+     * (node.cpp:1930-1938). The literal join would hit the alias a sub-viewport
+     * under ANOTHER owner publishes for itself — an instanced sub-scene's `%Inner`
+     * reached from outside it.
      */
-    it('falls back to the literal join for a %Name the table has no entry for', () => {
-      expect(viewportTextureRegistryKey('Root/Screen', '%Inner', claimed)).toBe('Root/%Inner');
+    it('resolves to nothing for a %Name the table has no entry for', () => {
+      expect(viewportTextureRegistryKey('Root/Screen', '%Inner', claimed)).toBeNull();
     });
 
     /** Outside the shell there is no tree, so the alias is all there is. */

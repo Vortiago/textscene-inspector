@@ -168,14 +168,64 @@ background_mode = 99
 
     it('leaves a scene file\'s own sections judged by their own headings', () => {
       // A `[gd_scene]` header carries no `type=`, so nothing leaks into the
-      // nodes below it.
+      // nodes below it — the index-only child is judged by its own heading.
       const content = `[gd_scene format=3]
 
-[node name="Root" index="0"]
+[node name="Root" type="Node"]
+
+[node name="Child" parent="." index="0"]
 background_mode = 99
 `;
 
       expect(parser.parse(content).errors).toHaveLength(0);
+    });
+  });
+  describe('a TileSet family key with no index or no leaf', () => {
+    // `TileSet::_set` gates each family on `trim_prefix(...).is_valid_int()`
+    // (tile_set.cpp:3893, :3995), which the empty index fails, and an empty
+    // `components[1]` matches no leaf branch (:3897, :3904); each falls out of
+    // the chain as `return false`, a dropped write.
+    it('reports each shape once', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="TileSet" id="1"]
+terrain_set_/mode = 0
+terrain_set_0/ = 0
+pattern_ = null
+terrain_set_0/mode = 0
+
+[node name="Root" type="Node2D"]
+`;
+      const errors = parser.parse(content).errors;
+      expect(errors.map((e) => [e.line, e.severity, e.code])).toEqual([
+        [4, 'error', 'INVALID_TILESET_TERRAIN_SET_KEY'],
+        [5, 'error', 'INVALID_TILESET_TERRAIN_SET_KEY'],
+        [6, 'error', 'INVALID_TILESET_PATTERN_KEY'],
+      ]);
+    });
+  });
+
+  describe('an indexed key with no leaf, a nested leaf, or no index', () => {
+    // `PropertyListHelper::_get_property` splits at the LAST `/`
+    // (property_list_helper.cpp:47): `item_0/` and `item_/text` hand it an
+    // index half it refuses — `!index_string.is_valid_int()` on `""` (:53) —
+    // and `item_0/text/extra` an index half of `0/text`, refused the same
+    // way. Each is a dropped write, so each must reach the family dispatcher.
+    it('reports each of the three shapes Godot drops, once', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Menu" type="PopupMenu"]
+item_0/ = "x"
+item_0/text/extra = "x"
+item_/text = "x"
+item_0/text = "x"
+`;
+      const errors = parser.parse(content).errors;
+      expect(errors.map((e) => [e.line, e.severity, e.code])).toEqual([
+        [4, 'error', 'INVALID_ITEM_KEY'],
+        [5, 'error', 'INVALID_ITEM_KEY'],
+        [6, 'error', 'INVALID_ITEM_KEY'],
+      ]);
     });
   });
 });
