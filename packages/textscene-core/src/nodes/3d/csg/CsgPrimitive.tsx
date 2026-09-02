@@ -26,11 +26,9 @@ import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../base/node3d/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
-import { resolveStandardMaterial } from '../../../r3f/materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../../../r3f/materials/ExternalMaterialSlot';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveMaterialSlotSource, scalarSlotFor } from '../../../r3f/materials/materialSlotSource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
@@ -87,16 +85,11 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
-  const scalars = useMemo(() => {
-    const sub = resolveStandardMaterial(properties.material, internalResources);
-    return sub ? parseStandardMaterial3DScalars(sub.data as Record<string, string>) : null;
-  }, [properties.material, internalResources]);
-
-  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource; those
-  // load through the material pipeline.
-  const externalMaterialPath = useMemo(
-    () => (scalars ? null : resolveExtResourcePath(properties.material, externalResources)),
-    [scalars, properties.material, externalResources]
+  // A CSG `material` is a `Ref<Material>`: an inline sub-resource, an ExtResource
+  // `.tres` the material pipeline loads, or a reference Godot drops on the floor.
+  const { scalars, externalPath: externalMaterialPath } = useMemo(
+    () => scalarSlotFor(resolveMaterialSlotSource(properties.material, internalResources, externalResources)),
+    [properties.material, internalResources, externalResources]
   );
 
   // Absorbed while the ancestor's boolean is pending or ready; NOT while it has failed,

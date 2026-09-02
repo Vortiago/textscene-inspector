@@ -22,6 +22,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_blue', path: 'res://blue_material.tres', type: 'Material' },
+  { id: '2_tex', path: 'res://albedo.png', type: 'Texture2D' },
 ];
 
 const INTERNALS: readonly TscnInternalResource[] = [
@@ -71,6 +72,18 @@ describe('<CsgPrimitive> material resolution', () => {
   it('shows the unresolved-resource placeholder while the .tres has not loaded', async () => {
     const renderer = await render('ExtResource("1_blue")');
     expect(materialOf(renderer).color.getHex()).toBe(0xffffff);
+  });
+
+  it('keeps the default material when the ExtResource is not a Material', async () => {
+    // `material` is a `Ref<Material>`; a Texture2D does not load into it, so the
+    // write is dropped and the solid keeps Godot's default shader (not the
+    // unresolved-resource white).
+    const renderer = await render('ExtResource("2_tex")');
+    const linear = materialOf(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
+    expect(linear.r).toBeCloseTo(0.6, 5);
   });
 
   it('falls back to Godot’s default material shader when no material is declared', async () => {

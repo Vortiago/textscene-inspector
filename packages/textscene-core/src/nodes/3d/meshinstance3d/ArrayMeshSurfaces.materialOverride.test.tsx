@@ -170,3 +170,40 @@ describe('surface_material_override/N on an ArrayMesh', () => {
     expect(materials.map((m) => m.color.getHex())).toEqual([0x00ff00, 0x00ff00]);
   });
 });
+
+describe('surface_material_override/N against the mesh\u2019s own surface count', () => {
+  it('a cleared entry past the last surface adds no slot', async () => {
+    // Godot stores a null Ref in the slot without touching the surface count, so
+    // nothing is drawn for an index the mesh does not have.
+    const { node, mesh } = meshNode(INLINE_SURFACES, {
+      surfaceMaterialOverrides: new Map([[2, 'null']]),
+    });
+    const { materials } = await renderMesh({ node, internal: [mesh], texture: new THREE.Texture() });
+    expect(materials).toHaveLength(1);
+  });
+});
+
+describe('a scene material edited under unchanged surface bytes', () => {
+  it('reaches the surface on the next parse', async () => {
+    const withColor = (color: string): TscnInternalResource => ({
+      id: 'Mat_1',
+      type: 'StandardMaterial3D',
+      data: { albedo_color: color },
+    });
+    const { node, mesh } = meshNode(inlineSurfacesWithMaterial('Mat_1'));
+    const fake = createFakeResourceLoader();
+    const tree = (internal: TscnInternalResource[]) => (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={internal} externalResources={EXT}>
+          <MeshInstance3D node={node} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree([mesh, withColor('Color(0, 1, 0, 1)')]));
+    await renderer.update(tree([{ ...mesh }, withColor('Color(1, 0, 0, 1)')]));
+    const drawn = renderer.scene.findAllByType('Mesh')[0]!.instance as unknown as THREE.Mesh;
+    const material = drawn.material as THREE.MeshStandardMaterial;
+    expect(material.color.r).toBeGreaterThan(0.9);
+    expect(material.color.g).toBeLessThan(0.1);
+  });
+});
