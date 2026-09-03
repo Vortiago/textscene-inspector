@@ -219,7 +219,6 @@ describe('isHeading', () => {
   });
 });
 
-
 describe('isEmpty', () => {
   it('should identify empty lines', () => {
     expect(isEmpty('')).toBe(true);

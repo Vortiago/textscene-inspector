@@ -99,9 +99,9 @@ export function formatJson(files: FileDiagnostics[]): string {
 
 /**
  * How each severity is presented: the text icon, the ANSI colour, and the
- * GitHub Actions workflow-command level. One table rather than three switches,
- * and total over the closed `Severity` union, so adding a severity fails tsc
- * here instead of falling silently through a `default` in two of them.
+ * GitHub Actions workflow-command level. One table rather than a table and two
+ * switches, and total over the closed `Severity` union, so adding a severity
+ * fails tsc here instead of falling silently through a switch `default`.
  */
 const SEVERITY_DISPLAY: Record<
   Severity,

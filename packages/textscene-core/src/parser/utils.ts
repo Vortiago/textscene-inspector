@@ -431,6 +431,12 @@ export function unquoteString(value: string): string {
 }
 
 /**
+ * The class Godot instantiates for an `instance_placeholder=` heading
+ * (`packed_scene.cpp:255`). Both node creators name it, so it is spelled here.
+ */
+export const INSTANCE_PLACEHOLDER_TYPE = 'InstancePlaceholder';
+
+/**
  * Whether a `[node]` heading OVERRIDES the node already at its path rather than
  * declaring a new one.
  *
@@ -446,12 +452,6 @@ export function unquoteString(value: string): string {
  * — and the two disagreeing about what an override is would be a silent
  * divergence between what renders and what lints.
  */
-/**
- * The class Godot instantiates for an `instance_placeholder=` heading
- * (`packed_scene.cpp:255`). Both node creators name it, so it is spelled here.
- */
-export const INSTANCE_PLACEHOLDER_TYPE = 'InstancePlaceholder';
-
 export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
   return (
     heading.type === 'node' &&

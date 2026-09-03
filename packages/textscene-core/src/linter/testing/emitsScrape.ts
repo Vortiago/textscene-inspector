@@ -139,6 +139,11 @@ export function pairMatches(scraped: string, declared: string): boolean {
   return new RegExp(`^${pattern}$`).test(declared);
 }
 
+/** The severity literals a push site can carry, from the union itself. */
+const SEVERITY_NAMES = Object.keys(SEVERITY_ORDER);
+
+const scrapeCache = new Map<string, EmittedPair[]>();
+
 /**
  * Scrape `(ruleName, severity)` pairs from a file, ignoring its `emits` blocks.
  *
@@ -147,11 +152,6 @@ export function pairMatches(scraped: string, declared: string): boolean {
  * previous one. A name with no preceding severity is a `rangeAdvisory` arm, and
  * those are `warning` by construction (rangeAdvisory.ts).
  */
-/** The severity literals a push site can carry, from the union itself. */
-const SEVERITY_NAMES = Object.keys(SEVERITY_ORDER);
-
-const scrapeCache = new Map<string, EmittedPair[]>();
-
 export function scrapePairs(file: string): EmittedPair[] {
   const cached = scrapeCache.get(file);
   if (cached) return cached;

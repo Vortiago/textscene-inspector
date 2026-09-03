@@ -18,13 +18,13 @@ import {
   type ParsedHeading,
 } from '../parser/utils.js';
 import { getAncestorPaths, joinPath } from '../utils/nodePath.js';
-
-/** What a `parent=` says when it names the scene's own root. */
-const ROOT_PATH = '.';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { isNilLiteral } from '../godot/index.js';
 import { resolveDeprecatedProperty } from '../godot/deprecated.js';
+
+/** What a `parent=` says when it names the scene's own root. */
+const ROOT_PATH = '.';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)

@@ -185,7 +185,8 @@ tier: a ported `get_configuration_warnings()` row is a **warning**, an
 `previewer-limitation` is an **info**, a `linter-failure` is an **error**, and
 only an `engine` arm is left to its cite, since a refusal and a hint sit on the
 same kind. `emitsGrounding.test.ts` holds every declared severity to that map,
-and `Linter` refuses a push whose severity contradicts the declaration.
+and `ruleCoverage.emits.test.ts` holds every literal push site to the severity
+its rule declares.
 
 **A bound cites each end separately when the ends differ.** `enforced` and `hinted`
 each take `{ min, max }`, because a floor with an `ERR_FAIL_COND` and a ceiling with
