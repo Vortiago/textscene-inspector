@@ -47,10 +47,10 @@ Strict parsing format-checks these `NavigationObstacle2D` properties, plus 12 in
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-navigationobstacle2d` | `navigationobstacle2d-carve-without-affect` | warning |
+| `valid-navigationobstacle2d` | `navigationobstacle2d-carve-without-affect` | info |
 |  | `navigationobstacle2d-non-positive-global-scale` | warning |
 |  | `navigationobstacle2d-non-uniform-global-scale` | warning |
 |  | `navigationobstacle2d-global-skew-ignored` | warning |

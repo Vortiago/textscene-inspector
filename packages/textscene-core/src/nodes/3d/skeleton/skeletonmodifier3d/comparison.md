@@ -37,7 +37,7 @@ Strict parsing format-checks these `SkeletonModifier3D` properties, plus 17 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->

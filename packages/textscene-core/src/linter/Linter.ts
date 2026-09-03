@@ -150,7 +150,18 @@ export class Linter {
       // walk goes on: no host catches around `lint`, so an uncaught throw
       // drops every diagnostic of the file, phase 1 included.
       try {
-        for (const diagnostic of rule.check(context)) diagnostics.push(diagnostic);
+        for (const diagnostic of rule.check(context)) {
+          // The tier is declared once, on `emits`, and fixed by its grounding
+          // (`severityFixedBy`); a push that says otherwise is the rule
+          // contradicting its own declaration, reported like any other throw.
+          const declared = rule.meta.emits?.find((e) => e.ruleName === diagnostic.ruleName);
+          if (declared && declared.severity !== diagnostic.severity) {
+            throw new Error(
+              `'${diagnostic.ruleName}' reported as ${diagnostic.severity} but is declared ${declared.severity}`
+            );
+          }
+          diagnostics.push(diagnostic);
+        }
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         diagnostics.push(

@@ -53,10 +53,10 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | warning |
+| `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | info |
 |  | `tilemaplayer-invalid-tile-data` | error |
 <!-- lint:end -->
 

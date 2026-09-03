@@ -47,7 +47,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const shapeName = shape === null ? undefined : GLOBAL_RNG_SHAPES.get(shape);
   if (shapeName) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `CPUParticles2D 'emission_shape = ${shapeName}' draws its positions from Godot's global RNG, which is never saved with the scene, so no static preview can place them. The previewer emits from the node origin instead.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -59,7 +59,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   // warning on every emitter that omits the property would say nothing.
   if (boolSlotValue(props.fract_delta) === true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `CPUParticles2D 'fract_delta' gives a restarting particle a partial first step. The previewer's frozen pose steps at a fixed rate and ignores it, so particles land up to one frame behind Godot's.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -80,7 +80,7 @@ const cpuParticles2DPreviewRule: LintRule = {
     emits: [
       {
         ruleName: 'cpuparticles2d-nondeterministic-emission-shape',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'no-engine-counterpart',
           scope: 'previewer-limitation',
@@ -89,7 +89,7 @@ const cpuParticles2DPreviewRule: LintRule = {
       },
       {
         ruleName: 'cpuparticles2d-fract-delta-ignored',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'no-engine-counterpart',
           scope: 'previewer-limitation',

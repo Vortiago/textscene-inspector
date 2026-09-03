@@ -289,7 +289,7 @@ describe('AudioStreamPlayer3D Linter', () => {
       it('should warn when emission_angle_degrees is set without emission_angle_enabled', () => {
         expectDiagnostic(withStream({ emission_angle_degrees: 45.0 }), {
           ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'AudioStreamPlayer3D',
           contains: ['not true', 'no effect'],
         });
@@ -305,7 +305,7 @@ describe('AudioStreamPlayer3D Linter', () => {
       it('should warn when emission_angle_filter_attenuation_db is set without emission_angle_enabled', () => {
         expectDiagnostic(withStream({ emission_angle_filter_attenuation_db: -12.0 }), {
           ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'AudioStreamPlayer3D',
           contains: ['not true', 'no effect'],
         });
@@ -434,7 +434,7 @@ describe('AudioStreamPlayer3D Linter', () => {
         'strict-parser',
         'strict-parser',
       ]);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every(d => d.severity !== 'error')).toBe(true);
     });
   });
 });

@@ -90,7 +90,7 @@ A **Lint rule** that warns when a single numeric property falls outside a plausi
 _Avoid_: modelling cross-field consistency or presence-dependency checks as range advisories (different control flow, not just different data); a range advisory that emits an **error**.
 
 **Severity**:
-Two levels. **error** — the file is objectively invalid per the TSCN format; fails the CLI and CI, and no committed fixture may carry one. **warning** — legal but suspicious; advisory, so healthy scenes and positive fixtures may carry them and nothing fails. (`info` is retired.)
+Three levels, each fixed by what the engine does with the value (ADR-0032, `severityFixedBy`), never chosen per rule. **error** — Godot refuses or alters the value, or cannot load the file; fails the CLI and CI, and no committed fixture may carry one. **warning** — legal, and either Godot's own editor warns about it (a ported configuration warning) or the value sits outside the property's editor hint; advisory. **info** — legal, and Godot has no reaction at all (an `engine-inert` grounding: the value is never read), or the finding is about this previewer rather than the scene; advisory. Healthy scenes and positive fixtures may carry warnings and infos and nothing fails.
 _Avoid_: advisory conditions as errors (breaks fixtureLint); severity as presentation (surfaces map it, never redefine it).
 
 **Live lint, settled render**:

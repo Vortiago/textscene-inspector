@@ -33,7 +33,7 @@ describe('a legacy format header', () => {
 
     const diagnostics = linter.lint(`[gd_scene format=2]\n${BODY}`);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.severity).toBe('warning');
+    expect(diagnostics[0]?.severity).toBe('info');
     expect(diagnostics[0]?.ruleName).toBe('legacy-format-version');
     expect(diagnostics[0]?.location?.line).toBe(1);
     expect(diagnostics[0]?.message).toContain('format=2');

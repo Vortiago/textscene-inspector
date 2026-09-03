@@ -46,7 +46,7 @@ Strict parsing format-checks these `NavigationRegion3D` properties, plus 17 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-navigationregion3d-resources` | `navigationregion3d-requires-navigation-mesh` | warning |
 <!-- lint:end -->

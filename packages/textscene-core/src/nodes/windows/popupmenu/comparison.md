@@ -49,8 +49,8 @@ Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited fro
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 | `valid-popupmenu-properties` (type-family match) | `popupmenu-item-index-out-of-range` | error |
 <!-- lint:end -->
 

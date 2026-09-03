@@ -51,7 +51,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     const monitorable = rawProps.monitorable ?? 'true'; // Default is true in Godot
     if (boolSlotValue(monitoring) === false && boolSlotValue(monitorable) === false) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -88,7 +88,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       const mask = ruleInt(collisionMask, null, 'uint32');
       if (mask === 0) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_mask' is 0. The area won't detect any collision layers.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -113,7 +113,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         {
           ruleName: `${prefix}-detects-nothing`,
-          severity: 'warning',
+          severity: 'info',
           grounding: {
             kind: 'engine-inert',
             at: monitorFlagsCite,
@@ -122,7 +122,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
         },
         {
           ruleName: `${prefix}-monitoring-zero-mask`,
-          severity: 'warning',
+          severity: 'info',
           grounding: {
             kind: 'engine-inert',
             at: areaMaskCite,

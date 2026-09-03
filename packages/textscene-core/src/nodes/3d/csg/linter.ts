@@ -52,7 +52,7 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   if (node.type === 'CSGMesh3D' && resourceSlotIsEmpty(properties.mesh)) {
     return [
       {
-        severity: 'warning',
+        severity: 'info',
         message: `CSGMesh3D '${node.name}' has no mesh assigned, so it contributes no geometry to any CSG operation.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -69,7 +69,7 @@ function checkCSGShape3D(context: RuleContext): Diagnostic[] {
     if (points < 3) {
       return [
         {
-          severity: 'warning',
+          severity: 'info',
           message: `CSGPolygon3D '${node.name}' has a polygon with ${points} point(s); at least 3 are needed for a solid shape.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -92,7 +92,7 @@ const csgShape3DDegenerateGeometryRule: LintRule = {
     emits: [
       {
         ruleName: MISSING_MESH_RULE,
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'csg_shape.cpp:1126',
@@ -101,7 +101,7 @@ const csgShape3DDegenerateGeometryRule: LintRule = {
       },
       {
         ruleName: INSUFFICIENT_POINTS_RULE,
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'csg_shape.cpp:2154',

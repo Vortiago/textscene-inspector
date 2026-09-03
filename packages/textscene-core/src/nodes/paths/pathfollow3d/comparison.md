@@ -55,11 +55,11 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 17 inherited 
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-pathfollow3d` | `pathfollow3d-no-parent` | warning |
 |  | `pathfollow3d-invalid-parent` | warning |
-|  | `pathfollow3d-negative-progress` | warning |
+|  | `pathfollow3d-negative-progress` | info |
 |  | `pathfollow3d-progress-ratio-ignored` | error |
 |  | `pathfollow3d-oriented-mode-requires-up-vector` | warning |
 <!-- lint:end -->

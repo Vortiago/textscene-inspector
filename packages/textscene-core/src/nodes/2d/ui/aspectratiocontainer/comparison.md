@@ -43,11 +43,11 @@ Strict parsing format-checks these `AspectRatioContainer` properties, plus 53 in
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
-| `valid-aspectratiocontainer-children` | `aspectratiocontainer-unsupported-texturerect-expand-mode` | warning |
+| `valid-aspectratiocontainer-children` | `aspectratiocontainer-unsupported-texturerect-expand-mode` | info |
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all four of AspectRatioContainer's own members; `linter.ts`

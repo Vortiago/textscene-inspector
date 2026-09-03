@@ -35,7 +35,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
     !isDrivenByAnimationAudioTrack(scene, node)
   ) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Autoplay is enabled but no stream is set. The player will have no audio source.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -56,7 +56,7 @@ const audioStreamPlayerValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'audiostreamplayer-autoplay-without-stream',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'audio_stream_player_internal.cpp:139',

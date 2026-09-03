@@ -50,7 +50,7 @@ function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
     if (expandMode === null || !UNSUPPORTED_EXPAND_MODES.has(expandMode)) continue;
 
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `TextureRect '${child.name}' has expand_mode ${expandMode}, a proportional mode AspectRatioContainer does not support: Godot's own sort skips positioning it ("Proportional TextureRect is currently not supported inside AspectRatioContainer"). Use a non-proportional expand_mode or a plain Container.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -71,7 +71,7 @@ const aspectRatioContainerRule: LintRule = {
     emits: [
       {
         ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'aspect_ratio_container.cpp:113',

@@ -61,7 +61,7 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-softbody3d-mesh` (type-family match) | `valid-softbody3d-mesh` | warning |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |

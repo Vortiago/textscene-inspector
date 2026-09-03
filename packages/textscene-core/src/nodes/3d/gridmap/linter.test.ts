@@ -38,6 +38,6 @@ cell_size = Vector3(1, 1, 1)
   it('warns (not errors) when a gridmap has no mesh_library', () => {
     const content = scene(node('GridMap', { cell_size: 'Vector3(1, 1, 1)' }));
     expectNoErrors(content);
-    expectDiagnostic(content, { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' });
+    expectDiagnostic(content, { ruleName: 'gridmap-requires-mesh-library', severity: 'info' });
   });
 });

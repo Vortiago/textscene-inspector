@@ -38,7 +38,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     | 'wallAngleInGrounded'
   > = {
     floorPropsInFloating: {
-      severity: 'warning',
+      severity: 'info',
       ruleName: `${prefix}-floor-props-in-floating-mode`,
       grounding: {
         kind: 'engine-inert',
@@ -47,7 +47,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       },
     },
     slideOnCeilingInFloating: {
-      severity: 'warning',
+      severity: 'info',
       ruleName: `${prefix}-slide-on-ceiling-in-floating-mode`,
       grounding: {
         kind: 'engine-inert',
@@ -60,7 +60,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     // read is `character_body_2d.cpp:313`, inside `_move_and_slide_floating`.
     wallAngleInGrounded: is2D
       ? {
-          severity: 'warning',
+          severity: 'info',
           ruleName: `${prefix}-wall-min-slide-angle-in-grounded-mode`,
           grounding: {
             kind: 'engine-inert',

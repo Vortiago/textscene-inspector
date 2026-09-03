@@ -39,9 +39,9 @@ Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | warning |
+| `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | info |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and

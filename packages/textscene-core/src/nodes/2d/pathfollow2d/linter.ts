@@ -73,7 +73,7 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     // nothing to say about the travel it would have asked for.
     if (progress !== null && Number.isFinite(progress) && progress < 0) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `PathFollow2D 'progress' is negative (${progress}). Godot keeps the value, but clamps it when sampling the curve, so the follower sits at the start of the path.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -107,7 +107,7 @@ const pathFollow2DValidationRule: LintRule = {
       { ruleName: 'pathfollow2d-invalid-parent', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'pathfollow2d-negative-progress',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'curve.cpp:1079',

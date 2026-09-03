@@ -47,7 +47,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // Warning: show_rest_only = true (debugging mode, animations disabled)
   if (boolSlotValue(rawProps.show_rest_only) === true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -117,7 +117,7 @@ const skeleton3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'skeleton3d-debug-mode',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'skeleton_3d.cpp:551',

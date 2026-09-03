@@ -546,7 +546,7 @@ sub_emitter = ${path}
 `,
           {
             ruleName: 'gpuparticles3d-sub-emitter-self',
-            severity: 'warning',
+            severity: 'info',
             contains: ['points back at', 'Particles'],
           }
         );
@@ -581,7 +581,7 @@ sub_emitter = NodePath("")
 process_material = SubResource("process_1")
 sub_emitter = NodePath("../Other/Emitter")
 `,
-        { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'warning' }
+        { ruleName: 'valid-gpuparticles3d-sub-emitter', severity: 'info' }
       );
     });
 

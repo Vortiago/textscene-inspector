@@ -62,11 +62,11 @@ Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-animationtree-properties` | `animationtree-missing-tree-root` | warning |
 |  | `animationtree-anim-player-not-found` | warning |
-|  | `animationtree-anim-player-wrong-type` | warning |
-|  | `animationtree-inactive` | warning |
+|  | `animationtree-anim-player-wrong-type` | info |
+|  | `animationtree-inactive` | info |
 <!-- lint:end -->
 
 `active`, `deterministic`, and `reset_on_save` fall back to `true` on an

@@ -40,10 +40,10 @@ Strict parsing format-checks these `Path2D` properties, plus 12 inherited from N
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-path2d` | `path2d-missing-curve` | warning |
+| `valid-path2d` | `path2d-missing-curve` | info |
 <!-- lint:end -->
 
 Path2D carries a single property of its own, `curve`. The lenient parser only checks

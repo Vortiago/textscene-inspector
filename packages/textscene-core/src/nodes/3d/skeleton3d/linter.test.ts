@@ -404,7 +404,7 @@ describe('Skeleton3D Linter', () => {
       it('should warn when show_rest_only is enabled', () => {
         expectDiagnostic(scene(node('Skeleton3D', { show_rest_only: true })), {
           ruleName: 'skeleton3d-debug-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['debugging mode', 'rest pose'],
         });
       });

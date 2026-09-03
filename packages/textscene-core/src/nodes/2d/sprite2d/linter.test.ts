@@ -159,7 +159,7 @@ describe('Sprite2D Linter', () => {
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite2D', { centered: true })), {
         ruleName: 'sprite2d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Sprite2D',
         contains: ["requires a 'texture' property"],
       });
@@ -342,7 +342,7 @@ describe('Sprite2D Linter', () => {
     it('should warn when region_rect is set without region_enabled', () => {
       expectDiagnostic(scene(node('Sprite2D', { region_rect: 'Rect2(0, 0, 100, 100)' })), {
         ruleName: 'sprite2d-region-configuration',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Sprite2D',
         contains: ['region_enabled', 'ignored'],
       });
@@ -360,7 +360,7 @@ describe('Sprite2D Linter', () => {
         ),
         {
           ruleName: 'sprite2d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'Sprite2D',
           contains: ["'region_enabled' is false"],
         }

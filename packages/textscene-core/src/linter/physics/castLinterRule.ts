@@ -47,7 +47,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<'noCollideTarget' | 'zeroMask' | 'missingShape' | 'concaveShape'> = {
     noCollideTarget: {
-      severity: 'warning',
+      severity: 'info',
       ruleName: `${prefix}-no-collide-target`,
       grounding: {
         kind: 'engine-inert',
@@ -56,7 +56,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
       },
     },
     zeroMask: {
-      severity: 'warning',
+      severity: 'info',
       ruleName: `${prefix}-zero-mask`,
       grounding: {
         kind: 'engine-inert',

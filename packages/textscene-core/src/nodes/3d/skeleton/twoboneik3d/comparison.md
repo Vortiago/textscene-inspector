@@ -52,7 +52,7 @@ Strict parsing format-checks these `TwoBoneIK3D` properties, plus 1 inherited fr
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-twoboneik3d-settings` (type-family match) | `twoboneik3d-setting-index-out-of-range` | error |

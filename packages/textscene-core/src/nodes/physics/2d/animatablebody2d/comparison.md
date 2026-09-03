@@ -33,7 +33,7 @@ Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherit
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |

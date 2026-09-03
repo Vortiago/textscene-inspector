@@ -54,7 +54,7 @@ describe('AudioStreamPlayer semantic rules', () => {
   it('warns when autoplay is on but no stream is set', () => {
     expectDiagnostic(scene(node('AudioStreamPlayer', { autoplay: true }, { name: 'Player' })), {
       ruleName: 'audiostreamplayer-autoplay-without-stream',
-      severity: 'warning',
+      severity: 'info',
     });
   });
 

@@ -58,7 +58,7 @@ describe.each(CASTS)('%s semantic rules', (type) => {
   it('warns when neither areas nor bodies can be hit', () => {
     expectDiagnostic(cast({ collide_with_areas: false, collide_with_bodies: false }), {
       ruleName: `${prefix}-no-collide-target`,
-      severity: 'warning',
+      severity: 'info',
       nodeType: type,
     });
   });
@@ -79,14 +79,14 @@ describe.each(CASTS)('%s semantic rules', (type) => {
     // so an unstorable value there leaves the pair dead and the warning stands.
     expectDiagnostic(cast({ collide_with_areas: '"yes"', collide_with_bodies: false }), {
       ruleName: `${prefix}-no-collide-target`,
-      severity: 'warning',
+      severity: 'info',
     });
   });
 
   it('warns on a zero collision mask', () => {
     expectDiagnostic(cast({ collision_mask: 0 }), {
       ruleName: `${prefix}-zero-mask`,
-      severity: 'warning',
+      severity: 'info',
     });
   });
 

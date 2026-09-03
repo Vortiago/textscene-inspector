@@ -168,7 +168,7 @@ export function scrapePairs(file: string): EmittedPair[] {
   // `(?<!:\s*)` keeps the meta's own `name: ruleName,` out of the emission scrape
   // — that line names the REGISTRY key, not a reported diagnostic.
   const token =
-    /severity:\s*'(error|warning)'|ruleName:\s*(?:'([^']+)'|`([^`]+)`|(\w+))|(?<![.\w])(?<!:\s*)ruleName\s*[,}]/g;
+    /severity:\s*'(error|warning|info)'|ruleName:\s*(?:'([^']+)'|`([^`]+)`|(\w+))|(?<![.\w])(?<!:\s*)ruleName\s*[,}]/g;
   const pairs: EmittedPair[] = [];
   let severity: string | null = null;
   let m: RegExpExecArray | null;

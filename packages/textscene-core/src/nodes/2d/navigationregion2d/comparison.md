@@ -44,7 +44,7 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-navigationregion2d-resources` | `navigationregion2d-requires-navigation-polygon` | warning |

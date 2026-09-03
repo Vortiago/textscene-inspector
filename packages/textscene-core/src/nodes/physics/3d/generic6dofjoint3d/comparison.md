@@ -92,7 +92,7 @@ Strict parsing format-checks these `Generic6DOFJoint3D` properties, plus 4 inher
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-joint` (type-family match) | `joint-not-connected` | warning |
 |  | `joint-same-body` | warning |

@@ -38,7 +38,7 @@ function checkFogVolumeSize(context: RuleContext): Diagnostic[] {
 
   return [
     {
-      severity: 'warning',
+      severity: 'info',
       message: `FogVolume 'size = ${sizeRaw}' has no effect while 'shape = ${shapeRaw}' (World). A World-shaped FogVolume's extents are never consulted by the volumetric fog pass (fog.cpp:702), and the editor itself hides 'size' for this shape (fog_volume.cpp:52).`,
       nodeName: node.name,
       nodeType: node.type,
@@ -57,7 +57,7 @@ const fogVolumeSizeRule: LintRule = {
     emits: [
       {
         ruleName: 'fogvolume-size-ignored-for-world-shape',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'fog.cpp:702',

@@ -74,7 +74,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
 
       if (target.status === 'missing') {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Sub-emitter node not found: NodePath("${subEmitterPath}"). Godot keeps the path and emits no sub-particles.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -87,7 +87,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
         // never becomes its own sub-emitter. Checked before the type arm
         // because a self path always passes it.
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Sub-emitter property points back at '${node.name}' itself. Godot keeps the path and emits no sub-particles.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -100,7 +100,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
         // PROPERTY_HINT_NODE_PATH_VALID_TYPES only constrains the inspector's
         // node picker and grounds nothing.
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Sub-emitter property points to a ${target.node.type} node, but must point to a GPUParticles3D node. Godot keeps the path and emits no sub-particles.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -127,7 +127,7 @@ const gpuParticles3DValidationRule: LintRule = {
       { ruleName: 'gpuparticles3d-no-draw-pass-mesh', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'valid-gpuparticles3d-sub-emitter',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'gpu_particles_3d.cpp:484',
@@ -136,7 +136,7 @@ const gpuParticles3DValidationRule: LintRule = {
       },
       {
         ruleName: 'gpuparticles3d-sub-emitter-self',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'gpu_particles_3d.cpp:486',
@@ -145,7 +145,7 @@ const gpuParticles3DValidationRule: LintRule = {
       },
       {
         ruleName: 'gpuparticles3d-sub-emitter-wrong-type',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'gpu_particles_3d.cpp:485',

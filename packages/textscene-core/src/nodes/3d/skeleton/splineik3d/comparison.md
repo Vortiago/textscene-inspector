@@ -53,7 +53,7 @@ Strict parsing format-checks these `SplineIK3D` properties, plus 1 inherited fro
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-splineik3d-path-3d` (type-family match) | `splineik3d-setting-without-path-3d` | warning |

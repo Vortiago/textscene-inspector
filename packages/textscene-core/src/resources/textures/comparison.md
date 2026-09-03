@@ -83,7 +83,7 @@ Strict parsing format-checks the inherited set (2 inherited from Resource); `Tex
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects a texture property: an unreadable value falls back to Godot's default through the shared value decoders, and a reference it cannot resolve leaves the slot empty, so the consumer renders untextured rather than failing the scene.

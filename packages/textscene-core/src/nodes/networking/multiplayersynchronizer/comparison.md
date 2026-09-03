@@ -43,7 +43,7 @@ Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-multiplayersynchronizer-root-path` | `multiplayersynchronizer-root-path-dangling` | warning |
 <!-- lint:end -->
 

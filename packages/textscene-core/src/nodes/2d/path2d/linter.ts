@@ -35,7 +35,7 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
     const script = heldResource(rawProps.script);
     if (script === undefined || !checkResourceExists(scene, script)) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Path2D '${node.name}' has no 'curve'. It will draw nothing until a Curve2D is assigned (often set at runtime via script).`,
         nodeName: node.name,
         nodeType: node.type,
@@ -56,7 +56,7 @@ const path2DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'path2d-missing-curve',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'path_2d.cpp:161',

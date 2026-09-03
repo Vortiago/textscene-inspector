@@ -59,11 +59,11 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-area2d` | `area2d-detects-nothing` | warning |
-|  | `area2d-monitoring-zero-mask` | warning |
+| `valid-area2d` | `area2d-detects-nothing` | info |
+|  | `area2d-monitoring-zero-mask` | info |
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 

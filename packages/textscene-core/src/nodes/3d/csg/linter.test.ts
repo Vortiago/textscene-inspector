@@ -53,7 +53,7 @@ describe('CSG own-geometry-degenerate rule', () => {
     it('warns when mesh is absent', () => {
       const warnings = warningsFor(csgScene('CSGMesh3D', ''));
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]?.severity).toBe('warning');
+      expect(warnings[0]?.severity).toBe('info');
       expect(warnings[0]?.ruleName).toBe('csgmesh3d-requires-mesh');
     });
 

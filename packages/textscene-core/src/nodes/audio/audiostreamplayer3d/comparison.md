@@ -63,10 +63,10 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-emission-angle-not-enabled` | warning |
-|  | `audiostreamplayer3d-emission-filter-not-enabled` | warning |
+| `valid-audiostreamplayer3d-properties` | `audiostreamplayer3d-emission-angle-not-enabled` | info |
+|  | `audiostreamplayer3d-emission-filter-not-enabled` | info |
 <!-- lint:end -->
 
 Beyond the shared audio-base fallbacks, every numeric property here defaults via

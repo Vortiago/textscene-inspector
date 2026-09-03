@@ -10,10 +10,12 @@ text-scene linter of its own, and the goal is to help you author a sound, valid
 `.tscn` regardless of what any previewer chooses to draw. So coverage tracks what
 the ENGINE serialises: a property is worth validating because Godot writes it and
 reads it back, not because some renderer consumes it. Every diagnostic is
-grounded in a line of Godot's own source, and the three severity tiers come from
-what the engine actually does with a value (ADR-0032): an **error** is a value the
+grounded in a line of Godot's own source, and the severity tiers come from what
+the engine actually does with a value (ADR-0032): an **error** is a value the
 setter refuses or alters, a **warning** is one outside the property's own editor
-hint, and a value the engine simply accepts gets nothing at all. The aim is that
+hint or one Godot's own editor warns about, an **info** is one the engine never
+reads at all (or a limitation of this previewer), and a value the engine simply
+accepts gets nothing at all. The aim is that
 a clean run means the file is sound, and that a diagnostic never fires on a scene
 Godot opens without complaint.
 

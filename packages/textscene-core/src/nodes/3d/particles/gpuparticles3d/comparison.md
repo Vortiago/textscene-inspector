@@ -76,13 +76,13 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-gpuparticles3d-resources` | `gpuparticles3d-missing-process-material` | warning |
 |  | `gpuparticles3d-no-draw-pass-mesh` | warning |
-|  | `valid-gpuparticles3d-sub-emitter` | warning |
-|  | `gpuparticles3d-sub-emitter-self` | warning |
-|  | `gpuparticles3d-sub-emitter-wrong-type` | warning |
+|  | `valid-gpuparticles3d-sub-emitter` | info |
+|  | `gpuparticles3d-sub-emitter-self` | info |
+|  | `gpuparticles3d-sub-emitter-wrong-type` | info |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |

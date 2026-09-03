@@ -49,7 +49,7 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-omnilight3d-properties` | `omnilight3d-projector-without-shadow` | warning |
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |

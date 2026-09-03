@@ -46,7 +46,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   if (layerData.length > 0 && resourceSlotIsEmpty(rawProps.tile_set)) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `TileMap has tile data but no 'tile_set' — its tiles cannot render.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -106,7 +106,7 @@ const tileMapValidationRule: LintRule = {
       { ruleName: 'tilemap-node-y-sort-without-layer', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'tilemap-requires-tileset',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'tile_map_layer.cpp:224',

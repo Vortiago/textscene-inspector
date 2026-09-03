@@ -242,7 +242,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       it('should warn when autoplay is enabled without stream', () => {
         expectDiagnostic(bare({ autoplay: true }), {
           ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'AudioStreamPlayer2D',
           contains: ['autoplay', 'no', 'stream'],
         });
@@ -268,7 +268,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       it('still warns when the audio track targets a DIFFERENT node', () => {
         expectDiagnostic(drivenByAudioTrack('SomeOtherNode', { autoplay: true }), {
           ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'AudioStreamPlayer2D',
         });
       });

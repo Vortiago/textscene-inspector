@@ -24,7 +24,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
 
   if (heldResource(rawProps.texture) === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Sprite2D requires a 'texture' property. Sprite2D is not visible without a texture.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -42,7 +42,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   // ignored whenever `region_enabled` is false or absent (its own default).
   if (rawProps.region_rect !== undefined && rawProps.region_enabled === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'region_rect' is set but 'region_enabled' is not true. The region_rect will be ignored.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -55,7 +55,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
     // the load on — read as a boolean the file does not carry.
     if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Property 'region_rect' is set but 'region_enabled' is false. The region_rect will be ignored.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -79,7 +79,7 @@ const sprite2DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'sprite2d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'sprite_2d.cpp:159',
@@ -103,7 +103,7 @@ const sprite2DValidationRule: LintRule = {
       },
       {
         ruleName: 'sprite2d-region-configuration',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'sprite_2d.cpp:98',

@@ -77,7 +77,7 @@ Strict parsing format-checks these `VehicleWheel3D` properties, plus 17 inherite
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-vehiclewheel3d` | `vehiclewheel3d-not-under-vehicle-body` | warning |
 <!-- lint:end -->

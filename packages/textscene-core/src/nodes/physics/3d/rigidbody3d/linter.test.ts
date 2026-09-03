@@ -303,7 +303,7 @@ physics_material_override = ExtResource("ext_mat_1")
         scene(node('RigidBody3D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }), collisionShape3d),
         {
           ruleName: 'rigidbody3d-max-contacts-without-monitor',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'RigidBody3D',
           contains: ['get_colliding_bodies() stays empty', 'contact COUNT still works'],
         }

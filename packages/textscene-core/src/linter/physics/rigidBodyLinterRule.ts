@@ -96,7 +96,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       const contactMonitor = rawProps.contact_monitor;
       if (boolSlotValue(contactMonitor) !== true) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message:
             `${node.type} '${node.name}' sets max_contacts_reported while contact_monitor is off, ` +
             'so get_colliding_bodies() stays empty and the body_entered/exited signals never ' +
@@ -186,7 +186,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         {
           ruleName: `${prefix}-max-contacts-without-monitor`,
-          severity: 'warning',
+          severity: 'info',
           grounding: {
             kind: 'engine-inert',
             at: contactMonitorCite,

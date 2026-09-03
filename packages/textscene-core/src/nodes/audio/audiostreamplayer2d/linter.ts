@@ -41,7 +41,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // WARNING: autoplay enabled but no stream set
   if (boolSlotValue(rawProps.autoplay) === true && streamEmpty && !drivenByAnimation) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'autoplay' is enabled but no 'stream' is set. Audio will not play automatically.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -64,7 +64,7 @@ const audioStreamPlayer2DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'audio_stream_player_internal.cpp:139',

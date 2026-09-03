@@ -49,7 +49,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     if (shadowMode === 0) {
       if (split1 || split2 || split3) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Shadow mode is ORTHOGONAL (0), but split properties are set. Splits are ignored in ORTHOGONAL mode.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -62,7 +62,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
     if (shadowMode === 1) {
       if (split2 || split3) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Shadow mode is PARALLEL_2_SPLITS (1), but split_2 or split_3 are set. Only split_1 is used in 2-split mode.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -90,7 +90,7 @@ const directionalLight3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'directionallight3d-unused-splits',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'renderer_scene_cull.cpp:2175',

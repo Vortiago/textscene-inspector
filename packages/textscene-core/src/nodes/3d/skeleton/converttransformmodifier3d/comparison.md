@@ -56,7 +56,7 @@ Strict parsing format-checks these `ConvertTransformModifier3D` properties, plus
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 | `valid-converttransformmodifier3d-ranges` (type-family match) | `converttransformmodifier3d-range-outside-mode-hint` | warning |

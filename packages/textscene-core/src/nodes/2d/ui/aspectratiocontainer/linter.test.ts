@@ -42,7 +42,7 @@ expand_mode = 3
 `);
       expectDiagnostic(content, {
         ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode',
-        severity: 'warning',
+        severity: 'info',
       });
       expectNoErrors(content);
     });
@@ -70,7 +70,7 @@ ${extra}
 [node name="Art" type="TextureRect" parent="Frame"]
 expand_mode = 5
 `),
-        { ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode', severity: 'warning' }
+        { ruleName: 'aspectratiocontainer-unsupported-texturerect-expand-mode', severity: 'info' }
       );
     });
 

@@ -23,9 +23,19 @@ const CLEAN_TSCN = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 `;
 
-// A CSGMesh3D with no mesh trips a warning-severity diagnostic and nothing of
-// error severity - mirrors lint.test.ts's WARNING_TSCN.
+// A CollisionShape2D with no shape trips a warning-severity diagnostic and
+// nothing of error severity - mirrors lint.test.ts's WARNING_TSCN.
 const WARNING_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="Body"]
+`;
+
+// A CSGMesh3D with no mesh trips an info-severity diagnostic and nothing else.
+const INFO_TSCN = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
@@ -35,6 +45,7 @@ const WARNING_TSCN = `[gd_scene format=3]
 let tempDir: string;
 let badPath: string;
 let warningPath: string;
+let infoPath: string;
 let scenesDir: string;
 let nestedCleanPath: string;
 let nestedBadPath: string;
@@ -63,6 +74,8 @@ beforeAll(() => {
   writeFileSync(badPath, BAD_TSCN);
   warningPath = join(tempDir, 'warning.tscn');
   writeFileSync(warningPath, WARNING_TSCN);
+  infoPath = join(tempDir, 'info.tscn');
+  writeFileSync(infoPath, INFO_TSCN);
 
   scenesDir = join(tempDir, 'scenes');
   const nestedDir = join(scenesDir, 'nested');
@@ -179,13 +192,22 @@ describe('CLI --format output modes', () => {
     ]);
   });
 
-  it('--format github prints ::error/::warning workflow-command annotations', () => {
-    const result = runCli(['--format', 'github', badPath, warningPath]);
+  it('--format github prints ::error/::warning/::notice workflow-command annotations', () => {
+    const result = runCli(['--format', 'github', badPath, warningPath, infoPath]);
 
     expect(result.status).toBe(1);
     const lines = result.stdout.trim().split('\n');
     expect(lines.some((l) => l.startsWith('::error file=') && l.includes(badPath))).toBe(true);
     expect(lines.some((l) => l.startsWith('::warning file=') && l.includes(warningPath))).toBe(true);
+    expect(lines.some((l) => l.startsWith('::notice file=') && l.includes(infoPath))).toBe(true);
+  });
+
+  it('--format json exits 0 for info-only input, listing the info finding', () => {
+    const result = runCli(['--format', 'json', infoPath]);
+
+    expect(result.status).toBe(0);
+    const findings = JSON.parse(result.stdout) as Array<{ file: string; severity: string; rule: string }>;
+    expect(findings).toContainEqual(expect.objectContaining({ file: infoPath, severity: 'info', rule: 'csgmesh3d-requires-mesh' }));
   });
 
   it('rejects an unknown --format value with a non-zero, non-1 exit code and no partial output', () => {

@@ -149,7 +149,7 @@ progress = 50.0
   it('still warns on a negative progress spelled with an exponent', () => {
     expectDiagnostic(
       scene(node('Path2D'), node('PathFollow2D', { progress: '-2e1' }, { parent: '.' })),
-      { ruleName: 'pathfollow2d-negative-progress', severity: 'warning' }
+      { ruleName: 'pathfollow2d-negative-progress', severity: 'info' }
     );
   });
 

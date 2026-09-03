@@ -150,7 +150,7 @@ pixel_size = 0.01
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite3D', { billboard: 1 }, { name: 'NoTexture' })), {
         ruleName: 'sprite3d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         contains: ["requires a 'texture' property"],
       });
     });
@@ -250,7 +250,7 @@ pixel_size = 0.01
         scene(node('Sprite3D', { region_rect: 'Rect2(0, 0, 100, 100)' }, { name: 'RegionNoEnabled' })),
         {
           ruleName: 'sprite3d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           contains: ['region_enabled', 'ignored'],
         }
       );
@@ -268,7 +268,7 @@ pixel_size = 0.01
         ),
         {
           ruleName: 'sprite3d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           contains: ["'region_enabled' is false"],
         }
       );

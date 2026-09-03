@@ -147,12 +147,12 @@ function lintFile(dir: string, file: string): { errors: number; messages: string
   return { errors: errors.length, messages: errors.map((e) => `${file}: ${e.message}`) };
 }
 
-/** Distinct warning rule names one file trips. */
-function warningRulesFor(dir: string, file: string): string[] {
+/** Distinct advisory (warning or info) rule names one file trips. */
+function advisoryRulesFor(dir: string, file: string): string[] {
   return [
     ...new Set(
       diagnosticsFor(dir, file)
-        .filter((d) => d.severity === 'warning')
+        .filter((d) => d.severity !== 'error')
         .map((d) => d.ruleName)
     ),
   ];
@@ -171,7 +171,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
       if (!file.startsWith('unit-')) continue;
       const allowed = new Set(UNIT_FIXTURE_WARNINGS[file]?.rules ?? []);
       unexpected.push(
-        ...warningRulesFor(fixturesDir, file)
+        ...advisoryRulesFor(fixturesDir, file)
           .filter((rule) => !allowed.has(rule))
           .map((rule) => `${file}: ${rule}`)
       );
@@ -184,7 +184,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // fixed or the rule changed, and the exemption is now a lie about the file.
     const stale: string[] = [];
     for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_WARNINGS)) {
-      const firing = new Set(warningRulesFor(fixturesDir, file));
+      const firing = new Set(advisoryRulesFor(fixturesDir, file));
       for (const rule of rules) {
         if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);
       }

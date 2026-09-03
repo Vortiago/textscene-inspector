@@ -280,7 +280,7 @@ describe('DirectionalLight3D Linter', () => {
           ),
           {
             ruleName: 'directionallight3d-unused-splits',
-            severity: 'warning',
+            severity: 'info',
             contains: ['ORTHOGONAL', 'Splits are ignored'],
           }
         );
@@ -297,7 +297,7 @@ describe('DirectionalLight3D Linter', () => {
           ),
           {
             ruleName: 'directionallight3d-unused-splits',
-            severity: 'warning',
+            severity: 'info',
             contains: ['PARALLEL_2_SPLITS', 'Only split_1 is used'],
           }
         );

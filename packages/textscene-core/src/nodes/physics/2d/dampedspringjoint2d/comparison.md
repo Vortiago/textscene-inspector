@@ -39,7 +39,7 @@ Strict parsing format-checks these `DampedSpringJoint2D` properties, plus 4 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-joint` (type-family match) | `joint-not-connected` | warning |

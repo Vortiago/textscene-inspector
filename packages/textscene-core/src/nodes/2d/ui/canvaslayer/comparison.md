@@ -42,7 +42,7 @@ Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited f
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 CanvasLayer has no validators of its own, so no property here is ever rejected.

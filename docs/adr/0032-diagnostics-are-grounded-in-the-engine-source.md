@@ -178,6 +178,15 @@ string names a source location rather than restating the rule's own opinion. Arm
 were the other population outside the sweep, and the one where invented thresholds
 had actually shipped.
 
+**A rule's severity is fixed by its grounding kind.** A semantic rule declares an
+`EmitGrounding` per reported name, and `severityFixedBy` maps the kind to the
+tier: a ported `get_configuration_warnings()` row is a **warning**, an
+`engine-inert` claim (the value is never read) is an **info**, a
+`previewer-limitation` is an **info**, a `linter-failure` is an **error**, and
+only an `engine` arm is left to its cite, since a refusal and a hint sit on the
+same kind. `emitsGrounding.test.ts` holds every declared severity to that map,
+and `Linter` refuses a push whose severity contradicts the declaration.
+
 **A bound cites each end separately when the ends differ.** `enforced` and `hinted`
 each take `{ min, max }`, because a floor with an `ERR_FAIL_COND` and a ceiling with
 only a hint are two different claims and must produce two different severities.

@@ -56,7 +56,7 @@ describe('PointLight2D linter', () => {
       scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 5, range_z_max: 4 })),
       {
         ruleName: 'pointlight2d-inverted-z-range',
-        severity: 'warning',
+        severity: 'info',
         contains: ['range_z_min', 'range_z_max'],
       }
     );
@@ -67,7 +67,7 @@ describe('PointLight2D linter', () => {
       scene(node('PointLight2D', { ...WITH_TEXTURE, range_layer_min: 2, range_layer_max: 1 })),
       {
         ruleName: 'pointlight2d-inverted-layer-range',
-        severity: 'warning',
+        severity: 'info',
         contains: ['range_layer_min', 'range_layer_max'],
       }
     );
@@ -86,7 +86,7 @@ describe('PointLight2D linter', () => {
       )
     );
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    expect(diagnostics.filter((d) => d.severity === 'warning')).toHaveLength(2);
+    expect(diagnostics.filter((d) => d.severity === 'info')).toHaveLength(2);
   });
 
   it("accepts a single-value window, which is Godot's own layer default", () => {
@@ -120,11 +120,11 @@ describe('PointLight2D linter', () => {
     // miss the commonest way to write the mistake.
     expectDiagnostic(scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_max: -2000 })), {
       ruleName: 'pointlight2d-inverted-z-range',
-      severity: 'warning',
+      severity: 'info',
     });
     expectDiagnostic(scene(node('PointLight2D', { ...WITH_TEXTURE, range_layer_min: 1 })), {
       ruleName: 'pointlight2d-inverted-layer-range',
-      severity: 'warning',
+      severity: 'info',
     });
   });
 

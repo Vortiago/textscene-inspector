@@ -37,7 +37,7 @@ Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inh
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-openxrrendermodel-parent` | `openxrrendermodel-parent-not-origin-or-manager` | warning |
 <!-- lint:end -->

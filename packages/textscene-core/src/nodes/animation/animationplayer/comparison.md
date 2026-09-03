@@ -71,10 +71,10 @@ Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherit
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-animationplayer-properties` | `animationplayer-autoplay-missing` | warning |
 |  | `animationplayer-current-animation-missing` | error |
-|  | `animationplayer-inactive` | warning |
+|  | `animationplayer-inactive` | info |
 <!-- lint:end -->
 
 `speed_scale` warns and falls back to `1.0` only when the value fails to parse

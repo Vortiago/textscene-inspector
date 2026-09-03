@@ -73,7 +73,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
   const configWarning = { kind: 'configuration-warning' } as const;
   const arms: RuleArms<'carveWithoutAffect' | 'nonPositiveScale' | 'nonUniformScale' | 'skew'> = {
     carveWithoutAffect: {
-      severity: 'warning',
+      severity: 'info',
       ruleName: `${prefix}-carve-without-affect`,
       grounding: {
         kind: 'engine-inert',

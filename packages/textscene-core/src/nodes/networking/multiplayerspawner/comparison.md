@@ -37,7 +37,7 @@ Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-multiplayerspawner-spawn-path` | `multiplayerspawner-spawn-path-dangling` | warning |
 <!-- lint:end -->
 

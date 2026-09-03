@@ -24,7 +24,7 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
 
   if (heldResource(rawProps.texture) === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Sprite3D requires a 'texture' property. Sprite3D is not visible without a texture.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -39,7 +39,7 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
   // Validate region_rect requires region_enabled
   if (rawProps.region_rect !== undefined && rawProps.region_enabled === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'region_rect' is set but 'region_enabled' is not true. The region_rect will be ignored.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -52,7 +52,7 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
     // the load on — read as a boolean the file does not carry.
     if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Property 'region_rect' is set but 'region_enabled' is false. The region_rect will be ignored.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -76,7 +76,7 @@ const sprite3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'sprite3d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'sprite_3d.cpp:798',
@@ -100,7 +100,7 @@ const sprite3DValidationRule: LintRule = {
       },
       {
         ruleName: 'sprite3d-region-configuration',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'sprite_3d.cpp:808',

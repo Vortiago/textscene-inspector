@@ -104,7 +104,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-navigationagent3d` | `navigationagent3d-parent-not-node3d` | warning |
 <!-- lint:end -->
 

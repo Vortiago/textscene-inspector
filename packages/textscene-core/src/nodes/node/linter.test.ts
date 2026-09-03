@@ -21,7 +21,7 @@ describe('binary-resource-reference', () => {
 
 [node name="GridMap" type="Node3D" parent="." instance=ExtResource("1")]
 `,
-      { ruleName: 'binary-resource-reference', severity: 'warning', contains: ['grid_map.scn'] }
+      { ruleName: 'binary-resource-reference', severity: 'info', contains: ['grid_map.scn'] }
     );
   });
 

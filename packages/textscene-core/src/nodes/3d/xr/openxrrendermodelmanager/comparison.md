@@ -39,7 +39,7 @@ Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 1
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-openxrrendermodelmanager-config` | `openxrrendermodelmanager-tracker-required-for-local-pose` | warning |
 |  | `openxrrendermodelmanager-parent-not-xrorigin3d` | warning |

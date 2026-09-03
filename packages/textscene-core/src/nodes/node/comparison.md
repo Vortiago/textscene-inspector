@@ -36,7 +36,7 @@ Strict parsing format-checks these `Node` properties. A malformed value is alway
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 There is no registered validator here, so nothing for the lenient parser to

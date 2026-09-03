@@ -56,12 +56,12 @@ Strict parsing format-checks these `PathFollow2D` properties, plus 12 inherited 
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-pathfollow2d` | `pathfollow2d-no-parent` | warning |
 |  | `pathfollow2d-invalid-parent` | warning |
-|  | `pathfollow2d-negative-progress` | warning |
+|  | `pathfollow2d-negative-progress` | info |
 |  | `pathfollow2d-progress-ratio-ignored` | error |
 <!-- lint:end -->
 

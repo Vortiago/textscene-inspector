@@ -38,7 +38,7 @@ describe('FogVolume size-ignored-for-World rule', () => {
     const content = scene(node('FogVolume', { shape: 4, size: 'Vector3(4, 3, 4)' }, { name: 'F' }));
     expectDiagnostic(content, {
       ruleName: 'fogvolume-size-ignored-for-world-shape',
-      severity: 'warning',
+      severity: 'info',
       contains: ['size', 'World'],
     });
   });

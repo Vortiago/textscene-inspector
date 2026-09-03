@@ -248,7 +248,7 @@ describe('Camera2D Linter', () => {
           ),
           {
             ruleName: 'camera2d-multiple-enabled',
-            severity: 'warning',
+            severity: 'info',
             nodeType: 'Camera2D',
             contains: ['Multiple enabled Camera2D'],
           }
@@ -309,7 +309,7 @@ describe('Camera2D Linter', () => {
             node('Camera2D', { enabled: true }, { name: 'CameraA', parent: 'Dialog' }),
             node('Camera2D', { enabled: true }, { name: 'CameraB', parent: 'Dialog' })
           ),
-          { ruleName: 'camera2d-multiple-enabled', severity: 'warning' }
+          { ruleName: 'camera2d-multiple-enabled', severity: 'info' }
         );
       });
 
@@ -321,7 +321,7 @@ describe('Camera2D Linter', () => {
             node('Camera2D', { enabled: true }, { name: 'CameraA', parent: 'Inset' }),
             node('Camera2D', { enabled: true }, { name: 'CameraB', parent: 'Inset' })
           ),
-          { ruleName: 'camera2d-multiple-enabled', severity: 'warning' }
+          { ruleName: 'camera2d-multiple-enabled', severity: 'info' }
         );
       });
 
@@ -343,7 +343,7 @@ describe('Camera2D Linter', () => {
             node('Camera2D', {}, { name: 'Camera1', parent: '.' }),
             node('Camera2D', {}, { name: 'Camera2', parent: '.' })
           ),
-          { ruleName: 'camera2d-multiple-enabled', severity: 'warning', nodeType: 'Camera2D' }
+          { ruleName: 'camera2d-multiple-enabled', severity: 'info', nodeType: 'Camera2D' }
         );
       });
     });
@@ -352,7 +352,7 @@ describe('Camera2D Linter', () => {
       it('should warn when limit_right < limit_left', () => {
         expectDiagnostic(scene(node('Camera2D', { limit_left: 1000, limit_right: 500 })), {
           ruleName: 'camera2d-invalid-horizontal-limits',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'Camera2D',
           contains: ['limit_right', 'limit_left'],
         });
@@ -361,7 +361,7 @@ describe('Camera2D Linter', () => {
       it('should warn when limit_bottom < limit_top', () => {
         expectDiagnostic(scene(node('Camera2D', { limit_top: 500, limit_bottom: 200 })), {
           ruleName: 'camera2d-invalid-vertical-limits',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'Camera2D',
           contains: ['limit_bottom', 'limit_top'],
         });
@@ -380,7 +380,7 @@ describe('Camera2D Linter', () => {
         // is make the interpolation factor zero (camera_2d.cpp:199-200).
         expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
           ruleName: 'camera2d-smoothing-speed-zero',
-          severity: 'warning',
+          severity: 'info',
           contains: ['position_smoothing_speed'],
         });
       });
@@ -414,7 +414,7 @@ describe('Camera2D Linter', () => {
         // pins lerp_angle where it started (camera_2d.cpp:216-217).
         expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })), {
           ruleName: 'camera2d-rotation-smoothing-speed-zero',
-          severity: 'warning',
+          severity: 'info',
           contains: ['rotation_smoothing_speed'],
         });
       });
@@ -537,7 +537,7 @@ describe('Camera2D Linter', () => {
           node('Camera2D', { enabled: true }, { name: 'Camera2', parent: 'Holder' })
         )
       );
-      const warnings = diagnostics.filter(d => d.severity === 'warning' && d.message.includes('Multiple enabled'));
+      const warnings = diagnostics.filter(d => d.severity === 'info' && d.message.includes('Multiple enabled'));
       expect(warnings.length).toBeGreaterThan(0);
     });
 

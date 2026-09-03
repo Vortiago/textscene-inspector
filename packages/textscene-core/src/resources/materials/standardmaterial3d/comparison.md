@@ -272,7 +272,7 @@ Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects: each field falls back to Godot's default through the shared value decoders and logs the literal it could not read, so a malformed `roughness` renders the material with default roughness rather than dropping the surface. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.

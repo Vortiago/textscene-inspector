@@ -51,11 +51,11 @@ Strict parsing format-checks these `CharacterBody3D` properties, plus 6 inherite
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-characterbody3d` | `characterbody3d-floor-props-in-floating-mode` | warning |
-|  | `characterbody3d-slide-on-ceiling-in-floating-mode` | warning |
+| `valid-characterbody3d` | `characterbody3d-floor-props-in-floating-mode` | info |
+|  | `characterbody3d-slide-on-ceiling-in-floating-mode` | info |
 | `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 

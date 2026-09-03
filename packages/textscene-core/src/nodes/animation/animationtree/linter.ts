@@ -62,7 +62,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
         });
       } else if (target.status === 'found' && target.node.type !== 'AnimationPlayer') {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `AnimationTree 'anim_player' references node "${path}" which is of type "${target.node.type}", not AnimationPlayer. AnimationTree requires an AnimationPlayer node.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -81,7 +81,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // blend-tree graph editor.
   if (boolSlotValue(rawProps.active) === false) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `AnimationTree 'active' is set to false. The AnimationTree will not process animations until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -124,7 +124,7 @@ const animationTreeValidationRule: LintRule = {
       },
       {
         ruleName: 'animationtree-anim-player-wrong-type',
-        severity: 'warning',
+        severity: 'info',
         // NOT animation_tree.cpp:1020: that ADD_PROPERTY's
         // PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the inspector's node
         // picker and constrains no stored value. set_animation_player
@@ -137,7 +137,7 @@ const animationTreeValidationRule: LintRule = {
       },
       {
         ruleName: 'animationtree-inactive',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'animation_mixer.cpp:446',

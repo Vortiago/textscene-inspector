@@ -25,7 +25,7 @@ export const FILE_DIAGNOSTICS = {
    * Declining it is a decision about this tool's scope.
    */
   legacyFormat: {
-    severity: 'warning',
+    severity: 'info',
     ruleName: 'legacy-format-version',
     grounding: {
       kind: 'no-engine-counterpart',
@@ -78,7 +78,7 @@ export const FILE_DIAGNOSTICS = {
     ruleName: 'rule-crashed',
     grounding: {
       kind: 'no-engine-counterpart',
-      scope: 'previewer-limitation',
+      scope: 'linter-failure',
       because: 'a rule threw instead of reporting; the linter says which one rather than dropping the file',
     },
   },

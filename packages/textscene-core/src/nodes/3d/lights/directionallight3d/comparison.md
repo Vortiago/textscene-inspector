@@ -52,9 +52,9 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-directionallight3d-properties` | `directionallight3d-unused-splits` | warning |
+| `valid-directionallight3d-properties` | `directionallight3d-unused-splits` | info |
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 

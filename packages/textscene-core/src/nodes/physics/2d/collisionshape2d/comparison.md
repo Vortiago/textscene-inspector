@@ -40,13 +40,13 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-collisionshape2d` | `collisionshape2d-requires-shape` | warning |
 |  | `collisionshape2d-invalid-parent` | warning |
 |  | `collisionshape2d-no-parent` | warning |
-|  | `collisionshape2d-unused-one-way-margin` | warning |
+|  | `collisionshape2d-unused-one-way-margin` | info |
 |  | `collisionshape2d-one-way-ignored-under-area2d` | warning |
 |  | `collisionshape2d-polygon-shape-limited-editing` | warning |
 <!-- lint:end -->

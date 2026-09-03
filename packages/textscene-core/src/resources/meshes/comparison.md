@@ -87,7 +87,7 @@ Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherit
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects a mesh property: an unreadable `subdivide_width` or `uv2_padding` falls back to Godot's default through the shared value decoders, and a mesh whose arrays are malformed renders as nothing rather than failing the scene.

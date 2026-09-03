@@ -126,7 +126,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     const enabledCount = countEnabledCamerasInScope(scene, scope);
     if (enabledCount > 1) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Multiple enabled Camera2D nodes detected in scene (${enabledCount} total). Only one Camera2D should typically be enabled at a time to avoid viewport conflicts.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -147,7 +147,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
     if (left !== null && right !== null && right < left) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Camera2D 'limit_right' (${right}) is less than 'limit_left' (${left}). This creates an invalid horizontal scroll area and may cause unexpected camera behavior.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -162,7 +162,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
     if (top !== null && bottom !== null && bottom < top) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Camera2D 'limit_bottom' (${bottom}) is less than 'limit_top' (${top}). This creates an invalid vertical scroll area and may cause unexpected camera behavior.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -173,7 +173,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
   if (smoothingIsFrozen(rawProps, 'position_smoothing_enabled', 'position_smoothing_speed')) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is 0. The value is kept, but it makes the interpolation factor 0, so the smoothed position never follows the camera.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -183,7 +183,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 
   if (smoothingIsFrozen(rawProps, 'rotation_smoothing_enabled', 'rotation_smoothing_speed')) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is 0. The value is kept, but it makes the step 0, so the smoothed rotation never follows the camera.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -206,7 +206,7 @@ const camera2DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'camera2d-multiple-enabled',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'camera_2d.cpp:354',
@@ -215,7 +215,7 @@ const camera2DValidationRule: LintRule = {
       },
       {
         ruleName: 'camera2d-invalid-horizontal-limits',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'camera_2d.cpp:229',
@@ -224,7 +224,7 @@ const camera2DValidationRule: LintRule = {
       },
       {
         ruleName: 'camera2d-invalid-vertical-limits',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'camera_2d.cpp:241',
@@ -233,7 +233,7 @@ const camera2DValidationRule: LintRule = {
       },
       {
         ruleName: 'camera2d-smoothing-speed-zero',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'camera_2d.cpp:199',
@@ -242,7 +242,7 @@ const camera2DValidationRule: LintRule = {
       },
       {
         ruleName: 'camera2d-rotation-smoothing-speed-zero',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'camera_2d.cpp:216',

@@ -47,7 +47,7 @@ function checkWindow(context: RuleContext): Diagnostic[] {
   const maxSizeSet = maxSize.x !== 0 || maxSize.y !== 0;
   if (maxSizeSet && (maxSize.x < minSize.x || maxSize.y < minSize.y)) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Window 'max_size' (Vector2i(${maxSize.x}, ${maxSize.y})) is smaller than 'min_size' (Vector2i(${minSize.x}, ${minSize.y})) in at least one dimension. Godot ignores max_size entirely in this case.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -67,7 +67,7 @@ const windowValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'window-max-size-below-min-size',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'window.cpp:473',

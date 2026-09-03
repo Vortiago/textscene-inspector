@@ -33,7 +33,7 @@ Strict parsing format-checks these `ResourcePreloader` properties, plus 10 inher
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 `parser.ts` reuses the plain `parseNode` reader, which never looks at

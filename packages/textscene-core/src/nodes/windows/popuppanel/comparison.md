@@ -42,8 +42,8 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
 The lenient parser (`parser.ts`) reuses the plain `Node` parse: it reads only the

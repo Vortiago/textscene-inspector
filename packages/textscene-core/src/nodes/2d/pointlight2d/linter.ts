@@ -40,6 +40,7 @@ const WINDOWS = [
     max: 'range_z_max',
     minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
     maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
+    severity: 'info',
     ruleName: 'pointlight2d-inverted-z-range',
     reaches: 'no item at any z_index',
   },
@@ -48,6 +49,7 @@ const WINDOWS = [
     max: 'range_layer_max',
     minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMin,
     maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.layerMax,
+    severity: 'info',
     ruleName: 'pointlight2d-inverted-layer-range',
     reaches: 'no canvas at any layer',
   },
@@ -81,7 +83,7 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
     const max = ruleInt(props[window.max], window.maxDefault);
     if (min === null || max === null || min <= max) continue;
     diagnostics.push({
-      severity: 'warning',
+      severity: window.severity,
       message:
         `PointLight2D '${window.min}' (${min}) is above '${window.max}' (${max}). ` +
         `Godot tests the window inclusively and does not swap the bounds, so this ` +
@@ -105,7 +107,7 @@ const pointLight2DValidationRule: LintRule = {
       { ruleName: 'pointlight2d-requires-texture', severity: 'warning', grounding: { kind: 'configuration-warning' } },
       {
         ruleName: 'pointlight2d-inverted-z-range',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'rasterizer_canvas_gles3.cpp:849',
@@ -114,7 +116,7 @@ const pointLight2DValidationRule: LintRule = {
       },
       {
         ruleName: 'pointlight2d-inverted-layer-range',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'renderer_viewport.cpp:672',

@@ -54,7 +54,7 @@ function checkAmbientMode(context: RuleContext): Diagnostic[] {
   for (const key of AMBIENT_ONLY_KEYS) {
     if (props[key] === undefined) continue;
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `ReflectionProbe '${node.name}' sets '${key}' but 'ambient_mode' is not AMBIENT_COLOR (2), so '${key}' has no effect. It still saves and reloads fine; the editor just hides it from the inspector while another ambient mode is selected.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -74,7 +74,7 @@ const reflectionProbeAmbientModeRule: LintRule = {
     emits: [
       {
         ruleName: 'reflectionprobe-ambient-color-no-effect',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'scene_forward_lights_inc.glsl:998',

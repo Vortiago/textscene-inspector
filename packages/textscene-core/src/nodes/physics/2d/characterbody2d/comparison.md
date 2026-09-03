@@ -54,12 +54,12 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-characterbody2d` | `characterbody2d-floor-props-in-floating-mode` | warning |
-|  | `characterbody2d-slide-on-ceiling-in-floating-mode` | warning |
-|  | `characterbody2d-wall-min-slide-angle-in-grounded-mode` | warning |
+| `valid-characterbody2d` | `characterbody2d-floor-props-in-floating-mode` | info |
+|  | `characterbody2d-slide-on-ceiling-in-floating-mode` | info |
+|  | `characterbody2d-wall-min-slide-angle-in-grounded-mode` | info |
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 

@@ -26,7 +26,7 @@ describe('TileMap lint rules', () => {
   it('warns when a layer has tile data but no tile_set is assigned', () => {
     expectDiagnostic(scene(`format = 2\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)`), {
       ruleName: 'tilemap-requires-tileset',
-      severity: 'warning',
+      severity: 'info',
     });
   });
 

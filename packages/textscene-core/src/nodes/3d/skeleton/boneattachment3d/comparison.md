@@ -44,7 +44,7 @@ Strict parsing format-checks these `BoneAttachment3D` properties, plus 17 inheri
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-boneattachment3d-skeleton` (type-family match) | `boneattachment3d-parent-not-skeleton3d` | warning |
 |  | `boneattachment3d-external-skeleton-unset` | warning |

@@ -59,7 +59,7 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -170,7 +170,7 @@ const path3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'path3d-requires-curve',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'path_3d.cpp:275',

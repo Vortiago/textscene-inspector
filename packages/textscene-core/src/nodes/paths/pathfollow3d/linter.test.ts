@@ -306,7 +306,7 @@ describe('PathFollow3D Linter', () => {
     it('should warn when progress is negative', () => {
       const warning = expectDiagnostic(pathScene({ progress: '-5.0' }), {
         ruleName: 'pathfollow3d-negative-progress',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'PathFollow3D',
         contains: ['negative', 'clamp'],
       });
@@ -339,7 +339,7 @@ describe('PathFollow3D Linter', () => {
     it('still warns on a negative progress spelled with an exponent', () => {
       expectDiagnostic(pathScene({ progress: '-2e1' }), {
         ruleName: 'pathfollow3d-negative-progress',
-        severity: 'warning',
+        severity: 'info',
       });
     });
 

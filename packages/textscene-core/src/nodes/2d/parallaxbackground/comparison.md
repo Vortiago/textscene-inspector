@@ -81,7 +81,7 @@ Strict parsing format-checks these `ParallaxBackground` properties, plus 8 inher
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser substitutes rather than rejects: a malformed `transform` falls

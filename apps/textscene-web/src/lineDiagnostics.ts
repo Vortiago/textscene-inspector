@@ -59,17 +59,20 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
 export interface DiagnosticsSummary {
   errors: number;
   warnings: number;
+  infos: number;
   total: number;
 }
 
 export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): DiagnosticsSummary {
   let errors = 0;
   let warnings = 0;
+  let infos = 0;
   for (const d of diagnostics) {
     if (d.severity === 'error') errors++;
-    else warnings++;
+    else if (d.severity === 'warning') warnings++;
+    else infos++;
   }
-  return { errors, warnings, total: errors + warnings };
+  return { errors, warnings, infos, total: errors + warnings + infos };
 }
 
 /**
@@ -82,5 +85,6 @@ export function formatProblemBadge(summary: DiagnosticsSummary): string | null {
   const parts: string[] = [];
   if (summary.errors > 0) parts.push(`✖ ${summary.errors}`);
   if (summary.warnings > 0) parts.push(`⚠ ${summary.warnings}`);
+  if (summary.infos > 0) parts.push(`ℹ ${summary.infos}`);
   return parts.join(' / ');
 }

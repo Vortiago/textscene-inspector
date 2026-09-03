@@ -132,25 +132,25 @@ const SLOTS: Slot[] = [
     },
   ]),
   ...at('nodes/2d/path2d/linter.ts', [
-    { type: 'Path2D', prop: 'curve', expected: ['warning path2d-missing-curve'] },
+    { type: 'Path2D', prop: 'curve', expected: ['info path2d-missing-curve'] },
     // The slot that EXCUSES the warning above, so a cleared one must not excuse
     // it: the exemption is "a script assigns the curve at runtime", and
     // `script = null` carries no script to do that. Read raw, `'null'` is a
     // truthy string and silenced the warning it is listed here to preserve.
-    { type: 'Path2D', prop: 'script', expected: ['warning path2d-missing-curve'] },
+    { type: 'Path2D', prop: 'script', expected: ['info path2d-missing-curve'] },
   ]),
   ...at('nodes/2d/pointlight2d/linter.ts', [
     { type: 'PointLight2D', prop: 'texture', expected: ['warning pointlight2d-requires-texture'] },
   ]),
   ...at('nodes/2d/sprite2d/linter.ts', [
-    { type: 'Sprite2D', prop: 'texture', expected: ['warning sprite2d-requires-texture'] },
+    { type: 'Sprite2D', prop: 'texture', expected: ['info sprite2d-requires-texture'] },
   ]),
   ...at('nodes/2d/tiles/tilemap/linter.ts', [
     {
       type: 'TileMap',
       prop: 'tile_set',
       props: { 'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)' },
-      expected: ['warning tilemap-deprecated', 'warning tilemap-requires-tileset'],
+      expected: ['info tilemap-requires-tileset', 'warning tilemap-deprecated'],
     },
   ]),
   ...at('nodes/2d/tiles/tilemaplayer/linter.ts', [
@@ -158,7 +158,7 @@ const SLOTS: Slot[] = [
       type: 'TileMapLayer',
       prop: 'tile_set',
       props: { tile_map_data: oneTile },
-      expected: ['warning tilemaplayer-requires-tileset'],
+      expected: ['info tilemaplayer-requires-tileset'],
     },
   ]),
   ...at('nodes/2d/ui/basebutton/linter.ts', [
@@ -193,7 +193,7 @@ const SLOTS: Slot[] = [
     },
   ]),
   ...at('nodes/3d/csg/linter.ts', [
-    { type: 'CSGMesh3D', prop: 'mesh', expected: ['warning csgmesh3d-requires-mesh'] },
+    { type: 'CSGMesh3D', prop: 'mesh', expected: ['info csgmesh3d-requires-mesh'] },
   ]),
   // One texture slot per Decal row: each is separately capable of standing in for
   // "has a texture", so each has to be seen as empty on its own.
@@ -204,7 +204,7 @@ const SLOTS: Slot[] = [
     { type: 'Decal', prop: 'texture_emission', expected: ['warning decal-requires-texture'] },
   ]),
   ...at('nodes/3d/gridmap/linter.ts', [
-    { type: 'GridMap', prop: 'mesh_library', expected: ['warning gridmap-requires-mesh-library'] },
+    { type: 'GridMap', prop: 'mesh_library', expected: ['info gridmap-requires-mesh-library'] },
   ]),
   ...at('nodes/3d/occluderinstance3d/linter.ts', [
     {
@@ -231,7 +231,7 @@ const SLOTS: Slot[] = [
     ),
   ]),
   ...at('nodes/3d/sprite3d/linter.ts', [
-    { type: 'Sprite3D', prop: 'texture', expected: ['warning sprite3d-requires-texture'] },
+    { type: 'Sprite3D', prop: 'texture', expected: ['info sprite3d-requires-texture'] },
   ]),
   ...at('nodes/3d/voxelgi/linter.ts', [
     { type: 'VoxelGI', prop: 'data', expected: ['warning voxelgi-missing-data'] },
@@ -266,7 +266,7 @@ const SLOTS: Slot[] = [
       type: 'AudioStreamPlayer',
       prop: 'stream',
       props: { autoplay: true },
-      expected: ['warning audiostreamplayer-autoplay-without-stream'],
+      expected: ['info audiostreamplayer-autoplay-without-stream'],
     },
   ]),
   ...at('nodes/audio/audiostreamplayer2d/linter.ts', [
@@ -274,11 +274,11 @@ const SLOTS: Slot[] = [
       type: 'AudioStreamPlayer2D',
       prop: 'stream',
       props: { autoplay: true },
-      expected: ['warning audiostreamplayer2d-autoplay-without-stream'],
+      expected: ['info audiostreamplayer2d-autoplay-without-stream'],
     },
   ]),
   ...at('nodes/paths/path3d/linter.ts', [
-    { type: 'Path3D', prop: 'curve', expected: ['warning path3d-requires-curve'] },
+    { type: 'Path3D', prop: 'curve', expected: ['info path3d-requires-curve'] },
   ]),
   ...at('nodes/physics/3d/softbody3d/linter.ts', [
     { type: 'SoftBody3D', prop: 'mesh', expected: ['warning valid-softbody3d-mesh'] },

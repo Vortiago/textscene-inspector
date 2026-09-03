@@ -31,7 +31,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // WARNING: emission_angle_degrees without emission_angle_enabled
   if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'emission_angle_degrees' is set but 'emission_angle_enabled' is not true. The emission angle will have no effect.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -42,7 +42,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // WARNING: emission_angle_filter_attenuation_db without emission_angle_enabled
   if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'emission_angle_filter_attenuation_db' is set but 'emission_angle_enabled' is not true. The filter will have no effect.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -65,7 +65,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'audio_stream_player_3d.cpp:898',
@@ -74,7 +74,7 @@ const audioStreamPlayer3DValidationRule: LintRule = {
       },
       {
         ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'audio_stream_player_3d.cpp:898',

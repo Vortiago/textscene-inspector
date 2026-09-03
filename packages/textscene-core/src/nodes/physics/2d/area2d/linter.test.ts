@@ -186,7 +186,7 @@ describe('Area2D Linter', () => {
     it('should warn when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: false, monitorable: false }), collisionShape2d), {
         ruleName: 'area2d-detects-nothing',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Area2D',
         contains: ['both', 'detects no bodies', 'overrides still apply'],
       });
@@ -238,7 +238,7 @@ describe('Area2D Linter', () => {
     it('should warn when collision_mask is 0 and monitoring is true', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: true, collision_mask: 0 }), collisionShape2d), {
         ruleName: 'area2d-monitoring-zero-mask',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Area2D',
       });
     });

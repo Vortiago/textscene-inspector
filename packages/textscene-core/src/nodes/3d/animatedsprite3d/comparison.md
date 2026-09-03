@@ -45,7 +45,7 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |

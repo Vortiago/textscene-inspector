@@ -19,7 +19,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
   // GridMap will render nothing and likely isn't visible.
   if (heldResource(rawProps.mesh_library) === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message:
         'GridMap has no mesh_library. It will render nothing and is not visible.',
       nodeName: node.name,
@@ -39,7 +39,7 @@ const gridMapValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'gridmap-requires-mesh-library',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'grid_map.cpp:676',

@@ -53,7 +53,7 @@ Strict parsing format-checks these `SpotLight3D` properties, plus 27 inherited f
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-spotlight3d-properties` | `spotlight3d-shadow-angle-too-wide` | warning |
 |  | `spotlight3d-projector-without-shadow` | warning |

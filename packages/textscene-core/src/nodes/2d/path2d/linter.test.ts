@@ -30,7 +30,7 @@ describe('Path2D Linter', () => {
   it('warns (not errors) when a Path2D has no curve and no script', () => {
     expectDiagnostic(scene(node('Path2D')), {
       ruleName: 'path2d-missing-curve',
-      severity: 'warning',
+      severity: 'info',
     });
   });
 

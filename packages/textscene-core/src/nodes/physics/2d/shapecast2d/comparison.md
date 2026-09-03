@@ -49,11 +49,11 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-shapecast2d` | `shapecast2d-no-collide-target` | warning |
-|  | `shapecast2d-zero-mask` | warning |
+| `valid-shapecast2d` | `shapecast2d-no-collide-target` | info |
+|  | `shapecast2d-zero-mask` | info |
 |  | `shapecast2d-missing-shape` | warning |
 <!-- lint:end -->
 

@@ -352,7 +352,7 @@ physics_material_override = ExtResource("ext_mat_1")
         scene(node('RigidBody2D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }), collisionShape2d),
         {
           ruleName: 'rigidbody2d-max-contacts-without-monitor',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'RigidBody2D',
           contains: ['get_colliding_bodies() stays empty', 'contact COUNT still works'],
         }
@@ -497,7 +497,7 @@ max_contacts_reported = 10
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
         'rigidbody2d-max-contacts-without-monitor',
       ]);
-      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
+      expect(diagnostics.every(d => d.severity === 'info')).toBe(true);
     });
   });
 });

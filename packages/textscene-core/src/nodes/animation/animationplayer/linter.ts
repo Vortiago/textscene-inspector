@@ -123,7 +123,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // ever reach the scene.
   if (!isActive(rawProps)) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `AnimationPlayer 'active' is set to false. Animations will not play until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -164,7 +164,7 @@ const animationPlayerValidationRule: LintRule = {
       },
       {
         ruleName: 'animationplayer-inactive',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'animation_mixer.cpp:446',

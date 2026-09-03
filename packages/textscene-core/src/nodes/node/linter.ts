@@ -19,7 +19,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
 
   const flag = (property: string, path: string) => {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message:
         `'${property}' references a binary Godot resource (${path}) — ` +
         `the previewer only loads text resources (.tscn/.tres), so this content shows as missing.`,
@@ -57,7 +57,7 @@ const binaryResourceRule: LintRule = {
     emits: [
       {
         ruleName: 'binary-resource-reference',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'no-engine-counterpart',
           scope: 'previewer-limitation',

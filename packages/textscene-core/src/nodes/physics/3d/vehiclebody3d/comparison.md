@@ -49,13 +49,13 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 23 inherited
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 | `valid-collisionobject3d-scale` (type-family match) | `collisionobject3d-non-uniform-scale` | warning |
-| `valid-rigidbody3d` (type-family match) | `rigidbody3d-max-contacts-without-monitor` | warning |
+| `valid-rigidbody3d` (type-family match) | `rigidbody3d-max-contacts-without-monitor` | info |
 |  | `rigidbody3d-scale-overridden-at-runtime` | warning |
 | `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
-| `valid-vehiclebody3d` | `vehiclebody3d-needs-wheels` | warning |
+| `valid-vehiclebody3d` | `vehiclebody3d-needs-wheels` | info |
 <!-- lint:end -->
 
 VehicleBody3D has no `parser.ts`: it reuses `parseNode3D` directly, so none of

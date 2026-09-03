@@ -44,7 +44,7 @@ Strict parsing format-checks these `Timer` properties, plus 10 inherited from No
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-timer-wait-time` | `timer-low-wait-time` | warning |
 <!-- lint:end -->
 

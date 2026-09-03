@@ -309,7 +309,7 @@ describe('CharacterBody3D Linter', () => {
         ),
         {
           ruleName: 'characterbody3d-floor-props-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );
@@ -343,7 +343,7 @@ describe('CharacterBody3D Linter', () => {
         ),
         {
           ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );

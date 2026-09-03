@@ -68,7 +68,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // polygon-editing advice is `collision_shape_2d.cpp:184-189`.
     unusedOneWayMargin: is2D
       ? {
-          severity: 'warning',
+          severity: 'info',
           ruleName: `${prefix}-unused-one-way-margin`,
           grounding: {
             kind: 'engine-inert',

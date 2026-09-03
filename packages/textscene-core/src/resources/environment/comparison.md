@@ -198,7 +198,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects: every scalar goes through the shared `floatOr` / `intOr` / `boolOr` decoders, which log the bad literal and fall back to Godot's default, so an unreadable `glow_intensity` renders as an Environment with default glow rather than as no Environment at all. An out-of-range but readable value is passed through to three, which is why the bounds above are the linter's job.

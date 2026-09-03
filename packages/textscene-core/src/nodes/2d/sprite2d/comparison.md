@@ -65,14 +65,14 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-sprite2d-resources` | `sprite2d-requires-texture` | warning |
+| `valid-sprite2d-resources` | `sprite2d-requires-texture` | info |
 |  | `sprite2d-frame-range` | error |
 |  | `sprite2d-frame-coords-range` | error |
 |  | `sprite2d-frame-remapped` | warning |
-|  | `sprite2d-region-configuration` | warning |
+|  | `sprite2d-region-configuration` | info |
 <!-- lint:end -->
 
 `hframes` and `vframes` fall back to `1` when absent or unparseable, and a parsed

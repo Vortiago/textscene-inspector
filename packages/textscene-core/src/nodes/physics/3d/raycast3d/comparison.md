@@ -51,10 +51,10 @@ Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited fro
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-raycast3d` | `raycast3d-no-collide-target` | warning |
-|  | `raycast3d-zero-mask` | warning |
+| `valid-raycast3d` | `raycast3d-no-collide-target` | info |
+|  | `raycast3d-zero-mask` | info |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D` unmodified, and that function only

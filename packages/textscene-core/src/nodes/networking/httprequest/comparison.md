@@ -45,7 +45,7 @@ Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited f
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 `parser.ts` reuses the base `parseNode`, which reads only `transform`/`name`/`parent`/

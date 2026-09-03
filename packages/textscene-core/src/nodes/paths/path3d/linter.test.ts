@@ -157,7 +157,7 @@ debug_custom_color = Color(0, 0, 0, 1)
       it('should detect missing curve property', () => {
         expectDiagnostic(scene(node('Path3D')), {
           ruleName: 'path3d-requires-curve',
-          severity: 'warning',
+          severity: 'info',
           contains: ["missing required property 'curve'", 'useless'],
         });
       });
@@ -262,7 +262,7 @@ curve = ExtResource("curve_ext")
 
     it('should handle missing curve', () => {
       const content = scene(node('Path3D'));
-      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'warning' });
+      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'info' });
     });
 
     it('should handle Path3D with invalid curve format', () => {

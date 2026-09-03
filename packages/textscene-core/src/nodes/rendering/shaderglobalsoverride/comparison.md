@@ -34,7 +34,7 @@ Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 i
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-shaderglobalsoverride-properties` | `shaderglobalsoverride-multiple-in-scene` | warning |
 <!-- lint:end -->
 

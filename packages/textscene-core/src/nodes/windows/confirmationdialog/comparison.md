@@ -33,8 +33,8 @@ Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inher
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
 The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the

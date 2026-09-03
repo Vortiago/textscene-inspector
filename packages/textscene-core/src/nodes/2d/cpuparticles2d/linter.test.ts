@@ -36,7 +36,7 @@ describe('CPUParticles2D preview rule', () => {
     const content = scene(`emission_shape = ${value}\n`);
     expect(namesOf(content)).toContain('cpuparticles2d-nondeterministic-emission-shape');
     expect(severitiesOf(content, 'cpuparticles2d-nondeterministic-emission-shape')).toEqual([
-      'warning',
+      'info',
     ]);
     expect(linter.lint(content)[0]!.message).toContain(label);
   });
@@ -74,7 +74,7 @@ describe('CPUParticles2D preview rule', () => {
   it('warns when `fract_delta` is explicitly enabled', () => {
     const content = scene('fract_delta = true\n');
     expect(namesOf(content)).toContain('cpuparticles2d-fract-delta-ignored');
-    expect(severitiesOf(content, 'cpuparticles2d-fract-delta-ignored')).toEqual(['warning']);
+    expect(severitiesOf(content, 'cpuparticles2d-fract-delta-ignored')).toEqual(['info']);
   });
 
   it('stays silent when `fract_delta` is omitted, though Godot defaults it TRUE', () => {

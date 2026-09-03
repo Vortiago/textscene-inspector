@@ -17,7 +17,7 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
 
   if (rawProps.tile_map_data && resourceSlotIsEmpty(rawProps.tile_set)) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `TileMapLayer has tile data but no 'tile_set' — its tiles cannot render.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -47,7 +47,7 @@ const tileMapLayerValidationRule: LintRule = {
     emits: [
       {
         ruleName: 'tilemaplayer-requires-tileset',
-        severity: 'warning',
+        severity: 'info',
         grounding: {
           kind: 'engine-inert',
           at: 'tile_map_layer.cpp:224',

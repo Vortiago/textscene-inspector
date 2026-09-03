@@ -26,7 +26,7 @@ import { describe, it, expect } from 'vitest';
 import { ruleRegistry } from './RuleRegistry.js';
 import { WARNINGS } from './configurationWarningCensus.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import type { EmitGrounding, Severity } from './types.js';
+import { severityFixedBy, type EmitGrounding, type Severity } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
@@ -130,13 +130,18 @@ describe('emit grounding', () => {
     expect(unexplained.sort()).toEqual([]);
   });
 
-  it('never reports an engine-inert claim as an error', () => {
-    // Nothing is refused and nothing is altered, so there is no ADR-0032 error
-    // tier to reach: the authored value is simply never read.
-    const overSevere = all
-      .filter((e) => e.grounding.kind === 'engine-inert' && e.severity === 'error')
-      .map((e) => `${e.rule}: ${e.ruleName}`);
-    expect(overSevere.sort()).toEqual([]);
+  it('reports at the severity its grounding fixes', () => {
+    // The tier is derived, not chosen: a ported editor warning warns, a value
+    // the engine never reads informs, a limitation of this previewer informs,
+    // a linter failure errs. Only an `engine` arm is left to its cite, since
+    // a refusal and a hint sit on the same kind.
+    const offTier = all
+      .filter((e) => {
+        const fixed = severityFixedBy(e.grounding);
+        return fixed !== undefined && fixed !== e.severity;
+      })
+      .map((e) => `${e.rule}: ${e.ruleName} is ${e.severity}, its grounding fixes ${severityFixedBy(e.grounding)}`);
+    expect(offTier.sort()).toEqual([]);
   });
 
   it('keeps the census the only place a ported warning is cited', () => {

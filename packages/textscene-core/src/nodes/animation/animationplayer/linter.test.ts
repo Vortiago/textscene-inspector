@@ -59,7 +59,7 @@ describe('AnimationPlayer Linter', () => {
     it('reports the modern key Godot writes', () => {
       expectDiagnostic(withActive({ active: 'false' }), {
         ...INACTIVE,
-        severity: 'warning',
+        severity: 'info',
         contains: ['active', 'false', 'will not play'],
       });
     });

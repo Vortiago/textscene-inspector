@@ -285,12 +285,12 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-pointlight2d-ranges` | `pointlight2d-requires-texture` | warning |
-|  | `pointlight2d-inverted-z-range` | warning |
-|  | `pointlight2d-inverted-layer-range` | warning |
+|  | `pointlight2d-inverted-z-range` | info |
+|  | `pointlight2d-inverted-layer-range` | info |
 <!-- lint:end -->
 
 `enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `offset` to

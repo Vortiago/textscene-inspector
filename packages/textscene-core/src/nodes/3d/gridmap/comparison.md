@@ -56,9 +56,9 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-gridmap-resources` | `gridmap-requires-mesh-library` | warning |
+| `valid-gridmap-resources` | `gridmap-requires-mesh-library` | info |
 <!-- lint:end -->
 
 `cell_size` falls back to Godot's default `Vector3(2, 2, 2)` on a malformed value with no warning; the catch is silent, unlike Decal's equivalent. `mesh_library` is copied straight through when present and left `undefined` when absent, so the lenient parser never checks that the reference resolves. `cell_center_x`/`_y`/`_z` default to `true` only when none of the three properties is present at all; if any one is, each falls back individually through `boolOr` (default `true`, with a warning) rather than reverting to the shared all-true default.

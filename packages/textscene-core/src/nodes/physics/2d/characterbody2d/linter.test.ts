@@ -272,7 +272,7 @@ describe('CharacterBody2D Linter', () => {
         ),
         {
           ruleName: 'characterbody2d-floor-props-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );
@@ -307,7 +307,7 @@ describe('CharacterBody2D Linter', () => {
         ),
         {
           ruleName: 'characterbody2d-slide-on-ceiling-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );
@@ -334,7 +334,7 @@ describe('CharacterBody2D Linter', () => {
       (props) => {
         expectDiagnostic(scene(node('CharacterBody2D', props), collisionShape2d), {
           ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['GROUNDED', 'FLOATING'],
         });
       }

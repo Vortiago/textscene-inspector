@@ -368,7 +368,7 @@ shape = SubResource("capsule_shape")
       );
       const marginWarning = expectDiagnostic(content, {
         ruleName: 'collisionshape2d-unused-one-way-margin',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'CollisionShape2D',
         contains: ['one_way_collision_margin', 'no effect'],
       });

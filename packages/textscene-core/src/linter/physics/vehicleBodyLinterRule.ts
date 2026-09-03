@@ -61,7 +61,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       !node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))
     ) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `${type} '${node.name}' has no direct ${wheelType} children. A vehicle body is driven by its wheels, and Godot only attaches wheels that are its immediate children; without them engine_force and steering have no effect.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -81,7 +81,7 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       emits: [
         {
           ruleName: `${prefix}-needs-wheels`,
-          severity: 'warning',
+          severity: 'info',
           grounding: {
             kind: 'engine-inert',
             at: NO_WHEELS_AT,

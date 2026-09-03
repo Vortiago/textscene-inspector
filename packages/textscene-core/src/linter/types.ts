@@ -5,20 +5,26 @@
 import type { TscnScene, TscnNode } from '../parser/types';
 
 /**
- * Diagnostic severity levels.
- * `error` — objectively invalid per the TSCN format; fails CLI/CI.
- * `warning` — legal but suspicious; advisory only.
+ * Diagnostic severity levels, each decided by what the engine does with the
+ * value (ADR-0032), never chosen per rule.
+ * `error` — Godot refuses or alters the value, or cannot load the file; fails
+ *   CLI/CI, and no committed fixture may carry one.
+ * `warning` — legal, and either Godot's own editor warns about it or the value
+ *   sits outside the property's editor hint; advisory.
+ * `info` — legal, and Godot has no reaction at all (the value is never read),
+ *   or the finding is about this previewer rather than the scene; advisory.
+ * `severityFixedBy` states which grounding kinds fix which tier.
  */
-export type Severity = 'error' | 'warning';
+export type Severity = 'error' | 'warning' | 'info';
 
 /**
- * Canonical severity ranking (lower = more severe): error, then warning.
+ * Canonical severity ranking (lower = more severe): error, warning, info.
  * The single source of truth for every severity comparison —
  * `Linter`'s own diagnostic sort, and any host (e.g. the web app's Source
  * pane gutter) that groups/ranks diagnostics by severity — so a future
  * severity level or reordering only needs updating here.
  */
-export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1 };
+export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
  * A diagnostic message reporting an issue
@@ -166,7 +172,12 @@ export type OutsideEngineScope =
   /** A payload this previewer cannot decode, so it says so instead of drawing nothing. */
   | 'previewer-limitation'
   /** A `.tscn` a Godot save could not have produced — duplicate names, malformed sections. */
-  | 'file-integrity';
+  | 'file-integrity'
+  /**
+   * A rule threw instead of reporting. About this linter, not the scene, yet an
+   * error: the file's findings are incomplete and the run cannot vouch for it.
+   */
+  | 'linter-failure';
 
 /**
  * Where one reported diagnostic's authority comes from.
@@ -228,6 +239,36 @@ export type EmitGrounding =
       readonly scope: OutsideEngineScope;
       readonly because: string;
     };
+
+/**
+ * The severity a grounding fixes, or `undefined` where only the cited line can
+ * decide: an `engine` arm is an error when the setter refuses or alters and a
+ * warning when it is a hint or a load-time `WARN_PRINT`. Everything else is
+ * settled by the kind — a ported editor warning warns, a value the engine
+ * never reads informs, a limitation of this previewer informs, a linter
+ * failure errs. `emitsGrounding.test.ts` holds every emit to it.
+ */
+export function severityFixedBy(grounding: EmitGrounding): Severity | undefined {
+  switch (grounding.kind) {
+    case 'engine':
+      return undefined;
+    case 'configuration-warning':
+      return 'warning';
+    case 'engine-inert':
+      return 'info';
+    case 'no-engine-counterpart':
+      switch (grounding.scope) {
+        case 'previewer-limitation':
+          return 'info';
+        case 'linter-failure':
+          return 'error';
+        case 'dangling-reference':
+        case 'unresolvable-path':
+        case 'file-integrity':
+          return 'warning';
+      }
+  }
+}
 
 /**
  * Rule metadata

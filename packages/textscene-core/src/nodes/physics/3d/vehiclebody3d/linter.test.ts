@@ -125,7 +125,7 @@ describe('VehicleBody3D Linter', () => {
     it('warns when the body has no VehicleWheel3D children — it cannot drive', () => {
       expectDiagnostic(
         scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), collisionShape3d),
-        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'warning' }
+        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'info' }
       );
     });
 
@@ -140,7 +140,7 @@ describe('VehicleBody3D Linter', () => {
           node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' }),
           collisionShape3d
         ),
-        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'warning' }
+        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'info' }
       );
     });
 

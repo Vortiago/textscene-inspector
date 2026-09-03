@@ -45,11 +45,11 @@ Strict parsing format-checks these `RayCast2D` properties, plus 12 inherited fro
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-raycast2d` | `raycast2d-no-collide-target` | warning |
-|  | `raycast2d-zero-mask` | warning |
+| `valid-raycast2d` | `raycast2d-no-collide-target` | info |
+|  | `raycast2d-zero-mask` | info |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode2D`, which only reads Node2D's own transform

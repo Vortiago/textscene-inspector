@@ -391,7 +391,7 @@ describe('AnimationTree Linter', () => {
               active: false,
             })
           ),
-          { prop: 'active', severity: 'warning', contains: ['false', 'will not process'] }
+          { prop: 'active', severity: 'info', contains: ['false', 'will not process'] }
         );
       });
 
