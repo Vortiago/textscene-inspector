@@ -183,7 +183,7 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (Monitoring Configuration)', () => {
-    it('should warn when both monitoring and monitorable are false', () => {
+    it('reports when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: false, monitorable: false }), collisionShape2d), {
         ruleName: 'area2d-detects-nothing',
         severity: 'info',
@@ -235,7 +235,7 @@ describe('Area2D Linter', () => {
       expectClean(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d));
     });
 
-    it('should warn when collision_mask is 0 and monitoring is true', () => {
+    it('reports when collision_mask is 0 and monitoring is true', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: true, collision_mask: 0 }), collisionShape2d), {
         ruleName: 'area2d-monitoring-zero-mask',
         severity: 'info',

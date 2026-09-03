@@ -285,8 +285,8 @@ describe('AudioStreamPlayer3D Linter', () => {
       });
     });
 
-    describe('emission angle configuration warnings', () => {
-      it('should warn when emission_angle_degrees is set without emission_angle_enabled', () => {
+    describe('emission angle configuration diagnostics', () => {
+      it('reports when emission_angle_degrees is set without emission_angle_enabled', () => {
         expectDiagnostic(withStream({ emission_angle_degrees: 45.0 }), {
           ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
           severity: 'info',
@@ -302,7 +302,7 @@ describe('AudioStreamPlayer3D Linter', () => {
         expect(warning).toBeUndefined();
       });
 
-      it('should warn when emission_angle_filter_attenuation_db is set without emission_angle_enabled', () => {
+      it('reports when emission_angle_filter_attenuation_db is set without emission_angle_enabled', () => {
         expectDiagnostic(withStream({ emission_angle_filter_attenuation_db: -12.0 }), {
           ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
           severity: 'info',

@@ -270,7 +270,7 @@ describe('DirectionalLight3D Linter', () => {
     });
 
     describe('shadow mode and split consistency', () => {
-      it('should warn if ORTHOGONAL mode has split properties', () => {
+      it('reports if ORTHOGONAL mode has split properties', () => {
         expectDiagnostic(
           scene(
             node('DirectionalLight3D', {
@@ -286,7 +286,7 @@ describe('DirectionalLight3D Linter', () => {
         );
       });
 
-      it('should warn if PARALLEL_2_SPLITS has split_2 or split_3', () => {
+      it('reports if PARALLEL_2_SPLITS has split_2 or split_3', () => {
         expectDiagnostic(
           scene(
             node('DirectionalLight3D', {

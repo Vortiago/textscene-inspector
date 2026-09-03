@@ -339,7 +339,7 @@ describe('Sprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Region Configuration)', () => {
-    it('should warn when region_rect is set without region_enabled', () => {
+    it('reports when region_rect is set without region_enabled', () => {
       expectDiagnostic(scene(node('Sprite2D', { region_rect: 'Rect2(0, 0, 100, 100)' })), {
         ruleName: 'sprite2d-region-configuration',
         severity: 'info',
@@ -348,7 +348,7 @@ describe('Sprite2D Linter', () => {
       });
     });
 
-    it('should warn when region_rect is set but region_enabled is false', () => {
+    it('reports when region_rect is set but region_enabled is false', () => {
       expectDiagnostic(
         scene(
           node('Sprite2D', {

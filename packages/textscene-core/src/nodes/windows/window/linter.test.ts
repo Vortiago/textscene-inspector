@@ -13,7 +13,7 @@ import './linterParser';
 import './linter';
 
 describe('Window semantic rules', () => {
-  it('warns when max_size is smaller than min_size in some dimension', () => {
+  it('reports when max_size is smaller than min_size in some dimension', () => {
     expectDiagnostic(
       scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(200, 600)' })),
       {
@@ -25,7 +25,7 @@ describe('Window semantic rules', () => {
     );
   });
 
-  it('warns when max_size is smaller than min_size in both dimensions', () => {
+  it('reports when max_size is smaller than min_size in both dimensions', () => {
     expectDiagnostic(
       scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(100, 100)' })),
       {
@@ -69,7 +69,7 @@ describe('Window sizes with a converted component no int32 holds', () => {
     );
   });
 
-  it('still warns on the canonical spelling of the same digits', () => {
+  it('still reports on the canonical spelling of the same digits', () => {
     expectDiagnostic(
       scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' })),
       { ruleName: 'window-max-size-below-min-size', severity: 'info', contains: ['Vector2i(-1, 600)'] }

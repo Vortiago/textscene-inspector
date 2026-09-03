@@ -55,7 +55,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   }
 
   // Godot's default is TRUE, so only an explicit setting is worth reporting —
-  // warning on every emitter that omits the property would say nothing.
+  // reporting on every emitter that omits the property would say nothing.
   if (boolSlotValue(props.fract_delta) === true) {
     diagnostics.push({
       severity: 'info',

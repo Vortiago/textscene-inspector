@@ -34,7 +34,7 @@ describe('FogVolume size-ignored-for-World rule', () => {
     expectClean(readFixture('unit-fog-volume.tscn'));
   });
 
-  it('warns when size is authored alongside shape = World (4)', () => {
+  it('reports when size is authored alongside shape = World (4)', () => {
     const content = scene(node('FogVolume', { shape: 4, size: 'Vector3(4, 3, 4)' }, { name: 'F' }));
     expectDiagnostic(content, {
       ruleName: 'fogvolume-size-ignored-for-world-shape',

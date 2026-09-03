@@ -380,8 +380,8 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('active property warnings', () => {
-      it('should warn when active is false', () => {
+    describe('active property diagnostics', () => {
+      it('reports when active is false', () => {
         expectDiagnostic(
           scene(
             blendTree,

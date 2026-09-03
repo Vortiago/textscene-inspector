@@ -239,7 +239,7 @@ describe('Camera2D Linter', () => {
       // TSCN allows only one parentless root node; sibling cameras must hang
       // off the root via parent="." for buildSceneTree to keep them.
 
-      it('should warn when multiple Camera2D nodes are enabled', () => {
+      it('reports when multiple Camera2D nodes are enabled', () => {
         expectDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -301,7 +301,7 @@ describe('Camera2D Linter', () => {
         );
       });
 
-      it('should warn for two cameras inside the SAME ConfirmationDialog', () => {
+      it('reports for two cameras inside the SAME ConfirmationDialog', () => {
         expectDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -313,7 +313,7 @@ describe('Camera2D Linter', () => {
         );
       });
 
-      it('should warn for two cameras inside the SAME SubViewport', () => {
+      it('reports for two cameras inside the SAME SubViewport', () => {
         expectDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -349,7 +349,7 @@ describe('Camera2D Linter', () => {
     });
 
     describe('limit consistency', () => {
-      it('should warn when limit_right < limit_left', () => {
+      it('reports when limit_right < limit_left', () => {
         expectDiagnostic(scene(node('Camera2D', { limit_left: 1000, limit_right: 500 })), {
           ruleName: 'camera2d-invalid-horizontal-limits',
           severity: 'info',
@@ -358,7 +358,7 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      it('should warn when limit_bottom < limit_top', () => {
+      it('reports when limit_bottom < limit_top', () => {
         expectDiagnostic(scene(node('Camera2D', { limit_top: 500, limit_bottom: 200 })), {
           ruleName: 'camera2d-invalid-vertical-limits',
           severity: 'info',
@@ -374,8 +374,8 @@ describe('Camera2D Linter', () => {
       });
     });
 
-    describe('position smoothing warnings', () => {
-      it('warns when position_smoothing_speed is zero, the value Godot keeps', () => {
+    describe('position smoothing diagnostics', () => {
+      it('reports when position_smoothing_speed is zero, the value Godot keeps', () => {
         // MAX(0, 0) is 0, so nothing is refused or altered; what the zero does
         // is make the interpolation factor zero (camera_2d.cpp:199-200).
         expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
@@ -408,8 +408,8 @@ describe('Camera2D Linter', () => {
       });
     });
 
-    describe('rotation smoothing warnings', () => {
-      it('warns when rotation_smoothing_speed is zero, the value Godot keeps', () => {
+    describe('rotation smoothing diagnostics', () => {
+      it('reports when rotation_smoothing_speed is zero, the value Godot keeps', () => {
         // Mirror of the position case: MAX(0, 0) stores 0, and the zero step
         // pins lerp_angle where it started (camera_2d.cpp:216-217).
         expectDiagnostic(scene(node('Camera2D', { rotation_smoothing_enabled: true, rotation_smoothing_speed: 0 })), {

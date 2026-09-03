@@ -297,7 +297,7 @@ describe('CharacterBody3D Linter', () => {
   });
 
   describe('Semantic Validation (Motion Mode Settings)', () => {
-    it('should warn when floor properties are set in FLOATING mode', () => {
+    it('reports when floor properties are set in FLOATING mode', () => {
       expectDiagnostic(
         scene(
           node('CharacterBody3D', {
@@ -335,7 +335,7 @@ describe('CharacterBody3D Linter', () => {
       });
     });
 
-    it('warns when slide_on_ceiling is set in FLOATING mode', () => {
+    it('reports when slide_on_ceiling is set in FLOATING mode', () => {
       expectDiagnostic(
         scene(
           node('CharacterBody3D', { motion_mode: 1, slide_on_ceiling: false }),

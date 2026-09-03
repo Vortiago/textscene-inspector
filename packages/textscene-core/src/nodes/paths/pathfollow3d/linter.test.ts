@@ -303,7 +303,7 @@ describe('PathFollow3D Linter', () => {
   });
 
   describe('Semantic Validation (Progress Values)', () => {
-    it('should warn when progress is negative', () => {
+    it('reports when progress is negative', () => {
       const warning = expectDiagnostic(pathScene({ progress: '-5.0' }), {
         ruleName: 'pathfollow3d-negative-progress',
         severity: 'info',
@@ -336,7 +336,7 @@ describe('PathFollow3D Linter', () => {
       }
     });
 
-    it('still warns on a negative progress spelled with an exponent', () => {
+    it('still reports on a negative progress spelled with an exponent', () => {
       expectDiagnostic(pathScene({ progress: '-2e1' }), {
         ruleName: 'pathfollow3d-negative-progress',
         severity: 'info',

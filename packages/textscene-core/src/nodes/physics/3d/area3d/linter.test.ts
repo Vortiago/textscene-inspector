@@ -176,7 +176,7 @@ describe('Area3D Linter', () => {
   });
 
   describe('Semantic Validation (Monitoring Configuration)', () => {
-    it('should warn when both monitoring and monitorable are false', () => {
+    it('reports when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area3D', { monitoring: false, monitorable: false }), collisionShape3d), {
         ruleName: 'area3d-detects-nothing',
         severity: 'info',
@@ -228,7 +228,7 @@ describe('Area3D Linter', () => {
       expectClean(scene(node('Area3D', { monitoring: true, collision_layer: 0 }), collisionShape3d));
     });
 
-    it('should warn when collision_mask is 0 and monitoring is true', () => {
+    it('reports when collision_mask is 0 and monitoring is true', () => {
       expectDiagnostic(scene(node('Area3D', { monitoring: true, collision_mask: 0 }), collisionShape3d), {
         ruleName: 'area3d-monitoring-zero-mask',
         severity: 'info',

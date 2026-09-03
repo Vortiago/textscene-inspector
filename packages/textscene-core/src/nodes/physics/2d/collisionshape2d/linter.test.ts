@@ -360,7 +360,7 @@ shape = SubResource("capsule_shape")
   });
 
   describe('Semantic Validation (One-Way Collision Configuration)', () => {
-    it('should warn when one_way_collision_margin is set but one_way_collision is false', () => {
+    it('reports when one_way_collision_margin is set but one_way_collision is false', () => {
       const content = scene(
         rectShape,
         staticBody,

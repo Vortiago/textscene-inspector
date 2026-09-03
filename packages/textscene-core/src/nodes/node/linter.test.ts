@@ -11,7 +11,7 @@ import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testk
 import './linter';
 
 describe('binary-resource-reference', () => {
-  it('warns when a node instances a binary .scn scene', () => {
+  it('reports when a node instances a binary .scn scene', () => {
     expectDiagnostic(
       `[gd_scene format=3]
 

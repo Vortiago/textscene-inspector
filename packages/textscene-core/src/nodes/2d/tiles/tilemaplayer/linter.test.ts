@@ -26,7 +26,7 @@ tile_size = Vector2i(16, 16)
 `;
 
 describe('TileMapLayer lint rules', () => {
-  it('warns when tile data is present but no tile_set is assigned', () => {
+  it('reports when tile data is present but no tile_set is assigned', () => {
     const hit = expectDiagnostic(scene(`tile_map_data = ${VALID_DATA}`), {
       ruleName: 'tilemaplayer-requires-tileset',
       severity: 'info',

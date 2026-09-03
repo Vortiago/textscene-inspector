@@ -54,8 +54,8 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // WARNING: a curve-less Path3D is valid (the curve can be assigned at
-  // runtime) but draws nothing until one is set.
+  // A curve-less Path3D is valid (the curve can be assigned at runtime) but
+  // draws nothing until one is set.
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
     diagnostics.push({

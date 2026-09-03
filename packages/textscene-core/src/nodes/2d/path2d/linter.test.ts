@@ -27,7 +27,7 @@ describe('Path2D Linter', () => {
     expect(diagnostics.filter((d) => d.nodeType === 'Path2D')).toHaveLength(0);
   });
 
-  it('warns (not errors) when a Path2D has no curve and no script', () => {
+  it('reports at info, not error, when a Path2D has no curve and no script', () => {
     expectDiagnostic(scene(node('Path2D')), {
       ruleName: 'path2d-missing-curve',
       severity: 'info',

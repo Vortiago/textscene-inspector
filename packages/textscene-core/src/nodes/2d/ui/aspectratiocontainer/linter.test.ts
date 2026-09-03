@@ -34,8 +34,8 @@ describe('AspectRatioContainer linter', () => {
     });
   });
 
-  describe('semantic rules (warnings)', () => {
-    it('warns on a direct TextureRect child with EXPAND_FIT_WIDTH_PROPORTIONAL (3)', () => {
+  describe('semantic rules', () => {
+    it('reports on a direct TextureRect child with EXPAND_FIT_WIDTH_PROPORTIONAL (3)', () => {
       const content = containerScene(`
 [node name="Art" type="TextureRect" parent="Frame"]
 expand_mode = 3
@@ -64,7 +64,7 @@ ${extra}
       );
     });
 
-    it('warns on a direct TextureRect child with EXPAND_FIT_HEIGHT_PROPORTIONAL (5)', () => {
+    it('reports on a direct TextureRect child with EXPAND_FIT_HEIGHT_PROPORTIONAL (5)', () => {
       expectDiagnostic(
         containerScene(`
 [node name="Art" type="TextureRect" parent="Frame"]

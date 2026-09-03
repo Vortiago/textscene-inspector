@@ -298,7 +298,7 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (Contact Monitor)', () => {
-    it('should warn when max_contacts_reported set but contact_monitor=false', () => {
+    it('reports when max_contacts_reported set but contact_monitor=false', () => {
       expectDiagnostic(
         scene(node('RigidBody3D', { mass: 1.0, contact_monitor: false, max_contacts_reported: 10 }), collisionShape3d),
         {

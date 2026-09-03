@@ -122,14 +122,14 @@ describe('VehicleBody3D Linter', () => {
   });
 
   describe('Semantic Validation (Vehicle Structure)', () => {
-    it('warns when the body has no VehicleWheel3D children — it cannot drive', () => {
+    it('reports when the body has no VehicleWheel3D children — it cannot drive', () => {
       expectDiagnostic(
         scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), collisionShape3d),
         { ruleName: 'vehiclebody3d-needs-wheels', severity: 'info' }
       );
     });
 
-    it('still warns when every wheel is nested under a container — Godot attaches only direct children', () => {
+    it('still reports when every wheel is nested under a container — Godot attaches only direct children', () => {
       // VehicleWheel3D registers itself via cast_to<VehicleBody3D>(get_parent()),
       // so a wheel under an intermediate node is never attached and the vehicle
       // has no working wheels at all.

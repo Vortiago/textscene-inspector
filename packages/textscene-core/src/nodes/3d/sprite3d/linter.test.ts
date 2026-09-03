@@ -245,7 +245,7 @@ pixel_size = 0.01
   });
 
   describe('Semantic Validation (Region Configuration)', () => {
-    it('should warn when region_rect is set without region_enabled', () => {
+    it('reports when region_rect is set without region_enabled', () => {
       expectDiagnostic(
         scene(node('Sprite3D', { region_rect: 'Rect2(0, 0, 100, 100)' }, { name: 'RegionNoEnabled' })),
         {
@@ -256,7 +256,7 @@ pixel_size = 0.01
       );
     });
 
-    it('should warn when region_rect is set but region_enabled is false', () => {
+    it('reports when region_rect is set but region_enabled is false', () => {
       expectDiagnostic(
         scene(
           node(

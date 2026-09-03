@@ -55,7 +55,7 @@ describe.each(CASTS)('%s semantic rules', (type) => {
     expectClean(cast());
   });
 
-  it('warns when neither areas nor bodies can be hit', () => {
+  it('reports when neither areas nor bodies can be hit', () => {
     expectDiagnostic(cast({ collide_with_areas: false, collide_with_bodies: false }), {
       ruleName: `${prefix}-no-collide-target`,
       severity: 'info',
@@ -76,14 +76,14 @@ describe.each(CASTS)('%s semantic rules', (type) => {
       ruleName: `${prefix}-no-collide-target`,
     });
     // The same reading the other way: `collide_with_areas` defaults to FALSE,
-    // so an unstorable value there leaves the pair dead and the warning stands.
+    // so an unstorable value there leaves the pair dead and the diagnostic stands.
     expectDiagnostic(cast({ collide_with_areas: '"yes"', collide_with_bodies: false }), {
       ruleName: `${prefix}-no-collide-target`,
       severity: 'info',
     });
   });
 
-  it('warns on a zero collision mask', () => {
+  it('reports on a zero collision mask', () => {
     expectDiagnostic(cast({ collision_mask: 0 }), {
       ruleName: `${prefix}-zero-mask`,
       severity: 'info',

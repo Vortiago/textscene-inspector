@@ -51,7 +51,7 @@ describe('PointLight2D linter', () => {
     });
   });
 
-  it('warns when the z window is inverted', () => {
+  it('reports when the z window is inverted', () => {
     expectDiagnostic(
       scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_min: 5, range_z_max: 4 })),
       {
@@ -62,7 +62,7 @@ describe('PointLight2D linter', () => {
     );
   });
 
-  it('warns when the layer window is inverted', () => {
+  it('reports when the layer window is inverted', () => {
     expectDiagnostic(
       scene(node('PointLight2D', { ...WITH_TEXTURE, range_layer_min: 2, range_layer_max: 1 })),
       {
