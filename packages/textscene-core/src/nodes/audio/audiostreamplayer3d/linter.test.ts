@@ -10,6 +10,7 @@ import {
   audioStream,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   expectNoErrors,
   runPropertyValidation,
   type PropValue,
@@ -295,11 +296,12 @@ describe('AudioStreamPlayer3D Linter', () => {
         });
       });
 
-      it('should not warn when emission_angle_degrees is set with emission_angle_enabled', () => {
-        const warning = lint(
-          withStream({ emission_angle_enabled: true, emission_angle_degrees: 45.0 })
-        ).find(d => d.severity === 'warning' && d.message.includes('emission_angle_degrees'));
-        expect(warning).toBeUndefined();
+      it('reports nothing when emission_angle_degrees is set with emission_angle_enabled', () => {
+        // By ruleName, not by tier: filtering on `severity === 'warning'` made
+        // this pass for any rule behaviour once the arm became info.
+        expectNoDiagnostic(withStream({ emission_angle_enabled: true, emission_angle_degrees: 45.0 }), {
+          ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
+        });
       });
 
       it('reports when emission_angle_filter_attenuation_db is set without emission_angle_enabled', () => {
@@ -311,11 +313,11 @@ describe('AudioStreamPlayer3D Linter', () => {
         });
       });
 
-      it('should not warn when emission_angle_filter_attenuation_db is set with emission_angle_enabled', () => {
-        const warning = lint(
-          withStream({ emission_angle_enabled: true, emission_angle_filter_attenuation_db: -12.0 })
-        ).find(d => d.severity === 'warning' && d.message.includes('emission_angle_filter_attenuation_db'));
-        expect(warning).toBeUndefined();
+      it('reports nothing when emission_angle_filter_attenuation_db is set with emission_angle_enabled', () => {
+        expectNoDiagnostic(
+          withStream({ emission_angle_enabled: true, emission_angle_filter_attenuation_db: -12.0 }),
+          { ruleName: 'audiostreamplayer3d-emission-filter-not-enabled' }
+        );
       });
     });
 

@@ -221,10 +221,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       report(arms.polygonShapeLimitedEditing, `${type} '${node.name}' uses a ${shape.type}, which has limited editing options in CollisionShape2D. Consider using a CollisionPolygon2D node instead.`);
     }
 
-    // WARNING: one_way_collision_margin set but one_way_collision is false (2D only)
+    // one_way_collision_margin set but one_way_collision is false (2D only)
     if (rawProps.one_way_collision_margin && boolSlotValue(rawProps.one_way_collision) !== true) {
       const margin = parseGodotFloat(rawProps.one_way_collision_margin);
-      // Only warn if margin is non-zero and one_way_collision is explicitly false or not set
+      // Only report if margin is non-zero and one_way_collision is explicitly false or not set
       if (margin !== null && margin > 0) {
         report(arms.unusedOneWayMargin, `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`);
       }
