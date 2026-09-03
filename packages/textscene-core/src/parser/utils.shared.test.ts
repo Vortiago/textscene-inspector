@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isIncompleteValue,
+  stripLineComment,
   unquoteString,
 } from './utils';
 
@@ -33,6 +34,35 @@ describe('isIncompleteValue', () => {
   });
   it('ignores brackets inside strings', () => {
     expect(isIncompleteValue('"a [ b { c"')).toBe(false);
+  });
+  it('flags a constructor call whose paren closes on a later line', () => {
+    // Godot's writer ends every nested `Object(…)` with `)\n`
+    // (variant_parser.cpp:2234) and its reader takes a newline as whitespace,
+    // so both the engine's own output and a hand-written
+    // `points = PackedVector2Array(` continue on the next line.
+    expect(isIncompleteValue('PackedVector2Array(')).toBe(true);
+    expect(isIncompleteValue('Object(Area3D,"a":1,"audio":Object(Timer,"b":2)')).toBe(true);
+    expect(isIncompleteValue('Vector2(1, 2)')).toBe(false);
+    expect(isIncompleteValue('"a ( b"')).toBe(false);
+  });
+});
+
+describe('stripLineComment', () => {
+  it('drops an unquoted `;` and the rest of the line — VariantParser skips to end of line (variant_parser.cpp:214)', () => {
+    expect(stripLineComment('ambient = 0.50 ; bumped from 0.40')).toBe('ambient = 0.50 ');
+    expect(stripLineComment('; whole line')).toBe('');
+    expect(stripLineComment('scale = Vector2(2, 2)')).toBe('scale = Vector2(2, 2)');
+  });
+  it('keeps a `;` inside a string, escapes included', () => {
+    expect(stripLineComment('text = "a; b" ; c')).toBe('text = "a; b" ');
+    expect(stripLineComment('text = "a \\" ; b"')).toBe('text = "a \\" ; b"');
+  });
+  it('resumes inside an open string on a continuation line', () => {
+    expect(stripLineComment('second; line"', true)).toBe('second; line"');
+    expect(stripLineComment('second" ; comment', true)).toBe('second" ');
+  });
+  it('leaves `#` alone — it opens a colour literal, not a comment (variant_parser.cpp:241)', () => {
+    expect(stripLineComment('color = #ff0000')).toBe('color = #ff0000');
   });
 });
 

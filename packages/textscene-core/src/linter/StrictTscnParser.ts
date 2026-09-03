@@ -34,7 +34,12 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
     name: heading.attributes.name || '',
     // Use type if available, otherwise use index or instance identifier
     // Note: For index=/instance= nodes, type may be inferred from parent scene or remain as identifier
-    type: heading.attributes.type || heading.attributes.index || heading.attributes.instance || '',
+    type:
+      heading.attributes.type ||
+      (heading.attributes.instance_placeholder ? 'InstancePlaceholder' : '') ||
+      heading.attributes.index ||
+      heading.attributes.instance ||
+      '',
     properties,
     rawProperties: properties,
     children: [], // Will be populated by buildSceneTree
@@ -84,6 +89,18 @@ export class StrictTscnParser {
     // `[node]` headings seen so far: heading 0 is the root and takes the
     // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
     let nodeHeadings = 0;
+    // Where instanced content lives, for the type-less headings below it: the
+    // root when the scene inherits (`instance=` on heading 0 sets the base
+    // scene, resource_format_text.cpp:233-240), and every node path whose
+    // heading carries `instance=` or `instance_placeholder=` (:242-254).
+    let rootInherits = false;
+    const instancedPaths = new Set<string>();
+    const hasInstancedAncestor = (parent: string | undefined): boolean => {
+      for (let p = parent; p && p !== '.'; p = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '.') {
+        if (instancedPaths.has(p)) return true;
+      }
+      return false;
+    };
 
     const observer: ParseObserver = {
       onError: (error) => {
@@ -139,20 +156,44 @@ export class StrictTscnParser {
         }
         // A heading without `type=` is TYPE_INSTANTIATED — `//no type? assume
         // this was instantiated` (resource_format_text.cpp:218-221) — which is
-        // a claim, not a grammar error, and what the two arms below report is
+        // a claim, not a grammar error, and what the arms below report is
         // whether the claim can hold.
         //
-        // Heading 0: only `instance=` sets the base scene (:236-239; `index=`
+        // Heading 0: only `instance=` sets the base scene (:233-240; `index=`
         // at :270-272 changes nothing), and without one the instantiate is
         // refused — `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED &&
-        // base_scene_idx < 0, …)` (packed_scene.cpp:220).
+        // base_scene_idx < 0, …)` (packed_scene.cpp:220). A placeholder there
+        // is refused earlier still: "Instance Placeholder can't be used for
+        // inheritance", ERR_FILE_CORRUPT (resource_format_text.cpp:247-251).
         //
-        // Any later heading: a node lacking all three is a property override
-        // on instanced content, which Godot only warns about at load when
-        // nothing instantiates it — `"… was modified from inside an instance,
-        // but it has vanished."` (packed_scene.cpp:309-311).
+        // Any later heading: `instance_placeholder=` declares an
+        // InstancePlaceholder (packed_scene.cpp:239-258); otherwise the node
+        // is looked up by name under its parent (:296-311), which finds it only
+        // inside content some ancestor instanced — the root of an inherited
+        // scene, or a node with `instance=` above. With no such ancestor the
+        // lookup fails and Godot drops the node: `"… was modified from inside
+        // an instance, but it has vanished."` (:309-311). `index=` is an
+        // ordering hint and rescues nothing.
         const isRootHeading = nodeHeadings++ === 0;
-        if (isRootHeading && !heading.attributes.type && !heading.attributes.instance) {
+        const { type, instance, instance_placeholder: placeholder, parent, name } =
+          heading.attributes;
+        const path = parent === undefined || parent === '.' ? (name ?? '') : `${parent}/${name ?? ''}`;
+        if (isRootHeading) rootInherits = Boolean(instance);
+        else if (instance || placeholder) instancedPaths.add(path);
+
+        if (isRootHeading && placeholder) {
+          errors.push({
+            severity: 'error',
+            message:
+              'Root node heading states "instance_placeholder=", which Godot refuses: ' +
+              '"Instance Placeholder can\'t be used for inheritance" (resource_format_text.cpp:247-251). ' +
+              'The file does not load.',
+            line,
+            column: 1,
+            code: 'INSTANCE_PLACEHOLDER_ROOT',
+            ...currentOwner,
+          });
+        } else if (isRootHeading && !type && !instance) {
           errors.push({
             severity: 'error',
             message:
@@ -166,15 +207,18 @@ export class StrictTscnParser {
           });
         } else if (
           !isRootHeading &&
-          !heading.attributes.type &&
-          !heading.attributes.index &&
-          !heading.attributes.instance
+          !type &&
+          !instance &&
+          !placeholder &&
+          !rootInherits &&
+          !hasInstancedAncestor(parent)
         ) {
           errors.push({
             severity: 'warning',
             message:
-              'Node heading states no "type=", "index=" or "instance=", so Godot treats it as ' +
-              'a node from an instanced scene. If nothing instantiates it, the node vanishes at load.',
+              'Node heading states no "type=" or "instance=" and no ancestor instances a scene, ' +
+              'so Godot looks for it inside instanced content that is not there and drops it: ' +
+              '"was modified from inside an instance, but it has vanished." (packed_scene.cpp:309-311).',
             line,
             column: 1,
             code: 'MISSING_NODE_IDENTIFIER',

@@ -19,9 +19,11 @@ describe('StrictTscnParser', () => {
 
   describe('Property Validation via ValidatorRegistry', () => {
     it('should skip validation for nodes with index attribute (unknown type)', () => {
-      const content = `[gd_scene load_steps=1 format=3]
+      const content = `[gd_scene load_steps=2 format=3]
 
-[node name="Root" type="Node3D"]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Root" instance=ExtResource("1")]
 
 [node name="@Child@123" index="0" parent="."]
 visible = invalid_value
@@ -169,9 +171,11 @@ background_mode = 99
     it('leaves a scene file\'s own sections judged by their own headings', () => {
       // A `[gd_scene]` header carries no `type=`, so nothing leaks into the
       // nodes below it — the index-only child is judged by its own heading.
-      const content = `[gd_scene format=3]
+      const content = `[gd_scene load_steps=2 format=3]
 
-[node name="Root" type="Node"]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Root" instance=ExtResource("1")]
 
 [node name="Child" parent="." index="0"]
 background_mode = 99

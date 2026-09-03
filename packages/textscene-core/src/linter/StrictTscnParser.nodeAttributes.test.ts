@@ -67,7 +67,7 @@ describe('StrictTscnParser', () => {
       ]);
     });
 
-    it('warns, not errors, on a later heading with no type=, index= or instance=', () => {
+    it('warns, not errors, on a later heading with no type= or instance= and no instanced ancestor', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"]
@@ -85,8 +85,8 @@ describe('StrictTscnParser', () => {
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(5);
       expect(result.errors[0]!.message).toContain('type=');
-      expect(result.errors[0]!.message).toContain('index=');
       expect(result.errors[0]!.message).toContain('instance=');
+      expect(result.errors[0]!.message).toContain('vanished');
     });
 
     it('should accept node with type attribute', () => {
@@ -101,9 +101,13 @@ describe('StrictTscnParser', () => {
     });
 
     it('should accept node with index attribute (instanced scene child)', () => {
-      const content = `[gd_scene load_steps=1 format=3]
+      const content = `[gd_scene load_steps=2 format=3]
 
-[node name="Enemy" type="Node3D"]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1")]
 
 [node name="@Sprite2D@123" index="0" parent="Enemy"]
 `;
@@ -115,9 +119,11 @@ describe('StrictTscnParser', () => {
     });
 
     it('parses an index-only child node without polluting its properties', () => {
-      const content = `[gd_scene load_steps=1 format=3]
+      const content = `[gd_scene load_steps=2 format=3]
 
-[node name="Root" type="Node3D"]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Root" instance=ExtResource("1")]
 
 [node name="@Child@123" index="0" parent="."]
 `;
@@ -149,6 +155,82 @@ describe('StrictTscnParser', () => {
       const childNode = result.scene!.nodes[0]!.children[0]!;
       expect(childNode.instance).toBe('ExtResource("1_abc")');
       expect((childNode.properties as Record<string, unknown>)['__instance']).toBeUndefined();
+    });
+  });
+
+  describe('a type-less heading is judged by its instanced ancestry', () => {
+    it('accepts an instance_placeholder heading — Godot builds an InstancePlaceholder there', () => {
+      // resource_format_text.cpp:242-254 folds the path into `instance` with
+      // FLAG_INSTANCE_IS_PLACEHOLDER; packed_scene.cpp:239-258 builds the node
+      // and applies the heading's properties to it.
+      const result = parser.parse(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]
+position = Vector2(5, 5)
+`);
+      expect(result.errors).toEqual([]);
+      expect(result.scene!.nodes[0]!.children[0]!.type).toBe('InstancePlaceholder');
+    });
+
+    it('refuses instance_placeholder on the root heading', () => {
+      // "Instance Placeholder can't be used for inheritance" — ERR_FILE_CORRUPT
+      // (resource_format_text.cpp:247-251).
+      const result = parser.parse(`[gd_scene format=3]
+
+[node name="Root" instance_placeholder="res://rock.tscn"]
+`);
+      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
+        ['INSTANCE_PLACEHOLDER_ROOT', 'error', 3],
+      ]);
+    });
+
+    it('accepts an override anywhere below an instanced ancestor — Godot writes it without index=', () => {
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://warp.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="WarpZones" type="Node2D" parent="."]
+
+[node name="WarpDown" parent="WarpZones" instance=ExtResource("1")]
+
+[node name="CollisionShape2D" parent="WarpZones/WarpDown"]
+disabled = true
+
+[node name="Deep" parent="WarpZones/WarpDown/CollisionShape2D"]
+`);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('accepts a type-less child of an inherited scene', () => {
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Root" instance=ExtResource("1")]
+
+[node name="Light" parent="."]
+visible = false
+`);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('index= does not rescue a child with no instance above it — Godot drops it', () => {
+      // packed_scene.cpp:296-311: TYPE_INSTANTIATED is looked up by name under
+      // the parent, and "was modified from inside an instance, but it has
+      // vanished." is all that is left when nothing instanced is there.
+      const result = parser.parse(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Child" parent="." index="0"]
+`);
+      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
+        ['MISSING_NODE_IDENTIFIER', 'warning', 5],
+      ]);
     });
   });
 });

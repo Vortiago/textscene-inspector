@@ -63,7 +63,7 @@ describe('Linter', () => {
 `;
 
       const diagnostics = linter.lint(content);
-      const stranded = diagnostics.find(d => d.message.includes('instanced scene'));
+      const stranded = diagnostics.find(d => d.message.includes('has vanished'));
 
       expect(stranded).toBeDefined();
       expect(stranded?.nodeName).toBe('Stranded');

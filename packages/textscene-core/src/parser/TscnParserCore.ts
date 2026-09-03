@@ -26,6 +26,7 @@ import {
   scanValueChunk,
   isIncompleteState,
   INITIAL_SCAN_STATE,
+  stripLineComment,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
@@ -183,7 +184,9 @@ export class TscnParserCore {
     };
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!; // Array access within bounds is safe
+      // A `;` comment ends the line for Godot's reader wherever it sits, so it
+      // is gone before the line is read as heading, property or continuation.
+      const line = stripLineComment(lines[i]!, pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
 
       // Inside an open multi-line string: append raw lines (preserving blank

@@ -45,6 +45,14 @@ describe('isPropertyOverrideHeading', () => {
     ).toBe(false);
   });
 
+  it('is false for an instance_placeholder heading — that declares a new InstancePlaceholder node', () => {
+    expect(
+      isPropertyOverrideHeading(
+        heading('[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]')
+      )
+    ).toBe(false);
+  });
+
   it('is false for a non-node section', () => {
     expect(isPropertyOverrideHeading(heading('[sub_resource type="BoxMesh" id="1"]'))).toBe(false);
   });
@@ -64,9 +72,11 @@ describe('the two node creators agree', () => {
   ].join('\n');
 
   const CASES = [
-    // Godot always writes an override with `index=` — it is how the editor
-    // addresses a node it did not declare — so these are the real shapes.
+    // An override addresses a node the heading did not declare; the editor
+    // writes `index=` only when sibling order has to be pinned.
     '[node name="Robot" parent="Player/Skeleton/Skeleton3D" index="0"]',
+    '[node name="Robot" parent="Player/Skeleton/Skeleton3D"]',
+    '[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]',
     '[node name="CoinCount" type="Label3D" parent="Player/Skeleton"]',
     '[node name="Crate" type="Node3D" parent="."]',
   ];

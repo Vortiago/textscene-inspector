@@ -95,9 +95,10 @@ export interface TscnNode {
    */
   instanceSubPath?: string;
   /**
-   * True when the `[node]` heading declared neither `type=` nor `instance=` —
-   * Godot's marker for "override properties on the node already at this path"
-   * rather than "add a new node here". See `isPropertyOverrideHeading`.
+   * True when the `[node]` heading declared none of `type=`, `instance=` and
+   * `instance_placeholder=` — Godot's marker for "override properties on the
+   * node already at this path" rather than "add a new node here". See
+   * `isPropertyOverrideHeading`.
    */
   overridesExistingNode?: boolean;
   /**

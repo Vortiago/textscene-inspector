@@ -300,7 +300,10 @@ export function isEmpty(line: string): boolean {
  * Running state of the string/bracket-balance scan, carried forward across
  * chunks so a growing multi-line value can be scanned incrementally (each new
  * chunk visited exactly once) instead of rescanned from the start every time
- * a line is appended. `depth` counts `[`/`{` outstanding over `]`/`}`.
+ * a line is appended. `depth` counts `[`/`{`/`(` outstanding over `]`/`}`/`)`:
+ * Godot's reader is token-based and takes a newline as whitespace, and its own
+ * writer ends every nested `Object(…)` with `)\n` (variant_parser.cpp:2234),
+ * so a paren closes on a later line as readily as a bracket does.
  */
 export interface ValueScanState {
   inString: boolean;
@@ -329,10 +332,29 @@ export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanS
       continue;
     }
     if (c === '"') inString = true;
-    else if (c === '[' || c === '{') depth++;
-    else if (c === ']' || c === '}') depth--;
+    else if (c === '[' || c === '{' || c === '(') depth++;
+    else if (c === ']' || c === '}' || c === ')') depth--;
   }
   return { inString, depth };
+}
+
+/**
+ * The line without its `;` comment: VariantParser skips from an unquoted `;`
+ * to the end of the line (variant_parser.cpp:214), so what follows one is never
+ * part of a value or a heading. `#` is left alone — it opens a colour literal
+ * (`:241`), not a comment. `inString` is the scan state at the start of the
+ * line, so a `;` on the continuation line of an open string stays.
+ */
+export function stripLineComment(line: string, inString = false): string {
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inString) {
+      if (c === '\\') i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === ';') return line.slice(0, i);
+  }
+  return line;
 }
 
 /** True when a scan state reflects an unterminated string or unbalanced brackets. */
@@ -342,12 +364,14 @@ export function isIncompleteState(state: ValueScanState): boolean {
 
 /**
  * True when a property value isn't complete on this line. Godot writes
- * multi-line values both as unterminated strings (label text) AND as bracketed
+ * multi-line values as unterminated strings (label text), as bracketed
  * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
- * `animations = [{ … }]`. The line-based parsers must keep accumulating until
- * BOTH quotes and brackets balance, or the value is truncated to its first
- * fragment. Single string-aware scan: incomplete if a string is still open, or
- * `[`/`{` outnumber `]`/`}` outside strings.
+ * `animations = [{ … }]` — and as nested `Object(…)` calls, and reads a
+ * hand-written `PackedVector2Array(` continued below. The line-based parsers
+ * must keep accumulating until quotes, brackets and parens all balance, or the
+ * value is truncated to its first fragment. Single string-aware scan:
+ * incomplete if a string is still open, or openers outnumber closers outside
+ * strings.
  *
  * A thin wrapper over {@link scanValueChunk} — full-string callers (tests,
  * and the single-line check on a property's first line) don't need to carry
@@ -407,7 +431,8 @@ export function unquoteString(value: string): string {
  *
  * Godot writes an override with neither `type=` nor `instance=` — the node it
  * names already exists inside instanced content, so there is nothing to declare,
- * only properties to change. `[node name="Robot" parent="Player/Skeleton/Skeleton3D"]`
+ * only properties to change. An `instance_placeholder=` heading declares a node
+ * of its own, an InstancePlaceholder (packed_scene.cpp:255). `[node name="Robot" parent="Player/Skeleton/Skeleton3D"]`
  * retextures a mesh inside a GLB; `[node name="CoinCount" type="Label3D" parent="..."]`
  * beside it adds a genuinely new child.
  *
@@ -418,6 +443,9 @@ export function unquoteString(value: string): string {
  */
 export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
   return (
-    heading.type === 'node' && !heading.attributes.type && !heading.attributes.instance
+    heading.type === 'node' &&
+    !heading.attributes.type &&
+    !heading.attributes.instance &&
+    !heading.attributes.instance_placeholder
   );
 }
