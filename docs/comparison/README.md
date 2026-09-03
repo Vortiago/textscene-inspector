@@ -19,9 +19,10 @@ of every node, so they are stated here once rather than in all 71 sheets.
 substitutes a documented default and carries on — that substitution is what each
 sheet's prose describes.
 
-**Four structural errors are swallowed silently by the lenient parser**, with no
+**Five structural errors are swallowed silently by the lenient parser**, with no
 warning and no node dropped from the render: `INVALID_HEADING_FORMAT`,
-`INVALID_PROPERTY_FORMAT`, `MISSING_NODE_NAME` and `MISSING_NODE_IDENTIFIER`.
+`INVALID_PROPERTY_FORMAT`, `MISSING_NODE_NAME`, `MISSING_NODE_IDENTIFIER` and
+`INSTANCE_PLACEHOLDER_ROOT`.
 
 **Two whole classes of property are never format-checked, even by strict.**
 `StrictTscnParser.onProperty` skips validation for multiline values (shader

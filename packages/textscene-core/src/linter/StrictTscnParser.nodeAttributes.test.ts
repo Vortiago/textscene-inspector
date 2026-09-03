@@ -80,7 +80,7 @@ describe('StrictTscnParser', () => {
       expect(result.errors).toHaveLength(1);
       // The `i > 0` arm: Godot only warns at load if nothing instantiates the
       // node — "was modified from inside an instance, but it has vanished."
-      // (packed_scene.cpp:309-311).
+      // (packed_scene.cpp:310).
       expect(result.errors[0]!.severity).toBe('warning');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(5);
@@ -219,8 +219,8 @@ visible = false
     });
 
     it('index= does not rescue a child with no instance above it — Godot drops it', () => {
-      // packed_scene.cpp:296-311: TYPE_INSTANTIATED is looked up by name under
-      // the parent, and "was modified from inside an instance, but it has
+      // packed_scene.cpp:283 looks a TYPE_INSTANTIATED node up by name under
+      // the parent; :310 "was modified from inside an instance, but it has
       // vanished." is all that is left when nothing instanced is there.
       const result = parser.parse(`[gd_scene format=3]
 

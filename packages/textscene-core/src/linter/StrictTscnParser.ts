@@ -168,12 +168,12 @@ export class StrictTscnParser {
         //
         // Any later heading: `instance_placeholder=` declares an
         // InstancePlaceholder (packed_scene.cpp:239-258); otherwise the node
-        // is looked up by name under its parent (:296-311), which finds it only
+        // is looked up by name under its parent (:283), which finds it only
         // inside content some ancestor instanced — the root of an inherited
         // scene, or a node with `instance=` above. With no such ancestor the
         // lookup fails and Godot drops the node: `"… was modified from inside
-        // an instance, but it has vanished."` (:309-311). `index=` is an
-        // ordering hint and rescues nothing.
+        // an instance, but it has vanished."` (:310). `index=` is an ordering
+        // hint and rescues nothing.
         const isRootHeading = nodeHeadings++ === 0;
         const { type, instance, instance_placeholder: placeholder, parent, name } =
           heading.attributes;
@@ -218,7 +218,7 @@ export class StrictTscnParser {
             message:
               'Node heading states no "type=" or "instance=" and no ancestor instances a scene, ' +
               'so Godot looks for it inside instanced content that is not there and drops it: ' +
-              '"was modified from inside an instance, but it has vanished." (packed_scene.cpp:309-311).',
+              '"was modified from inside an instance, but it has vanished." (packed_scene.cpp:310).',
             line,
             column: 1,
             code: 'MISSING_NODE_IDENTIFIER',
