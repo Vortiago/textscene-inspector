@@ -99,9 +99,9 @@ export function formatJson(files: FileDiagnostics[]): string {
 
 /**
  * How each severity is presented: the text icon, the ANSI colour, and the
- * GitHub Actions workflow-command level. One table rather than a table and two
- * switches, and total over the closed `Severity` union, so adding a severity
- * fails tsc here instead of falling silently through a switch `default`.
+ * GitHub Actions workflow-command level. One table, total over the closed
+ * `Severity` union, so adding a severity fails tsc here instead of falling
+ * silently through a `default`.
  */
 const SEVERITY_DISPLAY: Record<
   Severity,
@@ -113,7 +113,11 @@ const SEVERITY_DISPLAY: Record<
 };
 
 function displayFor(severity: string): { icon: string; color: string } | undefined {
-  return SEVERITY_DISPLAY[severity as Severity];
+  // `hasOwn` first: a bare index reaches Object.prototype, so `'constructor'`
+  // returns a truthy non-display and formats as `\x1b[undefinedm…`.
+  return Object.hasOwn(SEVERITY_DISPLAY, severity)
+    ? SEVERITY_DISPLAY[severity as Severity]
+    : undefined;
 }
 
 /**

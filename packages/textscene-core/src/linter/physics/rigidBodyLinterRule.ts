@@ -81,7 +81,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // (2D :425/:435 reject < -1, 3D :443/:453 reject < 0), which
     // linterParser.ts reports as errors.
 
-    // Warning: max_contacts_reported > 0 but contact_monitor=false.
+    // max_contacts_reported > 0 but contact_monitor=false.
     // The flag gates the contact LIST and the signals, not the reporting itself. `_sync_body_state` writes `contact_count` from the
     // state unconditionally (:155, called at :179 ahead of the guard), and the
     // server's `can_report_contacts()` is `!contacts.is_empty()`, sized by

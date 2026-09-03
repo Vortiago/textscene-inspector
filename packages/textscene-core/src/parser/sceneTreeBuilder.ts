@@ -3,6 +3,7 @@
  */
 
 import type { NodeOrigin, TscnNode } from './types';
+import { ROOT_PARENT_PATH } from '../godot';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -98,11 +99,14 @@ function placeResolvable(
         continue;
       }
 
-      // "." means a direct child of root; otherwise resolve by parent path.
-      const parentNode = node.parent === '.' ? rootNode : pathMap.get(node.parent);
+      // The root's own spelling means a direct child of root; otherwise
+      // resolve by parent path.
+      const parentNode =
+        node.parent === ROOT_PARENT_PATH ? rootNode : pathMap.get(node.parent);
       if (parentNode) {
         parentNode.children.push(node);
-        const nodePath = node.parent === '.' ? node.name : `${node.parent}/${node.name}`;
+        const nodePath =
+          node.parent === ROOT_PARENT_PATH ? node.name : `${node.parent}/${node.name}`;
         pathMap.set(nodePath, node);
       } else {
         stillRemaining.push(node);
@@ -140,7 +144,7 @@ function findInstanceAnchor(
   node: TscnNode,
   pathMap: Map<string, TscnNode>
 ): { node: TscnNode; subPath: string } | null {
-  if (!node.parent || node.parent === '.') return null;
+  if (!node.parent || node.parent === ROOT_PARENT_PATH) return null;
 
   const segments = node.parent.split('/');
   // Start one short of the full path: had the whole thing resolved, ordinary

@@ -28,7 +28,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   // default, audio_stream_player_3d.cpp defines no configuration warning, and a
   // script or an AnimationPlayer audio track may supply the stream instead.
 
-  // WARNING: emission_angle_degrees without emission_angle_enabled
+  // emission_angle_degrees without emission_angle_enabled.
   if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
       severity: 'info',
@@ -39,7 +39,7 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: emission_angle_filter_attenuation_db without emission_angle_enabled
+  // emission_angle_filter_attenuation_db without emission_angle_enabled.
   if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
       severity: 'info',

@@ -116,7 +116,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // `playback_default_blend_time` gets no advisory: linterParser.ts carries the
   // hint's 0..4096 as a warning-tier bound on the validator.
 
-  // WARNING: the mixer is switched off. Godot raises no configuration warning
+  // The mixer is switched off. Godot raises no configuration warning
   // for this — AnimationMixer declares no get_configuration_warnings() override
   // — but it is not a style opinion either: seek_internal returns immediately
   // on `!active` (animation_player.cpp:664), so nothing this node declares can

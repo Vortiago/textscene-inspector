@@ -95,12 +95,14 @@ their string ids — "Version 3: New string ID for ext/subresources, breaks
 forward compat." (`resource_format_text.h:44`) — so on a `format=2` file the
 reference rules read integer ids as dangling and every bound is judged against a
 grammar the file predates. Those diagnostics would be WRONG, not merely noisy,
-which is why the file gets one warning and nothing else.
+which is why the file gets one info and nothing else.
 
 Two consequences, both load-bearing:
 
-- **It warns, never errors.** The file loads. An error would misstate the engine
-  and would fail `lint:scenes` on content Godot accepts.
+- **It informs, never errors.** The file loads, and the claim is about this tool's
+  scope rather than about the engine — a `previewer-limitation`, which
+  `severityFixedBy` fixes at **info**. An error would misstate the engine and would
+  fail `lint:scenes` on content Godot accepts.
 - **The current end is deliberately unbounded.** `FORMAT_VERSION = 4`
   (`resource_format_text.h:46`) is the accepted ceiling and
   `FORMAT_VERSION_COMPAT = 3` (`:48`) the saver's default; ONE 4.6.3 saver

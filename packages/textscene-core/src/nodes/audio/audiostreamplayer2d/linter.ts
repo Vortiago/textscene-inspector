@@ -38,7 +38,7 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   // default, audio_stream_player_2d.cpp defines no configuration warning, and a
   // script may assign one at runtime.
 
-  // WARNING: autoplay enabled but no stream set
+  // Autoplay enabled but no stream set.
   if (boolSlotValue(rawProps.autoplay) === true && streamEmpty && !drivenByAnimation) {
     diagnostics.push({
       severity: 'info',

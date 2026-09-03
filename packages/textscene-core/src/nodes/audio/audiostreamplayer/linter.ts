@@ -23,7 +23,7 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // WARNING: autoplay is on but no stream is set. Godot raises no warning for
+  // Autoplay is on but no stream is set. Godot raises no warning for
   // this: `play_basic()` (audio_stream_player_internal.cpp:137-141) returns a
   // null playback the instant `stream` is null and never logs anything, so
   // autoplay silently does nothing. Suppressed when some AnimationPlayer

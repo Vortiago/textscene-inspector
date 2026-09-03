@@ -64,7 +64,7 @@ function checkGPUParticles3D(context: RuleContext): Diagnostic[] {
   // `_attach_sub_emitter` walks the path with `get_node_or_null` and skips the
   // attach when the node is missing (`if (n)`, gpu_particles_3d.cpp:484), the
   // cast fails (:485) or the target is this node (:486) — nothing is refused
-  // or altered, so each is a warning. `resolveNodePath` declines —
+  // or altered, so each is advisory. `resolveNodePath` declines —
   // `unknowable`, its only decline — whenever the walk touches content another
   // file declares, so no arm fires on a target this file cannot classify.
   if (rawProps.sub_emitter) {

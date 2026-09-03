@@ -47,7 +47,7 @@ export class Linter {
       for (const d of this.lintScene(parseResult.scene)) diagnostics.push(d);
     }
 
-    // Sort diagnostics by severity: errors first, then warnings.
+    // Sort diagnostics by severity: errors, then warnings, then infos.
     return this.sortDiagnostics(diagnostics);
   }
 

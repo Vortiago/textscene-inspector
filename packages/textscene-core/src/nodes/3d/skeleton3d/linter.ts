@@ -1,7 +1,7 @@
 /**
  * Semantic linter rules for Skeleton3D
  *
- * Validates property values and provides warnings for common issues.
+ * Validates property values and reports common issues.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -44,7 +44,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
 
   // `motion_scale` is validated in linterParser.ts, both tiers of it.
 
-  // Warning: show_rest_only = true (debugging mode, animations disabled)
+  // show_rest_only = true: debugging mode, animations disabled.
   if (boolSlotValue(rawProps.show_rest_only) === true) {
     diagnostics.push({
       severity: 'info',

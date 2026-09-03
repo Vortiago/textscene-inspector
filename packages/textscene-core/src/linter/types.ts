@@ -247,6 +247,10 @@ export type EmitGrounding =
  * settled by the kind — a ported editor warning warns, a value the engine
  * never reads informs, a limitation of this previewer informs, a linter
  * failure errs. `emitsGrounding.test.ts` holds every emit to it.
+ *
+ * Total over BOTH unions: a new kind or scope fails tsc in the `default` arms
+ * rather than returning `undefined`, which every caller reads as "the cite
+ * decides" and which would let a whole grounding ship with no tier check.
  */
 export function severityFixedBy(grounding: EmitGrounding): Severity | undefined {
   switch (grounding.kind) {
@@ -266,7 +270,11 @@ export function severityFixedBy(grounding: EmitGrounding): Severity | undefined 
         case 'unresolvable-path':
         case 'file-integrity':
           return 'warning';
+        default:
+          return grounding.scope satisfies never;
       }
+    default:
+      return grounding satisfies never;
   }
 }
 

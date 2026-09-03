@@ -115,10 +115,10 @@ real parser instead of the decode/build split. Conformance:
   sets this" sizes the blast radius of a change and never justifies skipping one.
   The one scope limit is the file's own header. `format <= 2` predates the string
   ext/subresource ids version 3 introduced, so those files get a single
-  `legacy-format-version` warning and no other diagnostic (ADR-0032). Formats 3 and 4
+  `legacy-format-version` info and no other diagnostic (ADR-0032). Formats 3 and 4
   are BOTH current — one 4.6.3 saver writes either, per file — and a header declaring
   no format is current too, so none of them is bounded.
-- Every diagnostic is grounded in the engine source, in one of three tiers (ADR-0032).
+- Every property bound is grounded in the engine source, in one of three tiers (ADR-0032).
   **error** = the setter refuses or alters the value (`ERR_FAIL*`, a clamp, a mask
   that drops bits). **warning** = outside what the property's own
   UI-control hint permits, `PROPERTY_HINT_RANGE` / `LAYERS_*` / `FLAGS` alike, where
@@ -140,6 +140,10 @@ real parser instead of the decode/build split. Conformance:
   opening with `ERR_FAIL_COND(!is_finite(...))` refuses one, and it says so with
   `{ finite: 'file:line' }` — a range bound cannot stand in, since every comparison
   against `nan` is false.
+  A semantic RULE's tier is derived rather than chosen: `severityFixedBy` reads the
+  rule's `EmitGrounding` kind — a ported `get_configuration_warnings()` row **warns**,
+  an `engine-inert` value the engine never reads and a `previewer-limitation` are both
+  **info**, a `linter-failure` **errors**, and only an `engine` arm is left to its cite.
 - **`ADD_PROPERTY` is one of FOUR ways a property reaches a `.tscn`.** The others are
   `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
   `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the

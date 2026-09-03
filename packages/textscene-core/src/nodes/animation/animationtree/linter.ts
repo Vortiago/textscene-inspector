@@ -43,7 +43,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   // An absent `anim_player` gets no diagnostic: set_animation_player treats the
   // empty path as a supported mode and reconfigures the root node for it.
 
-  // WARNING: anim_player must reference an existing AnimationPlayer node.
+  // anim_player must reference an existing AnimationPlayer node.
   // resolveNodePath's one decline, `unknowable`, covers every path whose answer
   // lives in another file (see its JSDoc); `..` resolves rather than declining.
   if (rawProps.anim_player) {
@@ -72,7 +72,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Warning: active = false. Not a port of
+  // active = false. Not a port of
   // `AnimationTree::get_configuration_warnings()` (animation_tree.cpp:717-723),
   // whose one row is the null `root_animation_node` that
   // `animationtree-missing-tree-root` above already carries. The wording here is

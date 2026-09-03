@@ -121,6 +121,7 @@ export {
   isCatalogedType,
 } from './nodeBaseTypes.js';
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
+export { INSTANCE_PLACEHOLDER_TYPE, ROOT_PARENT_PATH } from './packedScene.js';
 export {
   GODOT_TEXT_RESOURCE_EXTENSIONS,
   isGodotTextResourcePath,

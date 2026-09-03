@@ -14,11 +14,8 @@
  * in `r3f/NodeComponentRegistry.ts`.
  */
 
-import {
-  INSTANCE_PLACEHOLDER_TYPE,
-  isPropertyOverrideHeading,
-  type ParsedHeading,
-} from '../parser/utils';
+import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';

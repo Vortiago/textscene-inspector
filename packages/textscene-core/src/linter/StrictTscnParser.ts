@@ -12,19 +12,12 @@ import type { TscnNode } from '../parser/types.js';
 import type { ParseError, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
-import {
-  INSTANCE_PLACEHOLDER_TYPE,
-  isPropertyOverrideHeading,
-  type ParsedHeading,
-} from '../parser/utils.js';
+import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
 import { getAncestorPaths, joinPath } from '../utils/nodePath.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
-import { isNilLiteral } from '../godot/index.js';
+import { INSTANCE_PLACEHOLDER_TYPE, ROOT_PARENT_PATH, isNilLiteral } from '../godot/index.js';
 import { resolveDeprecatedProperty } from '../godot/deprecated.js';
-
-/** What a `parent=` says when it names the scene's own root. */
-const ROOT_PATH = '.';
 
 /**
  * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
@@ -98,8 +91,8 @@ export class StrictTscnParser {
     // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
     let nodeHeadings = 0;
     // The node paths that instance a scene, so a type-less heading below one
-    // names content that exists. `ROOT_PATH` stands for the scene's own root,
-    // which every `parent="."` stops at: it joins the set when heading 0
+    // names content that exists. `ROOT_PARENT_PATH` stands for the scene's own
+    // root, which every `parent="."` stops at: it joins the set when heading 0
     // carries `instance=` and the scene therefore inherits
     // (resource_format_text.cpp:233-240).
     //
@@ -108,8 +101,8 @@ export class StrictTscnParser {
     // named under one still vanishes and still deserves the warning.
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
-      if (instancedPaths.has(ROOT_PATH)) return true;
-      if (parent === undefined || parent === ROOT_PATH) return false;
+      if (instancedPaths.has(ROOT_PARENT_PATH)) return true;
+      if (parent === undefined || parent === ROOT_PARENT_PATH) return false;
       return instancedPaths.has(parent) || getAncestorPaths(parent).some((p) => instancedPaths.has(p));
     };
 
@@ -190,8 +183,8 @@ export class StrictTscnParser {
         if (instance) {
           instancedPaths.add(
             isRootHeading
-              ? ROOT_PATH
-              : joinPath(parent && parent !== ROOT_PATH ? parent : '', name ?? '')
+              ? ROOT_PARENT_PATH
+              : joinPath(parent && parent !== ROOT_PARENT_PATH ? parent : '', name ?? '')
           );
         }
 
