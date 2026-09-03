@@ -186,6 +186,25 @@ position = Vector2(5, 5)
       ]);
     });
 
+    it('still warns under an instance_placeholder: the placeholder has no children', () => {
+      // packed_scene.cpp:255 builds an InstancePlaceholder, and it is childless
+      // until something replaces it, so the lookup at :283 fails exactly as it
+      // does with no instance at all. Verified against Godot: the child is
+      // dropped with "was modified from inside an instance, but it has
+      // vanished."
+      const result = parser.parse(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]
+
+[node name="Inner" parent="Rock"]
+`);
+      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
+        ['MISSING_NODE_IDENTIFIER', 'warning', 7],
+      ]);
+    });
+
     it('accepts an override anywhere below an instanced ancestor — Godot writes it without index=', () => {
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 

@@ -537,8 +537,8 @@ describe('Camera2D Linter', () => {
           node('Camera2D', { enabled: true }, { name: 'Camera2', parent: 'Holder' })
         )
       );
-      const warnings = diagnostics.filter(d => d.severity === 'info' && d.message.includes('Multiple enabled'));
-      expect(warnings.length).toBeGreaterThan(0);
+      const reports = diagnostics.filter(d => d.severity === 'info' && d.message.includes('Multiple enabled'));
+      expect(reports.length).toBeGreaterThan(0);
     });
 
     it('should not warn about multiple cameras when only one is enabled', () => {

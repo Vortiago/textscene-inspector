@@ -12,7 +12,15 @@ import type { TscnNode } from '../parser/types.js';
 import type { ParseError, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
-import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
+import {
+  INSTANCE_PLACEHOLDER_TYPE,
+  isPropertyOverrideHeading,
+  type ParsedHeading,
+} from '../parser/utils.js';
+import { getAncestorPaths, joinPath } from '../utils/nodePath.js';
+
+/** What a `parent=` says when it names the scene's own root. */
+const ROOT_PATH = '.';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { isNilLiteral } from '../godot/index.js';
@@ -36,7 +44,7 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
     // Note: For index=/instance= nodes, type may be inferred from parent scene or remain as identifier
     type:
       heading.attributes.type ||
-      (heading.attributes.instance_placeholder ? 'InstancePlaceholder' : '') ||
+      (heading.attributes.instance_placeholder ? INSTANCE_PLACEHOLDER_TYPE : '') ||
       heading.attributes.index ||
       heading.attributes.instance ||
       '',
@@ -89,17 +97,20 @@ export class StrictTscnParser {
     // `[node]` headings seen so far: heading 0 is the root and takes the
     // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
     let nodeHeadings = 0;
-    // Where instanced content lives, for the type-less headings below it: the
-    // root when the scene inherits (`instance=` on heading 0 sets the base
-    // scene, resource_format_text.cpp:233-240), and every node path whose
-    // heading carries `instance=` or `instance_placeholder=` (:242-254).
-    let rootInherits = false;
+    // The node paths that instance a scene, so a type-less heading below one
+    // names content that exists. `ROOT_PATH` stands for the scene's own root,
+    // which every `parent="."` stops at: it joins the set when heading 0
+    // carries `instance=` and the scene therefore inherits
+    // (resource_format_text.cpp:233-240).
+    //
+    // `instance_placeholder=` is NOT one of these. Godot builds an
+    // InstancePlaceholder with no children (packed_scene.cpp:255), so a node
+    // named under one still vanishes and still deserves the warning.
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
-      for (let p = parent; p && p !== '.'; p = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '.') {
-        if (instancedPaths.has(p)) return true;
-      }
-      return false;
+      if (instancedPaths.has(ROOT_PATH)) return true;
+      if (parent === undefined || parent === ROOT_PATH) return false;
+      return instancedPaths.has(parent) || getAncestorPaths(parent).some((p) => instancedPaths.has(p));
     };
 
     const observer: ParseObserver = {
@@ -175,11 +186,14 @@ export class StrictTscnParser {
         // an instance, but it has vanished."` (:310). `index=` is an ordering
         // hint and rescues nothing.
         const isRootHeading = nodeHeadings++ === 0;
-        const { type, instance, instance_placeholder: placeholder, parent, name } =
-          heading.attributes;
-        const path = parent === undefined || parent === '.' ? (name ?? '') : `${parent}/${name ?? ''}`;
-        if (isRootHeading) rootInherits = Boolean(instance);
-        else if (instance || placeholder) instancedPaths.add(path);
+        const { instance, instance_placeholder: placeholder, parent, name } = heading.attributes;
+        if (instance) {
+          instancedPaths.add(
+            isRootHeading
+              ? ROOT_PATH
+              : joinPath(parent && parent !== ROOT_PATH ? parent : '', name ?? '')
+          );
+        }
 
         if (isRootHeading && placeholder) {
           errors.push({
@@ -193,7 +207,9 @@ export class StrictTscnParser {
             code: 'INSTANCE_PLACEHOLDER_ROOT',
             ...currentOwner,
           });
-        } else if (isRootHeading && !type && !instance) {
+        } else if (!isPropertyOverrideHeading(heading)) {
+          // The heading declares what it is, so neither arm below applies.
+        } else if (isRootHeading) {
           errors.push({
             severity: 'error',
             message:
@@ -205,14 +221,7 @@ export class StrictTscnParser {
             code: 'MISSING_NODE_IDENTIFIER',
             ...currentOwner,
           });
-        } else if (
-          !isRootHeading &&
-          !type &&
-          !instance &&
-          !placeholder &&
-          !rootInherits &&
-          !hasInstancedAncestor(parent)
-        ) {
+        } else if (!hasInstancedAncestor(parent)) {
           errors.push({
             severity: 'warning',
             message:

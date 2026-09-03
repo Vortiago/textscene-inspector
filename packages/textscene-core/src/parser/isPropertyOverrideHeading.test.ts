@@ -81,6 +81,21 @@ describe('the two node creators agree', () => {
     '[node name="Crate" type="Node3D" parent="."]',
   ];
 
+  it('agrees that an instance_placeholder heading declares an InstancePlaceholder', () => {
+    // The two creators otherwise spell an undeclared type differently on
+    // purpose — the renderer falls back to `Node` so it can draw something,
+    // the linter keeps the heading's own marker. A placeholder is the one
+    // case where Godot names a class of its own (packed_scene.cpp:255), so
+    // both must say it or the two trees hold different nodes.
+    const line = '[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]';
+    const rendered = parseNodeWithRegistry(heading(line), {});
+    const linted = new StrictTscnParser().parse([PREAMBLE, line, ''].join('\n'));
+    const strict = findNode(linted.scene?.nodes ?? [], 'Rock');
+
+    expect(rendered?.type).toBe('InstancePlaceholder');
+    expect(strict?.type).toBe('InstancePlaceholder');
+  });
+
   it.each(CASES)('sets overridesExistingNode identically for %s', (line) => {
     const parsed = heading(line);
     const expected = isPropertyOverrideHeading(parsed) || undefined;

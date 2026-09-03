@@ -14,7 +14,7 @@ const SCALE_RULE = 'navigationobstacle2d-non-positive-global-scale';
 const NON_UNIFORM_RULE = 'navigationobstacle2d-non-uniform-global-scale';
 const SKEW_RULE = 'navigationobstacle2d-global-skew-ignored';
 
-function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+function reportsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.ruleName === RULE);
 }
 
@@ -34,7 +34,7 @@ describe('NavigationObstacle2D carve-without-affect rule', () => {
 affect_navigation_mesh = false
 carve_navigation_mesh = false
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content))).toEqual([]);
   });
 
   it('stays quiet when both affect_navigation_mesh and carve_navigation_mesh are enabled', () => {
@@ -46,7 +46,7 @@ carve_navigation_mesh = false
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content))).toEqual([]);
   });
 
   it('warns when carve_navigation_mesh is enabled but affect_navigation_mesh is explicitly false', () => {
@@ -58,7 +58,7 @@ carve_navigation_mesh = true
 affect_navigation_mesh = false
 carve_navigation_mesh = true
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content));
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.severity).toBe('info');
     expect(warnings[0]!.message).toContain('affect_navigation_mesh');
@@ -72,7 +72,7 @@ carve_navigation_mesh = true
 [node name="Obstacle" type="NavigationObstacle2D" parent="."]
 carve_navigation_mesh = true
 `;
-    const warnings = warningsOf(linter.lint(content));
+    const warnings = reportsOf(linter.lint(content));
     expect(warnings).toHaveLength(1);
     expect(warnings[0]!.message).toContain('carve_navigation_mesh');
   });
@@ -84,7 +84,7 @@ carve_navigation_mesh = true
 
 [node name="Sprite" type="Sprite2D" parent="."]
 `;
-    expect(warningsOf(linter.lint(content))).toEqual([]);
+    expect(reportsOf(linter.lint(content))).toEqual([]);
   });
 });
 

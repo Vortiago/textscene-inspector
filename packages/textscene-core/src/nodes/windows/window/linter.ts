@@ -7,8 +7,8 @@
  * scene/main/window.cpp's `_validate_limit_size` confirms it component-wise
  * (`max_size.x >= min_size.x && max_size.y >= min_size.y`, gated on max_size
  * being non-zero). A scene author who sets a `max_size` smaller than `min_size`
- * gets no error from Godot — the max is silently dropped — so this is a
- * warning, not an error.
+ * gets no error from Godot — the max is silently dropped — so this is
+ * advisory, never an error.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseHeading, parseProperty, isHeading, isComment, isEmpty } from './utils';
+import { parseHeading, parseProperty, isHeading, isEmpty } from './utils';
 
 describe('parseHeading', () => {
   it('should parse simple heading without attributes', () => {
@@ -219,23 +219,6 @@ describe('isHeading', () => {
   });
 });
 
-describe('isComment', () => {
-  it('should identify comments', () => {
-    expect(isComment('; This is a comment')).toBe(true);
-    expect(isComment(';Another comment')).toBe(true);
-  });
-
-  it('should handle whitespace before semicolon', () => {
-    expect(isComment('  ; Indented comment')).toBe(true);
-  });
-
-  it('should reject non-comments', () => {
-    expect(isComment('[node]')).toBe(false);
-    expect(isComment('transform = Vector3(1, 2, 3)')).toBe(false);
-    expect(isComment('Not a comment')).toBe(false);
-    expect(isComment('')).toBe(false);
-  });
-});
 
 describe('isEmpty', () => {
   it('should identify empty lines', () => {

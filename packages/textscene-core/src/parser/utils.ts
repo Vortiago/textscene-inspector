@@ -48,9 +48,14 @@ function skipToSpace(str: string, pos: number): number {
 /**
  * Index just past the quote closing the string whose OPENING quote is at `pos`;
  * -1 if it never closes. Godot's escape rule: `\` consumes the next character,
- * and the next unescaped `"` ends the string. The one shared statement of that
- * rule for whole-string scans — {@link scanValueChunk} restates it because it
- * resumes mid-string across chunks and so has no opening quote to anchor on.
+ * and the next unescaped `"` ends the string.
+ *
+ * Three scans in this file walk that rule, because each asks a different
+ * question and none can answer another's: this one takes an opening quote and
+ * returns where it closes, {@link scanValueChunk} resumes mid-string across
+ * chunks and so has no opening quote to anchor on, and
+ * {@link stripLineComment} needs the first `;` that is NOT inside a string.
+ * A change to the escape convention has to land in all three.
  */
 function scanQuoted(str: string, pos: number): number {
   for (let i = pos + 1; i < str.length; i++) {
@@ -288,10 +293,6 @@ export function isSectionHeading(line: string): boolean {
   return SECTION_HEADING_RE.test(line.trim());
 }
 
-export function isComment(line: string): boolean {
-  return line.trim().startsWith(';');
-}
-
 export function isEmpty(line: string): boolean {
   return line.trim().length === 0;
 }
@@ -346,6 +347,10 @@ export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanS
  * line, so a `;` on the continuation line of an open string stays.
  */
 export function stripLineComment(line: string, inString = false): string {
+  // Every line of every parsed file reaches this, and 98% of them hold no `;`
+  // at all: without the native pre-scan the interpreted loop below costs ~28%
+  // of total parse time for a result it always throws away.
+  if (!line.includes(';')) return line;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (inString) {
@@ -441,6 +446,12 @@ export function unquoteString(value: string): string {
  * — and the two disagreeing about what an override is would be a silent
  * divergence between what renders and what lints.
  */
+/**
+ * The class Godot instantiates for an `instance_placeholder=` heading
+ * (`packed_scene.cpp:255`). Both node creators name it, so it is spelled here.
+ */
+export const INSTANCE_PLACEHOLDER_TYPE = 'InstancePlaceholder';
+
 export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
   return (
     heading.type === 'node' &&

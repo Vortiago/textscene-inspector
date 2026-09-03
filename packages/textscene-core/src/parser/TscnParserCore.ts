@@ -21,7 +21,6 @@ import {
   parseProperty,
   isHeading,
   isSectionHeading,
-  isComment,
   isEmpty,
   scanValueChunk,
   isIncompleteState,
@@ -213,7 +212,9 @@ export class TscnParserCore {
         }
       }
 
-      if (isEmpty(line) || isComment(line)) {
+      // A comment-only line is already whitespace: `stripLineComment` above is
+      // the single place a `;` is understood.
+      if (isEmpty(line)) {
         continue;
       }
 

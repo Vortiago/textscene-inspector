@@ -1,8 +1,8 @@
 /**
  * Semantic rule for FogVolume — `size` is authored while `shape` is World.
  *
- * Advisory (WARNING, never error): legal Godot, inert consequence, the same
- * shape as `Range`'s `max_value`-below-`min_value` rule.
+ * Advisory: legal Godot, inert consequence, the same shape as `Range`'s
+ * `max_value`-below-`min_value` rule.
  *
  * `FogVolume::_validate_property` (fog_volume.cpp:51-54) hides `size` from the
  * inspector once `shape == RS::FOG_VOLUME_SHAPE_WORLD`, but a hand-authored
@@ -51,7 +51,7 @@ const fogVolumeSizeRule: LintRule = {
   meta: {
     name: 'valid-fogvolume-size',
     description:
-      "Warns when a FogVolume authors 'size' while 'shape' is World, where Godot's renderer never consults it",
+      "Flags a FogVolume authoring 'size' while 'shape' is World, where Godot's renderer never consults it",
     category: 'validation',
     applicableNodeTypes: ['FogVolume'],
     emits: [

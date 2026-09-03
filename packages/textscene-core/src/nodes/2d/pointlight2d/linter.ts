@@ -20,7 +20,7 @@
  * forward, nothing more. So `min > max` is an EMPTY interval: the light stays
  * enabled, still costs its own accumulation pass, and reaches nothing at all.
  * That is an authoring mistake this previewer flags, not a complaint Godot's
- * own editor makes, so it warns rather than errors.
+ * own editor makes, and nothing refuses the value, so it is advisory.
  *
  * The comparison uses Godot's defaults for whichever half is absent, because
  * `range_z_max = -2000` alone — already empty against the default `range_z_min`
@@ -40,6 +40,8 @@ const WINDOWS = [
     max: 'range_z_max',
     minDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMin,
     maxDefault: POINT_LIGHT_2D_RANGE_DEFAULTS.zMax,
+    // The tier sits beside the name so `emitsScrape` pairs them: a table row
+    // whose `ruleName` has no severity above it scrapes as the default warning.
     severity: 'info',
     ruleName: 'pointlight2d-inverted-z-range',
     reaches: 'no item at any z_index',

@@ -2,10 +2,9 @@
  * Semantic rules for CPUParticles2D — the two settings whose result the
  * previewer's frozen pose cannot reproduce.
  *
- * Both are advisory (WARNING, never error): each is legal Godot that renders
- * fine in the engine. The warning exists because the divergence is otherwise
- * invisible — the emitter still draws particles, just not in the places the
- * property asks for.
+ * Both are advisory: each is legal Godot that renders fine in the engine, and
+ * the report exists because the divergence is otherwise invisible — the
+ * emitter still draws particles, just not in the places the property asks for.
  *
  * Format validation lives in linterParser.ts.
  */

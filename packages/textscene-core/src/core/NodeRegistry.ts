@@ -14,7 +14,11 @@
  * in `r3f/NodeComponentRegistry.ts`.
  */
 
-import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
+import {
+  INSTANCE_PLACEHOLDER_TYPE,
+  isPropertyOverrideHeading,
+  type ParsedHeading,
+} from '../parser/utils';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
@@ -110,7 +114,7 @@ export function parseNodeWithRegistry(
   // This keeps unsupported types and instance nodes in the tree hierarchy
   if (!registration) {
     const originalType =
-      heading.attributes.type || (placeholderPath ? 'InstancePlaceholder' : 'Node');
+      heading.attributes.type || (placeholderPath ? INSTANCE_PLACEHOLDER_TYPE : 'Node');
 
     // Warn for truly unsupported types, but not for instance nodes (which have no type until loaded)
     if (!hasInstanceAttribute) {

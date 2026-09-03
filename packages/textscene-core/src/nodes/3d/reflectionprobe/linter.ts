@@ -2,7 +2,7 @@
  * Semantic rule for ReflectionProbe — `ambient_color`/`ambient_color_energy`
  * authored while `ambient_mode` is not AMBIENT_COLOR (2).
  *
- * Advisory (WARNING, never error): both keys are perfectly legal here.
+ * Advisory, never an error: both keys are perfectly legal here.
  * `ReflectionProbe::_validate_property` (reflection_probe.cpp:203-212) only
  * hides them from the EDITOR inspector when `ambient_mode != AMBIENT_COLOR`,
  * by setting `PROPERTY_USAGE_NO_EDITOR` — and `PROPERTY_USAGE_NO_EDITOR ==

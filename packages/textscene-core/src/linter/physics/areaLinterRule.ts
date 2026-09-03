@@ -74,11 +74,11 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // it detects. It fired on shipped Godot demos that set `collision_layer = 0`
     // deliberately.
 
-    // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
+    // collision_mask is 0 while monitoring is true: it detects nothing.
     const collisionMask = rawProps.collision_mask;
     // `?? true`, not `=== true`: an unreadable value is a write Godot refuses, so
   // the constructor's `set_monitoring(true)` stands exactly as it does for an
-  // absent key. Reading it as "not monitoring" silenced the warning on the one
+  // absent key. Reading it as "not monitoring" silenced the report on the one
   // file that most needs it.
   if ((boolSlotValue(monitoring) ?? true) && collisionMask !== undefined) {
       // `ruleInt`, not `parseInt`: the latter stops at the first

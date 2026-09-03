@@ -12,8 +12,8 @@
  *
  * doc/classes/NavigationObstacle{2D,3D}.xml both state the dependency in
  * prose on `carve_navigation_mesh` itself: "Requires [member
- * affect_navigation_mesh] to be enabled." Advisory, hence a warning — the
- * scene loads and both properties are individually well-formed;
+ * affect_navigation_mesh] to be enabled." Advisory — the scene loads and both
+ * properties are individually well-formed;
  * `carve_navigation_mesh` is simply dead configuration until
  * `affect_navigation_mesh` is also on.
  *
@@ -154,7 +154,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
   return {
     meta: {
       name: `valid-${prefix}`,
-      description: `Warns when ${type}'s carve_navigation_mesh is enabled without affect_navigation_mesh, where it has no effect`,
+      description: `Flags ${type}'s carve_navigation_mesh enabled without affect_navigation_mesh, where it has no effect`,
       category: 'validation',
       applicableNodeTypes: [type],
       emits: armEmits(arms),

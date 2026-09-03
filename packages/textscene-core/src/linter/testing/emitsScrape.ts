@@ -16,6 +16,7 @@
 
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
+import { SEVERITY_ORDER } from '../types.js';
 
 export interface EmittedPair {
   readonly name: string;
@@ -146,6 +147,9 @@ export function pairMatches(scraped: string, declared: string): boolean {
  * previous one. A name with no preceding severity is a `rangeAdvisory` arm, and
  * those are `warning` by construction (rangeAdvisory.ts).
  */
+/** The severity literals a push site can carry, from the union itself. */
+const SEVERITY_NAMES = Object.keys(SEVERITY_ORDER);
+
 const scrapeCache = new Map<string, EmittedPair[]>();
 
 export function scrapePairs(file: string): EmittedPair[] {
@@ -166,9 +170,15 @@ export function scrapePairs(file: string): EmittedPair[] {
     bindings.set(m[1]!, m[2] ?? m[3]!);
   }
   // `(?<!:\s*)` keeps the meta's own `name: ruleName,` out of the emission scrape
-  // — that line names the REGISTRY key, not a reported diagnostic.
-  const token =
-    /severity:\s*'(error|warning|info)'|ruleName:\s*(?:'([^']+)'|`([^`]+)`|(\w+))|(?<![.\w])(?<!:\s*)ruleName\s*[,}]/g;
+  // — that line names the REGISTRY key, not a reported diagnostic. The severity
+  // alternation is DERIVED from the union: spelled out here, a fourth tier would
+  // compile everywhere and silently drop out of this scraper's population.
+  const token = new RegExp(
+    `severity:\\s*'(${SEVERITY_NAMES.join('|')})'` +
+      "|ruleName:\\s*(?:'([^']+)'|`([^`]+)`|(\\w+))" +
+      '|(?<![.\\w])(?<!:\\s*)ruleName\\s*[,}]',
+    'g'
+  );
   const pairs: EmittedPair[] = [];
   let severity: string | null = null;
   let m: RegExpExecArray | null;

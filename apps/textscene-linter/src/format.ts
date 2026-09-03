@@ -98,15 +98,23 @@ export function formatJson(files: FileDiagnostics[]): string {
 }
 
 /**
- * GitHub Actions workflow-command annotation level per diagnostic severity.
- * Total over the closed `Severity` union, so adding a severity fails tsc here
- * instead of silently falling through.
+ * How each severity is presented: the text icon, the ANSI colour, and the
+ * GitHub Actions workflow-command level. One table rather than three switches,
+ * and total over the closed `Severity` union, so adding a severity fails tsc
+ * here instead of falling silently through a `default` in two of them.
  */
-const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning' | 'notice'> = {
-  error: 'error',
-  warning: 'warning',
-  info: 'notice',
+const SEVERITY_DISPLAY: Record<
+  Severity,
+  { icon: string; color: string; github: 'error' | 'warning' | 'notice' }
+> = {
+  error: { icon: '✖', color: '31', github: 'error' },
+  warning: { icon: '⚠', color: '33', github: 'warning' },
+  info: { icon: 'ℹ', color: '36', github: 'notice' },
 };
+
+function displayFor(severity: string): { icon: string; color: string } | undefined {
+  return SEVERITY_DISPLAY[severity as Severity];
+}
 
 /**
  * Escapes workflow-command *data* (the `::command ...::<data>` payload) per
@@ -126,7 +134,7 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  const command = GITHUB_COMMAND_BY_SEVERITY[finding.severity];
+  const command = SEVERITY_DISPLAY[finding.severity].github;
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);
@@ -148,30 +156,15 @@ export function formatGithubAnnotations(files: FileDiagnostics[]): string[] {
   return toJsonFindings(files).map(formatGithubAnnotation);
 }
 
-/**
- * Get icon for severity level
- */
+/** Icon for a severity; a bullet for anything outside the union. */
 export function getSeverityIcon(severity: string): string {
-  switch (severity) {
-    case 'error': return '✖';
-    case 'warning': return '⚠';
-    case 'info': return 'ℹ';
-    default: return '•';
-  }
+  return displayFor(severity)?.icon ?? '•';
 }
 
-/**
- * Format severity with color
- */
+/** Severity name in its colour; unstyled for anything outside the union. */
 export function formatSeverity(severity: string, hasColor: boolean): string {
-  if (!hasColor) return severity;
-
-  switch (severity) {
-    case 'error': return `\x1b[31m${severity}\x1b[0m`; // Red
-    case 'warning': return `\x1b[33m${severity}\x1b[0m`; // Yellow
-    case 'info': return `\x1b[36m${severity}\x1b[0m`; // Cyan
-    default: return severity;
-  }
+  const display = hasColor ? displayFor(severity) : undefined;
+  return display ? `\x1b[${display.color}m${severity}\x1b[0m` : severity;
 }
 
 /**

@@ -1,8 +1,8 @@
 /**
  * Semantic linter rules for GridMap.
  *
- * Validates that the optional mesh_library reference resolves and that a
- * GridMap without one is flagged as a warning (it will render nothing).
+ * Validates that the optional mesh_library reference resolves, and reports a
+ * GridMap without one: legal, and it renders nothing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -15,8 +15,8 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // If mesh_library is absent, flag as a warning — valid in Godot but the
-  // GridMap will render nothing and likely isn't visible.
+  // An absent mesh_library is valid in Godot, but the GridMap renders nothing
+  // and likely isn't visible.
   if (heldResource(rawProps.mesh_library) === undefined) {
     diagnostics.push({
       severity: 'info',
@@ -34,7 +34,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
 const gridMapValidationRule: LintRule = {
   meta: {
     name: 'valid-gridmap-resources',
-    description: 'Flags a GridMap with no mesh_library as a warning',
+    description: 'Flags a GridMap with no mesh_library, which renders nothing',
     category: 'validation',
     emits: [
       {

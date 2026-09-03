@@ -92,6 +92,7 @@ describe('getSeverityIcon', () => {
   it('maps each known severity to its icon', () => {
     expect(getSeverityIcon('error')).toBe('✖');
     expect(getSeverityIcon('warning')).toBe('⚠');
+    expect(getSeverityIcon('info')).toBe('ℹ');
   });
 
   it('falls back to a bullet for unknown severities', () => {
@@ -103,11 +104,13 @@ describe('formatSeverity', () => {
   it('returns plain text when color is off', () => {
     expect(formatSeverity('error', false)).toBe('error');
     expect(formatSeverity('warning', false)).toBe('warning');
+    expect(formatSeverity('info', false)).toBe('info');
   });
 
   it('wraps severities in ANSI color codes when color is on', () => {
     expect(formatSeverity('error', true)).toBe('\x1b[31merror\x1b[0m');
     expect(formatSeverity('warning', true)).toBe('\x1b[33mwarning\x1b[0m');
+    expect(formatSeverity('info', true)).toBe('\x1b[36minfo\x1b[0m');
   });
 
   it('leaves unknown severities unstyled even when color is on', () => {

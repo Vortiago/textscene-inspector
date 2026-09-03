@@ -7,7 +7,7 @@
  *
  * Divergence from Path3D (which ERRORs on a missing curve): in real 2D games a
  * Path2D's curve is frequently assigned at runtime via an attached script (e.g.
- * godot-open-rpg's gamepiece.tscn), so a missing `curve` is a WARNING and is
+ * godot-open-rpg's gamepiece.tscn), so a missing `curve` is advisory and is
  * suppressed entirely when the node has a `script`.
  *
  * No "no PathFollow2D children" check: `path_2d.h`/`path_2d.cpp` declare a
