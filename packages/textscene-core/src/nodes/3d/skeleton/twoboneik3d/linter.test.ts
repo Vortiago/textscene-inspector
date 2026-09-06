@@ -37,7 +37,7 @@ const VALID_SETTING = {
 };
 
 describe('TwoBoneIK3D semantic rules', () => {
-  it('warns when a settings/<i>/… index is >= setting_count', () => {
+  it('reports when a settings/<i>/… index is >= setting_count', () => {
     expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -54,7 +54,7 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
-  it('warns when setting_count is absent (defaults to 0) and a settings/0/… key is present', () => {
+  it('reports when setting_count is absent (defaults to 0) and a settings/0/… key is present', () => {
     expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -95,7 +95,7 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
-  it('warns when pole_direction_vector is set while pole_direction is not Custom', () => {
+  it('reports when pole_direction_vector is set while pole_direction is not Custom', () => {
     expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -113,7 +113,7 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
-  it('warns when pole_direction is absent, since the setting defaults to None', () => {
+  it('reports when pole_direction is absent, since the setting defaults to None', () => {
     expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -159,7 +159,7 @@ describe('TwoBoneIK3D semantic rules', () => {
     );
   });
 
-  it('still warns on a padded index when the direction really is not Custom', () => {
+  it('still reports on a padded index when the direction really is not Custom', () => {
     expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {

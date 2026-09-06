@@ -531,7 +531,7 @@ sub_emitter = NodePath("../SubEmitter")
     // The path resolves and is stored, so nothing is refused — the emitter just
     // never becomes its own sub-emitter.
     it.each(['NodePath(".")', 'NodePath("../Particles")'])(
-      'warns when sub_emitter %s points back at the node itself',
+      'reports when sub_emitter %s points back at the node itself',
       (path) => {
         expectDiagnostic(
           `[gd_scene format=3]
@@ -569,7 +569,7 @@ sub_emitter = NodePath("")
     // asks World for a child named "Other" (node.cpp:1941). There is none and no
     // instance to hide one, so Godot's own `get_node_or_null` returns null too.
     // The instance case is the test below, where the decline is real.
-    it('errors on a relative path whose next segment names no child', () => {
+    it('reports a relative path whose next segment names no child', () => {
       expectDiagnostic(
         `[gd_scene format=3]
 

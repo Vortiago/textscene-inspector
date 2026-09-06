@@ -60,7 +60,7 @@ const INDIVIDUAL_SETTING = {
 
 describe('SpringBoneSimulator3D semantic rules', () => {
   describe('setting index against setting_count', () => {
-    it('warns when a settings/<i>/… index is >= setting_count', () => {
+    it('reports when a settings/<i>/… index is >= setting_count', () => {
       expectDiagnostic(
         scene(
           node('SpringBoneSimulator3D', {
@@ -77,7 +77,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
       );
     });
 
-    it('warns when setting_count is absent, since settings starts empty', () => {
+    it('reports when setting_count is absent, since settings starts empty', () => {
       expectDiagnostic(
         scene(node('SpringBoneSimulator3D', { 'settings/0/individual_config': false })),
         { ruleName: 'springbonesimulator3d-setting-index-out-of-range', severity: 'error' }
@@ -112,7 +112,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
   });
 
   describe('the two config modes', () => {
-    it('warns when the shared block is set while individual_config is true', () => {
+    it('reports when the shared block is set while individual_config is true', () => {
       expectDiagnostic(
         scene(
           node('SpringBoneSimulator3D', {
@@ -143,7 +143,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
       );
     });
 
-    it('warns when a joint is tuned while individual_config is false', () => {
+    it('reports when a joint is tuned while individual_config is false', () => {
       expectDiagnostic(
         scene(
           node('SpringBoneSimulator3D', {
@@ -206,7 +206,7 @@ describe('SpringBoneSimulator3D semantic rules', () => {
   });
 
   describe('the two collision lists', () => {
-    it('warns on an explicit list while enable_all_child_collisions is true', () => {
+    it('reports on an explicit list while enable_all_child_collisions is true', () => {
       expectDiagnostic(
         scene(
           node('SpringBoneSimulator3D', {

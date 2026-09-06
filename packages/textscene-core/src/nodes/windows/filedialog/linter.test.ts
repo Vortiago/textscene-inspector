@@ -14,7 +14,7 @@ import './linterParser';
 import './linter';
 
 describe('FileDialog semantic rules', () => {
-  it('warns when an option_<N>/… index is >= option_count', () => {
+  it('reports when an option_<N>/… index is >= option_count', () => {
     expectDiagnostic(
       scene(
         node('FileDialog', {
@@ -31,7 +31,7 @@ describe('FileDialog semantic rules', () => {
     );
   });
 
-  it('warns when option_count is absent (defaults to 0) and an option_0/… key is present', () => {
+  it('reports when option_count is absent (defaults to 0) and an option_0/… key is present', () => {
     expectDiagnostic(
       scene(
         node('FileDialog', {

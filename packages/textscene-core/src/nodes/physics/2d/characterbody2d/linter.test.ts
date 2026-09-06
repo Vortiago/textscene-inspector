@@ -330,7 +330,7 @@ describe('CharacterBody2D Linter', () => {
       { wall_min_slide_angle: 0.5 },
     ];
     it.each(grounded)(
-      'warns when wall_min_slide_angle is set in GROUNDED mode (%o)',
+      'reports when wall_min_slide_angle is set in GROUNDED mode (%o)',
       (props) => {
         expectDiagnostic(scene(node('CharacterBody2D', props), collisionShape2d), {
           ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode',

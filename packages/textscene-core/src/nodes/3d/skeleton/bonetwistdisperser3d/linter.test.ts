@@ -49,7 +49,7 @@ const CUSTOM_SETTING = {
 };
 
 describe('BoneTwistDisperser3D semantic rules', () => {
-  it('warns when a settings/<i>/… index is >= setting_count', () => {
+  it('reports when a settings/<i>/… index is >= setting_count', () => {
     expectDiagnostic(
       scene(
         node('BoneTwistDisperser3D', {
@@ -104,7 +104,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
     );
   });
 
-  it('warns when a joint twist_amount sits past that setting joint_count', () => {
+  it('reports when a joint twist_amount sits past that setting joint_count', () => {
     expectDiagnostic(
       scene(
         node('BoneTwistDisperser3D', {

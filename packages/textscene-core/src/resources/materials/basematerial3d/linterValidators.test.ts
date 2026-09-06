@@ -490,7 +490,7 @@ roughness = 0.3
       expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
     });
 
-    it('should validate uv1_scale with zero components (format valid, semantic warning could be added later)', () => {
+    it('accepts uv1_scale with zero components, which is a format-valid Vector3', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
 [sub_resource type="StandardMaterial3D" id="Material_1"]

@@ -183,6 +183,14 @@ export class StrictTscnParser {
         const isRootHeading = nodeHeadings++ === 0;
         const { instance, instance_placeholder: placeholder, parent, name } = heading.attributes;
         if (instance) {
+          // An empty `parent=` joins as the root's own child: the lookup
+          // returns null (node.cpp:1894) and the editor build's
+          // vanished-parent fallback re-parents the node to the scene root
+          // under its own name, the rename at :562 skipped because
+          // `old_parent_path` is empty too (packed_scene.cpp:209-214, inside
+          // `#ifdef DEBUG_ENABLED`). A release export has no fallback and sends
+          // the node to `stray_instances` (:549) instead, so nothing below it
+          // loads there either way.
           instancedPaths.add(
             isRootHeading
               ? ROOT_PARENT_PATH

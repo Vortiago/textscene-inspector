@@ -20,7 +20,7 @@ import './linterParser';
 import './linter';
 
 describe('ItemList semantic rules', () => {
-  it('warns when an item_<N>/… index is >= item_count', () => {
+  it('reports when an item_<N>/… index is >= item_count', () => {
     expectDiagnostic(
       scene(
         node('ItemList', {
@@ -38,7 +38,7 @@ describe('ItemList semantic rules', () => {
     );
   });
 
-  it('warns when item_count is absent, because the array then has length 0', () => {
+  it('reports when item_count is absent, because the array then has length 0', () => {
     // `item_count` defaults to 0 (doc/classes/ItemList.xml), and the serialiser
     // omits a property sitting at its default, so an absent count is a real
     // empty list rather than an unknown one.

@@ -37,7 +37,7 @@ describe('TileMap lint rules', () => {
     );
   });
 
-  it('warns on Godot-3-era tile data formats (format != 2)', () => {
+  it('reports on Godot-3-era tile data formats (format != 2)', () => {
     expectDiagnostic(
       scene(
         `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_0/tile_data = PackedInt32Array(0, 0)`,
