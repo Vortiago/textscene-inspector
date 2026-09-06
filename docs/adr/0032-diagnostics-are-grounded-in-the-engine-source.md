@@ -183,10 +183,12 @@ had actually shipped.
 **A rule's severity is fixed by its grounding kind.** A semantic rule declares an
 `EmitGrounding` per reported name, and `severityFixedBy` maps the kind to the
 tier: a ported `get_configuration_warnings()` row is a **warning**, an
-`engine-inert` claim (the value is never read) is an **info**, a
-`previewer-limitation` is an **info**, a `linter-failure` is an **error**, and
-only an `engine` arm is left to its cite, since a refusal and a hint sit on the
-same kind. `emitsGrounding.test.ts` holds every declared severity to that map,
+`engine-inert` claim (the engine reads the value and leaves it inert) is an
+**info**, a `previewer-limitation` is an **info**, a `linter-failure` is an
+**error**, the three scopes that describe the FILE rather than the engine —
+`dangling-reference`, `unresolvable-path`, `file-integrity` — are **warnings**,
+and only an `engine` arm is left to its cite, since a refusal and a hint sit on
+the same kind. `emitsGrounding.test.ts` holds every declared severity to that map,
 and `ruleCoverage.emits.test.ts` holds every literal push site to the severity
 its rule declares.
 

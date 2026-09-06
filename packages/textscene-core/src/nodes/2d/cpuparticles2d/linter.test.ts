@@ -71,7 +71,7 @@ describe('CPUParticles2D preview rule', () => {
     );
   });
 
-  it('warns when `fract_delta` is explicitly enabled', () => {
+  it('reports when `fract_delta` is explicitly enabled', () => {
     const content = scene('fract_delta = true\n');
     expect(namesOf(content)).toContain('cpuparticles2d-fract-delta-ignored');
     expect(severitiesOf(content, 'cpuparticles2d-fract-delta-ignored')).toEqual(['info']);
@@ -89,7 +89,7 @@ describe('CPUParticles2D preview rule', () => {
     );
   });
 
-  it('reports both warnings together when both apply', () => {
+  it('reports both diagnostics together when both apply', () => {
     const names = namesOf(scene('emission_shape = 6\nfract_delta = true\n'));
     expect(names).toContain('cpuparticles2d-nondeterministic-emission-shape');
     expect(names).toContain('cpuparticles2d-fract-delta-ignored');

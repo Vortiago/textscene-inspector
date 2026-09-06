@@ -36,8 +36,8 @@ export function readFixture(fixtureFile: string): string {
 /**
  * Every diagnostic the strict parser reports for a committed fixture.
  *
- * `ParseError.severity` spans both tiers, so this is errors AND warnings in one
- * list; that is why the assertion below can cover both at once.
+ * `ParseError.severity` spans every tier, so this is one list of errors,
+ * warnings and infos; that is why the assertion below can cover them at once.
  */
 export function fixtureDiagnostics(fixtureFile: string): ParseError[] {
   return new StrictTscnParser().parse(readFixture(fixtureFile)).errors;

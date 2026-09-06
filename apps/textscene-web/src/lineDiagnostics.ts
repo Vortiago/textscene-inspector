@@ -67,10 +67,24 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
   let errors = 0;
   let warnings = 0;
   let infos = 0;
+  // A switch total over the closed union, not a fall-through `else`: a fourth
+  // tier fails tsc here instead of being counted silently as an info.
   for (const d of diagnostics) {
-    if (d.severity === 'error') errors++;
-    else if (d.severity === 'warning') warnings++;
-    else infos++;
+    switch (d.severity) {
+      case 'error':
+        errors++;
+        break;
+      case 'warning':
+        warnings++;
+        break;
+      case 'info':
+        infos++;
+        break;
+      default: {
+        const unmatched: never = d.severity;
+        throw new Error(`unknown diagnostic severity ${String(unmatched)}`);
+      }
+    }
   }
   return { errors, warnings, infos, total: errors + warnings + infos };
 }

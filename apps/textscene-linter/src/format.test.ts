@@ -236,6 +236,21 @@ describe('formatGithubAnnotations', () => {
     expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
   });
 
+  it('falls back to ::notice for a severity outside the union, including a prototype key', () => {
+    // A bare index reaches Object.prototype, so `'constructor'` reads back a
+    // function and any other unknown value throws — which would cost the run
+    // every annotation, not just this finding's level.
+    const file: FileDiagnostics = {
+      filePath: 'odd.tscn',
+      diagnostics: [
+        makeDiagnostic({ severity: 'constructor' as unknown as Diagnostic['severity'] }),
+        makeDiagnostic({ severity: 'bogus' as unknown as Diagnostic['severity'] }),
+      ],
+    };
+
+    expect(formatGithubAnnotations([file]).every((l) => l.startsWith('::notice '))).toBe(true);
+  });
+
   it('omits line and col params when the diagnostic has no location', () => {
     const file: FileDiagnostics = { filePath: 'a.tscn', diagnostics: [makeDiagnostic()] };
 

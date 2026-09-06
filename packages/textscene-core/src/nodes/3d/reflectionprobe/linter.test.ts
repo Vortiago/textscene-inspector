@@ -37,7 +37,7 @@ describe('ReflectionProbe semantic rules', () => {
     );
   });
 
-  it('warns when ambient_color is set but ambient_mode is AMBIENT_DISABLED', () => {
+  it('reports when ambient_color is set but ambient_mode is AMBIENT_DISABLED', () => {
     const diagnostics = checkProbe('ambient_mode = 0\nambient_color = Color(1, 0, 0, 1)\n');
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.severity).toBe('info');
@@ -46,12 +46,12 @@ describe('ReflectionProbe semantic rules', () => {
     expect(diagnostics[0]?.message).toContain('no effect');
   });
 
-  it('warns when ambient_color_energy is set and ambient_mode is absent (defaults to AMBIENT_ENVIRONMENT)', () => {
+  it('reports when ambient_color_energy is set and ambient_mode is absent (defaults to AMBIENT_ENVIRONMENT)', () => {
     const diagnostics = checkProbe('ambient_color_energy = 2.0\n');
     expect(diagnostics.map((d) => d.ruleName)).toEqual(['reflectionprobe-ambient-color-no-effect']);
   });
 
-  it('warns twice when both ambient_color and ambient_color_energy are set under a non-COLOR mode', () => {
+  it('reports twice when both ambient_color and ambient_color_energy are set under a non-COLOR mode', () => {
     const diagnostics = checkProbe('ambient_mode = 1\nambient_color = Color(1, 0, 0, 1)\nambient_color_energy = 2.0\n');
     expect(diagnostics).toHaveLength(2);
     expect(diagnostics.every((d) => d.severity === 'info')).toBe(true);

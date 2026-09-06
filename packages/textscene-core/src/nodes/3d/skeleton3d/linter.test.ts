@@ -409,7 +409,7 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      it('should not warn when show_rest_only is false', () => {
+      it('reports nothing when show_rest_only is false', () => {
         expectNoDiagnostic(scene(node('Skeleton3D', { show_rest_only: false })), {
           ruleName: 'skeleton3d-debug-mode',
         });
@@ -604,7 +604,7 @@ describe('Skeleton3D Linter', () => {
     });
 
     it('should handle skeleton with all properties correctly set', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           node('Skeleton3D', {
             motion_scale: '1.0',
@@ -622,8 +622,6 @@ describe('Skeleton3D Linter', () => {
           )
         )
       );
-      // Should have no warnings or errors
-      expect(diagnostics.filter(d => d.severity === 'error' || d.severity === 'warning')).toHaveLength(0);
     });
 
     it('should handle complex bone hierarchy', () => {

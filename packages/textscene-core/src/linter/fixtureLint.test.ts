@@ -31,11 +31,12 @@ const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-
 const scenesRoot = resolve(here, '../../../../scenes');
 
 /**
- * `unit-*` fixtures allowed to carry advisory warnings, keyed by the EXACT rules
- * they may trip.
+ * `unit-*` fixtures allowed to carry an advisory — warning or info alike, since
+ * both tiers are legal Godot the fixture is meant to be free of — keyed by the
+ * EXACT rules they may trip.
  *
- * A unit fixture exists to demonstrate one node configured correctly, so a
- * warning on it usually means the fixture is wrong, not the rule. The gap this
+ * A unit fixture exists to demonstrate one node configured correctly, so an
+ * advisory on it usually means the fixture is wrong, not the rule. The gap this
  * closes is specific: a rule shipped in the same wave as the leaves it covers
  * fires on their own fixtures, and the error-only check above stays green.
  *
@@ -44,10 +45,10 @@ const scenesRoot = resolve(here, '../../../../scenes');
  * hole this exists to close - and the broad multi-node fixtures here are the
  * ones a later wave is most likely to trip.
  *
- * Add an entry only when the warning is the fixture's POINT; fixing the fixture
- * is the default.
+ * Add an entry only when the advisory is the fixture's POINT; fixing the
+ * fixture is the default.
  */
-const UNIT_FIXTURE_WARNINGS: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:
@@ -165,11 +166,11 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     expect(tscnFiles(fixturesDir).length).toBeGreaterThan(0);
   });
 
-  it('every unit-* fixture warns only where allowlisted, rule by rule', () => {
+  it('every unit-* fixture reports an advisory only where allowlisted, rule by rule', () => {
     const unexpected: string[] = [];
     for (const file of tscnFiles(fixturesDir)) {
       if (!file.startsWith('unit-')) continue;
-      const allowed = new Set(UNIT_FIXTURE_WARNINGS[file]?.rules ?? []);
+      const allowed = new Set(UNIT_FIXTURE_ADVISORIES[file]?.rules ?? []);
       unexpected.push(
         ...advisoryRulesFor(fixturesDir, file)
           .filter((rule) => !allowed.has(rule))
@@ -183,7 +184,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // Set equality both ways. An entry that stopped firing means the fixture was
     // fixed or the rule changed, and the exemption is now a lie about the file.
     const stale: string[] = [];
-    for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_WARNINGS)) {
+    for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_ADVISORIES)) {
       const firing = new Set(advisoryRulesFor(fixturesDir, file));
       for (const rule of rules) {
         if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);

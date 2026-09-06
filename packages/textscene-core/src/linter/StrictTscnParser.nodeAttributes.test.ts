@@ -205,6 +205,26 @@ position = Vector2(5, 5)
       ]);
     });
 
+    it('still warns beside a nameless instance heading, which stores no path', () => {
+      // A heading with no `name=` joins to the empty path, and `parent=""`
+      // names nothing to walk up from: matching the two would let one
+      // unrelated malformed heading vouch for the other.
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node parent="." instance=ExtResource("1")]
+
+[node name="Inner" parent=""]
+`);
+      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
+        ['MISSING_NODE_NAME', 'error', 7],
+        ['MISSING_NODE_IDENTIFIER', 'warning', 9],
+      ]);
+    });
+
     it('accepts an override anywhere below an instanced ancestor — Godot writes it without index=', () => {
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 

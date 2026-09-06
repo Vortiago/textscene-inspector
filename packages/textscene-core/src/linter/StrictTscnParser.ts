@@ -102,7 +102,9 @@ export class StrictTscnParser {
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
       if (instancedPaths.has(ROOT_PARENT_PATH)) return true;
-      if (parent === undefined || parent === ROOT_PARENT_PATH) return false;
+      // An empty `parent=` names nothing to walk up from, and a nameless
+      // instance heading stores the empty path — without this the two match.
+      if (!parent || parent === ROOT_PARENT_PATH) return false;
       return instancedPaths.has(parent) || getAncestorPaths(parent).some((p) => instancedPaths.has(p));
     };
 

@@ -7,12 +7,15 @@ import type { TscnScene, TscnNode } from '../parser/types';
 /**
  * Diagnostic severity levels, each decided by what the engine does with the
  * value (ADR-0032), never chosen per rule.
- * `error` — Godot refuses or alters the value, or cannot load the file; fails
- *   CLI/CI, and no committed fixture may carry one.
- * `warning` — legal, and either Godot's own editor warns about it or the value
- *   sits outside the property's editor hint; advisory.
- * `info` — legal, and Godot has no reaction at all (the value is never read),
- *   or the finding is about this previewer rather than the scene; advisory.
+ * `error` — Godot refuses or alters the value, or cannot load the file, or the
+ *   linter itself failed and cannot vouch for the run; fails CLI/CI, and no
+ *   committed fixture may carry one.
+ * `warning` — legal, and either Godot's own editor warns about it, or the value
+ *   sits outside the property's editor hint, or the claim is about the FILE
+ *   rather than the engine (a reference that resolves to nothing); advisory.
+ * `info` — legal, and the engine reads the value and leaves it inert (a branch
+ *   never entered, a mode that never consults the key), or the finding is about
+ *   this previewer rather than the scene; advisory.
  * `severityFixedBy` states which grounding kinds fix which tier.
  */
 export type Severity = 'error' | 'warning' | 'info';
@@ -244,13 +247,17 @@ export type EmitGrounding =
  * The severity a grounding fixes, or `undefined` where only the cited line can
  * decide: an `engine` arm is an error when the setter refuses or alters and a
  * warning when it is a hint or a load-time `WARN_PRINT`. Everything else is
- * settled by the kind — a ported editor warning warns, a value the engine
- * never reads informs, a limitation of this previewer informs, a linter
- * failure errs. `emitsGrounding.test.ts` holds every emit to it.
+ * settled by the kind — a ported editor warning warns, a value the engine reads
+ * and leaves inert informs, a limitation of this previewer informs, a linter
+ * failure errs, and the three scopes that describe the FILE rather than the
+ * engine (`dangling-reference`, `unresolvable-path`, `file-integrity`) warn.
+ * `emitsGrounding.test.ts` holds every emit to it.
  *
  * Total over BOTH unions: a new kind or scope fails tsc in the `default` arms
  * rather than returning `undefined`, which every caller reads as "the cite
- * decides" and which would let a whole grounding ship with no tier check.
+ * decides" and which would let a whole grounding ship with no tier check. The
+ * arms throw rather than returning the unmatched value, which is a string or a
+ * whole grounding object wearing the `Severity` type.
  */
 export function severityFixedBy(grounding: EmitGrounding): Severity | undefined {
   switch (grounding.kind) {
@@ -270,11 +277,15 @@ export function severityFixedBy(grounding: EmitGrounding): Severity | undefined 
         case 'unresolvable-path':
         case 'file-integrity':
           return 'warning';
-        default:
-          return grounding.scope satisfies never;
+        default: {
+          const unmatched: never = grounding.scope;
+          throw new Error(`no severity fixed for scope ${String(unmatched)}`);
+        }
       }
-    default:
-      return grounding satisfies never;
+    default: {
+      const unmatched: never = grounding;
+      throw new Error(`no severity fixed for grounding kind ${String((unmatched as EmitGrounding).kind)}`);
+    }
   }
 }
 

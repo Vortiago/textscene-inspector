@@ -246,7 +246,7 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('anim_player warnings', () => {
+    describe('anim_player diagnostics', () => {
       it('should detect anim_player path issues', () => {
         expectDiagnostic(
           scene(
@@ -260,7 +260,7 @@ describe('AnimationTree Linter', () => {
         );
       });
 
-      it('should not warn when anim_player references AnimationPlayer', () => {
+      it('reports nothing when anim_player references AnimationPlayer', () => {
         expectNoDiagnostic(
           scene(
             blendTree,
@@ -494,7 +494,7 @@ describe('AnimationTree Linter', () => {
     });
 
     it('should handle all properties together', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           blendTree,
           // Both nodes state `parent="."`. Without it the second heading is a
@@ -519,10 +519,6 @@ describe('AnimationTree Linter', () => {
           }, { parent: '.' })
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
 
     it('should handle multiple validation errors', () => {
@@ -563,7 +559,7 @@ describe('AnimationTree Linter', () => {
     });
 
     it('should handle complex AnimationTree setup', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_1"]',
           // A real root, and `parent="."` on both children: as two parentless
@@ -594,10 +590,6 @@ describe('AnimationTree Linter', () => {
           )
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
 
     it('should handle boundary values', () => {
@@ -629,7 +621,7 @@ describe('AnimationTree Linter', () => {
     });
 
     it('should validate AnimationTree with only required properties', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           blendTree,
           node('Node3D', {}, { name: 'Root' }),
@@ -644,10 +636,6 @@ describe('AnimationTree Linter', () => {
           )
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
   });
 });

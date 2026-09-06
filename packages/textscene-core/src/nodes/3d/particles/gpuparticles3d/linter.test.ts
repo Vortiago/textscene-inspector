@@ -635,8 +635,8 @@ speed_scale = 0.5
 `);
     });
 
-    it('should not warn for reasonable particle count', () => {
-      const diagnostics = lint(`[gd_scene format=3]
+    it('reports nothing at any tier for a mid-band particle count', () => {
+      expectClean(`[gd_scene format=3]
 
 ${RESOURCES}
 
@@ -645,8 +645,6 @@ process_material = SubResource("process_1")
 draw_pass_1 = SubResource("mesh_1")
 amount = 10000
 `);
-      const perfWarning = diagnostics.find(d => d.severity === 'warning');
-      expect(perfWarning).toBeUndefined();
     });
   });
 

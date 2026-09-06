@@ -36,13 +36,13 @@ describe('Window semantic rules', () => {
     );
   });
 
-  it('does not warn when max_size is at or above min_size', () => {
+  it('reports nothing when max_size is at or above min_size', () => {
     expectNoDiagnostic(scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' })), {
       ruleName: 'window-max-size-below-min-size',
     });
   });
 
-  it('does not warn when max_size is Vector2i(0, 0) (the "no maximum" sentinel)', () => {
+  it('reports nothing when max_size is Vector2i(0, 0) (the "no maximum" sentinel)', () => {
     expectNoDiagnostic(scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(0, 0)' })), {
       ruleName: 'window-max-size-below-min-size',
     });

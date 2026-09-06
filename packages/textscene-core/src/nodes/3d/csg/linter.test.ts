@@ -50,7 +50,7 @@ describe('CSG own-geometry-degenerate rule', () => {
   });
 
   describe('CSGMesh3D', () => {
-    it('warns when mesh is absent', () => {
+    it('reports when mesh is absent', () => {
       const reports = reportsFor(csgScene('CSGMesh3D', ''));
       expect(reports).toHaveLength(1);
       expect(reports[0]?.severity).toBe('info');
@@ -67,7 +67,7 @@ describe('CSG own-geometry-degenerate rule', () => {
       expect(reportsFor(csgScene('CSGPolygon3D', ''))).toEqual([]);
     });
 
-    it('warns on a 2-point polygon', () => {
+    it('reports on a 2-point polygon', () => {
       const reports = reportsFor(
         csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(0, 0, 1, 0)\n')
       );
@@ -76,13 +76,13 @@ describe('CSG own-geometry-degenerate rule', () => {
       expect(reports[0]?.message).toContain('2 point');
     });
 
-    it('warns on an empty polygon', () => {
+    it('reports on an empty polygon', () => {
       const reports = reportsFor(csgScene('CSGPolygon3D', 'polygon = PackedVector2Array()\n'));
       expect(reports).toHaveLength(1);
       expect(reports[0]?.ruleName).toBe('csgpolygon3d-insufficient-points');
     });
 
-    it('warns on a 2-point polygon carrying a non-finite component', () => {
+    it('reports on a 2-point polygon carrying a non-finite component', () => {
       // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix`
       // writes, so this is the same 2-point polygon as the case above — but the
       // renderer decoder throws on it, and a rule routed through that decoder

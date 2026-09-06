@@ -258,7 +258,7 @@ describe('Camera2D Linter', () => {
       // The current-camera slot belongs to the Viewport (viewport.h:764) and the
       // group name carries its id (camera_2d.cpp:349), so each of these becomes
       // current in its own sub-viewport and neither displaces the other.
-      it('should not warn across a SubViewport boundary, which has its own camera slot', () => {
+      it('reports nothing across a SubViewport boundary, which has its own camera slot', () => {
         expectNoDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -273,7 +273,7 @@ describe('Camera2D Linter', () => {
       // A camera's scope is `get_viewport()`, the nearest Viewport ancestor
       // (camera_2d.cpp:342, node.cpp:345-347), and Window is a Viewport
       // (window.h:43), so a window's cameras have their own current-camera slot.
-      it('should not warn across a Window boundary, a Viewport like any other', () => {
+      it('reports nothing across a Window boundary, a Viewport like any other', () => {
         expectNoDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -289,7 +289,7 @@ describe('Camera2D Linter', () => {
       // off the base chain, so a subclass three hops down scopes without being
       // named. Its own cameras still contend, which is what tells this apart from
       // a type the walk declined to classify.
-      it('should not warn across a ConfirmationDialog, three hops below Viewport', () => {
+      it('reports nothing across a ConfirmationDialog, three hops below Viewport', () => {
         expectNoDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -325,7 +325,7 @@ describe('Camera2D Linter', () => {
         );
       });
 
-      it('should not warn when only one camera is enabled', () => {
+      it('reports nothing when only one camera is enabled', () => {
         expectNoDiagnostic(
           scene(
             node('Node2D', {}, { name: 'Root' }),
@@ -541,7 +541,7 @@ describe('Camera2D Linter', () => {
       expect(reports.length).toBeGreaterThan(0);
     });
 
-    it('should not warn about multiple cameras when only one is enabled', () => {
+    it('reports nothing about multiple cameras when only one is enabled', () => {
       const diagnostics = lint(
         scene(
           node('Node2D', {}, { name: 'Root' }),

@@ -25,7 +25,7 @@ describe('binary-resource-reference', () => {
     );
   });
 
-  it('warns when a property references a binary .res resource', () => {
+  it('reports when a property references a binary .res resource', () => {
     expectDiagnostic(
       `[gd_scene format=3]
 

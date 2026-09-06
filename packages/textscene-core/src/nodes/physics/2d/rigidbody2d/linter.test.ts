@@ -478,7 +478,7 @@ max_contacts_reported = 10
       );
     });
 
-    it('should handle combination of warnings and errors', () => {
+    it('reports only the max-contacts advisory when nothing else is out of band', () => {
       const diagnostics = lint(
         scene(
           node('RigidBody2D', {
@@ -490,7 +490,7 @@ max_contacts_reported = 10
           collisionShape2d
         )
       );
-      // Warning: max_contacts without monitor. mass 0.001 sits exactly on the
+      // max_contacts without monitor. mass 0.001 sits exactly on the
       // hint's bottom (:742), linear_damp 20 is under its open top (:763), and
       // collision_layer = 0 carries no check (RigidBody2D) — none of those
       // contribute any more.

@@ -142,8 +142,10 @@ real parser instead of the decode/build split. Conformance:
   against `nan` is false.
   A semantic RULE's tier is derived rather than chosen: `severityFixedBy` reads the
   rule's `EmitGrounding` kind — a ported `get_configuration_warnings()` row **warns**,
-  an `engine-inert` value the engine never reads and a `previewer-limitation` are both
-  **info**, a `linter-failure` **errors**, and only an `engine` arm is left to its cite.
+  an `engine-inert` value the engine reads and leaves inert and a `previewer-limitation`
+  are both **info**, a `linter-failure` **errors**, the three scopes that describe the
+  FILE rather than the engine (`dangling-reference`, `unresolvable-path`,
+  `file-integrity`) **warn**, and only an `engine` arm is left to its cite.
 - **`ADD_PROPERTY` is one of FOUR ways a property reaches a `.tscn`.** The others are
   `PropertyListHelper`/`register_property`, `ADD_ARRAY_COUNT` (a real serialised INT,
   `class_db.cpp:1492`, whose floor is often an `ERR_FAIL_COND` in a template in the

@@ -49,7 +49,7 @@ carve_navigation_mesh = true
     expect(reportsOf(linter.lint(content))).toEqual([]);
   });
 
-  it('warns when carve_navigation_mesh is enabled but affect_navigation_mesh is explicitly false', () => {
+  it('reports when carve_navigation_mesh is enabled but affect_navigation_mesh is explicitly false', () => {
     const content = `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]

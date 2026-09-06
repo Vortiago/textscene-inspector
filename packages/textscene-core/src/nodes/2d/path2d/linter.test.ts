@@ -34,7 +34,7 @@ describe('Path2D Linter', () => {
     });
   });
 
-  it('suppresses the missing-curve warning when the node has a script (runtime-assigned)', () => {
+  it('suppresses the missing-curve report when the node has a script (runtime-assigned)', () => {
     const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://gamepiece.gd" id="1"]
@@ -67,13 +67,13 @@ script = ExtResource("1")
 describe('Path2D missing-curve, and the script slot that excuses it', () => {
   const path2d = (props: Record<string, string>) => scene(node('Path2D', props));
 
-  it('still warns when the script slot is explicitly cleared', () => {
+  it('still reports when the script slot is explicitly cleared', () => {
     // `'null'` is a truthy string: read raw, a cleared slot claimed a script
     // that could assign the curve at runtime, and the warning vanished.
     expectDiagnostic(path2d({ script: 'null' }), { ruleName: 'path2d-missing-curve' });
   });
 
-  it('warns for a script reference the scene never declares', () => {
+  it('reports for a script reference the scene never declares', () => {
     // The exemption is "a script assigns it at runtime". A dangling reference
     // loads no script, so there is nothing to assign it.
     expectDiagnostic(path2d({ script: 'ExtResource("9_gone")' }), {

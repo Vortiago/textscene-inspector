@@ -112,9 +112,10 @@ const SEVERITY_DISPLAY: Record<
   info: { icon: 'ℹ', color: '36', github: 'notice' },
 };
 
-function displayFor(severity: string): { icon: string; color: string } | undefined {
+function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] | undefined {
   // `hasOwn` first: a bare index reaches Object.prototype, so `'constructor'`
-  // returns a truthy non-display and formats as `\x1b[undefinedm…`.
+  // returns a truthy non-display and formats as `\x1b[undefinedm…`, while any
+  // other unknown value throws on the property read.
   return Object.hasOwn(SEVERITY_DISPLAY, severity)
     ? SEVERITY_DISPLAY[severity as Severity]
     : undefined;
@@ -138,7 +139,9 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  const command = SEVERITY_DISPLAY[finding.severity].github;
+  // The floor rather than a throw: an off-union severity costs this finding its
+  // level on the PR, never the whole run's annotations.
+  const command = displayFor(finding.severity)?.github ?? 'notice';
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);

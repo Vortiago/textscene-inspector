@@ -28,7 +28,7 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
 
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
-    // A script commonly assigns the curve at runtime — don't warn in that case.
+    // A script commonly assigns the curve at runtime — stay silent in that case.
     // The exemption needs a script that actually LOADS: read raw, `'null'` is a
     // truthy string, so a cleared slot claimed one, and a reference the scene
     // never declares claimed one too.

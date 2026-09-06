@@ -313,13 +313,13 @@ describe('PathFollow3D Linter', () => {
       expect(warning.nodeName).toBe('PathFollow');
     });
 
-    it('should not warn when progress is zero', () => {
+    it('reports nothing when progress is zero', () => {
       expectNoDiagnostic(pathScene({ progress: '0.0' }), {
         ruleName: 'pathfollow3d-negative-progress',
       });
     });
 
-    it('should not warn when progress is positive', () => {
+    it('reports nothing when progress is positive', () => {
       expectNoDiagnostic(pathScene({ progress: '100.5' }), {
         ruleName: 'pathfollow3d-negative-progress',
       });
