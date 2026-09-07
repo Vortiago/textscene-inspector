@@ -18,6 +18,11 @@
  * `severity:` in its `check` is the value under test, not a claim about a tier,
  * so `Linter.test.ts` may say "parse errors" while its fixture rule reports a
  * warning.
+ *
+ * `validatorCheck.test.ts` is the one file whose `expectError` call is the
+ * SUBJECT rather than a claim: it proves the helper throws on the wrong tier.
+ * Its titles satisfy this guard by naming both tiers, so a reword that drops
+ * one is a false positive rather than a drifted title.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -231,9 +236,18 @@ const allBlocks = (): Block[] => {
 
 describe('test titles name the tier they assert', () => {
   it('never claims a tier the block does not assert', () => {
-    const drifted = allBlocks()
-      .map((b) => ({ ...b, tiers: assertedTiers(b.body) }))
-      .filter((b) => b.tiers.length === 1)
+    // The scrape's own floor counts BLOCKS, and the ones this guard actually
+    // checks are the far smaller set carrying exactly one tier — so a narrowed
+    // anchor drops subjects with the walk intact and the list still empty. The
+    // drift pin belongs at the call site, which is where the population is.
+    const checked = atLeast(
+      allBlocks()
+        .map((b) => ({ ...b, tiers: assertedTiers(b.body) }))
+        .filter((b) => b.tiers.length === 1),
+      1600,
+      'blocks asserting exactly one tier'
+    );
+    const drifted = checked
       .filter(({ title, tiers }) => {
         const asserted = tiers[0] as Severity;
         if (TIER_WORDS[asserted].test(title)) return false;
