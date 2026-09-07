@@ -31,8 +31,8 @@ export function countLines(text: string): number {
  *
  * Ranking one directly is what makes it stick: `SEVERITY_ORDER[<off-union>]` is
  * `undefined`, and `undefined <= n` and `n <= undefined` are both false, so a
- * bogus severity on a line's FIRST diagnostic held the row against every error
- * after it. `hasOwn` first, since a bare index reaches `Object.prototype`.
+ * bogus severity on a line's FIRST diagnostic holds the row against every
+ * error after it. `hasOwn` first, since a bare index reaches `Object.prototype`.
  */
 function floored(severity: Severity): Severity {
   return Object.hasOwn(SEVERITY_ORDER, severity) ? severity : 'info';

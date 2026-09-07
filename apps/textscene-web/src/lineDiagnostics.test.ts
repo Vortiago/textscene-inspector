@@ -51,7 +51,7 @@ describe('groupDiagnosticsByLine', () => {
 
   it('floors a severity outside the union rather than letting it hold the row', () => {
     // `SEVERITY_ORDER[<off-union>]` is `undefined` and every comparison against
-    // it is false, so an unfloored first severity kept the gutter against the
+    // it is false, so an unfloored first severity keeps the gutter against the
     // error behind it.
     const diagnostics = [
       diagnostic({

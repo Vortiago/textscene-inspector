@@ -68,10 +68,9 @@ const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))/g;
  * A tier claimed by the assertion helper's own NAME, with no literal anywhere.
  *
  * `expectError(error, …)` and `expectWarning(…)` (`testing/validatorCheck.ts`)
- * are 127 call sites between them, every one invisible to the anchor above:
- * the tier is in the identifier, and the arguments are message substrings.
- * Total over `Severity` rather than over the two helpers that exist today, so
- * a third lands inside the sweep rather than beside it.
+ * carry the tier in the identifier and take message substrings for arguments,
+ * so the anchor above reaches neither. Total over `Severity` rather than over
+ * the two helpers that exist today, so a third lands inside the sweep.
  */
 const TIER_HELPER_RE = /\bexpect(Error|Warning|Info)\s*\(/g;
 
@@ -114,10 +113,10 @@ function openParenAt(src: string, from: number): number {
  * The block's title, when its first argument is a string literal, and where it
  * ends.
  *
- * Sticky rather than a windowed slice: a title longer than the window used to
- * drop its whole block out of the scan without saying so. Closed by the quote
- * it opened with, because a `[^'"`]` class cuts `(the "no maximum" sentinel)`
- * at the inner quote and hides every tier word behind it.
+ * Sticky rather than a windowed slice, which drops a title longer than the
+ * window — and its whole block with it — in silence. Closed by the quote it
+ * opened with, because a `[^'"`]` class cuts `(the "no maximum" sentinel)` at
+ * the inner quote and hides every tier word behind it.
  */
 const TITLE_RE = /\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/y;
 function titleAt(src: string, from: number): { text: string; end: number } | null {
@@ -137,11 +136,11 @@ interface Block {
  * The body of the block opened at `at`: its own call, and never the next
  * block's, nor anything declared after it.
  *
- * Running to the next START credited a block with the `severity:` in a
- * `runPropertyValidation` table declared BELOW it — 19 blocks carried a tier
- * nothing inside them asserts. Parentheses inside a string literal are counted
- * like any other, so the close is believed only when it lands on `})` at or
- * before the next start; otherwise the next start bounds the body as before.
+ * A body running to the next START reads the `severity:` in a
+ * `runPropertyValidation` table declared BELOW the block as the block's own.
+ * Parentheses inside a string literal count like any other, so the close is
+ * believed only when it lands on `})` at or before the next start; otherwise
+ * the next start bounds the body.
  */
 function bodyOf(src: string, at: number, callOpen: number, nextAt: number): string {
   const close = afterBalanced(src, callOpen);
@@ -161,7 +160,7 @@ function blocksIn(file: string, source: string): Block[] {
   const starts: { at: number; callOpen: number; title: string | null; isCase: boolean }[] = [];
   // How far a title already read reaches. A block start inside one is PROSE:
   // `the setter never checks it (tile_map.cpp:996)` opens a block exactly the
-  // way `SOME_RE.test(` did, and truncates the block it sits in.
+  // way `SOME_RE.test(` does, and truncates the block it sits in.
   let readThrough = 0;
   for (const m of src.matchAll(BLOCK_START_RE)) {
     if (m.index < readThrough) continue;
@@ -270,8 +269,8 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('keeps a title that spells a block start, and a table below one, out of the scan', () => {
-    // Both fabricate: `it (` in PROSE opened a block that truncated the real
-    // one around it, and a body running to the next START read the
+    // Both fabricate: `it (` in PROSE opens a block that truncates the real
+    // one around it, and a body running to the next START reads the
     // `severity:` in a table declared after the block as the block's own.
     const src = [
       "it('errors on a negative index — set_slot refuses it (graph_node.cpp:706)', () => {",
