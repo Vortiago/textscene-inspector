@@ -25,9 +25,22 @@ export function countLines(text: string): number {
   return count;
 }
 
+/**
+ * The severity itself when the union holds it, `info` when it does not — the
+ * floor `summarizeDiagnostics` counts an off-union tier at.
+ *
+ * Ranking one directly is what makes it stick: `SEVERITY_ORDER[<off-union>]` is
+ * `undefined`, and `undefined <= n` and `n <= undefined` are both false, so a
+ * bogus severity on a line's FIRST diagnostic held the row against every error
+ * after it. `hasOwn` first, since a bare index reaches `Object.prototype`.
+ */
+function floored(severity: Severity): Severity {
+  return Object.hasOwn(SEVERITY_ORDER, severity) ? severity : 'info';
+}
+
 /** True when `a` is at least as severe as `b` (lower rank = more severe). */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
-  return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
+  return SEVERITY_ORDER[floored(a)] <= SEVERITY_ORDER[floored(b)];
 }
 
 /**
@@ -44,12 +57,12 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
     if (line === undefined) continue;
     const existing = byLine.get(line);
     if (!existing) {
-      byLine.set(line, { line, severity: d.severity, messages: [d.message] });
+      byLine.set(line, { line, severity: floored(d.severity), messages: [d.message] });
       continue;
     }
     existing.messages.push(d.message);
     if (atLeastAsSevere(d.severity, existing.severity)) {
-      existing.severity = d.severity;
+      existing.severity = floored(d.severity);
     }
   }
   return byLine;
@@ -68,7 +81,7 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
   let warnings = 0;
   let infos = 0;
   // A switch total over the closed union, not a fall-through `else`: a fourth
-  // tier fails tsc in the `default` arm instead of being counted silently.
+  // tier fails tsc in the `default` arm below rather than passing unnoticed.
   for (const d of diagnostics) {
     switch (d.severity) {
       case 'error':

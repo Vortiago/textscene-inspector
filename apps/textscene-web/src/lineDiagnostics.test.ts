@@ -49,6 +49,25 @@ describe('groupDiagnosticsByLine', () => {
     expect(byLine.size).toBe(0);
   });
 
+  it('floors a severity outside the union rather than letting it hold the row', () => {
+    // `SEVERITY_ORDER[<off-union>]` is `undefined` and every comparison against
+    // it is false, so an unfloored first severity kept the gutter against the
+    // error behind it.
+    const diagnostics = [
+      diagnostic({
+        severity: 'bogus' as unknown as Diagnostic['severity'],
+        message: 'off-union',
+        location: { line: 4 },
+      }),
+      diagnostic({ severity: 'error', message: 'fatal', location: { line: 4 } }),
+    ];
+    expect(groupDiagnosticsByLine(diagnostics).get(4)).toEqual({
+      line: 4,
+      severity: 'error',
+      messages: ['off-union', 'fatal'],
+    });
+  });
+
   it('keeps diagnostics on different lines as separate entries', () => {
     const diagnostics = [
       diagnostic({ severity: 'error', message: 'bad line 2', location: { line: 2 } }),

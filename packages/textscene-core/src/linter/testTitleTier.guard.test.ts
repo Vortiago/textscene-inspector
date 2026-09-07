@@ -57,11 +57,23 @@ const BLOCK_START_RE = /(?<![.$\w])(it|test|describe)((?:\.\w+)*)\s*\(/g;
  *
  * `severities` too, and with no trailing boundary: a mapped list asserts its
  * tiers through `expect(severitiesOf(…)).toEqual(['info'])` and never spells
- * the `severity:` key at all. Four spellings reach a tier and all four are in
- * use — the key, an `=== 'info'` comparison, `.toBe('info')` on a read
- * severity, and that list form.
+ * the `severity:` key at all. `expectSeverity` and `expectRejected` take the
+ * tier as an argument and spell no lowercase `severit` for the first
+ * alternative to reach — a capital `S` sits inside the word, where `\b` does
+ * not hold.
  */
-const TIER_ANCHOR_RE = /\bseverit(?:y|ies)/g;
+const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))/g;
+
+/**
+ * A tier claimed by the assertion helper's own NAME, with no literal anywhere.
+ *
+ * `expectError(error, …)` and `expectWarning(…)` (`testing/validatorCheck.ts`)
+ * are 127 call sites between them, every one invisible to the anchor above:
+ * the tier is in the identifier, and the arguments are message substrings.
+ * Total over `Severity` rather than over the two helpers that exist today, so
+ * a third lands inside the sweep rather than beside it.
+ */
+const TIER_HELPER_RE = /\bexpect(Error|Warning|Info)\s*\(/g;
 
 /** A tier named as a literal. */
 const TIER_LITERAL_RE = /'(error|warning|info)'/g;
@@ -90,17 +102,28 @@ function afterBalanced(src: string, open: number): number {
   return -1;
 }
 
+/** The `(` at `from`, past any whitespace, or -1 when something else is there. */
+function openParenAt(src: string, from: number): number {
+  if (from < 0) return -1;
+  let i = from;
+  while (i < src.length && /\s/.test(src[i]!)) i++;
+  return src[i] === '(' ? i : -1;
+}
+
 /**
- * The block's title, when its first argument is a string literal.
+ * The block's title, when its first argument is a string literal, and where it
+ * ends.
  *
- * Anchored, and closed by the quote it opened with: unanchored, a block whose
- * title is a variable takes the first literal in its own body, and a `[^'"`]`
- * class cuts `(the "no maximum" sentinel)` at the inner quote, hiding every
- * tier word behind it.
+ * Sticky rather than a windowed slice: a title longer than the window used to
+ * drop its whole block out of the scan without saying so. Closed by the quote
+ * it opened with, because a `[^'"`]` class cuts `(the "no maximum" sentinel)`
+ * at the inner quote and hides every tier word behind it.
  */
-function titleAt(src: string, from: number): string | null {
-  const m = /^\s*\(?\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/.exec(src.slice(from, from + 400));
-  return m ? m[2]! : null;
+const TITLE_RE = /\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/y;
+function titleAt(src: string, from: number): { text: string; end: number } | null {
+  TITLE_RE.lastIndex = from;
+  const m = TITLE_RE.exec(src);
+  return m ? { text: m[2]!, end: TITLE_RE.lastIndex } : null;
 }
 
 interface Block {
@@ -111,21 +134,45 @@ interface Block {
 }
 
 /**
- * The `it`/`test` blocks in one file, each body running to the next block of
- * any kind so a helper declared between two of them lands in neither.
+ * The body of the block opened at `at`: its own call, and never the next
+ * block's, nor anything declared after it.
+ *
+ * Running to the next START credited a block with the `severity:` in a
+ * `runPropertyValidation` table declared BELOW it — 19 blocks carried a tier
+ * nothing inside them asserts. Parentheses inside a string literal are counted
+ * like any other, so the close is believed only when it lands on `})` at or
+ * before the next start; otherwise the next start bounds the body as before.
+ */
+function bodyOf(src: string, at: number, callOpen: number, nextAt: number): string {
+  const close = afterBalanced(src, callOpen);
+  const closes = close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(close - 16, close));
+  return src.slice(at, closes ? close : nextAt);
+}
+
+/**
+ * The `it`/`test` blocks in one file, each body bounded by `bodyOf`.
  *
  * Comments are blanked first, at preserved offsets: comment lines here spell
  * block starts and `severity:` assertions alike, and every other scraping
  * guard in this package strips them for the same reason.
  */
-export function blocksIn(file: string, source: string): Block[] {
+function blocksIn(file: string, source: string): Block[] {
   const src = stripComments(source);
-  const starts: { at: number; titleFrom: number; isCase: boolean }[] = [];
+  const starts: { at: number; callOpen: number; title: string | null; isCase: boolean }[] = [];
+  // How far a title already read reaches. A block start inside one is PROSE:
+  // `the setter never checks it (tile_map.cpp:996)` opens a block exactly the
+  // way `SOME_RE.test(` did, and truncates the block it sits in.
+  let readThrough = 0;
   for (const m of src.matchAll(BLOCK_START_RE)) {
+    if (m.index < readThrough) continue;
     const open = m.index + m[0].length - 1;
-    const titleFrom = m[2]!.includes('.each') ? afterBalanced(src, open) : open + 1;
-    if (titleFrom < 0) continue;
-    starts.push({ at: m.index, titleFrom, isCase: m[1] !== 'describe' });
+    // `it.each(<table>)(<title>, …)`: the title sits in the SECOND call, so
+    // the table is skipped by counting parentheses rather than matched.
+    const callOpen = m[2]!.includes('.each') ? openParenAt(src, afterBalanced(src, open)) : open;
+    if (callOpen < 0) continue;
+    const title = titleAt(src, callOpen + 1);
+    readThrough = title?.end ?? callOpen + 1;
+    starts.push({ at: m.index, callOpen, title: title?.text ?? null, isCase: m[1] !== 'describe' });
   }
   const blocks: Block[] = [];
   // One forward pass for line numbers: a per-block `slice(0, at).split('\n')`
@@ -137,10 +184,9 @@ export function blocksIn(file: string, source: string): Block[] {
       if (src[scanned] === '\n') line++;
       scanned++;
     }
-    if (!s.isCase) continue;
-    const title = titleAt(src, s.titleFrom);
-    if (title === null) continue;
-    blocks.push({ file, line, title, body: src.slice(s.at, starts[i + 1]?.at ?? src.length) });
+    if (!s.isCase || s.title === null) continue;
+    const body = bodyOf(src, s.at, s.callOpen, starts[i + 1]?.at ?? src.length);
+    blocks.push({ file, line, title: s.title, body });
   }
   return blocks;
 }
@@ -149,9 +195,10 @@ export function blocksIn(file: string, source: string): Block[] {
 const RULE_FIXTURE_RE = /\bmeta:\s*\{/;
 
 /** The tiers a block asserts, deduplicated. */
-export const assertedTiers = (body: string): string[] => {
+const assertedTiers = (body: string): string[] => {
   if (RULE_FIXTURE_RE.test(body)) return [];
   const tiers = new Set<string>();
+  for (const m of body.matchAll(TIER_HELPER_RE)) tiers.add(m[1]!.toLowerCase());
   for (const anchor of body.matchAll(TIER_ANCHOR_RE)) {
     const claim = body.slice(anchor.index, anchor.index + CLAIM_REACH).split(';')[0]!;
     if (EXCLUDES_RE.test(claim)) continue;
@@ -198,14 +245,16 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('reads every assertion spelling, and an .each table it cannot inline', () => {
-    // The four spellings a tier reaches the file by, pinned so a narrower regex
-    // cannot make the guard above vacuous — neither matcher form spells
-    // `severity:`. Plus a title that lives in the second call of
-    // `it.each(<variable>)(…)`.
+    // The six spellings a tier reaches the file by, pinned so a narrower regex
+    // cannot make the guard above vacuous — only the first and the last spell
+    // `severity:`, and the two helper forms spell no literal at all. Plus a
+    // title that lives in the second call of `it.each(<variable>)(…)`.
     const src = [
       "it('a', () => { expect(d.every((x) => x.severity === 'info')).toBe(true); });",
       "it('b', () => { expect(reports[0]?.severity).toBe('warning'); });",
       "it('c', () => { expect(severitiesOf(content, 'some-rule')).toEqual(['error']); });",
+      "it('e', () => { expectWarning(check('x', '1'), 'x'); });",
+      "it('f', () => { expectSeverity(content, 'error'); });",
       'const table = [{ a: 1 }];',
       "it.each(table)('d (%o)', () => { expectDiagnostic(s, { severity: 'info' }); });",
     ].join('\n');
@@ -214,7 +263,31 @@ describe('test titles name the tier they assert', () => {
       ['a', ['info']],
       ['b', ['warning']],
       ['c', ['error']],
+      ['e', ['warning']],
+      ['f', ['error']],
       ['d (%o)', ['info']],
+    ]);
+  });
+
+  it('keeps a title that spells a block start, and a table below one, out of the scan', () => {
+    // Both fabricate: `it (` in PROSE opened a block that truncated the real
+    // one around it, and a body running to the next START read the
+    // `severity:` in a table declared after the block as the block's own.
+    const src = [
+      "it('errors on a negative index — set_slot refuses it (graph_node.cpp:706)', () => {",
+      "  expect(check('slot/-1/left_enabled', 'true')?.severity).toBe('error');",
+      '});',
+      "it('passes a valid node', () => {",
+      '  expectClean(scene(node()));',
+      '});',
+      'runPropertyValidation({ nodeType: "GraphNode" }, [',
+      "  { prop: 'x', invalid: [{ value: 1, severity: 'warning' }] },",
+      ']);',
+    ].join('\n');
+
+    expect(blocksIn('synthetic.test.ts', src).map((b) => [b.title, assertedTiers(b.body)])).toEqual([
+      ['errors on a negative index — set_slot refuses it (graph_node.cpp:706)', ['error']],
+      ['passes a valid node', []],
     ]);
   });
 

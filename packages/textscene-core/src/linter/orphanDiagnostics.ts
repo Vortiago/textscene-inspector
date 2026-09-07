@@ -36,7 +36,7 @@ function reparentedName(parentPath: string, name: string): string | null {
  * `packed_scene.cpp:561-563`, one line below the re-root.
  *
  * The re-root is claimed only while nothing refuses: both `ERR_FAIL_COND_V_MSG`s
- * (`:207`, `:218`) return out of the loop the re-root (`:208-215`) runs in, so
+ * (`:207`, `:219`) return out of the loop the re-root (`:208-215`) runs in, so
  * once any heading trips one, no re-parent or rename of any node survives.
  */
 export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
