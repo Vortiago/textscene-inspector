@@ -83,8 +83,8 @@ export function resolveSubResourceRef(
 }
 
 /**
- * Peel every `CanvasTexture` wrapper off a Texture2D reference, down to the
- * first reference that is not one.
+ * Peel `CanvasTexture` wrappers off a Texture2D reference, down to the first
+ * reference that is not one.
  *
  * A `CanvasTexture` is a first-class Texture2D that wraps a `diffuse_texture`
  * (plus normal/specular maps we do not sample); Godot draws that diffuse map,
@@ -92,28 +92,27 @@ export function resolveSubResourceRef(
  * path is what lets the wrapper compose with every other form: an image, or an
  * inline `GradientTexture2D` with no file behind it at all.
  *
- * To FIXED POINT rather than one level, because a `diffuse_texture` is itself
- * an ordinary Texture2D slot and may name another wrapper. Peeling a fixed
- * number of levels makes every caller's answer depend on how deep the chain
- * happens to be, and two callers that must agree — the painter's and the
- * layout solve's — then agree only up to the shallower one's count.
- *
- * Every non-CanvasTexture reference passes through unchanged, so callers can
- * apply this unconditionally, and applying it twice changes nothing. A wrapper
- * with no `diffuse_texture`, or a chain that leads back to a wrapper already
- * peeled, returns undefined — neither names anything to draw.
+ * To FIXED POINT, not a fixed count: a `diffuse_texture` is itself an ordinary
+ * Texture2D slot and may name another wrapper, so peeling N levels makes each
+ * caller's answer depend on how deep the chain happens to be — and two callers
+ * that must agree, the painter's and the layout solve's, then agree only up to
+ * the shallower count. Non-wrappers pass through unchanged, so callers apply
+ * this unconditionally. A wrapper naming no `diffuse_texture`, or a chain that
+ * leads back into itself, returns undefined: neither names anything to draw.
  */
 export function unwrapCanvasTextureRef(
   ref: string | null | undefined,
   internalResources: readonly TscnInternalResource[]
 ): string | undefined {
-  const peeled = new Set<string>();
   let current = ref;
+  // Allocated only once a wrapper is actually found — most references are not
+  // one and leave on the first pass.
+  let peeled: Set<string> | undefined;
   while (current) {
-    if (peeled.has(current)) return undefined;
-    peeled.add(current);
+    if (peeled?.has(current)) return undefined;
     const sub = resolveSubResourceRef(current, internalResources);
     if (sub?.type !== 'CanvasTexture') return current;
+    (peeled ??= new Set()).add(current);
     const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
     current = typeof diffuse === 'string' ? diffuse : undefined;
   }

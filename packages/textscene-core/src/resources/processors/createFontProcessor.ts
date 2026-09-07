@@ -86,9 +86,12 @@ export function createFontProcessor(
     } catch {
       return null;
     } finally {
-      // A settled wait can never be part of a deadlock ring — leaving the edge
-      // in place would let a LATER wait walk a dependency nobody is parked on.
+      // A settled wait is nobody's deadlock: leaving the edge would let a LATER
+      // wait walk a dependency nothing is parked on. The entry goes once its
+      // last edge does, which a concurrent re-process of the same address keeps
+      // alive by still holding one.
       edges.delete(address);
+      if (edges.size === 0) waitingFor.delete(parent);
     }
   };
 
@@ -101,16 +104,7 @@ export function createFontProcessor(
     // The peer loader is bound to the address being built, so every wait it
     // parks on is recorded against its own requester rather than against the
     // processor as a whole.
-    process: async (path, data) => {
-      try {
-        return await buildFontResource(path, data, (address) => loadFont(path, address));
-      } finally {
-        // Every wait THIS run parked on has already removed its own edge, so a
-        // leftover one belongs to a concurrent re-process of the same address
-        // (a mid-flight `clearCache` starts a second run) and must survive.
-        if (waitingFor.get(path)?.size === 0) waitingFor.delete(path);
-      }
-    },
+    process: (path, data) => buildFontResource(path, data, (address) => loadFont(path, address)),
   });
 
   return processor;

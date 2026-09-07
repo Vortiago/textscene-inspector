@@ -54,8 +54,12 @@ export interface SceneProcessorOptions {
    * can reject `tex1` (a Texture2D) being requested through the scene
    * channel. Returns null when the id is unknown — the processor then
    * emits `failed` with a "metadata not found" error.
+   *
+   * A null `type` means the address resolved to a path nothing declared, so
+   * there is no registered type to disagree with. The content checks below
+   * run either way and are what actually reject a non-scene.
    */
-  resolveMetadata: (idOrPath: string) => { path: string; type: string } | null;
+  resolveMetadata: (idOrPath: string) => { path: string; type: string | null } | null;
   /**
    * Returns the current ResourceProvider, or null when none has been
    * set yet. Pulled lazily because the provider is wired AFTER the
@@ -82,7 +86,7 @@ export function createSceneProcessor({
       if (!metadata) {
         throw new Error(`Scene metadata not found: ${idOrPath}`);
       }
-      if (metadata.type !== 'PackedScene') {
+      if (metadata.type !== null && metadata.type !== 'PackedScene') {
         throw new Error(
           `Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`
         );
@@ -91,7 +95,7 @@ export function createSceneProcessor({
       if (!provider) {
         throw new Error('No ResourceProvider set');
       }
-      const content = await provider.loadResource(metadata.path, metadata.type);
+      const content = await provider.loadResource(metadata.path, metadata.type ?? undefined);
 
       // PackedScene references in Godot can point at either
       // a `.tscn` text file or a `.glb` / `.gltf` binary file (a
