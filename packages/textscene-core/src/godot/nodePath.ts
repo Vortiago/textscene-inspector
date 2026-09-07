@@ -19,3 +19,15 @@
 export function nodePathNames(path: string): string[] {
   return path.split('/').filter((segment) => segment !== '');
 }
+
+/**
+ * The names a node walk reads: {@link nodePathNames} with any `:subname`
+ * dropped.
+ *
+ * The constructor splits at the FIRST `:` and keeps only what precedes it as
+ * names (`node_path.cpp:405-427`), so `A:x` addresses the node `A` and the walk
+ * never sees `x`.
+ */
+export function nodePathWalkNames(path: string): string[] {
+  return nodePathNames(path.split(':')[0]!);
+}

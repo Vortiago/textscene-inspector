@@ -20,6 +20,7 @@ import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { joinPath } from '../utils/nodePath.js';
+import { nodePathNames } from '../godot/nodePath.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` = never
@@ -235,7 +236,7 @@ function liveChainLinks(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): LiveChainLink[] | null {
-  const segments = path.split('/').filter((s) => s.length > 0);
+  const segments = nodePathNames(path);
   if (segments.length === 0) return null;
 
   const links: LiveChainLink[] = [];

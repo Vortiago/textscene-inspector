@@ -29,7 +29,12 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree, rootDeclaringParent, strandedNodes } from './sceneTreeBuilder.js';
+import {
+  buildSceneTree,
+  emptyParentHeadings,
+  rootDeclaringParent,
+  strandedNodes,
+} from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
@@ -306,6 +311,7 @@ export class TscnParserCore {
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
     const orphanedNodes = strandedNodes(origins, sceneTree);
     const rootWithParent = rootDeclaringParent(origins);
+    const emptyParents = emptyParentHeadings(origins);
     for (const { node } of orphanedNodes) {
       logger.warn(
         `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
@@ -320,6 +326,7 @@ export class TscnParserCore {
       internalResources,
       ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
       ...(rootWithParent ? { rootWithParent } : {}),
+      ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
     };
   }
 

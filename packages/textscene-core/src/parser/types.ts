@@ -55,6 +55,16 @@ export interface TscnScene {
    * shape it sees for every well-formed scene.
    */
   rootWithParent?: NodeOrigin;
+  /**
+   * Headings spelling `parent=""`, which faults the text loader
+   * (`resource_format_text.cpp:206-207`). Absent rather than empty, like
+   * `orphanedNodes`.
+   *
+   * Not a subset of either field above: such a heading carries no `node.parent`,
+   * so the builder seats it wherever a parentless heading goes rather than
+   * stranding it.
+   */
+  emptyParentHeadings?: readonly NodeOrigin[];
   /** Event-based resource loader (used by SceneGraph helpers). */
   resourceLoader?: ResourceLoader;
 }

@@ -4,6 +4,7 @@
 
 import type { NodeOrigin, TscnNode } from './types';
 import { SCENE_ROOT_PATH, joinPath, resolveParentPath } from '../utils/nodePath.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -54,7 +55,7 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
     const { node, anchor } = deferred;
     anchor.node.children.push(node);
     node.instanceSubPath = anchor.subPath;
-    pathMap.set(joinPath(anchor.strandedParentPath, node.name), node);
+    registerPath(pathMap, anchor.strandedParentPath, node);
 
     remaining = placeResolvable(remaining.filter((n) => n !== node), pathMap);
   }
@@ -91,11 +92,11 @@ function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): Tsc
         continue;
       }
 
-      // Both sides of the map are keyed on the FOLDED path, so `./Mid`,
-      // `Mid/` and `Mid` name the one node Godot resolves them all to — and a
-      // node seated through any of them is registered under the single
-      // spelling its own children can address it by.
-      const parentPath = resolveParentPath(node.parent);
+      // The map IS the child lookup the walk asks at every descent, so `./Mid`,
+      // `Mid/` and `Mid` name the one node Godot resolves them all to while
+      // `Missing/../Mid` names none. A node seated through any spelling is
+      // registered under the single one its own children can address it by.
+      const parentPath = resolveParentPath(node.parent, (path) => canNameNode(pathMap, path));
       if (parentPath === null) {
         stillRemaining.push(node);
         continue;
@@ -106,13 +107,44 @@ function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): Tsc
         continue;
       }
       parentNode.children.push(node);
-      pathMap.set(joinPath(parentPath, node.name), node);
+      registerPath(pathMap, parentPath, node);
     }
 
     remaining = stillRemaining;
   }
 
   return remaining;
+}
+
+/**
+ * Whether a name the walk just descended onto could be a node — the child
+ * lookup `get_node_or_null` does at `node.cpp:1941-1946`, answered by a parse
+ * that cannot see inside an instanced scene.
+ *
+ * A path this map holds is a node. One it does not is a node too whenever its
+ * own parent is not in the map either, or is an `instance=`: the walk asked
+ * about that parent one segment ago and it passed, so a parent the map has
+ * since stopped holding is one instanced content vouched for. Only a name below
+ * a parent this file DOES declare is a name Godot fails to find.
+ */
+function canNameNode(pathMap: Map<string, TscnNode>, path: string): boolean {
+  if (pathMap.has(path)) return true;
+  const cut = path.lastIndexOf('/');
+  const parent = pathMap.get(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
+  return parent === undefined || parent.instance !== undefined;
+}
+
+/**
+ * Key a seated node by the path its own children address it at.
+ *
+ * A heading with no `name=` identifies no node, so it claims no key: joining an
+ * empty name onto its parent's path yields that parent's OWN key, and the
+ * nameless node would take the place of the node the file does name. Godot
+ * seats it and leaves every later sibling where its `parent=` says
+ * (`packed_scene.cpp:208-215` places by path, never by the previous heading).
+ */
+function registerPath(pathMap: Map<string, TscnNode>, parentPath: string, node: TscnNode): void {
+  if (node.name) pathMap.set(joinPath(parentPath, node.name), node);
 }
 
 /** The first node that has an instance anchor, paired with that anchor. */
@@ -147,7 +179,9 @@ interface InstanceAnchor {
  * resolve it.
  */
 function findInstanceAnchor(node: TscnNode, pathMap: Map<string, TscnNode>): InstanceAnchor | null {
-  const parentPath = resolveParentPath(node.parent);
+  // The same walk as the placement above: a name the file declares no node for
+  // strands the heading whatever instance sits further along its path.
+  const parentPath = resolveParentPath(node.parent, (path) => canNameNode(pathMap, path));
   // The root resolves, so a node naming it never reaches here; a path that
   // resolves to nothing at all names no instance either.
   if (!parentPath) return null;
@@ -221,4 +255,39 @@ export function strandedNodes(
 export function rootDeclaringParent(all: readonly NodeOrigin[]): NodeOrigin | undefined {
   const first = all[0];
   return first?.declaredParent === undefined ? undefined : first;
+}
+
+/**
+ * Whether the root heading states nothing Godot can build a node from.
+ *
+ * `:220` refuses an instantiate whose root is `TYPE_INSTANTIATED` with no base
+ * scene — a heading carrying none of `type=`, `instance=` and
+ * `instance_placeholder=` — and a placeholder root refuses earlier still, at the
+ * load (`resource_format_text.cpp:247-251`).
+ *
+ * Beside the two derivations below because it answers the same kind of question
+ * about the same heading, and because the flag it reads is the HEADING's own
+ * attributes: `node.type` is not, since both node creators synthesise it from
+ * `instance=` and `index=` as well.
+ */
+export function rootStatesNoIdentifier(root: TscnNode | undefined): boolean {
+  return root?.overridesExistingNode === true || root?.type === INSTANCE_PLACEHOLDER_TYPE;
+}
+
+/**
+ * Every heading spelling `parent=""`, which the text loader cannot read.
+ *
+ * `resource_format_text.cpp:206-207` builds the NodePath and calls
+ * `prepend_period()` on it while reading ANY heading, and that method
+ * dereferences the `data` an empty NodePath never allocates
+ * (`node_path.cpp:43-44`, `:394-397`) — so the load faults there and no node in
+ * the file is built.
+ *
+ * Positional like {@link rootDeclaringParent} rather than derived from the tree:
+ * both parsers leave `node.parent` unset for an empty one, so such a heading is
+ * placed as a root by the builder above as readily as it is stranded, and only
+ * the declared attribute names every one of them.
+ */
+export function emptyParentHeadings(all: readonly NodeOrigin[]): NodeOrigin[] {
+  return all.filter(({ declaredParent }) => declaredParent === '');
 }

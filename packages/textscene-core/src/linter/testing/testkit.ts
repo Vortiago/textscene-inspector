@@ -201,7 +201,7 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
 
 /** Assert no diagnostic matching `where` is present (other diagnostics may exist). */
 /**
- * The three diagnostics that mean a heading never entered the tree.
+ * The diagnostics that mean a heading never entered the tree.
  *
  * A NEGATIVE assertion over a scene carrying one proves nothing: Phase 2 walks
  * the tree, so no rule ran on the stranded node and the silence is the fixture's
@@ -213,7 +213,12 @@ export function expectDiagnostic(content: string, where: DiagnosticExpectation):
  * The positive helpers need no such check: they name the diagnostic they expect,
  * and a stranded subject simply fails to produce it.
  */
-const STRANDED_RULES = ['node-without-parent', 'unresolved-parent-path', 'root-declares-parent'];
+const STRANDED_RULES = [
+  'node-without-parent',
+  'unresolved-parent-path',
+  'empty-parent-path',
+  'root-declares-parent',
+];
 
 function expectEveryHeadingPlaced(diagnostics: Diagnostic[]): void {
   const stranded = diagnostics

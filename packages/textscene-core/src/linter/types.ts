@@ -56,8 +56,12 @@ export function isSeverity(value: string): value is Severity {
  * the direction that under-reports: VS Code's own default for an absent
  * severity is Error, which reads to the author as the most serious thing in the
  * file.
+ *
+ * `string` in, like `isSeverity`: a reader holding a value the union already
+ * covers needs no floor, so a parameter typed `Severity` is one no caller with
+ * an off-union tier can pass.
  */
-export function flooredSeverity(value: Severity): Severity {
+export function flooredSeverity(value: string): Severity {
   return isSeverity(value) ? value : 'info';
 }
 

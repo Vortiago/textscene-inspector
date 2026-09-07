@@ -98,18 +98,21 @@ describe('a parent path this file never defines', () => {
       node('Node2D', {}, { name: 'Root' }),
       node('Node2D', {}, { name: 'Leaf', parent: 'Gone/Deeper' })
     );
-    expect(orphansIn(nested)[0]?.message).toContain('"Gone@Deeper#Leaf"');
+    expect(orphansIn(nested)[0]?.message).toContain('"Gone_Deeper#Leaf"');
   });
 
   it.each([
     ['Gone/', 'Gone#Leaf'],
-    ['Gone//Deeper', 'Gone@Deeper#Leaf'],
-    ['/root/Gone', '@root@Gone#Leaf'],
+    ['Gone//Deeper', 'Gone_Deeper#Leaf'],
+    ['/root/Gone', '___root_Gone#Leaf'],
   ])('prefixes with the NodePath spelling of %s, not the heading text', (parent, renamed) => {
     // `:212` prefixes with `String(node_paths[…])`, which the NodePath
     // constructor built by ignoring every empty segment
-    // (`node_path.cpp:428-438`) and which keeps a leading `/` for an absolute
-    // one (`:176-177`).
+    // (`node_path.cpp:428-438`), which keeps a leading `/` for an absolute one
+    // (`:176-177`) and which the loader gave a leading `.` name
+    // (`resource_format_text.cpp:207`) — the period cancels against
+    // `trim_prefix("./")` for a relative path and survives for an absolute one.
+    // `set_name` then replaces every `@` and `.` with `_` (`node.cpp:1441`).
     const message = orphansIn(
       scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Leaf', parent }))
     )[0]?.message;
@@ -130,22 +133,72 @@ describe('a parent path this file never defines', () => {
     );
   });
 
-  it('reads an empty parent= as a vanished PATH, not as a missing field', () => {
+  it('errors on an empty parent=, which is neither a vanished path nor a missing field', () => {
     // The loader calls `add_node_path` for any value the field carries and it
     // never returns -1 (`packed_scene.cpp:2307-2311`), so `n.parent == -1` — the
-    // refusal `node-without-parent` cites — cannot apply to this heading.
-    const orphans = orphansIn(EMPTY_PARENT);
-    expect(orphans).toHaveLength(1);
-    expect(orphans[0]?.severity).toBe('warning');
-    expect(lint(EMPTY_PARENT).filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
+    // refusal `node-without-parent` cites — cannot apply to this heading. It
+    // never gets that far: `prepend_period()` (`resource_format_text.cpp:207`)
+    // dereferences the data an empty NodePath does not allocate
+    // (`node_path.cpp:43-44`, `:394-397`), so the LOAD faults. Verified against
+    // Godot 4.7.2: `load()` on this file crashes with SIGSEGV.
+    const diagnostics = lint(EMPTY_PARENT);
+    const empties = diagnostics.filter((d) => d.ruleName === 'empty-parent-path');
+    expect(empties).toHaveLength(1);
+    expect(empties[0]?.severity).toBe('error');
+    expect(empties[0]?.nodeName).toBe('B');
+    expect(orphansIn(EMPTY_PARENT)).toEqual([]);
+    expect(diagnostics.filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
   });
 
-  it('claims no rename for the empty path, which Godot leaves the name alone for', () => {
-    // `packed_scene.cpp:561` renames only while `old_parent_path` is non-empty,
-    // and `parent=""` trims to nothing, so the node keeps the heading's name.
-    const message = orphansIn(EMPTY_PARENT)[0]?.message;
-    expect(message).toContain('leaves its name alone');
+  it('claims no re-root for the empty path, since nothing in the file is read', () => {
+    const message = lint(EMPTY_PARENT).find((d) => d.ruleName === 'empty-parent-path')?.message;
+    expect(message).toContain('cannot load the file');
     expect(message).not.toContain('#B');
+  });
+
+  it('reports an empty parent= the tree build seated as a root, not only a stranded one', () => {
+    // `parent=""` leaves `node.parent` unset, so `buildSceneTree` picks this
+    // heading as its root and nothing strands it — while the loader faults on
+    // it all the same. Verified against Godot 4.7.2: `load()` crashes.
+    const source = scene(
+      node('Node2D', {}, { name: 'A', parent: '.' }),
+      node('Node2D', {}, { name: 'B', parent: '' })
+    );
+    expect(
+      lint(source)
+        .filter((d) => d.ruleName === 'empty-parent-path')
+        .map((d) => d.nodeName)
+    ).toEqual(['B']);
+  });
+
+  it.each([['index="0"'], ['instance_placeholder="res://x.tscn"']])(
+    'claims no re-root when the root heading carries only %s',
+    (attribute) => {
+      // Neither is a `type=` or an `instance=`, so `:220` refuses the
+      // instantiate (and a placeholder root fails the load outright at
+      // `resource_format_text.cpp:247-251`). Verified against Godot 4.7.2:
+      // both return null.
+      const source = scene(
+        `[node name="Root" ${attribute}]`,
+        node('StaticBody2D', {}, { name: 'Body', parent: 'Gone' })
+      );
+      const orphan = orphansIn(source)[0];
+      expect(orphan?.message).toContain('refuses');
+      expect(orphan?.message).not.toContain('renames');
+    }
+  );
+
+  it('claims no re-root when the root heading states no type= or instance=', () => {
+    // `packed_scene.cpp:220` fails at i == 0 on the missing base scene, before
+    // any node is built. Verified against Godot 4.7.2: instantiate returns null
+    // with "root node Root in an instance, but there's no base scene."
+    const source = scene(
+      '[node name="Root"]',
+      node('StaticBody2D', {}, { name: 'Body', parent: 'Gone' })
+    );
+    const orphan = orphansIn(source)[0];
+    expect(orphan?.message).toContain('refuses');
+    expect(orphan?.message).not.toContain('renames');
   });
 
   it('still names the headings a file with no root heading strands', () => {
@@ -182,13 +235,18 @@ describe('a root heading that declares a parent', () => {
     expect(errors[0]?.location?.line).toBe(3);
   });
 
-  it('reports an empty parent= on the root, which no heading omits', () => {
-    // `add_node_path` returns an index for a value the field carries, so this
-    // heading reaches `:219` with `n.parent != -1` exactly as `parent="."` does
-    // — even though both parsers leave `node.parent` unset for it.
+  it('yields to the empty path on the root, which the loader never reads that far', () => {
+    // `:219` is an instantiate refusal and `parent=""` faults the LOAD before
+    // any of them (`resource_format_text.cpp:206-207`), so claiming this
+    // heading reaches `n.parent != -1` would describe something Godot never
+    // does. Verified against Godot 4.7.2: `load()` on this file crashes.
+    const source = scene(node('Node2D', {}, { name: 'A', parent: '' }));
+    expect(rootErrors(source)).toEqual([]);
     expect(
-      rootErrors(scene(node('Node2D', {}, { name: 'A', parent: '' }))).map((d) => d.severity)
-    ).toEqual(['error']);
+      lint(source)
+        .filter((d) => d.ruleName === 'empty-parent-path')
+        .map((d) => [d.severity, d.nodeName])
+    ).toEqual([['error', 'A']]);
   });
 
   it('names the FIRST heading, not whichever one the tree build rooted at', () => {
@@ -252,7 +310,7 @@ describe('a vanished path beside an instantiate refusal', () => {
   });
 });
 
-describe('a parent path Godot folds before it walks', () => {
+describe('a parent path Godot folds as it walks', () => {
   // `add_node_path` stores the heading's value as a NodePath and
   // `NODE_FROM_ID` resolves it with `ret_nodes[0]->get_node_or_null(np)`
   // (`packed_scene.cpp:161`), so every fold `get_node_or_null` performs applies
@@ -276,11 +334,34 @@ describe('a parent path Godot folds before it walks', () => {
     ['Mid/', 'a trailing slash names no segment'],
     ['Mid//', 'neither does a doubled one'],
     ['./Mid/.', 'nor does a . in the middle'],
-    ['Other/../Mid', '.. steps back to the root and descends again'],
+    ['Mid:position', 'a :subname addresses a property, not a node'],
   ])('places a node under %s — %s', (parent) => {
     const source = placedUnder(parent);
     expect(orphansIn(source)).toEqual([]);
     expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+  });
+
+  it('steps back through a name the file DOES define', () => {
+    // `..` is only reached once the name before it resolved, so the pair below
+    // is what separates the walk from a textual fold.
+    const source = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('Node2D', {}, { name: 'Mid', parent: '.' }),
+      node('Node2D', {}, { name: 'Other', parent: '.' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: 'Other/../Mid' })
+    );
+    expect(orphansIn(source)).toEqual([]);
+    expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+  });
+
+  it('strands a path stepping back through a name it does not', () => {
+    // `get_node_or_null` looks `Other` up among the root's children and returns
+    // nullptr on the miss (`node.cpp:1941-1946`) — the `..` arm at `:1919-1924`
+    // is never reached, so `Mid` existing rescues nothing. Verified against
+    // Godot 4.7.2: the node is re-rooted as `Other____Mid#Body`.
+    const orphans = orphansIn(placedUnder('Other/../Mid'));
+    expect(orphans.map((d) => d.nodeName)).toEqual(['Body']);
+    expect(orphans[0]?.message).toContain('"Other____Mid#Body"');
   });
 
   it('reads ./ as the root itself', () => {
@@ -318,6 +399,18 @@ describe('a parent path Godot folds before it walks', () => {
     // outright: "Can't use get_node() with absolute paths from outside the
     // active scene tree" (`node.cpp:1898`).
     expect(orphansIn(placedUnder('/root/Mid')).map((d) => d.nodeName)).toEqual(['Body']);
+  });
+
+  it('strands a path through a missing name even when an instance sits below it', () => {
+    // The anchor twin resolves the same way: `Ghost` is not a child of the
+    // root, so `get_node_or_null` returns nullptr there and never reaches the
+    // instance the rest of the path names.
+    const source = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      instanced('Player', { parent: '.' }),
+      node('Sprite2D', {}, { name: 'Hat', parent: 'Ghost/../Player/Head' })
+    );
+    expect(orphansIn(source).map((d) => d.nodeName)).toEqual(['Hat']);
   });
 
   it('still strands a folded path that names nothing', () => {

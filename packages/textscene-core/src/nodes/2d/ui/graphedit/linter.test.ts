@@ -34,7 +34,7 @@ describe('GraphEdit zoom-limit rule', () => {
     expect(diagnose('zoom_min = 0.25\nzoom_max = 4.0\n')).toEqual([]);
   });
 
-  it('warns when zoom_min is authored above zoom_max', () => {
+  it('reports zoom_min authored above zoom_max, naming both properties', () => {
     const diagnostics = diagnose('zoom_min = 4.0\nzoom_max = 0.25\n');
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]!.ruleName).toBe('graphedit-zoom-min-above-max');

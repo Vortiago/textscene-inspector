@@ -254,6 +254,11 @@ describe('formatGithubAnnotations', () => {
       expect.stringMatching(/^::notice /),
       expect.stringMatching(/^::notice /),
     ]);
+
+    // The JSON output is the contract a CI tool switches on, and its `severity`
+    // is declared as the closed union — so the floor has to reach it too, not
+    // only the annotation level above.
+    expect(toJsonFindings([file]).map((f) => f.severity)).toEqual(['info', 'info']);
   });
 
   it('omits line and col params when the diagnostic has no location', () => {

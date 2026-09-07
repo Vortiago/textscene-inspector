@@ -1,6 +1,6 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import { isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { flooredSeverity, isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -77,7 +77,9 @@ export function toJsonFindings(files: FileDiagnostics[]): JsonFinding[] {
         file: file.filePath,
         line: diagnostic.location?.line ?? null,
         column: diagnostic.location?.column ?? null,
-        severity: diagnostic.severity,
+        // Floored: `severity` is declared as the closed union, and this is the
+        // one output a CI tool switches on rather than reads.
+        severity: flooredSeverity(diagnostic.severity),
         rule: diagnostic.ruleName,
         message: diagnostic.message,
         nodeType: diagnostic.nodeType,
@@ -137,9 +139,9 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  // The floor rather than a throw: an off-union severity costs this finding its
-  // level on the PR, never the whole run's annotations.
-  const command = displayFor(finding.severity)?.github ?? 'notice';
+  // The shared floor rather than a second spelling of it: an off-union severity
+  // costs this finding its level on the PR, never the whole run's annotations.
+  const command = SEVERITY_DISPLAY[flooredSeverity(finding.severity)].github;
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);

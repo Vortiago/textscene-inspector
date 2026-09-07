@@ -37,9 +37,7 @@ export const FILE_DIAGNOSTICS = {
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
    * node to the scene root and renames it `<path>#<name>` — so the file loads
-   * and the node exists, in the wrong place under a different name. An empty
-   * path keeps the heading's name: `:561` renames only while
-   * `old_parent_path` is non-empty.
+   * and the node exists, in the wrong place under a different name.
    */
   unresolvedParentPath: {
     severity: 'warning',
@@ -47,12 +45,26 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:208-215' },
   },
   /**
+   * `parent=""`, which the text loader cannot read at all. It builds the
+   * NodePath and calls `prepend_period()` on it unconditionally
+   * (`resource_format_text.cpp:206-207`), and that method dereferences `data`
+   * with no null check (`node_path.cpp:43-44`) while `NodePath("")` leaves
+   * `data` unset (`:394-397`) — so the load faults before any node is made. The
+   * error tier, and above the vanished-path warning: nothing about the file
+   * loads.
+   */
+  emptyParentPath: {
+    severity: 'error',
+    ruleName: 'empty-parent-path',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:206-207' },
+  },
+  /**
    * A heading declaring no `parent=` while not being the root. The text loader
    * stores it without complaint (`resource_format_text.cpp:273`); the
    * instantiate below refuses, so the resource loads and the scene cannot be
-   * built from it. `parent=""` is a different case and not this one: the loader
-   * calls `add_node_path` for any value the field carries, which never returns
-   * `-1` (`packed_scene.cpp:2307-2311`).
+   * built from it. `parent=""` is `emptyParentPath` and not this one: the
+   * loader calls `add_node_path` for any value the field carries, which never
+   * returns `-1` (`packed_scene.cpp:2307-2311`).
    */
   nodeWithoutParent: {
     severity: 'error',

@@ -1,6 +1,6 @@
 /** Utilities for manipulating node paths in the scene tree. */
 
-import { nodePathNames } from '../godot/nodePath.js';
+import { nodePathWalkNames } from '../godot/nodePath.js';
 import { nodePathLiteral } from '../godot/variantParser.js';
 import { UNIQUE_NODE_PREFIX } from './uniqueNames.js';
 
@@ -23,13 +23,20 @@ export function getAncestorPaths(nodePath: string): string[] {
  * Walk `relative` from the node whose path is `base`, the way
  * `Node::get_node_or_null` walks a NodePath (node.cpp:1912-1949).
  *
- * The walk runs over the names the constructor kept ({@link nodePathNames}), so
- * a leading, doubled or trailing slash contributes nothing. `.` stays on the
- * node the walk is on and `..` steps to its parent.
+ * The walk runs over the names the constructor kept
+ * ({@link nodePathWalkNames}), so a leading, doubled or trailing slash
+ * contributes nothing and a `:subname` addresses a property rather than a node.
+ * `.` stays on the node the walk is on and `..` steps to its parent.
  *
  * `rootDepth` is how many leading segments spell the scene root, and therefore
  * the length at which `..` has nowhere left to go: `!current->data.parent`
  * returns nullptr (node.cpp:1919-1922), which is null here.
+ *
+ * `exists` is the child lookup: a name that is not a child returns nullptr on
+ * the spot (node.cpp:1941-1946), which is what makes this a WALK rather than a
+ * fold — `Missing/../Real` stops at `Missing` however well `Real` resolves.
+ * A caller with no tree to ask omits it and gets the folded answer, which is
+ * the wider one.
  *
  * A `%Name` segment is a JUMP, not a descent: the name is looked up in the
  * owner's claim table and the walk continues from whatever node it finds
@@ -41,10 +48,11 @@ function walkNodePath(
   base: readonly string[],
   relative: string,
   rootDepth: number,
-  uniquePaths?: ReadonlyMap<string, string>
+  uniquePaths?: ReadonlyMap<string, string>,
+  exists?: (path: string) => boolean
 ): string[] | null {
   let segments = [...base];
-  for (const part of nodePathNames(relative)) {
+  for (const part of nodePathWalkNames(relative)) {
     if (part === '.') continue;
     if (part === '..') {
       if (segments.length <= rootDepth) return null;
@@ -58,6 +66,9 @@ function walkNodePath(
       continue;
     }
     segments.push(part);
+    // Only a descent needs asking: `.` moves nowhere and `..` returns to a path
+    // the walk already stood on.
+    if (exists && !exists(segments.join('/'))) return null;
   }
   return segments;
 }
@@ -97,19 +108,27 @@ export const SCENE_ROOT_PATH = '';
  * `ret_nodes[0]->get_node_or_null(np)` (`packed_scene.cpp:161`) — from the
  * root, so the root is the floor and paths here omit its name.
  *
- * Four shapes address nothing and are null rather than a path: an absent or
+ * `exists` answers whether a path names a node yet, and a caller that holds the
+ * tree must pass it: without one the walk folds `..` textually and resolves
+ * `Missing/../Real`, which `get_node_or_null` refuses at `Missing`.
+ *
+ * Five shapes address nothing and are null rather than a path: an absent or
  * empty value, since `NodePath("")` is empty and `get_node_or_null` returns
  * nullptr for it (node.cpp:1894); an absolute `/root/…`, which instantiate
  * refuses off-tree (node.cpp:1898); a `..` that steps above the root, where
- * `!current->data.parent` returns nullptr (node.cpp:1919-1922); and a `%Name`,
- * which needs the owner's claim table — the tree this feeds is what those
- * claims are derived FROM, so there is none to consult, and Godot's own
- * serialiser writes `parent_path.simplified()` from a live tree and never emits
- * one (resource_format_text.cpp:2018).
+ * `!current->data.parent` returns nullptr (node.cpp:1919-1922); a name `exists`
+ * does not know (node.cpp:1941-1946); and a `%Name`, which needs the owner's
+ * claim table — the tree this feeds is what those claims are derived FROM, so
+ * there is none to consult, and Godot's own serialiser writes
+ * `parent_path.simplified()` from a live tree and never emits one
+ * (resource_format_text.cpp:2018).
  */
-export function resolveParentPath(parentPath: string | undefined): string | null {
+export function resolveParentPath(
+  parentPath: string | undefined,
+  exists?: (path: string) => boolean
+): string | null {
   if (!parentPath || parentPath.startsWith('/')) return null;
-  return walkNodePath([], parentPath, 0)?.join('/') ?? null;
+  return walkNodePath([], parentPath, 0, undefined, exists)?.join('/') ?? null;
 }
 
 /**
@@ -165,7 +184,7 @@ export function unclaimedUniqueNames(
 ): string[] {
   const inner = relativePathText(raw);
   if (inner === null) return [];
-  return inner
-    .split('/')
-    .filter((segment) => segment.startsWith(UNIQUE_NODE_PREFIX) && !uniquePaths?.has(segment));
+  return nodePathWalkNames(inner).filter(
+    (segment) => segment.startsWith(UNIQUE_NODE_PREFIX) && !uniquePaths?.has(segment)
+  );
 }

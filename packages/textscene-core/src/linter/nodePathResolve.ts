@@ -48,7 +48,7 @@ import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX } from '../utils/uniqueNames.js';
-import { nodePathNames } from '../godot/nodePath.js';
+import { nodePathWalkNames } from '../godot/nodePath.js';
 
 /**
  * What resolving a NodePath against the authored tree can say.
@@ -73,16 +73,6 @@ function childNamed(node: TscnNode, name: string): TscnNode | undefined {
 }
 
 /**
- * The path's name segments, with any `:property` subname dropped.
- *
- * A NodePath's subnames address a property on the resolved node and take no part
- * in `get_node_or_null`, which loops over `get_name_count()` alone (:1912).
- */
-function nameSegments(path: string): string[] {
-  return nodePathNames(path.split(':')[0]!);
-}
-
-/**
  * Resolve `path` as written on `referencingNode`.
  *
  * Absolute paths (`/root/…`) are `unknowable`: `get_node_or_null` measures them
@@ -101,7 +91,7 @@ export function resolveNodePath(
   // No NAME segments is not an empty path: `is_empty()` is `!data`, true only
   // for a default-constructed NodePath, so `":position"` carries data, runs the
   // `get_name_count()` loop zero times (:1912) and returns `this`.
-  const segments = nameSegments(path);
+  const segments = nodePathWalkNames(path);
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
   let current: TscnNode = referencingNode;

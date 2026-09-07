@@ -42,7 +42,7 @@ describe('CPUParticles2D preview rule', () => {
   });
 
   it.each(['4.0', '4e0', ' 4 ', '5.9'])(
-    'warns for `emission_shape = %s`, which an INT slot stores as a global-RNG shape',
+    'reports at info that `emission_shape = %s` is stored as a global-RNG shape',
     (value) => {
       // The tokenizer types `4.0`/`4e0` FLOAT (variant_parser.cpp:442-448) and
       // the write converts through `_to_int` (variant.h:369-370), truncating

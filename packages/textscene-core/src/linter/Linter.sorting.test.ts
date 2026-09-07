@@ -22,22 +22,26 @@ function rule(name: string, severity: Diagnostic['severity'], message: string): 
 
 describe('Linter', () => {
   let linter: Linter;
-  // Derived from what each test registered, so a new case cannot leak a rule
-  // into the next by being left off a hand-written roster.
-  const registered: string[] = [];
-
-  const register = (...rules: LintRule[]): void => {
-    for (const r of rules) {
-      ruleRegistry.register(r);
-      registered.push(r.meta.name);
-    }
-  };
 
   beforeEach(() => {
     linter = new Linter();
   });
 
   describe('Diagnostic Sorting', () => {
+    // Derived from what each test registered, so a new case cannot leak a rule
+    // into the next by being left off a hand-written roster. Declared beside
+    // the `afterEach` that drains it: `ruleRegistry` is a module singleton, so
+    // a case registering outside that hook's reach leaks into every later file
+    // in the same worker.
+    const registered: string[] = [];
+
+    const register = (...rules: LintRule[]): void => {
+      for (const r of rules) {
+        ruleRegistry.register(r);
+        registered.push(r.meta.name);
+      }
+    };
+
     afterEach(() => {
       for (const name of registered.splice(0)) ruleRegistry['rules'].delete(name);
     });
@@ -51,6 +55,23 @@ describe('Linter', () => {
 
       const severities = linter.lint(ROOT_ONLY).map((d) => d.severity);
       expect(severities.indexOf('error')).toBeLessThan(severities.indexOf('warning'));
+    });
+
+    it('ranks a warning above an info, the two tiers nothing else orders', () => {
+      // The error/warning pair alone leaves `SEVERITY_ORDER`'s third rank free
+      // to move, and it is real order: it decides which message a gutter row
+      // shows and which end of the report an advisory lands at.
+      register(
+        rule('test-info-rule', 'info', 'Info'),
+        rule('test-warning-rule', 'warning', 'Warning')
+      );
+
+      const messages = linter
+        .lint(ROOT_ONLY)
+        .filter((d) => d.ruleName.startsWith('test-'))
+        .map((d) => d.message);
+
+      expect(messages).toEqual(['Warning', 'Info']);
     });
 
     it('ranks a severity outside the union last, rather than comparing it to NaN', () => {

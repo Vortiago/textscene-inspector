@@ -265,13 +265,12 @@ position = Vector2(5, 5)
       ]);
     });
 
-    it('places an empty parent= at the root, which is where Godot puts it', () => {
-      // `get_node_or_null(NodePath(""))` returns null (node.cpp:1894), so the
-      // heading takes the editor build's vanished-parent fallback: it warns and
-      // re-parents the node to the scene root under its own name, since
-      // `old_parent_path` is empty and the rename at packed_scene.cpp:562 is
-      // skipped (:209-214, `#ifdef DEBUG_ENABLED`). The instance therefore sits
-      // at `Rock`, and a heading naming that path is inside instanced content.
+    it('places an empty parent= at the root, the one reading that lints the rest', () => {
+      // Not an engine claim: `parent=""` faults the LOAD itself
+      // (`resource_format_text.cpp:206-207`), which `empty-parent-path`
+      // carries. Nothing about the file is instantiated, so this parser reads
+      // the path the one way that leaves every other heading checkable — the
+      // instance at `Rock`, and a heading naming that path inside it.
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://rock.tscn" id="1"]

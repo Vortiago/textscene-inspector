@@ -30,9 +30,18 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { atLeast, srcRoot, walk } from './testing/ruleNameScrape.js';
-import type { Severity } from './types.js';
+import { SEVERITY_ORDER, type Severity } from './types.js';
 
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
+
+/**
+ * The tier names, spelled for a regex — read off the union rather than typed
+ * out, so a fourth tier reaches every matcher below instead of only the one
+ * table tsc checks.
+ */
+const TIERS = Object.keys(SEVERITY_ORDER) as Severity[];
+const TIER_NAMES = TIERS.join('|');
+const TIER_NAMES_CAPITALISED = TIERS.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
 
 /** Every tier word, and the prose that claims it. Total over `Severity`. */
 const TIER_WORDS: Record<Severity, RegExp> = {
@@ -77,7 +86,7 @@ const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))/g;
  * so the anchor above reaches neither. Total over `Severity` rather than over
  * the two helpers that exist today, so a third lands inside the sweep.
  */
-const TIER_HELPER_RE = /\bexpect(Error|Warning|Info)\s*\(/g;
+const TIER_HELPER_RE = new RegExp(`\\bexpect(${TIER_NAMES_CAPITALISED})\\s*\\(`, 'g');
 
 /**
  * A list helper whose NAME carries the tier: `errorsOf(…)`, `warningsOf(…)`.
@@ -86,7 +95,7 @@ const TIER_HELPER_RE = /\bexpect(Error|Warning|Info)\s*\(/g;
  * argument is a diagnostic list, so a block asserting through it names no tier
  * for this scan to compare its title against.
  */
-const TIER_LIST_RE = /\b(error|warning|info)sOf\s*\(/g;
+const TIER_LIST_RE = new RegExp(`\\b(${TIER_NAMES})sOf\\s*\\(`, 'g');
 
 /**
  * What makes a list helper a CLAIM: the same statement asserting the list is
@@ -101,7 +110,7 @@ const TIER_LIST_RE = /\b(error|warning|info)sOf\s*\(/g;
 const NON_EMPTY_RE = /toHaveLength\(\s*[1-9]|toBeGreaterThan\(\s*0|length\)\.toBe\(\s*[1-9]|\[0\]/;
 
 /** A tier named as a literal. */
-const TIER_LITERAL_RE = /'(error|warning|info)'/g;
+const TIER_LITERAL_RE = new RegExp(`'(${TIER_NAMES})'`, 'g');
 
 /**
  * How far one claim reaches: its own statement, and never past this. A claim
