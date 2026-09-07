@@ -20,9 +20,17 @@
 ; is also exercised on translucent StyleBox fill and shaped text rather than on
 ; one flat fill.
 ;
-; NOT currently gated: the harness that asserted both numbers above was retired
-; with the DOM overlay, and this fixture has no entry in
-; `scripts/visual/scenes.mjs`.
+; NOT currently gated, and the reason is a live divergence rather than missing
+; wiring. The backdrop measures rgb(162) against Godot 4.6.3, as above — but the
+; Panel's translucent fill reads 110 where Godot reads 84. That fill is
+; `style_normal_color`, Color(0.1, 0.1, 0.1, 0.6) (`default_theme.cpp:112,134`),
+; and the SAME colour on the main canvas — a Button's `normal` box (`:138`) over
+; the 2D clear colour — measures 45 against Godot's 46, one step of the
+; reference rasterizer's blend rounding. So the alpha blend itself is right and
+; the offscreen target is where the two part company: an sRGB-tagged attachment
+; is linearised before blending, while Godot's viewport target holds ordinary
+; sRGB canvas values and blends in them. A baseline taken today would pin that
+; gap instead of gating against it.
 
 [gd_scene format=3]
 
