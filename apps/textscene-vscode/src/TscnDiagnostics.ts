@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter, isSeverity, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import { Linter, flooredSeverity, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
@@ -46,7 +46,7 @@ const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeve
  * severe thing in the file rather than the least.
  */
 function squiggleFor(severity: TscnLintDiagnostic['severity']): vscode.DiagnosticSeverity {
-  return SEVERITY_MAP[isSeverity(severity) ? severity : 'info'];
+  return SEVERITY_MAP[flooredSeverity(severity)];
 }
 
 /** Minimal slice of `vscode.TextDocument` the mapping needs (testable without a full mock). */

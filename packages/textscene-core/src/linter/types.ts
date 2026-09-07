@@ -47,6 +47,21 @@ export function isSeverity(value: string): value is Severity {
 }
 
 /**
+ * The severity itself, or `info` where the union does not hold it — the one
+ * place the floor TIER is chosen, as `isSeverity` is the one place the test is.
+ *
+ * `info` and not a throw: every reader of this runs inside an editor or a
+ * webview with no error boundary, and a malformed tier is worth a
+ * least-confident squiggle rather than a blank pane. Flooring low also fails in
+ * the direction that under-reports: VS Code's own default for an absent
+ * severity is Error, which reads to the author as the most serious thing in the
+ * file.
+ */
+export function flooredSeverity(value: Severity): Severity {
+  return isSeverity(value) ? value : 'info';
+}
+
+/**
  * A diagnostic message reporting an issue
  */
 export interface Diagnostic {

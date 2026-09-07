@@ -3,7 +3,7 @@
  * badge formatting. No React, no WebGL: the unit-testable seam the linter
  * gutter (`r3f-main.tsx`) builds on.
  */
-import { SEVERITY_ORDER, isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { SEVERITY_ORDER, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 
 /** One gutter row's worth of diagnostics: the line's highest severity, and every message on it, in encounter order. */
 export interface LineDiagnostics {
@@ -26,20 +26,14 @@ export function countLines(text: string): number {
 }
 
 /**
- * The severity itself when the union holds it, `info` when it does not — the
- * floor `summarizeDiagnostics` counts an off-union tier at, and the one gate
- * every severity passes before it is ranked.
+ * True when `a` is at least as severe as `b` (lower rank = more severe), both
+ * already through `flooredSeverity`.
  *
- * Ranking one directly is what makes it stick: `SEVERITY_ORDER[<off-union>]` is
- * `undefined`, and `undefined <= n` and `n <= undefined` are both false, so a
- * bogus severity on a line's FIRST diagnostic holds the row against every
- * error after it.
+ * Flooring first is what makes the comparison stick: `SEVERITY_ORDER` yields
+ * `undefined` for a tier outside the union, and `undefined <= n` and
+ * `n <= undefined` are both false, so a bogus severity on a line's FIRST
+ * diagnostic would hold the row against every error after it.
  */
-function floored(severity: Severity): Severity {
-  return isSeverity(severity) ? severity : 'info';
-}
-
-/** True when `a` is at least as severe as `b` (lower rank = more severe), both already {@link floored}. */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
   return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
@@ -56,7 +50,7 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
   for (const d of diagnostics) {
     const line = d.location?.line;
     if (line === undefined) continue;
-    const severity = floored(d.severity);
+    const severity = flooredSeverity(d.severity);
     const existing = byLine.get(line);
     if (!existing) {
       byLine.set(line, { line, severity, messages: [d.message] });
@@ -85,7 +79,8 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
   // A switch total over the closed union, not a fall-through `else`: a fourth
   // tier fails tsc in the `default` arm below rather than passing unnoticed.
   for (const d of diagnostics) {
-    switch (d.severity) {
+    const severity = flooredSeverity(d.severity);
+    switch (severity) {
       case 'error':
         errors++;
         break;
@@ -96,12 +91,10 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
         infos++;
         break;
       default: {
-        // Total for tsc, floored at runtime: this runs inside a `useMemo` on
-        // every keystroke and the app carries no error boundary, so a throw
-        // here would take the whole previewer down over a badge count.
-        const unmatched: never = d.severity;
+        // Unreachable: `flooredSeverity` maps an off-union tier onto `info`.
+        // The arm stays for tsc, which fails a fourth tier here.
+        const unmatched: never = severity;
         void unmatched;
-        infos++;
       }
     }
   }

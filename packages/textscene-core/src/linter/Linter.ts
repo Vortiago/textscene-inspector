@@ -7,11 +7,10 @@ import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
 import {
   SEVERITY_ORDER,
-  isSeverity,
+  flooredSeverity,
   type Diagnostic,
   type RuleContext,
   type ParseError,
-  type Severity,
 } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
@@ -186,8 +185,8 @@ export class Linter {
    * nothing decided.
    */
   private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    const rank = (severity: Severity): number =>
-      SEVERITY_ORDER[isSeverity(severity) ? severity : 'info'];
-    return diagnostics.sort((a, b) => rank(a.severity) - rank(b.severity));
+    return diagnostics.sort(
+      (a, b) => SEVERITY_ORDER[flooredSeverity(a.severity)] - SEVERITY_ORDER[flooredSeverity(b.severity)]
+    );
   }
 }

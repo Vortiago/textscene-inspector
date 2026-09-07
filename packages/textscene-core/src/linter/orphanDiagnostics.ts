@@ -14,6 +14,7 @@ import type { TscnScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
+import { nodePathNames } from '../godot/nodePath.js';
 
 /**
  * Godot's own name for a re-parented orphan: the vanished path with `./`
@@ -22,17 +23,16 @@ import { armDiagnostic } from './ruleArms.js';
  *
  * The prefix is the NodePath's OWN spelling, not the heading's text. `:212`
  * reads `String(node_paths[…])`, which rebuilds the path from the names the
- * constructor kept (`node_path.cpp:170-188`), and an empty segment never became
- * one (`:428-438`) — so `parent="Gone/"` renames to `Gone#Name`. A `.` IS a
- * name, and `trim_prefix` strips only one leading `./`.
+ * constructor kept plus a leading `/` when it is absolute
+ * (`node_path.cpp:170-188`) — so `parent="Gone/"` renames to `Gone#Name`. A `.`
+ * IS a name, and `trim_prefix` strips only one leading `./`.
  *
  * Null where the rename does not happen: `:561` guards on
  * `!old_parent_path.is_empty()`, and `parent=""` leaves it empty, so the node
  * keeps the name its heading gives it.
  */
 function reparentedName(parentPath: string, name: string): string | null {
-  const names = parentPath.split('/').filter((segment) => segment !== '');
-  const spelled = (parentPath.startsWith('/') ? '/' : '') + names.join('/');
+  const spelled = (parentPath.startsWith('/') ? '/' : '') + nodePathNames(parentPath).join('/');
   const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
   return prefix ? `${prefix}#${name}` : null;
 }

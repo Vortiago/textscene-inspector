@@ -48,6 +48,7 @@ import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX } from '../utils/uniqueNames.js';
+import { nodePathNames } from '../godot/nodePath.js';
 
 /**
  * What resolving a NodePath against the authored tree can say.
@@ -78,7 +79,7 @@ function childNamed(node: TscnNode, name: string): TscnNode | undefined {
  * in `get_node_or_null`, which loops over `get_name_count()` alone (:1912).
  */
 function nameSegments(path: string): string[] {
-  return path.split(':')[0]!.split('/').filter((segment) => segment !== '');
+  return nodePathNames(path.split(':')[0]!);
 }
 
 /**

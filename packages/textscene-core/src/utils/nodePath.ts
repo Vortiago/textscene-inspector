@@ -1,5 +1,6 @@
 /** Utilities for manipulating node paths in the scene tree. */
 
+import { nodePathNames } from '../godot/nodePath.js';
 import { nodePathLiteral } from '../godot/variantParser.js';
 import { UNIQUE_NODE_PREFIX } from './uniqueNames.js';
 
@@ -22,10 +23,9 @@ export function getAncestorPaths(nodePath: string): string[] {
  * Walk `relative` from the node whose path is `base`, the way
  * `Node::get_node_or_null` walks a NodePath (node.cpp:1912-1949).
  *
- * An empty segment never becomes a name — the NodePath constructor counts only
- * the runs BETWEEN slashes (node_path.cpp:428-438), so a leading, doubled or
- * trailing slash contributes nothing. `.` stays on the node the walk is on and
- * `..` steps to its parent.
+ * The walk runs over the names the constructor kept ({@link nodePathNames}), so
+ * a leading, doubled or trailing slash contributes nothing. `.` stays on the
+ * node the walk is on and `..` steps to its parent.
  *
  * `rootDepth` is how many leading segments spell the scene root, and therefore
  * the length at which `..` has nowhere left to go: `!current->data.parent`
@@ -44,8 +44,8 @@ function walkNodePath(
   uniquePaths?: ReadonlyMap<string, string>
 ): string[] | null {
   let segments = [...base];
-  for (const part of relative.split('/')) {
-    if (part === '' || part === '.') continue;
+  for (const part of nodePathNames(relative)) {
+    if (part === '.') continue;
     if (part === '..') {
       if (segments.length <= rootDepth) return null;
       segments.pop();
@@ -77,8 +77,7 @@ export function resolveRelativePath(
   relative: string,
   uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
-  const segments = walkNodePath(basePath.split('/'), relative, 1, uniquePaths);
-  return segments === null || segments.length === 0 ? null : segments.join('/');
+  return walkNodePath(basePath.split('/'), relative, 1, uniquePaths)?.join('/') ?? null;
 }
 
 /**
@@ -98,12 +97,13 @@ export const SCENE_ROOT_PATH = '';
  * `ret_nodes[0]->get_node_or_null(np)` (`packed_scene.cpp:161`) — from the
  * root, so the root is the floor and paths here omit its name.
  *
- * Three shapes address nothing and are null rather than a path:
- * an absent or empty value, since `NodePath("")` is empty and
- * `get_node_or_null` returns nullptr for it (node.cpp:1894); an absolute
- * `/root/…`, which instantiate refuses off-tree (node.cpp:1898); and a `%Name`,
+ * Four shapes address nothing and are null rather than a path: an absent or
+ * empty value, since `NodePath("")` is empty and `get_node_or_null` returns
+ * nullptr for it (node.cpp:1894); an absolute `/root/…`, which instantiate
+ * refuses off-tree (node.cpp:1898); a `..` that steps above the root, where
+ * `!current->data.parent` returns nullptr (node.cpp:1919-1922); and a `%Name`,
  * which needs the owner's claim table — the tree this feeds is what those
- * claims are derived FROM, so there is none to consult and Godot's own
+ * claims are derived FROM, so there is none to consult, and Godot's own
  * serialiser writes `parent_path.simplified()` from a live tree and never emits
  * one (resource_format_text.cpp:2018).
  */

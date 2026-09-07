@@ -194,16 +194,19 @@ export class StrictTscnParser {
           // the node to `stray_instances` (:549) instead, so nothing below it
           // loads there either way.
           //
-          // A path that resolves against nothing — an absolute one, or a `..`
-          // above the root — leaves `parentPath` null: the fallback re-roots
-          // the heading under a renamed path no other heading in the file can
-          // spell, so the instance vouches for none.
-          const parentPath = parent ? resolveParentPath(parent) : SCENE_ROOT_PATH;
-          // A heading with no `name=` identifies no node, so it vouches for
-          // none either. The root is the exception — it is the scene root
-          // whatever it is called.
-          if (isRootHeading) instancedPaths.add(SCENE_ROOT_PATH);
-          else if (name && parentPath !== null) instancedPaths.add(joinPath(parentPath, name));
+          // The root is the exception — it is the scene root whatever it is
+          // called — and a heading with no `name=` identifies no node, so it
+          // vouches for none.
+          if (isRootHeading) {
+            instancedPaths.add(SCENE_ROOT_PATH);
+          } else if (name) {
+            // Null where the path resolves against nothing — an absolute one,
+            // or a `..` above the root: the fallback re-roots the heading under
+            // a renamed path no other heading here can spell, so it vouches for
+            // no path at all.
+            const parentPath = parent ? resolveParentPath(parent) : SCENE_ROOT_PATH;
+            if (parentPath !== null) instancedPaths.add(joinPath(parentPath, name));
+          }
         }
 
         if (isRootHeading && placeholder) {

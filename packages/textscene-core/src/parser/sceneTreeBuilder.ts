@@ -54,7 +54,7 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
     const { node, anchor } = deferred;
     anchor.node.children.push(node);
     node.instanceSubPath = anchor.subPath;
-    pathMap.set(joinPath(anchor.parentPath, node.name), node);
+    pathMap.set(joinPath(anchor.strandedParentPath, node.name), node);
 
     remaining = placeResolvable(remaining.filter((n) => n !== node), pathMap);
   }
@@ -96,8 +96,12 @@ function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): Tsc
       // node seated through any of them is registered under the single
       // spelling its own children can address it by.
       const parentPath = resolveParentPath(node.parent);
-      const parentNode = parentPath === null ? undefined : pathMap.get(parentPath);
-      if (parentPath === null || parentNode === undefined) {
+      if (parentPath === null) {
+        stillRemaining.push(node);
+        continue;
+      }
+      const parentNode = pathMap.get(parentPath);
+      if (!parentNode) {
         stillRemaining.push(node);
         continue;
       }
@@ -123,14 +127,14 @@ function firstAnchorable(
   return null;
 }
 
-/**
- * The instance a stranded node hangs off: the anchor node, the remainder of the
- * path below it, and the folded parent path the anchored node is keyed under.
- */
+/** The instance a stranded node hangs off, and where that node lands. */
 interface InstanceAnchor {
+  /** The enclosing `instance=` node. */
   node: TscnNode;
+  /** The remainder of the path below it, for the sub-scene to match. */
   subPath: string;
-  parentPath: string;
+  /** The stranded node's OWN folded parent path — the key it is registered under. */
+  strandedParentPath: string;
 }
 
 /**
@@ -154,7 +158,11 @@ function findInstanceAnchor(node: TscnNode, pathMap: Map<string, TscnNode>): Ins
   for (let depth = segments.length - 1; depth >= 0; depth--) {
     const candidate = pathMap.get(segments.slice(0, depth).join('/'));
     if (candidate?.instance) {
-      return { node: candidate, subPath: segments.slice(depth).join('/'), parentPath };
+      return {
+        node: candidate,
+        subPath: segments.slice(depth).join('/'),
+        strandedParentPath: parentPath,
+      };
     }
   }
   return null;

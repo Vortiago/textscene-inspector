@@ -292,7 +292,7 @@ export { validatorRegistry } from './ValidatorRegistry.js';
 // direct import in-package and stays off the published surface.
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
-export { SEVERITY_ORDER, isSeverity } from './types.js';
+export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
 
 // Re-export types
 export type {

@@ -291,10 +291,12 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('reads every assertion spelling, and an .each table it cannot inline', () => {
-    // The eight spellings a tier reaches the file by, pinned so a narrower
-    // regex cannot make the guard above vacuous — only the first and the last
-    // spell `severity:`, and the four helper forms spell no literal at all.
-    // Plus a title that lives in the second call of `it.each(<variable>)(…)`.
+    // The spellings a tier reaches the file by, pinned so a narrower regex
+    // cannot make the guard above vacuous — only the first and the last spell
+    // `severity:`, and the six helper forms spell no literal at all. The last
+    // two list forms occur nowhere in the tree today, so this is the only place
+    // that proves `NON_EMPTY_RE`'s arms for them are not dead. Plus a title
+    // that lives in the second call of `it.each(<variable>)(…)`.
     const src = [
       "it('a', () => { expect(d.every((x) => x.severity === 'info')).toBe(true); });",
       "it('b', () => { expect(reports[0]?.severity).toBe('warning'); });",
@@ -303,6 +305,8 @@ describe('test titles name the tier they assert', () => {
       "it('f', () => { expectSeverity(content, 'error'); });",
       "it('g', () => { expect(errorsOf(linter.lint(c))).toHaveLength(1); });",
       "it('h', () => { expect(warningsOf(linter.lint(c))[0].message).toBe('x'); });",
+      "it('i', () => { expect(infosOf(linter.lint(c)).length).toBe(2); });",
+      "it('j', () => { expect(errorsOf(linter.lint(c)).length).toBeGreaterThan(0); });",
       'const table = [{ a: 1 }];',
       "it.each(table)('d (%o)', () => { expectDiagnostic(s, { severity: 'info' }); });",
     ].join('\n');
@@ -315,6 +319,8 @@ describe('test titles name the tier they assert', () => {
       ['f', ['error']],
       ['g', ['error']],
       ['h', ['warning']],
+      ['i', ['info']],
+      ['j', ['error']],
       ['d (%o)', ['info']],
     ]);
   });

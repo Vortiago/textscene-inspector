@@ -122,6 +122,7 @@ export {
 } from './nodeBaseTypes.js';
 export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
 export { INSTANCE_PLACEHOLDER_TYPE } from './packedScene.js';
+export { nodePathNames } from './nodePath.js';
 export {
   GODOT_TEXT_RESOURCE_EXTENSIONS,
   isGodotTextResourcePath,
