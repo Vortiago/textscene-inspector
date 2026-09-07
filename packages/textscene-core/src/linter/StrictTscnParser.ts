@@ -193,11 +193,12 @@ export class StrictTscnParser {
           const instancedPath = isRootHeading
             ? ROOT_PARENT_PATH
             : joinPath(parent && parent !== ROOT_PARENT_PATH ? parent : '', name ?? '');
-          // A nameless heading with an empty `parent=` joins as the empty
-          // path, which `getAncestorPaths` yields for every absolute one:
-          // stored, it would vouch for `parent="/Anything"`. It names no node,
-          // so it vouches for none.
-          if (instancedPath) instancedPaths.add(instancedPath);
+          // A heading with no `name=` identifies no node, so it vouches for
+          // none: the join yields either the empty path, which
+          // `getAncestorPaths` returns for every absolute one, or a
+          // trailing-slash path a later heading can still spell. The root is
+          // the exception — it is the scene root whatever it is called.
+          if (isRootHeading || name) instancedPaths.add(instancedPath);
         }
 
         if (isRootHeading && placeholder) {

@@ -170,11 +170,11 @@ upper_fade = -0.5
   });
 
   it('errors on a cull_mask past the width of the int slot that holds it', () => {
-    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, a 32-checkbox widget,
-    // and the setter never rejects, so a value inside the slot but outside the
-    // widget only warns. 4294967296 needs a 33rd bit: the int slot cannot hold
-    // it and Godot stores a different value, which is the error tier.
-    // 1048575 is Camera3D's DEFAULT, never a bound.
+    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, a widget hint that
+    // grounds no numeric bound, and the setter never rejects: every 32-bit
+    // pattern passes. 4294967296 needs a 33rd bit the `uint32_t` slot
+    // (decal.h:106) does not hold, which is the error tier. 1048575 is
+    // Camera3D's DEFAULT, never a bound.
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]

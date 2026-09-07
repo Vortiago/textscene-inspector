@@ -64,12 +64,11 @@ occluder = SubResource("999")
   });
 
   it('errors on an occluder_light_mask outside the 32-bit width', () => {
-    // light_occluder_2d.cpp:300 hints PROPERTY_HINT_LAYERS_2D_RENDER, a
-    // 32-checkbox widget, so the width is the UI's and a value outside it
-    // warns. set_occluder_light_mask (:257-260) assigns unconditionally, so it
-    // is not an error.
-    // `-1` is all-layers-on and the widget renders it, so nothing fires;
-    // 4294967296 drops a bit the file states, so the slot refuses it.
+    // light_occluder_2d.cpp:300 hints PROPERTY_HINT_LAYERS_2D_RENDER, a widget
+    // hint that grounds no numeric bound, and set_occluder_light_mask
+    // (:257-260) assigns unconditionally — so `-1` is all-layers-on and nothing
+    // fires. What is left is the INT-slot refusal: 4294967296 states bits the
+    // `int` slot (light_occluder_2d.h:102) does not hold.
     const lint = (value: string) =>
       new Linter()
         .lint(scene(node('LightOccluder2D', { occluder_light_mask: value }, { name: 'Occ' })))

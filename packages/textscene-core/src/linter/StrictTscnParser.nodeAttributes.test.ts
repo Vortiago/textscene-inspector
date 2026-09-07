@@ -245,6 +245,26 @@ position = Vector2(5, 5)
       ]);
     });
 
+    it('still warns beside a nameless instance heading that names a parent', () => {
+      // The join yields `Rock/`, a path no heading resolves through — but one a
+      // heading can spell. A heading with no `name=` identifies no node, so it
+      // vouches for none whatever its `parent=` says.
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node parent="Rock" instance=ExtResource("1")]
+
+[node name="Inner" parent="Rock/"]
+`);
+      expect(result.errors.map((e) => [e.code, e.severity, e.line])).toEqual([
+        ['MISSING_NODE_NAME', 'error', 7],
+        ['MISSING_NODE_IDENTIFIER', 'warning', 9],
+      ]);
+    });
+
     it('places an empty parent= at the root, which is where Godot puts it', () => {
       // `get_node_or_null(NodePath(""))` returns null (node.cpp:1894), so the
       // heading takes the editor build's vanished-parent fallback: it warns and
