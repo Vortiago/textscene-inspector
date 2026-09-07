@@ -3,7 +3,7 @@
  * badge formatting. No React, no WebGL: the unit-testable seam the linter
  * gutter (`r3f-main.tsx`) builds on.
  */
-import { SEVERITY_ORDER, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { SEVERITY_ORDER, isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 
 /** One gutter row's worth of diagnostics: the line's highest severity, and every message on it, in encounter order. */
 export interface LineDiagnostics {
@@ -27,20 +27,21 @@ export function countLines(text: string): number {
 
 /**
  * The severity itself when the union holds it, `info` when it does not — the
- * floor `summarizeDiagnostics` counts an off-union tier at.
+ * floor `summarizeDiagnostics` counts an off-union tier at, and the one gate
+ * every severity passes before it is ranked.
  *
  * Ranking one directly is what makes it stick: `SEVERITY_ORDER[<off-union>]` is
  * `undefined`, and `undefined <= n` and `n <= undefined` are both false, so a
  * bogus severity on a line's FIRST diagnostic holds the row against every
- * error after it. `hasOwn` first, since a bare index reaches `Object.prototype`.
+ * error after it.
  */
 function floored(severity: Severity): Severity {
-  return Object.hasOwn(SEVERITY_ORDER, severity) ? severity : 'info';
+  return isSeverity(severity) ? severity : 'info';
 }
 
-/** True when `a` is at least as severe as `b` (lower rank = more severe). */
+/** True when `a` is at least as severe as `b` (lower rank = more severe), both already {@link floored}. */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
-  return SEVERITY_ORDER[floored(a)] <= SEVERITY_ORDER[floored(b)];
+  return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
 
 /**
@@ -55,14 +56,15 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
   for (const d of diagnostics) {
     const line = d.location?.line;
     if (line === undefined) continue;
+    const severity = floored(d.severity);
     const existing = byLine.get(line);
     if (!existing) {
-      byLine.set(line, { line, severity: floored(d.severity), messages: [d.message] });
+      byLine.set(line, { line, severity, messages: [d.message] });
       continue;
     }
     existing.messages.push(d.message);
-    if (atLeastAsSevere(d.severity, existing.severity)) {
-      existing.severity = floored(d.severity);
+    if (atLeastAsSevere(severity, existing.severity)) {
+      existing.severity = severity;
     }
   }
   return byLine;

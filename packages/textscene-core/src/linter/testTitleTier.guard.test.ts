@@ -79,6 +79,27 @@ const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))/g;
  */
 const TIER_HELPER_RE = /\bexpect(Error|Warning|Info)\s*\(/g;
 
+/**
+ * A list helper whose NAME carries the tier: `errorsOf(…)`, `warningsOf(…)`.
+ *
+ * Neither anchor above reaches one: the tier is in the identifier and the
+ * argument is a diagnostic list, so a block asserting through it names no tier
+ * for this scan to compare its title against.
+ */
+const TIER_LIST_RE = /\b(error|warning|info)sOf\s*\(/g;
+
+/**
+ * What makes a list helper a CLAIM: the same statement asserting the list is
+ * non-empty.
+ *
+ * Positive evidence rather than the absence of a negative, because the common
+ * shape binds the call and asserts on the variable a statement later —
+ * `const errors = errorsOf(x);` alone says nothing about the tier, and reading
+ * it as a claim would fabricate one for every `expect(errorsOf(x)).toHaveLength(0)`
+ * written that way round.
+ */
+const NON_EMPTY_RE = /toHaveLength\(\s*[1-9]|toBeGreaterThan\(\s*0|length\)\.toBe\(\s*[1-9]|\[0\]/;
+
 /** A tier named as a literal. */
 const TIER_LITERAL_RE = /'(error|warning|info)'/g;
 
@@ -106,11 +127,14 @@ function afterBalanced(src: string, open: number): number {
   return -1;
 }
 
+/** Module level: this is tested once per source character between two calls. */
+const WHITESPACE = /\s/;
+
 /** The `(` at `from`, past any whitespace, or -1 when something else is there. */
 function openParenAt(src: string, from: number): number {
   if (from < 0) return -1;
   let i = from;
-  while (i < src.length && /\s/.test(src[i]!)) i++;
+  while (i < src.length && WHITESPACE.test(src[i]!)) i++;
   return src[i] === '(' ? i : -1;
 }
 
@@ -149,7 +173,11 @@ interface Block {
  */
 function bodyOf(src: string, at: number, callOpen: number, nextAt: number): string {
   const close = afterBalanced(src, callOpen);
-  const closes = close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(close - 16, close));
+  // `Math.max` because a negative `slice` start counts from the END of the
+  // file, so a block closing inside the first 16 characters would be judged on
+  // the file's tail.
+  const closes =
+    close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(Math.max(0, close - 16), close));
   return src.slice(at, closes ? close : nextAt);
 }
 
@@ -202,9 +230,14 @@ const RULE_FIXTURE_RE = /\bmeta:\s*\{/;
 const assertedTiers = (body: string): string[] => {
   if (RULE_FIXTURE_RE.test(body)) return [];
   const tiers = new Set<string>();
+  const claimAt = (index: number): string =>
+    body.slice(index, index + CLAIM_REACH).split(';')[0]!;
   for (const m of body.matchAll(TIER_HELPER_RE)) tiers.add(m[1]!.toLowerCase());
+  for (const m of body.matchAll(TIER_LIST_RE)) {
+    if (NON_EMPTY_RE.test(claimAt(m.index))) tiers.add(m[1]!);
+  }
   for (const anchor of body.matchAll(TIER_ANCHOR_RE)) {
-    const claim = body.slice(anchor.index, anchor.index + CLAIM_REACH).split(';')[0]!;
+    const claim = claimAt(anchor.index);
     if (EXCLUDES_RE.test(claim)) continue;
     for (const m of claim.matchAll(TIER_LITERAL_RE)) tiers.add(m[1]!);
   }
@@ -258,16 +291,18 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('reads every assertion spelling, and an .each table it cannot inline', () => {
-    // The six spellings a tier reaches the file by, pinned so a narrower regex
-    // cannot make the guard above vacuous — only the first and the last spell
-    // `severity:`, and the two helper forms spell no literal at all. Plus a
-    // title that lives in the second call of `it.each(<variable>)(…)`.
+    // The eight spellings a tier reaches the file by, pinned so a narrower
+    // regex cannot make the guard above vacuous — only the first and the last
+    // spell `severity:`, and the four helper forms spell no literal at all.
+    // Plus a title that lives in the second call of `it.each(<variable>)(…)`.
     const src = [
       "it('a', () => { expect(d.every((x) => x.severity === 'info')).toBe(true); });",
       "it('b', () => { expect(reports[0]?.severity).toBe('warning'); });",
       "it('c', () => { expect(severitiesOf(content, 'some-rule')).toEqual(['error']); });",
       "it('e', () => { expectWarning(check('x', '1'), 'x'); });",
       "it('f', () => { expectSeverity(content, 'error'); });",
+      "it('g', () => { expect(errorsOf(linter.lint(c))).toHaveLength(1); });",
+      "it('h', () => { expect(warningsOf(linter.lint(c))[0].message).toBe('x'); });",
       'const table = [{ a: 1 }];',
       "it.each(table)('d (%o)', () => { expectDiagnostic(s, { severity: 'info' }); });",
     ].join('\n');
@@ -278,7 +313,24 @@ describe('test titles name the tier they assert', () => {
       ['c', ['error']],
       ['e', ['warning']],
       ['f', ['error']],
+      ['g', ['error']],
+      ['h', ['warning']],
       ['d (%o)', ['info']],
+    ]);
+  });
+
+  it('reads a list helper as a tier only where the block asserts the list is non-empty', () => {
+    // `const errors = errorsOf(x)` binds a list and claims nothing; the tier
+    // arrives with the assertion, and `toHaveLength(0)` asserts the tier is
+    // ABSENT. Reading the bare call as a claim inverts both.
+    const src = [
+      "it('a', () => { expect(errorsOf(linter.lint(c))).toHaveLength(0); });",
+      "it('b', () => { const errors = errorsOf(linter.lint(c)); expect(errors).toEqual([]); });",
+    ].join('\n');
+
+    expect(blocksIn('synthetic.test.ts', src).map((b) => [b.title, assertedTiers(b.body)])).toEqual([
+      ['a', []],
+      ['b', []],
     ]);
   });
 

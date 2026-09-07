@@ -31,6 +31,12 @@ const dangling = scene(
 
 const orphansIn = (source: string) => lint(source).filter((d) => d.ruleName === ORPHAN);
 
+/** `parent=""` — a path the loader keeps and `get_node_or_null` resolves to nothing. */
+const EMPTY_PARENT = scene(
+  node('Node2D', {}, { name: 'Root' }),
+  node('Node2D', {}, { name: 'B', parent: '' })
+);
+
 /**
  * No heading omits `parent=`, so heading 0 becomes the root while declaring one.
  */
@@ -95,6 +101,21 @@ describe('a parent path this file never defines', () => {
     expect(orphansIn(nested)[0]?.message).toContain('"Gone@Deeper#Leaf"');
   });
 
+  it.each([
+    ['Gone/', 'Gone#Leaf'],
+    ['Gone//Deeper', 'Gone@Deeper#Leaf'],
+    ['/root/Gone', '@root@Gone#Leaf'],
+  ])('prefixes with the NodePath spelling of %s, not the heading text', (parent, renamed) => {
+    // `:212` prefixes with `String(node_paths[…])`, which the NodePath
+    // constructor built by ignoring every empty segment
+    // (`node_path.cpp:428-438`) and which keeps a leading `/` for an absolute
+    // one (`:176-177`).
+    const message = orphansIn(
+      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'Leaf', parent }))
+    )[0]?.message;
+    expect(message).toContain(`"${renamed}"`);
+  });
+
   it('leaves a path that descends into instanced content alone', () => {
     // The intermediate names live in the sub-scene, not here, so the node is
     // anchored to the instance rather than stranded.
@@ -113,22 +134,16 @@ describe('a parent path this file never defines', () => {
     // The loader calls `add_node_path` for any value the field carries and it
     // never returns -1 (`packed_scene.cpp:2307-2311`), so `n.parent == -1` — the
     // refusal `node-without-parent` cites — cannot apply to this heading.
-    const empty = scene(
-      node('Node2D', {}, { name: 'Root' }),
-      node('Node2D', {}, { name: 'B', parent: '' })
-    );
-    const orphans = orphansIn(empty);
+    const orphans = orphansIn(EMPTY_PARENT);
     expect(orphans).toHaveLength(1);
     expect(orphans[0]?.severity).toBe('warning');
-    expect(lint(empty).filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
+    expect(lint(EMPTY_PARENT).filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
   });
 
   it('claims no rename for the empty path, which Godot leaves the name alone for', () => {
     // `packed_scene.cpp:561` renames only while `old_parent_path` is non-empty,
     // and `parent=""` trims to nothing, so the node keeps the heading's name.
-    const message = orphansIn(
-      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'B', parent: '' }))
-    )[0]?.message;
+    const message = orphansIn(EMPTY_PARENT)[0]?.message;
     expect(message).toContain('leaves its name alone');
     expect(message).not.toContain('#B');
   });
@@ -234,5 +249,78 @@ describe('a vanished path beside an instantiate refusal', () => {
     expect(orphan?.nodeName).toBe('C');
     expect(orphan?.message).not.toContain('re-parents');
     expect(orphan?.message).toContain('refuses');
+  });
+});
+
+describe('a parent path Godot folds before it walks', () => {
+  // `add_node_path` stores the heading's value as a NodePath and
+  // `NODE_FROM_ID` resolves it with `ret_nodes[0]->get_node_or_null(np)`
+  // (`packed_scene.cpp:161`), so every fold `get_node_or_null` performs applies
+  // here: the NodePath constructor never makes a name out of an empty segment
+  // (`node_path.cpp:428-438`), `.` stays on the node the walk is on and `..`
+  // steps up (`node.cpp:1916-1924`).
+  //
+  // Both halves are asserted per case. No `unresolved-parent-path` says the
+  // path resolved; `collisionobject2d-needs-collision-shape` firing says Phase
+  // 2 walked a tree the node is actually in, which the silent-skip this fixes
+  // is otherwise invisible to.
+  const placedUnder = (parent: string) =>
+    scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('Node2D', {}, { name: 'Mid', parent: '.' }),
+      node('StaticBody2D', {}, { name: 'Body', parent })
+    );
+
+  it.each([
+    ['./Mid', 'a leading . stays on the root'],
+    ['Mid/', 'a trailing slash names no segment'],
+    ['Mid//', 'neither does a doubled one'],
+    ['./Mid/.', 'nor does a . in the middle'],
+    ['Other/../Mid', '.. steps back to the root and descends again'],
+  ])('places a node under %s — %s', (parent) => {
+    const source = placedUnder(parent);
+    expect(orphansIn(source)).toEqual([]);
+    expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+  });
+
+  it('reads ./ as the root itself', () => {
+    const source = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: './' })
+    );
+    expect(orphansIn(source)).toEqual([]);
+    expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+  });
+
+  it('spells a folded node the canonical way, so its own children resolve', () => {
+    // The reader alone is not enough: `Leaf` placed through `./Mid` has to be
+    // REGISTERED at `Mid/Leaf`, which is the only spelling a later heading can
+    // name it by.
+    const source = scene(
+      node('Node2D', {}, { name: 'Root' }),
+      node('Node2D', {}, { name: 'Mid', parent: '.' }),
+      node('Node2D', {}, { name: 'Leaf', parent: './Mid' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: 'Mid/Leaf' })
+    );
+    expect(orphansIn(source)).toEqual([]);
+    expect(lint(source).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+  });
+
+  it('still strands a path that steps above the root', () => {
+    // `..` on the root returns nullptr — `!current->data.parent`
+    // (`node.cpp:1919-1922`) — so the node vanishes exactly as a misspelled
+    // name does.
+    expect(orphansIn(placedUnder('../Mid')).map((d) => d.nodeName)).toEqual(['Body']);
+  });
+
+  it('still strands an absolute path', () => {
+    // `/root/…` measures from the live SceneTree, and instantiate refuses it
+    // outright: "Can't use get_node() with absolute paths from outside the
+    // active scene tree" (`node.cpp:1898`).
+    expect(orphansIn(placedUnder('/root/Mid')).map((d) => d.nodeName)).toEqual(['Body']);
+  });
+
+  it('still strands a folded path that names nothing', () => {
+    expect(orphansIn(placedUnder('./Nope')).map((d) => d.nodeName)).toEqual(['Body']);
   });
 });

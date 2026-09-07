@@ -3,7 +3,7 @@
  */
 
 import type { NodeOrigin, TscnNode } from './types';
-import { ROOT_PARENT_PATH } from '../godot';
+import { SCENE_ROOT_PATH, joinPath, resolveParentPath } from '../utils/nodePath.js';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -20,12 +20,12 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // exactly the file the engine refuses.
   const rootNode = nodes.find((n) => !n.parent) ?? nodes[0]!;
 
-  // Map from relative path to node (paths don't include root name)
+  // Every key is a path measured from the root, folded the way Godot folds one.
   const pathMap = new Map<string, TscnNode>();
-  pathMap.set('', rootNode); // Root is at empty path
+  pathMap.set(SCENE_ROOT_PATH, rootNode);
 
   // Track remaining nodes to place
-  let remaining = placeResolvable(nodes.filter((n) => n !== rootNode), rootNode, pathMap);
+  let remaining = placeResolvable(nodes.filter((n) => n !== rootNode), pathMap);
 
   // A node whose parent path descends INTO instanced content can never resolve
   // here: the intermediate names live in the instanced scene or GLB, not in
@@ -54,13 +54,9 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
     const { node, anchor } = deferred;
     anchor.node.children.push(node);
     node.instanceSubPath = anchor.subPath;
-    pathMap.set(`${node.parent}/${node.name}`, node);
+    pathMap.set(joinPath(anchor.parentPath, node.name), node);
 
-    remaining = placeResolvable(
-      remaining.filter((n) => n !== node),
-      rootNode,
-      pathMap
-    );
+    remaining = placeResolvable(remaining.filter((n) => n !== node), pathMap);
   }
 
   return [rootNode];
@@ -78,11 +74,7 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
  *
  * Returns the nodes that still did not resolve.
  */
-function placeResolvable(
-  nodes: TscnNode[],
-  rootNode: TscnNode,
-  pathMap: Map<string, TscnNode>
-): TscnNode[] {
+function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): TscnNode[] {
   let remaining = nodes;
   let lastRemainingCount = remaining.length + 1;
 
@@ -99,18 +91,18 @@ function placeResolvable(
         continue;
       }
 
-      // The root's own spelling means a direct child of root; otherwise
-      // resolve by parent path.
-      const parentNode =
-        node.parent === ROOT_PARENT_PATH ? rootNode : pathMap.get(node.parent);
-      if (parentNode) {
-        parentNode.children.push(node);
-        const nodePath =
-          node.parent === ROOT_PARENT_PATH ? node.name : `${node.parent}/${node.name}`;
-        pathMap.set(nodePath, node);
-      } else {
+      // Both sides of the map are keyed on the FOLDED path, so `./Mid`,
+      // `Mid/` and `Mid` name the one node Godot resolves them all to — and a
+      // node seated through any of them is registered under the single
+      // spelling its own children can address it by.
+      const parentPath = resolveParentPath(node.parent);
+      const parentNode = parentPath === null ? undefined : pathMap.get(parentPath);
+      if (parentPath === null || parentNode === undefined) {
         stillRemaining.push(node);
+        continue;
       }
+      parentNode.children.push(node);
+      pathMap.set(joinPath(parentPath, node.name), node);
     }
 
     remaining = stillRemaining;
@@ -123,12 +115,22 @@ function placeResolvable(
 function firstAnchorable(
   remaining: readonly TscnNode[],
   pathMap: Map<string, TscnNode>
-): { node: TscnNode; anchor: { node: TscnNode; subPath: string } } | null {
+): { node: TscnNode; anchor: InstanceAnchor } | null {
   for (const node of remaining) {
     const anchor = findInstanceAnchor(node, pathMap);
     if (anchor) return { node, anchor };
   }
   return null;
+}
+
+/**
+ * The instance a stranded node hangs off: the anchor node, the remainder of the
+ * path below it, and the folded parent path the anchored node is keyed under.
+ */
+interface InstanceAnchor {
+  node: TscnNode;
+  subPath: string;
+  parentPath: string;
 }
 
 /**
@@ -140,19 +142,19 @@ function firstAnchorable(
  * one: the sub-path has to be measured from the scene that will actually
  * resolve it.
  */
-function findInstanceAnchor(
-  node: TscnNode,
-  pathMap: Map<string, TscnNode>
-): { node: TscnNode; subPath: string } | null {
-  if (!node.parent || node.parent === ROOT_PARENT_PATH) return null;
+function findInstanceAnchor(node: TscnNode, pathMap: Map<string, TscnNode>): InstanceAnchor | null {
+  const parentPath = resolveParentPath(node.parent);
+  // The root resolves, so a node naming it never reaches here; a path that
+  // resolves to nothing at all names no instance either.
+  if (!parentPath) return null;
 
-  const segments = node.parent.split('/');
+  const segments = parentPath.split('/');
   // Start one short of the full path: had the whole thing resolved, ordinary
   // placement would already have used it.
   for (let depth = segments.length - 1; depth >= 0; depth--) {
     const candidate = pathMap.get(segments.slice(0, depth).join('/'));
     if (candidate?.instance) {
-      return { node: candidate, subPath: segments.slice(depth).join('/') };
+      return { node: candidate, subPath: segments.slice(depth).join('/'), parentPath };
     }
   }
   return null;

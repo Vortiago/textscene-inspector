@@ -13,10 +13,10 @@ import type { ParseError, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
-import { getAncestorPaths, joinPath } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, getAncestorPaths, joinPath, resolveParentPath } from '../utils/nodePath.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
-import { INSTANCE_PLACEHOLDER_TYPE, ROOT_PARENT_PATH, isNilLiteral } from '../godot/index.js';
+import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
 import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 
 /**
@@ -91,9 +91,10 @@ export class StrictTscnParser {
     // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
     let nodeHeadings = 0;
     // The node paths that instance a scene, so a type-less heading below one
-    // names content that exists. `ROOT_PARENT_PATH` stands for the scene's own
-    // root, which every `parent="."` stops at: it joins the set when heading 0
-    // carries `instance=` and the scene therefore inherits
+    // names content that exists. Keys are FOLDED paths, so `./Rock` and `Rock`
+    // are the one node Godot resolves them both to, and the scene's own root
+    // sits at `SCENE_ROOT_PATH`: it joins the set when heading 0 carries
+    // `instance=` and the scene therefore inherits
     // (resource_format_text.cpp:233-240).
     //
     // `instance_placeholder=` is NOT one of these. Godot builds an
@@ -101,10 +102,12 @@ export class StrictTscnParser {
     // named under one still vanishes and still deserves the warning.
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
-      if (instancedPaths.has(ROOT_PARENT_PATH)) return true;
-      // An empty `parent=` names nothing to walk up from.
-      if (!parent || parent === ROOT_PARENT_PATH) return false;
-      return instancedPaths.has(parent) || getAncestorPaths(parent).some((p) => instancedPaths.has(p));
+      if (instancedPaths.has(SCENE_ROOT_PATH)) return true;
+      // The root is covered above; an absolute or empty path names nothing to
+      // walk up from at all.
+      const path = resolveParentPath(parent);
+      if (!path) return false;
+      return instancedPaths.has(path) || getAncestorPaths(path).some((p) => instancedPaths.has(p));
     };
 
     const observer: ParseObserver = {
@@ -190,15 +193,17 @@ export class StrictTscnParser {
           // `#ifdef DEBUG_ENABLED`). A release export has no fallback and sends
           // the node to `stray_instances` (:549) instead, so nothing below it
           // loads there either way.
-          const instancedPath = isRootHeading
-            ? ROOT_PARENT_PATH
-            : joinPath(parent && parent !== ROOT_PARENT_PATH ? parent : '', name ?? '');
+          //
+          // A path that resolves against nothing — an absolute one, or a `..`
+          // above the root — leaves `parentPath` null: the fallback re-roots
+          // the heading under a renamed path no other heading in the file can
+          // spell, so the instance vouches for none.
+          const parentPath = parent ? resolveParentPath(parent) : SCENE_ROOT_PATH;
           // A heading with no `name=` identifies no node, so it vouches for
-          // none: the join yields either the empty path, which
-          // `getAncestorPaths` returns for every absolute one, or a
-          // trailing-slash path a later heading can still spell. The root is
-          // the exception — it is the scene root whatever it is called.
-          if (isRootHeading || name) instancedPaths.add(instancedPath);
+          // none either. The root is the exception — it is the scene root
+          // whatever it is called.
+          if (isRootHeading) instancedPaths.add(SCENE_ROOT_PATH);
+          else if (name && parentPath !== null) instancedPaths.add(joinPath(parentPath, name));
         }
 
         if (isRootHeading && placeholder) {

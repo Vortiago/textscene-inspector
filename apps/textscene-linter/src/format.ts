@@ -1,6 +1,6 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import type { Diagnostic, Severity } from '@textscene/core/linter';
+import { isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -113,12 +113,10 @@ const SEVERITY_DISPLAY: Record<
 };
 
 function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] | undefined {
-  // `hasOwn` first: a bare index reaches Object.prototype, so `'constructor'`
-  // returns a truthy non-display and formats as `\x1b[undefinedm…`, while any
-  // other unknown value throws on the property read.
-  return Object.hasOwn(SEVERITY_DISPLAY, severity)
-    ? SEVERITY_DISPLAY[severity as Severity]
-    : undefined;
+  // `isSeverity` rather than a bare index: `'constructor'` reaches
+  // Object.prototype and returns a truthy non-display that formats as
+  // `\x1b[undefinedm…`.
+  return isSeverity(severity) ? SEVERITY_DISPLAY[severity] : undefined;
 }
 
 /**

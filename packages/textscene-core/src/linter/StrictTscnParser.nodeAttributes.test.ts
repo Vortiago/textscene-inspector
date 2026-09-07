@@ -246,9 +246,9 @@ position = Vector2(5, 5)
     });
 
     it('still warns beside a nameless instance heading that names a parent', () => {
-      // The join yields `Rock/`, a path no heading resolves through — but one a
-      // heading can spell. A heading with no `name=` identifies no node, so it
-      // vouches for none whatever its `parent=` says.
+      // `Rock/` folds to `Rock`, the path the nameless heading itself sits at.
+      // A heading with no `name=` identifies no node, so it vouches for none
+      // whatever its `parent=` says.
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
@@ -313,6 +313,41 @@ disabled = true
 
 [node name="Light" parent="."]
 visible = false
+`);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('follows a folded parent path to the instance above it', () => {
+      // The ancestry test compares path strings, so it needs the fold
+      // `get_node_or_null` performs: `./Rock` and `Rock` are the same node
+      // (node.cpp:1916-1917), and the instance really does provide `Inner`.
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Rock" parent="." instance=ExtResource("1")]
+
+[node name="Inner" parent="./Rock"]
+`);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('registers an instance placed through a folded path under its canonical name', () => {
+      // The writer needs the fold too: an instance seated by `./Mid` vouches
+      // for `Mid/Rock/…`, which is the only spelling a later heading can use.
+      const result = parser.parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Mid" type="Node2D" parent="."]
+
+[node name="Rock" parent="./Mid" instance=ExtResource("1")]
+
+[node name="Inner" parent="Mid/Rock/Head"]
 `);
       expect(result.errors).toEqual([]);
     });

@@ -20,13 +20,30 @@ import { armDiagnostic } from './ruleArms.js';
  * stripped and every `/` turned into `@`, then `#` and the node's own name
  * (`packed_scene.cpp:212`, `:561-563`).
  *
+ * The prefix is the NodePath's OWN spelling, not the heading's text. `:212`
+ * reads `String(node_paths[…])`, which rebuilds the path from the names the
+ * constructor kept (`node_path.cpp:170-188`), and an empty segment never became
+ * one (`:428-438`) — so `parent="Gone/"` renames to `Gone#Name`. A `.` IS a
+ * name, and `trim_prefix` strips only one leading `./`.
+ *
  * Null where the rename does not happen: `:561` guards on
- * `!old_parent_path.is_empty()`, and `parent=""` — or `"./"`, which trims to
- * nothing — leaves it empty, so the node keeps the name its heading gives it.
+ * `!old_parent_path.is_empty()`, and `parent=""` leaves it empty, so the node
+ * keeps the name its heading gives it.
  */
 function reparentedName(parentPath: string, name: string): string | null {
-  const prefix = parentPath.replace(/^\.\//, '').replaceAll('/', '@');
+  const names = parentPath.split('/').filter((segment) => segment !== '');
+  const spelled = (parentPath.startsWith('/') ? '/' : '') + names.join('/');
+  const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
   return prefix ? `${prefix}#${name}` : null;
+}
+
+/** What the re-root does to this node, named for the reader of the diagnostic. */
+function reRootOutcome(parentPath: string, name: string): string {
+  const renamed = reparentedName(parentPath, name);
+  return renamed
+    ? `Godot re-parents it to the scene root and renames it "${renamed}".`
+    : 'Godot re-parents it to the scene root and leaves its name alone, since an empty ' +
+        'path has nothing to prefix it with.';
 }
 
 /**
@@ -83,15 +100,10 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
           { line, column: 1 }
         );
       }
-      const renamed = reparentedName(declaredParent!, node.name);
-      const reRooted = renamed
-        ? `Godot re-parents it to the scene root and renames it "${renamed}".`
-        : 'Godot re-parents it to the scene root and leaves its name alone, since an empty ' +
-          'path has nothing to prefix it with.';
       const outcome = refused
         ? 'Godot refuses to instantiate the scene for another heading (see the error beside ' +
           'this), so no re-root of this node happens.'
-        : reRooted;
+        : reRootOutcome(declaredParent!, node.name);
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,

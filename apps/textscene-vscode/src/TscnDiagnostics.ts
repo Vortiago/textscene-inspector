@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import { Linter, isSeverity, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
@@ -38,6 +38,17 @@ const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeve
   info: vscode.DiagnosticSeverity.Information,
 };
 
+/**
+ * The editor squiggle for a tier, an unranked one floored to Information.
+ *
+ * A bare index hands `undefined` to the `vscode.Diagnostic` constructor, which
+ * defaults to Error — so a malformed severity reads to the author as the most
+ * severe thing in the file rather than the least.
+ */
+function squiggleFor(severity: TscnLintDiagnostic['severity']): vscode.DiagnosticSeverity {
+  return SEVERITY_MAP[isSeverity(severity) ? severity : 'info'];
+}
+
 /** Minimal slice of `vscode.TextDocument` the mapping needs (testable without a full mock). */
 export interface DocumentLineSource {
   lineCount: number;
@@ -62,7 +73,7 @@ export function toVsCodeDiagnostic(
   const result = new vscode.Diagnostic(
     rangeForDiagnostic(diagnostic, document),
     diagnostic.message,
-    SEVERITY_MAP[diagnostic.severity]
+    squiggleFor(diagnostic.severity)
   );
   result.code = diagnostic.ruleName;
   result.source = 'tscn-lint';

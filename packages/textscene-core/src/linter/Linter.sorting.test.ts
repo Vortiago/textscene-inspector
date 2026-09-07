@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Linter } from './Linter.js';
 import { ruleRegistry } from './RuleRegistry.js';
-import type { LintRule } from './types.js';
+import type { Diagnostic, LintRule } from './types.js';
 
 describe('Linter', () => {
   let linter: Linter;
@@ -21,6 +21,7 @@ describe('Linter', () => {
       ruleRegistry['rules'].delete('test-info-rule');
       ruleRegistry['rules'].delete('test-warning-1');
       ruleRegistry['rules'].delete('test-warning-2');
+      ruleRegistry['rules'].delete('test-off-union-rule');
     });
 
     it('should sort diagnostics by severity (errors first)', () => {
@@ -70,6 +71,56 @@ describe('Linter', () => {
       const warningIndex = severities.indexOf('warning');
 
       expect(errorIndex).toBeLessThan(warningIndex);
+    });
+
+    it('ranks a severity outside the union last, rather than comparing it to NaN', () => {
+      // `SEVERITY_ORDER[<off-union>]` is `undefined` and the subtraction is
+      // then `NaN`, which the sort reads as "equal" — so with the offending
+      // rule registered FIRST, an unfloored comparator hands back registration
+      // order and the most severe finding is no longer at the top.
+      const oddRule: LintRule = {
+        meta: {
+          name: 'test-off-union-rule',
+          description: 'Generate an unrankable severity',
+          category: 'validation',
+        },
+        check: () => [
+          {
+            severity: 'bogus' as unknown as Diagnostic['severity'],
+            message: 'Odd',
+            nodeName: 'Root',
+            nodeType: 'Node3D',
+            ruleName: 'test-off-union-rule',
+          },
+        ],
+      };
+
+      const errorRule: LintRule = {
+        meta: {
+          name: 'test-error-rule',
+          description: 'Generate error',
+          category: 'validation',
+        },
+        check: () => [
+          {
+            severity: 'error',
+            message: 'Error',
+            nodeName: 'Root',
+            nodeType: 'Node3D',
+            ruleName: 'test-error-rule',
+          },
+        ],
+      };
+
+      ruleRegistry.register(oddRule);
+      ruleRegistry.register(errorRule);
+
+      const messages = linter
+        .lint(`[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node3D"]\n`)
+        .filter((d) => d.ruleName.startsWith('test-'))
+        .map((d) => d.message);
+
+      expect(messages).toEqual(['Error', 'Odd']);
     });
 
     it('should preserve order within same severity level', () => {

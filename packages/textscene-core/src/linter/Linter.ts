@@ -5,7 +5,14 @@
 import type { TscnScene, TscnNode } from '../parser/types.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
-import { SEVERITY_ORDER, type Diagnostic, type RuleContext, type ParseError } from './types.js';
+import {
+  SEVERITY_ORDER,
+  isSeverity,
+  type Diagnostic,
+  type RuleContext,
+  type ParseError,
+  type Severity,
+} from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
@@ -171,9 +178,16 @@ export class Linter {
   }
 
   /**
-   * Sort diagnostics by severity
+   * Sort diagnostics by severity, an unranked tier floored to `info`.
+   *
+   * A bare index yields `undefined` for a severity outside the union, and the
+   * subtraction then returns `NaN`, which the sort reads as "these two are
+   * equal" — so one malformed diagnostic leaves the whole report in an order
+   * nothing decided.
    */
   private sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    return diagnostics.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+    const rank = (severity: Severity): number =>
+      SEVERITY_ORDER[isSeverity(severity) ? severity : 'info'];
+    return diagnostics.sort((a, b) => rank(a.severity) - rank(b.severity));
   }
 }

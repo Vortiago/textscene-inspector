@@ -30,6 +30,23 @@ export type Severity = 'error' | 'warning' | 'info';
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
+ * Whether a string is one of the three tiers — the test every reader that
+ * ranks, sorts or maps a severity needs before indexing a table by it.
+ *
+ * `hasOwn` rather than a bare index: `SEVERITY_ORDER['constructor']` reads
+ * `Object.prototype`'s own property back and passes a truthy check, while any
+ * other unknown key yields `undefined`, and `undefined <= n` and `n <=
+ * undefined` are BOTH false — so an unranked severity holds a gutter row
+ * against every error behind it, and a comparator built on it returns `NaN`
+ * and leaves the sort unordered. Beside the table rather than in each host:
+ * this package's own sort, the CLI formatter, the VS Code squiggle map and
+ * the web gutter all index it, and the test is the same one every time.
+ */
+export function isSeverity(value: string): value is Severity {
+  return Object.hasOwn(SEVERITY_ORDER, value);
+}
+
+/**
  * A diagnostic message reporting an issue
  */
 export interface Diagnostic {

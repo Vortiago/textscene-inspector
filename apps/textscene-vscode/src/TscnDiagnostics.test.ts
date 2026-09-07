@@ -92,6 +92,19 @@ describe('toVsCodeDiagnostic', () => {
       const result = toVsCodeDiagnostic(makeCoreDiagnostic({ severity: 'info' }), doc);
       expect(result.severity).toBe(vscode.DiagnosticSeverity.Information);
     });
+
+    it('floors a severity outside the union to Information, not to the constructor default', () => {
+      // `SEVERITY_MAP[<off-union>]` is `undefined`, and `vscode.Diagnostic`
+      // defaults an absent severity to Error — so the least confident finding
+      // would read as the most severe thing in the file.
+      const result = toVsCodeDiagnostic(
+        makeCoreDiagnostic({
+          severity: 'bogus' as unknown as TscnLintDiagnostic['severity'],
+        }),
+        doc
+      );
+      expect(result.severity).toBe(vscode.DiagnosticSeverity.Information);
+    });
   });
 
   describe('location mapping', () => {
