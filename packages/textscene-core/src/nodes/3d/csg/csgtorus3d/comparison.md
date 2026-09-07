@@ -45,6 +45,7 @@ Strict parsing format-checks these `CSGTorus3D` properties, plus 16 inherited fr
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `flip_faces` |
 | `inner_radius` |
 | `material` |

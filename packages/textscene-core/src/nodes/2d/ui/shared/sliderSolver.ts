@@ -87,6 +87,9 @@ export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeVa
   return Number.isNaN(ratio) ? 0 : ratio;
 }
 
+/** `Size2i size = get_size()` — every draw formula below reads the narrowed size. */
+const size2i = (size: Vec2): Vec2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
+
 /**
  * The `slider` StyleBox draw rect — `style->draw(...)`:
  *
@@ -101,9 +104,6 @@ export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeVa
  * always is here (`2 * round(margin * scale)`), but the separate truncation
  * is transcribed anyway for fidelity to the source.
  */
-/** `Size2i size = get_size()` — every draw formula below reads the narrowed size. */
-const size2i = (size: Vec2): Vec2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
-
 export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeTheme): Rect2 {
   const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;

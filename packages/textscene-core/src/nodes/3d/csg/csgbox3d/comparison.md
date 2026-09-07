@@ -39,6 +39,7 @@ Strict parsing format-checks these `CSGBox3D` properties, plus 16 inherited from
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `flip_faces` |
 | `material` |
 | `operation` |

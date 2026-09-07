@@ -35,6 +35,7 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 16 inherited f
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `flip_faces` |
 | `material` |
 | `operation` |

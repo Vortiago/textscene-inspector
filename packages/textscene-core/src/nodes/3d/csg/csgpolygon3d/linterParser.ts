@@ -3,8 +3,8 @@
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { csgShapeValidators } from '../sharedLinter.js';
 
-const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
 const MODE = { 0: 'DEPTH', 1: 'SPIN', 2: 'PATH' };
 const INTERVAL_TYPE = { 0: 'DISTANCE', 1: 'SUBDIVIDE' };
 const PATH_ROTATION = { 0: 'POLYGON', 1: 'PATH', 2: 'PATH_FOLLOW' };
@@ -31,5 +31,5 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   smooth_faces: v.boolean('smooth_faces'),
   flip_faces: v.boolean('flip_faces'),
   material: v.resourceReference('material'),
-  operation: v.enumInt('operation', 0, 2, OPERATION),
+  ...csgShapeValidators,
 });

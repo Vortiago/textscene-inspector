@@ -50,7 +50,7 @@ import type { ThemeResource } from './styles/theme/types';
 import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
-import type { ResourceProcessor } from './createResourceProcessor';
+import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
 /**
@@ -64,9 +64,6 @@ export function busTypeFor(resourceType: string | undefined): ResourceType | nul
   if (!resourceType) return null;
   return resourceSliceRegistry.busTypeFor(resourceType);
 }
-
-/** Ceiling on a peer-processor wait — see `ResourceLoader.peerLoad`. */
-const PEER_LOAD_TIMEOUT_MS = 30_000;
 
 export class ResourceLoader {
   readonly metadata: MetadataStore;

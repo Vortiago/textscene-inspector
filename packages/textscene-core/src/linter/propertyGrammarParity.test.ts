@@ -284,37 +284,46 @@ const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
 
   CSGBox3D: {
     linterOnly: [
-      // CSG parsers call finishCsgParse which reads material/operation from
-      // shared helper; linter registers them explicitly per slice but they
-      // are not visible to the per-file parser scrape.
-      'material', 'operation',
+      // CSG parsers call finishCsgParse, which reads material plus the
+      // CSGShape3D pair from a shared helper; the linter registers them per
+      // slice (`csg/sharedLinter.ts`) but neither side is visible to the
+      // per-file parser scrape.
+      'material', 'operation', 'cast_shadow',
     ],
-    reason: 'CSG parsers read material/operation via finishCsgParse shared helper (not scrape-visible in parser.ts); linter registers them explicitly.',
+    reason: 'CSG parsers read material/operation/cast_shadow via the finishCsgParse shared helper (not scrape-visible in parser.ts); linter registers them explicitly.',
   },
 
   CSGCylinder3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    linterOnly: ['material', 'operation', 'cast_shadow'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation/cast_shadow via a shared helper not visible to the scrape.',
   },
 
   CSGSphere3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    linterOnly: ['material', 'operation', 'cast_shadow'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation/cast_shadow via a shared helper not visible to the scrape.',
   },
 
   CSGTorus3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    linterOnly: ['material', 'operation', 'cast_shadow'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation/cast_shadow via a shared helper not visible to the scrape.',
   },
 
   CSGMesh3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    linterOnly: ['material', 'operation', 'cast_shadow'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation/cast_shadow via a shared helper not visible to the scrape.',
   },
 
   CSGPolygon3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
+    linterOnly: ['material', 'operation', 'cast_shadow'],
+    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation/cast_shadow via a shared helper not visible to the scrape.',
+  },
+
+  CSGCombiner3D: {
+    // A CSGShape3D that is not a CSGPrimitive3D: it takes `finishCsgShapeParse`
+    // (the material-free half of the same helper), so its pair is scrape-invisible
+    // for the same reason the primitives' trio is.
+    linterOnly: ['operation', 'cast_shadow'],
+    reason: 'CSGCombiner3D reads operation/cast_shadow via the finishCsgShapeParse shared helper (not scrape-visible in parser.ts); linter registers them explicitly.',
   },
 
   Decal: {

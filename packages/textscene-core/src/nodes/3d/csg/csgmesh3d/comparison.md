@@ -50,6 +50,7 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 16 inherited fro
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `flip_faces` |
 | `material` |
 | `mesh` |

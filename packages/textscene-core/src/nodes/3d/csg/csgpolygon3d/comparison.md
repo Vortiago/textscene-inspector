@@ -94,6 +94,7 @@ Strict parsing format-checks these `CSGPolygon3D` properties, plus 16 inherited 
 
 | Property |
 | --- |
+| `cast_shadow` |
 | `depth` |
 | `flip_faces` |
 | `material` |
