@@ -52,7 +52,11 @@ export function createFontProcessor(
   // real ring from two independent loads that merely overlap in time, and
   // would resolve a perfectly ordinary shared base font to null whenever its
   // dependent happened to be in flight beside it.
-  const waitingFor = new Map<string, Set<string>>();
+  //
+  // COUNTED, not a set: two waits can park on one address at once — the byte
+  // bus re-broadcasts a cached file to every address still in flight for it —
+  // and a set would let the first to settle sever the other's live edge.
+  const waitingFor = new Map<string, Map<string, number>>();
 
   /** Would `parent` waiting on `address` close a ring — is `parent` already downstream of it? */
   const wouldCycle = (parent: string, address: string): boolean => {
@@ -64,7 +68,7 @@ export function createFontProcessor(
       if (next === parent) return true;
       if (seen.has(next)) continue;
       seen.add(next);
-      for (const edge of waitingFor.get(next) ?? []) stack.push(edge);
+      for (const edge of waitingFor.get(next)?.keys() ?? []) stack.push(edge);
     }
     return false;
   };
@@ -76,10 +80,10 @@ export function createFontProcessor(
     if (wouldCycle(parent, address)) return null;
     let edges = waitingFor.get(parent);
     if (!edges) {
-      edges = new Set<string>();
+      edges = new Map<string, number>();
       waitingFor.set(parent, edges);
     }
-    edges.add(address);
+    edges.set(address, (edges.get(address) ?? 0) + 1);
     processor.request(address);
     try {
       return await eventBus.once<FontResource>('font', 'loaded', address, PEER_LOAD_TIMEOUT_MS);
@@ -87,10 +91,12 @@ export function createFontProcessor(
       return null;
     } finally {
       // A settled wait is nobody's deadlock: leaving the edge would let a LATER
-      // wait walk a dependency nothing is parked on. The entry goes once its
-      // last edge does, which a concurrent re-process of the same address keeps
-      // alive by still holding one.
-      edges.delete(address);
+      // wait walk a dependency nothing is parked on. Only THIS wait's count
+      // goes; the entry goes with the last of them, which is also the moment
+      // nothing else can still be holding this map.
+      const remaining = (edges.get(address) ?? 1) - 1;
+      if (remaining > 0) edges.set(address, remaining);
+      else edges.delete(address);
       if (edges.size === 0) waitingFor.delete(parent);
     }
   };

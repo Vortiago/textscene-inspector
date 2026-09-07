@@ -18,7 +18,7 @@
  * it happens to CARRY a path, so every inline procedural texture and every
  * sheet cell resolved to a missing-resource placeholder.
  *
- * The wrapping forms are peeled off one level at a time and the remainder goes
+ * The wrapping forms are peeled off to a fixed point and the remainder goes
  * through the same three branches, so a cell of a sheet, a wrapped gradient and
  * a plain image all reach a consumer as one thing: a texture whose OWN size is
  * the size Godot reports for the slot.
@@ -37,8 +37,8 @@ import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import {
+  resolveExtResourcePath,
   resolveSubResourceRef,
-  resolveTexture2DPath,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
 import { atlasTextureLayout } from './textures/atlastexture/decode.js';
@@ -88,10 +88,11 @@ export function useTexture2D(
   // (pinned by the hook while mounted), never disposed.
   const procedural = useProceduralTexture(sourceRef, internalResources);
 
+  // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
+  // at its fixed point, so that resolver's own peel could only return it again.
   const path = useMemo(
-    () =>
-      procedural ? null : resolveTexture2DPath(sourceRef, externalResources, internalResources),
-    [procedural, sourceRef, externalResources, internalResources]
+    () => (procedural ? null : resolveExtResourcePath(sourceRef, externalResources)),
+    [procedural, sourceRef, externalResources]
   );
   const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
   const source = procedural ?? loaded.value ?? null;

@@ -96,9 +96,10 @@ export function resolveSubResourceRef(
  * Texture2D slot and may name another wrapper, so peeling N levels makes each
  * caller's answer depend on how deep the chain happens to be — and two callers
  * that must agree, the painter's and the layout solve's, then agree only up to
- * the shallower count. Non-wrappers pass through unchanged, so callers apply
- * this unconditionally. A wrapper naming no `diffuse_texture`, or a chain that
- * leads back into itself, returns undefined: neither names anything to draw.
+ * the shallower count. Non-wrappers pass through unchanged, and applying this
+ * twice changes nothing, so callers apply it unconditionally. A wrapper naming
+ * no `diffuse_texture`, or a chain that leads back into itself, returns
+ * undefined: neither names anything to draw.
  */
 export function unwrapCanvasTextureRef(
   ref: string | null | undefined,

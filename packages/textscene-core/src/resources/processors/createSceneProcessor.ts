@@ -55,9 +55,11 @@ export interface SceneProcessorOptions {
    * channel. Returns null when the id is unknown — the processor then
    * emits `failed` with a "metadata not found" error.
    *
-   * A null `type` means the address resolved to a path nothing declared, so
-   * there is no registered type to disagree with. The content checks below
-   * run either way and are what actually reject a non-scene.
+   * A FALSY `type` means nothing declared one — the address resolved to a path
+   * no `[ext_resource]` covers (null), or the heading carried no `type=` and
+   * the lenient parser kept it as `''`. Either way there is no registered type
+   * to disagree with. The content checks below run regardless and are what
+   * actually reject a non-scene.
    */
   resolveMetadata: (idOrPath: string) => { path: string; type: string | null } | null;
   /**
@@ -86,7 +88,7 @@ export function createSceneProcessor({
       if (!metadata) {
         throw new Error(`Scene metadata not found: ${idOrPath}`);
       }
-      if (metadata.type !== null && metadata.type !== 'PackedScene') {
+      if (metadata.type && metadata.type !== 'PackedScene') {
         throw new Error(
           `Not a PackedScene resource: ${idOrPath} (type: ${metadata.type})`
         );
@@ -95,7 +97,9 @@ export function createSceneProcessor({
       if (!provider) {
         throw new Error('No ResourceProvider set');
       }
-      const content = await provider.loadResource(metadata.path, metadata.type ?? undefined);
+      // A HINT about what to fetch, not the claim the guard settled: the
+      // channel it was asked through is what it is being asked for.
+      const content = await provider.loadResource(metadata.path, metadata.type || 'PackedScene');
 
       // PackedScene references in Godot can point at either
       // a `.tscn` text file or a `.glb` / `.gltf` binary file (a

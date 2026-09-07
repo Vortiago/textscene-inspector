@@ -73,6 +73,9 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
       const scene = await loaded;
       expect(scene.nodes[0]!.name).toBe('Root');
+      // Nothing declared a TYPE for it either, but the channel it was asked
+      // through is still what the provider is being asked to fetch.
+      expect(provider.loadResource).toHaveBeenCalledWith(rawPath, 'PackedScene');
     });
 
     it('still refuses an id that is not a path', async () => {
