@@ -100,9 +100,15 @@ function resolveStyleBoxes(
   return out;
 }
 
+/** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
+interface PendingScene {
+  path: string;
+  ext: TscnExternalResource | null;
+}
+
 interface ForestResult {
   tree: SolveNode[];
-  pendingScenes: TscnExternalResource[];
+  pendingScenes: PendingScene[];
   pendingTextures: string[];
   pendingThemes: string[];
   pendingFonts: string[];
@@ -125,7 +131,7 @@ function buildForest(
   projectThemeRef: string | undefined,
   hiddenNodePaths: ReadonlySet<string>
 ): ForestResult {
-  const pendingScenes = new Map<string, TscnExternalResource>();
+  const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
@@ -275,11 +281,16 @@ function buildForest(
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
         // The ExtResource itself, not just the path: `createSceneProcessor` throws
         // "Scene metadata not found" for an unregistered address and the failure is
-        // cached permanently, so the registration must precede the request.
+        // cached permanently, so the registration must precede the request. A raw
+        // `res://` instance names no ExtResource to register — it is still requested,
+        // as the world walk requests it, rather than silently never loading.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
-        const entry =
-          parsed?.type === 'ExtResource' ? ext.find((r) => r.id === parsed.id) : undefined;
-        if (entry) pendingScenes.set(scenePath, entry);
+        const entry = parsed?.type === 'ExtResource' ? ext.find((r) => r.id === parsed.id) : undefined;
+        // One path can be reached both ways in a single walk; an ExtResource already
+        // recorded for it is never overwritten by a raw-path node's absent one.
+        if (!pendingScenes.get(scenePath)?.ext) {
+          pendingScenes.set(scenePath, { path: scenePath, ext: entry ?? null });
+        }
       }
 
       const groups = liveChildGroups(node, scope, sceneCache);
@@ -456,9 +467,9 @@ export function useBuildSolveTree(
   // during it, matching `useResource`'s own request-in-effect convention.
   useEffect(() => {
     if (!loader) return;
-    for (const entry of pendingScenes) {
-      loader.register({ id: entry.id, path: entry.path, type: entry.type });
-      loader.scenes.request(entry.path);
+    for (const pending of pendingScenes) {
+      if (pending.ext) loader.register(pending.ext);
+      loader.scenes.request(pending.path);
     }
     for (const path of pendingTextures) loader.textures.request(path);
     for (const path of pendingThemes) loader.themes.request(path);

@@ -85,9 +85,10 @@ function computeAnchoredRect(anchors: [number, number, number, number], offsets:
  * `controlAnchors.ts`, ADR-0035) — `solveFree` needs anchors+offsets for its
  * own rect and grow-direction for the floor step right after; `dispatchChildren`
  * needs only grow-direction for a container child's re-floor. One resolve per
- * node keeps `presetTimeMinimumSize` (an unmemoised `MinimumSizeFn` run,
- * fired only when an applied preset is a `MINSIZE_PRESETS` member) from firing
- * twice for the SAME node the way two separate resolver calls would.
+ * node keeps `presetTimeMinimumSize` (an unmemoised `MinimumSizeFn` run, fired
+ * once per applied preset or `layout_mode` reset — the orphan `size_cache`
+ * KEEP_SIZE reads is floored at it) from firing twice for the SAME node the
+ * way two separate resolver calls would.
  */
 function resolveNodeLayout(n: SolveNode, ctx: SolveContext, orderedKeys: ControlLayoutOrder) {
   return resolveControlLayout(controlProps(n), orderedKeys, () => presetTimeMinimumSize(n, ctx));

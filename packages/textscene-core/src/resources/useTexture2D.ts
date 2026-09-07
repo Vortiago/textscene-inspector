@@ -149,16 +149,17 @@ export function inlineTexture2DSize(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Texture2DSize | null {
-  const atlas = resolveAtlasTextureRef(ref, internalResources);
+  // Unwrapped BEFORE the atlas lookup, exactly as the hook above does it: a
+  // CanvasTexture may wrap an AtlasTexture, and testing the raw ref would see
+  // only the wrapper and answer with the whole sheet's size.
+  const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
+  const atlas = resolveAtlasTextureRef(unwrapped, internalResources);
   if (atlas) {
     const layout = atlasTextureLayout(atlas.texture, null);
     return layout ? { x: layout.width, y: layout.height } : null;
   }
 
-  const resource = resolveSubResourceRef(
-    unwrapCanvasTextureRef(ref, internalResources),
-    internalResources
-  );
+  const resource = resolveSubResourceRef(unwrapped, internalResources);
   if (resource?.type !== 'GradientTexture2D') return null;
   const { width, height } = decodeGradientTexture2D(resource.data as Record<string, string>);
   return { x: width, y: height };

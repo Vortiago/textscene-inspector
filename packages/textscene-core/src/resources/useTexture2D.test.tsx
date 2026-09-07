@@ -414,6 +414,24 @@ describe('inlineTexture2DSize', () => {
     });
   });
 
+  it("reports the REGION size through a CanvasTexture, not the sheet's", () => {
+    // The size half of the same composition the hook resolves: answering from
+    // the raw ref sees only the wrapper, declines, and leaves the caller's
+    // cache lookup to reserve the whole sheet for a 64x64 cell.
+    const wrapped: TscnInternalResource[] = [
+      ...resources,
+      {
+        id: 'CanvasTexture_atlas',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("AtlasTexture_cell")' },
+      },
+    ];
+    expect(inlineTexture2DSize('SubResource("CanvasTexture_atlas")', wrapped)).toEqual({
+      x: 64,
+      y: 64,
+    });
+  });
+
   it('declines an AtlasTexture whose region falls back to the atlas size', () => {
     // A zero-size axis reports `atlas->get_width()` (:34-38) — only the loaded
     // sheet knows that, so this answer belongs to the cache lookup instead.

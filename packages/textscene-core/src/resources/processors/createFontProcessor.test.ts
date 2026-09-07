@@ -284,4 +284,57 @@ describe('createFontProcessor', () => {
     expect(resource.baseFont).toBeNull();
   });
 
+  // Overlapping in time is not a cycle. A wrapper parked on a slow leg is still
+  // mid-`process` when a SECOND font names it, and that second font must wait
+  // for it rather than resolve to null: nothing on the ring leads back.
+  it('waits for a font that is merely mid-load, rather than treating it as a cycle', async () => {
+    let releaseSlow: (bytes: ArrayBuffer) => void = () => {};
+    const slow = new Promise<ArrayBuffer>((resolve) => {
+      releaseSlow = resolve;
+    });
+    const wrapper = [
+      '[gd_resource type="FontFile" load_steps=2 format=3]',
+      '',
+      '[ext_resource type="FontFile" path="res://slow.otf" id="1"]',
+      '',
+      '[resource]',
+      'fallbacks = Array[Font]([ExtResource("1")])',
+      '',
+    ].join('\n');
+    const variation = [
+      '[gd_resource type="FontVariation" load_steps=2 format=3]',
+      '',
+      '[ext_resource type="FontFile" path="res://wrapper.tres" id="1"]',
+      '',
+      '[resource]',
+      'base_font = ExtResource("1")',
+      '',
+    ].join('\n');
+    const eventBus = new ResourceEventBus();
+    const provider: ResourceProvider = {
+      loadResource: vi.fn(async (path: string) => {
+        if (path === 'res://slow.otf') return slow;
+        if (path === 'res://wrapper.tres') return wrapper;
+        if (path === 'res://variation.tres') return variation;
+        return null;
+      }),
+    };
+    const processor = createFontProcessor(new FileEventBus(provider), eventBus);
+    const flush = async (): Promise<void> => {
+      for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://variation.tres', 2000);
+    processor.request('res://wrapper.tres');
+    await flush(); // the wrapper is now parked on `res://slow.otf`
+    processor.request('res://variation.tres');
+    await flush();
+    releaseSlow(new ArrayBuffer(4));
+
+    const resource = (await loaded) as FontVariationResource;
+    expect(resource.kind).toBe('variation');
+    const base = resource.baseFont as FontFileResource;
+    expect(base?.kind).toBe('file');
+    expect(base.fallbacks).toHaveLength(1);
+  });
 });

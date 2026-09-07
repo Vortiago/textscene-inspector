@@ -481,7 +481,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       expect(sourceDispose).not.toHaveBeenCalled();
     });
 
-    it('disposes nothing when it borrowed the source unchanged', async () => {
+    it('never disposes the shared source, region or no region', async () => {
       const tex = makeTexture(64, 64);
       const sourceDispose = vi.spyOn(tex, 'dispose');
       const renderer = await render({
@@ -495,5 +495,4 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       expect(sourceDispose).not.toHaveBeenCalled();
     });
   });
-
 });

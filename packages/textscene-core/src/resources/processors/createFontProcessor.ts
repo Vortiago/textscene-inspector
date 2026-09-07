@@ -26,12 +26,13 @@
 
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
-import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
+import {
+  createResourceProcessor,
+  PEER_LOAD_TIMEOUT_MS,
+  type ResourceProcessor,
+} from '../createResourceProcessor';
 import { buildFontResource } from '../fonts/font/loadFont';
 import type { FontResource } from '../fonts/font/types';
-
-/** Ceiling for a peer font load, far above any real fetch — see `ResourceLoader.peerLoad`. */
-const FONT_PEER_TIMEOUT_MS = 30_000;
 
 export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -42,27 +43,46 @@ export function createFontProcessor(
   // returned, so the closure over the not-yet-assigned binding is safe.
   let processor: ResourceProcessor<FontResource>;
 
-  // The addresses whose own `process` is still on the stack — the ANCESTORS of
-  // whatever `loadFont` is resolving right now. `base_font`/`fallbacks` are
-  // ordinary paths, so two files can name each other; the closing leg of such a
-  // cycle would otherwise park on a `once` that only its own caller can settle,
-  // wedging every address on the ring for the session.
+  // Who is waiting on whom: address → the addresses its own `process` is
+  // currently parked on. `base_font`/`fallbacks` are ordinary paths, so two
+  // files can name each other, and the leg that closes such a ring would park
+  // on a `once` only its own waiter can settle — wedging every address on it.
   //
-  // Owned by `process`, deliberately, rather than by `loadFont`: a set that
-  // `loadFont` filled would not hold the address of the resource being built
-  // (it arrived through `request`, not through a peer load), so the leg that
-  // closes the cycle would look unvisited and park anyway. It would also make
-  // two fallbacks naming the SAME file resolve the loser to null, since
-  // `decode.ts` resolves them concurrently.
-  const processing = new Set<string>();
+  // A DEPENDENCY EDGE, not a "currently loading" flag: a flag cannot tell a
+  // real ring from two independent loads that merely overlap in time, and
+  // would resolve a perfectly ordinary shared base font to null whenever its
+  // dependent happened to be in flight beside it.
+  const waitingFor = new Map<string, Set<string>>();
 
-  const loadFont = async (address: string): Promise<FontResource | null> => {
+  /** Would `parent` waiting on `address` close a ring — is `parent` already downstream of it? */
+  const wouldCycle = (parent: string, address: string): boolean => {
+    if (parent === address) return true;
+    const seen = new Set<string>();
+    const stack = [address];
+    while (stack.length > 0) {
+      const next = stack.pop()!;
+      if (next === parent) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      for (const edge of waitingFor.get(next) ?? []) stack.push(edge);
+    }
+    return false;
+  };
+
+  /** `ResourceLoader.peerLoad` plus the cycle check, which is why it is not that method. */
+  const loadFont = async (parent: string, address: string): Promise<FontResource | null> => {
     const cached = processor.getCached(address);
     if (cached !== undefined) return cached;
-    if (processing.has(address)) return null;
+    if (wouldCycle(parent, address)) return null;
+    let edges = waitingFor.get(parent);
+    if (!edges) {
+      edges = new Set<string>();
+      waitingFor.set(parent, edges);
+    }
+    edges.add(address);
     processor.request(address);
     try {
-      return await eventBus.once<FontResource>('font', 'loaded', address, FONT_PEER_TIMEOUT_MS);
+      return await eventBus.once<FontResource>('font', 'loaded', address, PEER_LOAD_TIMEOUT_MS);
     } catch {
       return null;
     }
@@ -74,12 +94,14 @@ export function createFontProcessor(
     resourceType: 'font',
     shouldProcess: (_path, data) => data instanceof ArrayBuffer || typeof data === 'string',
     addressesSubResources: true,
+    // The peer loader is bound to the address being built, so every wait it
+    // parks on is recorded against its own requester rather than against the
+    // processor as a whole.
     process: async (path, data) => {
-      processing.add(path);
       try {
-        return await buildFontResource(path, data, loadFont);
+        return await buildFontResource(path, data, (address) => loadFont(path, address));
       } finally {
-        processing.delete(path);
+        waitingFor.delete(path);
       }
     },
   });

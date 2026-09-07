@@ -6,9 +6,9 @@
  *    own `comparison.md` table, itself measured against real Godot 4.6.3
  *    (`pnpm ref:godot --mode 2d`, pixel-scanned for the colour edge), or
  *  - a synthetic `custom_minimum_size` case (never a Label) exercising the
- *    CLAMP path neither fixture's all-zero-minimum rows can reach, per this
- *    packet's own guidance to keep a font-metric regression and a `_resort`
- *    regression from ever presenting as the same failure.
+ *    CLAMP path neither fixture's all-zero-minimum rows can reach, which keeps
+ *    a font-metric regression and a `_resort` regression from ever presenting
+ *    as the same failure.
  * None are re-derived the way the implementation derives them.
  */
 import { afterEach, describe, expect, it } from 'vitest';
@@ -502,6 +502,17 @@ describe('computeSplitDraggerPosition — (int) narrowing of size and minimums',
       400.7, 12, axisChild({ minSize: 10.9 }), axisChild({ minSize: 20.9 }), 1000, false
     );
     expect(pos).toBe(368);
+  });
+
+  it('truncates the size BEFORE the stretch ratio divides it, not after', () => {
+    // `const int size = (int)get_size()[axis]` is read once at the top of
+    // `_update_default_dragger_positions` (`split_container.cpp:527`), so the
+    // rest position is `(int)(222 * 0.9) = 199`. Dividing the raw 222.9 first
+    // gives 200.61 and lands a pixel further right.
+    const pos = computeSplitDraggerPosition(
+      222.9, 0, axisChild({ expands: true, stretchRatio: 9 }), axisChild({ expands: true, stretchRatio: 1 }), 0, false
+    );
+    expect(pos).toBe(199);
   });
 });
 

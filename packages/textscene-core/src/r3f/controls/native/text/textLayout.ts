@@ -643,7 +643,6 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
   return lines;
 }
 
-/** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`, against `options.fontMetrics` (default `OPEN_SANS_FONT_METRICS`). */
 /** `String::chr(0x200B)`, the per-paragraph terminator `Label::_shape` appends (`label.cpp:164`). */
 const PARAGRAPH_TERMINATOR = '\u200b';
 
@@ -672,6 +671,7 @@ function splitParagraphs(text: string, separator: string | undefined): ShapedPar
   return out;
 }
 
+/** Shapes `text` into lines and per-glyph placements at `options.fontSizePx`, against `options.fontMetrics` (default `OPEN_SANS_FONT_METRICS`). */
 export function shapeText(text: string, options: ShapeTextOptions): TextLayoutResult {
   const {
     fontSizePx,
@@ -708,7 +708,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     // `fontSizePxAt` — keyed by index into the WHOLE text — is offset back to
     // it, and the one index past the paragraph's end resolves to its last size.
     const sizeAt = fontSizePxAt
-      ? (i: number): number => fontSizePxAt(para.offset + Math.min(i, para.text.length - 1))
+      ? (i: number): number => fontSizePxAt(para.offset + Math.max(0, Math.min(i, para.text.length - 1)))
       : undefined;
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt);

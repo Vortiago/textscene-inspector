@@ -113,9 +113,9 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     }
     return cloned;
   }, [sourceTexture, properties]);
-  // Dispose only clones this component made; a borrowed source is shared.
-  const ownedTexture = displayedTexture !== sourceTexture ? displayedTexture : undefined;
-  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
+  // `composeFrameTexture` hands back a CLONE, never the loader's cached entry, so
+  // the clone is this component's to release; the shared source is left alone.
+  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).

@@ -202,9 +202,8 @@ function presetDerivedOffsets(
  */
 function orphanSizeCache(
   state: ControlLayoutState,
-  presetTimeMinimumSize: () => { x: number; y: number }
+  min: { x: number; y: number }
 ): { x: number; y: number } {
-  const min = presetTimeMinimumSize();
   return {
     x: Math.max(state.offsets[2] - state.offsets[0], min.x),
     y: Math.max(state.offsets[3] - state.offsets[1], min.y),
@@ -354,9 +353,12 @@ function applyLayoutModePositionReset(
   state: ControlLayoutState,
   presetTimeMinimumSize: () => { x: number; y: number }
 ): void {
-  const sizeAtPresetTime = orphanSizeCache(state, presetTimeMinimumSize);
+  // Resolved ONCE per event: the orphan size cache floors at it, and a
+  // MINSIZE preset would otherwise re-run the unmemoised solve for the same node.
+  const minimumSize = presetTimeMinimumSize();
+  const sizeAtPresetTime = orphanSizeCache(state, minimumSize);
   state.anchors = [...STRUCT_DEFAULT_ANCHORS];
-  state.offsets = presetDerivedOffsets(0, presetTimeMinimumSize, sizeAtPresetTime);
+  state.offsets = presetDerivedOffsets(0, () => minimumSize, sizeAtPresetTime);
   state.growHorizontal = PRESET_GROW_HORIZONTAL[0]!;
   state.growVertical = PRESET_GROW_VERTICAL[0]!;
 }
@@ -379,9 +381,11 @@ function applyAnchorsPreset(
 ): void {
   const anchors = PRESET_ANCHORS[preset];
   if (!anchors) return;
-  const sizeAtPresetTime = orphanSizeCache(state, presetTimeMinimumSize);
+  // One resolve per event — see `applyLayoutModePositionReset`.
+  const minimumSize = presetTimeMinimumSize();
+  const sizeAtPresetTime = orphanSizeCache(state, minimumSize);
   state.anchors = [...anchors];
-  state.offsets = presetDerivedOffsets(preset, presetTimeMinimumSize, sizeAtPresetTime);
+  state.offsets = presetDerivedOffsets(preset, () => minimumSize, sizeAtPresetTime);
   state.growHorizontal = PRESET_GROW_HORIZONTAL[preset]!;
   state.growVertical = PRESET_GROW_VERTICAL[preset]!;
 }

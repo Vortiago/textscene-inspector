@@ -119,22 +119,29 @@ export function computeSplitDraggerPosition(
   splitOffset: number,
   collapsed: boolean
 ): number {
+  // `const int size = (int)get_size()[axis]` (`split_container.cpp:527`, and the
+  // same line in `_update_dragger_positions` and `_get_valid_range`): every
+  // formula below reads the ALREADY-narrowed extent, so the truncation happens
+  // once here rather than at each use.
+  const axisSize = Math.trunc(size);
+
   let wished: number;
   if (first.expands && second.expands) {
     const total = first.stretchRatio + second.stretchRatio;
     const ratio = total > 0 ? first.stretchRatio / total : 0.5;
     // `(int)` truncates toward zero (`split_container.cpp:561`) — not `Math.floor`,
     // which would differ on a negative result.
-    wished = Math.trunc(size * ratio - separation * 0.5);
+    wished = Math.trunc(axisSize * ratio - separation * 0.5);
   } else if (first.expands) {
-    wished = size - separation;
+    // "After all expand flags" (`split_container.cpp:613`).
+    wished = axisSize - separation;
   } else {
     wished = 0;
   }
 
-  // `_get_valid_range` narrows the size and both minimums with `(int)`.
+  // `_get_valid_range` narrows both minimums with `(int)` too.
   const lo = Math.trunc(first.minSize);
-  const hi = Math.trunc(size) - separation - Math.trunc(second.minSize);
+  const hi = axisSize - separation - Math.trunc(second.minSize);
   const raw = collapsed ? wished : wished + splitOffset;
   return godotClamp(raw, lo, hi);
 }
@@ -190,9 +197,8 @@ export function resortSplitContainer(
   const [c0, c1] = children as readonly [SplitChildInput, SplitChildInput];
   // `const Size2i new_size = get_size()` (`split_container.cpp`); the one-child
   // branch above stays full-precision, as Godot's does.
-  const mainSize = Math.trunc(vertical ? containerSize.height : containerSize.width);
+  const size = Math.trunc(vertical ? containerSize.height : containerSize.width);
   const crossSize = Math.trunc(vertical ? containerSize.width : containerSize.height);
-  const size = mainSize;
 
   const draggerPos = computeSplitDraggerPosition(
     size,
