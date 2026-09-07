@@ -34,14 +34,14 @@ describe('GraphElement selection rule', () => {
     expect(diagnostics).toEqual([]);
   });
 
-  it('warns when selected = true is authored alongside selectable = false', () => {
+  it('errors when selected = true is authored alongside selectable = false', () => {
     const content = scene('selectable = false\nselected = true\n');
     expect(namesOf(content)).toContain('graph-element-selected-not-selectable');
     expect(severitiesOf(content, 'graph-element-selected-not-selectable')).toEqual(['error']);
     expect(linter.lint(content)[0]!.message).toContain('selectable');
   });
 
-  it('warns the same way regardless of which property is authored first (order independence)', () => {
+  it('errors the same way regardless of which property is authored first (order independence)', () => {
     const content = scene('selected = true\nselectable = false\n');
     expect(namesOf(content)).toContain('graph-element-selected-not-selectable');
   });

@@ -89,6 +89,17 @@ describe('summarizeDiagnostics', () => {
   it('returns all-zero counts for no diagnostics', () => {
     expect(summarizeDiagnostics([])).toEqual({ errors: 0, warnings: 0, infos: 0, total: 0 });
   });
+
+  it('counts a severity outside the union rather than throwing the badge away', () => {
+    // The switch is total for tsc; at runtime it floors, because this runs in a
+    // `useMemo` and the app carries no error boundary.
+    const odd = diagnostic({
+      severity: 'bogus' as unknown as Diagnostic['severity'],
+      message: 'off-union',
+    });
+
+    expect(summarizeDiagnostics([odd])).toEqual({ errors: 0, warnings: 0, infos: 1, total: 1 });
+  });
 });
 
 describe('formatProblemBadge', () => {

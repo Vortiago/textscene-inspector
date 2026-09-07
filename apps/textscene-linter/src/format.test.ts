@@ -248,7 +248,12 @@ describe('formatGithubAnnotations', () => {
       ],
     };
 
-    expect(formatGithubAnnotations([file]).every((l) => l.startsWith('::notice '))).toBe(true);
+    // Both lines, spelled out: `every` on an empty array is `true`, so a
+    // formatter that dropped the findings would pass this arm.
+    expect(formatGithubAnnotations([file])).toEqual([
+      expect.stringMatching(/^::notice /),
+      expect.stringMatching(/^::notice /),
+    ]);
   });
 
   it('omits line and col params when the diagnostic has no location', () => {

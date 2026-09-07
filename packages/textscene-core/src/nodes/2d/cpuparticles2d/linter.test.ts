@@ -32,7 +32,7 @@ describe('CPUParticles2D preview rule', () => {
     ['4', 'POINTS'],
     ['5', 'DIRECTED_POINTS'],
     ['6', 'RING'],
-  ])('warns that emission_shape = %s (%s) draws from the global RNG', (value, label) => {
+  ])('reports at info that emission_shape = %s (%s) draws from the global RNG', (value, label) => {
     const content = scene(`emission_shape = ${value}\n`);
     expect(namesOf(content)).toContain('cpuparticles2d-nondeterministic-emission-shape');
     expect(severitiesOf(content, 'cpuparticles2d-nondeterministic-emission-shape')).toEqual([

@@ -63,7 +63,7 @@ occluder = SubResource("999")
     expectNoDiagnostic(scene(node('LightOccluder2D', {}, { name: 'Occ' })), {});
   });
 
-  it('warns on an occluder_light_mask outside the 32-bit width', () => {
+  it('errors on an occluder_light_mask outside the 32-bit width', () => {
     // light_occluder_2d.cpp:300 hints PROPERTY_HINT_LAYERS_2D_RENDER, a
     // 32-checkbox widget, so the width is the UI's and a value outside it
     // warns. set_occluder_light_mask (:257-260) assigns unconditionally, so it

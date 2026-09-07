@@ -37,7 +37,9 @@ export const FILE_DIAGNOSTICS = {
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
    * node to the scene root and renames it `<path>#<name>` — so the file loads
-   * and the node exists, in the wrong place under a different name.
+   * and the node exists, in the wrong place under a different name. An empty
+   * path keeps the heading's name: `:561` renames only while
+   * `old_parent_path` is non-empty.
    */
   unresolvedParentPath: {
     severity: 'warning',

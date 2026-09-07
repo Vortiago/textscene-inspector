@@ -19,9 +19,14 @@ import { armDiagnostic } from './ruleArms.js';
  * Godot's own name for a re-parented orphan: the vanished path with `./`
  * stripped and every `/` turned into `@`, then `#` and the node's own name
  * (`packed_scene.cpp:212`, `:561-563`).
+ *
+ * Null where the rename does not happen: `:561` guards on
+ * `!old_parent_path.is_empty()`, and `parent=""` — or `"./"`, which trims to
+ * nothing — leaves it empty, so the node keeps the name its heading gives it.
  */
-function reparentedName(parentPath: string, name: string): string {
-  return `${parentPath.replace(/^\.\//, '').replaceAll('/', '@')}#${name}`;
+function reparentedName(parentPath: string, name: string): string | null {
+  const prefix = parentPath.replace(/^\.\//, '').replaceAll('/', '@');
+  return prefix ? `${prefix}#${name}` : null;
 }
 
 /**
@@ -78,10 +83,15 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
           { line, column: 1 }
         );
       }
+      const renamed = reparentedName(declaredParent!, node.name);
+      const reRooted = renamed
+        ? `Godot re-parents it to the scene root and renames it "${renamed}".`
+        : 'Godot re-parents it to the scene root and leaves its name alone, since an empty ' +
+          'path has nothing to prefix it with.';
       const outcome = refused
         ? 'Godot refuses to instantiate the scene for another heading (see the error beside ' +
           'this), so no re-root of this node happens.'
-        : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
+        : reRooted;
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,

@@ -28,7 +28,7 @@ function makeContext(properties: Record<string, string>): RuleContext {
 }
 
 describe('CodeEdit semantic rules', () => {
-  it('warns when delimiter_strings and delimiter_comments share a start key', () => {
+  it('errors when delimiter_strings and delimiter_comments share a start key', () => {
     const diagnostics = codeEditDelimiterCollisionRule.check(
       makeContext({
         delimiter_strings: 'PackedStringArray("# ")',

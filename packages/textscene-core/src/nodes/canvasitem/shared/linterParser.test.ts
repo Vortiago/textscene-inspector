@@ -92,7 +92,7 @@ describe('CanvasItem shared validators', () => {
     expect(validator('clip_children', '-3000000000', 1)?.severity).toBe('error');
   });
 
-  it.each(['Sprite2D', 'Label'])('does not ERROR on the wide spelling of -1 (%s)', (nodeType) => {
+  it.each(['Sprite2D', 'Label'])('warns rather than errors on the wide spelling of -1 (%s)', (nodeType) => {
     // Godot's own serialiser writes `clip_children = 4294967295` for -1, and
     // the value clips. Erroring on it contradicted the canvasgroup rule, which
     // narrows the same key and warns that the ancestor DOES clip.

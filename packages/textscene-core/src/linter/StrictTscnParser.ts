@@ -102,8 +102,7 @@ export class StrictTscnParser {
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
       if (instancedPaths.has(ROOT_PARENT_PATH)) return true;
-      // An empty `parent=` names nothing to walk up from, and a nameless
-      // instance heading stores the empty path — without this the two match.
+      // An empty `parent=` names nothing to walk up from.
       if (!parent || parent === ROOT_PARENT_PATH) return false;
       return instancedPaths.has(parent) || getAncestorPaths(parent).some((p) => instancedPaths.has(p));
     };
@@ -191,11 +190,14 @@ export class StrictTscnParser {
           // `#ifdef DEBUG_ENABLED`). A release export has no fallback and sends
           // the node to `stray_instances` (:549) instead, so nothing below it
           // loads there either way.
-          instancedPaths.add(
-            isRootHeading
-              ? ROOT_PARENT_PATH
-              : joinPath(parent && parent !== ROOT_PARENT_PATH ? parent : '', name ?? '')
-          );
+          const instancedPath = isRootHeading
+            ? ROOT_PARENT_PATH
+            : joinPath(parent && parent !== ROOT_PARENT_PATH ? parent : '', name ?? '');
+          // A nameless heading with an empty `parent=` joins as the empty
+          // path, which `getAncestorPaths` yields for every absolute one:
+          // stored, it would vouch for `parent="/Anything"`. It names no node,
+          // so it vouches for none.
+          if (instancedPath) instancedPaths.add(instancedPath);
         }
 
         if (isRootHeading && placeholder) {

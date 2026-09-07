@@ -123,6 +123,16 @@ describe('a parent path this file never defines', () => {
     expect(lint(empty).filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
   });
 
+  it('claims no rename for the empty path, which Godot leaves the name alone for', () => {
+    // `packed_scene.cpp:561` renames only while `old_parent_path` is non-empty,
+    // and `parent=""` trims to nothing, so the node keeps the heading's name.
+    const message = orphansIn(
+      scene(node('Node2D', {}, { name: 'Root' }), node('Node2D', {}, { name: 'B', parent: '' }))
+    )[0]?.message;
+    expect(message).toContain('leaves its name alone');
+    expect(message).not.toContain('#B');
+  });
+
   it('still names the headings a file with no root heading strands', () => {
     // `packed_scene.cpp:218-219` makes heading 0 the root and fails the
     // instantiate when it declares a parent, so handing the flat list back as

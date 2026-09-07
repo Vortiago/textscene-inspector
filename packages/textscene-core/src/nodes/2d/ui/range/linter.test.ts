@@ -33,7 +33,7 @@ describe('Range bounds rule', () => {
     expect(diagnostics).toEqual([]);
   });
 
-  it('warns when max_value is below min_value', () => {
+  it('errors when max_value is below min_value', () => {
     const content = scene('min_value = 10\nmax_value = 5\n');
     expect(namesOf(content)).toContain('range-max-below-min');
     expect(severitiesOf(content, 'range-max-below-min')).toEqual(['error']);

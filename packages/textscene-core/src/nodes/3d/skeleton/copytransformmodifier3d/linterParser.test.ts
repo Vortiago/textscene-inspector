@@ -104,9 +104,11 @@ describe('CopyTransformModifier3D strict validators', () => {
       expect(check('settings/0/copy', '-1')?.severity).toBe('warning');
     });
 
-    it('rejects a non-integer mask as a format error', () => {
-      const error = check('settings/0/axes', 'true');
-      expect(error?.severity).toBe('warning');
+    it('warns on a boolean mask, which an INT slot stores as 1', () => {
+      // `_to_int` maps `true` to 1 before the setter runs (variant.h:360-377),
+      // so the stored value differs from the written one without the setter
+      // refusing anything.
+      expect(check('settings/0/axes', 'true')?.severity).toBe('warning');
     });
   });
 

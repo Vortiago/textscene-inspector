@@ -69,15 +69,15 @@ describe('TabBar cross-field rule', () => {
     it('stays silent when current_tab is absent (it defaults to -1)', () => {
       expect(only({ tab_count: 3 })).toHaveLength(0);
     });
-    it('warns when current_tab equals tab_count, one past the last valid index', () => {
+    it('errors when current_tab equals tab_count, one past the last valid index', () => {
       const found = only({ tab_count: 3, current_tab: 3 });
       expect(found).toHaveLength(1);
       expect(found[0]?.severity).toBe('error');
     });
-    it('warns when current_tab exceeds tab_count', () => {
+    it('errors when current_tab exceeds tab_count', () => {
       expect(only({ tab_count: 3, current_tab: 9 })).toHaveLength(1);
     });
-    it('warns when current_tab is set but tab_count never is: the count defaults to 0, so no index is selectable', () => {
+    it('errors when current_tab is set but tab_count never is: the count defaults to 0, so no index is selectable', () => {
       expect(only({ current_tab: 0 })).toHaveLength(1);
     });
     it('leaves a below-floor current_tab to linterParser.ts, which already errors on it', () => {
@@ -108,12 +108,12 @@ describe('TabBar cross-field rule', () => {
     it('stays silent when no tab_<idx>/ key is present at all', () => {
       expect(only({ tab_count: 2 })).toHaveLength(0);
     });
-    it('warns on an index at tab_count, the first index the array does not hold', () => {
+    it('errors on an index at tab_count, the first index the array does not hold', () => {
       const found = only({ tab_count: 2, 'tab_2/title': '"Three"' });
       expect(found).toHaveLength(1);
       expect(found[0]?.severity).toBe('error');
     });
-    it('warns once, listing every offending index, rather than once per key', () => {
+    it('errors once, listing every offending index, rather than once per key', () => {
       const found = only({
         tab_count: 1,
         'tab_0/title': '"One"',
@@ -124,7 +124,7 @@ describe('TabBar cross-field rule', () => {
       expect(found).toHaveLength(1);
       expect(found[0]?.message).toContain('3, 5');
     });
-    it('warns when a tab_<idx>/ key appears with no tab_count at all', () => {
+    it('errors when a tab_<idx>/ key appears with no tab_count at all', () => {
       expect(only({ 'tab_0/title': '"One"' })).toHaveLength(1);
     });
     it('never claims the tab_-prefixed scalars are indexed keys', () => {

@@ -68,7 +68,7 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
   let warnings = 0;
   let infos = 0;
   // A switch total over the closed union, not a fall-through `else`: a fourth
-  // tier fails tsc here instead of being counted silently as an info.
+  // tier fails tsc in the `default` arm instead of being counted silently.
   for (const d of diagnostics) {
     switch (d.severity) {
       case 'error':
@@ -81,8 +81,12 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
         infos++;
         break;
       default: {
+        // Total for tsc, floored at runtime: this runs inside a `useMemo` on
+        // every keystroke and the app carries no error boundary, so a throw
+        // here would take the whole previewer down over a badge count.
         const unmatched: never = d.severity;
-        throw new Error(`unknown diagnostic severity ${String(unmatched)}`);
+        void unmatched;
+        infos++;
       }
     }
   }
