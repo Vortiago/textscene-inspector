@@ -13,6 +13,7 @@ import {
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
+  unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
@@ -107,6 +108,59 @@ describe('resolveSubResourceRef', () => {
   it('returns undefined when the SubResource id is not registered (error path)', () => {
     expect(resolveSubResourceRef('SubResource("Missing_1")', internalResources)).toBeUndefined();
     expect(resolveSubResourceRef('SubResource("RectangleShape2D_1")', [])).toBeUndefined();
+  });
+});
+
+describe('unwrapCanvasTextureRef', () => {
+  const internals: readonly TscnInternalResource[] = [
+    {
+      id: 'CanvasTexture_outer',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_middle")' },
+    },
+    {
+      id: 'CanvasTexture_middle',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_inner")' },
+    },
+    {
+      id: 'CanvasTexture_inner',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'ExtResource("5")' },
+    },
+    { id: 'CanvasTexture_empty', type: 'CanvasTexture', data: {} },
+    {
+      id: 'CanvasTexture_self',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_self")' },
+    },
+    { id: 'Gradient_1', type: 'GradientTexture2D', data: { width: '160', height: '96' } },
+  ];
+
+  it('passes a reference that is not a wrapper straight through', () => {
+    expect(unwrapCanvasTextureRef('res://icon.png', internals)).toBe('res://icon.png');
+    expect(unwrapCanvasTextureRef('SubResource("Gradient_1")', internals)).toBe(
+      'SubResource("Gradient_1")'
+    );
+  });
+
+  it('peels a chain of wrappers to the first reference that is not one', () => {
+    // THREE levels: two peels is what the callers used to spell out by hand, so
+    // only a third distinguishes a fixed point from a fixed count.
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals)).toBe(
+      'ExtResource("5")'
+    );
+  });
+
+  it('is idempotent, so a caller can apply it to an already-peeled reference', () => {
+    const once = unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals);
+    expect(unwrapCanvasTextureRef(once, internals)).toBe(once);
+  });
+
+  it('names nothing to draw for an empty wrapper or one that leads back to itself', () => {
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_empty")', internals)).toBeUndefined();
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_self")', internals)).toBeUndefined();
+    expect(unwrapCanvasTextureRef(undefined, internals)).toBeUndefined();
   });
 });
 

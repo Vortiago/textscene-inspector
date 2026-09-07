@@ -83,7 +83,8 @@ export function resolveSubResourceRef(
 }
 
 /**
- * Peel one `CanvasTexture` wrapper off a Texture2D reference.
+ * Peel every `CanvasTexture` wrapper off a Texture2D reference, down to the
+ * first reference that is not one.
  *
  * A `CanvasTexture` is a first-class Texture2D that wraps a `diffuse_texture`
  * (plus normal/specular maps we do not sample); Godot draws that diffuse map,
@@ -91,19 +92,32 @@ export function resolveSubResourceRef(
  * path is what lets the wrapper compose with every other form: an image, or an
  * inline `GradientTexture2D` with no file behind it at all.
  *
+ * To FIXED POINT rather than one level, because a `diffuse_texture` is itself
+ * an ordinary Texture2D slot and may name another wrapper. Peeling a fixed
+ * number of levels makes every caller's answer depend on how deep the chain
+ * happens to be, and two callers that must agree — the painter's and the
+ * layout solve's — then agree only up to the shallower one's count.
+ *
  * Every non-CanvasTexture reference passes through unchanged, so callers can
- * apply this unconditionally. A wrapper with no `diffuse_texture` returns
- * undefined — it names nothing to draw.
+ * apply this unconditionally, and applying it twice changes nothing. A wrapper
+ * with no `diffuse_texture`, or a chain that leads back to a wrapper already
+ * peeled, returns undefined — neither names anything to draw.
  */
 export function unwrapCanvasTextureRef(
   ref: string | null | undefined,
   internalResources: readonly TscnInternalResource[]
 ): string | undefined {
-  if (!ref) return undefined;
-  const sub = resolveSubResourceRef(ref, internalResources);
-  if (sub?.type !== 'CanvasTexture') return ref;
-  const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
-  return typeof diffuse === 'string' ? diffuse : undefined;
+  const peeled = new Set<string>();
+  let current = ref;
+  while (current) {
+    if (peeled.has(current)) return undefined;
+    peeled.add(current);
+    const sub = resolveSubResourceRef(current, internalResources);
+    if (sub?.type !== 'CanvasTexture') return current;
+    const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
+    current = typeof diffuse === 'string' ? diffuse : undefined;
+  }
+  return undefined;
 }
 
 /**

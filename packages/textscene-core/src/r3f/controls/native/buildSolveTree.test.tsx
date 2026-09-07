@@ -1014,6 +1014,40 @@ describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
     expect(loader.registerCalls.findIndex((r) => r.path === LAYER_PATH)).toBeGreaterThanOrEqual(0);
   });
 
+  it('requests a raw `res://` instance, which names no ExtResource to register', () => {
+    const loader = createFakeResourceLoader();
+    const requested: string[] = [];
+    loader.scenes.setRequestImpl((path) => requested.push(path));
+
+    renderHook(
+      () => useBuildSolveTree([node('Hud', 'Node', { instance: LAYER_PATH })], [], []),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    expect(requested).toContain(LAYER_PATH);
+    expect(loader.registerCalls).toHaveLength(0);
+  });
+
+  it('keeps the ExtResource when the same path is also reached raw', () => {
+    const loader = createFakeResourceLoader();
+    loader.scenes.setRequestImpl(() => {});
+
+    const ext = { id: '1_layer', path: LAYER_PATH, type: 'PackedScene' };
+    renderHook(
+      () =>
+        useBuildSolveTree(
+          [node('Hud', 'Node', { instance: LAYER_PATH }), instanceOf('Hud2', '1_layer')],
+          [ext],
+          []
+        ),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    // The raw node is walked FIRST; its absent ExtResource must not be the one
+    // the single per-path entry keeps, or the registration never happens.
+    expect(loader.registerCalls).toContainEqual(ext);
+  });
+
   it('does not re-request a scene the loader already has', () => {
     const loader = createFakeResourceLoader();
     loader.scenes.seed(LAYER_PATH, scene([label('LayerLabel', { text: 'HUD LAYER' })]));

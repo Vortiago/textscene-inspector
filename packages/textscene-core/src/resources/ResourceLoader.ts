@@ -186,7 +186,13 @@ export class ResourceLoader {
       eventBus: this.eventBus,
       resolveMetadata: (idOrPath) => {
         const meta = this.metadata.get(idOrPath);
-        return meta ? { path: meta.path, type: meta.type } : null;
+        if (meta) return { path: meta.path, type: meta.type };
+        // A node's `instance` may be a raw `res://` path, which no
+        // `[ext_resource]` declares and so nothing ever registers. Such an
+        // address IS its own path — answering from it is what lets it load at
+        // all; `createSceneProcessor`'s own header/extension checks still
+        // reject anything that turns out not to be a text scene.
+        return idOrPath.startsWith('res://') ? { path: idOrPath, type: 'PackedScene' } : null;
       },
       getProvider: () => this.provider,
     });

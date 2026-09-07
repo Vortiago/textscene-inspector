@@ -85,6 +85,10 @@ export function createFontProcessor(
       return await eventBus.once<FontResource>('font', 'loaded', address, PEER_LOAD_TIMEOUT_MS);
     } catch {
       return null;
+    } finally {
+      // A settled wait can never be part of a deadlock ring — leaving the edge
+      // in place would let a LATER wait walk a dependency nobody is parked on.
+      edges.delete(address);
     }
   };
 
@@ -101,7 +105,10 @@ export function createFontProcessor(
       try {
         return await buildFontResource(path, data, (address) => loadFont(path, address));
       } finally {
-        waitingFor.delete(path);
+        // Every wait THIS run parked on has already removed its own edge, so a
+        // leftover one belongs to a concurrent re-process of the same address
+        // (a mid-flight `clearCache` starts a second run) and must survive.
+        if (waitingFor.get(path)?.size === 0) waitingFor.delete(path);
       }
     },
   });

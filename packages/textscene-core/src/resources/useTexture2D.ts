@@ -75,8 +75,10 @@ export function useTexture2D(
     () => resolveAtlasTextureRef(unwrapped, internalResources),
     [unwrapped, internalResources]
   );
+  // The sheet a window names is an ordinary Texture2D slot, so it gets the same
+  // unwrap; `unwrapped` is already at its fixed point.
   const sourceRef = useMemo(
-    () => unwrapCanvasTextureRef(atlas ? atlas.texture.atlas : unwrapped, internalResources),
+    () => (atlas ? unwrapCanvasTextureRef(atlas.texture.atlas, internalResources) : unwrapped),
     [atlas, unwrapped, internalResources]
   );
 

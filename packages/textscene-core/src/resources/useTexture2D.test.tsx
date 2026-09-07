@@ -432,6 +432,52 @@ describe('inlineTexture2DSize', () => {
     });
   });
 
+  it('reports the size through a CHAIN of CanvasTexture wrappers', () => {
+    // The painter resolves the whole chain, so the size must too: stopping at
+    // any fixed depth reserves 0x0 for a slot that draws at its declared size,
+    // and inside a BoxContainer that collapses the node over its siblings.
+    const chained: TscnInternalResource[] = [
+      ...resources,
+      {
+        id: 'CanvasTexture_outer',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("CanvasTexture_middle")' },
+      },
+      {
+        id: 'CanvasTexture_middle',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("CanvasTexture_gradient")' },
+      },
+    ];
+    expect(inlineTexture2DSize('SubResource("CanvasTexture_outer")', chained)).toEqual({
+      x: 160,
+      y: 96,
+    });
+  });
+
+  it("reports a chained wrapper's REGION size, never the sheet's", () => {
+    // The window is found only once every wrapper is off: an atlas lookup run
+    // against a half-peeled reference still sees a CanvasTexture and answers
+    // with the whole sheet through the caller's cache instead of the cell.
+    const chained: TscnInternalResource[] = [
+      ...resources,
+      {
+        id: 'CanvasTexture_outer',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("CanvasTexture_atlas")' },
+      },
+      {
+        id: 'CanvasTexture_atlas',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("AtlasTexture_cell")' },
+      },
+    ];
+    expect(inlineTexture2DSize('SubResource("CanvasTexture_outer")', chained)).toEqual({
+      x: 64,
+      y: 64,
+    });
+  });
+
   it('declines an AtlasTexture whose region falls back to the atlas size', () => {
     // A zero-size axis reports `atlas->get_width()` (:34-38) — only the loaded
     // sheet knows that, so this answer belongs to the cache lookup instead.

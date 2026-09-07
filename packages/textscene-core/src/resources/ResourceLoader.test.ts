@@ -60,6 +60,31 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
   });
 
+  describe('scene addresses no [ext_resource] declares', () => {
+    it('loads a raw `res://` scene path nothing ever registered', async () => {
+      // A node's `instance` may name the path directly. No ExtResource declares
+      // it, so nothing calls `register` for it — and an address the MetadataStore
+      // cannot answer used to fail permanently, in BOTH walks that request one.
+      const rawPath = 'res://scenes/never-registered.tscn';
+      provider.files.set(rawPath, VALID_TSCN);
+      const loaded = loader.eventBus.once<TscnScene>('scene', 'loaded', rawPath);
+
+      loader.request('scene', rawPath);
+
+      const scene = await loaded;
+      expect(scene.nodes[0]!.name).toBe('Root');
+    });
+
+    it('still refuses an id that is not a path', async () => {
+      const pending = loader.eventBus.once<TscnScene>('scene', 'loaded', '9_unknown');
+
+      loader.request('scene', '9_unknown');
+
+      await expect(pending).rejects.toThrow('Scene metadata not found');
+      expect(loader.scenes.getCached('9_unknown')).toBeNull();
+    });
+  });
+
   describe('failed loads', () => {
     it('caches null when the provider has no content for the path', async () => {
       loader.register(SCENE_META);

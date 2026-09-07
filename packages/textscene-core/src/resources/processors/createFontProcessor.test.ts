@@ -326,7 +326,12 @@ describe('createFontProcessor', () => {
 
     const loaded = eventBus.once<FontResource>('font', 'loaded', 'res://variation.tres', 2000);
     processor.request('res://wrapper.tres');
-    await flush(); // the wrapper is now parked on `res://slow.otf`
+    await flush();
+    // Asserted, not assumed: without the wrapper actually parked on the slow
+    // leg there is no overlap to tell apart from a cycle, and the case below
+    // would pass for the wrong reason.
+    expect(processor.isLoading('res://wrapper.tres')).toBe(true);
+    expect(processor.isLoading('res://slow.otf')).toBe(true);
     processor.request('res://variation.tres');
     await flush();
     releaseSlow(new ArrayBuffer(4));
@@ -336,5 +341,64 @@ describe('createFontProcessor', () => {
     const base = resource.baseFont as FontFileResource;
     expect(base?.kind).toBe('file');
     expect(base.fallbacks).toHaveLength(1);
+  });
+
+  // The wait graph must hold LIVE waits only. A dependency that has already
+  // arrived is nobody's deadlock: leaving its edge behind lets a later,
+  // perfectly settleable wait walk it and be refused as a ring.
+  it('forgets a wait once it settles, so a reload is not refused by the finished one', async () => {
+    let releaseSlow: (bytes: ArrayBuffer) => void = () => {};
+    const slow = new Promise<ArrayBuffer>((resolve) => {
+      releaseSlow = resolve;
+    });
+    const hub = [
+      '[gd_resource type="FontFile" load_steps=3 format=3]',
+      '',
+      '[ext_resource type="FontFile" path="res://leaf.tres" id="1"]',
+      '[ext_resource type="FontFile" path="res://slow.otf" id="2"]',
+      '',
+      '[resource]',
+      'fallbacks = Array[Font]([ExtResource("1"), ExtResource("2")])',
+      '',
+    ].join('\n');
+    const leaf = [
+      '[gd_resource type="FontVariation" load_steps=2 format=3]',
+      '',
+      '[ext_resource type="FontFile" path="res://hub.tres" id="1"]',
+      '',
+      '[resource]',
+      'base_font = ExtResource("1")',
+      '',
+    ].join('\n');
+    const eventBus = new ResourceEventBus();
+    const provider: ResourceProvider = {
+      loadResource: vi.fn(async (path: string) => {
+        if (path === 'res://slow.otf') return slow;
+        if (path === 'res://hub.tres') return hub;
+        if (path === 'res://leaf.tres') return leaf;
+        return null;
+      }),
+    };
+    const processor = createFontProcessor(new FileEventBus(provider), eventBus);
+    const flush = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    processor.request('res://hub.tres');
+    await flush();
+    // The first leaf load closed the ring while hub was parked on it, so its
+    // own `base_font` is null — and hub is STILL parked, on the slow leg.
+    expect((processor.getCached('res://leaf.tres') as FontVariationResource).baseFont).toBeNull();
+    expect(processor.isLoading('res://hub.tres')).toBe(true);
+
+    // Reload the leaf. Hub no longer waits on it, so this wait settles.
+    const reloaded = eventBus.once<FontResource>('font', 'loaded', 'res://leaf.tres', 2000);
+    processor.clearCache('res://leaf.tres');
+    processor.request('res://leaf.tres');
+    await flush();
+    releaseSlow(new ArrayBuffer(4));
+
+    const resource = (await reloaded) as FontVariationResource;
+    expect((resource.baseFont as FontFileResource | null)?.kind).toBe('file');
   });
 });
