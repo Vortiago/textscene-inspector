@@ -226,9 +226,9 @@ position = Vector2(5, 5)
     });
 
     it('lets no nameless instance heading vouch for an absolute parent path', () => {
-      // A nameless heading joins as the empty path, and `getAncestorPaths`
-      // yields that for every absolute one, so storing it made the malformed
-      // heading vouch for a path nothing declares.
+      // An absolute path resolves to nothing at all — instantiate refuses one
+      // off-tree (node.cpp:1898) — so it reaches no ancestor walk, and the
+      // nameless heading it names has no path to vouch with either.
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://rock.tscn" id="1"]
