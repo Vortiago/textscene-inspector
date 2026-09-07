@@ -5,7 +5,7 @@
  * against the real engine: a scratch project instantiated the equivalent
  * scene tree in a `SubViewport` and printed `Control.get_rect()` /
  * `get_combined_minimum_size()` per node (`s9-gridcontainer/probe-project`
- * in the packet report — scenarios a-i). Children are synthetic
+ * scenarios a-i). Children are synthetic
  * `custom_minimum_size` Controls, never Labels, so a font-metric regression
  * and a `_resort` regression can never present as the same test failure.
  */

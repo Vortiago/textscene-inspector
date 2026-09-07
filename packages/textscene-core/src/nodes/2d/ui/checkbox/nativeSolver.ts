@@ -73,7 +73,7 @@ export { fitIconSize, tintColor };
  * NOT only while a mouse physically holds it down. `disabled` still wins
  * outright (`DRAW_DISABLED`, checked first in the source).
  *
- * Verified against `pnpm ref:godot a probe scene --mode 2d`:
+ * Verified against a `pnpm ref:godot --mode 2d` render of a CheckBox probe scene:
  * the checked (`button_pressed=true`), non-disabled row's label reads pure
  * white (255,255,255) at probe (527,298) — `font_pressed_color`, not the
  * 0.875-gray a merely-`DRAW_NORMAL` label would read.

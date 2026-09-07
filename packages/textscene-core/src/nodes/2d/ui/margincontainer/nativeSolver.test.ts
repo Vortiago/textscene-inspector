@@ -5,7 +5,7 @@
  * project instantiated the equivalent scene tree in a `SubViewport` sized
  * 1152×648 (this repo's `DEFAULT_VIEWPORT_WIDTH`/`HEIGHT` fallback) and
  * printed `Control.get_rect()`/`get_combined_minimum_size()` per node — see
- * the packet report for the full transcript. Children are synthetic
+ * the same probe technique the sibling container suites use. Children are synthetic
  * `custom_minimum_size` Controls, never Labels, so a font-metric regression
  * and a `_resort` regression can never present as the same test failure.
  */

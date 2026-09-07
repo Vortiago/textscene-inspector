@@ -19,9 +19,9 @@
  * font-metric-derived minimum actually is — makes the container's truncated
  * cell smaller than the child's own true minimum, and the child's final rect
  * grows past that cell rather than clipping to it. Confirmed against the live
- * engine (`s9-gridcontainer/probe-project`, scenarios h/i in the packet
- * report): `custom_minimum_size = Vector2(10.7, 5)` in a column whose
- * bookkeeping truncates to width 10 renders at width 10.7, and with
+ * engine (`s9-gridcontainer/probe-project`, scenarios h/i):
+ * `custom_minimum_size = Vector2(10.7, 5)` in a column whose bookkeeping
+ * truncates to width 10 renders at width 10.7, and with
  * `grow_horizontal = 0` (`GROW_DIRECTION_BEGIN`) shifts its own x by exactly
  * `-0.7` to grow toward the cell's leading edge instead of overflowing its
  * trailing one.

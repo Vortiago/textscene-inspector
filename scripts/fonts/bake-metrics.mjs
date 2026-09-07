@@ -10,13 +10,13 @@
  *
  * ## Why a pre-baked MSDF atlas, not a runtime font
  *
- * Spike S1 (packet P10) found the obvious alternative — troika-three-text /
- * drei's `<Text>`, which parses a real font at runtime — is blocked TWICE
- * over by the VS Code webview CSP: its SDF-generation worker needs
+ * The obvious alternative — troika-three-text / drei's `<Text>`, which parses
+ * a real font at runtime — is blocked TWICE over by the VS Code webview CSP:
+ * its SDF-generation worker needs
  * `worker-src blob:` and its font fetch needs `connect-src`, and this CSP has
  * neither (both fall back to `default-src 'none'`). A pre-baked MSDF atlas
  * PNG works because it rides `img-src ... data:`, which the CSP explicitly
- * grants — see `<scratchpad>/s1-font-csp/FINDINGS.md` from that spike.
+ * grants.
  *
  * ## Why vendor the woff2 (not the TTF) as the checked-in font asset
  *
@@ -74,7 +74,7 @@ const CHARSET_END = 0x7e;
 // 199 kerning pairs, all involving 0xAD, once it was in this range). Nothing
 // in Godot's own defaults or this repo's scene fixtures needs it rendered,
 // and baking it would assert a specific visible-ink behavior for a format
-// character this packet never measured against real Godot.
+// character nothing here has measured against real Godot.
 const LATIN1_SUPPLEMENT_START = 0xa0;
 const LATIN1_SUPPLEMENT_END = 0xff;
 const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);

@@ -124,8 +124,8 @@ describe('resortBoxContainer — fractional-remainder carry + discard/refit evic
 describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox-container-pitch.tscn\'s ExpandColumn)', () => {
   it('three-way carry test lands on Green=213/Amber=451, not the float64 double-precision 214/452', () => {
     // Godot 4.6.3 headless, `Control.get_rect()` read directly off the live engine
-    // (SubViewport-free `_ready` probe against this exact scene, per the packet's own
-    // documented oracle technique): Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)],
+    // (SubViewport-free `_ready` probe against this exact scene, the same oracle
+    // technique the rest of this suite uses): Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)],
     // Green [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)].
     //
     // `stretch_avail`(320) * ratio / `stretch_ratio_total`(3) for Blue(ratio 1) and

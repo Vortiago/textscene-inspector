@@ -24,8 +24,8 @@
 ; repo holding a Camera2D at all, so every other sub-viewport fixture pins the
 ; whole-rect fallback and nothing else; camera2DView and orthoFrameForCamera2D
 ; have unit tests, but those assert the view rect without ever rendering
-; through it. The WebGL golden gate cannot see it either — a viewport surface
-; is a <canvas> in the Control overlay (ADR-0024).
+; through it. No golden covers it either: this fixture has no entry in
+; `scripts/visual/scenes.mjs`.
 ;
 ; Deliberately asymmetric BOTH ways, like the siblings, because the readback is
 ; bottom-up while a canvas is top-down:

@@ -6,8 +6,7 @@
  * `controlSolverRegistry.registerMinimumSize`. Pure per-node math, no
  * THREE/React — painting is `Component.tsx`'s job, and the StyleBox
  * this module picks by draw state is `nativeTheme.ts`'s `widgets.lineEdit`
- * (a P27 addition to that shared theme, since no earlier packet needed
- * LineEdit's own `normal`/`read_only` boxes).
+ * (LineEdit's own `normal`/`read_only` boxes, which no other widget reads).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -2,7 +2,7 @@
  * The one DOM-touching orchestrator in this font's pipeline: turns a
  * resolved `FontResource` (`resources/fonts/font/` — the
  * output of `styles/theme/lookup.ts`'s `resolveThemeFontIn`,
- * a CONCURRENT packet's own ancestor/type-chain walk over `SolveNode`'s
+ * whose own ancestor/type-chain walk reads `SolveNode`'s
  * `fontOverrides`/`themeChain`/`projectTheme` fields — see this file's own
  * doc for the join-point contract) into a `FontMetrics` (`./fontMetrics.ts`),
  * or the bundled default when that is not possible. Never throws; never
