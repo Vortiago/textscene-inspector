@@ -9,9 +9,19 @@ import './nodes/index'; // side-effect: populate the component registry
 import '../parser/TscnParser'; // side-effect: populate the parser registry
 import { nodeRegistry } from '../core/NodeRegistry';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
 import { rendersOwnVisual } from './nodeSupport';
 
 describe('rendersOwnVisual', () => {
+  it('reports an instance_placeholder heading as drawing nothing by design', () => {
+    // `NodeRegistry.ts:114` types such a heading `InstancePlaceholder`, which no
+    // slice registers. Godot builds an InstancePlaceholder with no children
+    // (`packed_scene.cpp:255`) and draws nothing for it until something calls
+    // `create_instance`, so the node is finished, not unimplemented — the badge
+    // said "Not implemented" on every scene carrying one.
+    expect(rendersOwnVisual(INSTANCE_PLACEHOLDER_TYPE)).toBe('transform-only');
+  });
+
   it('reports a node with real geometry as drawing', () => {
     expect(rendersOwnVisual('MeshInstance3D')).toBe('draws');
   });

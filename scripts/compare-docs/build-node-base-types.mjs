@@ -72,7 +72,7 @@ export function deriveBaseTypes(nodes) {
   for (const node of nodes) {
     // A catalogued class with no ancestry contributes no hop, so it lands in
     // NODE_BASE_TYPES with no base and inherits nothing — the silence
-    // `--chain`'s ClassDB check cannot see, because the name IS in the catalog.
+    // the scaffold's catalog check cannot see, because the name IS in the catalog.
     // Only `Node` itself has nowhere to go.
     if (node.name !== 'Node' && !node.chain?.length) {
       throw new Error(

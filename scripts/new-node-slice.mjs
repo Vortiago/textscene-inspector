@@ -13,7 +13,6 @@
  * Options:
  *   --base <node3d|node2d|node|control>  base slice to extend (default: node3d)
  *   --intent <draws|transform-only|pending>   REQUIRED — what the viewport does
- *   --chain <ParentType>         REQUIRED — Godot parent class, checked against ClassDB
  *   --linter                     generate strict validators + linter wiring
  *   --dry-run                    print the plan without writing anything
  *
@@ -34,16 +33,16 @@
  *                   component lays out anchors rather than passing through.
  *                   Status `unimplemented`.
  *
- * `--chain` no longer writes anything: NODE_BASE_TYPES is derived from the node
- * catalog, so a real Godot type already has its base. It is still required as a
- * spelling check — a name Godot does not know gets no base, and a type with no
- * base receives ZERO inherited validation with no error and no warning. Name
- * the Godot parent even when it is plain `Node`.
+ * There is no parent-class flag: NODE_BASE_TYPES is derived from the node
+ * catalog, so a real Godot type already has its base. <TypeName> is checked
+ * against that catalog instead, which is the same protection a flag would give
+ * — a name Godot does not know gets no base, and a type with no base receives
+ * ZERO inherited validation with no error and no warning.
  *
  * Examples:
- *   pnpm new:node RayCast3D physics/3d --intent transform-only --chain Node3D --linter
- *   pnpm new:node ProgressBar 2d/ui --base control --intent pending --chain Range --linter
- *   pnpm new:node Decal 3d --intent draws --chain Node3D --linter
+ *   pnpm new:node RayCast3D physics/3d --intent transform-only --linter
+ *   pnpm new:node ProgressBar 2d/ui --base control --intent pending --linter
+ *   pnpm new:node Decal 3d --intent draws --linter
  *
  * The conformance guards (barrelCompleteness, reactFree, webExtensionSafe,
  * ruleCoverage) fail the suite if a generated slice is mis-wired.

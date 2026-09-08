@@ -47,13 +47,14 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   autoplay: v.stringName('autoplay'),
 });
 
-// `is_playing` is bound as a METHOD (animated_sprite_2d.cpp:634) and nothing in
-// the ADD_PROPERTY block (:671-681) declares it, so the key never appears in a
-// property list and `_setv` drops the write. Registered rather than deleted:
-// with no entry at all `playing = true` is silently accepted.
+// Nothing in the ADD_PROPERTY block (animated_sprite_2d.cpp:671-681) declares
+// it, and the DISABLE_DEPRECATED `_set` that could still catch a 4.0-era key
+// has one arm, `frames` (:615-622) — so it returns false and the write is
+// dropped. `is_playing` is only a method binding (:634). Registered rather than
+// deleted: with no entry at all `playing = true` is silently accepted.
 validatorRegistry.registerUnavailable('AnimatedSprite2D', {
   playing: {
     reason: `it is a method, not a property — playback is started with play(), and only 'autoplay' is serialised`,
-    cite: 'animated_sprite_2d.cpp:634',
+    cite: 'animated_sprite_2d.cpp:615-622',
   },
 });

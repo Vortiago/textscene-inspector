@@ -5,6 +5,7 @@
 
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
 
 /**
  * The badge's answer for `type`.
@@ -31,6 +32,11 @@ import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
 export function rendersOwnVisual(type: string): 'draws' | 'transform-only' | 'not-implemented' {
   // Synthetic GLB types render through the GLB path, not a registration.
   if (type.startsWith('GLB')) return 'draws';
+  // Not a node class, so no slice registers it: `instance_placeholder=` builds
+  // an InstancePlaceholder with no children and draws nothing until something
+  // calls `create_instance` (`packed_scene.cpp:255`). Drawing nothing IS the
+  // finished behaviour, so the gap badge would be reporting the engine.
+  if (type === INSTANCE_PLACEHOLDER_TYPE) return 'transform-only';
   // Ahead of every branch below, including the Control fallback: a declared gap
   // is the node's own claim about itself and nothing may promote it.
   if (nodeComponentRegistry.isPending(type)) return 'not-implemented';

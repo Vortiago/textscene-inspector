@@ -123,8 +123,9 @@ describe('AnimatedSprite2D strict validators', () => {
  * It carried `v.boolean` while the slice's own rule said the type declares no
  * such property, so `playing = true` reported clean on a key `_setv` drops.
  * Nothing binds it: no ADD_PROPERTY (animated_sprite_2d.cpp:671-681), no
- * `<member>` in the class XML, and `is_playing` is a method binding
- * (animated_sprite_2d.cpp:634).
+ * `<member>` in the class XML, and the deprecated-key `_set` handles only
+ * `frames` (:615-622), so the write returns false. `is_playing` is a method
+ * binding (:634).
  *
  * Deleting the entry outright is what this pins against — with no validator the
  * key is silently accepted, which is worse than the boolean was.

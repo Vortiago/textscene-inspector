@@ -12,7 +12,7 @@ Each sheet lives beside the code it documents, as `<slice>/comparison.md`.
 Every sheet carries a generated `## Linting` block (`pnpm docs:lint-sections`,
 verified in CI) listing the validators and rules that reach that node type, plus
 hand-written prose on what the lenient parser does instead. Three things are true
-of every node, so they are stated here once rather than in all 71 sheets.
+of every node, so they are stated here once rather than in every sheet.
 
 **The two parsers disagree on purpose.** `TscnParser` renders what it can;
 `StrictTscnParser` reports everything. Where strict rejects a value, lenient

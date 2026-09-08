@@ -41,7 +41,7 @@ describe('deriveBaseTypes', () => {
   });
 
   it('refuses a node whose chain is absent, rather than emitting no base for it', () => {
-    // The silence the `--chain` ClassDB check cannot reach: the name IS in the
+    // The silence the scaffold's catalog check cannot reach: the name IS in the
     // catalog, so every spelling check passes, while the type lands in
     // NODE_BASE_TYPES with no base and inherits not one validator.
     expect(() => deriveBaseTypes([{ name: 'Orphan' }])).toThrow(/Orphan has no chain/);
