@@ -30,8 +30,3 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 Container registers no validators or rules of its own, so the strict and lenient parsers
 agree on every property. Whatever the registered base parser reads it reads without
 substitution.
-
-## Known limitations
-
-- **Not drawn** The previewer draws nothing for this node. Its children still show at
-  their authored offsets.

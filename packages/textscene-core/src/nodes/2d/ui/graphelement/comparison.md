@@ -40,8 +40,3 @@ All six of GraphElement's own members format-check as a plain `Vector2` or bool.
 lenient parser reuses `parseControl` and reads none of them. `linter.ts` warns on
 `selected = true` beside `selectable = false`, since `set_selectable(false)` always
 deselects the element.
-
-## Known limitations
-
-- **Not drawn** The previewer draws nothing for this node. Its children still show at
-  their authored offsets.

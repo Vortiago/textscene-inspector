@@ -43,8 +43,3 @@ Strict parsing format-checks these `BaseButton` properties, plus 53 inherited fr
 `linterParser.ts` format-checks all ten of BaseButton's own members. The lenient parser
 reuses `parseControl` unchanged and reads none of them, so a bad `toggle_mode` or
 `button_group` is neither substituted nor warned on.
-
-## Known limitations
-
-- **Not drawn** The previewer draws nothing for this node. Its children still show at
-  their authored offsets.

@@ -68,5 +68,5 @@ The smoothing, drag and `editor_draw_*` keys are never read.
 
 ## Known limitations
 
-- **Approximated** The main 2D stage frames the whole scene rather than the enabled
-  camera's view. Only a SubViewportContainer surface frames through the camera.
+- **Approximated** The main 2D stage opens on the whole scene rather than the enabled
+  camera's view. A Cameras panel row frames the stage through the camera on request.

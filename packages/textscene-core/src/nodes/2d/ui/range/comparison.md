@@ -44,8 +44,3 @@ Strict parsing format-checks these `Range` properties, plus 53 inherited from Co
 Every own member format-checks as a plain float or bool, since `range.cpp` hints none of
 them. A `max_value` below `min_value` is an error, because `Range::set_max` clamps it up
 and the stored value differs from the file.
-
-## Known limitations
-
-- **Not drawn** The previewer draws nothing for this node. Its children still show at
-  their authored offsets.
