@@ -46,7 +46,9 @@ export class Linter {
       for (const d of this.convertParseErrors(parseResult.errors)) diagnostics.push(d);
     }
 
-    // Phase 2: Semantic validation (only if parsing succeeded)
+    // Phase 2: semantic rules, on every scene the strict parser could build.
+    // A property error does NOT withhold the tree, so a file reports its parse
+    // errors and the semantic findings underneath them together.
     if (parseResult.scene) {
       for (const d of orphanDiagnostics(parseResult.scene)) diagnostics.push(d);
       for (const d of danglingResourceDiagnostics(parseResult.scene)) diagnostics.push(d);

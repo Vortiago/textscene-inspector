@@ -6,8 +6,8 @@
 - pnpm workspaces with catalog dependency versions
 - Vitest 4.1 (with `@react-three/test-renderer` and `@testing-library/react`)
 - React 19 + react-three-fiber 9 + @react-three/drei
-- three.js 0.184
-- Vite 6 (web app) + esbuild (VS Code extension)
+- three.js and Vite, pinned in `pnpm-workspace.yaml`
+- esbuild (VS Code extension)
 
 ## Domain language & decisions
 
@@ -160,7 +160,7 @@ entry points: `index.ts` (parser/formatter → `NodeRegistry`),
 `index.r3f.ts` (render component → `nodeComponentRegistry`). The
 `r3f/nodes/index.ts` barrel imports each slice's `index.r3f` for its
 side effect. Unknown types render as `<GenericNodeFallback>` (a labeled
-placeholder cube) from `r3f/internal/`. Not every slice carries every
+an invisible group that applies the transform and draws nothing, per ADR-0008) from `r3f/internal/`. Not every slice carries every
 file: `propertyFormatter.ts` is present only for types with non-default
 Inspector formatting, and linter entry points exist only for types with
 validators/rules (Controls are render-only per
@@ -368,9 +368,9 @@ do the async I/O underneath — see the note below.)
    processor also carry a clear **generation**: a fetch that departed before a
    full clear finishes under the cleared era and its result (success or
    failure) is dropped, never cached or announced.
-5. **`ResourceLoader`**: owns the `MetadataStore` + the four processors
-   (`textures`, `materials`, `glbMeshes`, `scenes` — WI-ARCH-2 collapsed the old
-   standalone `SceneLoader` into a `createSceneProcessor`). `register()` records
+5. **`ResourceLoader`**: owns the `MetadataStore` and one processor per
+   `ResourceBusType` (`resources/sliceRegistration.ts`): `texture`, `material`,
+   `scene`, `glb`, `resource`, `arraymesh`. `register()` records
    `ExtResource` id↔path; `provideFile(path)` drives the late-arrival flow below.
 6. **`useResource(path, type)`** — the only thing R3F components see. It **never
    suspends**; it returns `{ value, status, error? }` with
@@ -452,12 +452,14 @@ resource-level `linterValidators.ts` files — never the `r3f/` tree or
 
 ### Self-Registration Patterns
 
-Two parallel registries:
+Three parallel registries:
 
 - `nodeRegistry` (`core/NodeRegistry.ts`): node-type parser + formatter.
   Used by `TscnParser` to convert TSCN body properties.
 - `nodeComponentRegistry` (`r3f/NodeComponentRegistry.ts`): node-type
   React component. Used by `NodeDispatcher` to render the SceneGraph.
+- `controlComponentRegistry` (`r3f/controls/ControlComponentRegistry.ts`):
+  Control-type DOM component. Used by `ControlDispatcher` (ADR-0003).
 
 Each node type registers itself in both registries via side-effect
 imports — `parser/TscnParser.ts` and `r3f/index.ts` import every node
@@ -624,8 +626,7 @@ Spike-validated stack:
 extension-host import graph uses only React-free core subpaths
 (`@textscene/core/parser`, `/linter`, `/logger`, plus targeted resource
 utils) — never the root barrel, whose React/CSS side effects defeat
-tree-shaking. That keeps `dist/extension.js` ≈ 204 KB and
-`dist/extension.web.js` (the vscode.dev worker host) ≈ 204 KB with zero
+tree-shaking. The host bundles carry zero
 `react`/`three` occurrences. If a host file imports the root
 `@textscene/core` barrel again, the host bundle balloons ~4× — check
 sizes after touching host imports. This is no longer just a documented
@@ -760,8 +761,8 @@ A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts
 
 **Status:** the 2D-UI Control set, the viewport toggle, and the **Split Dock** chrome (which replaced the 3-column DCC layout — ADR-0007) are all **shipped**.
 
-- **P3 — Control set (done).** All 15 Control types the target real-world corpus uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice). `CheckBox` and `OptionButton` were added later, beyond that original scope, bringing the current total to 17 (see Project Structure above).
-- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the (now 17) Control components stay out of the initial canvas-paint bundle.
+- **P3 — Control set (done).** All 15 Control types the target real-world corpus uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice). `README.md` states the current count (see Project Structure above).
+- **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the Control components stay out of the initial canvas-paint bundle.
 - **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
 - **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips) over **two** columns — a large center viewport (with the `ViewportToolbar` floated over its top-right corner) and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
 

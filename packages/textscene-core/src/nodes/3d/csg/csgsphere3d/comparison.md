@@ -51,7 +51,7 @@ Strict parsing format-checks these `CSGSphere3D` properties, plus 1 inherited fr
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-positive `radius`, or `radial_segments`/`rings` below 1, as
+Strict rejects a non-positive `radius`, `radial_segments` below 4, or `rings` below 1, as
 errors. The lenient parser falls back silently when absent, or warns and falls back
 when present but unparseable: `radius` to `0.5`, `radial_segments` to `12`, `rings` to
 `6`. `operation` is read separately with `parseOptionalInt` (no warning either way)

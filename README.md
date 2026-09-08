@@ -64,7 +64,8 @@ Beyond the node set:
 ## Surfaces
 
 **VS Code extension** — desktop and web (vscode.dev) entry points, scene
-outline, go-to-definition on node and resource paths, and hot reload on save.
+outline, go-to-definition on `SubResource` and `ExtResource` ids within the
+file, and hot reload on save.
 Not yet published to the Marketplace; build it from source (below).
 
 **Web previewer** — a fixture browser, an "Open .tscn" picker with a
@@ -80,7 +81,7 @@ An editable Source pane renders `.tscn` text as you type, with a linter gutter
 
 ## Quick start
 
-Requires Node.js 20+ and pnpm 9+.
+Requires Node.js 24+ and pnpm 9+.
 
 ```bash
 pnpm install

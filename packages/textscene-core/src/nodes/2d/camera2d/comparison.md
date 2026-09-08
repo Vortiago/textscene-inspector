@@ -30,7 +30,7 @@ blue fill rather than the layout:
 
 - **The blue pentagon reads paler and less saturated in ours.** Godot writes the
   authored colour straight to the framebuffer (`0.2, 0.7, 0.9` gives `51, 178, 229`);
-  ours renders `95, 191, 217`. See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+  ours renders `95, 191, 217`. See "Why 2D colour matches, and what breaks it" in docs/comparison/README.md.
 
 ## Linting
 

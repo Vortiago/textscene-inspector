@@ -125,7 +125,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the
+The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
 `[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
 `transform` property, and never looks at any Window-specific key at all. A bad
 `mode` value like `mode = "banana"`, or any other malformed property the strict

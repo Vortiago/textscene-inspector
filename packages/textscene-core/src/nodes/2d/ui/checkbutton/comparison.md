@@ -25,7 +25,7 @@ Godot draws CheckButton as a labelled on/off switch with a themed check icon; th
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 
@@ -45,4 +45,4 @@ CheckButton binds no property of its own: doc/classes/CheckButton.xml lists only
 `alignment` and `toggle_mode`, both marked `overrides=` on Button/BaseButton, and
 check_button.cpp's `_bind_methods` calls only `BIND_THEME_ITEM` for its theme
 constants and icons, never `ADD_PROPERTY`. So the strict and lenient parsers agree
-on every property here: whatever `parser.ts` reads it reads without substitution.
+on every property here: whatever the registered base parser reads it reads without substitution.

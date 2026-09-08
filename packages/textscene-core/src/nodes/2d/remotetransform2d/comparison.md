@@ -35,7 +35,7 @@ One visible difference remains, in the polygon fill rather than its placement:
 - **The blue pentagon reads paler and less saturated in ours.** Godot writes
   `0.2, 0.7, 0.9` as exactly `51, 178, 229`; ours renders `95, 191, 217`, and the
   semi-transparent ghost carries the same lift faintly (`93` to `98`).
-  See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+  See "Why 2D colour matches, and what breaks it" in docs/comparison/README.md.
 
 ## Linting
 

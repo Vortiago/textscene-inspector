@@ -42,13 +42,8 @@ Strict parsing format-checks these `CenterContainer` properties, plus 53 inherit
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-The block above predates this section and still reads "`CenterContainer`
-declares none of its own"; it is the generated `lint:begin`/`lint:end` block
-and is now stale, needing a regen once that can run without racing concurrent
-slice work.
-
 `CenterContainer` does have one own member: `use_top_left`
-(doc/classes/CenterContainer.xml, `center_container.cpp:94`). It now has a
+(doc/classes/CenterContainer.xml, `center_container.cpp:94`), and it carries a
 strict validator (`linterParser.ts`, `v.boolean`): `set_use_top_left`
 (center_container.cpp:50-58) assigns straight through with no ERR_FAIL, no
 clamp and no hinted range, so a malformed literal is the only failure and it

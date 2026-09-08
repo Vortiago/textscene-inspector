@@ -60,7 +60,7 @@ Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the
 playing/autoplay/stream_paused flags, as in AudioStreamPlayer), max_distance
 defaults to 2000, attenuation to 1, and panning_strength to 1 when absent,
 warning and reusing those defaults only if the value fails to parse as a float;
-strict's positive-only `max_distance` check and 0-1 `panning_strength` range have
+strict's `max_distance` floor and its `panning_strength` floor of 0 have
 no lenient counterpart, and `attenuation` is bounded in neither (its hint is
 PROPERTY_HINT_EXP_EASING, which states no range). area_mask defaults to 1 the same way; strict's bitmask validation
 is not reproduced, so any parseable int is accepted. playback_type is the one

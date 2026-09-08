@@ -140,10 +140,10 @@ which is a claim about the node and is machine-checked against the registration.
   tonemapping, RemoteTransform relay limits) is written there once. Report your own
   measured pixels and point at it.
 
-Two sheet kinds carry no `## Linting` block, and the sheets test asserts they have
-no markers: the `complex-*` whole-scene showcases (no single node type), and the
-`category: Resources` sheets (resources are validated through `resourceChecker`,
-not the per-node registries the generator reads, so a generated block would lie).
+One sheet kind carries no `## Linting` block, and `sheets.test.mjs` asserts it has
+no markers: the `complex-*` whole-scene showcases, which name no single node type.
+Every other sheet carries exactly one block naming its frontmatter `type`,
+`category: Resources` sheets included.
 
 ## Status — never claim more than you have verified
 

@@ -43,7 +43,7 @@ Strict parsing format-checks these `PinJoint3D` properties, plus 4 inherited fro
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-The lenient parser applies no substitution: it stores whatever `parser.ts` reads
+The lenient parser applies no substitution: it stores whatever the registered base parser reads
 for `params/bias`, `params/damping`, and `params/impulse_clamp` verbatim, even a
 value outside the strict validators' ranges (for example a negative
 `params/impulse_clamp`), because the base Node3D parse has no notion of these

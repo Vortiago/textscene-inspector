@@ -47,7 +47,7 @@ Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10
 | `valid-multiplayersynchronizer-root-path` | `multiplayersynchronizer-root-path-dangling` | warning |
 <!-- lint:end -->
 
-`parser.ts` reuses the base `parseNode`, which reads only `transform`/`name`/`parent`/
+`index.ts` registers the base `parseNode`, which reads only `transform`/`name`/`parent`/
 `instance`/`index` — none of MultiplayerSynchronizer's own properties. A malformed
 `replication_interval` like `"abc"` is never read by the lenient path at all, so it has
 no fallback value to report: the node still renders as the same empty transform group

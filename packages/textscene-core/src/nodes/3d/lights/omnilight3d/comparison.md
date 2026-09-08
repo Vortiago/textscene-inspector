@@ -55,7 +55,7 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-Strict rejects only an `omni_shadow_mode` outside 0-1 as an error; `omni_range` and
+Strict warns on an `omni_shadow_mode` outside 0-1, since only the hint states that bound; `omni_range` and
 `omni_attenuation` are unenforced in Godot (`Light3D::set_param` guards the param index,
 not the value), so a negative range is a warning and any attenuation is legal. The
 lenient parser falls back silently when

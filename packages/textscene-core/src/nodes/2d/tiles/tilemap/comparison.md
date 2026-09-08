@@ -36,7 +36,7 @@ The tile composition matches: same 3x2 footprint, same reconstructed "F", same
 vacant bottom-right cell, and the blue reads the same in both. The one difference
 is that the white marker strokes render as a light grey rather than Godot's pure
 white, uniformly across the stroke interiors rather than only at their edges.
-See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+See "Why 2D colour matches, and what breaks it" in docs/comparison/README.md.
 
 
 ## Linting

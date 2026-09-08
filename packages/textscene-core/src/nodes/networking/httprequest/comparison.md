@@ -48,7 +48,7 @@ Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-`parser.ts` reuses the base `parseNode`, which reads only `transform`/`name`/`parent`/
+`index.ts` registers the base `parseNode`, which reads only `transform`/`name`/`parent`/
 `instance`/`index` — none of HTTPRequest's own properties. A malformed
 `download_chunk_size` like `"abc"` is never read by the lenient path at all, so it has
 no fallback value to report: the node still renders as the same empty transform group

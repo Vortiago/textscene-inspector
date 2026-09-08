@@ -11,7 +11,7 @@ renders_as: a texture projected onto the surfaces its box intersects
 
 Godot's texture projector: it casts `texture_albedo` down the node's local −Y
 axis onto whatever surfaces sit inside its `size` box, blended onto the lit
-surface. The previewer now does the same — it bakes the projection onto each
+surface. The previewer does the same — it bakes the projection onto each
 mesh the box overlaps (three's `DecalGeometry`) and shades it with the scene's
 lights, so the checkerboards lie flat on the floor rather than floating. The
 projector-box outline is selection-gated (ADR-0018), so the default render shows

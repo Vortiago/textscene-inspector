@@ -70,7 +70,7 @@ Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from
 
 `linterParser.ts` format-checks all 22 of CodeEdit's own members (everything in
 `doc/classes/CodeEdit.xml` except `layout_direction` and `text_direction`, both
-default-value overrides). None of this reaches the lenient parser: `parser.ts` reuses
+default-value overrides). None of this reaches the lenient parser: `index.ts` registers
 `parseControl` unchanged and never reads a single CodeEdit-specific key, so a bad
 `indent_size`, a delimiter missing its symbol-only start key, or an
 `auto_brace_completion_pairs` entry with an empty close key all parse and render

@@ -23,7 +23,7 @@ A real-time heightmap collision shape that particles emitted by nearby `GPUParti
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 
@@ -47,7 +47,7 @@ Strict parsing format-checks these `GPUParticlesCollisionHeightField3D` properti
 GPUParticlesCollisionHeightField3D registers 5 own validators (size, resolution,
 update_mode, follow_camera_enabled, heightfield_mask), plus the inherited
 cull_mask from GPUParticlesCollision3D, so the strict and lenient parsers
-diverge: the lenient parser reads whatever `parser.ts` (the shared Node3D
+diverge: the lenient parser reads whatever the registered base parser (the shared Node3D
 parse) accepts, while the strict parser now format- and range-checks all six
 keys above. The `## Linting` block itself is generated from the live linter
 registries by `pnpm docs:lint-sections`, which needs a built core, so it is

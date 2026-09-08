@@ -44,7 +44,7 @@
 > PathFollow3D follows the parent curve — visible only while the node is selected, so the clutter this
 > ADR fought does not return. They still position their children identically (the transform-only
 > guarantee below still holds). The rest of the transform-only set — physics bodies, `Skeleton3D`,
-> `GPUParticles3D`, and genuinely-unsupported types — is unchanged by that amendment.
+> and genuinely-unsupported types — is unchanged by that amendment.
 
 ## Context
 

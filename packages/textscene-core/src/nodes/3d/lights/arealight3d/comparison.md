@@ -62,7 +62,7 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 <!-- lint:end -->
 
 Strict rejects a non-positive `area_range`, a malformed `area_size`, or a non-boolean
-`area_normalize_energy` as errors. The lenient parser instead falls back silently when
+`area_normalize_energy` only for a malformed literal: none of the three carries a bound. The lenient parser instead falls back silently when
 one of these is absent, or warns and falls back when present but unparseable:
 `area_range` to `5.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to
 `true`.

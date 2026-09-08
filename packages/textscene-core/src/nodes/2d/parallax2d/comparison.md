@@ -28,7 +28,7 @@ Godot repeats and scroll-offsets this node's children at runtime to fake camera 
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 
@@ -55,7 +55,7 @@ Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited fr
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-`parser.ts` reuses `parseNode2D` unchanged, which reads only Node2D's own keys
+`index.ts` registers `parseNode2D` unchanged, which reads only Node2D's own keys
 (`position`, `rotation`, `scale`, `skew`, …) and never looks at any of the ten
 properties above. So the lenient parser has no per-property fallback for a
 malformed `repeat_size` or `repeat_times`: it silently drops the key along with

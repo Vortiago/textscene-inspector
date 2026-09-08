@@ -61,7 +61,7 @@ Strict parsing format-checks these `BaseButton` properties, plus 53 inherited fr
 (everything in `doc/classes/BaseButton.xml` except `focus_mode`, which only
 overrides a Control default). None of them affect the rendered fallback
 today, since BaseButton draws nothing (ADR-0003): the strict and lenient
-parsers still agree on every property, because `parser.ts` reads none of
+parsers still agree on every property, because the registered base parser reads none of
 these keys at all — it reuses `parseControl` unchanged. A property here
 becomes render-relevant only once a concrete subclass (Button, CheckBox, …)
 reads it for drawing.

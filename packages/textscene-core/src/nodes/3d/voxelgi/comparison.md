@@ -26,7 +26,7 @@ its children still show.
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 

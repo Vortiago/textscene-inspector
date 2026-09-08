@@ -36,7 +36,7 @@ Strict parsing format-checks the inherited set (1 inherited from ConfirmationDia
 <!-- lint:end -->
 
 ScriptCreateDialog declares no property of its own, so its whole surface is inherited from
-ConfirmationDialog/AcceptDialog/Window: the lenient parser (`parser.ts`, the plain `Node`
+ConfirmationDialog/AcceptDialog/Window: the lenient parser (`index.ts`, the plain `Node`
 parse) and the strict linter agree on every property by construction. There is no
 ScriptCreateDialog-specific key for either to diverge on. A bad value in an inherited
 AcceptDialog/Window property is still never read or substituted by the lenient path; the node

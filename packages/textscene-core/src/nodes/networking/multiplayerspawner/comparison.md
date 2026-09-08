@@ -41,7 +41,7 @@ Strict parsing format-checks these `MultiplayerSpawner` properties, plus 10 inhe
 | `valid-multiplayerspawner-spawn-path` | `multiplayerspawner-spawn-path-dangling` | warning |
 <!-- lint:end -->
 
-`parser.ts` reuses the base `parseNode`, which reads only `transform`/`name`/`parent`/
+`index.ts` registers the base `parseNode`, which reads only `transform`/`name`/`parent`/
 `instance`/`index` — none of MultiplayerSpawner's own properties. A malformed
 `spawn_limit` like `"abc"` is never read by the lenient path at all, so it has no
 fallback value to report: the node still renders as the same empty transform group

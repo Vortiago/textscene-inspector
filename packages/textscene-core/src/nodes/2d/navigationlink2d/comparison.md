@@ -52,7 +52,7 @@ Strict parsing format-checks these `NavigationLink2D` properties, plus 12 inheri
 <!-- lint:end -->
 
 None of NavigationLink2D's own seven properties feed the lenient parser at all:
-`parser.ts` reuses `parseNode2D` verbatim, which only reads Node2D's transform
+`index.ts` registers `parseNode2D` verbatim, which only reads Node2D's transform
 surface (`position`/`rotation`/`scale`/`skew`/…) and has no branch for
 `enabled`, `bidirectional`, `navigation_layers`, `start_position`,
 `end_position`, `enter_cost`, or `travel_cost`. So a malformed value on any of

@@ -45,7 +45,7 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the
+The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
 `[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
 `transform` property, and never looks at any AcceptDialog-specific key at all. A bad
 `dialog_text` value, or any other malformed property the strict linter above rejects,

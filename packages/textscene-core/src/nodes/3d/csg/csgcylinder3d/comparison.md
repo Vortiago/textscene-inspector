@@ -61,7 +61,7 @@ Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited 
 <!-- lint:end -->
 
 Strict rejects a non-positive `radius`/`height`, `sides` outside 3-64, or a non-boolean
-`cone` as errors. The lenient parser falls back silently when absent, or warns and
+`cone`: the radius and height floors warn, and a non-boolean `cone` is an error. The lenient parser falls back silently when absent, or warns and
 falls back when present but unparseable: `radius` to `0.5`, `height` to `2.0`, `sides`
 to `8`. `cone` skips that contract entirely: it's read as a raw `=== 'true'` string
 comparison, so any non-`true` value (not just an absent one) silently becomes `false`

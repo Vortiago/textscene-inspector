@@ -61,7 +61,8 @@ The rules that decide which row a property lands in:
   loads and stores 5 with no engine complaint. The stored value still differs
   from the written one, so it is worth reporting — as a warning, because the
   error row is reserved for what the setter itself does. This applies to EVERY
-  int slot, so it belongs to the shared `truncatedInt` rather than to any
+  int slot, so it belongs to the shared `storedNotWritten`
+  (`linter/validators/intSlot.ts`) rather than to any
   property: three combinators used to call it a FORMAT error on 56 of 225 slots
   while the rest were silent, and the same `.cpp` line judged `Sprite2D.hframes`
   and `Sprite3D.hframes` differently. It is checked after every bound, so a

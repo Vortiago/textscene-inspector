@@ -75,7 +75,7 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the
+The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
 `[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
 `transform` property, and never looks at `file_mode`, `access`, `filters` or any
 other FileDialog-specific key at all. A bad `file_mode` value such as `5` (which

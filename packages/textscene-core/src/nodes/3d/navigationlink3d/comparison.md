@@ -50,7 +50,7 @@ Strict parsing format-checks these `NavigationLink3D` properties, plus 17 inheri
 | `valid-navigationlink3d-positions` | `navigationlink3d-start-position-equals-end-position` | warning |
 <!-- lint:end -->
 
-Every property above is specific to NavigationLink3D, and `parser.ts` reuses
+Every property above is specific to NavigationLink3D, and `index.ts` registers
 `parseNode3D`, which reads only `transform` and `visible` (`nodes/base/node3d/parser.ts`).
 So the lenient parser never even LOOKS at `enabled`, `bidirectional`, `navigation_layers`,
 `start_position`, `end_position`, `enter_cost` or `travel_cost` — a bad value on any of

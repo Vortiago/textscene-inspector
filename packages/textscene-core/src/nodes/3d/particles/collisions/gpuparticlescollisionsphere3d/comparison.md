@@ -22,7 +22,7 @@ so it renders as an invisible transform-only fallback and its children still sho
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 

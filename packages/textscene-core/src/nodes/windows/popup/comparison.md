@@ -32,6 +32,6 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 <!-- lint:end -->
 
 Popup registers no validators or semantic rules of its own yet, so the strict
-and lenient parsers agree on every property: whatever `parser.ts` reads it reads
+and lenient parsers agree on every property: whatever the registered base parser reads it reads
 without substitution. Replace this once `linterParser.ts` has validators, naming
 the property and the value the lenient parser falls back to.

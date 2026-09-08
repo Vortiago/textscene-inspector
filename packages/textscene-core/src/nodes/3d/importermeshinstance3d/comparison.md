@@ -55,7 +55,7 @@ Strict parsing format-checks these `ImporterMeshInstance3D` properties, plus 17 
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-`parser.ts` reuses the plain `parseNode` reader, which decodes only `transform`
+`index.ts` registers the plain `parseNode` reader, which decodes only `transform`
 from this node's properties — mesh, skin, layer_mask, cast_shadow and every
 visibility_range_* key are validated by the strict parser but never decoded by
 the lenient one, so a malformed value there changes nothing about what renders.

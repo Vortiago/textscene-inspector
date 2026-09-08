@@ -42,7 +42,7 @@ Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherit
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-`parser.ts` reuses the plain `parseNode` reader, which never looks at tooltip,
+`index.ts` registers the plain `parseNode` reader, which never looks at tooltip,
 icon, menu or visible — every value, well-formed or not, is carried as inert
 text and has no effect on what the previewer draws, since none of this node's
 behavior is inside the render surface this previewer covers.

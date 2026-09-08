@@ -48,7 +48,7 @@ Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited
 (`doc/classes/FlowContainer.xml`, none of them `overrides=`). None affect the
 rendered fallback today, since FlowContainer draws nothing itself (ADR-0003):
 the strict and lenient parsers still agree on every property, because
-`parser.ts` reads none of these keys at all — it reuses `parseControl`
+the registered base parser reads none of these keys at all — it reuses `parseControl`
 unchanged. `vertical` stays validated at this level even though
 `HFlowContainer`/`VFlowContainer` (a later wave) hide it from their own
 inspector: `_validate_property` only applies `PROPERTY_USAGE_NONE` to it when

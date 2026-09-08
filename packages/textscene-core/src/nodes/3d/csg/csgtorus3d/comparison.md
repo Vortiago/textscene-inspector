@@ -63,7 +63,7 @@ Strict parsing format-checks these `CSGTorus3D` properties, plus 1 inherited fro
 <!-- lint:end -->
 
 Strict rejects a non-positive `inner_radius` or `outer_radius`, and `sides` or
-`ring_sides` outside 3 to 64, as errors. The lenient parser falls back silently when a
+`ring_sides` outside 3 to 64, as warnings: only the hint states those bounds. The lenient parser falls back silently when a
 property is absent and warns then falls back when it is present but unparseable:
 `inner_radius` to `0.5`, `outer_radius` to `1.0`, `sides` to `8`, `ring_sides` to `6`,
 `smooth_faces` to `true` and `flip_faces` to `false`. Note that `smooth_faces` defaults

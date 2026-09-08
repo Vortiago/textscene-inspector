@@ -38,7 +38,7 @@ Strict parsing format-checks these `ShaderGlobalsOverride` properties, plus 10 i
 | `valid-shaderglobalsoverride-properties` | `shaderglobalsoverride-multiple-in-scene` | warning |
 <!-- lint:end -->
 
-`parser.ts` reuses the plain `parseNode` reader, which never looks at any
+`index.ts` registers the plain `parseNode` reader, which never looks at any
 `params/*` key — every value, well-formed or not, is carried as inert text and
 has no effect on what the previewer draws, since nothing here propagates a
 project's global shader parameters into a THREE material in the first place.

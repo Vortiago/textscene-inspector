@@ -46,7 +46,7 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`parser.ts`) reuses the plain `Node` parse: it reads only the
+The lenient parser (`index.ts`) registers the plain `Node` parse: it reads only the
 `[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
 `transform`, and never looks at `size`, `title`, or any other PopupPanel/Window
 property at all. A malformed value the strict linter above rejects, such as a

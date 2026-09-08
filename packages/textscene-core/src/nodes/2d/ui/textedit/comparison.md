@@ -100,5 +100,5 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 `doc/classes/TextEdit.xml` except `focus_mode` and `mouse_default_cursor_shape`, both
 `overrides="Control"`). None of them affect the rendered fallback today, since TextEdit
 draws nothing (ADR-0003): the strict and lenient parsers still agree on every property,
-because `parser.ts` reads none of these keys at all — it reuses `parseControl` unchanged.
+because the registered base parser reads none of these keys at all — it reuses `parseControl` unchanged.
 A property here becomes render-relevant only once a concrete text-editing view is drawn.

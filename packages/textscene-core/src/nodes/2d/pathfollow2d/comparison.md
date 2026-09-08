@@ -29,7 +29,7 @@ field, so its position and colour report the whole story.
 ## Divergences
 
 **Marker colour.** Godot fills the square with `(76, 204, 255)`, the exact sRGB of
-`Color(0.3, 0.8, 1)`; ours renders a paler `(134, 207, 225)`. See "Why 2D colours read paler in our captures" in docs/comparison/README.md.
+`Color(0.3, 0.8, 1)`; ours renders a paler `(134, 207, 225)`. See "Why 2D colour matches, and what breaks it" in docs/comparison/README.md.
 
 The follow position agrees — both draw the square at the path midpoint. `progress`
 is the only position key a scene file can carry: Godot binds the parent Path2D on

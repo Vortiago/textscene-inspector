@@ -36,7 +36,7 @@ Strict parsing format-checks these `ResourcePreloader` properties, plus 10 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-`parser.ts` reuses the plain `parseNode` reader, which never looks at
+`index.ts` registers the plain `parseNode` reader, which never looks at
 `resources` at all — whether it is well-formed, has mismatched name/resource
 counts, or carries a null entry, the lenient parser carries it as inert text
 and nothing about the rendered scene changes.

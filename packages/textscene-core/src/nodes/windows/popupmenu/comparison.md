@@ -67,7 +67,7 @@ or past `item_count`. `PropertyListHelper::_get_property`
 (popup_menu.cpp:3092) passes that refusal straight out, so the leaf setter is
 never called and the value is dropped on load.
 
-The lenient parser reads none of this: `parser.ts` reuses the generic `parseNode`,
+The lenient parser reads none of this: `index.ts` registers the generic `parseNode`,
 which never reads `item_0/text` (or any other PopupMenu key), so a bad value there
 is neither substituted nor warned on. It is carried in the node's `rawProperties`
 and ignored by rendering, exactly like every other unread key on an invisible

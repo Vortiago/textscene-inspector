@@ -37,7 +37,7 @@ Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inher
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`parser.ts`) reuses the plain `Node` parser: it reads only the
+The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
 `[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
 `transform` property, and never looks at `cancel_button_text` or any other
 ConfirmationDialog-specific key at all. A bad value there, or in any inherited

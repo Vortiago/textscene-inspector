@@ -30,7 +30,7 @@ child to fill the content box — so a child Label's own alignment has room to a
 
 ## Divergences
 
-None visible in this fixture. The child now fills the content box, so the label's
+None visible in this fixture. The child fills the content box, so the label's
 `vertical_alignment = 1` centres it on the panel's midline as in Godot; panel
 position, size, dark slate fill, 6 px corners, padding and both-axis centring match.
 

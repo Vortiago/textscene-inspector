@@ -28,7 +28,7 @@ glossy highlight, and the scene's two Label3D captions sit above and below it.
 
 ## Divergences
 
-The torus now agrees on orientation: both frames lay it flat with the hole opening
+The torus agrees on orientation: both frames lay it flat with the hole opening
 upward, matching outer/inner radii, tessellation, orange albedo, and the paired
 specular highlights. Both also render the two Label3D captions — the pale-yellow
 "TorusMesh Test" title above and the white description line below.

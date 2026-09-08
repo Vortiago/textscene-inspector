@@ -30,11 +30,12 @@ source, long label text) and for any property whose owning type is unknown —
 which means a property override on an instanced child (`instance=`) is never
 validated. Existence checks deliberately stay silent across an instance boundary.
 
-**Semantic rules run only on a clean parse.** `Linter` runs strict parsing first
-and only reaches the rule phase if it produced no errors, so a file with a format
-error reports that error alone — never the semantic findings underneath it.
+**Semantic rules run on every scene the strict parser could build.** A format
+error does not withhold the tree, so a file reports its parse errors and the
+semantic findings underneath them together. A pre-current format header is the
+one exception: it reports a single `legacy-format-version` info and nothing else.
 
-## Why 2D colours used to read paler in our captures (fixed)
+## Why 2D colour matches, and what breaks it
 
 Every 2D sheet once carried the same colour divergence, so the cause is recorded
 here once — and so is its correction, because sheets captured before it show the

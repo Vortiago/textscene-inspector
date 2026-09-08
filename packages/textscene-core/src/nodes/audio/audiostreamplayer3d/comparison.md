@@ -74,7 +74,8 @@ Beyond the shared audio-base fallbacks, every numeric property here defaults via
 (strict only warns below the hint's 0.1, since the setter is a bare assignment),
 max_distance to 0 with no non-negativity check,
 attenuation_filter_cutoff_hz to 5000 with no 1-20500 range check, and
-panning_strength/emission_angle_degrees to 1 and 45 with no 0-1/0-90 clamp.
+panning_strength/emission_angle_degrees to 1 and 45, reproducing neither the
+`panning_strength` floor nor the 0.1-90 `emission_angle_degrees` bound.
 attenuation_model and doppler_tracking are the two enums: `enumOr` does enforce
 the strict 0-3/0-2 membership, warning and falling back to
 `ATTENUATION_INVERSE_DISTANCE` and `DISABLED` (both 0) for any out-of-range

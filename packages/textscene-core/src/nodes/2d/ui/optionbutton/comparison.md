@@ -54,10 +54,6 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 | `valid-optionbutton-selected` | `optionbutton-selected-out-of-range` | warning |
 <!-- lint:end -->
 
-The table above predates this section and still reads "`OptionButton` declares
-none of its own"; it is the generated `lint:begin`/`lint:end` block and is now
-stale, needing a regen once that can run without racing concurrent slice work.
-
 `OptionButton` now has a strict counterpart for every own property: `selected`,
 `fit_to_longest_item`, `allow_reselect`, `item_count`, and the
 `popup/item_N/{text,icon,id,disabled,separator}` family (linterParser.ts). The

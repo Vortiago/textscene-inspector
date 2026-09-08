@@ -42,7 +42,7 @@ Godot draws a particle cloud from this emitter; the previewer does not yet, so i
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 

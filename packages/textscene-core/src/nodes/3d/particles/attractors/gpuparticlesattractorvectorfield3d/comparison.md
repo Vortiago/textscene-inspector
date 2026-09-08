@@ -20,7 +20,7 @@ A box-shaped attractor that samples a 3D texture to vary attraction strength and
 
 ## Divergences
 
-None visible in this fixture.
+Not captured yet — nothing renders, so there is nothing to compare pixels against.
 
 ## Linting
 

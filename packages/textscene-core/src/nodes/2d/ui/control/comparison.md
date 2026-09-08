@@ -33,7 +33,7 @@ The OptionButton chevron. Godot draws a right-edge dropdown chevron on the
 icon, compiled into the engine rather than shipped as a resource file. A
 scene-authored `theme_override_icons/<name>` is a separate case: `parseThemeOverrides`
 drops it through its `default` branch, but it would resolve the way
-`theme_override_styles` already does. The bar tone itself now matches — both draw a
+`theme_override_styles` already does. The bar tone matches — both draw a
 dark neutral StyleBox.
 
 The checkbox and radio indicators are drawn approximations: the previewer draws

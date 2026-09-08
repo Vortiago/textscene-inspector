@@ -26,7 +26,7 @@ centered. The fixture stacks three centered buttons: an unthemed `Click Me`, a g
 
 ## Divergences
 
-The unthemed **Click Me** chrome now matches Godot's default theme exactly: a charcoal
+The unthemed **Click Me** chrome matches Godot's default theme exactly: a charcoal
 fill rgb(46,46,46) sitting darker than the rgb(76,76,76) backdrop, white label
 rgb(223,223,223), in both images. The **Styled** button is pixel-exact green
 rgb(51,128,89). The **Disabled** button renders with Godot's lighter disabled fill in

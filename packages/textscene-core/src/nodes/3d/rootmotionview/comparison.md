@@ -49,7 +49,7 @@ Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-`parser.ts` reuses `parseNode3D`, which reads only `transform` and `visible` — it
+`index.ts` registers `parseNode3D`, which reads only `transform` and `visible` — it
 never looks at `animation_path`, `color`, `cell_size`, `radius`, or `zero_y` at all.
 So a malformed value on any of those five (`cell_size = "banana"`, an unquoted
 `animation_path`, …) parses with no error and no substitution: the lenient parser
