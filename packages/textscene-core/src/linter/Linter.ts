@@ -70,8 +70,8 @@ export class Linter {
    *
    * It does NOT claim the file is invalid. The engine loads it — there is no
    * less-than comparison against the format version anywhere in
-   * `resource_format_text.cpp` — so this reports the linter's scope, and warns
-   * rather than errors.
+   * `resource_format_text.cpp` — so this is a claim about the linter's scope
+   * rather than the scene, and reports at `info`.
    */
   private legacyFormatDiagnostic(content: string): Diagnostic | null {
     const header = readHeaderFormat(content);

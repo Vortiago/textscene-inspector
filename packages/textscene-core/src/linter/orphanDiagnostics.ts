@@ -108,10 +108,7 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
   // The third and fourth refusals: a root heading that states no identifier at
   // all, which `:220` fails on, and a placeholder root, which fails the load.
   const refused =
-    rootOrigin !== undefined ||
-    rootStatesNoIdentifier(scene.nodes[0]) ||
-    emptyParents.length > 0 ||
-    stranded.some(missing);
+    rootOrigin !== undefined || rootStatesNoIdentifier(scene.nodes[0]) || stranded.some(missing);
 
   return emptyRefusals.concat(rootRefusal).concat(
     stranded.map((origin) => {
@@ -125,10 +122,17 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
           { line, column: 1 }
         );
       }
-      const outcome = refused
-        ? 'Godot refuses to instantiate the scene for another heading (see the error beside ' +
-          'this), so no re-root of this node happens.'
-        : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
+      // Three outcomes, and the empty path is its own because the verb differs:
+      // that heading faults the LOAD, so the instantiate the re-root belongs to
+      // is never reached at all.
+      const outcome =
+        emptyParents.length > 0
+          ? 'Godot cannot load the file at all — another heading spells parent="" (see the ' +
+            'error beside this) — so nothing in it is instantiated.'
+          : refused
+            ? 'Godot refuses to instantiate the scene for another heading (see the error ' +
+              'beside this), so no re-root of this node happens.'
+            : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,

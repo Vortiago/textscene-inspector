@@ -3,8 +3,15 @@
  */
 
 import type { NodeOrigin, TscnNode } from './types';
-import { SCENE_ROOT_PATH, joinPath, resolveParentPath } from '../utils/nodePath.js';
+import {
+  SCENE_ROOT_PATH,
+  joinPath,
+  resolveParentPath,
+  type ParentPathTree,
+} from '../utils/nodePath.js';
+import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { isTypeUnknowable } from './typeUnknowable.js';
 
 /**
  * Build scene tree from flat node list using parent path references.
@@ -21,99 +28,91 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
   // exactly the file the engine refuses.
   const rootNode = nodes.find((n) => !n.parent) ?? nodes[0]!;
 
-  // Every key is a path measured from the root, folded the way Godot folds one.
-  const pathMap = new Map<string, TscnNode>();
-  pathMap.set(SCENE_ROOT_PATH, rootNode);
+  const tables = newTables(rootNode);
 
-  // Track remaining nodes to place
-  let remaining = placeResolvable(nodes.filter((n) => n !== rootNode), pathMap);
-
-  // A node whose parent path descends INTO instanced content can never resolve
-  // here: the intermediate names live in the instanced scene or GLB, not in
-  // this file. Godot only lets you address into a sub-scene you INSTANCED, so
-  // the nearest enclosing instance node is the anchor, and the rest of the path
-  // is that content's business to match.
+  // ONE pass, in declaration order, because that is the order Godot resolves
+  // in: `NODE_FROM_ID` asks `ret_nodes[0]->get_node_or_null(np)`
+  // (`packed_scene.cpp:157-165`), and at heading `i` that tree holds only the
+  // headings above it. Repeating until a pass places nothing resolved against
+  // the FINISHED tree instead, so a `parent=` naming a node declared later
+  // seated silently where Godot warns the path vanished and re-roots
+  // (`:208-215`) — the node got the wrong parent, the wrong inherited
+  // transform and the wrong 2D paint order, and nothing said so.
   //
-  // Requiring the anchor to be instance-bearing is what separates these from
-  // genuinely malformed paths: a scene that says `parent="Level2"` when the
-  // root has no such child is a mistake, and re-rooting it under the nearest
-  // resolvable ancestor would hide it. Godot re-roots such a node to the SCENE
-  // root and renames it `Level2#Name` (`packed_scene.cpp:208-215`, `:561-563`);
-  // `strandedNodes` below is what carries the same fact to a caller, since a
-  // node absent from the tree is otherwise invisible to everything walking it.
-  // It is also the ONLY report. Logging `remaining` from here covers the
-  // narrower set — a second parentless heading never reaches it — so the console
-  // would say nothing about a node the linter names.
-  //
-  // One node is deferred per pass, then the ordinary resolution above is
-  // re-run, so a deferred node's own descendants resolve through their declared
-  // paths and never pick up a marker of their own.
-  while (remaining.length > 0) {
-    const deferred = firstAnchorable(remaining, pathMap);
-    if (!deferred) break;
+  // Forward order is also what gives `children` the `.tscn`'s own sibling
+  // order, which is the 2D paint order: earlier siblings draw behind.
+  for (const node of nodes) {
+    if (node === rootNode) continue;
+    // A second parentless node cannot be placed by path, so it is stranded
+    // here — `strandedNodes` finds it by walking the tree this returns, which
+    // is why that derivation is not a second copy of the resolution rules.
+    if (!node.parent) continue;
 
-    const { node, anchor } = deferred;
+    // The map IS the child lookup the walk asks at every descent, so `./Mid`,
+    // `Mid/` and `Mid` name the one node Godot resolves them all to while
+    // `Missing/../Mid` names none. A node seated through any spelling is
+    // registered under the single one its own children can address it by.
+    const parentPath = resolveParentPath(node.parent, tables.tree);
+    if (parentPath === null) continue;
+
+    const parentNode = tables.byPath.get(parentPath);
+    if (parentNode) {
+      parentNode.children.push(node);
+      registerPath(tables, parentPath, node);
+      continue;
+    }
+
+    // A node whose parent path descends INTO instanced content can never
+    // resolve against a declared node: the intermediate names live in the
+    // instanced scene or GLB, not in this file. Godot only lets you address
+    // into a sub-scene you INSTANCED, so the nearest enclosing instance node
+    // is the anchor, and the rest of the path is that content's business to
+    // match.
+    //
+    // Requiring the anchor to be instance-bearing is what separates these from
+    // genuinely malformed paths: a scene that says `parent="Level2"` when the
+    // root has no such child is a mistake, and re-rooting it under the nearest
+    // resolvable ancestor would hide it. Godot re-roots such a node to the
+    // SCENE root and renames it `Level2#Name` (`:208-215`, `:561-563`);
+    // `strandedNodes` below is what carries the same fact to a caller, since a
+    // node absent from the tree is otherwise invisible to everything walking
+    // it, and it is the ONLY report.
+    const anchor = findInstanceAnchor(parentPath, tables);
+    if (!anchor) continue;
+
     anchor.node.children.push(node);
     node.instanceSubPath = anchor.subPath;
-    registerPath(pathMap, anchor.strandedParentPath, node);
-
-    remaining = placeResolvable(remaining.filter((n) => n !== node), pathMap);
+    registerPath(tables, anchor.strandedParentPath, node);
   }
 
   return [rootNode];
 }
 
 /**
- * Attach every node whose parent path resolves against `pathMap`, repeating
- * until a pass places nothing.
- *
- * Iterates FORWARD (declaration order) and rebuilds the unplaced list each pass
- * — this preserves sibling order, so `children` matches the `.tscn` declaration
- * order, which is the 2D paint order (earlier siblings draw behind), and it
- * avoids the index-shifting hazards of splicing mid-iteration. Repeating places
- * children whose parent appears later in the file.
- *
- * Returns the nodes that still did not resolve.
+ * What the build knows about the tree so far, and the view of it the path walk
+ * asks — one object because every consulting site needs both halves and the
+ * two lookups it exposes are the two `get_node_or_null` performs.
  */
-function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): TscnNode[] {
-  let remaining = nodes;
-  let lastRemainingCount = remaining.length + 1;
+interface BuildTables {
+  /** Every seated node, keyed by the folded path its own children address it at. */
+  readonly byPath: Map<string, TscnNode>;
+  /** `%Name` to that path, for the nodes claiming one. */
+  readonly uniquePaths: Map<string, string>;
+  /** The same two tables as the walk consumes them. */
+  readonly tree: ParentPathTree;
+}
 
-  while (remaining.length > 0 && remaining.length < lastRemainingCount) {
-    lastRemainingCount = remaining.length;
-    const stillRemaining: TscnNode[] = [];
-
-    for (const node of remaining) {
-      if (!node.parent) {
-        // A second parentless node cannot be placed by path, so it never
-        // reaches `remaining` — `strandedNodes` finds it by walking the tree
-        // this returns, which is why that derivation is not a second copy of
-        // the resolution rules.
-        continue;
-      }
-
-      // The map IS the child lookup the walk asks at every descent, so `./Mid`,
-      // `Mid/` and `Mid` name the one node Godot resolves them all to while
-      // `Missing/../Mid` names none. A node seated through any spelling is
-      // registered under the single one its own children can address it by.
-      const parentPath = resolveParentPath(node.parent, (path) => canNameNode(pathMap, path));
-      if (parentPath === null) {
-        stillRemaining.push(node);
-        continue;
-      }
-      const parentNode = pathMap.get(parentPath);
-      if (!parentNode) {
-        stillRemaining.push(node);
-        continue;
-      }
-      parentNode.children.push(node);
-      registerPath(pathMap, parentPath, node);
-    }
-
-    remaining = stillRemaining;
-  }
-
-  return remaining;
+/** Tables holding only the scene root, which sits at the empty path. */
+function newTables(rootNode: TscnNode): BuildTables {
+  const byPath = new Map<string, TscnNode>([[SCENE_ROOT_PATH, rootNode]]);
+  // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
+  // node's OWNER (node.cpp:2222-2233) and the scene root has none.
+  const uniquePaths = new Map<string, string>();
+  return {
+    byPath,
+    uniquePaths,
+    tree: { exists: (path) => canNameNode(byPath, path), uniquePaths },
+  };
 }
 
 /**
@@ -122,41 +121,45 @@ function placeResolvable(nodes: TscnNode[], pathMap: Map<string, TscnNode>): Tsc
  * that cannot see inside an instanced scene.
  *
  * A path this map holds is a node. One it does not is a node too whenever its
- * own parent is not in the map either, or is an `instance=`: the walk asked
- * about that parent one segment ago and it passed, so a parent the map has
- * since stopped holding is one instanced content vouched for. Only a name below
- * a parent this file DOES declare is a name Godot fails to find.
+ * own parent is not in the map either, or is a heading that does not say what
+ * its node is: the walk asked about that parent one segment ago and it passed,
+ * so a parent the map has since stopped holding is one instanced content
+ * vouched for. Only a name below a parent this file DOES describe is a name
+ * Godot fails to find.
+ *
+ * `isTypeUnknowable`, not an `instance=` test: an override heading names a node
+ * the base scene declares, so ITS children live there too. Godot writes exactly
+ * that shape for editable children — `[node name="Inside" parent="Building"
+ * index="0"]` between the instance and the path — and reading the heading's
+ * defaulted `'Node'` as a real type strands every heading below it.
  */
 function canNameNode(pathMap: Map<string, TscnNode>, path: string): boolean {
   if (pathMap.has(path)) return true;
   const cut = path.lastIndexOf('/');
   const parent = pathMap.get(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
-  return parent === undefined || parent.instance !== undefined;
+  return parent === undefined || isTypeUnknowable(parent);
 }
 
 /**
- * Key a seated node by the path its own children address it at.
+ * Key a seated node by the path its own children address it at, and by the
+ * `%Name` it claims.
  *
  * A heading with no `name=` identifies no node, so it claims no key: joining an
  * empty name onto its parent's path yields that parent's OWN key, and the
  * nameless node would take the place of the node the file does name. Godot
  * seats it and leaves every later sibling where its `parent=` says
  * (`packed_scene.cpp:208-215` places by path, never by the previous heading).
+ *
+ * First claim wins: a second node claiming a name already in the owner's table
+ * warns and clears its OWN flag rather than displacing the holder
+ * (`node.cpp:2225-2231`).
  */
-function registerPath(pathMap: Map<string, TscnNode>, parentPath: string, node: TscnNode): void {
-  if (node.name) pathMap.set(joinPath(parentPath, node.name), node);
-}
-
-/** The first node that has an instance anchor, paired with that anchor. */
-function firstAnchorable(
-  remaining: readonly TscnNode[],
-  pathMap: Map<string, TscnNode>
-): { node: TscnNode; anchor: InstanceAnchor } | null {
-  for (const node of remaining) {
-    const anchor = findInstanceAnchor(node, pathMap);
-    if (anchor) return { node, anchor };
-  }
-  return null;
+function registerPath(tables: BuildTables, parentPath: string, node: TscnNode): void {
+  if (!node.name) return;
+  const path = joinPath(parentPath, node.name);
+  tables.byPath.set(path, node);
+  const key = UNIQUE_NODE_PREFIX + node.name;
+  if (isUniqueNameInOwner(node) && !tables.uniquePaths.has(key)) tables.uniquePaths.set(key, path);
 }
 
 /** The instance a stranded node hangs off, and where that node lands. */
@@ -170,7 +173,7 @@ interface InstanceAnchor {
 }
 
 /**
- * The nearest INSTANCE node enclosing this node's parent path, and the
+ * The nearest INSTANCE node enclosing an already-resolved parent path, and the
  * remainder of that path below it — or `null` when the path names no instanced
  * content, which makes it a malformed path rather than an override.
  *
@@ -178,19 +181,15 @@ interface InstanceAnchor {
  * one: the sub-path has to be measured from the scene that will actually
  * resolve it.
  */
-function findInstanceAnchor(node: TscnNode, pathMap: Map<string, TscnNode>): InstanceAnchor | null {
-  // The same walk as the placement above: a name the file declares no node for
-  // strands the heading whatever instance sits further along its path.
-  const parentPath = resolveParentPath(node.parent, (path) => canNameNode(pathMap, path));
-  // The root resolves, so a node naming it never reaches here; a path that
-  // resolves to nothing at all names no instance either.
+function findInstanceAnchor(parentPath: string, tables: BuildTables): InstanceAnchor | null {
+  // The root is seated from the start, so a node naming it never reaches here.
   if (!parentPath) return null;
 
   const segments = parentPath.split('/');
   // Start one short of the full path: had the whole thing resolved, ordinary
   // placement would already have used it.
   for (let depth = segments.length - 1; depth >= 0; depth--) {
-    const candidate = pathMap.get(segments.slice(0, depth).join('/'));
+    const candidate = tables.byPath.get(segments.slice(0, depth).join('/'));
     if (candidate?.instance) {
       return {
         node: candidate,
@@ -213,7 +212,7 @@ function findInstanceAnchor(node: TscnNode, pathMap: Map<string, TscnNode>): Ins
  *
  * Two shapes end up here. One declares a `parent=` path that names nothing —
  * Godot warns and re-roots it. One declares no `parent=` at all while not being
- * the root, which `packed_scene.cpp:206` refuses outright.
+ * the root, which `packed_scene.cpp:207` refuses outright.
  */
 export function strandedNodes(
   all: readonly NodeOrigin[],

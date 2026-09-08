@@ -15,6 +15,7 @@ import {
   instanced,
   lint,
   node,
+  override,
   packedScene,
   scene,
 } from './testing/testkit.js';
@@ -133,6 +134,92 @@ describe('a parent path this file never defines', () => {
     );
   });
 
+  it('leaves a path descending through an OVERRIDE heading alone', () => {
+    // The editable-children shape Godot writes constantly: `Inside` carries no
+    // `type=` because the node it names already exists in the instanced scene,
+    // so `StaticBody2D` is that scene's business and the path resolves at
+    // runtime. Warning here would fire on the most ordinary composition in the
+    // engine.
+    expectNoDiagnostic(
+      scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Building', { parent: '.' }),
+        override('Inside', 0, { parent: 'Building' }),
+        node('CollisionPolygon2D', {}, { name: 'Poly', parent: 'Building/Inside/StaticBody2D' })
+      ),
+      { ruleName: ORPHAN }
+    );
+  });
+
+  it('leaves a path descending through an override below an instanced ROOT alone', () => {
+    // The inherited scene: every heading after the root overrides base-scene
+    // content, so the opacity starts at the scene root.
+    expectNoDiagnostic(
+      scene(
+        packedScene,
+        instanced('Root'),
+        override('Mid', 0, { parent: '.' }),
+        node('Sprite2D', {}, { name: 'Leaf', parent: 'Mid/Ghost' })
+      ),
+      { ruleName: ORPHAN }
+    );
+  });
+
+  it('follows a %Name in a parent= to the node that claims it', () => {
+    // Godot's own serialiser writes `parent_path.simplified()` and never emits
+    // one (`resource_format_text.cpp:2018`), but the LOADER resolves it:
+    // `get_node_or_null` looks a `%Name` up in the owner's claim table and
+    // continues from what it finds (`node.cpp:1930-1938`). Probed on 4.7.2 —
+    // with the flag `Hat` lands at `Root/Player/Hat`.
+    expectNoDiagnostic(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' }),
+        node('Node2D', {}, { name: 'Hat', parent: '%Player' })
+      ),
+      { ruleName: ORPHAN }
+    );
+  });
+
+  it('warns on a %Name whose claim is declared later, as Godot does', () => {
+    // Same two headings, swapped: the claim table holds only what the earlier
+    // headings seated, so 4.7.2 warns the path vanished and renames the node.
+    const message = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', {}, { name: 'Hat', parent: '%Player' }),
+        node('Node2D', { unique_name_in_owner: true }, { name: 'Player', parent: '.' })
+      )
+    )[0]?.message;
+    expect(message).toContain('"_Player#Hat"');
+  });
+
+  it('strands a %Name nothing claims, which Godot re-roots', () => {
+    // The other half of the same probe: drop `unique_name_in_owner` and 4.7.2
+    // warns "Parent path './%Player' for node 'Hat' has vanished" and renames
+    // it `_Player#Hat` — the `%` is one of the characters `validate_node_name`
+    // replaces (`ustring.cpp:5119-5131`).
+    const message = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', {}, { name: 'Player', parent: '.' }),
+        node('Node2D', {}, { name: 'Hat', parent: '%Player' })
+      )
+    )[0]?.message;
+    expect(message).toContain('"_Player#Hat"');
+  });
+
+  it('reports no type for an override heading, rather than its index=', () => {
+    // `index=` is the sibling position Godot restores the override at, not a
+    // type. The parse-side arm on the same heading reads
+    // `heading.attributes.type` and already says `<unknown>`.
+    const diagnostic = lint(
+      scene(node('Node2D', {}, { name: 'Root' }), override('Pivot', 2, { parent: 'NoSuchNode' }))
+    ).find((d) => d.ruleName === ORPHAN);
+    expect(diagnostic?.nodeType).toBe('<unknown>');
+  });
+
   it('errors on an empty parent=, which is neither a vanished path nor a missing field', () => {
     // The loader calls `add_node_path` for any value the field carries and it
     // never returns -1 (`packed_scene.cpp:2307-2311`), so `n.parent == -1` — the
@@ -148,6 +235,22 @@ describe('a parent path this file never defines', () => {
     expect(empties[0]?.nodeName).toBe('B');
     expect(orphansIn(EMPTY_PARENT)).toEqual([]);
     expect(diagnostics.filter((d) => d.ruleName === 'node-without-parent')).toEqual([]);
+  });
+
+  it('says the LOAD failed, not the instantiate, for a node stranded beside an empty path', () => {
+    // `parent=""` faults `prepend_period()` while the loader is still reading
+    // headings (`resource_format_text.cpp:206-207`), so the instantiate the
+    // re-root belongs to is never reached — an "refuses to instantiate" verb
+    // here names a stage the file never got to.
+    const message = orphansIn(
+      scene(
+        node('Node2D', {}, { name: 'Root' }),
+        node('Node2D', {}, { name: 'B', parent: '' }),
+        node('Node2D', {}, { name: 'Stray', parent: 'NoSuchNode' })
+      )
+    )[0]?.message;
+    expect(message).toContain('cannot load the file at all');
+    expect(message).not.toContain('instantiate the scene for another heading');
   });
 
   it('claims no re-root for the empty path, since nothing in the file is read', () => {

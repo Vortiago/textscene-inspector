@@ -95,8 +95,12 @@ describe('getSeverityIcon', () => {
     expect(getSeverityIcon('info')).toBe('ℹ');
   });
 
-  it('falls back to a bullet for unknown severities', () => {
-    expect(getSeverityIcon('bogus')).toBe('•');
+  it('floors an off-union severity to the info icon', () => {
+    // The same floor `--format json` and `--format github` apply, so one run
+    // does not name two tiers for one finding.
+    expect(getSeverityIcon('bogus')).toBe('ℹ');
+    // `'constructor'` reaches Object.prototype through a bare index.
+    expect(getSeverityIcon('constructor')).toBe('ℹ');
   });
 });
 
@@ -113,8 +117,12 @@ describe('formatSeverity', () => {
     expect(formatSeverity('info', true)).toBe('\x1b[36minfo\x1b[0m');
   });
 
-  it('leaves unknown severities unstyled even when color is on', () => {
-    expect(formatSeverity('bogus', true)).toBe('bogus');
+  it('floors an off-union severity to the info tier, styled or not', () => {
+    // The stdout tier has to match the one `toJsonFindings` reports for the
+    // same diagnostic; printing the raw word left the two outputs of one run
+    // disagreeing about what the finding is.
+    expect(formatSeverity('bogus', true)).toBe('\x1b[36minfo\x1b[0m');
+    expect(formatSeverity('bogus', false)).toBe('info');
   });
 });
 

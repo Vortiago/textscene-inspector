@@ -30,18 +30,17 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { atLeast, srcRoot, walk } from './testing/ruleNameScrape.js';
-import { SEVERITY_ORDER, type Severity } from './types.js';
+import { SEVERITIES, type Severity } from './types.js';
 
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
 
 /**
- * The tier names, spelled for a regex — read off the union rather than typed
- * out, so a fourth tier reaches every matcher below instead of only the one
- * table tsc checks.
+ * The tier names, spelled for a regex — read off the shared roster rather than
+ * typed out, so a fourth tier reaches every matcher below instead of only the
+ * one table tsc checks.
  */
-const TIERS = Object.keys(SEVERITY_ORDER) as Severity[];
-const TIER_NAMES = TIERS.join('|');
-const TIER_NAMES_CAPITALISED = TIERS.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
+const TIER_NAMES = SEVERITIES.join('|');
+const TIER_NAMES_CAPITALISED = SEVERITIES.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
 
 /** Every tier word, and the prose that claims it. Total over `Severity`. */
 const TIER_WORDS: Record<Severity, RegExp> = {

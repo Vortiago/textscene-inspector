@@ -12,7 +12,9 @@
  * So this guards the ACCESS, not the spelling. `findParentNode` is the only way
  * to reach a node's parent, and only `parentType.ts` may call it; every other
  * file asks `parentType.ts`, whose primitives gate `isTypeUnknowable` before
- * they hand an ancestor back. A rule that cannot hold a raw parent cannot spell
+ * they hand an ancestor back. The test itself lives in
+ * `parser/typeUnknowable.ts`, since `buildSceneTree` asks it at every descent
+ * of a `parent=` path and the parser cannot import the linter. A rule that cannot hold a raw parent cannot spell
  * the test wrongly, cannot spell it partially, and cannot omit it — the three
  * failures are one invariant.
  *
@@ -58,14 +60,15 @@ const PARENT_ACCESS_ALLOWED = new Set(['linter/linterUtils.ts', 'linter/parentTy
 /**
  * The files that may read the raw `overridesExistingNode` flag.
  *
- * `StrictTscnParser.ts` SETS it, `parentType.ts` is the one place the linter
- * turns it into a decision. Scoped to the linter's own tree below, because the
- * flag answers a second, unrelated question outside it — `NodeRegistry.ts` sets
- * it too, and `graftInstanceChildren.ts` and `glbNodeOverrides.ts` read it to
- * decide whether an instanced child REPLACES one or is appended beside it,
- * which has nothing to do with whether a type is knowable.
+ * `StrictTscnParser.ts` SETS it, and nothing in the linter reads it: the one
+ * decision it feeds is `parser/typeUnknowable.ts`, which both trees ask
+ * through. Scoped to the linter's own tree below, because the flag answers a
+ * second, unrelated question outside it — `NodeRegistry.ts` sets it too, and
+ * `graftInstanceChildren.ts` and `glbNodeOverrides.ts` read it to decide
+ * whether an instanced child REPLACES one or is appended beside it, which has
+ * nothing to do with whether a type is knowable.
  */
-const OVERRIDE_FLAG_ALLOWED = new Set(['linter/parentType.ts', 'linter/StrictTscnParser.ts']);
+const OVERRIDE_FLAG_ALLOWED = new Set(['linter/StrictTscnParser.ts']);
 
 /** The raw parent accessor, under any spelling of the call around it. */
 const RAW_PARENT_ACCESS = /\bfindParentNode\b/;

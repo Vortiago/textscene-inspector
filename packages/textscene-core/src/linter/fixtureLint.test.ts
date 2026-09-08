@@ -52,7 +52,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:
-      'a Godot 3 file; the single warning IS the fixture, and the errors its pre-4.0 spellings would otherwise draw are what the suppression exists to withhold',
+      'a Godot 3 file; the single advisory IS the fixture, and the errors its pre-4.0 spellings would otherwise draw are what the suppression exists to withhold',
   },
   'unit-unsupported-nodes.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],

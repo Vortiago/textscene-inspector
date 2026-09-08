@@ -9,10 +9,15 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
+import { isTypeUnknowable } from '../parser/typeUnknowable.js';
 import { findParentNode } from './linterUtils.js';
 import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
 import type { TscnScene } from '../parser/types.js';
 import { boolSlotValue } from '../godot/index.js';
+
+// Re-exported, not re-spelled: `buildSceneTree` asks the same question at
+// every descent of a `parent=` path, and the parser cannot import the linter.
+export { isTypeUnknowable };
 
 /**
  * What a rule can say about a node's parent, once the cases it must not judge
@@ -46,35 +51,6 @@ export type ParentVerdict =
   | { kind: 'unknowable' }
   /** A real, typed parent that is not the wanted type. */
   | { kind: 'mismatch'; parent: TscnNode };
-
-/**
- * True when this node's `type` is not what it says, because the node comes from
- * a scene the linter never opens.
- *
- * Three ways that happens, and testing fewer than all three is a bug that reads
- * as correct:
- *
- * - `instance=` — the node IS another scene, whose root type lives there.
- * - no `type=` and no `instance=` — Godot's marker for "override the node
- *   already at this path", inside an instanced ancestor.
- * - a genuinely absent type on a malformed heading.
- *
- * The middle case is the trap. `NodeRegistry.ts:109` defaults a missing type to
- * `'Node'`, so an override heading parses as a confident, wrong `'Node'` and a
- * check of `!node.type` sails past it. That is not hypothetical: it made the
- * linter report a misplaced skeleton modifier on a shipped Godot demo, where a
- * `PhysicalBoneSimulator3D` hangs off a `Skeleton3D` override inside an
- * instanced character.
- *
- * This is a function rather than three inline conditions because the inline
- * form had already been written five ways across the linter — parent-side and
- * child-side, some testing two arms, some one, one testing none — and fixing
- * the middle case in `parentTypeVerdict` did not fix it in
- * `visibleInTreeVerdict` sixty lines below, in the same commit.
- */
-export function isTypeUnknowable(node: TscnNode): boolean {
-  return Boolean(node.instance) || !node.type || Boolean(node.overridesExistingNode);
-}
 
 /**
  * Resolve `node`'s parent against `wantedType`, subclasses included.

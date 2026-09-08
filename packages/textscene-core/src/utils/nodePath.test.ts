@@ -93,8 +93,11 @@ describe('nodePath utilities', () => {
   });
 
   describe('resolveParentPath', () => {
-    const tree = new Set(['', 'Mid', 'Mid/Leaf', 'Other']);
-    const inTree = (path: string) => tree.has(path);
+    const seated = new Set(['', 'Mid', 'Mid/Leaf', 'Other']);
+    const inTree = {
+      exists: (path: string) => seated.has(path),
+      uniquePaths: new Map([['%Hud', 'Mid/Leaf']]),
+    };
 
     it('resolves the scene root to the key it occupies', () => {
       expect(resolveParentPath('.', inTree)).toBe(SCENE_ROOT_PATH);
@@ -117,7 +120,7 @@ describe('nodePath utilities', () => {
       expect(resolveParentPath('Missing/../Mid', inTree)).toBeNull();
     });
 
-    it('folds without an `exists`, which is the wider answer a caller with no tree gets', () => {
+    it('folds without a tree, which is the wider answer a caller with none gets', () => {
       expect(resolveParentPath('Missing/../Mid')).toBe('Mid');
     });
 
@@ -133,8 +136,19 @@ describe('nodePath utilities', () => {
       expect(resolveParentPath('../Mid', inTree)).toBeNull();
     });
 
-    it('refuses a %Name, since the claims are derived from the tree this builds', () => {
-      expect(resolveParentPath('%Hud', inTree)).toBeNull();
+    it('jumps a %Name to the path claiming it, rather than descending onto it', () => {
+      // `get_node_or_null` reads the owner's table and continues from what it
+      // finds (node.cpp:1930-1938), so the walk restarts there.
+      expect(resolveParentPath('%Hud', inTree)).toBe('Mid/Leaf');
+      expect(resolveParentPath('%Hud/..', inTree)).toBe('Mid');
+    });
+
+    it('refuses a %Name no node claims', () => {
+      expect(resolveParentPath('%Missing', inTree)).toBeNull();
+    });
+
+    it('refuses a %Name when the caller holds no tree at all', () => {
+      expect(resolveParentPath('%Hud')).toBeNull();
     });
   });
 });

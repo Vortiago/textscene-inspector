@@ -16,7 +16,7 @@
 
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
-import { SEVERITY_ORDER } from '../types.js';
+import { SEVERITIES } from '../types.js';
 
 export interface EmittedPair {
   readonly name: string;
@@ -139,9 +139,6 @@ export function pairMatches(scraped: string, declared: string): boolean {
   return new RegExp(`^${pattern}$`).test(declared);
 }
 
-/** The severity literals a push site can carry, from the union itself. */
-const SEVERITY_NAMES = Object.keys(SEVERITY_ORDER);
-
 const scrapeCache = new Map<string, EmittedPair[]>();
 
 /**
@@ -174,7 +171,7 @@ export function scrapePairs(file: string): EmittedPair[] {
   // alternation is DERIVED from the union: spelled out here, a fourth tier would
   // compile everywhere and silently drop out of this scraper's population.
   const token = new RegExp(
-    `severity:\\s*'(${SEVERITY_NAMES.join('|')})'` +
+    `severity:\\s*'(${SEVERITIES.join('|')})'` +
       "|ruleName:\\s*(?:'([^']+)'|`([^`]+)`|(\\w+))" +
       '|(?<![.\\w])(?<!:\\s*)ruleName\\s*[,}]',
     'g'

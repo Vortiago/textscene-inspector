@@ -30,6 +30,16 @@ export type Severity = 'error' | 'warning' | 'info';
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
 /**
+ * The tier names, for a reader that needs them as data rather than as a type —
+ * the scrapes that build a severity alternation into a regex.
+ *
+ * Derived here rather than in each scraper: a tier spelled out at a match site
+ * compiles everywhere and silently drops out of that scraper's population, and
+ * two scrapers already derived this list separately.
+ */
+export const SEVERITIES = Object.keys(SEVERITY_ORDER) as Severity[];
+
+/**
  * Whether a string is one of the three tiers — the test every reader that
  * ranks, sorts or maps a severity needs before indexing a table by it.
  *

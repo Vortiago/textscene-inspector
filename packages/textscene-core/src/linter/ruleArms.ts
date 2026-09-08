@@ -63,7 +63,9 @@ export function armDiagnostic(
     severity: arm.severity,
     message,
     nodeName: node.name,
-    nodeType: node.type,
+    // A heading stating no type has none to report, and an empty string reads
+    // in the CLI as a node with an unnameable type rather than an unknown one.
+    nodeType: node.type || '<unknown>',
     ruleName: arm.ruleName,
     ...(location ? { location } : {}),
   };

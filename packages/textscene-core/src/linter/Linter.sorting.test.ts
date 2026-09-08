@@ -31,8 +31,9 @@ describe('Linter', () => {
     // Derived from what each test registered, so a new case cannot leak a rule
     // into the next by being left off a hand-written roster. Declared beside
     // the `afterEach` that drains it: `ruleRegistry` is a module singleton, so
-    // a case registering outside that hook's reach leaks into every later file
-    // in the same worker.
+    // a case registering outside that hook's reach reports on every later test
+    // in this file. Vitest isolates the module graph per FILE, so the reach
+    // stops there.
     const registered: string[] = [];
 
     const register = (...rules: LintRule[]): void => {

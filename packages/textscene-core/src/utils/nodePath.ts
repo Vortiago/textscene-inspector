@@ -108,27 +108,36 @@ export const SCENE_ROOT_PATH = '';
  * `ret_nodes[0]->get_node_or_null(np)` (`packed_scene.cpp:161`) — from the
  * root, so the root is the floor and paths here omit its name.
  *
- * `exists` answers whether a path names a node yet, and a caller that holds the
- * tree must pass it: without one the walk folds `..` textually and resolves
- * `Missing/../Real`, which `get_node_or_null` refuses at `Missing`.
+ * `tree` is what a caller holding the scene knows: whether a path names a node
+ * yet, and which node claims each `%Name`. A caller with neither gets the
+ * folded answer, which is the wider one — it resolves `Missing/../Real`, which
+ * `get_node_or_null` refuses at `Missing`.
  *
  * Five shapes address nothing and are null rather than a path: an absent or
  * empty value, since `NodePath("")` is empty and `get_node_or_null` returns
  * nullptr for it (node.cpp:1894); an absolute `/root/…`, which instantiate
  * refuses off-tree (node.cpp:1898); a `..` that steps above the root, where
- * `!current->data.parent` returns nullptr (node.cpp:1919-1922); a name `exists`
- * does not know (node.cpp:1941-1946); and a `%Name`, which needs the owner's
- * claim table — the tree this feeds is what those claims are derived FROM, so
- * there is none to consult, and Godot's own serialiser writes
- * `parent_path.simplified()` from a live tree and never emits one
- * (resource_format_text.cpp:2018).
+ * `!current->data.parent` returns nullptr (node.cpp:1919-1922); a name the tree
+ * does not know (node.cpp:1941-1946); and a `%Name` no node claims, which the
+ * owner's table has no entry for (node.cpp:1930-1938). Godot's own serialiser
+ * writes `parent_path.simplified()` and never emits that last shape
+ * (resource_format_text.cpp:2018), but the loader resolves one: probed on
+ * 4.7.2, `parent="%Player"` seats the node under the claiming `Player` and
+ * warns the path vanished only when nothing claims it.
  */
+export interface ParentPathTree {
+  /** Whether a path names a node yet — the child lookup at each descent. */
+  readonly exists: (path: string) => boolean;
+  /** `%Name` to the path of the node claiming it, in the scene root's table. */
+  readonly uniquePaths: ReadonlyMap<string, string>;
+}
+
 export function resolveParentPath(
   parentPath: string | undefined,
-  exists?: (path: string) => boolean
+  tree?: ParentPathTree
 ): string | null {
   if (!parentPath || parentPath.startsWith('/')) return null;
-  return walkNodePath([], parentPath, 0, undefined, exists)?.join('/') ?? null;
+  return walkNodePath([], parentPath, 0, tree?.uniquePaths, tree?.exists)?.join('/') ?? null;
 }
 
 /**

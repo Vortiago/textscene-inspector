@@ -33,12 +33,15 @@ import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 function createSimpleNode(heading: ParsedHeading, properties: Record<string, string>): TscnNode {
   const node: TscnNode = {
     name: heading.attributes.name || '',
-    // Use type if available, otherwise use index or instance identifier
-    // Note: For index=/instance= nodes, type may be inferred from parent scene or remain as identifier
+    // The heading's own `type=`, else the identifier it states instead. `index=`
+    // is NOT one of those: it is the sibling position Godot restores an override
+    // at, and reading it as a type made a diagnostic on such a heading report
+    // `nodeType: "2"` while the parse-side arm on the SAME heading reported
+    // `<unknown>` from `heading.attributes.type`. An override heading states no
+    // type at all, and empty is what every reader treats as unknowable.
     type:
       heading.attributes.type ||
       (heading.attributes.instance_placeholder ? INSTANCE_PLACEHOLDER_TYPE : '') ||
-      heading.attributes.index ||
       heading.attributes.instance ||
       '',
     properties,
@@ -185,14 +188,11 @@ export class StrictTscnParser {
         const isRootHeading = nodeHeadings++ === 0;
         const { instance, instance_placeholder: placeholder, parent, name } = heading.attributes;
         if (instance) {
-          // An empty `parent=` joins as the root's own child: the lookup
-          // returns null (node.cpp:1894) and the editor build's
-          // vanished-parent fallback re-parents the node to the scene root
-          // under its own name, the rename at :562 skipped because
-          // `old_parent_path` is empty too (packed_scene.cpp:209-214, inside
-          // `#ifdef DEBUG_ENABLED`). A release export has no fallback and sends
-          // the node to `stray_instances` (:549) instead, so nothing below it
-          // loads there either way.
+          // An empty `parent=` reads as the root here, which is not an engine
+          // claim: it faults the LOAD itself (resource_format_text.cpp:206-207)
+          // and `empty-parent-path` carries that. Nothing is instantiated, so
+          // this parser takes the one reading that leaves every other heading
+          // checkable.
           //
           // The root is the exception — it is the scene root whatever it is
           // called — and a heading with no `name=` identifies no node, so it

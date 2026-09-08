@@ -78,11 +78,11 @@ One linter finding: a **Severity**, a message, the node it concerns, the name of
 _Avoid_: "error" for a diagnostic of unknown severity; "issue" (ambiguous with the tracker).
 
 **Validator** (format check):
-A per-property format/range check that runs during strict parsing (dispatched by the **ParseObserver**) and inherits down the node base-type chain. A validator failure is **always an error** — a format violation is objectively invalid; that is the sorting principle for where a new check goes.
-_Avoid_: advisory/warning conditions as validators (they belong in a **Lint rule**); "validator" for the parser-side **Value decoder**s.
+A per-property format/range check that runs during strict parsing (dispatched by the **ParseObserver**) and inherits down the node base-type chain. Its **Severity** comes from what the engine does, like every other: a malformed value or a bound the setter enforces is an **error**, a bound only the property's editor hint states is a **warning** (`validators/v/grounding.ts`). What makes a check a validator is that it judges ONE property's value in isolation; that is the sorting principle for where a new check goes.
+_Avoid_: deciding a validator's severity per property rather than from the engine; "validator" for the parser-side **Value decoder**s.
 
 **Lint rule** (semantic check):
-A per-node-type check that runs on the parsed scene, matches its node type exactly (no base-type inheritance), and chooses its own **Severity** — the only home for advisory conditions.
+A per-node-type check that runs on the parsed scene and matches its node type exactly (no base-type inheritance) — the home for conditions no single property's value settles. Its **Severity** is fixed by the engine (ADR-0032), not chosen.
 _Avoid_: bare "rule" for a **Validator**; expecting base-class inheritance from rules (that is the validators' walk).
 
 **Range advisory** (`linter/rangeAdvisory.ts`):

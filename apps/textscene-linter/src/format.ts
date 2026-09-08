@@ -1,6 +1,6 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import { flooredSeverity, isSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -114,11 +114,15 @@ const SEVERITY_DISPLAY: Record<
   info: { icon: 'ℹ', color: '36', github: 'notice' },
 };
 
-function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] | undefined {
-  // `isSeverity` rather than a bare index: `'constructor'` reaches
-  // Object.prototype and returns a truthy non-display that formats as
-  // `\x1b[undefinedm…`.
-  return isSeverity(severity) ? SEVERITY_DISPLAY[severity] : undefined;
+/**
+ * The row an off-union severity is presented by. Floored rather than absent, so
+ * every surface of one run — the icon, the colour, the severity word, the JSON
+ * `severity` and the workflow-command level — names the same tier for the same
+ * finding. `flooredSeverity` also keeps `'constructor'` out of the table, which
+ * a bare index reaches through Object.prototype.
+ */
+function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] {
+  return SEVERITY_DISPLAY[flooredSeverity(severity)];
 }
 
 /**
@@ -139,9 +143,9 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  // The shared floor rather than a second spelling of it: an off-union severity
-  // costs this finding its level on the PR, never the whole run's annotations.
-  const command = SEVERITY_DISPLAY[flooredSeverity(finding.severity)].github;
+  // An off-union severity costs this finding its level on the PR, never the
+  // whole run's annotations.
+  const command = displayFor(finding.severity).github;
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);
@@ -163,15 +167,15 @@ export function formatGithubAnnotations(files: FileDiagnostics[]): string[] {
   return toJsonFindings(files).map(formatGithubAnnotation);
 }
 
-/** Icon for a severity; a bullet for anything outside the union. */
+/** Icon for a severity, floored for anything outside the union. */
 export function getSeverityIcon(severity: string): string {
-  return displayFor(severity)?.icon ?? '•';
+  return displayFor(severity).icon;
 }
 
-/** Severity name in its colour; unstyled for anything outside the union. */
+/** Severity name in its colour, floored for anything outside the union. */
 export function formatSeverity(severity: string, hasColor: boolean): string {
-  const display = hasColor ? displayFor(severity) : undefined;
-  return display ? `\x1b[${display.color}m${severity}\x1b[0m` : severity;
+  const floored = flooredSeverity(severity);
+  return hasColor ? `\x1b[${SEVERITY_DISPLAY[floored].color}m${floored}\x1b[0m` : floored;
 }
 
 /**
