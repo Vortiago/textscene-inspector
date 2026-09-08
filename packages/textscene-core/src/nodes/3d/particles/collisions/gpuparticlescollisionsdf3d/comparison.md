@@ -9,21 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionSDF3D
 
-The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `size` | `Vector3(4, 2, 4)` | Extents of the baked SDF volume in 3D units |
-| `resolution` | `2` (index for 64³) | Bake resolution of the SDF texture |
-| `thickness` | `0.5` | Hollow-shell thickness used to prevent particle tunnelling |
-| `bake_mask` | `3` | Visual layers considered when baking the SDF |
-| `texture` | `ExtResource("1_sdf")` | Baked signed distance field texture |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+A baked signed distance field that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw it or apply the collision yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -45,10 +31,8 @@ Strict parsing format-checks these `GPUParticlesCollisionSDF3D` properties, plus
 | `valid-gpuparticlescollisionsdf3d-bake-mask` (type-family match) | `gpuparticlescollisionsdf3d-empty-bake-mask` | warning |
 <!-- lint:end -->
 
-`size`, `resolution`, `thickness`, `bake_mask`, and `texture` are validated as shown
-above; `cull_mask` and the rest come from the GPUParticlesCollision3D base tier
-through the base-walk. GPUParticlesCollisionSDF3D has no `parser.ts` of its own (it
-registers `parseNode3D` directly, per index.ts), so none of these five are ever read
-by the lenient parser, valid or not: an out-of-range `resolution` or a malformed
-`size` is silently dropped rather than substituted or warned on, consistent with the
-node rendering as an invisible transform-only fallback.
+GPUParticlesCollisionSDF3D registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `resolution` or a malformed `size` is dropped silently rather than substituted or warned on, and only strict reports it.
+
+## Known limitations
+
+- **Needs runtime** Godot stops a live particle cloud at the baked field. Here there is no cloud to stop.

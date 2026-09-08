@@ -4,35 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-gpuparticles3d.tscn
 image: unit-gpuparticles3d
-renders_as: nothing yet — Godot draws a particle cloud, the previewer does not
+renders_as: nothing yet, Godot draws a particle cloud, the previewer does not
 ---
 
 # GPUParticles3D
 
-A GPU-simulated particle emitter. The previewer does not run the simulation, so
-it contributes no visible geometry — a gap, not a design (`renderIntent:
-'pending'`). The Node3D base still mounts, so the emitter's transform, its
-`visible` flag and its exclusion from the 2D canvas all behave.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `amount` | `200` | up to 200 particles fill Godot's burst |
-| `lifetime` | `2.0` | each particle lives 2 s before recycling |
-| `preprocess` | `1.2` | the sim runs 1.2 s ahead, so the still catches a spread cloud, not the emission instant |
-| `process_material` | `ParticleProcessMaterial` | drives the motion: upward `direction`, 45° `spread`, downward `gravity`, per-particle `scale` 0.5–1.0 |
-| `draw_pass_1` | `SphereMesh` (radius 0.12) | each particle is drawn as a small sphere |
-| `material_override` | emissive `StandardMaterial3D` | tints every particle glowing orange |
-
-## Divergences
-
-Godot draws the whole particle burst; the previewer draws none of it. Godot's
-frame is a spread of ~200 orange emissive spheres of varying sizes fanning up
-and out from the emitter (the `preprocess` seek catches them mid-flight); ours
-shows only the sky gradient and dark ground with no particles at all.
-The previewer runs no GPU particle simulation, so neither the
-`process_material` motion nor the `draw_pass_1` mesh appears.
+A GPU-simulated particle emitter. The previewer runs no simulation, so the emitter contributes no geometry and only its transform and `visible` flag take effect.
 
 ## Linting
 
@@ -86,9 +63,8 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-GPUParticles3D has no `parser.ts` of its own: registration wires `parseNode3D`
-straight in, reusing Node3D's parse verbatim. None of the properties validated
-above, including `amount`, `lifetime`, `process_material`, `draw_pass_1`, and
-`visibility_aabb`, are read by the lenient parser at all, so an invalid or
-missing value has no lenient-side effect; only the inherited `transform` and
-`visible` are parsed.
+GPUParticles3D registers `parseNode3D` directly, so `amount`, `lifetime`, `process_material`, `draw_pass_1` and `visibility_aabb` are never read by the lenient parser. An invalid or missing value has no lenient-side effect, and only strict reports it.
+
+## Known limitations
+
+- **Not drawn** Godot draws the burst of orange emissive spheres mid-flight. Here only the sky and ground appear.

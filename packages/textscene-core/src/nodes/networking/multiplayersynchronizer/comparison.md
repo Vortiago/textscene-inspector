@@ -10,22 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # MultiplayerSynchronizer
 
-This node synchronises properties from the multiplayer authority to remote peers and draws nothing, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `root_path` | `NodePath("SyncTarget")` | none — no visual effect |
-| `replication_interval` | `0.1` | none — no visual effect |
-| `delta_interval` | `0.05` | none — no visual effect |
-| `replication_config` | `SubResource("SceneReplicationConfig_1")` | none — no visual effect |
-| `visibility_update_mode` | `1` | none — no visual effect |
-| `public_visibility` | `true` | none — no visual effect |
-
-## Divergences
-
-None visible in this fixture.
+Synchronises properties from the multiplayer authority to remote peers and draws nothing. The previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -47,8 +32,4 @@ Strict parsing format-checks these `MultiplayerSynchronizer` properties, plus 10
 | `valid-multiplayersynchronizer-root-path` | `multiplayersynchronizer-root-path-dangling` | warning |
 <!-- lint:end -->
 
-`index.ts` registers the base `parseNode`, which reads only `transform`/`name`/`parent`/
-`instance`/`index` — none of MultiplayerSynchronizer's own properties. A malformed
-`replication_interval` like `"abc"` is never read by the lenient path at all, so it has
-no fallback value to report: the node still renders as the same empty transform group
-the strict parser would accept.
+`index.ts` registers the base `parseNode`, which reads only the heading attributes and `transform`. A malformed `replication_interval` is never read on the lenient path, so there is no fallback to report.

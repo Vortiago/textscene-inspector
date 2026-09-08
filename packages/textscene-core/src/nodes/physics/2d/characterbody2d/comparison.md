@@ -9,25 +9,7 @@ renders_as: a transform-only group
 
 # CharacterBody2D
 
-A 2D body moved by script rather than by the solver. It draws nothing in Godot,
-and the previewer mounts it as a transform-only Node2D group (ADR-0008) whose
-children carry the picture: a toggle-gated `CollisionShape2D` overlay
-(ADR-0005/0006) and a yellow `ColorRect`.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(0, 0)` | the body's starting placement |
-| `collision_layer` | `1` | the layers this body occupies |
-| `collision_mask` | `4` | the layers it scans for contacts |
-| `velocity` | `Vector2(0, 0)` | the starting velocity `move_and_slide` reads |
-
-## Divergences
-
-None. `velocity` is state a script drives every frame; storing it in the file
-sets only the first frame's value, and no previewer could show more than that
-without running the game.
+A 2D body moved by script rather than by the solver. It draws nothing in Godot, and the previewer mounts it as a transform-only Node2D group (ADR-0008) whose children carry the picture.
 
 ## Linting
 
@@ -63,6 +45,4 @@ Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherite
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-`velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either
-direction, since Godot neither clamps nor rejects a value here, and the
-non-finite literals the engine itself writes (`inf`, `nan`) stay legal.
+`velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either direction, since Godot neither clamps nor rejects a value there, and the lenient parser never reads it.

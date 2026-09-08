@@ -9,27 +9,9 @@ renders_as: a collapsible titled panel (accordion)
 
 # FoldableContainer
 
-A Container with a clickable title bar that expands or collapses its children, like an
-accordion section; the previewer parses and validates it but does not draw it yet, so it
-renders as an invisible transform-only fallback and its children still show regardless of
-`folded`.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `folded` | `true` | Format-checked only; the previewer draws nothing regardless. |
-| `title` | `"Inventory"` | Format-checked only. |
-| `title_alignment` | `1` (`HORIZONTAL_ALIGNMENT_CENTER`) | Format-checked only. |
-| `title_position` | `1` (`POSITION_BOTTOM`) | Format-checked only. |
-| `title_text_overrun_behavior` | `3` (`OVERRUN_TRIM_ELLIPSIS`) | Format-checked only. |
-| `foldable_group` | `SubResource("FoldableGroup_1")` | Format-checked only. |
-| `title_text_direction` | `2` (`TEXT_DIRECTION_RTL`) | Format-checked only. |
-| `language` | `"en"` | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+FoldableContainer is a titled panel that expands or collapses its children like an
+accordion section. The previewer parses and validates it but does not draw it, so it
+renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -55,9 +37,11 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl` unchanged (`index.ts`), which reads only the
-Control layout/theme-override keys, so none of FoldableContainer's own properties are
-read by it at all. A bad `title_alignment` (say `"nope"`) or an out-of-range
-`title_text_direction` therefore never reaches the lenient tree in any form, substituted
-or otherwise: strict rejects it as a diagnostic, and lenient never looks at the
-key, leaving the fallback node exactly as unaffected as a well-formed value would.
+The lenient parser reuses `parseControl` unchanged, which reads none of
+FoldableContainer's own keys. A bad `title_alignment` or an out-of-range
+`title_text_direction` is never read, so no fallback applies.
+
+## Known limitations
+
+- **Not drawn** Godot draws the title bar and hides the children while `folded`. The
+  previewer draws nothing for this node, and the children show regardless of `folded`.

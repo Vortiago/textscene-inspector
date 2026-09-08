@@ -10,19 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # PinJoint3D
 
-This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `params/bias` | `0.5` | Positional correction strength between the pinned bodies. |
-| `params/damping` | `2.0` | Velocity correction strength between the pinned bodies. |
-| `params/impulse_clamp` | `8.0` | Maximum impulse the joint may produce. |
-
-## Divergences
-
-None visible in this fixture.
+Pins two 3D physics bodies together at a point. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -43,8 +31,4 @@ Strict parsing format-checks these `PinJoint3D` properties, plus 4 inherited fro
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-The lenient parser applies no substitution: it stores whatever the registered base parser reads
-for `params/bias`, `params/damping`, and `params/impulse_clamp` verbatim, even a
-value outside the strict validators' ranges (for example a negative
-`params/impulse_clamp`), because the base Node3D parse has no notion of these
-per-property bounds and only `StrictTscnParser` consults `linterParser.ts`.
+The lenient parser applies no substitution. The base Node3D parse has no notion of the `params/*` bounds, so a negative `params/impulse_clamp` is stored verbatim and only `StrictTscnParser` reports it.

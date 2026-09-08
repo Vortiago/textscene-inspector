@@ -10,26 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # OpenXRHand
 
-OpenXRHand drives a Skeleton3D's bone poses from OpenXR hand-tracking data, repositioning
-itself to the tracked palm joint every frame. It draws nothing of its own, so the previewer
-renders it as a transform-only group (ADR-0008): its children — typically the hand mesh and
-skeleton — still show, at the transform and pose the scene file states, not the live tracked
-one.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `hand` | `1` | tracks the player's right hand (`HAND_RIGHT`) |
-| `motion_range` | `1` | hand skeleton conforms to the held controller's grip instead of forming a full fist |
-| `hand_skeleton` | `NodePath("../Skeleton3D")` | the Skeleton3D whose bone poses get updated |
-| `skeleton_rig` | `1` | expects Humanoid bone names (`SKELETON_RIG_HUMANOID`), not OpenXR's own |
-| `bone_update` | `1` | only rotates bones to match tracking, preserving the modeled bone lengths |
-
-## Divergences
-
-None visible in this fixture: nothing here changes what a static scene draws, since every
-property drives live per-frame tracking data the previewer never has.
+Drives a Skeleton3D's bone poses from OpenXR hand tracking. It draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008). Its children show at the pose the scene file states.
 
 ## Linting
 
@@ -50,8 +31,4 @@ Strict parsing format-checks these `OpenXRHand` properties, plus 17 inherited fr
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reads OpenXRHand through `parseNode3D`, so a malformed `hand`,
-`motion_range`, `skeleton_rig`, or `bone_update` (say, a bare word instead of an enum
-index) is kept as opaque, unparsed text with no substitution or fallback value — there is no
-tracked hand pose to fall back to either. Strict parsing is where these are read,
-and there a bad value is an error, not a lenient default.
+The lenient parser reads OpenXRHand through `parseNode3D`, so a malformed `hand`, `motion_range`, `skeleton_rig` or `bone_update` is kept as opaque text with no substitution. There is no tracked pose to fall back to.

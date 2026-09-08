@@ -9,21 +9,9 @@ renders_as: invisible transform-only fallback
 
 # GraphNode
 
-GraphNode is Godot's `GraphEdit` node: a titled `Container` whose children each become a numbered "slot" that can carry a left (input) and/or right (output) connection port. It is a Control (ADR-0003 routes Controls through the 2D DOM overlay, not the WebGL scene), so the previewer parses and validates every member below but does not draw it: it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `title` | `"Add"` | the text shown in the node's title bar |
-| `ignore_invalid_connection_type` | `true` | ports of different types may connect even without the parent `GraphEdit` explicitly allowing it |
-| `slots_focus_mode` | `2` (All) | connection slots can be focused with `ui_up`/`ui_down`, not only clicked |
-| `slot/0/left_enabled`, `/left_type`, `/left_color`, `/left_icon`, `/right_enabled`, `/draw_stylebox` | `true`, `0`, `Color(1, 1, 1, 1)`, `null`, `false`, `true` | slot 0 has an input port only, default type and tint, no custom icon |
-| `slot/1/right_enabled`, `/right_type`, `/right_color`, `/left_enabled` | `true`, `1`, `Color(0.4, 0.7, 1, 1)`, `false` | slot 1 has an output port only, with a distinct connection type and tint |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+GraphNode is a titled container inside a GraphEdit whose children become slots with
+input and output ports. The previewer parses and validates it but does not draw it, so
+it renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -46,10 +34,11 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | error |
 <!-- lint:end -->
 
-GraphNode registers `parseControl` directly (`index.ts`), the same base parser
-GraphElement uses, which reads only Control/CanvasItem-level fields (layout,
-modulate, theme overrides). It never reads `title`, `ignore_invalid_connection_type`,
-`slots_focus_mode`, or any `slot/<index>/<leaf>` key, so a malformed value like
-`title = Unquoted` or `slots_focus_mode = "nope"` is silently dropped rather than
-substituted or warned on: it rides along untyped in the raw property bag, and the
-node keeps rendering as the same invisible transform-only fallback either way.
+GraphNode registers `parseControl` directly, which never reads `title`,
+`ignore_invalid_connection_type`, `slots_focus_mode` or any `slot/<index>/<leaf>` key. A
+malformed value rides along untyped in the raw property bag.
+
+## Known limitations
+
+- **Not drawn** Godot draws the title bar, the slots and their ports. The previewer
+  draws nothing for this node.

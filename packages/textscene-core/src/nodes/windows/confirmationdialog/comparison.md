@@ -9,18 +9,7 @@ renders_as: invisible transform-only fallback
 
 # ConfirmationDialog
 
-A two-button confirmation dialog with independent OK/Cancel outcomes, building on AcceptDialog. It draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `cancel_button_text` | `"No thanks"` | not drawn yet — the Cancel button's label |
-
-## Divergences
-
-No capture exists yet — ConfirmationDialog is `status: unimplemented`, so there is nothing to
-compare against Godot.
+A two-button dialog with independent OK and Cancel outcomes, built on AcceptDialog. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
 
 ## Linting
 
@@ -37,10 +26,8 @@ Strict parsing format-checks these `ConfirmationDialog` properties, plus 5 inher
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
-`[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
-`transform` property, and never looks at `cancel_button_text` or any other
-ConfirmationDialog-specific key at all. A bad value there, or in any inherited
-AcceptDialog/Window property the strict linter above rejects, is never read,
-substituted, or reported by the lenient path — the node still renders as the
-same empty transform-only group either way.
+The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A bad `cancel_button_text` is never read, substituted or reported on the lenient path.
+
+## Known limitations
+
+- **Not drawn** Godot displays the dialog once popped up. The previewer draws nothing for it.

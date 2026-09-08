@@ -9,23 +9,7 @@ renders_as: a toggle-gated collision wireframe
 
 # CollisionShape3D
 
-CollisionShape3D attaches a collision shape to a physics body and has no visible
-form at runtime. Its wireframe draws only when "Visible Collision Shapes" is enabled
-(ADR-0005 / ADR-0006), which is off in this capture, so the previewer draws nothing
-for it here. The salmon cube on screen is the sibling `CrateMesh` (a MeshInstance3D)
-under the same RigidBody3D.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `shape` | `BoxShape3D` (size 1×1×1) | the collision volume; drawn only as a gated wireframe box, so absent from this capture |
-
-## Divergences
-
-None visible in this fixture. The CollisionShape3D wireframe is toggle-gated and so
-appears in neither capture, and the sibling crate sits at its authored pose, colour,
-and shading identically on both sides.
+Attaches a collision shape to a physics body and has no visible form at runtime. Its wireframe draws only when "Visible Collision Shapes" is on (ADR-0005, ADR-0006). The salmon cube on screen is the sibling mesh.
 
 ## Linting
 
@@ -52,9 +36,8 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 17 inheri
 |  | `collisionshape3d-concave-under-characterbody` | warning |
 <!-- lint:end -->
 
-`shape` is copied through verbatim whenever present, with no format check.
-`disabled` is set to `properties.disabled === 'true'`, so any non-`'true'`
-string silently becomes `false`. `debug_color` goes through
-`parseDebugColor`/`colorOr`, falling back to the project default
-`Color(0, 0.6, 0.7, 0.42)` for both an absent and an unparseable value, with
-no warning either way.
+`shape` is copied through verbatim with no format check. `disabled` is `true` only for the literal string `true`. `debug_color` falls back to the project default `Color(0, 0.6, 0.7, 0.42)` for an absent or unparseable value, with no warning.
+
+## Known limitations
+
+- **Editor only** The shape wireframe draws only while the collision-shape toggle is on.

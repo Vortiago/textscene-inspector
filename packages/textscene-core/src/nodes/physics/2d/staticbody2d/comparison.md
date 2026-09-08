@@ -9,23 +9,7 @@ renders_as: a transform-only group
 
 # StaticBody2D
 
-A non-moving 2D physics body. It has no visual of its own in Godot either: the
-previewer mounts it as a transform-only Node2D group (ADR-0008), so what the
-capture shows is its children — a `CollisionShape2D` overlay, hidden unless
-toggled on (ADR-0005/0006), and a blue `ColorRect`.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(5, 5)` | places the body, and with it every child |
-| `collision_layer` | `1` | the layers this body occupies |
-| `collision_mask` | `1` | the layers it scans for contacts |
-
-## Divergences
-
-None. Nothing here draws, in Godot or in the previewer, and the physics the
-properties describe is not simulated by either at load time.
+A non-moving 2D physics body with no visual of its own. The previewer mounts it as a transform-only Node2D group (ADR-0008), so the capture shows its children only.
 
 ## Linting
 
@@ -46,7 +30,4 @@ Strict parsing format-checks these `StaticBody2D` properties, plus 5 inherited f
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-Both collision keys go through `layerBitmask`, so a value outside a 32-bit mask
-is reported while any legal mask passes untouched. The lenient parser keeps a
-malformed `position` as its raw text rather than dropping the node, which is why
-a typo in one body never costs you the rest of the scene tree.
+Both collision keys go through `layerBitmask`, so a value outside a 32-bit mask is reported while any legal mask passes. The lenient parser keeps a malformed `position` as raw text rather than dropping the node.

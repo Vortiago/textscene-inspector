@@ -9,25 +9,9 @@ renders_as: invisible transform-only fallback
 
 # TouchScreenButton
 
-TouchScreenButton is an on-screen button for touch input; Godot draws its `texture_normal`/`texture_pressed` and the previewer parses and validates the node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `texture_normal` | `SubResource("PlaceholderTexture2D_normal")` | Format-checked only; the previewer draws nothing regardless. |
-| `texture_pressed` | `SubResource("PlaceholderTexture2D_pressed")` | Format-checked only. |
-| `bitmask` | `SubResource("BitMap_1")` | Format-checked only. |
-| `shape` | `SubResource("CircleShape2D_1")` | Format-checked only. |
-| `shape_centered` | `true` | Format-checked only. |
-| `shape_visible` | `true` | Format-checked only. |
-| `passby_press` | `false` | Format-checked only. |
-| `action` | `"ui_accept"` | Format-checked only; existence in an InputMap is out of scope. |
-| `visibility_mode` | `1` (`VISIBILITY_TOUCHSCREEN_ONLY`) | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+TouchScreenButton is an on-screen button for touch input that draws `texture_normal` or
+`texture_pressed`. The previewer parses and validates it but does not draw it, so it
+renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -53,13 +37,11 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-This slice has no `parser.ts`: `index.ts` registers `parseNode2D`, which reads
-none of these nine keys. So an unquoted `action` or an out-of-range
-`visibility_mode` has no fallback value to substitute — the lenient parse
-carries the raw string through untouched and it never reaches a render, since
-nothing downstream reads it yet. `action` itself accepts either the plain
-`"…"` quoted string Godot saves (`get_action` returns `String`) or
-the `&"…"` StringName literal, because the variant text parser reads both
-forms. `visibility_mode` beyond `0`-`1` is only a WARNING (ADR-0032): the
-`PROPERTY_HINT_ENUM` at touch_screen_button.cpp:442 states the bound but
-`set_visibility_mode` (cpp:374-377) assigns it with no `ERR_FAIL_INDEX`.
+The slice has no `parser.ts`. `index.ts` registers `parseNode2D`, which reads none of
+the nine keys, so an unquoted `action` or an out-of-range `visibility_mode` is carried
+through raw and never rendered.
+
+## Known limitations
+
+- **Not drawn** Godot draws the button's texture. The previewer draws nothing for this
+  node.

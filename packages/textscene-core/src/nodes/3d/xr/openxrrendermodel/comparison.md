@@ -10,25 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # OpenXRRenderModel
 
-At runtime, OpenXRRenderModel asks the OpenXR runtime for a glTF scene describing the actual
-physical device (controller, tracker, or similar) the player is holding, and adds that scene
-as its child (`openxr_render_model.cpp:72`, `add_child(scene)`). Nothing in a `.tscn` names or
-describes that model — it does not exist until the XR runtime hands one over at play time — so
-this is not a render gap the previewer could close by reading the file more closely: there is
-nothing here to read. The previewer renders it as a transform-only group (ADR-0008).
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-
-OpenXRRenderModel's only member, `render_model`, is a `Variant::RID` — a handle into a live,
-per-process runtime table, not a value a `.tscn` legitimately carries. See `linterParser.ts`
-for the full chain of reasoning. No fixture value exercises it.
-
-## Divergences
-
-None visible in this fixture: the node owns no property that describes anything drawable.
+Asks the OpenXR runtime for a glTF model of the device the player holds and adds it as a child at play time. Nothing in a `.tscn` describes that model, so the previewer renders the node as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -42,7 +24,4 @@ Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inh
 | `valid-openxrrendermodel-parent` | `openxrrendermodel-parent-not-origin-or-manager` | warning |
 <!-- lint:end -->
 
-OpenXRRenderModel declares no validators, so there is no per-property bad value to discuss.
-Its one semantic rule instead checks parentage: the lenient parser never substitutes a
-missing or wrong parent either, it renders the node wherever the scene tree puts it,
-and strict parsing reports the misplacement as a warning rather than refusing the file.
+OpenXRRenderModel declares no validators, since its one member is a runtime `RID`. The lenient parser never substitutes a missing or wrong parent either. It renders the node wherever the tree puts it, and strict parsing reports the misplacement as a warning.

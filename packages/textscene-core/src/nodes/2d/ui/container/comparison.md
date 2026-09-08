@@ -4,21 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-container.tscn
 # image: unit-container
-renders_as: nothing yet — not implemented
+renders_as: nothing yet, not implemented
 ---
 
 # Container
 
-The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-
-## Divergences
-
-Not captured yet.
+Container is the abstract base every layout container extends and draws nothing of its
+own. The previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -34,7 +27,11 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 | `valid-container-script` | `container-no-script` | warning |
 <!-- lint:end -->
 
-Container registers no validators or semantic rules of its own yet, so the strict
-and lenient parsers agree on every property: whatever the registered base parser reads it reads
-without substitution. Replace this once `linterParser.ts` has validators, naming
-the property and the value the lenient parser falls back to.
+Container registers no validators or rules of its own, so the strict and lenient parsers
+agree on every property. Whatever the registered base parser reads it reads without
+substitution.
+
+## Known limitations
+
+- **Not drawn** The previewer draws nothing for this node. Its children still show at
+  their authored offsets.

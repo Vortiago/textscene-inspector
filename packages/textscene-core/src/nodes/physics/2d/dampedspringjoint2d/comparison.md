@@ -10,20 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # DampedSpringJoint2D
 
-Connects two 2D physics bodies with a spring-like force. It draws nothing at runtime, since Godot shows the spring only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `length` | `80.0` | none, the spring's maximum extent, not drawn |
-| `rest_length` | `40.0` | none, the length the spring relaxes toward, not drawn |
-| `stiffness` | `20.0` | none, how strongly the spring resists deformation, not drawn |
-| `damping` | `1.0` | none, how fast the attached bodies realign to the spring axis, not drawn |
-
-## Divergences
-
-None visible in this fixture.
+Connects two 2D physics bodies with a spring-like force. Godot shows the spring only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -46,7 +33,4 @@ Strict parsing format-checks these `DampedSpringJoint2D` properties, plus 4 inhe
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so a
-malformed `stiffness` (or any of this type's other three properties) never reaches
-`node.properties`: it is silently ignored rather than substituted with a default,
-and only the raw text survives on `node.rawProperties`.
+The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so a malformed `stiffness` never reaches `node.properties`. Only the raw text survives on `node.rawProperties`.

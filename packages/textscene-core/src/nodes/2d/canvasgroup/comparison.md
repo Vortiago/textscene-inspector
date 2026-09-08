@@ -4,34 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-canvas-group.tscn
 # image: unit-canvas-group
-renders_as: invisible transform-only fallback; the children's composite into one offscreen buffer is not reproduced
+renders_as: invisible transform-only fallback, the children's composite into one offscreen buffer is not reproduced
 ---
 
 # CanvasGroup
 
-Godot composites a CanvasGroup's children into one offscreen buffer and draws that
-buffer as a single canvas item — the effect this exists for is overlapping
-semi-transparent children blending against each other, then the whole group
-blending once against the background, rather than each child blending against
-the background individually. The previewer does not reproduce that compositing
-step, so it parses and validates this node but draws it as an invisible
-transform-only fallback and its children still show, each blending against the
-background on its own.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `fit_margin` | `16.0` | margin expanding the drawable rect fitted around the children |
-| `clear_margin` | `16.0` | margin expanding the backbuffer clear rect |
-| `use_mipmaps` | `true` | mipmaps computed for the backbuffer, for a custom ShaderMaterial |
-
-## Divergences
-
-No image pair exists for this fixture (status `unimplemented`). The behavioural
-gap is the compositing step described above: any overlapping semi-transparent
-children in this fixture would render differently, blended individually against
-the background instead of once through the group's own buffer.
+CanvasGroup composites its children into one offscreen buffer and blends that buffer
+once. The previewer parses and validates it but does not reproduce the compositing, so
+it renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -53,7 +33,10 @@ Strict parsing format-checks these `CanvasGroup` properties, plus 12 inherited f
 |  | `canvasgroup-nested-in-canvasgroup` | warning |
 <!-- lint:end -->
 
-CanvasGroup reuses the plain `parseNode2D`, which never reads `fit_margin`,
-`clear_margin`, or `use_mipmaps` at all — all three are absent from the parsed
-properties regardless of value, valid or malformed, since this node draws
-nothing itself for any of them to affect.
+The lenient parser reuses `parseNode2D`, which never reads `fit_margin`, `clear_margin`
+or `use_mipmaps`. All three are dropped whatever their value.
+
+## Known limitations
+
+- **Not drawn** Overlapping semi-transparent children blend against the background one
+  by one, not once through the group's buffer.

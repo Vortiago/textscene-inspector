@@ -9,28 +9,9 @@ renders_as: a 2D view frame with no drawn geometry
 
 # Camera2D
 
-Camera2D is a Node2D that defines the 2D view — which slice of the canvas the
-viewport shows. The previewer draws no geometry for it; it only tags its group so
-the Cameras panel can frame the view through it. The camera's outline is an
-editor-only gizmo, drawn in neither capture. This fixture contains no Camera2D
-node at all: what fills the frame is the fixture's two Polygon2D pentagons, the
-blue one dragged up to the right by a RemoteTransform2D relay while the grey ghost
-stays at the authored spot. Nothing on screen exercises Camera2D.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| — | — | the fixture defines no Camera2D node, so no Camera2D property is set or exercised |
-
-## Divergences
-
-The two frames place both pentagons identically; one difference is visible, in the
-blue fill rather than the layout:
-
-- **The blue pentagon reads paler and less saturated in ours.** Godot writes the
-  authored colour straight to the framebuffer (`0.2, 0.7, 0.9` gives `51, 178, 229`);
-  ours renders `95, 191, 217`. See "Why 2D colour matches, and what breaks it" in docs/comparison/README.md.
+Camera2D defines which slice of the canvas the viewport shows, and the previewer draws
+no geometry for it. A sub-viewport's 2D pass frames through it, while the main 2D stage
+frames the whole scene (ADR-0006).
 
 ## Linting
 
@@ -79,15 +60,13 @@ Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from
 |  | `camera2d-rotation-smoothing-speed-zero` | info |
 <!-- lint:end -->
 
-Strict rejects a non-positive `zoom` component as `INVALID_ZOOM_VALUE`; the lenient parser's
-`vec2Or` only re-checks the `Vector2(x, y)` grammar, so `Vector2(0, 0)` or a negative zoom
-parses through unchanged and renders as authored, falling back to `(1, 1)` only when the
-property is missing or the grammar itself fails to match. `anchor_mode` falls back to
-`DRAG_CENTER` (`1`), `limit_left`/`limit_top`/`limit_right`/`limit_bottom` fall back to
-`-10000000`/`-10000000`/`10000000`/`10000000`, `limit_enabled` falls back to `true`, and
-`offset` falls back to `(0, 0)`, each warning first if present but unparseable. `enabled` skips
-that family entirely: any value other than the literal string `'false'` is treated as true, and
-it defaults to `true` when absent. `ignore_rotation`, `process_callback`, `limit_smoothed`,
-every smoothing and drag property, and the `editor_draw_*` flags are validated by strict but
-never read by the lenient parser at all, consistent with Camera2D drawing no geometry in the
-previewer.
+`zoom` falls back to `(1, 1)` only when absent or ungrammatical, so a zero or negative
+component that strict rejects renders as authored. `anchor_mode` falls back to
+`DRAG_CENTER`, the four `limit_*` keys to plus or minus `10000000`, `limit_enabled` to
+`true` and `offset` to `(0, 0)`. `enabled` is `true` unless the value reads as `false`.
+The smoothing, drag and `editor_draw_*` keys are never read.
+
+## Known limitations
+
+- **Approximated** The main 2D stage frames the whole scene rather than the enabled
+  camera's view. Only a SubViewportContainer surface frames through the camera.

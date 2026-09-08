@@ -9,22 +9,7 @@ renders_as: invisible transform-only fallback
 
 # FogVolume
 
-Adds a localized region of volumetric fog (or, with a negative-density
-FogMaterial, removes it) into the world's volumetric fog effect. The previewer
-parses and validates this node but does not draw it yet, so it renders as an
-invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| shape | `2` (CYLINDER) | Selects the local volume shape the fog is bounded to. |
-| size | `Vector3(4, 3, 4)` | Local-space extents of the fog volume for every shape but World. |
-| material | `SubResource("FogMaterial_1")` | The FogMaterial controlling density/colour/emission inside the volume. |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+Adds a local region of volumetric fog to the world's fog effect, or removes fog from it with a negative-density `FogMaterial`. The previewer does not draw it yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -44,8 +29,8 @@ Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from
 | `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | info |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and
-`visible` and silently ignores every FogVolume-specific key — `shape =
-ellipsoid` or a malformed `size = Vector3(-1, 2, 2)` parses with no warning and
-never reaches any in-memory state, the same as a value Godot's own class never
-declared. Only the strict parser (`linterParser.ts`) tells the two apart.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `shape = ellipsoid` or a malformed `size = Vector3(-1, 2, 2)` parses with no warning and reaches no in-memory state.
+
+## Known limitations
+
+- **Not drawn** Godot fills the volume with fog. Here the region is empty.

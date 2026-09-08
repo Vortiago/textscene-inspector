@@ -9,30 +9,9 @@ renders_as: invisible transform-only fallback
 
 # TextureButton
 
-TextureButton is BaseButton's sprite-based button: five texture slots (normal,
-pressed, hover, disabled, focused) plus a click mask and a stretch mode, instead
-of Godot's Theme resource. The previewer parses and validates every member below
-but does not draw it yet: it renders as an invisible transform-only fallback and
-its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `flip_h` | `true` | mirrors every texture slot horizontally |
-| `flip_v` | `true` | mirrors every texture slot vertically |
-| `ignore_texture_size` | `true` | the button's minimum size ignores the texture dimensions |
-| `stretch_mode` | `4` (`STRETCH_KEEP_ASPECT`) | scales the drawn texture to fit the rect while keeping its aspect ratio |
-| `texture_click_mask` | a `BitMap` | restricts the clickable area to the mask's white pixels |
-| `texture_disabled` | a `PlaceholderTexture2D` | drawn when `disabled` is true |
-| `texture_focused` | a `PlaceholderTexture2D` | overlaid when the button has focus |
-| `texture_hover` | a `PlaceholderTexture2D` | drawn while the mouse hovers |
-| `texture_normal` | a `PlaceholderTexture2D` | the default, not-pressed appearance |
-| `texture_pressed` | a `PlaceholderTexture2D` | drawn while the button is pressed |
-
-## Divergences
-
-Not captured yet, since nothing renders and there is nothing to compare pixels against.
+TextureButton is a sprite-based button with five texture slots, a click mask and a
+stretch mode. The previewer parses and validates it but does not draw it, so it renders
+as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -61,12 +40,11 @@ Strict parsing format-checks these `TextureButton` properties, plus 10 inherited
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which reads only Control/CanvasItem
-fields (anchors, offsets, modulate, theme overrides) and has no field for any of
-TextureButton's own 10 members. A bad value on any of them, say
-`stretch_mode = 12`, a malformed `Color(...)` on an inherited key, or a plain
-string on `texture_normal`, is silently dropped: `parseControl` never reads the
-key, so the node still parses with its children intact and no trace of the bad
-value survives.
-StrictTscnParser sees the same raw key independent of `parseControl`, which is
-why the validators above catch what the lenient path silently drops.
+The lenient parser reuses `parseControl`, which has no field for any of TextureButton's
+ten members. A `stretch_mode = 12` or a plain string on `texture_normal` is dropped
+silently, and only strict sees the raw key.
+
+## Known limitations
+
+- **Not drawn** Godot draws the button's texture. The previewer draws nothing for this
+  node.

@@ -10,22 +10,7 @@ renders_as: an invisible Node2D transform group
 
 # AudioStreamPlayer2D
 
-A positional audio emitter. It has no runtime visual, so the previewer reuses the
-Node2D transform-group Component (ADR-0008): an invisible group that positions its
-children, drawing nothing itself. Both images are an empty scene.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(120, 80)` | places the (invisible) emitter and its children; no mark of its own |
-| `stream` | `AudioStreamGenerator` | the audio to play — inaudible and invisible in a still render |
-| `volume_db` | `-6.0` | playback gain; no visible effect |
-| `pitch_scale` | `1.2` | playback pitch; no visible effect |
-
-## Divergences
-
-None visible in this fixture.
+A positional audio emitter with no runtime visual. The previewer reuses the Node2D transform-group component (ADR-0008), which positions its children and draws nothing itself. Both images are an empty scene.
 
 ## Linting
 
@@ -56,14 +41,4 @@ Strict parsing format-checks these `AudioStreamPlayer2D` properties, plus 12 inh
 | `valid-audiostreamplayer2d-properties` | `audiostreamplayer2d-autoplay-without-stream` | info |
 <!-- lint:end -->
 
-Beyond the shared audio-base fallbacks (pitch_scale, volume_db, bus, and the
-playing/autoplay/stream_paused flags, as in AudioStreamPlayer), max_distance
-defaults to 2000, attenuation to 1, and panning_strength to 1 when absent,
-warning and reusing those defaults only if the value fails to parse as a float;
-strict's `max_distance` floor and its `panning_strength` floor of 0 have
-no lenient counterpart, and `attenuation` is bounded in neither (its hint is
-PROPERTY_HINT_EXP_EASING, which states no range). area_mask defaults to 1 the same way; strict's bitmask validation
-is not reproduced, so any parseable int is accepted. playback_type is the one
-enum-shaped property here: unlike the plain floats, enumOr does enforce the
-strict 0/1/2 membership check, falling back to `DEFAULT` (0) with a warning for
-any value outside that set, not just an unparseable one.
+`max_distance` defaults to 2000, `attenuation` to 1 and `panning_strength` to 1 when absent. Those defaults are reused with a warning when the value fails to parse. `playback_type` re-checks the enum through `enumOr` and falls back to `DEFAULT` (0) for any value outside 0-2. Strict's floors on `max_distance` and `panning_strength` have no lenient counterpart.

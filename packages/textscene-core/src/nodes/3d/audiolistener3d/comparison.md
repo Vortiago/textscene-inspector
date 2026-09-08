@@ -10,18 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # AudioListener3D
 
-This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story. `doppler_tracking` only changes Doppler-shifted audio at runtime, which has no visual counterpart either.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `transform` | `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)` | inherited from Node3D; positions the (invisible) listener, no visible effect |
-| `doppler_tracking` | `1` (IDLE_STEP) | AudioListener3D's own member; audio-only, no visible effect |
-
-## Divergences
-
-There is no runtime output to compare — the node draws nothing in either Godot or here, by design.
+Sets the point 3D audio is heard from. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -39,8 +28,4 @@ Strict parsing format-checks these `AudioListener3D` properties, plus 17 inherit
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-`doppler_tracking` is the node's only own property, and it plays no part in what the
-lenient parser renders (the node is transform-only, so nothing reads it for drawing):
-an out-of-range or non-numeric value here has no fallback to speak of, it is never consulted. Strict parsing still format-checks it, and treats an out-of-range int
-as a warning rather than an error, since `set_doppler_tracking` (audio_listener_3d.cpp:146-158)
-assigns without a guard — only the property's own `PROPERTY_HINT_ENUM` grounds the check.
+The lenient parser never consults `doppler_tracking`, the node's only own property, since nothing reads it for drawing. An out-of-range or non-numeric value has no fallback and is carried through untouched, while strict warns on it.

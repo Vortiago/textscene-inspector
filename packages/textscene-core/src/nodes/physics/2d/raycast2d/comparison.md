@@ -10,23 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # RayCast2D
 
-RayCast2D casts a ray each physics frame toward `target_position`, reporting the first Area2D/PhysicsBody2D it hits, and draws nothing of its own, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story. Godot itself only draws the ray as a debug line while `Engine.is_editor_hint()` or the runtime "Visible Collision Shapes" flag is on (`ray_cast_2d.cpp`'s `NOTIFICATION_DRAW` guard), so a plain gameplay capture shows nothing either.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `enabled` | `true` | ray reports collisions each physics frame (default) |
-| `exclude_parent` | `true` | ignores a parent CollisionObject2D, if any (default) |
-| `target_position` | `Vector2(0, 96)` | ray direction/length from the node's origin; invisible here since the node draws nothing itself |
-| `collision_mask` | `1` | only physics layer 1 is checked (default) |
-| `hit_from_inside` | `false` | ignores shapes the ray starts inside (default) |
-| `collide_with_areas` | `true` | Area2D nodes are reported |
-| `collide_with_bodies` | `true` | PhysicsBody2D nodes are reported (default) |
-
-## Divergences
-
-None visible in this fixture.
+Casts a ray each physics frame toward `target_position` and reports the first hit. Godot draws the ray only as a debug line, so the previewer renders it as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -52,7 +36,4 @@ Strict parsing format-checks these `RayCast2D` properties, plus 12 inherited fro
 |  | `raycast2d-zero-mask` | info |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode2D`, which only reads Node2D's own transform
-keys, so a malformed `collision_mask` or a non-boolean `hit_from_inside` is never
-read at all: it is silently ignored rather than substituted, because none of
-RayCast2D's seven properties feeds rendering.
+The lenient parser reuses `parseNode2D`, which reads only Node2D's transform keys, so a malformed `collision_mask` or a non-boolean `hit_from_inside` is ignored rather than substituted.

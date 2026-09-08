@@ -9,31 +9,7 @@ renders_as: a solid cylinder or cone mesh
 
 # CSGCylinder3D
 
-A CSG cylinder primitive, drawn as a solid cylinder or as a cone when `cone` is
-set (top radius collapses to 0). The geometry is a port of Godot's own
-`_build_brush`, not `THREE.CylinderGeometry`: three gives a collapsed cone apex
-nine distinct radial normals where Godot's `smooth_faces` averages every face
-meeting at one position into a single normal, which on a symmetric cone points
-straight up. That difference alone was the whole of a 0.788% parity gap. CSG
-boolean ops ARE composed (ADR-0027), so a cylinder inside a CSG root contributes
-to that root's result.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `radius` | `0.5` / `0.4` | base radius of the pillar / cone |
-| `height` | `2.0` / `1.0` | the tall pillar versus the shorter cone |
-| `sides` | `16` | radial segments — a smooth silhouette with faint faceting |
-| `cone` | `true` (Cone only) | collapses the top to a point, making a cone |
-| `smooth_faces` | default `true` | one averaged normal at the cone apex, not nine radial ones |
-| `material` | albedo `Color(0.6, 0.5, 0.2)` | the olive surface both shapes share |
-| `transform` | `+1.5` on X (Cone) | offsets the cone to the right of the pillar |
-
-## Divergences
-
-None visible in this fixture. Measured at 0.052% against Godot 4.6.3 with
-`pnpm ref:diff unit-csg-cylinder.tscn`, down from 0.788% before the normals port.
+A CSG cylinder, drawn as a solid cylinder or as a cone when `cone` is set. The geometry is a port of Godot's own `_build_brush`, so the tessellation and the apex normals match, and the boolean `operation` is evaluated (ADR-0027).
 
 ## Linting
 
@@ -60,11 +36,4 @@ Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-positive `radius`/`height`, `sides` outside 3-64, or a non-boolean
-`cone`: the radius and height floors warn, and a non-boolean `cone` is an error. The lenient parser falls back silently when absent, or warns and
-falls back when present but unparseable: `radius` to `0.5`, `height` to `2.0`, `sides`
-to `8`. `cone` skips that contract entirely: it is read as a raw `=== 'true'` string
-comparison, so any non-`true` value (not just an absent one) silently becomes `false`
-with no warning. `operation` is read with `parseOptionalInt`, so it warns neither way;
-a non-zero value is applied by the boolean evaluator rather than dropped (ADR-0027,
-superseding ADR-0004). `material`, if present, is copied through unvalidated.
+The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `radius` to `0.5`, `height` to `2.0`, `sides` to `8`. `cone` is a raw `=== 'true'` comparison, so any other value silently becomes `false`. `operation` is read with `parseOptionalInt` and warns neither way.

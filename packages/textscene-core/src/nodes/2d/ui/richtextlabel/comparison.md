@@ -9,28 +9,9 @@ renders_as: a positioned HTML div of styled text
 
 # RichTextLabel
 
-A Control that lays out a run of rich text; the previewer draws it as a
-positioned `<div>` and, with `bbcode_enabled`, renders a BBCode subset as inline
-styling (ADR-0003). Both images show one line reading "Bold, italic, underline,
-and coloured BBCode" pinned to the top-left, with each tagged word carrying its
-style.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `text` | `"[b]Bold[/b], [i]italic[/i], [u]underline[/u], and [color=#e0a030]colored[/color] BBCode"` | the visible line of text |
-| `bbcode_enabled` | `true` | tags render as styling, not literal characters |
-| `fit_content` | `true` | box shrinks to the single line's height at the top edge |
-| `theme_override_font_sizes/normal_font_size` | `18` | the size of the text |
-| `theme_override_colors/default_color` | `Color(0.9, 0.9, 0.9, 1)` | the light-grey of the untagged words |
-
-`[b]` renders bold, `[i]` italic, `[u]` underlined, and `[color=#e0a030]` in the
-same orange in both images.
-
-## Divergences
-
-None visible in this fixture.
+RichTextLabel lays out a run of rich text. The previewer draws it as a positioned
+`<div>` and, with `bbcode_enabled`, renders a subset of BBCode as inline styling
+(ADR-0003).
 
 ## Linting
 
@@ -78,7 +59,11 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`RichTextLabel` has no strict counterpart for `bbcode_enabled` or `fit_content`
-either. Both flags use a direct string comparison against `'true'`, so an absent
-property or any other value (`"1"`, garbage text) silently resolves to `false`, with
-no warning logged.
+`bbcode_enabled` and `fit_content` have no strict counterpart. Both compare the raw
+string against `true`, so an absent property or any other value silently resolves to
+`false`.
+
+## Known limitations
+
+- **Approximated** Only a subset of BBCode tags is styled, so a tag outside it renders
+  as plain text.

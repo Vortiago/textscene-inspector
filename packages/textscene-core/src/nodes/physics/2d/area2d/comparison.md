@@ -10,29 +10,7 @@ renders_as: a transform-only Node2D group
 
 # Area2D
 
-Area2D is a 2D physics region that detects overlaps. Like every physics body it
-has no runtime visual, so the previewer mounts it as a transform-only Node2D
-group (ADR-0005/ADR-0008) and draws nothing for it. Both captures are an empty
-grey frame.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(10, 20)` | shifts the invisible node; no pixels |
-| `collision_layer` | `4` | physics config; not drawn |
-| `collision_mask` | `1` | physics config; not drawn |
-| `monitoring` | `true` | physics config; not drawn |
-| `monitor_neighbors` | `true` | physics config; not drawn |
-
-The child `CollisionShape2D` (a `CircleShape2D`) is a selection-gated gizmo and
-does not appear in a plain capture. The child `ColorRect` (colour
-`Color(1, 0.4, 0.4, 1)`) carries no size, so its rect is empty and it too draws
-nothing.
-
-## Divergences
-
-None visible in this fixture.
+A 2D physics region that detects overlaps. It has no runtime visual, so the previewer mounts it as a transform-only Node2D group (ADR-0008). Both captures are an empty grey frame.
 
 ## Linting
 
@@ -67,11 +45,4 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-The lenient parser only reads `monitoring`, `monitorable`, `collision_layer`, and
-`collision_mask`, through `parseOptionalBool`/`parseOptionalInt`: an absent or
-unparseable value returns `undefined` and the property is omitted from
-the parsed node, with no warning. Every other Area2D property the strict
-validators cover (`gravity`, the damp settings, `priority`,
-`audio_bus_name`, `disable_mode`) is never read by the lenient parser at all,
-since the node renders as a transform-only group and none of them touch a
-pixel.
+The lenient parser reads only `monitoring`, `monitorable`, `collision_layer` and `collision_mask` through the `parseOptional*` readers, which omit an absent or unparseable value with no warning. Every other Area2D property is never read, since none touches a pixel.

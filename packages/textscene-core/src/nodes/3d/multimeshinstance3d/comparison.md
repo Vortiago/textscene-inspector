@@ -4,28 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-multi-mesh-instance-3d.tscn
 # image: unit-multi-mesh-instance-3d
-renders_as: nothing yet — Godot draws a batch of mesh instances, the previewer does not
+renders_as: nothing yet, Godot draws a batch of mesh instances, the previewer does not
 ---
 
 # MultiMeshInstance3D
 
-MultiMeshInstance3D instances a [MultiMesh] resource, batch-drawing many copies of one
-mesh in a single draw call (doc/classes/MultiMeshInstance3D.xml) — the classic use case
-is grass or forest instancing. Godot draws every instance from the `multimesh`
-resource, but the previewer only parses and validates this node so far and does not
-draw it yet, so it renders as an invisible transform-only fallback and its children
-still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `multimesh` | `SubResource("MultiMesh_1")` | the MultiMesh resource this instance would batch-render (not yet drawn) |
-| `cast_shadow` | `2` (Double-Sided) | how the (not yet drawn) batch would cast shadows |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+Instances a `MultiMesh` resource, drawing many copies of one mesh in a single call. The previewer does not draw the batch yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -45,9 +29,8 @@ Strict parsing format-checks these `MultiMeshInstance3D` properties, plus 18 inh
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser does not call `multimesh`'s validator at all — that path only runs
-in `StrictTscnParser`. Given `multimesh = "res://grass.tres"` (a bare string instead of
-a `SubResource`/`ExtResource` reference), the lenient parser stores whatever string it
-read on the node's generic property bag and moves on with no substitution and no
-warning; since MultiMeshInstance3D registers no render component yet, nothing ever
-reads that value back to notice it is not a resource reference at all.
+The lenient parser never runs `multimesh`'s validator. Given `multimesh = "res://grass.tres"`, a bare string instead of a resource reference, it stores the string on the node's property bag with no substitution and no warning.
+
+## Known limitations
+
+- **Not drawn** Godot draws every instance in the `multimesh`. Here none appears.

@@ -4,21 +4,12 @@ category: Other
 status: unimplemented
 fixture: unit-popup.tscn
 # image: unit-popup
-renders_as: nothing yet — not implemented
+renders_as: nothing yet, not implemented
 ---
 
 # Popup
 
-The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-
-## Divergences
-
-Not captured yet.
+The base of every popup window. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group and its children still show.
 
 ## Linting
 
@@ -31,7 +22,8 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-Popup registers no validators or semantic rules of its own yet, so the strict
-and lenient parsers agree on every property: whatever the registered base parser reads it reads
-without substitution. Replace this once `linterParser.ts` has validators, naming
-the property and the value the lenient parser falls back to.
+Popup declares no property of its own. The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. An inherited Window key such as `size` is never read or substituted.
+
+## Known limitations
+
+- **Not drawn** Godot displays the popup once shown. The previewer draws nothing for it.

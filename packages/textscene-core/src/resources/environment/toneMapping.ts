@@ -43,6 +43,11 @@ export interface ToneMappingSettings {
 /** The chunk name three expands into every material's fragment shader. */
 const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 
+/**
+ * LINEAR maps to `NoToneMapping`, and three applies `toneMappingExposure` only
+ * inside a tone curve, so a `tonemap_exposure` authored under LINEAR is
+ * dropped. Faithful at the 1.0 default.
+ */
 export function toneMappingFor(mode: number): THREE.ToneMapping {
   if (mode === GodotToneMapper.LINEAR) return THREE.NoToneMapping;
   return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;

@@ -10,25 +10,7 @@ renders_as: a transform-only THREE.Group
 
 # Node2D
 
-Node2D is the base of 2D transform objects — sprites, bodies, areas: a transform
-(position/rotation/scale/skew and draw-order Z), no pixels of its own. The previewer
-maps it to a `<group>` and draws its children inside. Here the fixture's root is a
-bare Node2D, so the group is empty and the frame is blank.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `Area2D.position` | `Vector2(10, 20)` | offsets the area's subtree; the Area2D itself draws nothing at runtime |
-| `CollisionShape2D.shape` | `CircleShape2D` (r=0.5) | a collision gizmo — editor/toggle-gated, absent from a plain capture |
-| `ColorRect.color` | `Color(1, 0.4, 0.4, 1)` | would tint the rect, but no size is set so it lays out at 0×0 and nothing draws |
-
-The root Node2D sets no properties of its own; every node in this scene is transform,
-physics, or a zero-size Control, so both renders are the empty viewport.
-
-## Divergences
-
-None visible in this fixture.
+The base of 2D transform objects: a position, rotation, scale, skew and draw-order Z, with no pixels of its own. The previewer maps it to a `<group>` and draws its children inside. Here the root Node2D is bare, so both frames are blank.
 
 ## Linting
 
@@ -57,20 +39,8 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-`transform` (a `Transform2D`) takes priority when present: a malformed matrix
-warns and falls back not to identity but to the discrete
-`position`/`rotation`/`scale`/`skew` path, so those properties still take
-effect even when `transform` fails to parse. Absent or unparseable
-`position`/`scale` fall back to `(0, 0)`/`(1, 1)` through `vec2Or`, and
-`rotation`/`skew` fall back to `0` through `floatOr`, each warning first if
-present but invalid. `z_index` falls back to `0` the same way. `z_as_relative`
-and `y_sort_enabled` skip that contract entirely, resolving through plain string
-equality (`!== 'false'` and `=== 'true'` respectively) with no warning for a
-malformed value, and default to `true` and `false` when absent. The six
-`global_*` properties validated above are never read by the lenient parser at
-all: Node2D only parses the local transform, so an authored `global_position`
-has no effect on the render.
+`transform` takes priority when present. A malformed matrix warns and falls back to the discrete `position`, `rotation`, `scale` and `skew` path, which default to `(0, 0)`, `0`, `(1, 1)` and `0`. `z_index` falls back to `0`. The six `global_*` properties are never read by the lenient parser, so an authored `global_position` has no effect.
 
 ## Known limitations
 
-- **z_as_relative = false** — the default (true, effective Z = parent Z + `z_index`) is faithful; with `z_as_relative = false` Godot makes `z_index` absolute, but our nested 2D groups still accumulate ancestor Z. No corpus fixture sets it.
+- **Approximated** With `z_as_relative = false` Godot makes `z_index` absolute, but nested 2D groups here still accumulate ancestor Z.

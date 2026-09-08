@@ -266,7 +266,11 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
  * raster path takes four bilinear taps per 4x4 block, the compute path a separable
  * gaussian — and it runs the compute one wherever storage buffers are supported,
  * which is every desktop target. Neither transplants onto a normalised-UV pass, so
- * this shares the 13-tap downsample; the sheet records which measured closer.
+ * this shares the 13-tap downsample, with a 9-tap tent upsample. Measured with
+ * `ref:godot`, that pair lands closer than a port of the raster gather did: the
+ * gather moved the REPLACE fixture, which shows the bare glow buffer, from exact
+ * to 0.1% off. The per-level weighting and the pyramid's resolution are what set
+ * the halo's shape and size, and those are ported exactly.
  */
 function brightPassFragmentShader(glow: GlowParams): string {
   return /* glsl */ `

@@ -9,32 +9,9 @@ renders_as: invisible transform-only fallback, not drawn yet
 
 # ColorPicker
 
-A widget for selecting a colour through sliders, a wheel/rectangle, hex input and
-presets. It is a Control (ADR-0003 routes Controls through the 2D DOM
-overlay), so the previewer parses and validates every member below but does
-not draw it yet: it renders as an invisible transform-only fallback and its
-children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `color` | `Color(0.2, 0.4, 0.6, 0.8)` | the initially selected, partially transparent colour |
-| `edit_alpha` | `false` | hides the alpha channel slider |
-| `edit_intensity` | `false` | hides the intensity slider |
-| `color_mode` | `1` | starts in HSV mode instead of RGB |
-| `deferred_mode` | `true` | applies the picked colour only once the mouse button is released |
-| `picker_shape` | `1` | shows the HSV wheel shape instead of the rectangle |
-| `can_add_swatches` | `false` | disables the add-preset button under Swatches |
-| `sampler_visible` | `false` | hides the eyedropper and the colour preview swatch |
-| `color_modes_visible` | `false` | hides the RGB/HSV/OKHSL mode buttons |
-| `sliders_visible` | `false` | hides the channel sliders |
-| `hex_visible` | `false` | hides the hex colour code input field |
-| `presets_visible` | `false` | hides the Swatches and Recent Colors sections |
-
-## Divergences
-
-Not captured yet: nothing renders, so there is nothing to compare pixels against.
+ColorPicker is the widget for choosing a colour through sliders, a wheel, hex input and
+presets. The previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -65,9 +42,10 @@ Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited fr
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-None of ColorPicker's own properties are read by `index.ts` today: it reuses
-`parseVBoxContainer` unchanged (ADR-0003: the node draws nothing), so a
-malformed `color_mode`, `picker_shape` or `color` value parses without
-incident under the lenient parser and never reaches any consumer. The strict
-parser is the only one that inspects these keys at all; a bad `picker_shape`
-such as `7` loads and renders identically to a well-formed scene, silently.
+`index.ts` reuses `parseVBoxContainer` unchanged, which reads none of ColorPicker's own
+keys. A `picker_shape` of `7` or a malformed `color` loads and renders the same as a
+well-formed value.
+
+## Known limitations
+
+- **Not drawn** Godot draws the whole picker. The previewer draws nothing for this node.

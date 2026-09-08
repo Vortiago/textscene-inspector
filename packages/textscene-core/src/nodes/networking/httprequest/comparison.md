@@ -10,23 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # HTTPRequest
 
-This node issues HTTP(S) requests at runtime and draws nothing, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `accept_gzip` | `true` | none — no visual effect |
-| `body_size_limit` | `-1` | none — no visual effect |
-| `download_chunk_size` | `65536` | none — no visual effect |
-| `download_file` | `"res://downloads/file.zip"` | none — no visual effect |
-| `max_redirects` | `8` | none — no visual effect |
-| `timeout` | `10.0` | none — no visual effect |
-| `use_threads` | `false` | none — no visual effect |
-
-## Divergences
-
-None visible in this fixture.
+Issues HTTP requests at runtime and draws nothing, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -48,8 +32,4 @@ Strict parsing format-checks these `HTTPRequest` properties, plus 10 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-`index.ts` registers the base `parseNode`, which reads only `transform`/`name`/`parent`/
-`instance`/`index` — none of HTTPRequest's own properties. A malformed
-`download_chunk_size` like `"abc"` is never read by the lenient path at all, so it has
-no fallback value to report: the node still renders as the same empty transform group
-the strict parser would accept.
+`index.ts` registers the base `parseNode`, which reads only the heading attributes and `transform`. A malformed `download_chunk_size` is never read on the lenient path, so there is no fallback to report.

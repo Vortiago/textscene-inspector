@@ -9,29 +9,7 @@ renders_as: nothing yet, an invisible Control-sized rect
 
 # VideoStreamPlayer
 
-A Control that plays a VideoStream and draws the decoded frame into its own rect,
-stretched to the control size when `expand` is set and at the frame's native size
-otherwise. The previewer parses and validates it but draws no frame, so it renders as
-an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `stream` | `ExtResource("1_video")` | the VideoStream whose frames fill the rect |
-| `audio_track` | `1` | plays the second embedded audio track |
-| `volume_db` | `-6.0` | halves the playback volume |
-| `speed_scale` | `1.5` | plays at one and a half times normal speed |
-| `autoplay` | `true` | playback starts when the scene enters the tree |
-| `paused` | `true` | so it holds on the first frame instead of running |
-| `expand` | `true` | the frame stretches to the 320x180 rect the offsets give it |
-| `loop` | `true` | restarts at the end instead of emitting `finished` once |
-| `buffering_msec` | `250` | quarter of a second of audio held in the resampler |
-| `bus` | `&"Master"` | the audio bus the video's sound mixes into |
-
-## Divergences
-
-Not captured yet.
+A Control that plays a `VideoStream` and draws the decoded frame into its rect. The previewer draws no frame, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -59,13 +37,8 @@ Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inher
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-The lenient parser reads VideoStreamPlayer through `parseControl`, so it takes the
-layout keys and ignores all ten playback keys entirely: there is no substitution to
-report, because nothing downstream consumes them. Strict is the only side that looks
-at them. Two of the eleven values a `.tscn` might plausibly carry are checked
-nowhere at all, and deliberately: `volume` and `stream_position` are bound
-`PROPERTY_USAGE_NONE`, so Godot never writes either one, and a validator for them
-would guard a key that cannot appear. The one place strict is knowingly lenient is
-the bottom of the `volume_db` range: it errors below -80, while Godot in fact
-collapses anything below -79 to silence, so a hand-written `volume_db = -79.5`
-passes here and loads as -80 there.
+The lenient parser reads VideoStreamPlayer through `parseControl`. It keeps the layout keys and ignores all ten playback keys, so a malformed `volume_db` is dropped with no fallback and no warning.
+
+## Known limitations
+
+- **Not drawn** Godot draws the video frame in the rect. Here the rect stays empty.

@@ -9,25 +9,7 @@ renders_as: an invisible transform-only group
 
 # RigidBody3D
 
-RigidBody3D is a gravity-driven physics body. The previewer mounts it as a
-transform-only Node3D group — it draws nothing itself and runs no simulation
-(ADR-0005/0008), only positioning its children at the authored transform. The
-reddish crate on screen is its child `MeshInstance3D` (a 1×1×1 `BoxMesh` under a
-salmon `StandardMaterial3D`); the `CollisionShape3D` is a toggle-gated overlay
-(ADR-0006) and stays hidden. Both frames carry the grey-sky-over-brown-ground
-preview environment.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `transform` | translate `(0, 1, 0)` | lifts the body one unit up; its child mesh rides along and floats above centre |
-| `mass` | `2.0` | physics-only, no visual in a static preview |
-| `gravity_scale` | `1.0` | physics-only; nothing falls because neither side simulates |
-
-## Divergences
-
-None visible in this fixture.
+A gravity-driven physics body. The previewer mounts it as a transform-only Node3D group (ADR-0008) and runs no simulation. The reddish crate on screen is its child MeshInstance3D, and the collision shape is a toggle-gated overlay.
 
 ## Linting
 
@@ -70,8 +52,4 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 | `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-RigidBody3D has no `parser.ts`: it reuses `parseNode3D` directly, so none of
-the strict-validated properties (`mass`, `inertia`, the centre-of-mass and
-damp settings, `collision_layer`/`collision_mask`, `freeze_mode`,
-`disable_mode`) are read by the lenient parser. The node renders as a
-transform-only group, so nothing needs substituting.
+RigidBody3D reuses `parseNode3D` directly, so `mass`, `inertia`, the centre-of-mass and damp settings and `freeze_mode` are never read by the lenient parser. The node renders as a transform-only group, so nothing needs substituting.

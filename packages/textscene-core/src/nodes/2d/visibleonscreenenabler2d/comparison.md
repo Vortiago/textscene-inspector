@@ -10,22 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # VisibleOnScreenEnabler2D
 
-VisibleOnScreenEnabler2D switches another node's `process_mode` on and off as this node's shape
-enters and leaves the screen. It draws nothing at runtime in Godot either, so the
-previewer rendering it as a transform-only group (ADR-0008) is parity, not a gap:
-the absence IS the useful fact.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `enable_mode` | `1` / `2` | which `Node.ProcessMode` the target gets while on screen; off screen it is always `PROCESS_MODE_DISABLED` |
-| `enable_node_path` | `NodePath("../Target")` | the node whose processing is toggled; an empty path affects nothing |
-| `rect` | `Rect2(-20, -20, 40, 40)` | the on-screen test rectangle, inherited from VisibleOnScreenNotifier2D |
-
-## Divergences
-
-None. The node has no runtime visual in Godot, so there is nothing to diverge on.
+Switches another node's `process_mode` on and off as its `rect` enters and leaves the screen. It draws nothing at runtime in Godot either, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -44,8 +29,4 @@ Strict parsing format-checks these `VisibleOnScreenEnabler2D` properties, plus 2
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses the base parser here and keeps every key in
-`rawProperties` verbatim, so a malformed `enable_mode` is neither substituted nor
-dropped: it survives into the inspector exactly as written while the strict
-parser reports it. An out-of-enum `enable_mode` is only a warning, because
-`set_enable_mode` bare-assigns it and Godot itself loads the scene.
+The lenient parser reuses the base parser and keeps every key in `rawProperties` verbatim. A malformed `enable_mode` is neither substituted nor dropped, so it reaches the inspector exactly as written while strict reports it.

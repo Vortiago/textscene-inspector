@@ -4,26 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-mesh-instance-2d.tscn
 # image: unit-mesh-instance-2d
-renders_as: nothing yet — Godot draws a textured mesh, the previewer does not
+renders_as: nothing yet, Godot draws a textured mesh, the previewer does not
 ---
 
 # MeshInstance2D
 
-MeshInstance2D draws a [Mesh] in 2D, optionally textured with `texture` for the default
-[CanvasItemMaterial] (doc/classes/MeshInstance2D.xml) — this DOES draw in Godot, but the
-previewer only parses and validates this node so far and does not draw it yet, so it
-renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `mesh` | `SubResource("QuadMesh_1")` | the Mesh this instance would draw (not yet drawn) |
-| `texture` | `ExtResource("1_marker")` | the Texture2D the default CanvasItemMaterial would sample (not yet drawn) |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer
+parses and validates it but does not draw it, so it renders as a transform-only fallback
+and its children still show.
 
 ## Linting
 
@@ -42,8 +30,10 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-Given `mesh = "res://quad.tres"` (a bare string instead of a `SubResource`/`ExtResource`
-reference), the lenient parser stores whatever string it read on the node's generic
-property bag and moves on with no substitution and no warning; since MeshInstance2D
-registers no render component yet, nothing ever reads that value back to notice it is
-not a resource reference at all. The same holds for a malformed `texture`.
+A bare string in `mesh` or `texture`, such as `"res://quad.tres"`, is stored as-is with
+no warning. Nothing reads it back, since no render component exists yet.
+
+## Known limitations
+
+- **Not drawn** Godot draws the textured mesh. The previewer draws nothing for this
+  node.

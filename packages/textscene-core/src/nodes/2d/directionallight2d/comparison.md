@@ -9,18 +9,9 @@ renders_as: an invisible transform-only fallback
 
 # DirectionalLight2D
 
-DirectionalLight2D casts an infinite directional 2D light over the whole scene; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `height` | `0.5` | halfway between parallel (0) and perpendicular (1) to the plane, for 2D normal mapping — not yet computed by the previewer |
-| `max_distance` | `2000.0` | pixel distance beyond which shadows are culled — not yet meaningful since the light casts no shadow yet |
-
-## Divergences
-
-Not captured yet.
+DirectionalLight2D casts an infinite directional light over the whole canvas. The
+previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -39,6 +30,10 @@ Strict parsing format-checks these `DirectionalLight2D` properties, plus 15 inhe
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses Node2D's own property reader, which has no field for
-`height` or `max_distance` at all: neither is read, so any value there —
-malformed or not — is silently dropped rather than substituted with a fallback.
+The lenient parser reuses `parseNode2D`, which has no field for `height` or
+`max_distance`. Either key is dropped whatever its value, with no fallback substituted.
+
+## Known limitations
+
+- **Not drawn** Godot lights the canvas from this node. The previewer applies no light
+  for it.

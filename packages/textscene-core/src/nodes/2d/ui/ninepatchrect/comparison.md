@@ -9,25 +9,10 @@ renders_as: nothing yet - not implemented
 
 # NinePatchRect
 
-NinePatchRect (9-slice) displays a texture by keeping its corners intact while tiling its edges and centre; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `axis_stretch_horizontal` | `1` | Horizontal stretch mode: tile instead of stretch the centre/edges. |
-| `axis_stretch_vertical` | `2` | Vertical stretch mode: tile-fit. |
-| `draw_center` | `false` | Only the border is drawn; the centre patch is skipped. |
-| `patch_margin_bottom` | `8` | Bottom row of the 9-slice is 8px tall. |
-| `patch_margin_left` | `8` | Left column of the 9-slice is 8px wide. |
-| `patch_margin_right` | `8` | Right column of the 9-slice is 8px wide. |
-| `patch_margin_top` | `8` | Top row of the 9-slice is 8px tall. |
-| `region_rect` | `Rect2(0, 0, 32, 32)` | Samples the whole 32x32 placeholder texture. |
-| `texture` | `SubResource("PlaceholderTexture2D_1")` | The 9-slice source texture. |
-
-## Divergences
-
-Not captured yet.
+NinePatchRect displays a texture as a 9-slice, keeping its corners intact while
+stretching or tiling the edges and centre. The previewer parses and validates it but
+does not draw it, so it renders as a transform-only fallback and its children still
+show.
 
 ## Linting
 
@@ -54,9 +39,11 @@ Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which only extracts Control's own known
-keys (anchors, offsets, modulate, and so on) into typed fields; it has no field for
-`patch_margin_*`, `axis_stretch_*`, `draw_center`, `region_rect` or `texture`, so a
-bad value on any of them (an out-of-range patch margin, an unknown axis-stretch
-mode) is never read rather than substituted or clamped. There is no
-lenient-side fallback for the strict parser's warnings to diverge from.
+The lenient parser reuses `parseControl`, which has no field for `patch_margin_*`,
+`axis_stretch_*`, `draw_center`, `region_rect` or `texture`. A bad value on any of them
+is never read, so no fallback applies.
+
+## Known limitations
+
+- **Not drawn** Godot draws the sliced texture. The previewer draws nothing for this
+  node.

@@ -10,26 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # RayCast3D
 
-This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `enabled` | `true` | ray updates automatically each physics frame |
-| `exclude_parent` | `false` | ray does not ignore its parent body |
-| `target_position` | `Vector3(0, -3, 0)` | how far and which direction the ray reaches |
-| `collision_mask` | `3` | which physics layers the ray can hit |
-| `hit_from_inside` | `true` | ray detects shapes it starts inside |
-| `hit_back_faces` | `false` | ray ignores back faces of concave/heightmap shapes |
-| `collide_with_areas` | `true` | ray can report Area3D hits |
-| `collide_with_bodies` | `true` | ray can report PhysicsBody3D hits |
-| `debug_shape_custom_color` | `Color(1, 0, 0, 1)` | tints the editor/debug gizmo only |
-| `debug_shape_thickness` | `3` | sizes the editor/debug gizmo only |
-
-## Divergences
-
-None visible in this fixture.
+Casts a ray each physics frame toward `target_position` and reports the first hit. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -57,8 +38,4 @@ Strict parsing format-checks these `RayCast3D` properties, plus 17 inherited fro
 |  | `raycast3d-zero-mask` | info |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D` unmodified, and that function only
-pulls `transform` and `visible` off the raw property bag — so a bad value on
-any of RayCast3D's own ten properties (say `collision_mask = "all"` or
-`target_position = Vector3(0, -1)`) is never even read, let alone substituted
-or defaulted. Strict linting is the only path that ever looks at them.
+The lenient parser reuses `parseNode3D` unmodified, which pulls only `transform` and `visible` off the property bag. A bad `collision_mask = "all"` or a two-component `target_position` is never read, so strict linting is the only path that sees it.

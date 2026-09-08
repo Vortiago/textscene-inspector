@@ -10,22 +10,7 @@ renders_as: an invisible transform-only group
 
 # Area3D
 
-Area3D is a physics region for detecting overlaps; it has no runtime visual of its
-own. The previewer mounts it as a transform-only Node3D group, so it draws nothing.
-Its child `CollisionShape3D` is a toggle-gated overlay (ADR-0005/0006) and stays
-hidden in a plain capture. Both images show only the preview environment's
-procedural sky — a grey-blue gradient fading to a brown ground below the horizon.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `monitoring` | `false` | physics-only flag, no visual |
-| `monitorable` | `false` | physics-only flag, no visual |
-
-## Divergences
-
-None visible in this fixture.
+A physics region for detecting overlaps, with no runtime visual of its own. The previewer mounts it as a transform-only Node3D group, so both images show only the preview environment's sky.
 
 ## Linting
 
@@ -67,9 +52,4 @@ Strict parsing format-checks these `Area3D` properties, plus 6 inherited from Co
 | `valid-collisionobject3d` (type-family match) | `collisionobject3d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-Area3D has no `parser.ts`: the lenient path reuses `parseNode3D` unmodified,
-so none of the Area3D-specific properties the strict validators cover
-(`monitoring`, the gravity and damp settings,
-`collision_layer`/`collision_mask`, `audio_bus_name`, `priority`) are ever
-read. The transform-only render needs none of them, so there is nothing to
-substitute.
+Area3D reuses `parseNode3D` unmodified, so none of its own properties (`monitoring`, the gravity and damp settings, `audio_bus_name`, `priority`) is ever read. The transform-only render needs none of them.

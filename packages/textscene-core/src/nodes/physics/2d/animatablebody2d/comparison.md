@@ -10,17 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # AnimatableBody2D
 
-A kinematic 2D body meant to be moved by code, an AnimationMixer, or a RemoteTransform2D: it never moves on its own and draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008); its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `sync_to_physics` | `false` | none: governs whether motion syncs to the physics frame, not drawn |
-
-## Divergences
-
-None visible in this fixture.
+A kinematic 2D body meant to be moved by code, an AnimationMixer or a RemoteTransform2D. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -39,7 +29,4 @@ Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherit
 | `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
 <!-- lint:end -->
 
-`sync_to_physics` is not read by the lenient parser at all: AnimatableBody2D reuses
-`parseNode2D` verbatim, which only destructures Node2D's own known keys, so a
-malformed value like `sync_to_physics = maybe` is silently dropped rather than
-substituted, and the parsed node carries no opinion on it either way.
+The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so a malformed `sync_to_physics = maybe` is dropped rather than substituted.

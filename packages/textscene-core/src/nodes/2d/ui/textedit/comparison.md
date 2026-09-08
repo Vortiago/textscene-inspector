@@ -9,29 +9,9 @@ renders_as: invisible transform-only fallback
 
 # TextEdit
 
-TextEdit is Godot's multi-line text editor Control — the base class `CodeEdit` builds
-on for source-code editing. Controls render through the 2D DOM overlay (ADR-0003), and
-the previewer parses and validates this node but does not draw it yet, so it renders as
-an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Group | Properties (fixture values) | Effect |
-| --- | --- | --- |
-| Text & behaviour | `text`, `placeholder_text`, `editable`, `context_menu_enabled`, `emoji_menu_enabled`, `backspace_deletes_composite_character_enabled`, `shortcut_keys_enabled`, `selecting_enabled`, `deselect_on_focus_loss_enabled`, `drag_and_drop_selection_enabled`, `middle_mouse_paste_enabled`, `empty_selection_clipboard_enabled` | Format-checked only; the previewer draws nothing regardless. |
-| Wrapping | `wrap_mode` (`1`, BOUNDARY), `autowrap_mode` (`2`, WORD), `indent_wrapped_lines`, `tab_input_mode` | Format-checked only. |
-| Virtual keyboard | `virtual_keyboard_enabled`, `virtual_keyboard_show_on_focus` | Format-checked only. |
-| Scrolling | `scroll_smooth`, `scroll_v_scroll_speed` (`80.0`), `scroll_past_end_of_file`, `scroll_vertical` (`0.0`), `scroll_horizontal` (`0`), `scroll_fit_content_height`, `scroll_fit_content_width` | Format-checked only. |
-| Minimap | `minimap_draw`, `minimap_width` (`80`) | Format-checked only. |
-| Caret | `caret_type` (`1`, BLOCK), `caret_blink`, `caret_blink_interval` (`0.65`), `caret_draw_when_editable_disabled`, `caret_move_on_right_click`, `caret_mid_grapheme`, `caret_multiple` | Format-checked only. |
-| Word separators | `use_default_word_separators`, `use_custom_word_separators`, `custom_word_separators` (`".,;:!?"`) | Format-checked only. |
-| Highlighting | `syntax_highlighter` (`SubResource("CodeHighlighter_1")`), `highlight_all_occurrences`, `highlight_current_line` | Format-checked only. |
-| Visual whitespace | `draw_control_chars`, `draw_tabs`, `draw_spaces` | Format-checked only. |
-| BiDi | `text_direction` (`0`, AUTO), `language` (`"en"`), `structured_text_bidi_override` (`0`, DEFAULT), `structured_text_bidi_override_options` (`[]`) | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
+parses and validates it but does not draw it, so it renders as a transform-only fallback
+and its children still show.
 
 ## Linting
 
@@ -96,9 +76,11 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` now format-checks all 47 of TextEdit's own members (everything in
-`doc/classes/TextEdit.xml` except `focus_mode` and `mouse_default_cursor_shape`, both
-`overrides="Control"`). None of them affect the rendered fallback today, since TextEdit
-draws nothing (ADR-0003): the strict and lenient parsers still agree on every property,
-because the registered base parser reads none of these keys at all — it reuses `parseControl` unchanged.
-A property here becomes render-relevant only once a concrete text-editing view is drawn.
+`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered base
+parser reuses `parseControl` unchanged and reads none of them, so strict and lenient
+agree on every key.
+
+## Known limitations
+
+- **Not drawn** Godot draws the editor and its text. The previewer draws nothing for
+  this node.

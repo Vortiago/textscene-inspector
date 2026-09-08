@@ -10,20 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # StatusIndicator
 
-An OS-level notification-area icon (macOS/Windows only in Godot); it has no in-scene geometry to draw. The previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `tooltip` | `"Server status"` | OS tray tooltip text |
-| `icon` | `ExtResource("1_icon")` | OS tray icon image |
-| `menu` | `NodePath("../TrayMenu")` | native popup menu shown on click |
-| `visible` | `true` | whether the OS tray icon is shown |
-
-## Divergences
-
-None visible in this fixture.
+An OS notification-area icon with no in-scene geometry to draw. The previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -42,7 +29,4 @@ Strict parsing format-checks these `StatusIndicator` properties, plus 10 inherit
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-`index.ts` registers the plain `parseNode` reader, which never looks at tooltip,
-icon, menu or visible — every value, well-formed or not, is carried as inert
-text and has no effect on what the previewer draws, since none of this node's
-behaviour is inside the render surface this previewer covers.
+`index.ts` registers the plain `parseNode` reader, which never looks at `tooltip`, `icon`, `menu` or `visible`. Every value, well-formed or not, is carried as inert text with no effect on what the previewer draws.

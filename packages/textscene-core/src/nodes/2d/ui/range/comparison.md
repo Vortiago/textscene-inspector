@@ -9,30 +9,10 @@ renders_as: invisible transform-only fallback
 
 # Range
 
-Range is Godot's abstract base for a Control that carries a number within
-bounds (`min_value`/`max_value`), a `step` and a `page` — the shared plumbing
-behind `HSlider`, `VSlider`, `ProgressBar`, `SpinBox`, `ScrollBar` and
-`TextureProgressBar`. It is a Control (ADR-0003 routes Controls through the 2D
-DOM overlay, not the WebGL scene), so the previewer parses and validates every
-member below but does not draw it: it renders as an invisible transform-only
-fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `min_value` / `max_value` | `-50.0` / `50.0` | the bounds `value` is clamped between |
-| `step` | `0.5` | the increment `value` snaps to above `min_value` |
-| `page` | `10.0` | the page size a `ScrollBar` grabber would use |
-| `value` | `25.0` | the current position within `[min_value, max_value]` |
-| `exp_edit` | `false` | linear rather than logarithmic value spacing |
-| `rounded` | `true` | `value` always rounds to the nearest integer |
-| `allow_greater` | `true` | `value` may exceed `max_value` |
-| `allow_lesser` | `true` | `value` may fall below `min_value` |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+Range is the abstract base that carries a bounded number, with `step` and `page`, behind
+sliders, scroll bars, spin boxes and progress bars. The previewer parses and validates
+it but does not draw it, so it renders as a transform-only fallback and its children
+still show.
 
 ## Linting
 
@@ -61,10 +41,11 @@ Strict parsing format-checks these `Range` properties, plus 53 inherited from Co
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-Every property above format-checks as a plain float or boolean literal —
-`scene/gui/range.cpp`'s `ADD_PROPERTY` list carries no `PROPERTY_HINT_RANGE` on
-any of Range's own members except `ratio`, which Godot never serialises
-(`PROPERTY_USAGE_NONE`) and which therefore has no validator at all. A
-`max_value` authored below `min_value` is an error tier: `Range::set_max`
-clamps it up to `min_value` (`range.cpp`), so the value the file states is not
-the value Godot stores.
+Every own member format-checks as a plain float or bool, since `range.cpp` hints none of
+them. A `max_value` below `min_value` is an error, because `Range::set_max` clamps it up
+and the stored value differs from the file.
+
+## Known limitations
+
+- **Not drawn** The previewer draws nothing for this node. Its children still show at
+  their authored offsets.

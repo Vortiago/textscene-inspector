@@ -9,26 +9,9 @@ renders_as: invisible transform-only fallback
 
 # Tree
 
-Tree is Godot's hierarchical multi-column list Control: a scrollable grid of rows built
-from `TreeItem` objects, with fold arrows, optional column titles and per-cell widgets.
-Controls render through the 2D DOM overlay (ADR-0003), and the previewer parses and
-validates this node but does not draw it yet, so it renders as an invisible
+Tree is the hierarchical multi-column list Control, built from TreeItem objects at
+runtime. The previewer parses and validates it but does not draw it, so it renders as a
 transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Group | Properties (fixture values) | Effect |
-| --- | --- | --- |
-| Columns | `columns` (`3`), `column_titles_visible` (`true`) | Format-checked only; the previewer draws nothing regardless. |
-| Selection | `select_mode` (`2`, SELECT_MULTI), `allow_reselect`, `allow_rmb_select`, `allow_search` (`false`) | Format-checked only. |
-| Folding | `hide_folding` (`true`), `enable_recursive_folding` (`false`), `enable_drag_unfolding` (`false`), `hide_root` (`true`) | Format-checked only. |
-| Drag and drop | `drop_mode_flags` (`3`, ON_ITEM \| INBETWEEN) | Format-checked only. |
-| Tooltips | `auto_tooltip` (`false`) | Format-checked only. |
-| Scroll | `scroll_horizontal_enabled` (`false`), `scroll_vertical_enabled` (`false`), `scroll_hint_mode` (`1`, BOTH), `tile_scroll_hint` (`true`) | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
 
 ## Linting
 
@@ -62,16 +45,11 @@ Strict parsing format-checks these `Tree` properties, plus 53 inherited from Con
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 16 of Tree's own members, which is every member in
-`doc/classes/Tree.xml` except `clip_contents` and `focus_mode`, both `overrides="Control"`.
-That count is far smaller than the class reads, because `TreeItem` is a plain Object
-rather than a Node: rows, cell text, icons, per-column widths and fold state are created
-by script at runtime and never reach the `.tscn`, so no amount of linting can see the
-content a Tree will show. Three of the sixteen diagnose at warning rather than
-error, `select_mode` and `scroll_hint_mode` past their last constant and
-`drop_mode_flags` past its two hinted bits, because each setter stores the wide value
-unaltered and only the inspector widget is narrow. None of the sixteen affects the
-rendered fallback today, since Tree draws nothing: the strict and lenient parsers agree
-on every property, because there is no `parser.ts` here at all and `parseControl` reads
-none of these keys. A property here becomes render-relevant only once a concrete tree
-view is drawn.
+`linterParser.ts` format-checks all 16 of Tree's own members. There is no `parser.ts`,
+and `parseControl` reads none of these keys, so strict and lenient agree on every
+property. Rows and cells are created by script and never reach the `.tscn`.
+
+## Known limitations
+
+- **Not drawn** Godot draws the rows, columns and fold arrows. The previewer draws
+  nothing for this node.

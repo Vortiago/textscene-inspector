@@ -4,27 +4,12 @@ category: Other
 status: unimplemented
 fixture: unit-accept-dialog.tscn
 # image: unit-accept-dialog
-renders_as: nothing yet — not implemented
+renders_as: nothing yet, not implemented
 ---
 
 # AcceptDialog
 
-A base dialog with an OK button and a message, and the base class ConfirmationDialog and FileDialog build on. It draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `dialog_text` | `"Are you sure you want to continue?"` | not drawn yet — the message text in the dialog body |
-| `ok_button_text` | `"Got it"` | not drawn yet — the OK button's label |
-| `dialog_autowrap` | `true` | not drawn yet — whether the message text autowraps |
-| `dialog_close_on_escape` | `false` | not drawn yet — whether Escape closes the dialog |
-| `dialog_hide_on_ok` | `false` | not drawn yet — whether pressing OK hides the dialog |
-
-## Divergences
-
-No capture exists yet — AcceptDialog is `status: unimplemented`, so there is nothing to
-compare against Godot.
+A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
 
 ## Linting
 
@@ -45,9 +30,8 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
-`[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
-`transform` property, and never looks at any AcceptDialog-specific key at all. A bad
-`dialog_text` value, or any other malformed property the strict linter above rejects,
-is never read, substituted, or reported by the lenient path — the node still renders
-as the same empty transform-only group either way.
+The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A bad `dialog_text` is never read, substituted or reported on the lenient path.
+
+## Known limitations
+
+- **Not drawn** Godot displays the dialog once popped up. The previewer draws nothing for it.

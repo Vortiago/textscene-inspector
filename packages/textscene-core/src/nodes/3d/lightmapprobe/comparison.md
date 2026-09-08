@@ -9,24 +9,7 @@ renders_as: invisible transform-only fallback
 
 # LightmapProbe
 
-LightmapProbe marks a manually placed probe position that LightmapGI samples to
-light dynamic objects; it carries no state of its own beyond where it sits. The
-previewer parses and validates it but does not draw it yet, so it renders as an
-invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `transform` | `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)` | Node3D's key, lifting the probe one unit up; no visible mark, since the node draws nothing |
-
-LightmapProbe itself contributes no property to set: it binds no `ADD_PROPERTY` and
-overrides no property-list hook, so every key a `.tscn` may carry on one reaches it
-through the base-walk from Node3D.
-
-## Divergences
-
-Not captured yet.
+A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits, and the previewer does not use it yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -39,11 +22,8 @@ Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inh
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-LightmapProbe declares no validator of its own, so nothing strict rejects here is
-something lenient substitutes for a LightmapProbe-specific fallback. The lenient
-parser reuses `parseNode3D`, which reads only `transform` and `visible`: a malformed
-`transform` string is caught in `parseOptionalTransform` (`utils/transform.ts`),
-which logs a warning and substitutes the identity transform rather than dropping the
-node, while the strict parser reports the same bad value as a diagnostic instead of
-silently replacing it. Every other Node3D key, `rotation_order` included, is read by
-neither parser and never reaches the scene tree.
+LightmapProbe declares no validator of its own. The lenient parser reuses `parseNode3D`, so a malformed `transform` warns and substitutes the identity rather than dropping the node.
+
+## Known limitations
+
+- **Not drawn** Godot samples the probe to light dynamic objects. Here it has no effect.

@@ -9,20 +9,9 @@ renders_as: an invisible transform-only fallback
 
 # FlowContainer
 
-The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `alignment` | `1` (`ALIGNMENT_CENTER`) | Format-checked only; the previewer draws nothing regardless. |
-| `last_wrap_alignment` | `3` (`LAST_WRAP_ALIGNMENT_END`) | Format-checked only. |
-| `vertical` | `true` | Format-checked only. |
-| `reverse_fill` | `true` | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+FlowContainer lays children out in a line and wraps them when the line is full. The
+previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -44,13 +33,12 @@ Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 4 of FlowContainer's own members
-(`doc/classes/FlowContainer.xml`, none of them `overrides=`). None affect the
-rendered fallback today, since FlowContainer draws nothing itself (ADR-0003):
-the strict and lenient parsers still agree on every property, because
-the registered base parser reads none of these keys at all — it reuses `parseControl`
-unchanged. `vertical` stays validated at this level even though
-`HFlowContainer`/`VFlowContainer` (a later wave) hide it from their own
-inspector: `_validate_property` only applies `PROPERTY_USAGE_NONE` to it when
-the C++ `is_fixed` flag is set, and a plain `FlowContainer` leaves that flag
-false, so its scene files keep writing `vertical` like any other property.
+`linterParser.ts` format-checks all four of FlowContainer's own members. The lenient
+parser reuses `parseControl` unchanged and reads none of them. `vertical` stays
+validated here, since a plain FlowContainer serialises it where its fixed-axis
+subclasses hide it.
+
+## Known limitations
+
+- **Not drawn** Godot flows and wraps the children. The previewer applies no layout, so
+  they stay at their authored offsets.

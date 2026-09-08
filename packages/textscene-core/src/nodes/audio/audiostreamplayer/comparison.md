@@ -10,21 +10,7 @@ renders_as: nothing (a non-spatial audio node)
 
 # AudioStreamPlayer
 
-AudioStreamPlayer plays a non-spatial audio stream and has no runtime visual. The
-previewer draws nothing for it — reusing the base Node component with zero geometry
-rather than a placeholder cube. The blue slab in both images is the fixture's `Ground`
-StaticBody3D; the `Music` player is invisible in each.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `autoplay` | `true` | none — playback has no visual |
-| `volume_db` | `-6.0` | none — audio level has no visual |
-
-## Divergences
-
-None visible in this fixture.
+Plays a non-spatial audio stream and has no runtime visual. The previewer draws nothing for it, reusing the base Node component. The blue slab in both images is the fixture's `Ground` StaticBody3D.
 
 ## Linting
 
@@ -50,12 +36,4 @@ Strict parsing format-checks these `AudioStreamPlayer` properties, plus 10 inher
 | `valid-audiostreamplayer-properties` | `audiostreamplayer-autoplay-without-stream` | info |
 <!-- lint:end -->
 
-pitch_scale, volume_db, and the playing/autoplay/stream_paused flags fall back
-silently to 1, 0, false, false, and false when absent, warning and reusing those
-same defaults when present but unparseable; strict's positive-only check on
-pitch_scale has no lenient counterpart beyond "is it a number". max_polyphony
-behaves the same way, defaulting to 1 with no floor enforced (strict rejects
-anything below 1). stream and bus get no format validation: stream is copied
-through verbatim whenever present and left unset otherwise, and bus defaults to
-"Master" only when absent, accepting whatever string is given (quotes or the
-StringName `&` sigil stripped) with no warning.
+`pitch_scale`, `volume_db` and the `playing`, `autoplay` and `stream_paused` flags fall back to 1, 0, false, false and false, with a warning when present but unparseable. `max_polyphony` defaults to 1 with no floor. `bus` defaults to `"Master"` only when absent and accepts any string with its quotes stripped.

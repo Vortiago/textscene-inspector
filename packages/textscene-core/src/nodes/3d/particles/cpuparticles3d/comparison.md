@@ -9,39 +9,7 @@ renders_as: nothing yet, not implemented
 
 # CPUParticles3D
 
-Godot draws a live particle cloud from this node's CPU-simulated particles; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-The fixture sets a representative value for every property, grouped below the way
-`cpu_particles_3d.cpp`'s own `ADD_GROUP` calls group them in the inspector.
-
-| Group | Values | Effect |
-| --- | --- | --- |
-| top-level | `emitting=true`, `amount=32` | none: emission on/off and particle count; not drawn |
-| `Time` | `lifetime=2.0`, `one_shot=false`, `preprocess=0.0` | none: per-particle playback timing; not drawn |
-| top-level (cont.) | `speed_scale=1.0`, `explosiveness=0.0`, `randomness=0.2`, `use_fixed_seed=true`, `seed=42`, `lifetime_randomness=0.1`, `fixed_fps=30`, `fract_delta=true` | none: emission cadence and RNG seeding; not drawn |
-| `Drawing` | `visibility_aabb=AABB(-2,-2,-2,4,4,4)`, `local_coords=false`, `draw_order=1`, `mesh=SphereMesh` | none: the assigned `SphereMesh` is the per-particle geometry, not yet drawn |
-| `Emission Shape` | `emission_shape=6` (RING), plus `emission_sphere_radius`, `emission_box_extents`, `emission_points`, `emission_normals`, `emission_colors`, `emission_ring_axis/height/radius/inner_radius/cone_angle` | none: where new particles spawn; not drawn |
-| `Particle Flags` | `particle_flag_align_y=true`, `particle_flag_rotate_y=false`, `particle_flag_disable_z=false` | none: per-particle orientation/axis behaviour; not drawn |
-| `Direction` | `direction=Vector3(0,1,0)`, `spread=30.0`, `flatness=0.0` | none: initial velocity cone; not drawn |
-| `Gravity` | `gravity=Vector3(0,-9.8,0)` | none: constant per-particle acceleration; not drawn |
-| `Initial Velocity` | `initial_velocity_min=2.0`, `initial_velocity_max=4.0` | none: launch speed range; not drawn |
-| `Angular Velocity` | `angular_velocity_min=-90.0`, `angular_velocity_max=90.0`, `angular_velocity_curve=Curve` | none: rotation speed over lifetime; not drawn |
-| `Orbit Velocity` | `orbit_velocity_min=0.0`, `orbit_velocity_max=0.5`, `orbit_velocity_curve=Curve` | none: only used with `particle_flag_disable_z`; not drawn |
-| `Linear Accel` | `linear_accel_min=0.0`, `linear_accel_max=1.0`, `linear_accel_curve=Curve` | none: acceleration along velocity; not drawn |
-| `Radial Accel` | `radial_accel_min=-1.0`, `radial_accel_max=1.0`, `radial_accel_curve=Curve` | none: acceleration toward/away from origin; not drawn |
-| `Tangential Accel` | `tangential_accel_min=-1.0`, `tangential_accel_max=1.0`, `tangential_accel_curve=Curve` | none: acceleration perpendicular to velocity; not drawn |
-| `Damping` | `damping_min=0.0`, `damping_max=1.0`, `damping_curve=Curve` | none: velocity decay over lifetime; not drawn |
-| `Angle` | `angle_min=-45.0`, `angle_max=45.0`, `angle_curve=Curve` | none: per-particle mesh rotation; not drawn |
-| `Scale` | `scale_amount_min=0.8`, `scale_amount_max=1.2`, `scale_amount_curve=Curve`, `split_scale=true`, `scale_curve_x/y/z=Curve` | none: per-particle size over lifetime; not drawn |
-| `Color` | `color=Color(1,1,1,1)`, `color_ramp=Gradient`, `color_initial_ramp=Gradient` | none: multiplies the (absent) mesh's vertex colours; not drawn |
-| `Hue Variation` | `hue_variation_min=-0.1`, `hue_variation_max=0.1`, `hue_variation_curve=Curve` | none: per-particle hue shift; not drawn |
-| `Animation` | `anim_speed_min=0.5`, `anim_speed_max=1.5`, `anim_speed_curve=Curve`, `anim_offset_min=0.0`, `anim_offset_max=1.0`, `anim_offset_curve=Curve` | none: needs a billboard material to show; not drawn |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+A CPU-simulated particle emitter that draws its `mesh` once per live particle. The previewer does not draw the cloud yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -138,10 +106,8 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `valid-cpuparticles3d-mesh` | `cpuparticles3d-requires-mesh` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D` (index.ts), which reads only `transform` and
-`visible`, so none of the 77 `linterParser.ts` keys above is ever read: a malformed
-value like `spread = 400.0` or a dangling `mesh` reference is silently dropped rather
-than substituted or warned on, consistent with the node rendering as a transform-only
-fallback. The one semantic rule this slice adds (`linter.ts`) ports
-`get_configuration_warnings`'s "no mesh assigned" case, which the fixture avoids by
-assigning a `SphereMesh`.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so none of the 77 keys strict validates is ever read. A `spread = 400.0` or a dangling `mesh` reference is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+
+## Known limitations
+
+- **Not drawn** Godot draws the live particle cloud. Here nothing appears.

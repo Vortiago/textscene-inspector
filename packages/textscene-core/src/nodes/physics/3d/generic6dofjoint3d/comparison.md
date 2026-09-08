@@ -10,32 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # Generic6DOFJoint3D
 
-This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-The fixture sets one representative property per group, spread across the `x`/`y`/`z`
-axis suffix so every axis letter is exercised at least once. Strict validation is
-registered as a wildcard per `<group>_<axis>/*` (18 patterns: 6 groups × 3 axes, all
-sharing one leaf table per group — Godot's own `ADD_PROPERTYI` calls give x/y/z
-byte-identical `PropertyInfo` per leaf) rather than as ~80 individual keys. The leaves
-carrying a `PROPERTY_HINT_RANGE` bound are additionally registered under their exact
-`<group>_<axis>/<leaf>` key, which changes no verdict — the wildcard forwards to the
-same leaf function — but puts the bound where a registry sweep can read it instead of
-seeing only a dispatcher that has none.
-
-| Group (wildcard) | Value set | Effect |
-| --- | --- | --- |
-| `linear_limit_x/*` | `enabled=true`, `upper_distance=2.0`, `lower_distance=-2.0`, `softness=0.7`, `restitution=0.5`, `damping=1.0` | none: linear-motion clamp on X; not drawn |
-| `linear_motor_y/*` | `enabled=true`, `target_velocity=3.0`, `force_limit=10.0` | none: linear motor on Y; not drawn |
-| `linear_spring_z/*` | `enabled=true`, `stiffness=4.0`, `damping=0.02`, `equilibrium_point=0.1` | none: linear spring on Z; not drawn |
-| `angular_limit_x/*` | `enabled=true`, `upper_angle=0.5`, `lower_angle=-0.5`, `softness=0.5`, `restitution=0.2`, `damping=1.0`, `force_limit=0.0`, `erp=0.5` | none: rotation clamp on X; not drawn |
-| `angular_motor_y/*` | `enabled=true`, `target_velocity=1.0`, `force_limit=300.0` | none: angular motor on Y; not drawn |
-| `angular_spring_z/*` | `enabled=true`, `stiffness=0.0`, `damping=0.0`, `equilibrium_point=0.3` | none: angular spring on Z; not drawn |
-
-## Divergences
-
-None visible in this fixture.
+A joint with limits, motors and springs on all six axes. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -98,8 +73,4 @@ Strict parsing format-checks these `Generic6DOFJoint3D` properties, plus 4 inher
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D` (index.ts), which reads only `transform` and
-`visible`, so none of the `linear_limit_x/*` / `linear_motor_y/*` / `linear_spring_z/*` /
-`angular_limit_x/*` / `angular_motor_y/*` / `angular_spring_z/*` keys is ever read: a
-malformed value like `linear_limit_x/damping = "fast"` is silently dropped rather than
-substituted or warned on, consistent with the node rendering as a transform-only group.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A malformed `linear_limit_x/damping` or any other axis key is dropped rather than substituted or warned on, since nothing renders from it.

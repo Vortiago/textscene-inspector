@@ -207,8 +207,17 @@ describe('comparison sheets', () => {
         }
       }
     }
-    // Without this the guard passes on a corpus whose tables it never found.
-    expect(tables).toBeGreaterThan(500);
+    // Without a coverage floor the guard passes on a corpus whose tables it
+    // never found. DERIVED rather than a fixed count: a sheet holding a table
+    // row must yield at least one table to the sweep, so a corpus that shrinks
+    // moves both sides together while a sweep that stops matching moves only
+    // one. A fixed floor went stale the moment the sheets got shorter, and the
+    // fix for a stale floor is always to lower it, which is the guard dying.
+    const sheetsHoldingARow = sheets.filter((s) =>
+      s.body.split('\n').some((line) => line.trim().startsWith('|'))
+    ).length;
+    expect(tables).toBeGreaterThanOrEqual(sheetsHoldingARow);
+    expect(sheetsHoldingARow).toBeGreaterThan(sheets.length * 0.9);
     expect(problems.sort()).toEqual([]);
   });
 

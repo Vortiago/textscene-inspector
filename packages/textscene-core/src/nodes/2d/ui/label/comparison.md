@@ -9,31 +9,8 @@ renders_as: a positioned HTML div in the Control overlay
 
 # Label
 
-The 2D UI text node. The previewer draws each label as a positioned `<div>` in the
-Control overlay, styled from its alignment, case, and wrap settings. The fixture
-stacks three labels to exercise those in turn.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `text` | three strings | the text each of the three labels shows |
-| `offset_left/top/right/bottom` | for example, `20/20/260/60` | stacks the labels and fixes each box at 240px wide |
-| `horizontal_alignment` | `1` (Centre) | "Centered label" sits centred within its box |
-| `vertical_alignment` | `1` (Centre) | that same label's text is centred vertically in its box |
-| `uppercase` | `true` | "shouts when rendered" renders as SHOUTS WHEN RENDERED |
-| `autowrap_mode` | `3` (WORD_SMART) | the long string wraps onto three lines |
-
-## Divergences
-
-The auto-wrap paragraph breaks at a different word. Godot lays it out as "This label
-wraps across / multiple lines once it runs out / of horizontal space."; ours packs one
-more word onto each line — "This label wraps across multiple / lines once it runs out
-of / horizontal space." — and spaces those lines slightly tighter. Both reach three
-lines, and the centred and single-line labels occupy the same span in both images, so
-the box width is not wrong: the previewer draws the text in a system font stack (web
-fonts are CSP-blocked in the VS Code webview), so the browser's glyph advances and
-leading stand in for Godot's bundled theme font and nudge the break to a different word.
+Label is the 2D UI text node. The previewer draws it as a positioned `<div>` in the
+Control overlay, styled from its alignment, case and wrap settings.
 
 ## Linting
 
@@ -74,14 +51,13 @@ Strict parsing format-checks these `Label` properties, plus 53 inherited from Co
 | `valid-label-autowrap-sizing` | `label-autowrap-needs-custom-minimum-size` | warning |
 <!-- lint:end -->
 
-Label's own 22 members (everything `doc/classes/Label.xml` lists without
-`overrides="Control"`) now carry strict validators, where the lenient parser
-still reads only five of them: `text`, `horizontal_alignment`,
-`vertical_alignment`, `autowrap_mode`, `uppercase`. Where it stays lenient,
-strict now flags it: `horizontal_alignment`/`vertical_alignment` use
-`parseOptionalInt`, so an out-of-range or unparseable value silently becomes
-`undefined`, no warning; `uppercase` is not `boolOr`, so only the literal string
-`"true"` turns it on and anything else (including a garbled value) leaves it
-falsy without a warning. The other seventeen members tune Godot's
-shaping/BiDi/visibility behaviour with no effect on the DOM overlay's static
-frame, so the lenient parser never reads them at all.
+The lenient parser reads only `text`, `horizontal_alignment`, `vertical_alignment`,
+`autowrap_mode` and `uppercase`. An out-of-range or unparseable alignment becomes
+`undefined` with no warning, and `uppercase` turns on only for a value that reads as
+`true`.
+
+## Known limitations
+
+- **Approximated** Text is set in a system font stack, since the VS Code webview blocks
+  web fonts. A wrapped paragraph can break at a different word and sit tighter than
+  Godot's theme font.

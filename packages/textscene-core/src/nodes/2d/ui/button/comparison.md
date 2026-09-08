@@ -9,30 +9,9 @@ renders_as: a positioned HTML div
 
 # Button
 
-Button is Godot's clickable text control. This is a static viewer, so it draws each
-Button's NORMAL state as a positioned HTML `<div>` — background and border from the
-`normal` StyleBox (or the default-theme StyleBox when none is set), with the label
-centred. The fixture stacks three centred buttons: an unthemed `Click Me`, a green
-`Styled` one with an explicit StyleBox, and a `Disabled` one.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `text` | `"Click Me"` / `"Styled"` / `"Disabled"` | the label on each of the three buttons |
-| `theme_override_styles/normal` | green `StyleBoxFlat` | replaces the default chrome on **Styled** — `bg_color = Color(0.2,0.5,0.35,1)` green fill, `corner_radius = 6` rounded corners, `content_margin 14/6` padding |
-| `disabled` | `true` | switches **Disabled** to the lighter disabled StyleBox and mutes its label |
-| `alignment` | `1` (CENTER) | centres the **Styled** label — Godot's Button default, so no visible change |
-
-## Divergences
-
-The unthemed **Click Me** chrome matches Godot's default theme exactly: a charcoal
-fill rgb(46,46,46) sitting darker than the rgb(76,76,76) backdrop, white label
-rgb(223,223,223), in both images. The **Styled** button is pixel-exact green
-rgb(51,128,89). The **Disabled** button renders with Godot's lighter disabled fill in
-both (Godot rgb(61,61,61), ours rgb(57,57,57)); its greyed label is marginally less
-muted here (ours rgb(164,164,164) versus Godot rgb(142,142,142)) because the disabled font
-tint is approximated rather than read from the default theme's disabled colour.
+Button is Godot's clickable text control. The previewer draws its NORMAL state as a
+positioned `<div>` with the `normal` StyleBox, or the default-theme chrome when none is
+set, and the label centred.
 
 ## Linting
 
@@ -64,11 +43,13 @@ Strict parsing format-checks these `Button` properties, plus 10 inherited from B
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-Button's own fields, `text`, `disabled`, `flat`, `alignment`, `icon`,
-`icon_alignment`, `vertical_icon_alignment`, `expand_icon`, have no strict
-counterpart at all; only the inherited Control set is checked. `disabled`, `flat`,
-and `expand_icon` parse with a bare `=== 'true'` check, so anything but the literal
-string `"true"`, for example, `"1"`, `"True"`, a typo, silently becomes `false`.
-`alignment`, `icon_alignment`, and `vertical_icon_alignment` use `parseOptionalInt`:
-a malformed value becomes `undefined` with no warning, leaving the button to fall
-back to its own render default.
+Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignment`,
+`vertical_icon_alignment` and `expand_icon`, have no strict counterpart. `disabled`,
+`flat` and `expand_icon` become `false` for any value that does not read as `true`, with
+no warning. The three alignments go through `parseOptionalInt`, so a malformed value
+becomes `undefined` and the render default applies.
+
+## Known limitations
+
+- **Approximated** A disabled label is dimmed by opacity rather than the default theme's
+  disabled font colour, so it reads a little lighter than Godot's.

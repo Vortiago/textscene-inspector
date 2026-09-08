@@ -9,20 +9,9 @@ renders_as: invisible transform-only fallback
 
 # ProgressBar
 
-ProgressBar shows a percentage fill (or an indeterminate "something is happening" animation) inside a Control-sized bar; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `fill_mode` | `2` (`FILL_TOP_TO_BOTTOM`) | direction the fill grows in |
-| `show_percentage` | `false` | suppresses the centred `"NN%"` label |
-| `indeterminate` | `true` | swaps the percentage fill for the scanning animation |
-| `editor_preview_indeterminate` | `true` | lets the indeterminate animation run in the editor too |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+ProgressBar shows a percentage fill, or an indeterminate animation, inside a bar. The
+previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -47,9 +36,10 @@ Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited fr
 <!-- lint:end -->
 
 The lenient parser reuses `parseControl` directly and never reads `fill_mode`,
-`show_percentage`, `indeterminate` or `editor_preview_indeterminate` at all, so a
-malformed value on any of them (say `fill_mode = 99`) is silently dropped from the
-typed `ControlProperties` the renderer consumes — it survives only on the node's
-raw string property bag, which nothing draws from, so nothing substitutes for it
-and nothing renders differently, because ProgressBar draws nothing in either case
-today.
+`show_percentage`, `indeterminate` or `editor_preview_indeterminate`. A `fill_mode = 99`
+survives only in the raw property bag, which nothing draws from.
+
+## Known limitations
+
+- **Not drawn** Godot draws the bar and its fill. The previewer draws nothing for this
+  node.

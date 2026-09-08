@@ -9,25 +9,9 @@ renders_as: invisible transform-only fallback
 
 # AspectRatioContainer
 
-A Container that resizes its child controls to keep a fixed width/height ratio as the
-container itself is resized, choosing where to fit or crop them through `stretch_mode` and
-where to align the result through `alignment_horizontal`/`alignment_vertical`. It is a
-Control (ADR-0003 routes Controls through the 2D DOM overlay, not the WebGL scene), so
-the previewer parses and validates every member below but does not draw it yet: it
-renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `ratio` | `1.5` | width divided by height each child is scaled toward |
-| `stretch_mode` | `3` | `STRETCH_COVER`: children are scaled to cover the container, cropping past its edges |
-| `alignment_horizontal` | `0` | `ALIGNMENT_BEGIN`: children sit against the left edge |
-| `alignment_vertical` | `2` | `ALIGNMENT_END`: children sit against the bottom edge |
-
-## Divergences
-
-Not captured yet, nothing renders, so there is nothing to compare pixels against.
+AspectRatioContainer resizes its children to keep a fixed width-to-height ratio, fitting
+or cropping them by `stretch_mode`. The previewer parses and validates it but does not
+draw it, so it renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -50,11 +34,12 @@ Strict parsing format-checks these `AspectRatioContainer` properties, plus 53 in
 | `valid-aspectratiocontainer-children` | `aspectratiocontainer-unsupported-texturerect-expand-mode` | info |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all four of AspectRatioContainer's own members; `linter.ts`
-adds one semantic rule for a direct TextureRect child whose `expand_mode` is proportional
-(3 or 5), which Godot's own sort pass skips positioning at runtime. None of this affects the
-rendered fallback today: `index.ts` reuses `parseControl` unchanged (ADR-0003, the node draws
-nothing), which reads none of `ratio`, `stretch_mode`, `alignment_horizontal`, or
-`alignment_vertical`. So a bad value on any of the four is not substituted with a fallback by
-the lenient parser; it is never read at all, and the fallback render is unchanged
-regardless of what strict parsing would warn about.
+`index.ts` reuses `parseControl` unchanged, which reads none of `ratio`, `stretch_mode`,
+`alignment_horizontal` or `alignment_vertical`. A bad value on any of them is never
+read, so no fallback applies. `linter.ts` adds one rule for a direct TextureRect child
+whose `expand_mode` is proportional, which Godot's sort pass skips.
+
+## Known limitations
+
+- **Not drawn** Godot scales and aligns the children to the ratio. The previewer applies
+  no layout, so they stay at their authored offsets.

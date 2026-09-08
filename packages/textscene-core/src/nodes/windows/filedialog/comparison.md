@@ -9,36 +9,7 @@ renders_as: invisible transform-only fallback
 
 # FileDialog
 
-A preset dialog for choosing files or directories in the filesystem, building on ConfirmationDialog and adding filters, a customisable browse UI and a dynamic per-dialog options family. It draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `mode_overrides_title` | `false` | not drawn yet, whether changing `file_mode` also changes the window title |
-| `file_mode` | `0` (Open File) | not drawn yet, the dialog's open/save mode |
-| `display_mode` | `1` (List) | not drawn yet, file list as a grid of thumbnails versus a list of filenames |
-| `access` | `2` (File System) | not drawn yet, which part of the filesystem the dialog may browse |
-| `root_subfolder` | `"levels"` | not drawn yet, the sub-folder the dialog cannot navigate above |
-| `filters` | `PackedStringArray("*.png, *.jpg, *.jpeg", "*.tscn")` | not drawn yet, the file type filters offered in the filter dropdown |
-| `filename_filter` | `"level"` | not drawn yet, the substring filter applied to file names |
-| `show_hidden_files` | `true` | not drawn yet, whether hidden files are shown |
-| `use_native_dialog` | `false` | not drawn yet, whether the OS's native file dialog is used instead |
-| `option_count` | `2` | not drawn yet, how many extra OptionButtons/CheckBoxes the dialog shows |
-| `hidden_files_toggle_enabled` | `true` | not drawn yet, whether the toggle-hidden-files button is shown |
-| `file_filter_toggle_enabled` | `true` | not drawn yet, whether the toggle-file-filter button is shown |
-| `file_sort_options_enabled` | `true` | not drawn yet, whether the file sort options button is shown |
-| `folder_creation_enabled` | `true` | not drawn yet, whether the "New Folder..." option is available |
-| `favorites_enabled` | `false` | not drawn yet, whether the favorites list and toggle are shown |
-| `recent_list_enabled` | `false` | not drawn yet, whether the recent-directories list is shown |
-| `layout_toggle_enabled` | `true` | not drawn yet, whether the list/thumbnail layout buttons are shown |
-| `overwrite_warning_enabled` | `true` | not drawn yet, whether saving over an existing file warns first |
-| `deleting_enabled` | `false` | not drawn yet, whether the context menu offers "Delete" |
-
-## Divergences
-
-No capture exists yet, FileDialog is `status: unimplemented`, so there is nothing to
-compare against Godot.
+A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
 
 ## Linting
 
@@ -75,11 +46,8 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser (`index.ts`) registers the plain `Node` parser: it reads only the
-`[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
-`transform` property, and never looks at `file_mode`, `access`, `filters` or any
-other FileDialog-specific key at all. A bad `file_mode` value such as `5` (which
-`set_file_mode`'s `ERR_FAIL_INDEX` refuses at runtime) is never read, substituted,
-or reported by the lenient path: the node still renders as the same empty
-transform-only group either way, regardless of what the strict linter above
-would flag.
+The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A `file_mode` of `5`, which `set_file_mode` refuses at runtime, is never read, substituted or reported on the lenient path.
+
+## Known limitations
+
+- **Not drawn** Godot displays the dialog once popped up. The previewer draws nothing for it.

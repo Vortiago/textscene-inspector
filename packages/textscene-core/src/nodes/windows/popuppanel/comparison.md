@@ -9,31 +9,7 @@ renders_as: nothing yet, not implemented
 
 # PopupPanel
 
-A popup with a themed panel background that stretches its children to fit, like
-`PanelContainer`. The previewer parses and validates this node but does not draw
-it yet, so it renders as an invisible transform-only fallback and its children
-still show.
-
-## Properties exercised
-
-PopupPanel declares no serialisable property of its own: `_bind_methods`
-(popup.cpp:427-428) binds only a ThemeDB theme-cache item, not an `ADD_PROPERTY`,
-and `PopupPanel.xml`'s two `<member>`s are both `overrides=` default values, not
-own properties. That absence is itself the fact this sheet records. Every row
-below is a property inherited from `Popup`/`Window`, exercised at a value that is
-legal for a PopupPanel to carry.
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `title` | `"Sample Popup"` | not drawn yet, inherited from Window |
-| `size` | `Vector2i(320, 240)` | not drawn yet, inherited from Window |
-| `visible` | `true` | not drawn yet, inherited from Window |
-| `transient` | `true` | not drawn yet, inherited from Window |
-| `theme_override_styles/panel` | `SubResource("StyleBoxFlat_1")` | not drawn yet, inherited from Window's dynamic theme-override property list, generated for this class because PopupPanel alone binds a "panel" stylebox item |
-
-## Divergences
-
-Not captured yet.
+A popup with a themed panel background that stretches its children to fit. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group.
 
 ## Linting
 
@@ -46,10 +22,8 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 <!-- lint:end -->
 
-The lenient parser (`index.ts`) registers the plain `Node` parse: it reads only the
-`[node]` heading's `name`/`parent`/`instance`/`index` attributes plus an optional
-`transform`, and never looks at `size`, `title`, or any other PopupPanel/Window
-property at all. A malformed value the strict linter above rejects, such as a
-negative `size` component or an unquoted `title`, is never read, substituted, or
-reported on the lenient path; the node still renders as the same empty
-transform-only group either way.
+PopupPanel declares no property of its own. The lenient parser registers the plain `Node` reader. A negative inherited `size` component or an unquoted `title` is never read, substituted or reported on the lenient path.
+
+## Known limitations
+
+- **Not drawn** Godot displays the panel once shown. The previewer draws nothing for it.

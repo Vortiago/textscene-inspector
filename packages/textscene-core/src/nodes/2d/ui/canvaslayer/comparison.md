@@ -9,20 +9,8 @@ renders_as: a full-rect passthrough layer hosting Control children
 
 # CanvasLayer
 
-CanvasLayer is not a Control and paints nothing of its own — it fills the overlay
-and gives its Control children a viewport to anchor against. The visible "Score: 0"
-is the child Label, and it lands in the top-right corner of both images, which is
-the evidence the layer hosts and viewport-anchors its child faithfully.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `layer` | `1` | z-order of this layer; with one CanvasLayer it has no visible consequence here |
-
-## Divergences
-
-None visible in this fixture.
+CanvasLayer is not a Control and paints nothing of its own. The previewer fills the
+overlay with it and gives its Control children a viewport to anchor against.
 
 ## Linting
 
@@ -45,9 +33,6 @@ Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-CanvasLayer has no validators of its own, so no property here is ever rejected.
-`layer` and `index` go through `parseOptionalInt`: absent or unparseable, each
-silently becomes `undefined`, and a missing `layer` has no visual consequence
-anyway (see Properties exercised). `visible` skips the shared decoders entirely:
-anything other than the literal string `"false"`, including a typo like
-`"flase"`, renders the layer visible, with no warning logged.
+CanvasLayer has no validators of its own. `layer` and `index` go through
+`parseOptionalInt`, so an absent or unparseable value becomes `undefined` with no
+warning. `visible` is `true` for anything other than a value that reads as `false`.

@@ -9,19 +9,9 @@ renders_as: invisible transform-only fallback, not drawn yet
 
 # ColorPickerButton
 
-A Button that opens a ColorPicker popup when pressed, toggling the popup's visibility (ADR-0003 routes Controls through the 2D DOM overlay). The previewer parses and validates every member below but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `color` | `Color(0.8, 0.3, 0.5, 0.6)` | the initially selected, partially transparent colour shown on the button face |
-| `edit_alpha` | `false` | hides the alpha channel slider in the popped-up ColorPicker |
-| `edit_intensity` | `false` | hides the intensity slider in the popped-up ColorPicker |
-
-## Divergences
-
-Not captured yet: nothing renders, so there is nothing to compare pixels against.
+ColorPickerButton is a Button that opens a ColorPicker popup and shows the chosen
+`color` on its face. The previewer parses and validates it but does not draw it, so it
+renders as a transform-only fallback and its children still show.
 
 ## Linting
 
@@ -43,11 +33,11 @@ Strict parsing format-checks these `ColorPickerButton` properties, plus 13 inher
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`index.ts` reuses `parseButton` unchanged, which reads only Button's own keys
-(`text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignment`,
-`vertical_icon_alignment`, `expand_icon`) plus whatever `parseControl` reads
-beneath it. It never reads `color`, `edit_alpha` or `edit_intensity` at all, so
-a malformed `color = Color(1, 1)` or a non-boolean `edit_alpha = maybe` loads
-and renders identically to a well-formed scene under the lenient parser:
-nothing consumes the value, so nothing can notice it is wrong. The strict
-parser is the only one that inspects these three keys.
+`index.ts` reuses `parseButton` unchanged, which never reads `color`, `edit_alpha` or
+`edit_intensity`. A malformed `color = Color(1, 1)` loads and renders the same as a
+well-formed one, since nothing consumes it.
+
+## Known limitations
+
+- **Not drawn** Godot draws the button with its colour swatch. The previewer draws
+  nothing for this node.

@@ -10,19 +10,7 @@ renders_as: a selection-gated frustum gizmo, as Camera3D
 
 # XRCamera3D
 
-The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D and the previewer treats it as one: the same selection-gated frustum gizmo (ADR-0018), from the same component. `visual: false` because that gizmo is selection-gated, so a plain capture has nothing to pair.
-
-## Properties exercised
-
-XRCamera3D declares no properties of its own (`xr_nodes.cpp` has no `XRCamera3D::_bind_methods` at all); the fixture exercises the inherited Node3D key below. The fixture places the camera at the scene root with no parent, so its own `valid-xrcamera3d-parent` rule (below) stays quiet.
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `transform` | `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)` | inherited from Node3D; positions the (invisible) camera, no visible effect |
-
-## Divergences
-
-Godot's second XRCamera3D configuration warning — an OFF `physics_interpolation_mode` while FTI is project-enabled — is not modelled here: it depends on `SceneTree::is_fti_enabled_in_project()`, a project setting no `.tscn` carries, so this linter has nothing to check it against. There is otherwise no runtime output to compare — the node draws nothing in either Godot or here, by design.
+The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same selection-gated frustum gizmo (ADR-0018) from the same component.
 
 ## Linting
 
@@ -38,9 +26,8 @@ Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 i
 | `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 
-XRCamera3D has no `linterParser.ts` of its own, so strict parsing falls back to
-whatever the Node3D/Camera3D base validates. A malformed inherited `transform`
-is a strict-parser error, while the lenient parser's `parseNode3D` keeps rendering
-with the identity transform rather than reporting anything. The `valid-xrcamera3d-parent`
-semantic rule is advisory only (a warning): a camera outside an XROrigin3D still
-loads and renders exactly as one inside it would.
+XRCamera3D has no `linterParser.ts` of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited `transform` is a strict error, while the lenient `parseNode3D` keeps rendering with the identity transform.
+
+## Known limitations
+
+- **Editor only** The frustum gizmo draws only for the selected node, so a plain capture shows nothing for the camera.

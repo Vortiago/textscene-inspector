@@ -10,22 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # PinJoint2D
 
-This node attaches two 2D physics bodies at a single point, allowing them to freely rotate. It draws nothing at runtime, since Godot shows joints only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `softness` | `4.5` | how much the pinned bond can flex; not drawn |
-| `angular_limit_enabled` | `true` | enables the angular rotation limit; not drawn |
-| `angular_limit_lower` | `-0.5` | minimum rotation in radians; not drawn |
-| `angular_limit_upper` | `0.5` | maximum rotation in radians; not drawn |
-| `motor_enabled` | `true` | enables the motor that turns the pin; not drawn |
-| `motor_target_velocity` | `50.0` | motor target speed in radians per second; not drawn |
-
-## Divergences
-
-None visible in this fixture.
+Attaches two 2D physics bodies at a single point and lets them rotate freely. Godot shows joints only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -50,6 +35,4 @@ Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited fro
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-PinJoint2D has no parser.ts: it reuses parseNode2D directly (index.ts), so its own
-properties never reach the lenient parser. A bad value is not substituted or
-defaulted, it is never read, and only the strict parser reports it.
+PinJoint2D reuses `parseNode2D` directly, so its own properties never reach the lenient parser. A bad `softness` is neither substituted nor defaulted, and only the strict parser reports it.

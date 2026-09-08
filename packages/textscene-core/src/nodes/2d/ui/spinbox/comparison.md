@@ -9,24 +9,9 @@ renders_as: invisible transform-only fallback
 
 # SpinBox
 
-SpinBox is Godot's numeric text-input Control, built on Range, adding prefix/suffix decoration and arrow-button stepping; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `alignment` | `2` (`RIGHT`) | text in the underlying LineEdit aligns right |
-| `editable` | `true` | the field accepts direct text edits, not just the arrows |
-| `prefix` | `"$"` | prepended before the numeric text |
-| `suffix` | `"kg"` | appended after the numeric text |
-| `custom_arrow_step` | `0.5` | increment used by the arrow buttons, overriding `Range.step` for arrow clicks only |
-| `custom_arrow_round` | `true` | value rounds to a multiple of `custom_arrow_step` when an arrow is clicked |
-| `select_all_on_focus` | `true` | the LineEdit selects all its text when it gains focus |
-| `update_on_text_changed` | `true` | `Range.value` updates as the user types rather than only on submit |
-
-## Divergences
-
-Not captured yet: nothing renders, so there is nothing to compare pixels against.
+SpinBox is a numeric text input over a Range, with prefix, suffix and arrow-button
+stepping. The previewer parses and validates it but does not draw it, so it renders as a
+transform-only fallback and its children still show.
 
 ## Linting
 
@@ -54,9 +39,11 @@ Strict parsing format-checks these `SpinBox` properties, plus 9 inherited from R
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which reads only Control's own layout
-and theme-override keys. SpinBox's own properties (`alignment`, `editable`,
-`prefix`, `suffix`, `custom_arrow_step`, `custom_arrow_round`,
-`select_all_on_focus`, `update_on_text_changed`) are never read by it at all,
-valid or not, so a malformed value here is silently absent from the parsed node
-rather than substituted or coerced to a fallback.
+The lenient parser reuses `parseControl`, which reads only Control's layout and theme
+keys. SpinBox's own keys are never read, so a malformed `prefix` or `custom_arrow_step`
+is absent from the parsed node rather than substituted.
+
+## Known limitations
+
+- **Not drawn** Godot draws the field and its arrows. The previewer draws nothing for
+  this node.

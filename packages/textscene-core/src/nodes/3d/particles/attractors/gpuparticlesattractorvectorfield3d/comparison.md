@@ -9,18 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesAttractorVectorField3D
 
-A box-shaped attractor that samples a 3D texture to vary attraction strength and direction across its volume, pulling or pushing particles from nearby `GPUParticles3D` nodes; the previewer parses and validates the node but does not yet draw the box or sample the texture, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `size` | `Vector3(3, 1.5, 3)` | The vector field box's extents in 3D units, centred on its origin. |
-| `texture` | `SubResource("PlaceholderTexture3D_1")` | The 3D texture sampled across the box; its pixels are linearly interpolated to vary attraction strength and direction by location. |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+A box-shaped attractor that samples a 3D `texture` to vary attraction strength and direction across its volume. The previewer does not draw the box or sample the texture yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -38,9 +27,8 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-`size` is validated as a Vector3 whose components must each be at least 0.01, the
-hard floor Godot's PROPERTY_HINT_RANGE hint sets. The stated 1024 upper bound is
-soft (or_greater), so no maximum is enforced. `texture` is validated only as a
-resource reference (SubResource or ExtResource); the linter does not check that
-the referenced resource is a Texture3D. All other members come from the
-GPUParticlesAttractor3D base tier through the base-walk.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `size` below `0.01` or a `texture` that is not a `Texture3D` parses with no warning, and strict checks only that `texture` is a resource reference.
+
+## Known limitations
+
+- **Needs runtime** Godot steers a live particle cloud by the field texture. Here there is no cloud to steer.

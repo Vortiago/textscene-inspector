@@ -10,20 +10,7 @@ renders_as: a transform-only group
 
 # SkeletonModifier3D
 
-SkeletonModifier3D is the base class custom skeleton modifiers derive from, feeding a
-parent Skeleton3D's bone poses each frame; it draws nothing at runtime, so the previewer
-renders it as a transform-only group (ADR-0008) — that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `active` | `false` | modifier stops processing — no visible mark |
-| `influence` | `0.75` | blends 75% of the modifier's pose into the skeleton — no visible mark |
-
-## Divergences
-
-None visible in this fixture.
+The base class custom skeleton modifiers derive from, feeding a parent Skeleton3D's bone poses each frame. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -42,8 +29,4 @@ Strict parsing format-checks these `SkeletonModifier3D` properties, plus 17 inhe
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-SkeletonModifier3D has no `parser.ts` of its own: it registers `parseNode3D` directly
-(index.ts), so `active` and `influence` are never read at all, valid or not — an
-out-of-range `influence = 5.0` or a non-boolean `active = "maybe"` is silently dropped
-rather than substituted or warned on, consistent with the node rendering as a
-transform-only group (ADR-0008).
+SkeletonModifier3D registers `parseNode3D` directly, so `active` and `influence` are never read. An `influence = 5.0` or an `active = "maybe"` is dropped silently, and only strict reports it.

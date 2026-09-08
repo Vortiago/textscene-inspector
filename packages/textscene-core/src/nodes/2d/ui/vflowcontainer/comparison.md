@@ -9,19 +9,7 @@ renders_as: an invisible transform-only fallback
 
 # VFlowContainer
 
-The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `alignment` | `1` (`ALIGNMENT_CENTER`) | Format-checked only; the previewer draws nothing regardless. |
-| `last_wrap_alignment` | `3` (`LAST_WRAP_ALIGNMENT_END`) | Format-checked only. |
-| `reverse_fill` | `true` | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+A container that lays its children out in vertical columns and wraps to a new column when it runs out of height. The previewer does not draw the layout yet, so the node is an invisible transform-only fallback and its children still show.
 
 ## Linting
 
@@ -40,12 +28,8 @@ Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`VFlowContainer` declares no member of its own; every property in the table
-above is FlowContainer's, inherited through the base-walk. The one thing this
-class does on its own is REMOVE `vertical`: its orientation is fixed vertical
-by the C++ constructor and `set_vertical` refuses any write, so a scene
-carrying that key is one Godot could not have written. The lenient parser
-reuses `parseControl` (same as `FlowContainer`), which never reads `vertical`
-by name, so a hand-edited scene carrying it here parses silently: no error,
-no stored value, no visible difference, since `VFlowContainer` draws nothing
-regardless of what a scene author writes there.
+The lenient parser reuses `parseControl`, which never reads `vertical`. A scene carrying that key parses silently, with no error and no stored value.
+
+## Known limitations
+
+- **Not drawn** Godot flows the children into columns. Here they sit at their own offsets.

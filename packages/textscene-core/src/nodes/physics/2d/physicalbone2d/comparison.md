@@ -10,22 +10,7 @@ renders_as: a transform-only Node2D group
 
 # PhysicalBone2D
 
-PhysicalBone2D is a RigidBody2D-derived node that makes a Bone2D inside a Skeleton2D react to physics. Like every physics body it has no runtime visual of its own, so the previewer mounts it as a transform-only Node2D group (ADR-0008) and draws nothing for it.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(10, 20)` | shifts the invisible node; no pixels |
-| `bone2d_nodepath` | `NodePath("../Bone")` | names the Bone2D to simulate; not drawn |
-| `bone2d_index` | `0` | the bone's index inside the Skeleton2D; not drawn |
-| `auto_configure_joint` | `false` | skips auto-configuring a child Joint2D; not drawn |
-| `simulate_physics` | `true` | drives physics simulation instead of following the bone; not drawn |
-| `follow_bone_when_simulating` | `true` | keeps the bone's transform while simulating; not drawn |
-
-## Divergences
-
-None visible in this fixture.
+A RigidBody2D that makes a Bone2D inside a Skeleton2D react to physics. It has no runtime visual, so the previewer mounts it as a transform-only Node2D group (ADR-0008).
 
 ## Linting
 
@@ -53,8 +38,4 @@ Strict parsing format-checks these `PhysicalBone2D` properties, plus 23 inherite
 |  | `physicalbone2d-missing-joint-child` | warning |
 <!-- lint:end -->
 
-PhysicalBone2D has no `parser.ts`: it reuses `parseNode2D` directly (index.ts), so
-none of the strict-validated properties (`bone2d_nodepath`, `bone2d_index`,
-`auto_configure_joint`, `simulate_physics`, `follow_bone_when_simulating`) are read
-by the lenient parser at all. The node renders as a transform-only group, so
-there is no substitution to describe.
+PhysicalBone2D reuses `parseNode2D` directly, so `bone2d_nodepath`, `bone2d_index` and the three flags are never read by the lenient parser. There is no substitution to describe.

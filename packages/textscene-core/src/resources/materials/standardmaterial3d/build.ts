@@ -167,6 +167,11 @@ export function buildStandardMaterial(
     });
   }
 
+  // `emission_on_uv2` is deliberately not bound to `emissiveMap.channel`. No
+  // mesh here carries a second UV set: the primitive meshes are stock three
+  // geometries with `uv` only, and the ArrayMesh decoder drops trailing UV2
+  // data. Binding an absent attribute samples one texel across the surface,
+  // which reads as flat colour, so the map samples through UV1 instead.
   const emissiveMap = slotTexture('emission_texture');
   // Godot's `emission_operator` only becomes observable once a texture is in
   // play, and whether one resolved is knowable here and not at decode time.

@@ -10,21 +10,9 @@ renders_as: nothing (a transform-only group)
 
 # BackBufferCopy
 
-BackBufferCopy copies a screen region into the render backbuffer for shader code to
-sample; it draws nothing of its own, so the previewer renders it as a transform-only
-group (ADR-0008) and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `copy_mode` | `2` (Viewport) | buffers the whole screen rather than `rect` |
-| `rect` | `Rect2(-50, -50, 100, 100)` | the buffered region when `copy_mode` is Rect |
-
-## Divergences
-
-None. BackBufferCopy draws nothing at runtime in either engine — only its
-children's rendering, which this node does not affect.
+BackBufferCopy copies a screen region into the backbuffer for shaders to sample. It
+draws nothing of its own, so the previewer renders it as a transform-only group
+(ADR-0008) and its children still show.
 
 ## Linting
 
@@ -43,6 +31,5 @@ Strict parsing format-checks these `BackBufferCopy` properties, plus 12 inherite
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-BackBufferCopy reuses `parseNode2D`, which never reads `copy_mode` or `rect` at all —
-both are absent from the parsed properties regardless of value, valid or malformed,
-because this node draws nothing for either to affect.
+The lenient parser reuses `parseNode2D`, which never reads `copy_mode` or `rect`. Both
+keys are dropped whatever their value, valid or malformed.

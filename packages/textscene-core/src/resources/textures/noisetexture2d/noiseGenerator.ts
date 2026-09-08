@@ -6,6 +6,12 @@
  * the same upstream library Godot vendors as `thirdparty/misc/FastNoiseLite.h`,
  * so the same settings and seed produce the same field. These maps are the only
  * translation: our decoded enums into the port's string constants.
+ *
+ * Every parameter is set explicitly, defaults included. The port's own defaults
+ * are not Godot's (3 fractal octaves against Godot's 5, EuclideanSq cellular
+ * distance against Godot's Euclidean), and leaving one to the port moves a
+ * sample from 0.61 to 0.25. With all of them set, the field agrees with Godot
+ * 4.6.3 to about 1e-7 across simplex, cellular and weighted-fBm Perlin.
  */
 
 import FastNoiseLite from 'fastnoise-lite';

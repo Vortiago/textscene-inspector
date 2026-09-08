@@ -9,23 +9,9 @@ renders_as: invisible transform-only fallback
 
 # LinkButton
 
-LinkButton is a BaseButton-derived Control that behaves like a hyperlink: pressing
-it opens `uri` through the OS's default handler instead of toggling state or firing an
-action itself. The previewer parses and validates this node but does not draw it
-yet, so it renders as an invisible transform-only fallback and its children still
-show.
-
-## Properties exercised
-
-| Group | Properties (fixture values) | Effect |
-| --- | --- | --- |
-| (ungrouped) | `text` (`"Visit our site"`), `underline` (`1`, ON_HOVER), `uri` (`"https://godotengine.org"`) | Format-checked only; the previewer draws nothing regardless. |
-| Text Behaviour | `text_overrun_behavior` (`3`, OVERRUN_TRIM_ELLIPSIS), `ellipsis_char` (`"…"`) | Format-checked only. |
-| BiDi | `text_direction` (`1`, LTR), `language` (`"en_GB"`), `structured_text_bidi_override` (`0`, DEFAULT), `structured_text_bidi_override_options` (`[]`) | Format-checked only. |
-
-## Divergences
-
-Not captured yet.
+LinkButton is a hyperlink-style button that opens `uri` when pressed. The previewer
+parses and validates it but does not draw it, so it renders as a transform-only fallback
+and its children still show.
 
 ## Linting
 
@@ -53,11 +39,11 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` now format-checks all 9 of LinkButton's own members (everything in
-`doc/classes/LinkButton.xml` except `focus_mode` and `mouse_default_cursor_shape`,
-both `overrides="Control"`). None of them affect the rendered fallback today, since
-LinkButton draws nothing yet (parser.ts reuses `parseControl` unchanged and reads
-none of these keys), so the lenient parser never even looks at a bad `text`, `uri`,
-`underline`, `ellipsis_char`, or BiDi value here: it passes straight through into the
-node's untyped property bag, with no crash and no substitution, exactly as it did
-before this slice had any validators.
+`linterParser.ts` format-checks all nine of LinkButton's own members. `parser.ts` reuses
+`parseControl` unchanged and reads none of them, so a bad `text`, `uri` or `underline`
+passes into the untyped property bag with no substitution.
+
+## Known limitations
+
+- **Not drawn** Godot draws the underlined link text. The previewer draws nothing for
+  this node.

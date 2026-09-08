@@ -9,23 +9,9 @@ renders_as: invisible transform-only fallback
 
 # CheckButton
 
-Godot draws CheckButton as a labelled on/off switch with a themed check icon; the previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `layout_mode` | `1` | anchored layout mode, inherited from Control |
-| `offset_left` | `8.0` | left edge of the anchored rect, inherited from Control |
-| `offset_top` | `8.0` | top edge of the anchored rect, inherited from Control |
-| `offset_right` | `108.0` | right edge of the anchored rect, inherited from Control |
-| `offset_bottom` | `40.0` | bottom edge of the anchored rect, inherited from Control |
-| `toggle_mode` | `true` | the switch stays down after a click instead of springing back; inherited from BaseButton (also CheckButton's own overridden default) |
-| `button_pressed` | `true` | the switch's checked/"on" state, inherited from BaseButton |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+CheckButton is a labelled on-off switch with a themed check icon. The previewer parses
+and validates it but does not draw it, so it renders as a transform-only fallback and
+its children still show.
 
 ## Linting
 
@@ -41,8 +27,11 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-CheckButton binds no property of its own: doc/classes/CheckButton.xml lists only
-`alignment` and `toggle_mode`, both marked `overrides=` on Button/BaseButton, and
-check_button.cpp's `_bind_methods` calls only `BIND_THEME_ITEM` for its theme
-constants and icons, never `ADD_PROPERTY`. So the strict and lenient parsers agree
-on every property here: whatever the registered base parser reads it reads without substitution.
+CheckButton binds no property of its own, only theme items, so the strict and lenient
+parsers agree on every key. Whatever the registered base parser reads it reads without
+substitution.
+
+## Known limitations
+
+- **Not drawn** Godot draws the switch and its label. The previewer draws nothing for
+  this node.

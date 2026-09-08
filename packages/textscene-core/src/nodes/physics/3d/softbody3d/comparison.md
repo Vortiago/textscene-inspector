@@ -4,38 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-soft-body-3d.tscn
 # image: unit-soft-body-3d
-renders_as: nothing yet; Godot draws a deformable mesh, the previewer does not
+renders_as: nothing yet, Godot draws a deformable mesh, the previewer does not
 ---
 
 # SoftBody3D
 
-A deformable 3D physics mesh: Godot draws it as a soft, simulated version of its
-own `mesh`, but the previewer only parses and validates it so far and does not draw
-it yet. The Node3D base mounts under `renderIntent: 'pending'`, so it holds its
-transform and honours `visible`, its children still show, and the badge reports
-the gap.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `mesh` | `SubResource("BoxMesh_1")` | the mesh this body would deform (not yet drawn) |
-| `collision_layer` | `3` | physics layers this body is in |
-| `collision_mask` | `5` | physics layers this body scans |
-| `parent_collision_ignore` | `NodePath("../Ground")` | the CollisionObject3D this body should avoid clipping |
-| `simulation_precision` | `8` | solver iteration count |
-| `total_mass` | `2.5` | the body's mass |
-| `linear_stiffness` | `0.6` | how stiff versus bendable the body is |
-| `shrinking_factor` | `0.1` | shrinks the mesh's edge constraints by 10% |
-| `pressure_coefficient` | `1.5` | simulated internal pressure build-up |
-| `damping_coefficient` | `0.05` | how quickly applied forces slow down |
-| `drag_coefficient` | `0.1` | air resistance |
-| `ray_pickable` | `false` | opts out of RayCast3D hits |
-| `disable_mode` | `1` | KEEP_ACTIVE: stays simulated when process_mode is disabled |
-
-## Divergences
-
-Not captured yet — nothing renders, so there is nothing to compare pixels against.
+A deformable physics mesh that Godot draws as a simulated version of its own `mesh`. The previewer parses and validates it but does not draw it yet, so the Node3D base mounts under `renderIntent: 'pending'` and its children still show.
 
 ## Linting
 
@@ -69,9 +43,8 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`
-off any node heading: it never looks at `mesh`, `total_mass`, `collision_layer`, or
-any other property this file's `linterParser.ts`/`linter.ts` validate. A malformed
-value for any of them (an out-of-range `simulation_precision`, a non-boolean
-`ray_pickable`, a missing `mesh`) parses without complaint and has no effect at all,
-since nothing is rendered from it yet either way.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. An out-of-range `simulation_precision`, a non-boolean `ray_pickable` or a missing `mesh` parses without complaint and has no effect, since nothing renders from it.
+
+## Known limitations
+
+- **Not drawn** Godot draws the soft mesh. The previewer draws nothing for it.

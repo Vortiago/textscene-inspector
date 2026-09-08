@@ -34,30 +34,6 @@ renders_as: a THREE.PointLight    # one short noun phrase
 One or two sentences: what the node is, and what the previewer draws for it. Present
 tense, no hedging, no three.js tutorial.
 
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `light_energy` | `2.0` | brightness of the pool on the ground |
-| `omni_range` | `8.0` | how far the light reaches |
-| `shadow_enabled` | `true` | the box casts a shadow |
-
-Only the properties the FIXTURE actually sets, with the value it sets and the visible
-consequence. Read the fixture; never invent a property.
-
-## Divergences
-
-What differs between the two images, each with a cause. Report YOUR measured
-pixels here; if the cause is one of the shared ones catalogued in
-`docs/comparison/README.md`, name your numbers and point there rather than
-restating the explanation.
-
-If the two agree, write exactly one line:
-
-    None visible in this fixture.
-
-Never pad this section. An invented divergence is worse than an empty one.
-
 ## Linting
 
 <!-- lint:begin OmniLight3D -->
@@ -66,7 +42,44 @@ Generated. Do not edit inside these markers.
 
 Below the marker, by hand: what the LENIENT parser does where strict rejects.
 Name the property and the concrete fallback value.
+
+## Known limitations
+
+- **Approximated** One sentence on what a viewer sees differently.
 ```
+
+The comparison images need no markup. They come from the `image:` frontmatter and
+the gallery lays out the Godot-versus-previewer pair.
+
+## Known limitations
+
+Only when something real differs. Omit the section entirely when nothing does.
+
+One bullet per limitation. Open with a tag from the fixed set below, in bold,
+then one sentence naming what a viewer sees differently. The tag is what makes
+246 sheets comparable, so use one of these and no other:
+
+| Tag | Means |
+| --- | --- |
+| **Not drawn** | The previewer draws nothing for this node. Godot does. |
+| **Approximated** | Drawn by a different method, so it differs under some inputs. |
+| **Shader missing** | Godot's effect is a fragment shader the previewer does not reproduce. |
+| **Needs runtime** | Only a running game shows it: physics, particles, audio, an XR session. |
+| **Editor only** | Godot draws it only in the editor. Here it is selection-gated or absent. |
+| **Resource gap** | It depends on a resource type the previewer does not decode. |
+
+```markdown
+## Known limitations
+
+- **Approximated** The three projection fades are computed per vertex, so a
+  large decal on a low-poly floor bands where Godot's is smooth.
+- **Shader missing** `distance_fade_*` is not applied, so a far decal stays at
+  full strength.
+```
+
+Never explain the engine here. A sheet says what a reader sees; why the engine
+behaves that way belongs in the code that implements it, in one place, and only
+in a docblock when the reason is not already plain from the code.
 
 ## Sectioned sheets — one sheet, many per-property comparisons
 
@@ -103,10 +116,12 @@ What the fixture sets and what the two images show; fold any limitation in here.
 - A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
   its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
 
-## Sections beyond the four
+## Sections beyond the three
 
-`## Known limitations` is an accepted optional fifth section, used by sheets whose
-constraint is structural rather than visible in the capture. Put it last.
+There are three: the intro under the `#` heading, `## Linting`, and
+`## Known limitations`. A sectioned sheet (below) adds one per feature. Nothing
+else. A sheet does not carry a hand-kept property table, a pixel-by-pixel
+comparison, or an explanation of how the engine works.
 
 ## Optional frontmatter keys
 

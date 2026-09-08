@@ -5,6 +5,10 @@
  * lists without an `overrides=` attribute. Everything from Control up is
  * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
  * re-declaring an inherited key shadows it and duplicates the rule.
+ *
+ * No `item_N/...` family here, unlike ItemList: a `TreeItem` is a plain Object,
+ * not a Node, so rows, cell text, icons and fold state are created by script at
+ * runtime and never reach a `.tscn`.
  */
 
 import '../control/linterParser.js';

@@ -9,24 +9,7 @@ renders_as: invisible transform-only fallback
 
 # PopupMenu
 
-PopupMenu is Godot's modal window for a list of options (toolbar/context menus). The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `title`, `size` | `"File"`, `Vector2i(200, 120)` | none: inherited from Window, format-checked only |
-| `hide_on_item_selection`, `hide_on_checkable_item_selection`, `hide_on_state_item_selection` | `true`, `true`, `false` | none: format-checked only |
-| `submenu_popup_delay` | `0.3` | none: format-checked only |
-| `allow_search` | `true` | none: format-checked only |
-| `system_menu_id` | `0` (INVALID_MENU_ID) | none: format-checked only |
-| `prefer_native_menu`, `shrink_height`, `shrink_width` | `false`, `true`, `true` | none: format-checked only |
-| `item_count` | `2` | none: declares 2 items; format-checked only |
-| `item_0/text`, `item_0/id`, `item_1/text`, `item_1/checkable`, `item_1/checked`, `item_1/id` | `"Open"`, `0`, `"Autosave"`, `1`, `true`, `1` | none: real per-item state; format-checked only |
-
-## Divergences
-
-Not captured yet.
+Godot's modal window for a list of options. The previewer parses and validates it, including the per-item `item_<index>/<leaf>` family, but does not draw it, so it mounts as an invisible transform-only group.
 
 ## Linting
 
@@ -54,21 +37,8 @@ Strict parsing format-checks these `PopupMenu` properties, plus 45 inherited fro
 | `valid-popupmenu-properties` (type-family match) | `popupmenu-item-index-out-of-range` | error |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks every declared own member of `PopupMenu` (the ten
-properties above minus `title`/`size`, which are Window's) plus the seven
-`item_<idx>/<leaf>` leaves Godot serialises through `PropertyListHelper`
-(`_get_property_list`/`_set`/`_get`, never `ADD_PROPERTY`). Godot glues the item
-index straight onto `item_` with no separating slash, so the family registers
-under the `item_#/*` pattern rather than `item_/*`.
+The lenient parser registers the generic `parseNode`, which never reads `item_0/text` or any other PopupMenu key. A bad value is carried in `rawProperties` and ignored by rendering, with no substitution or warning.
 
-`linter.ts` holds the one bound a per-property validator cannot see: an index at
-or past `item_count`. `PropertyListHelper::_get_property`
-(property_list_helper.cpp:58) returns null for it and `PopupMenu::_set`
-(popup_menu.cpp:3092) passes that refusal straight out, so the leaf setter is
-never called and the value is dropped on load.
+## Known limitations
 
-The lenient parser reads none of this: `index.ts` registers the generic `parseNode`,
-which never reads `item_0/text` (or any other PopupMenu key), so a bad value there
-is neither substituted nor warned on. It is carried in the node's `rawProperties`
-and ignored by rendering, exactly like every other unread key on an invisible
-fallback node.
+- **Not drawn** Godot displays the menu once popped up. The previewer draws nothing for it.

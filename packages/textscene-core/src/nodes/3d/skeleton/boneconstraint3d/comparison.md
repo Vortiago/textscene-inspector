@@ -10,16 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # BoneConstraint3D
 
-This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-
-## Divergences
-
-Not captured yet.
+The base class of the bone constraint modifiers, holding the `settings/<i>/` entries that name an apply bone and a reference bone or node. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008) and its children still show.
 
 ## Linting
 
@@ -37,7 +28,4 @@ Strict parsing format-checks these `BoneConstraint3D` properties, plus 2 inherit
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-BoneConstraint3D registers no validators or semantic rules of its own yet, so the strict
-and lenient parsers agree on every property: whatever the registered base parser reads it reads
-without substitution. Replace this once `linterParser.ts` has validators, naming
-the property and the value the lenient parser falls back to.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so every `settings/<i>/` leaf is dropped rather than substituted and only strict reports a bad one.

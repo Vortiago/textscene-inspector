@@ -10,25 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # ShapeCast2D
 
-Sweeps a `Shape2D` from its origin to `target_position` to detect `CollisionObject2D`s, but draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story. Godot draws the swept shape only as an editor gizmo or under the "Visible Collision Shapes" debug flag, so a plain capture shows nothing either.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `enabled` | `true` | none — gates collision reporting, not drawn |
-| `shape` | `SubResource("CircleShape2D_1")` | none — the swept geometry, not drawn |
-| `exclude_parent` | `true` | none — collision-query filter, not drawn |
-| `target_position` | `Vector2(0, 50)` | none — cast direction and length, not drawn |
-| `margin` | `2.0` | none — collision margin, not drawn |
-| `max_results` | `32` | none — query result cap, not drawn |
-| `collision_mask` | `1` | none — physics layer filter, not drawn |
-| `collide_with_areas` | `false` | none — query filter, not drawn |
-| `collide_with_bodies` | `true` | none — query filter, not drawn |
-
-## Divergences
-
-None visible in this fixture.
+Sweeps a `Shape2D` from its origin to `target_position` to detect collisions. Godot draws the swept shape only as a debug gizmo, so the previewer renders it as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -57,7 +39,4 @@ Strict parsing format-checks these `ShapeCast2D` properties, plus 12 inherited f
 |  | `shapecast2d-missing-shape` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so none of
-the properties above reaches `node.properties` at all: a malformed `margin` is
-ignored rather than substituted with a default. The raw text survives on
-`node.rawProperties`, but nothing reads it back for this type.
+The lenient parser reuses `parseNode2D`, which reads only Node2D's own keys, so a malformed `margin` is ignored rather than substituted. The raw text survives on `node.rawProperties`, but nothing reads it back.
