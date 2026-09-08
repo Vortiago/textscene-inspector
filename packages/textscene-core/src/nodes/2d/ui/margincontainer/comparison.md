@@ -41,7 +41,7 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 <!-- lint:end -->
 
 MarginContainer's parser adds nothing beyond Control; the four margins are
-collected generically as `theme_override_constants` via `parseOptionalFloat`,
+collected generically as `theme_override_constants` through `parseOptionalFloat`,
 which returns `undefined` (no warning) for an absent or unparseable
 `margin_left` / `margin_top` / `margin_right` / `margin_bottom`. The Component
 then substitutes `0` for whichever margins are `undefined`, so a missing or

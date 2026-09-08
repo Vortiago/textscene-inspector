@@ -59,7 +59,7 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 <!-- lint:end -->
 
 The lenient parser reads only two of these nine properties: `directional_shadow_mode`
-and `directional_shadow_max_distance`, both via `parseOptionalInt`/`parseOptionalFloat`,
+and `directional_shadow_max_distance`, both through `parseOptionalInt`/`parseOptionalFloat`,
 which return `undefined` with no warning when absent or unparseable. The other seven
 (the three shadow splits, `directional_shadow_fade_start`, `directional_shadow_pancake_size`,
 `directional_shadow_blend_splits`, `sky_mode`) are never read by the lenient parser at

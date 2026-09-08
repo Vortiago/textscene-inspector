@@ -58,6 +58,6 @@ the key is absent; a present-but-invalid value (anything other than the
 literal string `'true'`) silently resolves to `false` instead, since
 `parseOptionalBool` has no unparseable case, unlike its int/float
 counterparts. `process_callback` is read as a bare int with no enum check, so
-a value outside strict's `0`/`1` membership (e.g. `99`) parses through
+a value outside strict's `0`/`1` membership (for example, `99`) parses through
 unrejected. Since Timer draws nothing, none of this has a render-time effect;
 it only changes what a consumer reading the parsed node sees.

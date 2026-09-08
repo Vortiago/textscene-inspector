@@ -41,7 +41,7 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 
 HSeparator inherits every property it validates from Control; `scene/gui/separator.cpp`
 binds zero `ADD_PROPERTY` of its own (separator.cpp:60-63 registers only two THEME
-items via `BIND_THEME_ITEM`/`BIND_THEME_ITEM_CUSTOM`), so `linterParser.ts` declares
+items through `BIND_THEME_ITEM`/`BIND_THEME_ITEM_CUSTOM`), so `linterParser.ts` declares
 nothing for HSeparator or its Separator ancestor. `theme_override_constants/separation`
 and `theme_override_styles/separator` are Control's generic `theme_override_*`
 wildcards, not Separator state: a `.tscn` carries a theme item that way regardless of

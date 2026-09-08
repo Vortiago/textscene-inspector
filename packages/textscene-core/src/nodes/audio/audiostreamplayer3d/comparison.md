@@ -69,7 +69,7 @@ Strict parsing format-checks these `AudioStreamPlayer3D` properties, plus 17 inh
 |  | `audiostreamplayer3d-emission-filter-not-enabled` | info |
 <!-- lint:end -->
 
-Beyond the shared audio-base fallbacks, every numeric property here defaults via
+Beyond the shared audio-base fallbacks, every numeric property here defaults through
 `floatOr` without reproducing strict's range checks: unit_size falls back to 10
 (strict only warns below the hint's 0.1, since the setter is a bare assignment),
 max_distance to 0 with no non-negativity check,

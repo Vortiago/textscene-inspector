@@ -9,7 +9,7 @@ renders_as: nothing yet — not implemented
 
 # Window
 
-A node that creates a window — the base class AcceptDialog, ConfirmationDialog, Popup, PopupMenu, PopupPanel and FileDialog all build on. It genuinely draws at runtime (it displays its Control children), but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
+A node that creates a window — the base class AcceptDialog, ConfirmationDialog, Popup, PopupMenu, PopupPanel and FileDialog all build on. It draws at runtime (it displays its Control children), but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
 
 ## Properties exercised
 
@@ -17,7 +17,7 @@ A node that creates a window — the base class AcceptDialog, ConfirmationDialog
 | --- | --- | --- |
 | `mode` | `0` (Windowed) | not drawn yet — the window mode (windowed/minimized/maximized/fullscreen) |
 | `title` | `"Sample Window"` | not drawn yet — the title bar text |
-| `initial_position` | `1` (Center of Primary Screen) | not drawn yet — where the window first appears |
+| `initial_position` | `1` (Centre of Primary Screen) | not drawn yet — where the window first appears |
 | `position` | `Vector2i(100, 100)` | not drawn yet — screen position in pixels |
 | `size` | `Vector2i(640, 480)` | not drawn yet — window size in pixels |
 | `current_screen` | `0` | not drawn yet — which monitor the window occupies |
@@ -32,7 +32,7 @@ A node that creates a window — the base class AcceptDialog, ConfirmationDialog
 | `borderless` | `false` | not drawn yet — hides the OS window border |
 | `always_on_top` | `false` | not drawn yet — stays above other windows |
 | `transparent` | `false` | not drawn yet — allows a transparent background |
-| `unfocusable` | `false` | not drawn yet — can't be focused or interacted with |
+| `unfocusable` | `false` | not drawn yet — cannot be focused or interacted with |
 | `popup_window` | `false` | not drawn yet — behaves as a popup |
 | `extend_to_title` | `false` | not drawn yet — content expands under the title bar |
 | `mouse_passthrough` | `false` | not drawn yet — passes all mouse events through |
@@ -48,13 +48,13 @@ A node that creates a window — the base class AcceptDialog, ConfirmationDialog
 | `content_scale_size` | `Vector2i(1280, 720)` | not drawn yet — base "virtual pixel" content size |
 | `content_scale_mode` | `1` (Canvas Items) | not drawn yet — how content scales when resized |
 | `content_scale_aspect` | `1` (Keep) | not drawn yet — aspect handling for content scaling |
-| `content_scale_stretch` | `0` (Fractional) | not drawn yet — fractional vs. integer scale factor |
+| `content_scale_stretch` | `0` (Fractional) | not drawn yet — fractional versus integer scale factor |
 | `content_scale_factor` | `1.0` | not drawn yet — base content scale multiplier |
 | `accessibility_name` | `"Main window"` | not drawn yet — name reported to assistive apps |
 | `accessibility_description` | `"The application's main window"` | not drawn yet — description reported to assistive apps |
 | `theme` | `SubResource("Theme_1")` | not drawn yet — theme resource for the window and its Control children |
 | `theme_type_variation` | `&"WindowTitle"` | not drawn yet — theme type lookup override |
-| `theme_override_colors/title_color` | `Color(1, 1, 1, 1)` | not drawn yet — title text color override |
+| `theme_override_colors/title_color` | `Color(1, 1, 1, 1)` | not drawn yet — title text colour override |
 | `theme_override_constants/title_height` | `36` | not drawn yet — title bar height override |
 | `theme_override_fonts/title_font` | `SubResource("SystemFont_1")` | not drawn yet — title font override |
 | `theme_override_font_sizes/title_font_size` | `20` | not drawn yet — title font size override |

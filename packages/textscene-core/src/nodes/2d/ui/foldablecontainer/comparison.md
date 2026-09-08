@@ -59,5 +59,5 @@ The lenient parser reuses `parseControl` unchanged (`index.ts`), which reads onl
 Control layout/theme-override keys, so none of FoldableContainer's own properties are
 read by it at all. A bad `title_alignment` (say `"nope"`) or an out-of-range
 `title_text_direction` therefore never reaches the lenient tree in any form, substituted
-or otherwise: strict rejects it as a diagnostic, and lenient simply never looks at the
+or otherwise: strict rejects it as a diagnostic, and lenient never looks at the
 key, leaving the fallback node exactly as unaffected as a well-formed value would.

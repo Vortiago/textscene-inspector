@@ -21,7 +21,7 @@ runtime visual — the previewer draws it as a transform-only Node2D group
 | `radius` | `50.0` | avoidance region radius — no runtime visual |
 | `vertices` | `PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)` | obstacle outline — no runtime visual |
 | `affect_navigation_mesh` | `true` | discards source geometry inside the outline when baking — no runtime visual |
-| `carve_navigation_mesh` | `true` | carving ignores baking offsets (e.g. agent radius) — no runtime visual |
+| `carve_navigation_mesh` | `true` | carving ignores baking offsets (for example, agent radius) — no runtime visual |
 | `avoidance_enabled` | `true` | enables avoidance for the region — no runtime visual |
 | `velocity` | `Vector2(0, 0)` | predicted avoidance velocity, editor-hidden but still serialised — no runtime visual |
 | `avoidance_layers` | `3` | avoidance layer bitmask — no runtime visual |
@@ -65,5 +65,5 @@ only Node2D's own transform/draw-order properties are. A malformed `radius`
 exactly the same (zero) effect on the rendered scene as a well-formed value:
 nothing ever inspects it for rendering, so there is no fallback to describe.
 The raw string still reaches `node.rawProperties` untouched, for any consumer
-that reads it directly; only `StrictTscnParser`, via `linterParser.ts`, ever
+that reads it directly; only `StrictTscnParser`, through `linterParser.ts`, ever
 validates it.

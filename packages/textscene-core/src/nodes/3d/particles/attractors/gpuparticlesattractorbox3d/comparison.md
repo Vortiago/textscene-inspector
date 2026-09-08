@@ -19,7 +19,7 @@ still show.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `size` | `Vector3(3, 1.5, 3)` | The attractor box's extents in 3D units, centered on its origin. |
+| `size` | `Vector3(3, 1.5, 3)` | The attractor box's extents in 3D units, centred on its origin. |
 
 ## Divergences
 

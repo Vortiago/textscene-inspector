@@ -84,6 +84,6 @@ parser warns and falls back to `0` / `100` respectively. `invert_enabled` falls 
 failures. `antialiased` is format-checked by strict but never read by the lenient parser,
 so no fallback applies and it has no effect on the render. Malformed `polygon` warns and
 leaves the shape with no vertices; malformed `polygons` warns and degrades to no
-sub-polygons, i.e. the polygon's stored vertex order. A malformed `uv` or `vertex_colors`
-warns and degrades to empty, which is exactly Godot's "sizes don't match" branch: the
+sub-polygons, that is, the polygon's stored vertex order. A malformed `uv` or `vertex_colors`
+warns and degrades to empty, which is exactly Godot's "sizes do not match" branch: the
 point coordinates stand in for UVs and the flat `color` for per-vertex colours.

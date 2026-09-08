@@ -36,9 +36,9 @@ as an invisible transform-only fallback and its children still show.
 | `max_texture_size` | `8192` | Maximum atlas texture size for the baked lightmap. |
 | `environment_mode` | `3` | Environment-lighting source for the bake (`Custom Color`). |
 | `environment_custom_sky` | `SubResource("Sky_1")` | Sky used as environment light when `environment_mode` is `Custom Sky`. |
-| `environment_custom_color` | `Color(0.8, 0.6, 0.4, 1)` | Constant environment-light color used when `environment_mode` is `Custom Color`. |
+| `environment_custom_color` | `Color(0.8, 0.6, 0.4, 1)` | Constant environment-light colour used when `environment_mode` is `Custom Color`. |
 | `environment_custom_energy` | `2.5` | Multiplier on the custom environment light. |
-| `camera_attributes` | `SubResource("CameraAttributesPractical_1")` | Exposure settings the bake uses to normalize brightness. |
+| `camera_attributes` | `SubResource("CameraAttributesPractical_1")` | Exposure settings the bake uses to normalise brightness. |
 | `generate_probes_subdiv` | `3` | Subdivision level for automatically generated `LightmapProbe`s. |
 | `light_data` | `SubResource("LightmapGIData_1")` | The baked lightmap/probe data this node stores and would apply at runtime. |
 

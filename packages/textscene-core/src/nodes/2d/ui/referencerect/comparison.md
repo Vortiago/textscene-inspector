@@ -9,7 +9,7 @@ renders_as: invisible transform-only fallback
 
 # ReferenceRect
 
-Godot draws ReferenceRect as a plain colored border around its rect, purely as a design-time visual aid; the previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
+Godot draws ReferenceRect as a plain coloured border around its rect, purely as a design-time visual aid; the previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
 
 ## Properties exercised
 
@@ -20,7 +20,7 @@ Godot draws ReferenceRect as a plain colored border around its rect, purely as a
 | `offset_top` | `8.0` | top edge of the anchored rect, inherited from Control |
 | `offset_right` | `108.0` | right edge of the anchored rect, inherited from Control |
 | `offset_bottom` | `40.0` | bottom edge of the anchored rect, inherited from Control |
-| `border_color` | `Color(0, 1, 0, 1)` | the border's color |
+| `border_color` | `Color(0, 1, 0, 1)` | the border's colour |
 | `border_width` | `2.0` | the border's thickness, grown both inwards and outwards |
 | `editor_only` | `false` | forces the border to draw at runtime, not only in the editor |
 

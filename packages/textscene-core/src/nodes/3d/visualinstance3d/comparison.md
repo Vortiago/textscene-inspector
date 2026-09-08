@@ -40,7 +40,7 @@ Strict parsing format-checks these `VisualInstance3D` properties, plus 17 inheri
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-A non-numeric or negative `layers` (e.g. `layers = abc` or `layers = -1`) fails strict
+A non-numeric or negative `layers` (for example, `layers = abc` or `layers = -1`) fails strict
 validation, but the lenient parser (`parseNode3D`) never reads `layers` at all — the
 render layer bitmask has no effect on a node that draws nothing — so a bad value is
 silently ignored rather than substituted or reported.

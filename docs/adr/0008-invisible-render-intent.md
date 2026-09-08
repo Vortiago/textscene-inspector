@@ -4,7 +4,7 @@
   Label3D parity amendment (2026-07-22), and by the render-intent split (2026-07-30)**.
 - Generalizes ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam; `showCollisions` toggle).
-- Supersedes the WI-R3F-7 "visible gray-box placeholder" behaviour of `GenericNodeFallback`.
+- Supersedes the WI-R3F-7 "visible grey-box placeholder" behaviour of `GenericNodeFallback`.
 
 > **Amendment (render-intent split, 2026-07-30):** This ADR describes the render
 > MECHANISM — an invisible group that positions its children — and applied it to two
@@ -19,7 +19,7 @@
 > The list below moves `GPUParticles3D` to the second group: Godot rasterises a particle
 > cloud at runtime (`unit-gpuparticles3d-godot.png`) and the previewer draws nothing, so
 > it is a gap, not a node that draws nothing by nature. The physics bodies, `Skeleton3D`,
-> `Path3D`/`PathFollow3D` and the rest stay in the first — their runtime output really is
+> `Path3D`/`PathFollow3D` and the rest stay in the first — their runtime output is
 > empty, and what an editor draws for them is ADR-0018's business, not this one's.
 
 > **Amendment (Label3D parity, 2026-07-22):** Point 4's "**off by default**" is superseded.
@@ -49,11 +49,11 @@
 ## Context
 
 The 3D viewport drew clutter. Node types with no registered render component fell through to
-`GenericNodeFallback`, which rendered a semi-transparent gray cube **plus** a floating `Type: Name`
+`GenericNodeFallback`, which rendered a semi-transparent grey cube **plus** a floating `Type: Name`
 text label for every such node (`r3f/internal/generic-node-fallback/Component.tsx`). The unregistered
 3D types are `CharacterBody3D`, `RigidBody3D`, `Skeleton3D`, `Path3D`, `PathFollow3D`, `GPUParticles3D`
 — none of which depict anything meaningful in a static previewer, so a scene with several of them filled
-with gray boxes and overlapping labels. ADR-0005 already *declared* `RigidBody3D`/`CharacterBody3D`
+with grey boxes and overlapping labels. ADR-0005 already *declared* `RigidBody3D`/`CharacterBody3D`
 transform-only, but only `StaticBody3D`/`Area3D` were registered that way, so reality contradicted the
 record. `Label3D` separately rasterises text onto a plane drawn into the 3D scene, adding to the noise.
 
@@ -63,7 +63,7 @@ The render contract has exactly **two outcomes**, and "renders nothing" becomes 
 intent rather than an accident of missing registration:
 
 1. **Visible renderer**, or **invisible transform-only group** — a `<group>` that positions its children
-   and draws nothing itself. There is no third "placeholder" outcome; the gray cube and its always-on
+   and draws nothing itself. There is no third "placeholder" outcome; the grey cube and its always-on
    label are removed.
 2. **Known non-visual types** — physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`,
    `Area3D`), `Skeleton3D`, `Path3D`, `PathFollow3D`, `GPUParticles3D` — render as transform-only groups,
@@ -83,10 +83,10 @@ intent rather than an accident of missing registration:
 - A transform-only group must still position its children correctly, so every non-visual type needs at
   least the Node3D-level `transform` parsed, and `GenericNodeFallback` reads the transform defensively
   (identity when absent). Children of an unparsed unknown type therefore land at their parent's origin —
-  acceptable, since the alternative was a mis-placed gray box.
+  acceptable, since the alternative was a mis-placed grey box.
 - Tests asserting the placeholder cube/label are **replaced**, not layered, with assertions that the
-  fallback is an invisible group that still positions children (per the replace-don't-layer rule).
-- Reality is realigned with ADR-0005: `RigidBody3D`/`CharacterBody3D` now actually render transform-only.
+  fallback is an invisible group that still positions children (per the replace-do not-layer rule).
+- Reality is realigned with ADR-0005: `RigidBody3D`/`CharacterBody3D` now render transform-only.
 
 Recorded because an architecture review naturally re-suggests "wire up the unregistered node types so
 they render" (this project's own deepening review did exactly that) — the invisibility is deliberate, not

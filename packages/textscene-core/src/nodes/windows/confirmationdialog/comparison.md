@@ -9,7 +9,7 @@ renders_as: invisible transform-only fallback
 
 # ConfirmationDialog
 
-A two-button confirmation dialog with independent OK/Cancel outcomes, building on AcceptDialog. It genuinely draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
+A two-button confirmation dialog with independent OK/Cancel outcomes, building on AcceptDialog. It draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
 
 ## Properties exercised
 

@@ -15,7 +15,7 @@ A box-shaped attractor that samples a 3D texture to vary attraction strength and
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `size` | `Vector3(3, 1.5, 3)` | The vector field box's extents in 3D units, centered on its origin. |
+| `size` | `Vector3(3, 1.5, 3)` | The vector field box's extents in 3D units, centred on its origin. |
 | `texture` | `SubResource("PlaceholderTexture3D_1")` | The 3D texture sampled across the box; its pixels are linearly interpolated to vary attraction strength and direction by location. |
 
 ## Divergences
@@ -42,5 +42,5 @@ Strict parsing format-checks these `GPUParticlesAttractorVectorField3D` properti
 hard floor Godot's PROPERTY_HINT_RANGE hint sets. The stated 1024 upper bound is
 soft (or_greater), so no maximum is enforced. `texture` is validated only as a
 resource reference (SubResource or ExtResource); the linter does not check that
-the referenced resource is actually a Texture3D. All other members come from the
+the referenced resource is a Texture3D. All other members come from the
 GPUParticlesAttractor3D base tier through the base-walk.

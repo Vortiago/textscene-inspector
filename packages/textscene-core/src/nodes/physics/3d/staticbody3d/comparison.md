@@ -50,4 +50,4 @@ the strict-validated properties (`physics_material_override`,
 `constant_linear_velocity`/`constant_angular_velocity`,
 `collision_layer`/`collision_mask`, `disable_mode`, `input_ray_pickable`) are
 read by the lenient parser. The node renders as a transform-only group, so
-there's no substitution to describe.
+there is no substitution to describe.

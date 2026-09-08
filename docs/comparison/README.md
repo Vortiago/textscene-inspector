@@ -207,13 +207,13 @@ reproduced:
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md) — a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md) — a colour multiply applied to the whole canvas
 - [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md) — nothing yet; Godot composites its children into one buffer, so overlapping translucency blends once against the background rather than layer by layer
-- [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centering flex container
+- [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md) — a centring flex container
 - [CharacterBody2D](../../packages/textscene-core/src/nodes/physics/2d/characterbody2d/comparison.md) — a transform-only group (a script-moved 2D body)
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — an inline HTML row with a drawn check indicator
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — nothing yet; a labelled on/off switch
 - [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md) — nothing (a transform-only group)
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
-- [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a color-filled div
+- [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a colour-filled div
 - [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — nothing yet; a multi-line code editor with gutters and folding
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md) — one merged quad mesh holding a frozen particle pose

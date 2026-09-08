@@ -10,7 +10,7 @@ renders_as: no geometry of its own; a working driver of other nodes' properties
 # AnimationPlayer
 
 Godot's keyframe animation driver. It has no geometry of its own, but the
-previewer really plays its clips, so the comparison above is the animated pair
+previewer plays its clips, so the comparison above is the animated pair
 (`unit-animation-player.gif`): both sides step through one loop of the `spin`
 clip and the box turns in each. The still frames beside it are the authored
 rest pose — the capture harness stops every player before taking a still, so a
@@ -82,7 +82,7 @@ as a float, which is all strict checks too: the hint is open at both ends and th
 setter is a bare assignment, so `0` and an extreme speed are both legal.
 `playback_default_blend_time` falls back to `0.0` the same way; strict warns
 rather than errors when it sits outside 0-4096. `callback_mode_process` and
-`callback_mode_method` do re-enforce strict's enum membership via `enumOr`,
+`callback_mode_method` do re-enforce strict's enum membership through `enumOr`,
 warning and substituting `IDLE` (1) or `DEFERRED` (0) for any value outside
 `0`-`2`/`0`-`1`. `active` falls back to `true`, which is also Godot's default,
 so an absent key means the mixer runs. Those three keys each have a deprecated

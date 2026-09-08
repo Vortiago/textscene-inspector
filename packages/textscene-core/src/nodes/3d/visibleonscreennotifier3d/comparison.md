@@ -11,7 +11,7 @@ renders_as: nothing (a transform-only group)
 # VisibleOnScreenNotifier3D
 
 VisibleOnScreenNotifier3D reports whether its `aabb` is visible on screen or in a
-Camera3D's view via `screen_entered`/`screen_exited` signals and draws nothing else
+Camera3D's view through `screen_entered`/`screen_exited` signals and draws nothing else
 at runtime, so the previewer renders it as a transform-only group (ADR-0008): its
 children still show, and that absence is the whole story. Unlike its 2D sibling —
 whose own `NOTIFICATION_DRAW` code fills `rect` under `Engine.is_editor_hint()` —

@@ -108,7 +108,7 @@ Strict parsing format-checks these `LightOccluder2D` properties, plus 12 inherit
 Strict rejects a non-numeric `light_mask` or `occluder_light_mask`; the lenient parser
 warns and falls back to `1` for either. An unparseable `sdf_collision` warns and falls
 back to `true`. `occluder` is copied through unvalidated: the lenient parser never checks
-it is a resource reference at all, so a malformed value simply flows into rendering as-is.
+it is a resource reference at all, so a malformed value flows into rendering as-is.
 
 ## Known limitations
 

@@ -123,7 +123,7 @@ in place of the value strict would reject. `modulate`/`self_modulate` follow the
 same undefined-silently contract but through a different reader,
 `parseColorOrUndefined`, not `parseOptional*`.
 `theme_override_styles/*` skips parsing entirely, so whatever string is present is
-stored as-is, even one `resourceReference` would flag as broken. `visible` isn't
+stored as-is, even one `resourceReference` would flag as broken. `visible` is not
 `boolOr` either: any value other than the literal string `"false"` (typos included)
 parses as `true`, again with no warning.
 

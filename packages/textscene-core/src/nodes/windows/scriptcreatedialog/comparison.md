@@ -9,7 +9,7 @@ renders_as: invisible transform-only fallback
 
 # ScriptCreateDialog
 
-Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog; it is editor UI that no game scene a project ships ever carries, since it exists only inside the running editor to configure and create a new `.gd`/`.cs` file. It genuinely draws at runtime when popped up inside the editor, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
+Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog; it is editor UI that no game scene a project ships ever carries, since it exists only inside the running editor to configure and create a new `.gd`/`.cs` file. It draws at runtime when popped up inside the editor, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
 
 ## Properties exercised
 

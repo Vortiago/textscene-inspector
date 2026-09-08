@@ -179,7 +179,7 @@ never in the denominator.
 compiler rejects an uncited arm; `rangeAdvisoryGrounding.test.ts` then checks the
 string names a source location rather than restating the rule's own opinion. Arms
 were the other population outside the sweep, and the one where invented thresholds
-had actually shipped.
+had shipped.
 
 **A rule's severity is fixed by its grounding kind.** A semantic rule declares an
 `EmitGrounding` per reported name, and `severityFixedBy` maps the kind to the

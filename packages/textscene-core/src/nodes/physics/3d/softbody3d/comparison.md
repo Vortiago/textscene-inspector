@@ -25,7 +25,7 @@ the gap.
 | `parent_collision_ignore` | `NodePath("../Ground")` | the CollisionObject3D this body should avoid clipping |
 | `simulation_precision` | `8` | solver iteration count |
 | `total_mass` | `2.5` | the body's mass |
-| `linear_stiffness` | `0.6` | how stiff vs. bendable the body is |
+| `linear_stiffness` | `0.6` | how stiff versus bendable the body is |
 | `shrinking_factor` | `0.1` | shrinks the mesh's edge constraints by 10% |
 | `pressure_coefficient` | `1.5` | simulated internal pressure build-up |
 | `damping_coefficient` | `0.05` | how quickly applied forces slow down |

@@ -28,7 +28,7 @@ Godot draws the marker's white pixels at full white (~252); ours renders them li
 grey (~223). The tile mesh uses an unlit `meshBasicMaterial` that keeps three's
 default `toneMapped: true`, so the scene tonemapper compresses the bright white —
 Godot's 2D CanvasItem draw is not tonemapped. Tile positions, the grid, and the
-blue background (~214 vs ~223 on the blue channel) all match.
+blue background (~214 versus ~223 on the blue channel) all match.
 
 ## Linting
 
@@ -62,8 +62,8 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 
 `enabled` falls back to `true` when absent or unparseable (`boolOr`), warning
 only when a value was present. `tile_set` is passed through as the raw
-resource-reference string when present and simply omitted when absent, so an
-unresolvable reference isn't caught here; the layer then renders with no tiles.
-Malformed `tile_map_data` (truncated bytes or an unrecognized format version)
+resource-reference string when present and omitted when absent, so an
+unresolvable reference is not caught here; the layer then renders with no tiles.
+Malformed `tile_map_data` (truncated bytes or an unrecognised format version)
 warns and drops all cells rather than rejecting the node, again leaving an
 empty layer.

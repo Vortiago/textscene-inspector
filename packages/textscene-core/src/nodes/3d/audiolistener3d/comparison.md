@@ -41,7 +41,6 @@ Strict parsing format-checks these `AudioListener3D` properties, plus 17 inherit
 
 `doppler_tracking` is the node's only own property, and it plays no part in what the
 lenient parser renders (the node is transform-only, so nothing reads it for drawing):
-an out-of-range or non-numeric value here has no fallback to speak of, it is simply
-never consulted. Strict parsing still format-checks it, and treats an out-of-range int
+an out-of-range or non-numeric value here has no fallback to speak of, it is never consulted. Strict parsing still format-checks it, and treats an out-of-range int
 as a warning rather than an error, since `set_doppler_tracking` (audio_listener_3d.cpp:146-158)
 assigns without a guard — only the property's own `PROPERTY_HINT_ENUM` grounds the check.

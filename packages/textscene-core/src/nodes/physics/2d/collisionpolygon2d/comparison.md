@@ -11,7 +11,7 @@ renders_as: nothing (a transform-only group)
 # CollisionPolygon2D
 
 CollisionPolygon2D gives a polygon collision shape to a CollisionObject2D
-parent (Area2D, StaticBody2D, RigidBody2D, CharacterBody2D, etc.); like its
+parent (Area2D, StaticBody2D, RigidBody2D, CharacterBody2D, and so on); like its
 sibling CollisionShape2D, it has no runtime visual of its own — its outline is
 an editor/debug gizmo, so drawing nothing here is correct, not a gap. The
 previewer renders it as a transform-only group (ADR-0008): its children still
@@ -61,5 +61,4 @@ it never reads `build_mode`, `polygon`, `disabled`, `one_way_collision`, or
 `one_way_collision_margin` at all — a malformed value on any of the five
 passes through completely unexamined, with no substitution and no fallback,
 because nothing downstream of the parse ever looks at the property. Only
-Node2D's own properties (position, rotation, scale, etc.) affect what actually
-renders.
+Node2D's own properties (position, rotation, scale, and so on) affect what renders.

@@ -64,7 +64,7 @@ Strict parsing format-checks these `Node3D` properties, plus 10 inherited from N
 Node3D's lenient parser reads exactly two properties: `transform` and
 `visible`. An absent `transform` stays `undefined`; a malformed one warns and
 falls back to the identity `Transform3D`, matching neither strict's rejection
-nor any authored value. `visible` resolves via plain string equality
+nor any authored value. `visible` resolves through plain string equality
 (`!== 'false'`) with no warning for a malformed value, and stays `undefined`
 when absent rather than defaulting to `true`. Every other validated property,
 including `position`, `rotation`, `rotation_degrees`, `scale`, `basis`,

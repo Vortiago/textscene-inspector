@@ -60,7 +60,7 @@ Strict parsing format-checks these `VehicleBody3D` properties, plus 23 inherited
 
 VehicleBody3D has no `parser.ts`: it reuses `parseNode3D` directly, so none of
 the strict-validated properties (`mass`, `engine_force`, `brake`, `steering`,
-the inherited center-of-mass and damp settings,
+the inherited centre-of-mass and damp settings,
 `collision_layer`/`collision_mask`) are read by the lenient parser. The node
 renders as a transform-only group, so nothing needs substituting.
 

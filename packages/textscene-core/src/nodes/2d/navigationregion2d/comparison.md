@@ -52,5 +52,5 @@ Strict parsing format-checks these `NavigationRegion2D` properties, plus 12 inhe
 
 `navigation_polygon` has no fallback of its own: the parser passes the raw
 resource-reference string straight through when present and leaves the
-property `undefined` when absent, so an invalid or dangling reference isn't
-caught here, it simply renders no navigation mesh.
+property `undefined` when absent, so an invalid or dangling reference is not
+caught here, it renders no navigation mesh.

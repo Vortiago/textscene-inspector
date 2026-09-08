@@ -17,7 +17,7 @@ This node draws nothing at runtime, so the previewer renders it as a transform-o
 | Property | Value | Effect |
 | --- | --- | --- |
 | `enabled` | `true` | link participates in pathfinding — no runtime visual |
-| `bidirectional` | `true` | link may be traveled start-to-end and end-to-start — no runtime visual |
+| `bidirectional` | `true` | link may be travelled start-to-end and end-to-start — no runtime visual |
 | `navigation_layers` | `3` | layers 1 and 2 of the 32-bit navigation mask — no runtime visual |
 | `start_position` | `Vector3(-1, 0, 0)` | link's local start point — no runtime visual |
 | `end_position` | `Vector3(2, 0, 0)` | link's local end point — no runtime visual |

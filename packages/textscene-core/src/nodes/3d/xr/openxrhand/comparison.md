@@ -53,5 +53,5 @@ Strict parsing format-checks these `OpenXRHand` properties, plus 17 inherited fr
 The lenient parser reads OpenXRHand through `parseNode3D`, so a malformed `hand`,
 `motion_range`, `skeleton_rig`, or `bone_update` (say, a bare word instead of an enum
 index) is kept as opaque, unparsed text with no substitution or fallback value — there is no
-tracked hand pose to fall back to either. Strict parsing is where these are actually read,
+tracked hand pose to fall back to either. Strict parsing is where these are read,
 and there a bad value is an error, not a lenient default.

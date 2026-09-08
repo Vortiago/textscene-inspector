@@ -21,7 +21,7 @@ These live on the referenced Environment sub-resource.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `background_mode` | `1` (Color) | fills the view with a flat colour instead of a sky |
+| `background_mode` | `1` (Colour) | fills the view with a flat colour instead of a sky |
 | `background_color` | `Color(0.05, 0.05, 0.15)` | base backdrop — shows as-is in ours; fog tints it steel-blue in Godot |
 | `background_energy_multiplier` | `1.0` | default; no visible change |
 | `volumetric_fog_enabled` | `true` | Godot fills the view with a scattering haze; ours draws none |

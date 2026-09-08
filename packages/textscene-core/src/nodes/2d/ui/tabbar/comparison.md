@@ -86,7 +86,7 @@ Strict parsing format-checks these `TabBar` properties, plus 53 inherited from C
 
 Nothing on TabBar diverges between the two parsers. The lenient parser reuses
 `parseControl` and reads only the Control layout members, so every TabBar-specific
-key above is simply absent from the lenient tree rather than substituted with a
+key above is absent from the lenient tree rather than substituted with a
 fallback value; the strict parser is the only one that looks at them. The two
 cross-field advisories both compare an index against `tab_count`, which is a
 sibling property no per-key validator can see, so they live in `linter.ts` and

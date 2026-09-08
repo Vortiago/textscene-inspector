@@ -67,7 +67,7 @@ Strict parsing format-checks these `Tree` properties, plus 53 inherited from Con
 That count is far smaller than the class reads, because `TreeItem` is a plain Object
 rather than a Node: rows, cell text, icons, per-column widths and fold state are created
 by script at runtime and never reach the `.tscn`, so no amount of linting can see the
-content a Tree will actually show. Three of the sixteen diagnose at warning rather than
+content a Tree will show. Three of the sixteen diagnose at warning rather than
 error, `select_mode` and `scroll_hint_mode` past their last constant and
 `drop_mode_flags` past its two hinted bits, because each setter stores the wide value
 unaltered and only the inspector widget is narrow. None of the sixteen affects the

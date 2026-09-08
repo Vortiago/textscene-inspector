@@ -50,10 +50,10 @@ Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 5
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-`alignment` goes through `parseOptionalInt` (via the shared BoxContainer
+`alignment` goes through `parseOptionalInt` (through the shared BoxContainer
 parser): absent or unparseable, it becomes `undefined` with no warning, and
 `alignmentJustify` maps that (or any value besides `1`/`2`) to `flex-start`,
 Godot's BEGIN default. `theme_override_constants/separation` is collected
 generically by the Control parser (`parseOptionalFloat`, same silent-fallback
-contract); when it's missing the Component substitutes its own default of
+contract); when it is missing the Component substitutes its own default of
 `4`px, matching Godot's VBoxContainer default gap.

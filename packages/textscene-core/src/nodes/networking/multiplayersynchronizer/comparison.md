@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # MultiplayerSynchronizer
 
-This node synchronizes properties from the multiplayer authority to remote peers and draws nothing, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
+This node synchronises properties from the multiplayer authority to remote peers and draws nothing, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.
 
 ## Properties exercised
 

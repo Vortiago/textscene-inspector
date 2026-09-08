@@ -29,9 +29,9 @@ and its children still show.
 | `texture_progress` | a `PlaceholderTexture2D` | clips by `value`/`fill_mode`; the bar itself |
 | `texture_progress_offset` | `Vector2(1, 1)` | offsets `texture_progress` relative to `texture_under`/`texture_over` |
 | `texture_under` | a `PlaceholderTexture2D` | draws under the bar; its background |
-| `tint_over` | `Color(1, 0.8, 0.8, 1)` | multiplies `texture_over`'s color |
-| `tint_progress` | `Color(0.8, 1, 0.8, 1)` | multiplies `texture_progress`'s color |
-| `tint_under` | `Color(0.8, 0.8, 1, 1)` | multiplies `texture_under`'s color |
+| `tint_over` | `Color(1, 0.8, 0.8, 1)` | multiplies `texture_over`'s colour |
+| `tint_progress` | `Color(0.8, 1, 0.8, 1)` | multiplies `texture_progress`'s colour |
+| `tint_under` | `Color(0.8, 0.8, 1, 1)` | multiplies `texture_under`'s colour |
 
 ## Divergences
 

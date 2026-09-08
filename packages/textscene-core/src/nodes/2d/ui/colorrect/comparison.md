@@ -10,7 +10,7 @@ renders_as: a color-filled div
 # ColorRect
 
 A Control that fills its rect with a single flat `color`. The previewer draws a
-positioned `<div>` with that color as its `backgroundColor`, alpha included.
+positioned `<div>` with that colour as its `backgroundColor`, alpha included.
 
 ## Properties exercised
 
@@ -42,11 +42,11 @@ Strict parsing format-checks these `ColorRect` properties, plus 53 inherited fro
 | `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-ColorRect's only own property, `color`, gets a format-only Color check: Godot's
+ColorRect's only own property, `color`, gets a format-only Colour check: Godot's
 `ADD_PROPERTY` for it carries no hint at all (`PROPERTY_HINT_NONE`), and
 `set_color` assigns any value through unclamped, so there is no numeric bound to
 enforce — a component outside 0-1 (HDR) is exactly as legal as one inside. The
-render parser doesn't parse `color` at all: `properties.color || DEFAULT_COLOR`
+render parser does not parse `color` at all: `properties.color || DEFAULT_COLOR`
 keeps whatever string is present verbatim, so even a malformed `Color(...)`
 literal the linter would reject still reaches the renderer unexamined, and only
 an absent or empty value falls back to `Color(1, 1, 1, 1)` (opaque white),

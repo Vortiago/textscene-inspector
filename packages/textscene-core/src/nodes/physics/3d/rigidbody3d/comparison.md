@@ -71,7 +71,7 @@ Strict parsing format-checks these `RigidBody3D` properties, plus 6 inherited fr
 <!-- lint:end -->
 
 RigidBody3D has no `parser.ts`: it reuses `parseNode3D` directly, so none of
-the strict-validated properties (`mass`, `inertia`, the center-of-mass and
+the strict-validated properties (`mass`, `inertia`, the centre-of-mass and
 damp settings, `collision_layer`/`collision_mask`, `freeze_mode`,
 `disable_mode`) are read by the lenient parser. The node renders as a
 transform-only group, so nothing needs substituting.

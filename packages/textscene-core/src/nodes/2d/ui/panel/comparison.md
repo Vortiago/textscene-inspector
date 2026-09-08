@@ -17,7 +17,7 @@ StyleBox and holds free-anchored children. The previewer renders it as a positio
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| offsets (`-160..160`, `-100..100`) | centered | a 320×200 box in the middle of the frame |
+| offsets (`-160..160`, `-100..100`) | centred | a 320×200 box in the middle of the frame |
 | `bg_color` | `Color(0.16, 0.17, 0.22, 1)` | the dark navy fill |
 | `corner_radius_*` | `8` | the rounded corners |
 | `border_width_*` | `2` | the thin visible edge |

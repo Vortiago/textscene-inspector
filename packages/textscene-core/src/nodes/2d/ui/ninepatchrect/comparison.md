@@ -9,15 +9,15 @@ renders_as: nothing yet - not implemented
 
 # NinePatchRect
 
-NinePatchRect (9-slice) displays a texture by keeping its corners intact while tiling its edges and center; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
+NinePatchRect (9-slice) displays a texture by keeping its corners intact while tiling its edges and centre; the previewer parses and validates it but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `axis_stretch_horizontal` | `1` | Horizontal stretch mode: tile instead of stretch the center/edges. |
+| `axis_stretch_horizontal` | `1` | Horizontal stretch mode: tile instead of stretch the centre/edges. |
 | `axis_stretch_vertical` | `2` | Vertical stretch mode: tile-fit. |
-| `draw_center` | `false` | Only the border is drawn; the center patch is skipped. |
+| `draw_center` | `false` | Only the border is drawn; the centre patch is skipped. |
 | `patch_margin_bottom` | `8` | Bottom row of the 9-slice is 8px tall. |
 | `patch_margin_left` | `8` | Left column of the 9-slice is 8px wide. |
 | `patch_margin_right` | `8` | Right column of the 9-slice is 8px wide. |
@@ -58,5 +58,5 @@ The lenient parser reuses `parseControl`, which only extracts Control's own know
 keys (anchors, offsets, modulate, and so on) into typed fields; it has no field for
 `patch_margin_*`, `axis_stretch_*`, `draw_center`, `region_rect` or `texture`, so a
 bad value on any of them (an out-of-range patch margin, an unknown axis-stretch
-mode) is simply never read rather than substituted or clamped. There is no
+mode) is never read rather than substituted or clamped. There is no
 lenient-side fallback for the strict parser's warnings to diverge from.

@@ -51,6 +51,6 @@ rejects `vertical`, which HBoxContainer removes.
 
 A malformed value here, say `offset_right = garbage` or `modulate = Color(1)`, is
 silently dropped by the lenient parser: `parseOptionalFloat` and
-`parseColorOrUndefined` return `undefined`, so the property is simply absent from
+`parseColorOrUndefined` return `undefined`, so the property is absent from
 the parsed props with no diagnostic and no crash. Only the strict parser catches
 it, through the inherited Control/CanvasItem validators reached by the base-walk.

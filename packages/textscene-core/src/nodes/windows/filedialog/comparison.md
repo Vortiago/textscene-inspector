@@ -9,7 +9,7 @@ renders_as: invisible transform-only fallback
 
 # FileDialog
 
-A preset dialog for choosing files or directories in the filesystem, building on ConfirmationDialog and adding filters, a customisable browse UI and a dynamic per-dialog options family. It genuinely draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
+A preset dialog for choosing files or directories in the filesystem, building on ConfirmationDialog and adding filters, a customisable browse UI and a dynamic per-dialog options family. It draws at runtime once popped up, but the previewer only parses and validates it today; it does not draw it yet, so it renders as an invisible transform-only fallback (ADR-0008) and its children still show.
 
 ## Properties exercised
 
@@ -17,7 +17,7 @@ A preset dialog for choosing files or directories in the filesystem, building on
 | --- | --- | --- |
 | `mode_overrides_title` | `false` | not drawn yet, whether changing `file_mode` also changes the window title |
 | `file_mode` | `0` (Open File) | not drawn yet, the dialog's open/save mode |
-| `display_mode` | `1` (List) | not drawn yet, file list as a grid of thumbnails vs. a list of filenames |
+| `display_mode` | `1` (List) | not drawn yet, file list as a grid of thumbnails versus a list of filenames |
 | `access` | `2` (File System) | not drawn yet, which part of the filesystem the dialog may browse |
 | `root_subfolder` | `"levels"` | not drawn yet, the sub-folder the dialog cannot navigate above |
 | `filters` | `PackedStringArray("*.png, *.jpg, *.jpeg", "*.tscn")` | not drawn yet, the file type filters offered in the filter dropdown |

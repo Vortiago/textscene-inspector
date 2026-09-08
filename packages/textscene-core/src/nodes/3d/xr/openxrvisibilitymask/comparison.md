@@ -55,4 +55,4 @@ in-memory state. Only the strict parser's base-walk to VisualInstance3D's
 OpenXRVisibilityMask parented to anything other than an XRCamera3D draws a
 warning, the same one Godot's editor reports. It stays quiet when `visible =
 false` (Node3D's own `is_visible()` never sees a parent chain) and when the
-parent's type is unknown, e.g. behind `instance=`.
+parent's type is unknown, for example, behind `instance=`.

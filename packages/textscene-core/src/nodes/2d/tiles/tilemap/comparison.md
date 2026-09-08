@@ -71,8 +71,7 @@ Strict parsing format-checks these `TileMap` properties, plus 12 inherited from 
 `format` falls back to `0` when absent or unparseable (`intOr`), warning only when
 a value was present; only `format` `2` decodes, so any other value warns and the
 layer's `tile_data` is dropped rather than the node being rejected. `tile_set` is
-passed through as the raw resource-reference string when present and simply
-omitted when absent, so an unresolvable reference isn't caught here; the map
+passed through as the raw resource-reference string when present and omitted when absent, so an unresolvable reference is not caught here; the map
 renders with no tiles instead.
 
 ## Known limitations

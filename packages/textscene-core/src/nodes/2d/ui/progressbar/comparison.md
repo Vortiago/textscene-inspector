@@ -16,7 +16,7 @@ ProgressBar shows a percentage fill (or an indeterminate "something is happening
 | Property | Value | Effect |
 | --- | --- | --- |
 | `fill_mode` | `2` (`FILL_TOP_TO_BOTTOM`) | direction the fill grows in |
-| `show_percentage` | `false` | suppresses the centered `"NN%"` label |
+| `show_percentage` | `false` | suppresses the centred `"NN%"` label |
 | `indeterminate` | `true` | swaps the percentage fill for the scanning animation |
 | `editor_preview_indeterminate` | `true` | lets the indeterminate animation run in the editor too |
 

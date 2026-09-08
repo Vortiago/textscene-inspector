@@ -15,7 +15,7 @@ A Button that opens a ColorPicker popup when pressed, toggling the popup's visib
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `color` | `Color(0.8, 0.3, 0.5, 0.6)` | the initially selected, partially transparent color shown on the button face |
+| `color` | `Color(0.8, 0.3, 0.5, 0.6)` | the initially selected, partially transparent colour shown on the button face |
 | `edit_alpha` | `false` | hides the alpha channel slider in the popped-up ColorPicker |
 | `edit_intensity` | `false` | hides the intensity slider in the popped-up ColorPicker |
 

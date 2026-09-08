@@ -9,17 +9,17 @@ renders_as: a centering flex container
 
 # CenterContainer
 
-CenterContainer places its single child at the exact center of its own rect,
-horizontally and vertically. The previewer maps it to a CSS flexbox centered on
-both axes, so the container draws nothing itself — only the centered child shows.
+CenterContainer places its single child at the exact centre of its own rect,
+horizontally and vertically. The previewer maps it to a CSS flexbox centred on
+both axes, so the container draws nothing itself — only the centred child shows.
 
 ## Properties exercised
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `anchors_preset` | `15` | fills the parent Control (full rect), so the container's center is the viewport center |
+| `anchors_preset` | `15` | fills the parent Control (full rect), so the container's centre is the viewport centre |
 | `anchor_right` / `anchor_bottom` | `1.0` | the container spans the full viewport width and height |
-| child `Label.text` | `"Centered"` | the single child; the container pins it dead-center |
+| child `Label.text` | `"Centered"` | the single child; the container pins it dead-centre |
 
 ## Divergences
 
@@ -50,11 +50,11 @@ clamp and no hinted range, so a malformed literal is the only failure and it
 is always an error (ADR-0032).
 
 CenterContainer's parser is a pure passthrough to `parseControl`: it adds no
-property and no fallback of its own, so its lenient-parsing behavior is
+property and no fallback of its own, so its lenient-parsing behaviour is
 entirely Control's. That includes `use_top_left`: `parser.ts` never reads it
 (there is no field for it on `ControlProperties`), and `Component.tsx` always
 lays the child out with `alignItems: 'center', justifyContent: 'center'` with
-no branch for the alternate anchor. Godot's `use_top_left = true` centers the
-child around the container's top-left corner instead of its own center
+no branch for the alternate anchor. Godot's `use_top_left = true` centres the
+child around the container's top-left corner instead of its own centre
 (`center_container.cpp:83`); the previewer has no equivalent for that mode, so
 the property is validated but has no effect on the render.

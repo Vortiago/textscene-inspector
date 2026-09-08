@@ -19,7 +19,7 @@ still show.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| radius | 2.5 | The attractor sphere's radius in 3D units, centered on its origin. |
+| radius | 2.5 | The attractor sphere's radius in 3D units, centred on its origin. |
 
 ## Divergences
 

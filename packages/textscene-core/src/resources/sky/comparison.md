@@ -14,13 +14,13 @@ here as a background plus a PMREM-filtered environment map.
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
-A gradient sky (top / horizon / ground colors and curves). The warm-top,
+A gradient sky (top / horizon / ground colours and curves). The warm-top,
 green-horizon gradient and the sphere and floor it lights match Godot.
 
 ## PanoramaSkyMaterial
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
 
-An equirectangular image wrapped onto the sky. The colored calibration bands and the
+An equirectangular image wrapped onto the sky. The coloured calibration bands and the
 black grid confirm the U/V orientation matches Godot (measured to ~2% earlier).
 
 ## PhysicalSkyMaterial

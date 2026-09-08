@@ -6,14 +6,14 @@ description: Implement a feature in the TextScene previewer end-to-end — a God
 # Implementing a feature completely
 
 A feature is done only when **every layer** lands. The recurring failure is a **half-feature** —
-the parse works but the node renders a gray placeholder (a barrel was never imported), or a property
+the parse works but the node renders a grey placeholder (a barrel was never imported), or a property
 renders but nothing lints, documents, or shows it. **Green unit tests do NOT mean complete**: several
 layers have no unit guard (see Guards). Walk the whole checklist; each layer is either done or
 explicitly N/A-because-X — never silently skipped.
 
 **Identify the SHAPE first — the wiring differs fundamentally and is the #1 source of forgotten layers:**
 
-- **Node type** (`[node type="X"]`) → **self-registering** via three barrels. Scaffold it:
+- **Node type** (`[node type="X"]`) → **self-registering** through three barrels. Scaffold it:
   `pnpm new:node <Type> <category> --intent <draws|transform-only|pending>
   [--base node3d|node2d|node|control] [--linter]` (`scripts/new-node-slice.mjs`) generates the slice
   + a fixture and wires the barrels; `NODE_BASE_TYPES` is derived from the node catalog, and
@@ -36,7 +36,7 @@ monorepo orientation lives in the `textscene-dev` skill; this skill is the per-f
   `standardMaterialScalars.<feat>.test.ts` for a material scalar. Assert acceptance through public APIs
   (registry lookup, typed parser output, the right three.js object renders, linter passes the fixture).
 - **Render** → see the shape section.
-- **Component test** → `Component.test.tsx` / `Component.material-features.test.tsx` via
+- **Component test** → `Component.test.tsx` / `Component.material-features.test.tsx` through
   `@react-three/test-renderer`, asserting the real rendered `material.*` / object. **Render IS gateable —
   never skip it as "visual-only."**
 - **Fixture** → `scenes/fixtures/unit-<kebab-type>.tscn`, a real parseable scene, then **regenerate the web
@@ -58,7 +58,7 @@ monorepo orientation lives in the `textscene-dev` skill; this skill is the per-f
   `linter.ts` → `ruleRegistry` (+ `linter.test.ts`), NOT scaffolded. Gotcha: the generated `index.linter.ts`
   imports only `./linterParser.js`; adding a `linter.ts` also needs `import './linter.js'`, or the rule
   silently never registers.
-- `propertyFormatter.ts` (optional) — inspector display for non-obvious props; wire via `index.ts`.
+- `propertyFormatter.ts` (optional) — inspector display for non-obvious props; wire through `index.ts`.
 - Scene-tree badge (optional polish) — `TreeNode.tsx` `TYPE_BADGE_CLASS` / `TYPE_SHORTHAND` (has a default).
 
 ## Material / mesh / resource layers (central dispatch, hand-edited — no self-registration)
@@ -82,7 +82,7 @@ Meta-guards catch most forgotten layers: `linter/barrelCompleteness.test.ts` (li
 `linter/ruleCoverage.test.ts` (rule registered), `core/registrationCollision.test.ts` (dup
 typeName), `nodes/_contracts/fixture-coverage.test.ts` (dropped fixture). **THE GAP: the render/parse
 barrels (`TscnParser.ts`, `r3f/nodes/index.ts`) have no completeness guard** — miss the `r3f/nodes/index.ts`
-import and the node renders a gray placeholder with green unit tests; only the visual golden or a manual run
+import and the node renders a grey placeholder with green unit tests; only the visual golden or a manual run
 catches it. Verify these two barrels by hand. Nothing sizes a test SUITE either: a co-located
 `parser.test.ts` holding one empty `it` is invisible to every guard above, so suite depth is a
 /code-review question.

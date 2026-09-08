@@ -75,5 +75,5 @@ property's own validator can see on its own.
 `text` and `icon` are Button's, not OptionButton's own: `_validate_property`
 (option_button.cpp:554-558) hides them from the inspector/saver, but Button's
 setters still accept a hand-written value (inert, not invalid: the value is
-simply overwritten the next time a selection is applied), so both resolve
+overwritten the next time a selection is applied), so both resolve
 through the inherited Button validator rather than being flagged unavailable.

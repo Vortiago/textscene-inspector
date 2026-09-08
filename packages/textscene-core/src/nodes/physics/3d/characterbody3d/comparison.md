@@ -19,7 +19,7 @@ nothing in a plain capture.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `transform` | `origin (0, 0.8, 0)` | lifts the group so the capsule floats centered above the origin |
+| `transform` | `origin (0, 0.8, 0)` | lifts the group so the capsule floats centred above the origin |
 | `velocity` | `Vector3(0, 0, 0)` | runtime physics state; no visual effect in a static preview |
 
 ## Divergences

@@ -19,7 +19,7 @@ at a time.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `tab_alignment` | `1` (Center) | horizontal placement of the tab row |
+| `tab_alignment` | `1` (Centre) | horizontal placement of the tab row |
 | `current_tab` | `0` | which child's tab is active |
 | `tabs_position` | `0` (Top) | tab bar above or below the panel |
 | `clip_tabs` | `true` | overflowing tabs hide behind nav buttons rather than growing the min size |
@@ -68,5 +68,5 @@ Strict parsing format-checks these `TabContainer` properties, plus 53 inherited 
 The lenient parser reuses `parseControl`, which only reads Control's own
 properties (anchors, offsets, modulate, theme overrides). It never reads any of
 the twelve properties above, so a bad `tab_alignment` or `current_tab` is not
-substituted or clamped, it is simply never looked at: the node still falls back
+substituted or clamped, it is never looked at: the node still falls back
 to `GenericNodeFallback` and renders exactly as it would with valid values.

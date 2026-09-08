@@ -24,7 +24,7 @@ indicator followed by the label text.
 ## Divergences
 
 The indicator's fill. Godot draws the theme's icon textures — a bright, solid
-square with a tick for the checked row, a gray solid square for the unchecked,
+square with a tick for the checked row, a grey solid square for the unchecked,
 disabled one — while the previewer draws a thin outlined square with a Unicode
 tick when checked and an empty outline when not. Godot's default-theme icons are
 compiled into the engine rather than shipped as resource files, so the indicator is

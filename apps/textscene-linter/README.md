@@ -11,11 +11,10 @@ text-scene linter of its own, and the goal is to help you author a sound, valid
 the ENGINE serialises: a property is worth validating because Godot writes it and
 reads it back, not because some renderer consumes it. Every diagnostic is
 grounded in a line of Godot's own source, and the severity tiers come from what
-the engine actually does with a value (ADR-0032): an **error** is a value the
+the engine does with a value (ADR-0032): an **error** is a value the
 setter refuses or alters, a **warning** is one outside the property's own editor
 hint or one Godot's own editor warns about, an **info** is one the engine never
-reads at all (or a limitation of this previewer), and a value the engine simply
-accepts gets nothing at all. The aim is that
+reads at all (or a limitation of this previewer), and a value the engine accepts gets nothing at all. The aim is that
 a clean run means the file is sound, and that a diagnostic never fires on a scene
 Godot opens without complaint.
 
@@ -52,7 +51,7 @@ print as findings/annotations in those formats, or to stderr in `text` format.
 
 ### Output formats (`--format`)
 
-- `text` (default) — colored, human-readable, streamed per file. `--no-color`
+- `text` (default) — coloured, human-readable, streamed per file. `--no-color`
   disables ANSI codes.
 - `json` — a single pretty-printed JSON array of findings, one object per
   diagnostic (plus one synthetic `file-read-error` finding per unreadable
@@ -84,7 +83,7 @@ print as findings/annotations in those formats, or to stderr in `text` format.
   node apps/textscene-linter/dist/cli.js --format github scenes/
   ```
 
-  Auto-detected when `$GITHUB_ACTIONS=true` (i.e. running inside a GitHub
+  Auto-detected when `$GITHUB_ACTIONS=true` (that is, running inside a GitHub
   Actions job) and `--format` is not passed explicitly; pass `--format text`
   to opt back into human-readable output there.
 
@@ -92,7 +91,7 @@ print as findings/annotations in those formats, or to stderr in `text` format.
 
 - `0` — all files clean, or only warning/info diagnostics
 - `1` — at least one error-severity diagnostic, or a file could not be read
-- `2` — an unrecognized `--format` value was passed
+- `2` — an unrecognised `--format` value was passed
 
 Warnings do not fail the run; only errors and unreadable files do. The exit
 code contract is identical across all three output formats.
@@ -104,9 +103,8 @@ code contract is identical across all three output formats.
   `index.ts` that pulls in renderers. This keeps the CLI bundle free of
   react and three.js — guarded by
   `packages/textscene-core/src/linter/reactFree.test.ts`.
-- **Where rules live**: each node slice self-registers its lint rules via
+- **Where rules live**: each node slice self-registers its lint rules through
   `ruleRegistry` in its `linter.ts`, wired up by the slice's
-  `index.linter.ts` (e.g.
-  `packages/textscene-core/src/nodes/base/node3d/index.linter.ts`). The
+  `index.linter.ts` (for example, `packages/textscene-core/src/nodes/base/node3d/index.linter.ts`). The
   entry point `packages/textscene-core/src/linter/index.ts` imports them all
   to trigger registration.

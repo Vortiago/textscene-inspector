@@ -23,7 +23,7 @@ to that root's result.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `radius` | `0.5` / `0.4` | base radius of the pillar / cone |
-| `height` | `2.0` / `1.0` | the tall pillar vs the shorter cone |
+| `height` | `2.0` / `1.0` | the tall pillar versus the shorter cone |
 | `sides` | `16` | radial segments — a smooth silhouette with faint faceting |
 | `cone` | `true` (Cone only) | collapses the top to a point, making a cone |
 | `smooth_faces` | default `true` | one averaged normal at the cone apex, not nine radial ones |
@@ -63,7 +63,7 @@ Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited 
 Strict rejects a non-positive `radius`/`height`, `sides` outside 3-64, or a non-boolean
 `cone`: the radius and height floors warn, and a non-boolean `cone` is an error. The lenient parser falls back silently when absent, or warns and
 falls back when present but unparseable: `radius` to `0.5`, `height` to `2.0`, `sides`
-to `8`. `cone` skips that contract entirely: it's read as a raw `=== 'true'` string
+to `8`. `cone` skips that contract entirely: it is read as a raw `=== 'true'` string
 comparison, so any non-`true` value (not just an absent one) silently becomes `false`
 with no warning. `operation` is read with `parseOptionalInt`, so it warns neither way;
 a non-zero value is applied by the boolean evaluator rather than dropped (ADR-0027,

@@ -31,7 +31,7 @@ The `.import` file Godot writes beside a source asset, recording which importer 
 _Avoid_: "import file" for the asset itself; treating absence as an error.
 
 **Project settings**:
-`project.godot` at a project's `res://` root — the engine configuration a scene is authored against, parsed into settings named as `ProjectSettings.get_setting()` names them (`[gui]` + `theme/default_theme_scale` → `gui/theme/default_theme_scale`). Like the **Import sidecar** it is found by path convention rather than referenced by any scene, so a scene without one is ordinary and renders at Godot's defaults, never a **Missing resource**. Only settings the previewer actually honours get a typed reader; today that is `gui/theme/default_theme_scale`, which scales every metric of the built-in default theme (font sizes, corner radii, content margins, container separations) and is the one setting any corpus project sets. A node's `theme_override_*` is NOT scaled — Godot returns an override as the scene authored it.
+`project.godot` at a project's `res://` root — the engine configuration a scene is authored against, parsed into settings named as `ProjectSettings.get_setting()` names them (`[gui]` + `theme/default_theme_scale` → `gui/theme/default_theme_scale`). Like the **Import sidecar** it is found by path convention rather than referenced by any scene, so a scene without one is ordinary and renders at Godot's defaults, never a **Missing resource**. Only settings the previewer honours get a typed reader; today that is `gui/theme/default_theme_scale`, which scales every metric of the built-in default theme (font sizes, corner radii, content margins, container separations) and is the one setting any corpus project sets. A node's `theme_override_*` is NOT scaled — Godot returns an override as the scene authored it.
 _Avoid_: "config file" for a `.tscn`; treating absence as an error; growing it into a general settings store.
 
 **Asset re-import**:
@@ -43,11 +43,11 @@ An embedded resource written `SubResource("id")` and declared by a `[sub_resourc
 _Avoid_: "asset", "inline resource".
 
 **Sub-resource path** (`resources/subResourcePath.ts`):
-`res://file.tres::SubId` — Godot's own notation for a **SubResource** of some `.tres` OTHER than the previewed scene, and the one string that makes all three kinds of resource reference interchangeable to a consumer (an **ExtResource** `.tres`; a SubResource of the scene, resolved from its own internal-resources list via `SceneResourcesContext`; a SubResource of a `.tres` the scene pulled in). The WHOLE address is the resource identity — the processor cache key, the in-flight dedupe key, `useResource`'s LRU pin — while its `filePath` half is the only thing the **resource event bus**'s byte layer, a host `ResourceProvider` or a **Dependency hot-reload** ever sees, because only real files can be fetched. A FAILED address is reported under the address, so one can surface as a missing-resources row; the panel normalises to `filePath` before handing a host a **Resource upload** or its removal, that being the key the bytes live under. Consumers hold the address as an ordinary path (`ArrayMeshResource.materialPaths`, `MeshLibraryItem.meshPath`, `ExternalMaterialSlot`'s `path`), which keeps the third kind from being a category any CONSUMER has to know about; a producer minting addresses for a new resource type must still honour the id in its processor's `process()`, declared with `addressesSubResources`. Decision: ADR-0029.
+`res://file.tres::SubId` — Godot's own notation for a **SubResource** of some `.tres` OTHER than the previewed scene, and the one string that makes all three kinds of resource reference interchangeable to a consumer (an **ExtResource** `.tres`; a SubResource of the scene, resolved from its own internal-resources list through `SceneResourcesContext`; a SubResource of a `.tres` the scene pulled in). The WHOLE address is the resource identity — the processor cache key, the in-flight dedupe key, `useResource`'s LRU pin — while its `filePath` half is the only thing the **resource event bus**'s byte layer, a host `ResourceProvider` or a **Dependency hot-reload** ever sees, because only real files can be fetched. A FAILED address is reported under the address, so one can surface as a missing-resources row; the panel normalises to `filePath` before handing a host a **Resource upload** or its removal, that being the key the bytes live under. Consumers hold the address as an ordinary path (`ArrayMeshResource.materialPaths`, `MeshLibraryItem.meshPath`, `ExternalMaterialSlot`'s `path`), which keeps the third kind from being a category any CONSUMER has to know about; a producer minting addresses for a new resource type must still honour the id in its processor's `process()`, declared with `addressesSubResources`. Decision: ADR-0029.
 _Avoid_: "composite path"/"synthetic path" (it is Godot's grammar, not an invention); treating it as a filename (nothing may `fetch` one); a per-consumer resolver for the third kind.
 
 **ParsedResource** (`parser/parsedResource.ts`):
-The one parsed form every Godot resource serialization normalizes to — header type, ext/sub-resource tables, and the `[resource]` body as raw Godot-text value strings. Produced today from `.tres` text; a binary `.res` loader (#110) must produce the same shape, which is what lets a **Resource slice**'s decoder stay format-agnostic. Values stay raw strings at this layer — the slice's `decode.ts` owns their meaning.
+The one parsed form every Godot resource serialisation normalises to — header type, ext/sub-resource tables, and the `[resource]` body as raw Godot-text value strings. Produced today from `.tres` text; a binary `.res` loader (#110) must produce the same shape, which is what lets a **Resource slice**'s decoder stay format-agnostic. Values stay raw strings at this layer — the slice's `decode.ts` owns their meaning.
 _Avoid_: "ParsedTresFile" (the pre-rename name — it baked the text format into a shape binary files will share); decoding values at parse time.
 
 **UID reference**:
@@ -55,19 +55,19 @@ Godot 4's stable `uid://…` identifier; in this corpus every ExtResource pairs 
 _Avoid_: "id" (overloaded with the per-scene resource `id=`).
 
 **Lenient parser** (`TscnParser`):
-The recovering parser used for rendering — logs issues but emits whatever it can, preserving unknown Node types via the fallback.
+The recovering parser used for rendering — logs issues but emits whatever it can, preserving unknown Node types through the fallback.
 _Avoid_: "the parser" (ambiguous with strict).
 
 **Strict parser** (`StrictTscnParser`):
-The validating parser used only for linting — reports every syntax/format error as a `ParseError` with line/column. Since 2026-06 it is a thin adapter over the shared scanning loop via a **ParseObserver**.
+The validating parser used only for linting — reports every syntax/format error as a `ParseError` with line/column. Since 2026-06 it is a thin adapter over the shared scanning loop through a **ParseObserver**.
 _Avoid_: "validator" (reserve for property validators).
 
 **ParseObserver** (`parser/TscnParserCore.ts`):
-The optional hook seam (`onError` / `onSectionStart` / `onProperty`) on the single shared scanning loop. Lenient parsing passes no observer (byte-identical recovery behavior); strict parsing passes an observer that collects `ParseError`s, runs the heading checks, and dispatches property validators. One loop, two adapters.
+The optional hook seam (`onError` / `onSectionStart` / `onProperty`) on the single shared scanning loop. Lenient parsing passes no observer (byte-identical recovery behaviour); strict parsing passes an observer that collects `ParseError`s, runs the heading checks, and dispatches property validators. One loop, two adapters.
 _Avoid_: "callback API", "strict mode flag".
 
 **Value decoder** (`parser/valueParsers.ts`):
-The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps only the canonical `parseVector2` leaf scanner (via `vec2Or`); `parseVector2`/`parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`), which the slices call directly, share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and the throwing `parseColor` in `standardmaterial3d` stay in their slice, while Control's `custom_minimum_size` now reads through the shared `parseOptionalVector2`. The grammar (`FLOAT_PATTERN_SOURCE`) is shared; the absent/error contract may **fork** per slice — `floatOr`/`intOr` warn-then-fallback for concrete-default scalars, `parseOptionalFloat`/`parseOptionalVector2` return `undefined` for optional properties, and `vec2Or`/`parseColor` keep their slice-specific fallbacks.
+The lenient parser's shared primitives for reading a raw property string into a typed scalar/vector — `intOr`/`floatOr`/`boolOr`/`enumOr`/`vec2Or` (take a fallback, always return) and `parseOptionalInt` (returns `undefined` when unset). One contract: fall back **silently when absent**, **warn-then-fall-back when present but unparseable**. Wraps only the canonical `parseVector2` leaf scanner (through `vec2Or`); `parseVector2`/`parseVector3` (`parser/vectors.ts`) and the canonical `parseColor` (`utils/colorParser.ts`), which the slices call directly, share `FLOAT_PATTERN_SOURCE` — the one float regex accepting scientific notation (`1e-05`, which Godot emits) and rejecting malformed components outright; one-off structured literals (`Vector2i`, `Rect2`, `frame_coords`) and the throwing `parseColor` in `standardmaterial3d` stay in their slice, while Control's `custom_minimum_size` now reads through the shared `parseOptionalVector2`. The grammar (`FLOAT_PATTERN_SOURCE`) is shared; the absent/error contract may **fork** per slice — `floatOr`/`intOr` warn-then-fallback for concrete-default scalars, `parseOptionalFloat`/`parseOptionalVector2` return `undefined` for optional properties, and `vec2Or`/`parseColor` keep their slice-specific fallbacks.
 The renderer's grammar is FINITE by choice: `inf` / `-inf` / `inf_neg` / `nan` are legal TSCN literals, but a component that reaches three.js as `Infinity` renders NaN geometry, so the decoders warn-then-fall-back on one exactly as they do on a malformed value. The linter reads Godot's full tokenizer grammar instead, through `TSCN_FLOAT_PATTERN_SOURCE` (`godot/number.ts`, re-exported by `linter/validators/commonValidators.ts`), which is `FLOAT_PATTERN_SOURCE` plus those four spellings.
 _Avoid_: re-declaring per-node `intOr`/`floatOr` copies (the pattern this replaced); "validator" (that is the strict-linter path); reaching for `FLOAT_PATTERN_SOURCE` in a validator (it refuses literals Godot writes).
 
@@ -101,10 +101,10 @@ _Avoid_: gating lint on a clean parse (lint must see the broken text); rendering
 Existence checks (node names, NodePath targets) never assume visibility into an instanced sub-scene's internals: a reference that crosses an `instance=` boundary stays silent rather than false-positive. The linter reads the static text of one file — never the composed **Live scene tree**.
 _Avoid_: "fixing" the silence by resolving instance internals (the linter must stay file-local and React-free).
 
-### Code organization
+### Code organisation
 
 **Vertical slice**:
-All code for one Node type co-located in one folder — parser, linter, formatter, render component, and tests — the organizing principle the codebase is being unified toward.
+All code for one Node type co-located in one folder — parser, linter, formatter, render component, and tests — the organising principle the codebase is being unified toward.
 _Avoid_: "module" (reserve for the architecture sense), "feature folder".
 
 **Resource slice**:
@@ -146,7 +146,7 @@ The DOM analogue of NodeDispatcher — recursively walks a Control subtree and e
 _Avoid_: "UI renderer".
 
 **Viewport mode**:
-The single `'2D' | '3D'` display state of the center viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + 2D world canvas + **Control overlay**, in Godot's 2D-editor order); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
+The single `'2D' | '3D'` display state of the centre viewport — `3D` mounts the R3F canvas, `2D` mounts the pannable 2D stage (project-viewport frame + 2D world canvas + **Control overlay**, in Godot's 2D-editor order); chosen by an auto-default heuristic on the scene root type, overridable by the toolbar toggle.
 _Avoid_: "2D mode" alone (it is one of two values of one state).
 
 **Control overlay**:
@@ -170,7 +170,7 @@ The Godot Control property recording how a node is positioned — `0` free posit
 _Avoid_: treating anchors as the primary path; saying the renderer branches on `layout_mode` (it branches on the parent's `ParentLayoutKind`).
 
 **Anchor / offset**:
-Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded via the full LayoutPreset 0..15 table (`PRESET_ANCHORS`) to CSS absolute positioning; applied when the **parent imposes the `'free'` layout kind** (a top-level overlay, or a child of a plain Control/Panel/CanvasLayer rather than a layout container).
+Godot Control layout properties (`anchors_preset`, `anchor_*`, `offset_*`, `grow_*`) decoded through the full LayoutPreset 0..15 table (`PRESET_ANCHORS`) to CSS absolute positioning; applied when the **parent imposes the `'free'` layout kind** (a top-level overlay, or a child of a plain Control/Panel/CanvasLayer rather than a layout container).
 _Avoid_: "margin" (reserve for `MarginContainer` → CSS padding); gating this on the child's `layout_mode` value (the gate is the parent's `ParentLayoutKind`).
 
 **StyleBox**:
@@ -178,7 +178,7 @@ A Godot Control theme resource (`StyleBoxFlat` / `StyleBoxEmpty`) defining backg
 _Avoid_: "style".
 
 **Collision-shape resource**:
-A `[sub_resource]` carrying collision geometry — `BoxShape3D` (`size`), `ConvexPolygonShape3D` (`points`), `ConcavePolygonShape3D` (`data`); distinct from the **CollisionShape3D** Node that references one via a `shape` property.
+A `[sub_resource]` carrying collision geometry — `BoxShape3D` (`size`), `ConvexPolygonShape3D` (`points`), `ConcavePolygonShape3D` (`data`); distinct from the **CollisionShape3D** Node that references one through a `shape` property.
 _Avoid_: conflating the Node with the resource; "collision mesh".
 
 **Collision gizmo**:
@@ -207,14 +207,14 @@ _Avoid_: using it to describe intended behaviour. That was ADR-0004, superseded 
 
 **Transform-only group**:
 A node rendered as an invisible `<group>` that positions its children but draws nothing itself — the render intent for every non-visual type: physics bodies (`StaticBody3D`, `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D`/`PathFollow3D`, the `Node3D`/`Node2D` bases, and the fallback for unsupported types. No simulation, and no geometry of its own that it draws (see ADR-0005, ADR-0008). A **geometry contributor** is the one kind that *has* own geometry: it still draws nothing, because its solid is consumed by its **CSG root** instead (ADR-0027).
-_Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls); "placeholder" (the visible gray-box placeholder was retired in ADR-0008).
+_Avoid_: "physics body" implying simulation; "transform container" (collides with Godot's Container Controls); "placeholder" (the visible grey-box placeholder was retired in ADR-0008).
 
 **Render intent**:
 Which of the three declared outcomes (`NodeComponentRegistry.renderIntent`) a node type takes — `draws`, a *visible renderer*; `transform-only`, an invisible group that positions children and is finished; `pending`, parsed but not drawn yet, registering its base so `visible` and workspace placement survive. The badge and the sheet status read the declared intent, never the absence of a registration. "Renders nothing" is an explicit intent, not an unregistered accident; in-viewport text and collision shapes are opt-in toggles (`showLabels`, `showCollisions`) on the viewport-mode seam (ADR-0006, ADR-0008). Three invisible roles are **not** inert: the **AnimationPlayer** draws nothing itself but *drives* sibling objects, a transform-only group that is also an **animation driver** (ADR-0011); a **geometry contributor** draws nothing itself but supplies its solid to its **CSG root** (ADR-0027); and a **sub-viewport** draws nothing itself but *hosts* — scoping its canvas subtree to a **viewport surface** while its 3D subtree stays in the parent world (ADR-0030). All three are roles layered onto the second outcome, not a third outcome.
 _Avoid_: "placeholder", "not implemented" — an invisible node may be fully intended; "inert" for AnimationPlayer, a geometry contributor, or a sub-viewport.
 
 **Editor cursor**:
-Godot's `Cursor` — an orbit focus point plus the pitch, yaw and radius of the eye around it — and the thing every 3D navigation gesture actually edits. The camera transform is rebuilt from it rather than steered directly, which is why orbiting, panning, zooming and freelook compose without drift. Immutable: a gesture is `(cursor, deltas) -> cursor`.
+Godot's `Cursor` — an orbit focus point plus the pitch, yaw and radius of the eye around it — and the thing every 3D navigation gesture edits. The camera transform is rebuilt from it rather than steered directly, which is why orbiting, panning, zooming and freelook compose without drift. Immutable: a gesture is `(cursor, deltas) -> cursor`.
 _Avoid_: "camera state" (the camera is derived from the cursor, not the source of it); "orbit target" for the whole cursor (the target is one of its four fields).
 
 **Preview sun**:
@@ -222,7 +222,7 @@ The stand-in directional light this previewer supplies so a scene with no light 
 _Avoid_: "default light", "fill light" (both hide that it is a faithful reproduction of a specific Godot object that disappears under a specific condition).
 
 **Preview environment**:
-The stand-in **WorldEnvironment** this previewer supplies — Godot's editor preview environment: a procedural sky that is both the background and the scene's ambient light. Yields independently of the **Preview sun**: a scene containing any `WorldEnvironment` gets none, whatever that environment actually emits (ADR-0025).
+The stand-in **WorldEnvironment** this previewer supplies — Godot's editor preview environment: a procedural sky that is both the background and the scene's ambient light. Yields independently of the **Preview sun**: a scene containing any `WorldEnvironment` gets none, whatever that environment emits (ADR-0025).
 _Avoid_: "default environment", "skybox"; treating it as coupled to the **Preview sun** — the two yield separately, and a scene routinely has one and not the other.
 
 **Yield** (of preview lighting):
@@ -238,15 +238,15 @@ The async resource pipeline — a render component calls `useResource(path, type
 _Avoid_: "asset loader" (reserve `ResourceLoader` for the host implementation).
 
 **PackedScene instancing**:
-A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and composed into the host tree. A single-root `.tscn` is folded in via **Instance root merge**; a `.glb` (or any multi-root scene) is instead injected as children under a nested resources provider.
+A Node with `instance = ExtResource("scene_id")` whose referenced `.tscn`/`.glb` is loaded and composed into the host tree. A single-root `.tscn` is folded in through **Instance root merge**; a `.glb` (or any multi-root scene) is instead injected as children under a nested resources provider.
 _Avoid_: "include", "prefab".
 
-**Instance root merge** (`mergeInstanceRoot`, applied via `collapseLiveNode`):
+**Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
 The collapse of the redundant wrapper level for a single-root `.tscn` instance: the instance Node *becomes* the sub-scene's root — adopting the root's `type` and `children`, merging the root's parsed `properties` under the instance's own overrides (instance wins per-key, so the instance `transform` **replaces** the root's, matching Godot — not composed on top), while keeping the instance ref so the row still carries the 📦 badge and ⤢ open-standalone affordance. The collapse *decision* is the shared `collapseLiveNode` (in the **Live scene tree** module, wrapping `mergeInstanceRoot` over a `singleSceneCache` of the just-loaded sub-scene): the tree (`TreeNode`), viewport (`NodeDispatcher`), inspector (`useLiveNode` → `resolveLiveEntry`), and panels all call it rather than each re-deriving the resolve-instance→merge-or-keep sequence, so node paths stay consistent across every consumer (`collapseLiveNode(node) !== node` ⟺ a merge happened). Skipped for `.glb` synthetic-root instances (`GLBSceneRoot`) and any scene with multiple top-level nodes, which fall back to the nested-injection form.
 _Avoid_: "wrapper node", "prefab flattening"; "compose" for the transform (it is a replace); re-deriving the merge decision in a consumer instead of calling `collapseLiveNode`.
 
 **Sprite-frame composition** (`r3f/spriteFrame.ts`):
-The shared region_rect + hframes/vframes UV math for SpriteBase nodes — Godot computes a base_rect (region when enabled, else the full texture) and then subdivides it by the frame grid; the two compose. `composeFrameTexture` windows a texture clone's UVs to the current frame, `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per-slice (Sprite2D mirrors via mesh scale at 1 px = 1 unit; Sprite3D mirrors via UV negation and scales by `pixel_size`), as does the **wrap mode** (`SpriteWrapMode`, a required argument): an oversized `region_rect` is never clipped by Godot — neither the region nor the quad shrinks, the UVs simply leave the texture — so only the sampler decides the overrun, and the 2D canvas clamps to the edge texel where Sprite3D's material repeats.
+The shared region_rect + hframes/vframes UV math for SpriteBase nodes — Godot computes a base_rect (region when enabled, else the full texture) and then subdivides it by the frame grid; the two compose. `composeFrameTexture` windows a texture clone's UVs to the current frame, `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per-slice (Sprite2D mirrors through mesh scale at 1 px = 1 unit; Sprite3D mirrors through UV negation and scales by `pixel_size`), as does the **wrap mode** (`SpriteWrapMode`, a required argument): an oversized `region_rect` is never clipped by Godot — neither the region nor the quad shrinks, the UVs leave the texture — so only the sampler decides the overrun, and the 2D canvas clamps to the edge texel where Sprite3D's material repeats.
 _Avoid_: re-inlining region/frames math in a sprite slice (the pre-extraction hand-syncing caused the B12 parity divergence); defaulting the wrap mode (a default is how the 2D and 3D samplers silently diverge again); "clip"/"crop" for an oversized region — Godot does neither.
 
 **Synthetic render type**:
@@ -256,7 +256,7 @@ _Avoid_: "default node".
 ### Shell & editing
 
 **Source pane**:
-The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral and leave the browser only via a "Download .tscn" export; nothing is written back to disk. A browser reload resets silently, but an in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop/upload) of an *edited* buffer confirms before discarding (ADR-0020 as amended).
+The web previewer's editable `.tscn` text view — a left sibling of the preview shell, never inside it. Holds the single editable buffer, fed three ways (fixture-select, file upload, or direct paste/type), that is the source of truth for both the **Linter** (surfaced in the browser as gutter markers with a hover popover) and — gated on a clean **Lenient parser** result (**Hold-last-valid**) — the shell's rendered scene. Edits are ephemeral and leave the browser only through a "Download .tscn" export; nothing is written back to disk. A browser reload resets silently, but an in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop/upload) of an *edited* buffer confirms before discarding (ADR-0020 as amended).
 _Avoid_: "code editor" / "Monaco" / "CodeMirror" — it is a bare `<textarea>`, no editor library; conflating it with the **SceneTreeViewer** ("scene tree" UI panel) or with the VS Code extension's own real text editor.
 
 **Host (app)**:
@@ -264,7 +264,7 @@ An embedding application that mounts the shared preview shell over its own `Reso
 _Avoid_: bare "host" for VS Code's extension-host process; "frontend"/"app" bare.
 
 **Hold-last-valid** (web):
-The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-parsed buffer while mid-edit text is transiently broken — brokenness shows as gutter markers (the **Linter** reads the raw buffer, ungated), never as a blanked scene. Applies to the edit loop only; fixture loads and uploads forward ungated so a genuinely broken file surfaces its parse-error banner.
+The **Source pane**'s edit gate: the viewport keeps rendering the last cleanly-parsed buffer while mid-edit text is transiently broken — brokenness shows as gutter markers (the **Linter** reads the raw buffer, ungated), never as a blanked scene. Applies to the edit loop only; fixture loads and uploads forward ungated so a broken file surfaces its parse-error banner.
 _Avoid_: "debounce" for the gate (the debounce is timing; the gate is parse cleanliness); gating the linter (it must see the broken text).
 
 **Preview panel** (VS Code):
@@ -294,11 +294,11 @@ A built-in scene the previewer serves from its backend — the demo/test/showcas
 _Avoid_: "sample"/"template"; calling anything user-provided a fixture.
 
 **Fixture catalog**:
-The browsable, categorized manifest of every **Fixture** (generated; the optional vendored games corpus appends when present). All kinds stay browsable — unit and edge-case fixtures double as a node-coverage showcase. Deep links may reach unlisted sub-scenes, whose **Corpus root** derives from the path.
+The browsable, categorised manifest of every **Fixture** (generated; the optional vendored games corpus appends when present). All kinds stay browsable — unit and edge-case fixtures double as a node-coverage showcase. Deep links may reach unlisted sub-scenes, whose **Corpus root** derives from the path.
 _Avoid_: "scene library"; curating unit fixtures out of the public catalog.
 
 **Uploaded scene**:
-A user's `.tscn` opened as the active scene (the selector shows it as "(Uploaded: …)"). User uploads live in the frontend only — never sent to or stored on the backend; they reset on scene switch and leave the browser only via the Download export.
+A user's `.tscn` opened as the active scene (the selector shows it as "(Uploaded: …)"). User uploads live in the frontend only — never sent to or stored on the backend; they reset on scene switch and leave the browser only through the Download export.
 _Avoid_: "imported scene"; treating an upload as a **Fixture** (fixtures are backend-served; uploads must never be).
 
 **Resource upload**:
@@ -320,7 +320,7 @@ One named Godot animation — a `[sub_resource type="Animation"]` carrying `leng
 _Avoid_: "AnimationClip" for the parsed form (reserve `THREE.AnimationClip` for the three.js runtime object); "clip" bare.
 
 **Animation library**:
-The `[sub_resource type="AnimationLibrary"]` whose `_data` maps clip names → **GodotAnimation**s; referenced from an **AnimationPlayer** via `libraries/<name> = SubResource(...)`, where the empty-name default library is written `libraries/`.
+The `[sub_resource type="AnimationLibrary"]` whose `_data` maps clip names → **GodotAnimation**s; referenced from an **AnimationPlayer** through `libraries/<name> = SubResource(...)`, where the empty-name default library is written `libraries/`.
 _Avoid_: "library" bare; the legacy Godot-3 `anims/<name>` inline form (absent from this corpus).
 
 **Track**:
@@ -328,11 +328,11 @@ One channel of a **GodotAnimation** targeting `NodePath("Node:property")` with o
 _Avoid_: "channel".
 
 **AnimatedValue push registry**:
-The ref-backed registry through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target component — the value-push lane for everything the `THREE.AnimationMixer` can't bind (it drives transforms only). Keyed by `${nodePath}:${property}` (one node animates several properties at once); the target overrides its authored value while a value is pushed and reverts on release. Discrete `frame` is sampled stepped; continuous `modulate`/`size` are linearly interpolated (ADR-0016, ADR-0017). Generalises the `frame`-only **AnimatedFrame** form: `AnimatedFrameContext` was renamed to `AnimatedValueContext` (`r3f/contexts/AnimatedValueContext.tsx`) when the Decal value-track feature landed (ADR-0017).
+The ref-backed registry through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target component — the value-push lane for everything the `THREE.AnimationMixer` cannot bind (it drives transforms only). Keyed by `${nodePath}:${property}` (one node animates several properties at once); the target overrides its authored value while a value is pushed and reverts on release. Discrete `frame` is sampled stepped; continuous `modulate`/`size` are linearly interpolated (ADR-0016, ADR-0017). Generalises the `frame`-only **AnimatedFrame** form: `AnimatedFrameContext` was renamed to `AnimatedValueContext` (`r3f/contexts/AnimatedValueContext.tsx`) when the Decal value-track feature landed (ADR-0017).
 _Avoid_: "AnimatedFrame registry" (the generalised name is **AnimatedValue**); "mixer"/"central value context" for this path (it is a narrow per-target push, not a tree-wide per-frame recompute — ADR-0011).
 
 **Animation transport**:
-The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, **AnimatedSprite2D**, or **AnimationTree driver** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame via `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
+The play/pause/scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the **AnimationPlayer**, **GLB animation driver**, **AnimatedSprite2D**, or **AnimationTree driver** **currently selected in the scene tree** — selection-driven, one driver at a time, mirroring the Godot editor's Animation panel. Drives the selected node's `THREE.AnimationMixer` (or, for **AnimatedSprite2D**, advances its displayed frame through `frameAtTime` — no mixer; ADR-0015); starts STOPPED (authored pose/frame preserved), play is user-initiated. The tab is shown only while a driver is selected; deselecting (or selecting a different node) stops playback and restores the authored pose.
 _Avoid_: "scene-level transport" (it follows selection, not the whole scene); "timeline" / "player controls" for the whole transport (reserve "timeline"/"scrubber" for the seek widget).
 
 **RESET animation**:
@@ -352,11 +352,11 @@ A **GLBSceneRoot** acting as an **animation driver**. Godot's glTF importer expo
 _Avoid_: "GodotAnimation" for these clips (they are ready-made glTF clips — see **GLB-embedded clip**); treating the synthesised `GLBAnimationPlayer` row as a real **AnimationPlayer** Node, or as the thing that renders (it is a tree-only selection target — the GLBSceneRoot component does both the driving and the rendering); saying the GLB *root* row activates the transport (its synthesised `GLBAnimationPlayer` child does).
 
 **AnimationTree driver**:
-An **AnimationTree** acting as a transport driver (ADR-0019). It owns no clips — it resolves its `tree_root` into an `AnimNode` graph, evaluates that graph at the *authored* `parameters/*` state into a **blend program** (`{clip, weight, timeScale}[]`), resolves its `anim_player` `NodePath` to a driver in the **AnimationDriverRegistry**, and drives that driver's object with weighted actions. Processes only when `active = true` (Godot parity — its game script flips `active` at runtime; a static previewer evaluates the saved state) AND it is the selected node. Has **no clip picker** (Godot plays it from parameter state), so it registers a single read-only transport entry (the dominant clip). The full runtime blend is approximated: per-bone Blend2 `filter`s aren't modelled and a StateMachine's current state is the authored `current_state` else the `Start`-transition target.
-_Avoid_: calling it an **AnimationPlayer** (it drives one, via `anim_player`); implying it has a selectable clip list.
+An **AnimationTree** acting as a transport driver (ADR-0019). It owns no clips — it resolves its `tree_root` into an `AnimNode` graph, evaluates that graph at the *authored* `parameters/*` state into a **blend program** (`{clip, weight, timeScale}[]`), resolves its `anim_player` `NodePath` to a driver in the **AnimationDriverRegistry**, and drives that driver's object with weighted actions. Processes only when `active = true` (Godot parity — its game script flips `active` at runtime; a static previewer evaluates the saved state) AND it is the selected node. Has **no clip picker** (Godot plays it from parameter state), so it registers a single read-only transport entry (the dominant clip). The full runtime blend is approximated: per-bone Blend2 `filter`s are not modelled and a StateMachine's current state is the authored `current_state` else the `Start`-transition target.
+_Avoid_: calling it an **AnimationPlayer** (it drives one, through `anim_player`); implying it has a selectable clip list.
 
 **AnimationDriverRegistry**:
-The `nodePath → { object, clips }` lookup (`AnimationDriverContext`) that an **AnimationPlayer** or **GLB animation driver** publishes into whenever its clips are loaded — *availability*, decoupled from the selection-driven transport. The **AnimationTree driver** consumes it to find the object to root its blended mixer on and the clips to play, unifying the two clip sources behind one path lookup. Two contexts: a STABLE register function (so a publishing driver's effect doesn't re-fire) and a REACTIVE drivers map (so a consumer re-renders when an async-loaded driver appears).
+The `nodePath → { object, clips }` lookup (`AnimationDriverContext`) that an **AnimationPlayer** or **GLB animation driver** publishes into whenever its clips are loaded — *availability*, decoupled from the selection-driven transport. The **AnimationTree driver** consumes it to find the object to root its blended mixer on and the clips to play, unifying the two clip sources behind one path lookup. Two contexts: a STABLE register function (so a publishing driver's effect does not re-fire) and a REACTIVE drivers map (so a consumer re-renders when an async-loaded driver appears).
 _Avoid_: conflating it with the **Animation transport** (the registry is about which driver owns which clips; the transport is about play/pause for the selected one).
 
 **Playback step** (`r3f/animation/`):
@@ -373,17 +373,17 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 - A **Node** references **ExtResource**s and **SubResource**s by id; the **resource event bus** resolves ExtResources to files. A `.tres` the scene reached may itself reference its OWN SubResources, which the bus resolves under a **Sub-resource path** — fetching the owning file, then building the named body out of it (ADR-0029).
 - A **CollisionShape3D** Node references one **collision-shape resource**; the **collision gizmo** reads the latter through the former.
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
-- A unified **vertical slice** exposes its behavior through three **slice entry points**, one per registry domain.
+- A unified **vertical slice** exposes its behaviour through three **slice entry points**, one per registry domain.
 - **Label3D** (3D, billboarded text in-canvas) is a different subsystem from **Label** / **RichTextLabel** (2D DOM text in the **Control overlay**).
-- An **AnimationPlayer** references one **Animation library** via `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
-- An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found via the **AnimationDriverRegistry** (ADR-0019).
+- An **AnimationPlayer** references one **Animation library** through `libraries/`; the library's **GodotAnimation**s carry **Track**s that the **Animation transport** plays by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
+- An **AnimationTree driver** owns no clips: it evaluates its `tree_root` at the authored `parameters/*` into a **blend program** and drives the **AnimationPlayer** or **GLB animation driver** its `anim_player` resolves to, found through the **AnimationDriverRegistry** (ADR-0019).
 - A **sub-viewport** publishes its render target into the **ViewportTextureRegistry**; a **viewport surface** or a `ViewportTexture` consumer resolves it back by node path. The parent's **NodeDispatcher** and **ControlDispatcher** both stop at the boundary, so the subtree is dispatched exactly once — by its surface (ADR-0030).
-- Both **Host (app)**s mount the same preview shell; what differs is the resource-loading adapter and how source text arrives — **Save-driven refresh** from disk (VS Code) vs the live-typed **Source pane** buffer under **Hold-last-valid** (web). **Progressive fill-in** is shared.
+- Both **Host (app)**s mount the same preview shell; what differs is the resource-loading adapter and how source text arrives — **Save-driven refresh** from disk (VS Code) versus the live-typed **Source pane** buffer under **Hold-last-valid** (web). **Progressive fill-in** is shared.
 
 ## Example dialogue
 
 > **Dev:** "When `main.tscn` loads — its root is a Node3D with a Hallway plus five CanvasLayer UI scenes — which **viewport mode** do we default to?"
-> **Architect:** "3D, because the root is spatial. The five **Control overlay** subtrees don't render in 3D mode — same as Godot's own 3D editor viewport — but we surface a 'contains 2D UI' hint so the user can flip the toggle."
+> **Architect:** "3D, because the root is spatial. The five **Control overlay** subtrees do not render in 3D mode — same as Godot's own 3D editor viewport — but we surface a 'contains 2D UI' hint so the user can flip the toggle."
 > **Dev:** "And a `StaticBody3D` with a `CollisionShape3D` child?"
 > **Architect:** "The body is a **transform-only group**; the CollisionShape3D renders nothing unless `showCollisions` is on, in which case its **collision gizmo** draws the **collision-shape resource** as a wireframe."
 
@@ -392,7 +392,7 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips — it
 - "Shape" meant both the CollisionShape3D Node and its collision-shape resource — resolved: the Node holds a `shape` reference, the resource carries the geometry.
 - "Transform container" collided with Godot's Container Controls (VBoxContainer, …) — resolved: physics bodies are **transform-only groups**; "Container" is reserved for the 2D layout Controls.
 - "Registry" was used for three distinct singletons — resolved: **NodeRegistry** (parse), **NodeComponentRegistry** (3D render), **ControlComponentRegistry** (2D render); their multiplicity is the mechanism that keeps the linter React-free, not duplication.
-- `uid://` vs the per-scene `id=` both called "id" — resolved: **UID reference** is the global `uid://`, `id=` is the per-file resource handle.
+- `uid://` versus the per-scene `id=` both called "id" — resolved: **UID reference** is the global `uid://`, `id=` is the per-file resource handle.
 - "AnimationClip" meant both the parsed Godot animation and the three.js runtime object — resolved: parsed = **GodotAnimation**, runtime = `THREE.AnimationClip` (always qualified).
 - "GLB AnimationPlayer" was an *avoided* coinage when a GLB instance exposed no AnimationPlayer node (the **GLB animation driver** bound to the GLBSceneRoot root row) — resolved: GLB hierarchy parity now synthesises a tree-only `GLBAnimationPlayer` row (Godot exposes glTF clips on an in-hierarchy AnimationPlayer), and *that* row — not the GLB root — activates the **Animation transport** (ADR-0014).
 - "AnimatedFrame" push registry named only the `frame` lane it first carried — resolved: the value-push path is the **AnimatedValue push registry**, keyed by `${nodePath}:${property}`, carrying any non-transform value (stepped `frame`, interpolated `modulate`/`size`); "AnimatedFrame" is retired to the historical `frame`-only form (ADR-0016, ADR-0017).

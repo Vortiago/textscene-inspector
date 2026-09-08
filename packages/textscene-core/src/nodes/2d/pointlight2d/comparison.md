@@ -297,7 +297,7 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 `(0, 0)`, and `blend_mode` to `0` (ADD) for both an absent value and an out-of-range
 one. `color` also falls back to opaque white `(1, 1, 1, 1)`, but silently:
 `colorOr` skips the warn-then-fallback of the other `*Or` helpers, so a malformed
-color leaves no trace in the log. `texture` is stored as whatever string is
+colour leaves no trace in the log. `texture` is stored as whatever string is
 present, with no resource-reference format check.
 
 ## Known limitations

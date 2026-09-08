@@ -22,7 +22,7 @@ NavigationLink2D describes a navigation-mesh shortcut between two points (a zipl
 | `start_position` | `Vector2(0, 0)` | link's local start point — no runtime visual |
 | `end_position` | `Vector2(100, 50)` | link's local end point — no runtime visual |
 | `enter_cost` | `0.5` | added to path distance on entering the link — no runtime visual |
-| `travel_cost` | `2.0` | multiplies traveled distance along the link — no runtime visual |
+| `travel_cost` | `2.0` | multiplies travelled distance along the link — no runtime visual |
 
 ## Divergences
 
@@ -57,7 +57,7 @@ surface (`position`/`rotation`/`scale`/`skew`/…) and has no branch for
 `enabled`, `bidirectional`, `navigation_layers`, `start_position`,
 `end_position`, `enter_cost`, or `travel_cost`. So a malformed value on any of
 them — `enter_cost = banana`, `navigation_layers = nonsense` — produces no
-lenient-parser warning and no substitution; the key is simply never read,
+lenient-parser warning and no substitution; the key is never read,
 where a bad Node2D property instead warns and falls back to a documented
 default. The strict parser still catches it, because `StrictTscnParser` scans
 every `key = value` line by text and checks `validatorRegistry` independently

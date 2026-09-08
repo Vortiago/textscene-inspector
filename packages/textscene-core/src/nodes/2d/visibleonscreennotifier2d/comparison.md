@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # VisibleOnScreenNotifier2D
 
-VisibleOnScreenNotifier2D reports whether its `rect` is visible on screen via
+VisibleOnScreenNotifier2D reports whether its `rect` is visible on screen through
 `screen_entered`/`screen_exited` signals and draws nothing else at runtime, so the
 previewer renders it as a transform-only group (ADR-0008): its children still show,
 and that absence is the whole story. `rect` itself is an editor-only gizmo — Godot

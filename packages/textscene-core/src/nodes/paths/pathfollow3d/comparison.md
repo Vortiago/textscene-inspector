@@ -69,8 +69,8 @@ to true, warning and falling back to those defaults only when the property is
 present but unparseable. rotation_mode uses `intOr` rather than an enum-aware
 reader: strict rejects any value outside 0-4, but the lenient parser accepts
 any parseable int (`rotation_mode="99"` survives untouched) and falls back to
-`XYZ` (3) only when the value isn't a number at all. use_model_front skips the
-shared bool reader entirely: it's a raw `=== 'true'` comparison, so any
+`XYZ` (3) only when the value is not a number at all. use_model_front skips the
+shared bool reader entirely: it is a raw `=== 'true'` comparison, so any
 non-"true" string (including `"1"` or `"TRUE"`) silently becomes false with no
 warning, unlike the sibling boolean flags. progress and progress_ratio stay
 optional: left undefined when absent, but warned-and-defaulted to 0 when

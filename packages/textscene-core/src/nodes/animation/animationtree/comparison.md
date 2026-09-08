@@ -10,7 +10,7 @@ renders_as: no geometry of its own; a working blend-tree driver
 # AnimationTree
 
 AnimationTree drives another node's clips through a blend tree and draws no
-geometry of its own. The previewer really evaluates it: selecting the node and
+geometry of its own. The previewer evaluates it: selecting the node and
 playing runs the blend program, so two clips from the `AnimationPlayer` it
 points at are mixed and applied at once (ADR-0019).
 

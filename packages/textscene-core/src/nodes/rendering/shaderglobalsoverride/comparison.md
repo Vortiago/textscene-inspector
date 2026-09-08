@@ -17,7 +17,7 @@ Overrides the project's global shader parameters for as long as it stays in the 
 | Property | Value | Effect |
 | --- | --- | --- |
 | `params/fog_enabled` | `true` | overrides a bool-typed global shader parameter |
-| `params/tint` | `Color(1, 0, 0, 1)` | overrides a Color-typed global shader parameter |
+| `params/tint` | `Color(1, 0, 0, 1)` | overrides a Colour-typed global shader parameter |
 
 ## Divergences
 

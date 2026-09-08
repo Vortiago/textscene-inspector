@@ -32,7 +32,7 @@ During a live OpenXR session this composites `layer_viewport`'s SubViewport onto
 | `swapchain_state_blue_swizzle` | `1` (Green) | blue channel swizzle |
 | `swapchain_state_alpha_swizzle` | `2` (Blue) | alpha channel swizzle |
 | `swapchain_state_max_anisotropy` | `8.0` | swapchain anisotropic filtering |
-| `swapchain_state_border_color` | `Color(0, 0, 0, 1)` | border color for CLAMP_TO_BORDER wrap |
+| `swapchain_state_border_color` | `Color(0, 0, 0, 1)` | border colour for CLAMP_TO_BORDER wrap |
 | `radius` | `3.0` | sphere radius |
 | `central_horizontal_angle` | `3.14159` | slice width, in radians |
 | `upper_vertical_angle` | `1.0` | slice height above centre, in radians |

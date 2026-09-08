@@ -26,7 +26,7 @@ grey frame.
 | `monitor_neighbors` | `true` | physics config; not drawn |
 
 The child `CollisionShape2D` (a `CircleShape2D`) is a selection-gated gizmo and
-does not appear in a plain capture. The child `ColorRect` (color
+does not appear in a plain capture. The child `ColorRect` (colour
 `Color(1, 0.4, 0.4, 1)`) carries no size, so its rect is empty and it too draws
 nothing.
 
@@ -68,8 +68,8 @@ Strict parsing format-checks these `Area2D` properties, plus 5 inherited from Co
 <!-- lint:end -->
 
 The lenient parser only reads `monitoring`, `monitorable`, `collision_layer`, and
-`collision_mask`, via `parseOptionalBool`/`parseOptionalInt`: an absent or
-unparseable value returns `undefined` and the property is simply omitted from
+`collision_mask`, through `parseOptionalBool`/`parseOptionalInt`: an absent or
+unparseable value returns `undefined` and the property is omitted from
 the parsed node, with no warning. Every other Area2D property the strict
 validators cover (`gravity`, the damp settings, `priority`,
 `audio_bus_name`, `disable_mode`) is never read by the lenient parser at all,

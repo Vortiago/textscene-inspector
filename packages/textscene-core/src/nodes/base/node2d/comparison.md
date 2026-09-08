@@ -61,10 +61,10 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 warns and falls back not to identity but to the discrete
 `position`/`rotation`/`scale`/`skew` path, so those properties still take
 effect even when `transform` fails to parse. Absent or unparseable
-`position`/`scale` fall back to `(0, 0)`/`(1, 1)` via `vec2Or`, and
-`rotation`/`skew` fall back to `0` via `floatOr`, each warning first if
+`position`/`scale` fall back to `(0, 0)`/`(1, 1)` through `vec2Or`, and
+`rotation`/`skew` fall back to `0` through `floatOr`, each warning first if
 present but invalid. `z_index` falls back to `0` the same way. `z_as_relative`
-and `y_sort_enabled` skip that contract entirely, resolving via plain string
+and `y_sort_enabled` skip that contract entirely, resolving through plain string
 equality (`!== 'false'` and `=== 'true'` respectively) with no warning for a
 malformed value, and default to `true` and `false` when absent. The six
 `global_*` properties validated above are never read by the lenient parser at

@@ -48,5 +48,5 @@ Strict parsing format-checks these `OpenXRRenderModelManager` properties, plus 1
 The lenient parser reads OpenXRRenderModelManager through `parseNode3D`, so a malformed
 `tracker` (a bare word instead of an enum index) or `make_local_to_pose` (an unquoted bare
 word) is kept as opaque, unparsed text with no substitution — there is no managed render
-model to fall back to either. Strict parsing is where these are actually read, and there a
+model to fall back to either. Strict parsing is where these are read, and there a
 bad value is an error or warning, never a lenient default.

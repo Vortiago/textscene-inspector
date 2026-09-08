@@ -58,7 +58,7 @@ none of these nine keys. So an unquoted `action` or an out-of-range
 `visibility_mode` has no fallback value to substitute — the lenient parse
 carries the raw string through untouched and it never reaches a render, since
 nothing downstream reads it yet. `action` itself accepts either the plain
-`"…"` quoted string Godot actually saves (`get_action` returns `String`) or
+`"…"` quoted string Godot saves (`get_action` returns `String`) or
 the `&"…"` StringName literal, because the variant text parser reads both
 forms. `visibility_mode` beyond `0`-`1` is only a WARNING (ADR-0032): the
 `PROPERTY_HINT_ENUM` at touch_screen_button.cpp:442 states the bound but

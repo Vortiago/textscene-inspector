@@ -10,7 +10,7 @@ renders_as: nothing (a transform-only group)
 
 # XROrigin3D
 
-Maps the real-world tracking-space center into the game world; every XRCamera3D,
+Maps the real-world tracking-space centre into the game world; every XRCamera3D,
 XRController3D and XRAnchor3D should sit under it. It draws nothing itself, so the
 previewer renders it as a transform-only group (ADR-0008): its children still
 show, and that absence is the whole story.

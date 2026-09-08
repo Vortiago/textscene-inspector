@@ -17,7 +17,7 @@ Godot draws a particle cloud from this emitter; the previewer does not yet, so i
 | --- | --- | --- |
 | `emitting` | `true` | the emitter is active |
 | `amount` | `64` | up to 64 particles fill one emission cycle |
-| `amount_ratio` | `0.8` | only 80% of `amount` are actually emitted |
+| `amount_ratio` | `0.8` | only 80% of `amount` are emitted |
 | `lifetime` | `2.0` | each particle lives 2 s before recycling |
 | `one_shot` | `false` | the emitter loops continuously rather than firing once |
 | `preprocess` | `1.0` | the sim runs 1 s ahead before the first frame |
@@ -25,7 +25,7 @@ Godot draws a particle cloud from this emitter; the previewer does not yet, so i
 | `speed_scale` | `1.0` | simulation runs at normal speed |
 | `explosiveness` | `0.2` | a slight gap between emission bursts |
 | `randomness` | `0.1` | a little variance in per-particle lifetime |
-| `use_fixed_seed` | `true` | the seed below is actually used |
+| `use_fixed_seed` | `true` | the seed below is used |
 | `seed` | `4242` | the run is reproducible across replays |
 | `fixed_fps` | `30` | the sim steps at a fixed 30 FPS |
 | `interpolate` | `true` | inter-frame motion is smoothed |

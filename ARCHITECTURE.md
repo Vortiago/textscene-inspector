@@ -159,7 +159,7 @@ entry points: `index.ts` (parser/formatter → `NodeRegistry`),
 `index.linter.ts` (validators + rules → linter registries), and
 `index.r3f.ts` (render component → `nodeComponentRegistry`). The
 `r3f/nodes/index.ts` barrel imports each slice's `index.r3f` for its
-side effect. Unknown types render as `<GenericNodeFallback>` (a labeled
+side effect. Unknown types render as `<GenericNodeFallback>` (a labelled
 an invisible group that applies the transform and draws nothing, per ADR-0008) from `r3f/internal/`. Not every slice carries every
 file: `propertyFormatter.ts` is present only for types with non-default
 Inspector formatting, and linter entry points exist only for types with
@@ -176,8 +176,8 @@ per-type folders because each carries real per-type lint rules. See
 Two parsers serve different use cases, but they share ONE scanning loop:
 `packages/textscene-core/src/parser/TscnParserCore.ts`. The core loop
 takes an optional `ParseObserver` (`onError` / `onSectionStart` /
-`onProperty` hooks) — strict behavior is an observer adapter, lenient
-behavior is the bare loop:
+`onProperty` hooks) — strict behaviour is an observer adapter, lenient
+behaviour is the bare loop:
 
 - **`packages/textscene-core/src/parser/TscnParser.ts`** — lenient
   parser used by the renderer. Runs the core loop with NO observer:
@@ -190,7 +190,7 @@ behavior is the bare loop:
   runs `validatorRegistry` property validators.
 
 The observer is purely additive — it never changes what the lenient
-loop parses or recovers, so renderer behavior is identical with or
+loop parses or recovers, so renderer behaviour is identical with or
 without it. `TscnParserCore` stays three.js-free, preserving the
 React-free linter boundary (ADR-0001).
 
@@ -206,7 +206,7 @@ agreement.
 The lenient parser uses `NodeRegistry` to convert raw TSCN body
 properties (snake_case strings) into the strongly-typed shape declared
 by each node type's `parser.ts`. Each node-type's `index.ts` registers
-its parser + property formatter on module load via side-effect
+its parser + property formatter on module load through side-effect
 imports declared in `parser/TscnParser.ts`.
 
 ### Godot → three.js orientation conversions
@@ -222,7 +222,7 @@ decoders, which stay faithful readers of what the file says:
   converted per consumer, never by flipping the texture:
   `resources/meshes/arraymesh/build.ts` (mesh UV attribute),
   `resources/tileset/tileGeometry.ts` (`pxRectToUv`) and `r3f/spriteFrame.ts`
-  (region/frame windowing via texture offset+repeat). The shapes differ enough
+  (region/frame windowing through texture offset+repeat). The shapes differ enough
   that the shared part is only the `1 -`; there is deliberately no helper.
   The material UV transform (`uv1_scale`/`uv1_offset`) does **not** convert —
   see the `uv1 V-anchoring` note in the StandardMaterial3D comparison sheet
@@ -244,7 +244,7 @@ paints nothing on the canvas: it is multiplied into every lit CanvasItem
 beneath it. The shader captures each item's albedo BEFORE the canvas tint and
 folds it into every light term, which collapses the whole pass to
 
-    color.rgb = albedo × S
+    colour.rgb = albedo × S
 
 where `S` starts at the CanvasModulate and each light applies one blend to it
 (`+= light·a` for ADD, `-= light·a` for SUB, `mix(S, light, a)` for MIX). `S`
@@ -316,7 +316,7 @@ resulting numbers.
 Every resource type is a **Resource slice** (ADR-0031, CONTEXT.md):
 `resources/<category>/<type>/` with a THREE-free `index.ts` that registers the
 slice's claims (TSCN type names, extensions, bus tag, failure label) into
-`sliceRegistration.ts`'s registry via the `sliceRegistrations.ts` barrel.
+`sliceRegistration.ts`'s registry through the `sliceRegistrations.ts` barrel.
 Routing derives from those claims — nothing sniffs a type name by substring.
 Godot-text slices carry a pure `decode.ts` (a **ParsedResource** section → typed
 Data) and, only where THREE construction exists, a `build.ts`; foreign-format
@@ -334,7 +334,7 @@ do the async I/O underneath — see the note below.)
 
 1. **`ResourceProvider`** (app layer): the host's file access —
    `WebResourceProvider` (HTTP `fetch`) or `VSCodeResourceProvider` (the
-   extension's `res://` bridge, CSP-honoring). `loadResource(path)` returns
+   extension's `res://` bridge, CSP-honouring). `loadResource(path)` returns
    `string | ArrayBuffer | null` (async).
 2. **`FileEventBus`** — type-agnostic raw bytes: `request(path) →`
    `loaded(path, bytes) | failed(path, err)`. Calls the provider, caches bytes,
@@ -345,7 +345,7 @@ do the async I/O underneath — see the note below.)
    defaults" instead of a **Missing resource**.
 3. **Per-type processors** (`createResourceProcessor`): one
    cache + in-flight + emit machine per type. On raw bytes it runs `process()`
-   (async), caches the result (**failures cached as `null`** so they don't
+   (async), caches the result (**failures cached as `null`** so they do not
    retry), and emits on the… (One documented edge: a path that **no**
    processor's `shouldProcess` claims stays pending forever — by design,
    since sibling processors share one `FileEventBus`; pinned in
@@ -376,7 +376,7 @@ do the async I/O underneath — see the note below.)
    suspends**; it returns `{ value, status, error? }` with
    `status ∈ 'pending' | 'loaded' | 'missing' | 'error'`. On mount it does a
    synchronous cache check, then **subscribes** to the bus and fires `request()`
-   *after* subscribing (so a synchronous cache-hit emit isn't missed). Object3D
+   *after* subscribing (so a synchronous cache-hit emit is not missed). Object3D
    values (`GLBMesh`) are cloned per consumer (three.js single-parent rule,
    CLAUDE.md). Components branch on `status` and render placeholders for missing
    resources — the subtree never suspends.
@@ -406,7 +406,7 @@ processors declare it today. So the third kind of reference is invisible to any
 resource type must honour the id in its own `process()`. The
 `resources/subResourcePath.ts` grammar is the only place `::` is written.
 
-**Late arrival — why it's events, not a one-shot promise.** When a load fails the
+**Late arrival — why it is events, not a one-shot promise.** When a load fails the
 hook flips to `missing` and reports the path to `MissingResourcesContext`, which
 lists it in the Inspector's **Resources** tab. **The hook keeps its subscription
 while `missing`.** When the user supplies the file the host calls
@@ -461,7 +461,7 @@ Three parallel registries:
 - `controlComponentRegistry` (`r3f/controls/ControlComponentRegistry.ts`):
   Control-type DOM component. Used by `ControlDispatcher` (ADR-0003).
 
-Each node type registers itself in both registries via side-effect
+Each node type registers itself in both registries through side-effect
 imports — `parser/TscnParser.ts` and `r3f/index.ts` import every node
 type's `index.ts` / `nodes/index.ts` for the registration.
 
@@ -479,7 +479,7 @@ key for log correlation and (future) multi-panel coordination.
 / `returnToFreeView` actions. The `<NodeDetailsPanel>` renders a "Use
 This Camera" / "Reset Camera" button when the selected node is a
 Camera3D. The `<TscnCanvas>` houses an `ActiveCameraSwitcher` that
-swaps the R3F active camera via `useThree(state => state.set)` based on
+swaps the R3F active camera through `useThree(state => state.set)` based on
 the `userData.tscnPath` tag the Camera3D component writes to its
 three.js camera.
 
@@ -499,7 +499,7 @@ breaking the "each component renders itself" invariant (ADR-0011): an
   `..`); `THREE.PropertyBinding` resolves each target by name through the
   dispatcher's unnamed pickable wrappers (ADR-0011).
 - **Non-transform tracks** (a discrete `Sprite2D:frame`, continuous
-  `Decal:modulate`/`Decal:size`) can't go through the mixer, so the player
+  `Decal:modulate`/`Decal:size`) cannot go through the mixer, so the player
   samples the live mixer playhead and pushes values through the
   **AnimatedValue push registry** (`r3f/contexts/AnimatedValueContext.tsx`) —
   a ref-backed registry keyed by `${nodePath}:${property}` that the target
@@ -515,10 +515,10 @@ driver, unified behind the same transport and `usePlaybackLoop`:
 - **`GLBSceneRoot`** acting as a **GLB animation driver** (ADR-0014): a GLB's
   own **GLB-embedded clip**s (ready-made `THREE.AnimationClip`s straight from
   the glTF loader — never parsed as a GodotAnimation) surface on a
-  synthesized, tree-only `GLBAnimationPlayer` row; selecting that row runs a
+  synthesised, tree-only `GLBAnimationPlayer` row; selecting that row runs a
   mixer rooted on the GLB object itself (no `root_node`).
 - **`AnimatedSprite2D`** (ADR-0015) — no mixer; the transport advances a
-  displayed frame directly via `frameAtTime`.
+  displayed frame directly through `frameAtTime`.
 - **`AnimationTree`** (ADR-0019) owns no clips itself: it resolves its
   `tree_root` `AnimNode` graph at the authored `parameters/*` state into a
   **blend program** (`{clip, weight, timeScale}[]`), looks up the driver its
@@ -591,13 +591,13 @@ expose, so this lives entirely in the web app's own layer, never touching
 `TscnPreviewShell`.
 
 The web app also surfaces a missing-resource count badge in the toolbar:
-`<Toolbar>` is rendered through the shell's `toolbar` prop, i.e. as a
+`<Toolbar>` is rendered through the shell's `toolbar` prop, that is, as a
 descendant of the shell's own `<MissingResourcesProvider>`, so calling
 `useMissingResources()` directly inside it reads the exact same live
 `missingPaths` set the Resources tab's `<MissingResourcesPanel>`
 aggregates — no new plumbing. A loading overlay covers the viewport while
 a fixture's `fetch()` is in flight. `?fixture=` is now written back to the
-URL via `history.replaceState` on every scene switch (never `pushState`),
+URL through `history.replaceState` on every scene switch (never `pushState`),
 so reloading or sharing the URL reopens the same scene. The app root
 accepts a dropped `.tscn` (with a drop-zone hint while dragging), and the
 toolbar's file input accepts multiple files at once; a shared
@@ -615,7 +615,7 @@ Spike-validated stack:
 - three 0.184, @types/three 0.184
 - Vitest 4.1, happy-dom 20, @vitejs/plugin-react 5 (workspace is on Vite 6);
   `jsdom` also sits in the catalog as a devDependency but no vitest config
-  actually selects it as a test `environment` — every DOM-needing project uses
+  selects it as a test `environment` — every DOM-needing project uses
   happy-dom, and node-only projects (CLI linter, VS Code extension host) use
   `environment: 'node'`.
 - TypeScript 6.0.3
@@ -641,9 +641,9 @@ than `main + 200 KB gzipped`". History:
 
 - `main` baseline: 1,429,646 B raw / **247,543 B gzipped**
 - WI-R3F-6 (iife, no code-splitting): 3,691,702 B raw / **638,980 B gzipped** — +382 KB gz, **+182 KB over budget**
-- WI-R3F-18 (ESM + splitting + React.lazy panels): initial-paint static-import closure is 1,357,273 B raw / 390,322 B gzipped — +143 KB gz vs main, 57 KB under the +200 KB budget ✅
+- WI-R3F-18 (ESM + splitting + React.lazy panels): initial-paint static-import closure is 1,357,273 B raw / 390,322 B gzipped — +143 KB gz versus main, 57 KB under the +200 KB budget ✅
 - Post-WI-R3F-18 feature growth (GLB support — GLTFLoader/KTX2Loader/DRACOLoader/MeshoptDecoder — plus further node/animation coverage) pushed the closure back over budget: **536,997 B gzipped, 87.4 KB OVER budget**. Part of that regrowth was drei's `<Text>` (troika-three-text + bidi-js + its sdf-generator worker, statically imported by `InternalTextLabel` for the empty-state placeholder label) baked directly into `webview.js`.
-- **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it actually renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
+- **Issue #215: `InternalTextLabel`'s drei `<Text>` converted to `React.lazy`.** It no longer sits in `webview.js`; it resolves in its own on-demand chunk the first time it renders. Result: **492,801 B gzipped — still 44.2 KB OVER budget**, a ~44 KB gz reduction from the troika split alone.
 - **Issue #241: GLTFLoader + SkeletonUtils converted to dynamic `import()` in `glbProcessing.ts`.** Both modules are now split into on-demand lazy chunks (`GLTFLoader-*.js`, `SkeletonUtils-*.js`) that only load on the first actual GLB resource request. Scenes without any GLB references pay no loading cost for the loader chain at all. Result (measured on PR #286): **496,404 B gzipped before the split, 484,921 B gzipped after**, an 11.2 KB gz reduction; that left the closure 36.5 KB OVER the original 447,543 B budget. Investigation confirmed DRACOLoader, KTX2Loader, and MeshoptDecoder are NOT imported anywhere in source — they only appear as string plugin-name literals inside GLTFLoader; none of the vendored fixture GLBs use Draco or Meshopt compression.
 - **Budget renegotiated (2026-07-14, PR #286): absolute ceiling of 600,000 B (600 kB) gzipped.** The original `main + 200 KB` criterion (447,543 B gz) came from the WI-R3F-6 PRD acceptance and predates GLB support becoming a committed, shipped feature. With the realistic lazy-loading landed (drei `<Text>`/troika in issue #215, GLTFLoader + SkeletonUtils in issue #241), the remaining closure is legitimate feature cost, so growth is accepted for now. Current closure of **484,921 B gz leaves ~115 KB headroom** under the new ceiling. Longer term the plan is to evaluate lighter rendering technologies to shrink the webview, not to squeeze this stack further.
 - **Ceiling raised (2026-08-07): 700,000 B (700 kB) gzipped.** The node-coverage run gives every one of Godot's 240 instantiable node types a parser registration, and a registration is bundled webview code even though the validators that go with it are not (the linter does not ship in the webview). That is measured, deliberate per-type growth — ~260 B raw per slice, near-identical shapes that gzip hard — and it took the closure to **592,721 B gz, 7.1 KB under the old ceiling**. The budget exists to catch an accidental import dragging in a library, not to cap growth the project chose; at 7.1 KB it would have failed on the next slice instead. The new ceiling leaves ~107 KB, matching the headroom the 2026-07-14 renegotiation left.
@@ -651,11 +651,11 @@ than `main + 200 KB gzipped`". History:
 WI-R3F-18 closed the gap (at the time) with three combined changes:
 
 1. **Webview build flipped from `iife` to `esm` + `splitting`**
-   (`apps/textscene-vscode/esbuild.config.mjs`). iife couldn't
+   (`apps/textscene-vscode/esbuild.config.mjs`). iife could not
    code-split — every transitive import landed in one bundle. ESM
    with splitting emits `dist/webview/webview.js` (entry) plus
    `dist/webview/chunks/*.js` (shared + lazy chunks).
-2. **DOM panels lazy-loaded via `React.lazy` + `<Suspense>`**
+2. **DOM panels lazy-loaded through `React.lazy` + `<Suspense>`**
    (`packages/textscene-core/src/r3f/components/TscnPreviewShell/TscnPreviewShell.tsx`).
    `<SceneTreeViewer>` and `<NodeDetailsPanel>` are no longer in the
    initial static-import closure; they load on demand with a
@@ -702,7 +702,7 @@ needs to shrink.
 ### Known limitations
 
 **Web app: content-only hot-reload from disk is not implemented.** When a
-fixture's TSCN content changes out-of-band on disk (e.g. via the dev server
+fixture's TSCN content changes out-of-band on disk (for example, through the dev server
 filesystem, or an external editor touching the file the browser fetched it
 from) the web app does not detect the change — it only re-fetches a fixture
 on an explicit dropdown re-selection. The **Source pane** (ADR-0020,
@@ -716,7 +716,7 @@ VS Code extension does NOT share the disk-level limitation — there the
 editor's `onDidSaveTextDocument` fires `loadTscn` and the React shell
 reconciles cleanly on save, from any editor or external tool.
 
-Actually watching disk from the browser would mean either:
+watching disk from the browser would mean either:
 1. Subscribing to the Vite HMR `import.meta.hot.on('update')` event
    when in dev mode, then re-fetching the active fixture, or
 2. Polling the fixture URL with `ETag` / `Last-Modified` and
@@ -761,10 +761,10 @@ A module-graph guard test (over both `linter/index.ts` and `parser/TscnParser.ts
 
 **Status:** the 2D-UI Control set, the viewport toggle, and the **Split Dock** chrome (which replaced the 3-column DCC layout — ADR-0007) are all **shipped**.
 
-- **P3 — Control set (done).** All 15 Control types the target real-world corpus uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically via `useResource` (type-only `THREE` import — no runtime three in the slice). `README.md` states the current count (see Project Structure above).
+- **P3 — Control set (done).** All 15 Control types the target real-world corpus uses are registered DOM components: `Control`, `ColorRect`, `Label`, `VBoxContainer`, `HBoxContainer`, `GridContainer`, `CenterContainer`, `MarginContainer`, `ScrollContainer`, `Panel`, `PanelContainer`, `Button`, `TextureRect`, `RichTextLabel`, and the passthrough `CanvasLayer`. Each is a unified slice whose `index.r3f.ts` registers into `ControlComponentRegistry`; `ControlDispatcher` walks the subtree and `controlLayoutStyle` + `styleBoxToCss` + `resolveStyleBoxCss` map Godot layout/theme to CSS. `TextureRect` loads images host-agnostically through `useResource` (type-only `THREE` import — no runtime three in the slice). `README.md` states the current count (see Project Structure above).
 - **P4 — viewport toggle (done).** `TscnPreviewShell` is wrapped in `<ViewportModeProvider>`; a shared `<ViewportToolbar>` (3D/2D switch + Collisions checkbox) writes through `useViewportMode()`, and `<ViewportArea>` renders `TscnCanvas` (3D) or the lazy-loaded `ControlOverlay` (2D, fed the root scene's nodes + resources). The overlay is a separate lazy chunk, so the Control components stay out of the initial canvas-paint bundle.
-- **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the center viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
-- **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips) over **two** columns — a large center viewport (with the `ViewportToolbar` floated over its top-right corner) and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled via the shared `--tsi-*` tokens (VS Code-theme-aware).
+- **P5 — 3-column DCC chrome (superseded by P6).** The first chrome was a full-width top bar over three columns: a left **Scene** dock (SceneInfoCard + tree), the centre viewport, and a right **Inspector** dock. Resizable + collapsible docks, stacked vertically under 768px. Replaced by the Split Dock (P6).
+- **P6 — Split Dock chrome (done, [ADR-0007](./docs/adr/0007-adopt-split-dock-shell.md)).** A prototype exploration (5 fresh-eyes designs → A+B hybrids → "Split Dock") landed the user-chosen layout: a slim top bar (file/brand + host toolbar + scene-stat chips) over **two** columns — a large centre viewport (with the `ViewportToolbar` floated over its top-right corner) and a single right dock. **No left rail** (a VS Code webview sits right of VS Code's own activity bar + Explorer, so a left rail clashes + wastes width). The dock is a vertical **master-detail**: `SceneTreeViewer` on top over a tabbed detail (**Inspector / Resources / Cameras**) — selecting a node updates the inspector with no tab hop; the on-pane tab strip switches only the lower section; the Cameras tab lists `Camera3D` nodes with a one-click "use". `SceneInfoCard` was removed (node count moved to the top bar + tree header). Resizable width (`<Splitter>`) + a draggable master/detail handle; collapsible to a full-width viewport; stacks under 768px. In 2D mode the viewport becomes a framed pan/zoom `Canvas2DStage` wrapping the live `ControlOverlay`. The web app's scene picker is a Ctrl/Cmd+K command palette in the web toolbar (`apps/textscene-web/src/r3f-main.tsx`; "Open .tscn" primary — the built-in fixtures it lists are dev-only scaffolding). Restyled through the shared `--tsi-*` tokens (VS Code-theme-aware).
 
 A single `ViewportModeContext` chooses between the 3D canvas and the 2D Control overlay (a sibling DOM layer, never inside `<Canvas>`), and drives the collision gizmo. The Split Dock shell is shared by both apps:
 
@@ -787,7 +787,7 @@ flowchart TB
   CENTER --- CO
 ```
 
-The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images via the host file provider (`useResource`, so VS Code webview CSP is honored). Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
+The 2D overlay maps `layout_mode = 2` (container-managed, the majority case) to CSS flex/grid, the LayoutPreset 0..15 table to absolute positioning, and StyleBox resources to CSS; system fonts only, images through the host file provider (`useResource`, so VS Code webview CSP is honoured). Per-app mode persistence behind a `usePersistedMode()` hook (`localStorage` web / webview state API) is **deferred** — the switch is per-session today.
 
 ### Scope (P2 — [ADR-0004](./docs/adr/0004-csg-as-primitive.md), [ADR-0005](./docs/adr/0005-physics-bodies-transform-only.md))
 

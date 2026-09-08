@@ -50,5 +50,5 @@ of its own, and that parser only reads `transform` and `visible`. It never looks
 `hand_tracker` or `bone_update`, so where strict linting rejects a value the lenient
 parser substitutes nothing: there is no fallback because it never records the key.
 `bone_update = 2` is the sharpest case. Godot's `set_bone_update` refuses the value
-outright and keeps the previous mode, while the previewer simply carries on with a
+outright and keeps the previous mode, while the previewer carries on with a
 node it never asked to pose anything.

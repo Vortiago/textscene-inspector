@@ -22,7 +22,7 @@ yet, so it renders as an invisible transform-only fallback and its children stil
 | blend_distance | `4.0` | Meters over which this probe blends into the scene/neighbouring probes. |
 | max_distance | `20000.0` | Objects beyond this distance are culled from the reflection. |
 | size | `Vector3(30, 10, 30)` | The probe's box extents. |
-| origin_offset | `Vector3(2, 1, 2)` | Shifts the reflection center for box projection, within the box. |
+| origin_offset | `Vector3(2, 1, 2)` | Shifts the reflection centre for box projection, within the box. |
 | box_projection | `true` | Offsets the reflection to better fit a rectangular room. |
 | interior | `true` | Ignores sky contribution in the reflection. |
 | enable_shadows | `true` | Computes shadows inside the reflection (slower). |
@@ -30,8 +30,8 @@ yet, so it renders as an invisible transform-only fallback and its children stil
 | reflection_mask | `4294967295` | The widest 32-bit mask value — every bit set, beyond the 20 checkboxes the 3D-render layer widget itself exposes. |
 | mesh_lod_threshold | `500.0` | LOD bias for meshes rendered inside the probe. |
 | ambient_mode | `2` (AMBIENT_COLOR) | Uses the custom `ambient_color`/`ambient_color_energy` below instead of environment lighting. |
-| ambient_color | `Color(0.1, 0.2, 0.3, 1)` | Custom ambient color inside the probe's box. |
-| ambient_color_energy | `5.0` | Custom ambient color's energy multiplier. |
+| ambient_color | `Color(0.1, 0.2, 0.3, 1)` | Custom ambient colour inside the probe's box. |
+| ambient_color_energy | `5.0` | Custom ambient colour's energy multiplier. |
 
 ## Divergences
 
@@ -69,5 +69,5 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`
 and silently ignores every ReflectionProbe-specific key — `intensity = "bright"` or
-`ambient_mode = "Environment"` parses with no warning and simply never reaches any
+`ambient_mode = "Environment"` parses with no warning and never reaches any
 in-memory state, the same as a value Godot's own class never declared.

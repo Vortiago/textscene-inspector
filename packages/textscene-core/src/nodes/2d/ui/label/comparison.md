@@ -18,9 +18,9 @@ stacks three labels to exercise those in turn.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `text` | three strings | the text each of the three labels shows |
-| `offset_left/top/right/bottom` | e.g. `20/20/260/60` | stacks the labels and fixes each box at 240px wide |
-| `horizontal_alignment` | `1` (Center) | "Centered label" sits centered within its box |
-| `vertical_alignment` | `1` (Center) | that same label's text is centered vertically in its box |
+| `offset_left/top/right/bottom` | for example, `20/20/260/60` | stacks the labels and fixes each box at 240px wide |
+| `horizontal_alignment` | `1` (Centre) | "Centered label" sits centred within its box |
+| `vertical_alignment` | `1` (Centre) | that same label's text is centred vertically in its box |
 | `uppercase` | `true` | "shouts when rendered" renders as SHOUTS WHEN RENDERED |
 | `autowrap_mode` | `3` (WORD_SMART) | the long string wraps onto three lines |
 
@@ -30,7 +30,7 @@ The auto-wrap paragraph breaks at a different word. Godot lays it out as "This l
 wraps across / multiple lines once it runs out / of horizontal space."; ours packs one
 more word onto each line — "This label wraps across multiple / lines once it runs out
 of / horizontal space." — and spaces those lines slightly tighter. Both reach three
-lines, and the centered and single-line labels occupy the same span in both images, so
+lines, and the centred and single-line labels occupy the same span in both images, so
 the box width is not wrong: the previewer draws the text in a system font stack (web
 fonts are CSP-blocked in the VS Code webview), so the browser's glyph advances and
 leading stand in for Godot's bundled theme font and nudge the break to a different word.
@@ -80,7 +80,7 @@ still reads only five of them: `text`, `horizontal_alignment`,
 `vertical_alignment`, `autowrap_mode`, `uppercase`. Where it stays lenient,
 strict now flags it: `horizontal_alignment`/`vertical_alignment` use
 `parseOptionalInt`, so an out-of-range or unparseable value silently becomes
-`undefined`, no warning; `uppercase` isn't `boolOr`, so only the literal string
+`undefined`, no warning; `uppercase` is not `boolOr`, so only the literal string
 `"true"` turns it on and anything else (including a garbled value) leaves it
 falsy without a warning. The other seventeen members tune Godot's
 shaping/BiDi/visibility behaviour with no effect on the DOM overlay's static

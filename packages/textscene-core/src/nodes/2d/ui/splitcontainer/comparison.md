@@ -11,7 +11,7 @@ renders_as: invisible transform-only fallback
 
 SplitContainer is a Control that arranges children horizontally or vertically and
 grabbers between them (`HSplitContainer`/`VSplitContainer` fix the axis; the base
-type leaves it authorable via `vertical`). It is a Control (ADR-0003 routes
+type leaves it authorable through `vertical`). It is a Control (ADR-0003 routes
 Controls through the 2D DOM overlay, not the WebGL scene), so the previewer
 parses and validates every member below but does not draw it: it renders as an
 invisible transform-only fallback and its children still show.

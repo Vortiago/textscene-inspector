@@ -54,5 +54,5 @@ The lenient parser reuses `parseButton` unchanged: it reads Button's own fields
 `switch_on_hover`, `item_count` and every `popup/item_<idx>/<leaf>` key are
 MenuButton-specific and never read by that parser, so a bad value there, say
 `popup/item_0/checkable = "yes"`, is neither substituted nor warned on. It is
-simply carried in the node's `rawProperties` and ignored by rendering, exactly
+carried in the node's `rawProperties` and ignored by rendering, exactly
 like every other unread key on an invisible fallback node.

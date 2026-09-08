@@ -61,7 +61,7 @@ Strict parsing format-checks these `ScrollContainer` properties, plus 53 inherit
 | `valid-scrollcontainer-single-child` | `scrollcontainer-not-single-child` | warning |
 <!-- lint:end -->
 
-`ScrollContainer` doesn't validate its scroll-mode enums either: `horizontal_scroll_mode`
+`ScrollContainer` does not validate its scroll-mode enums either: `horizontal_scroll_mode`
 and `vertical_scroll_mode` go through the optional-int reader, which accepts any
 parseable integer, including an out-of-range value like `99`. That value passes
 straight to the component's `switch`, which falls through to its `default` case and

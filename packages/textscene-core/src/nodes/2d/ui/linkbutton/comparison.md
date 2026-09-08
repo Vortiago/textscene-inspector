@@ -10,7 +10,7 @@ renders_as: invisible transform-only fallback
 # LinkButton
 
 LinkButton is a BaseButton-derived Control that behaves like a hyperlink: pressing
-it opens `uri` via the OS's default handler instead of toggling state or firing an
+it opens `uri` through the OS's default handler instead of toggling state or firing an
 action itself. The previewer parses and validates this node but does not draw it
 yet, so it renders as an invisible transform-only fallback and its children still
 show.
@@ -20,7 +20,7 @@ show.
 | Group | Properties (fixture values) | Effect |
 | --- | --- | --- |
 | (ungrouped) | `text` (`"Visit our site"`), `underline` (`1`, ON_HOVER), `uri` (`"https://godotengine.org"`) | Format-checked only; the previewer draws nothing regardless. |
-| Text Behavior | `text_overrun_behavior` (`3`, OVERRUN_TRIM_ELLIPSIS), `ellipsis_char` (`"…"`) | Format-checked only. |
+| Text Behaviour | `text_overrun_behavior` (`3`, OVERRUN_TRIM_ELLIPSIS), `ellipsis_char` (`"…"`) | Format-checked only. |
 | BiDi | `text_direction` (`1`, LTR), `language` (`"en_GB"`), `structured_text_bidi_override` (`0`, DEFAULT), `structured_text_bidi_override_options` (`[]`) | Format-checked only. |
 
 ## Divergences

@@ -54,8 +54,8 @@ Perlin settings. That holds only because every parameter is configured explicitl
 the raw library's own defaults are not Godot's (3 fractal octaves against Godot's 5,
 EuclideanSq cellular distance against Godot's Euclidean), and leaving one unset moves
 a sample from 0.61 to 0.25. The image layer
-around it is ported from Godot: normalization to the field's own min/max, `invert`,
-the `color_ramp` mapped through each pixel's luminance, `as_normal_map` via
+around it is ported from Godot: normalisation to the field's own min/max, `invert`,
+the `color_ramp` mapped through each pixel's luminance, `as_normal_map` through
 `Image::bump_map_to_normal_map` (which reads the RED channel, so a ramped texture's
 normals come from its red), and the seamless blend skirt's quadrant swap.
 

@@ -10,8 +10,8 @@ renders_as: invisible transform-only fallback
 # AspectRatioContainer
 
 A Container that resizes its child controls to keep a fixed width/height ratio as the
-container itself is resized, choosing where to fit or crop them via `stretch_mode` and
-where to align the result via `alignment_horizontal`/`alignment_vertical`. It is a
+container itself is resized, choosing where to fit or crop them through `stretch_mode` and
+where to align the result through `alignment_horizontal`/`alignment_vertical`. It is a
 Control (ADR-0003 routes Controls through the 2D DOM overlay, not the WebGL scene), so
 the previewer parses and validates every member below but does not draw it yet: it
 renders as an invisible transform-only fallback and its children still show.
@@ -56,5 +56,5 @@ adds one semantic rule for a direct TextureRect child whose `expand_mode` is pro
 rendered fallback today: `index.ts` reuses `parseControl` unchanged (ADR-0003, the node draws
 nothing), which reads none of `ratio`, `stretch_mode`, `alignment_horizontal`, or
 `alignment_vertical`. So a bad value on any of the four is not substituted with a fallback by
-the lenient parser; it is simply never read at all, and the fallback render is unchanged
+the lenient parser; it is never read at all, and the fallback render is unchanged
 regardless of what strict parsing would warn about.

@@ -129,7 +129,7 @@ common grayscale / ORM packings are faithful.
 An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the editor
 preview environment blooms it (the glow itself is covered on the Environment sheet).
 
-Godot uploads `emission` through a `source_color` uniform, so the authored Color is
+Godot uploads `emission` through a `source_color` uniform, so the authored Colour is
 converted sRGB→linear BEFORE `emission_energy_multiplier` multiplies it. That order
 matters for an HDR emission: the conversion is not linear, so normalising by the peak
 channel first and scaling after is a different mapping — `Color(2, 0.5, 0)` lands at
@@ -320,7 +320,7 @@ The lenient parser never rejects: each field falls back to Godot's default throu
 - **metallic_specular** — three hard-wires dielectric F0 at 0.04 (Godot's 0.5 default). Authoring it away from 0.5 has no effect.
 - **uv1 V-anchoring** — Godot measures V from the image top, three from the bottom, so a non-integer `uv1_scale.y` or non-zero `uv1_offset.y` shifts V differently. Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **SphereMesh UV phase** — Godot winds a sphere's UVs at a different phase than three's `SphereGeometry`, so a patterned texture lands rotated relative to Godot's. Measured at 3.556% on a plain albedo checkerboard. Not a material property — it belongs to the mesh — but it is what makes any patterned-texture comparison on a sphere unreadable.
-- **billboard_mode** — orientation is faithful, but `billboard_keep_scale = false` (scale normalized away while billboarding) is not honored, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).
+- **billboard_mode** — orientation is faithful, but `billboard_keep_scale = false` (scale normalised away while billboarding) is not honoured, and a billboarded mesh's child nodes inherit its rotation (Godot's per-surface effect does not turn children).
 - **Triplanar on curved meshes** — tiling density is exact for planar meshes; curved / GLB geometry falls back to the mesh's own UVs.
 - **emission_operator = Add with BOTH a lit colour and a texture** — Godot computes `(emission + tex) * energy`, a sum three's multiply-only emissive chain cannot express. The colour is applied as a multiply instead, so such a material reads darker and more tinted. The far more common cases — either term alone, and Add over the default black colour — are exact.
 - **emission_on_uv2** — Godot samples the emission texture from the second UV set. Nothing here produces one: the primitive meshes are stock three geometries carrying only `uv`, and the ArrayMesh decoder drops trailing UV2 data. Binding the flag would leave the attribute unbound, so the whole surface would sample one texel and read as flat colour — strictly worse than reading the texture through UV1, which is what happens. Validated, not rendered.

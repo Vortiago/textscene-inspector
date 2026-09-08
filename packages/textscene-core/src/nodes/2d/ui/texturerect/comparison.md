@@ -20,7 +20,7 @@ and `object-position` set from `stretch_mode`.
 | `anchors_preset` | `15` | full-rect anchors — the control fills the whole viewport |
 | `texture` | `ExtResource("1_tex")` | the blue "F" marker sprite is drawn |
 | `expand_mode` | `1` (EXPAND_IGNORE_SIZE) | the control ignores the texture's natural minimum size |
-| `stretch_mode` | `5` (KEEP_ASPECT_CENTERED) | square texture fits the frame height and centers — grey letterbox on the left and right |
+| `stretch_mode` | `5` (KEEP_ASPECT_CENTERED) | square texture fits the frame height and centres — grey letterbox on the left and right |
 
 ## Divergences
 

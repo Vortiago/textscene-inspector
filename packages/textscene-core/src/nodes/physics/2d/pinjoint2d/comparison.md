@@ -52,4 +52,4 @@ Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited fro
 
 PinJoint2D has no parser.ts: it reuses parseNode2D directly (index.ts), so its own
 properties never reach the lenient parser. A bad value is not substituted or
-defaulted, it is simply never read, and only the strict parser reports it.
+defaulted, it is never read, and only the strict parser reports it.

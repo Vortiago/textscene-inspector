@@ -10,7 +10,7 @@ renders_as: a 2D profile swept into a solid
 A 2D profile swept into a 3D solid. The sweep takes one of three shapes, chosen
 by `mode`: extruded straight back (DEPTH), revolved about +Y (SPIN), or carried
 along a Path3D's curve (PATH). All three are implemented, as a port of Godot's
-`_build_brush` rather than via `THREE.ExtrudeGeometry` / `LatheGeometry`, both of
+`_build_brush` rather than through `THREE.ExtrudeGeometry` / `LatheGeometry`, both of
 which get the axis and the caps wrong for this node. The boolean `operation` IS
 evaluated (ADR-0027).
 

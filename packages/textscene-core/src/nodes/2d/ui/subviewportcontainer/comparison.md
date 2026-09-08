@@ -135,7 +135,7 @@ also the blit's coverage guard. Measured through Godot 4.6.3 with
   therefore shows its settled frame in the surface, while the same animation
   drawn directly in the canvas keeps moving.
 - **Clipping is a consequence, not an operation.** The container issues no clip;
-  content outside the target simply was never rendered, because the texture is
+  content outside the target was never rendered, because the texture is
   only `size` pixels. The DOM equivalent puts `overflow: hidden` on the
   *surface*, never on the container — a surface may legitimately overflow the
   container's own box, since Godot Controls do not clip unless `clip_contents`.

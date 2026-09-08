@@ -12,7 +12,7 @@ renders_as: a positioned HTML div of styled text
 A Control that lays out a run of rich text; the previewer draws it as a
 positioned `<div>` and, with `bbcode_enabled`, renders a BBCode subset as inline
 styling (ADR-0003). Both images show one line reading "Bold, italic, underline,
-and colored BBCode" pinned to the top-left, with each tagged word carrying its
+and coloured BBCode" pinned to the top-left, with each tagged word carrying its
 style.
 
 ## Properties exercised

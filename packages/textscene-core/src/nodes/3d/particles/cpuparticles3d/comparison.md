@@ -35,7 +35,7 @@ The fixture sets a representative value for every property, grouped below the wa
 | `Damping` | `damping_min=0.0`, `damping_max=1.0`, `damping_curve=Curve` | none: velocity decay over lifetime; not drawn |
 | `Angle` | `angle_min=-45.0`, `angle_max=45.0`, `angle_curve=Curve` | none: per-particle mesh rotation; not drawn |
 | `Scale` | `scale_amount_min=0.8`, `scale_amount_max=1.2`, `scale_amount_curve=Curve`, `split_scale=true`, `scale_curve_x/y/z=Curve` | none: per-particle size over lifetime; not drawn |
-| `Color` | `color=Color(1,1,1,1)`, `color_ramp=Gradient`, `color_initial_ramp=Gradient` | none: multiplies the (absent) mesh's vertex colors; not drawn |
+| `Color` | `color=Color(1,1,1,1)`, `color_ramp=Gradient`, `color_initial_ramp=Gradient` | none: multiplies the (absent) mesh's vertex colours; not drawn |
 | `Hue Variation` | `hue_variation_min=-0.1`, `hue_variation_max=0.1`, `hue_variation_curve=Curve` | none: per-particle hue shift; not drawn |
 | `Animation` | `anim_speed_min=0.5`, `anim_speed_max=1.5`, `anim_speed_curve=Curve`, `anim_offset_min=0.0`, `anim_offset_max=1.0`, `anim_offset_curve=Curve` | none: needs a billboard material to show; not drawn |
 

@@ -20,7 +20,7 @@ invisible transform-only fallback and its children still show.
 | --- | --- | --- |
 | shape | `2` (CYLINDER) | Selects the local volume shape the fog is bounded to. |
 | size | `Vector3(4, 3, 4)` | Local-space extents of the fog volume for every shape but World. |
-| material | `SubResource("FogMaterial_1")` | The FogMaterial controlling density/color/emission inside the volume. |
+| material | `SubResource("FogMaterial_1")` | The FogMaterial controlling density/colour/emission inside the volume. |
 
 ## Divergences
 

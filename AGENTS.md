@@ -91,7 +91,7 @@ Coverage: `node scripts/coverage-report.mjs [--next 5]` derives which Godot node
 are still unregistered, base classes first.
 
 Resource types: `packages/textscene-core/src/resources/<category>/<type>/`
-(**Resource slice**, ADR-0031) — `index.ts` (registration via
+(**Resource slice**, ADR-0031) — `index.ts` (registration through
 `registerResourceSlice`, THREE-free, wired into `resources/sliceRegistrations.ts`)
 · `decode.ts` (pure: property bag → typed Data; `decode<Type>` naming) ·
 `build.ts` only where THREE construction exists · `types.ts` · co-located tests
@@ -173,14 +173,14 @@ real parser instead of the decode/build split. Conformance:
 - Advisory linter conditions are WARNINGS, not errors — an error rule on a condition an
   existing positive fixture carries breaks fixtureLint.
 - Web tests run under happy-dom: no CSS cascade, no layout — never assert rendered
-  geometry. Pin load-bearing CSS by reading the `.module.css` source via
+  geometry. Pin load-bearing CSS by reading the `.module.css` source through
   `import.meta.dirname`, never `process.cwd()` (hooks/CI run from the repo root).
 - `THREE.Object3D` has ONE parent: cached Object3D resources are cloned per consumer
   (`src/resources/useResource.ts`); identity-equality only for textures/materials.
 - Tests: happy + error + edge per public method, co-located. Prefix intentionally-unused
   params with `_`.
 - Self-registration on import — never edit central files beyond the aggregation imports.
-  Keep web previewer and VS Code extension at parity via the shared core.
+  Keep web previewer and VS Code extension at parity through the shared core.
 - **Engine facts live in `packages/textscene-core/src/godot/`, which imports
   NOTHING** — the one module every domain (linter, parser, resources, nodes, r3f)
   may import freely, because as a leaf it can never carry one domain's weight

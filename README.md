@@ -54,7 +54,7 @@ Beyond the node set:
   the scene that references it. A resource a `.tres` declares inside itself —
   a mesh's own surface materials, a MeshLibrary's embedded meshes — is addressed
   the same way, by Godot's `res://file.tres::SubId` path.
-- **Animation.** AnimationPlayer (transform tracks via `THREE.AnimationMixer`,
+- **Animation.** AnimationPlayer (transform tracks through `THREE.AnimationMixer`,
   plus value tracks like sprite frames and Decal modulate/size), AnimationTree
   blend trees and state machines, GLB-embedded clips, and AnimatedSprite2D
   frames — all behind one selection-driven play/pause/scrub transport.
@@ -71,7 +71,7 @@ Not yet published to the Marketplace; build it from source (below).
 **Web previewer** — a fixture browser, an "Open .tscn" picker with a
 <kbd>Ctrl/Cmd+K</kbd> scene palette, drag-and-drop multi-file upload (drop a
 scene and its textures in one gesture), and shareable `?fixture=` deep links
-(add `&camera=<node path>`, e.g. `&camera=Root/Camera3D`, to open looking through
+(add `&camera=<node path>`, for example, `&camera=Root/Camera3D`, to open looking through
 a scene's own Camera3D).
 An editable Source pane renders `.tscn` text as you type, with a linter gutter
 (error/warning dots, hover popover, problem-count badge) and a

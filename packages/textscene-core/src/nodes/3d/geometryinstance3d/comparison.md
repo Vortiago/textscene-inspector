@@ -36,7 +36,7 @@ the whole story.
 | `visibility_range_end_margin` | `2.0` | fade-out transition distance; invisible here since the node draws nothing itself |
 | `visibility_range_fade_mode` | `1` (Self) | how the node fades at its visibility-range limits; invisible here since the node draws nothing itself |
 | `sorting_offset` | `0.5` | shifts the node's depth-sort position; invisible here since the node draws nothing itself |
-| `sorting_use_aabb_center` | `false` | sorts from the origin instead of the AABB center; invisible here since the node draws nothing itself |
+| `sorting_use_aabb_center` | `false` | sorts from the origin instead of the AABB centre; invisible here since the node draws nothing itself |
 
 ## Divergences
 

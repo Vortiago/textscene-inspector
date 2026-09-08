@@ -19,7 +19,7 @@ wireframe-cone gizmo is selection-gated, so it appears in neither capture.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `transform` origin | `(0, 3, 0)`, aimed straight down | hangs the light above the cube, so the lit circle and the shadow center on it |
+| `transform` origin | `(0, 3, 0)`, aimed straight down | hangs the light above the cube, so the lit circle and the shadow centre on it |
 | `light_color` | `Color(0.9, 0.95, 1, 1)` | faint cool-white tint on the lit ground |
 | `light_energy` | `3.0` | brightness of the lit pool on the plane |
 | `spot_range` | `8.0` | reach of the cone — the floor sits well inside it |

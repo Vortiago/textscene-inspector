@@ -12,7 +12,7 @@ renders_as: a selection-gated frustum gizmo
 Camera3D is an authored viewpoint that draws nothing at runtime — Godot renders the game, not
 the editor, so the camera is invisible. The previewer matches that: it draws only a frustum
 gizmo, and that gizmo is selection-gated (ADR-0018), so with nothing selected it is absent too.
-The fixture places three cameras (`MainCamera`, `LeftCamera`, `TopCamera`) among a gray ground
+The fixture places three cameras (`MainCamera`, `LeftCamera`, `TopCamera`) among a grey ground
 plane and a blue and an orange box; only the reference geometry appears in either capture.
 
 ## Properties exercised
@@ -58,4 +58,4 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 |  | `camera3d-zero-depth-range` | warning |
 <!-- lint:end -->
 
-Numeric fields (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum_offset`) fall back through `floatOr`/`vec2Or`, warning and substituting Godot's defaults (75° fov, size 1, near 0.05, far 4000, zero offsets) on a malformed value; `cull_mask` and `doppler_tracking` fall back the same way to 1048575 and 0. `projection` and `keep_aspect` bypass that contract: any value other than the recognized ints (1/2 for projection, 0/2 for keep_aspect) is silently treated as the default (PERSPECTIVE, KEEP_HEIGHT) with no warning logged. `current` reads via plain string equality (`=== 'true'`) rather than `boolOr`, so anything but the literal string "true", including "1", renders the camera inactive without comment.
+Numeric fields (`fov`, `size`, `near`, `far`, `h_offset`, `v_offset`, `frustum_offset`) fall back through `floatOr`/`vec2Or`, warning and substituting Godot's defaults (75° fov, size 1, near 0.05, far 4000, zero offsets) on a malformed value; `cull_mask` and `doppler_tracking` fall back the same way to 1048575 and 0. `projection` and `keep_aspect` bypass that contract: any value other than the recognised ints (1/2 for projection, 0/2 for keep_aspect) is silently treated as the default (PERSPECTIVE, KEEP_HEIGHT) with no warning logged. `current` reads through plain string equality (`=== 'true'`) rather than `boolOr`, so anything but the literal string "true", including "1", renders the camera inactive without comment.

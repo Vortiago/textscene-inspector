@@ -28,7 +28,7 @@ and drop its whole subtree in the 2D one.
 
 ## The offscreen pass
 
-The pass renders **the scene the subtree is actually mounted in**. With 3D
+The pass renders **the scene the subtree is mounted in**. With 3D
 content, a shared `World3D` and the 3D workspace, the subtree already draws
 inline, so the main scene is the source — which is also what Godot does, since a
 shared world means the viewport renders that whole world, environment and sky
@@ -58,7 +58,7 @@ clamp) is `camera2DView`, shared with the Cameras panel; the camera's position
 comes off its world matrix, so one inside an instanced sub-scene resolves for
 free. Measured on `game_splitscreen.tscn` against Godot 4.6.3 at 800x480: level
 geometry in the left sub-viewport aligns to **dy 0, dx 2 px**, the 2 px being our
-8 px `HSplitContainer` grabber against Godot's 2 px (a 396 vs 399 px viewport),
+8 px `HSplitContainer` grabber against Godot's 2 px (a 396 versus 399 px viewport),
 not a framing error.
 
 `game_splitscreen`'s RIGHT sub-viewport cannot match Godot and this is a format
@@ -80,8 +80,7 @@ XR flag to opt back in, scoped by Godot's own-world rule: a shared world keeps
 the renderer's live curve, an own world (a fresh `World3D`, no Environment —
 LINEAR) and 2D-canvas content (drawn after Godot's tonemap pass) render with
 none. Measured on `unit-sub-viewport-texture.tscn` against Godot 4.6.3: every
-probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
-177,193,212; sphere 121,130,145 vs 121,130,144), with the direct view exact.
+probe through the quad within 1.0% in linear terms (sky 177,194,212 versus 177,193,212; sphere 121,130,145 versus 121,130,144), with the direct view exact.
 
 ## Divergences (offscreen pass)
 
@@ -112,7 +111,7 @@ probe through the quad within 1.0% in linear terms (sky 177,194,212 vs
   plus `Sprite2D.texture`. Godot allows one in any Texture2D slot except
   `Decal`, `Light3D` and `PointLight2D`.
 - **`TextureRect` cannot show one.** It is a Control, so it renders in the DOM
-  overlay (ADR-0003) via `imageToDataUrl(texture.image)`, and a render target
+  overlay (ADR-0003) through `imageToDataUrl(texture.image)`, and a render target
   has no `image` element to draw. That is exactly why `ViewportTextureEntry`
   also carries `readPixels`; consuming it is the DOM rasterizer's job.
 - **`msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` still do
@@ -171,7 +170,7 @@ lifetime; a redraw flips `needsUpdate`.
   reach the raster. `rendering_method` alone was isolated by re-rendering the
   fixture above under a `gl_compatibility` project: the opaque backdrop stays
   rgb(162) and the translucent Panel moves rgb(84) → rgb(82). Measured offsets
-  on the demo itself are Panel 55 (ours) vs 53 (Godot), Button 40 vs 33, and a
+  on the demo itself are Panel 55 (ours) versus 53 (Godot), Button 40 versus 33, and a
   smaller font; the fixture above carries no project settings and matches
   exactly.
 - **Blending is the browser's.** A translucent StyleBox composites in sRGB

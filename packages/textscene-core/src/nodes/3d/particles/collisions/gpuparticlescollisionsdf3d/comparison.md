@@ -17,7 +17,7 @@ The previewer parses and validates this node but does not draw it yet, so it ren
 | --- | --- | --- |
 | `size` | `Vector3(4, 2, 4)` | Extents of the baked SDF volume in 3D units |
 | `resolution` | `2` (index for 64³) | Bake resolution of the SDF texture |
-| `thickness` | `0.5` | Hollow-shell thickness used to prevent particle tunneling |
+| `thickness` | `0.5` | Hollow-shell thickness used to prevent particle tunnelling |
 | `bake_mask` | `3` | Visual layers considered when baking the SDF |
 | `texture` | `ExtResource("1_sdf")` | Baked signed distance field texture |
 

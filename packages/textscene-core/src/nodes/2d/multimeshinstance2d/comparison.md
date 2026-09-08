@@ -10,7 +10,7 @@ renders_as: nothing yet — Godot draws a batch of textured mesh instances, the 
 # MultiMeshInstance2D
 
 MultiMeshInstance2D instances a [MultiMesh] resource in 2D, batch-drawing many copies of
-one mesh in a single draw call and optionally texturing them via `texture` for the
+one mesh in a single draw call and optionally texturing them through `texture` for the
 default [CanvasItemMaterial] (doc/classes/MultiMeshInstance2D.xml) — this DOES draw in
 Godot, but the previewer only parses and validates this node so far and does not draw it
 yet, so it renders as an invisible transform-only fallback and its children still show.

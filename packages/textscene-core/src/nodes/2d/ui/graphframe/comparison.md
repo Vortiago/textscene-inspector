@@ -56,5 +56,5 @@ The lenient parser reuses `parseControl` unchanged (`index.ts`), which reads onl
 the Control layout/theme-override keys, so none of GraphFrame's own properties are
 read by it at all. An out-of-range `autoshrink_margin` (say `200`) or a malformed
 `tint_color` therefore never reaches the lenient tree in any form, substituted or
-otherwise: strict reports it as a diagnostic, and lenient simply never looks at the
+otherwise: strict reports it as a diagnostic, and lenient never looks at the
 key, leaving the fallback node exactly as unaffected as a well-formed value would.

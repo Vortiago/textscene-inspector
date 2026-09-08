@@ -81,7 +81,7 @@ Strict parsing format-checks these `SpringBoneSimulator3D` properties, plus 2 in
 
 The lenient parser never substitutes a value here, because SpringBoneSimulator3D
 reuses `parseNode3D` and keeps only the transform; every `settings/<i>/…` key it
-reads is carried through untouched and simply never consulted, since nothing is
+reads is carried through untouched and never consulted, since nothing is
 simulated. So where strict rejects `settings/0/gravity/direction =
 Vector3(0, 0, 0)` or a `settings/<i>/…` index past `setting_count`, the lenient
 side does not fall back to a default: it keeps the raw string in the node's

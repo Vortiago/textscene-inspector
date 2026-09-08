@@ -20,7 +20,7 @@ its children still show, at the transform the scene file states.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `bone_name` | `"Head"` | names the bone both attachments follow, bone 1 of the skeleton |
-| `bone_idx` | `1` | the index Godot actually reads; `bone_name` only resolves to it |
+| `bone_idx` | `1` | the index Godot reads; `bone_name` only resolves to it |
 | `override_pose` | `true` | on the attachment under the Skeleton3D: its transform drives the bone instead of the other way round |
 | `use_external_skeleton` | `true` | on the attachment outside the Skeleton3D: look the skeleton up by path, ignoring the parent |
 | `external_skeleton` | `NodePath("../Skeleton3D")` | the skeleton that attachment binds to; serialised only while the flag above is on |

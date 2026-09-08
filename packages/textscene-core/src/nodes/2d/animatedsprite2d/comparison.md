@@ -12,7 +12,7 @@ renders_as: a textured quad
 AnimatedSprite2D plays a SpriteFrames clip. Playback is selection-driven
 (ADR-0012): select the sprite and its transport advances the frame. Both images
 here are GIFs of the `walk` clip playing — the Dodge character (drawn as a
-textured quad centered and scaled 3x at the viewport centre) cycling its two
+textured quad centred and scaled 3x at the viewport centre) cycling its two
 frames (`dodge-walk1`/`walk2`, legs together then splayed), driven to the same
 frame at the same time on each side.
 
@@ -20,7 +20,7 @@ frame at the same time on each side.
 
 | Property | Value | Effect |
 | --- | --- | --- |
-| `position` | `Vector2(576, 324)` | centers the sprite in the 1152x648 viewport |
+| `position` | `Vector2(576, 324)` | centres the sprite in the 1152x648 viewport |
 | `scale` | `Vector2(3, 3)` | enlarges the sprite 3x |
 | `sprite_frames` | embedded `SpriteFrames_walk` | supplies the `walk` clip's two frame textures |
 | `animation` | `&"walk"` | selects the `walk` clip |

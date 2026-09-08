@@ -180,13 +180,13 @@ AnimationPlayer, an AnimationTree, a RemoteTransform3D — has no geometry of it
 yet moves something you can watch, so it belongs on the normal `done`/`limitation`
 scale and its sheet should compare that effect. The registry flag stays
 `transform-only` (it is a claim about the node's own geometry); only the status
-differs. Reserve `linter-only` for a node whose runtime effect is genuinely nil.
+differs. Reserve `linter-only` for a node whose runtime effect is nil.
 
 ## Rules
 
 - **Look at both images.** Read `docs/comparison/images/<image>-godot.png` and
   `-ours.png` with your own eyes. The prose and divergences must describe what is
-  actually on screen. A sheet written from the code alone is worthless — that is the
+  on screen. A sheet written from the code alone is worthless — that is the
   one thing only a viewer can do.
 - **Terse.** This is a reference to skim, not an essay. No restating the code, no
   explaining what three.js is.

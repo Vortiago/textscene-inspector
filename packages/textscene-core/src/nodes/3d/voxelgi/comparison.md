@@ -21,7 +21,7 @@ its children still show.
 | --- | --- | --- |
 | `subdiv` | `2` | Octree subdivision level (`SUBDIV_256`) — finer voxel detail, slower bake. |
 | `size` | `Vector3(30, 20, 30)` | World-space extents of the baked probe volume. |
-| `camera_attributes` | `SubResource("CameraAttributesPractical_1")` | Exposure settings used to normalize the bake's brightness. |
+| `camera_attributes` | `SubResource("CameraAttributesPractical_1")` | Exposure settings used to normalise the bake's brightness. |
 | `data` | `SubResource("VoxelGIData_1")` | The baked octree/distance-field data this probe reads at runtime. |
 
 ## Divergences

@@ -44,5 +44,5 @@ Strict parsing format-checks the inherited set (17 inherited from Node3D, 10 inh
 
 OpenXRRenderModel declares no validators, so there is no per-property bad value to discuss.
 Its one semantic rule instead checks parentage: the lenient parser never substitutes a
-missing or wrong parent either, it simply renders the node wherever the scene tree puts it,
+missing or wrong parent either, it renders the node wherever the scene tree puts it,
 and strict parsing reports the misplacement as a warning rather than refusing the file.

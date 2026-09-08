@@ -42,4 +42,4 @@ Strict parsing format-checks these `AnimatableBody2D` properties, plus 3 inherit
 `sync_to_physics` is not read by the lenient parser at all: AnimatableBody2D reuses
 `parseNode2D` verbatim, which only destructures Node2D's own known keys, so a
 malformed value like `sync_to_physics = maybe` is silently dropped rather than
-substituted, and the parsed node simply carries no opinion on it either way.
+substituted, and the parsed node carries no opinion on it either way.

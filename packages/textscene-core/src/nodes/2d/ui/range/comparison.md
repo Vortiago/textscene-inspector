@@ -63,7 +63,7 @@ Strict parsing format-checks these `Range` properties, plus 53 inherited from Co
 
 Every property above format-checks as a plain float or boolean literal —
 `scene/gui/range.cpp`'s `ADD_PROPERTY` list carries no `PROPERTY_HINT_RANGE` on
-any of Range's own members except `ratio`, which Godot never serializes
+any of Range's own members except `ratio`, which Godot never serialises
 (`PROPERTY_USAGE_NONE`) and which therefore has no validator at all. A
 `max_value` authored below `min_value` is an error tier: `Range::set_max`
 clamps it up to `min_value` (`range.cpp`), so the value the file states is not

@@ -46,5 +46,5 @@ Strict parsing format-checks these `XRFaceModifier3D` properties, plus 17 inheri
 The lenient parser reads XRFaceModifier3D through `parseNode3D`, so a malformed
 `face_tracker` (an unquoted bare word) or `target` (a bare quoted string instead of a
 NodePath literal) is kept as opaque, unparsed text — there is no tracked blend weight to
-substitute either way. Strict parsing is where these are actually read, and there a bad
+substitute either way. Strict parsing is where these are read, and there a bad
 value is an error, not a lenient default.

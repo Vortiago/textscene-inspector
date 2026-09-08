@@ -12,7 +12,7 @@ renders_as: a positioned HTML div
 Button is Godot's clickable text control. This is a static viewer, so it draws each
 Button's NORMAL state as a positioned HTML `<div>` — background and border from the
 `normal` StyleBox (or the default-theme StyleBox when none is set), with the label
-centered. The fixture stacks three centered buttons: an unthemed `Click Me`, a green
+centred. The fixture stacks three centred buttons: an unthemed `Click Me`, a green
 `Styled` one with an explicit StyleBox, and a `Disabled` one.
 
 ## Properties exercised
@@ -31,8 +31,8 @@ fill rgb(46,46,46) sitting darker than the rgb(76,76,76) backdrop, white label
 rgb(223,223,223), in both images. The **Styled** button is pixel-exact green
 rgb(51,128,89). The **Disabled** button renders with Godot's lighter disabled fill in
 both (Godot rgb(61,61,61), ours rgb(57,57,57)); its greyed label is marginally less
-muted here (ours rgb(164,164,164) vs Godot rgb(142,142,142)) because the disabled font
-tint is approximated rather than read from the default theme's disabled color.
+muted here (ours rgb(164,164,164) versus Godot rgb(142,142,142)) because the disabled font
+tint is approximated rather than read from the default theme's disabled colour.
 
 ## Linting
 
@@ -68,7 +68,7 @@ Button's own fields, `text`, `disabled`, `flat`, `alignment`, `icon`,
 `icon_alignment`, `vertical_icon_alignment`, `expand_icon`, have no strict
 counterpart at all; only the inherited Control set is checked. `disabled`, `flat`,
 and `expand_icon` parse with a bare `=== 'true'` check, so anything but the literal
-string `"true"`, e.g. `"1"`, `"True"`, a typo, silently becomes `false`.
+string `"true"`, for example, `"1"`, `"True"`, a typo, silently becomes `false`.
 `alignment`, `icon_alignment`, and `vertical_icon_alignment` use `parseOptionalInt`:
 a malformed value becomes `undefined` with no warning, leaving the button to fall
 back to its own render default.

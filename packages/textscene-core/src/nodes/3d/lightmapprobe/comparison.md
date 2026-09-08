@@ -46,4 +46,4 @@ parser reuses `parseNode3D`, which reads only `transform` and `visible`: a malfo
 which logs a warning and substitutes the identity transform rather than dropping the
 node, while the strict parser reports the same bad value as a diagnostic instead of
 silently replacing it. Every other Node3D key, `rotation_order` included, is read by
-neither parser and simply never reaches the scene tree.
+neither parser and never reaches the scene tree.

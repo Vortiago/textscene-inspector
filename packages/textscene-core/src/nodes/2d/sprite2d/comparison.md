@@ -21,7 +21,7 @@ and a fifth carried by a rotated `Node2D` group above and to the right.
 | Property | Value | Effect |
 | --- | --- | --- |
 | `texture` | `ExtResource marker` | each sprite draws the 96×96 blue marker quad, centred on its node position |
-| `position` | `(140, 0)`, `(0, 140)`, `(-140, 0)`, `(70, 0)` | offsets the four outer markers around the centred origin; the unset Center stays at `(0, 0)` |
+| `position` | `(140, 0)`, `(0, 140)`, `(-140, 0)`, `(70, 0)` | offsets the four outer markers around the centred origin; the unset Centre stays at `(0, 0)` |
 | `modulate` | `Color(1, 0.5, 0.5, 1)` | red-tints the Below sprite (green and blue halved) |
 | `flip_h` | `true` | mirrors the left marker horizontally — its F reads backwards |
 | `rotation` | `0.5` | set on the Group `Node2D`; tilts its child sprite ~29° (the upper marker), inherited from the parent |
@@ -35,10 +35,10 @@ child is tilted identically.
 Colour diverges. The previewer dims the entire 2D output — no pixel in ours reaches pure
 white, so the marker F's cap at a light grey `[226, 226, 226]` where Godot's white texels
 render `[255, 255, 255]`. On the unmodulated blue field the shift is small (ours
-`[44, 115, 214]` vs Godot `[45, 108, 223]`), but on the red-`modulate` **Below** sprite it
+`[44, 115, 214]` versus Godot `[45, 108, 223]`), but on the red-`modulate` **Below** sprite it
 is stark: ours `[22, 34, 111]` against Godot `[45, 54, 112]` — red and green roughly half
 of Godot's while blue matches — and its glyph reads a muddy salmon `[238, 151, 146]`
-rather than Godot's brighter pink `[255, 128, 128]`. The Center sprite sets no `modulate`
+rather than Godot's brighter pink `[255, 128, 128]`. The Centre sprite sets no `modulate`
 yet still caps below white, so this is a pipeline-wide colour shift in the previewer's 2D
 output; the Below sprite is that shift plus the tint multiply, not a separate
 `modulate`-only defect.
@@ -76,7 +76,7 @@ Strict parsing format-checks these `Sprite2D` properties, plus 12 inherited from
 <!-- lint:end -->
 
 `hframes` and `vframes` fall back to `1` when absent or unparseable, and a parsed
-value below `1` (e.g. `0` or negative) is silently clamped up to `1` via
+value below `1` (for example, `0` or negative) is silently clamped up to `1` through
 `Math.max`. `frame` falls back to `0` but is otherwise unclamped, so a negative
 frame index passes through unchanged where strict rejects it. `frame_coords` and
 `region_rect` use their own inline parsers: a value that fails the `Vector2i` /

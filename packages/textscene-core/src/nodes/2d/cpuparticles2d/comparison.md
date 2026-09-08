@@ -93,7 +93,7 @@ every scene:
   makes its own output stable but means an unseeded emitter's particles are in
   plausible places rather than the engine's.
 - **`speed_scale` on a preprocessed emitter.** Godot forces `speed_scale` to 1
-  while it preprocesses, so the property genuinely does not move a preprocessed
+  while it preprocesses, so the property does not move a preprocessed
   pose; it applies only to the substituted window described above.
 
 ## Linting
