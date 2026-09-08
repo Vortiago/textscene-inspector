@@ -29,6 +29,16 @@ export interface NodeOrigin {
    * reach the `n.parent == -1` refusal at all.
    */
   readonly declaredParent: string | undefined;
+  /**
+   * Whether the heading carries `parent_id_path=`, the id trail Godot falls
+   * back to when the `parent=` path does not walk
+   * (`packed_scene.cpp:161-163`, `:1947`).
+   *
+   * Only whether, not the ids: they name nodes by id inside the base scenes,
+   * which no reader of THIS file can resolve. It is enough to know that a
+   * vanished path here does not settle where the node lands.
+   */
+  readonly recoverableById?: boolean;
 }
 
 /**

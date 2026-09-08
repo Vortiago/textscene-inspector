@@ -141,6 +141,7 @@ export class TscnParserCore {
             node,
             line: currentHeadingLine,
             declaredParent: currentHeading.attributes.parent,
+            recoverableById: currentHeading.attributes.parent_id_path !== undefined,
           });
         }
       } else if (currentSection === 'ext_resource') {

@@ -220,6 +220,24 @@ describe('a parent path this file never defines', () => {
     expect(diagnostic?.nodeType).toBe('<unknown>');
   });
 
+  it('claims no re-root when the heading carries parent_id_path', () => {
+    // `NODE_FROM_ID` falls back to `_recover_node_path_index` before the
+    // vanished-path warning (`packed_scene.cpp:161-163`, `:1947`), which walks
+    // ids through the base scenes. Those ids name nodes in files this linter
+    // never opens, so the path being unwalkable here does not settle where the
+    // node lands — and asserting the rename would be a claim about an engine
+    // branch we did not evaluate.
+    const source = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" type="Node2D" parent="Gone" parent_id_path=PackedInt32Array(840561040, 1598164129)]
+`;
+    const message = orphansIn(source)[0]?.message;
+    expect(message).toContain('parent_id_path');
+    expect(message).not.toContain('Gone#Body');
+  });
+
   it('errors on an empty parent=, which is neither a vanished path nor a missing field', () => {
     // The loader calls `add_node_path` for any value the field carries and it
     // never returns -1 (`packed_scene.cpp:2307-2311`), so `n.parent == -1` — the

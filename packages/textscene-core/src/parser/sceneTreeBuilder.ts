@@ -206,9 +206,10 @@ function findInstanceAnchor(parentPath: string, tables: BuildTables): InstanceAn
  * scan produced.
  *
  * Derived from the tree it actually returned rather than re-deciding
- * resolvability: the deferral pass anchors a path descending into instanced
- * content, and a second copy of that judgement would drift from this one. A
- * node reachable from `roots` was placed; every other node was not.
+ * resolvability: the placement above seats a path descending into instanced
+ * content at its anchor, and a second copy of that judgement would drift from
+ * this one. A node reachable from `roots` was placed; every other node was
+ * not.
  *
  * Two shapes end up here. One declares a `parent=` path that names nothing —
  * Godot warns and re-roots it. One declares no `parent=` at all while not being
