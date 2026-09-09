@@ -10,8 +10,9 @@
  *      root nodes as additional children of the instancing node. This is
  *      how Godot's external-scene composition (`integration-three-cubes.tscn`
  *      → `child_cube.tscn`) is rendered.
- *   4. Otherwise render `<GenericNodeFallback>` so unknown types stay
- *      visible in the viewport.
+ *   4. Otherwise render `<GenericNodeFallback>`, an invisible group that
+ *      applies the transform so the node's children stay in the right space
+ *      (ADR-0008). It draws nothing of its own.
  *
  * The dispatcher itself only renders nodes; it does NOT mount a `<Canvas>`
  * or any context providers — those are owned by `<TscnCanvas>` and

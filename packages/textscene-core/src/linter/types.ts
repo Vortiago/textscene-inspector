@@ -205,7 +205,7 @@ export interface RuleContext {
  * Why a diagnostic that is NOT about Godot semantics is still worth reporting.
  *
  * Typed rather than free text for the reason `DeclineCategory` is
- * (`configurationWarningCoverage.test.ts`): a prose excuse turns the arm into a
+ * (`configurationWarningCoverage.test.ts`): a prose excuse turns the kind into a
  * rubber stamp, while a category a reader can sort by makes a tired claim
  * visible next to a principled one.
  */
@@ -251,7 +251,7 @@ export type EmitGrounding =
    * `configurationWarningCoverage.test.ts`'s census already holds it for every
    * ported row, keyed by this exact `ruleName`; re-typing it beside the rule
    * would create a second roster that can drift from the first.
-   * `emitsGrounding.test.ts` resolves it, and fails an arm with no census row.
+   * `emitsGrounding.test.ts` resolves it, and fails a kind with no census row.
    */
   | { readonly kind: 'configuration-warning' }
   /**
@@ -266,19 +266,19 @@ export type EmitGrounding =
    * a sibling flag that gates the whole group. `at` is that line, `unused` says
    * in one clause what the value does not do.
    *
-   * A separate arm because the claim is about REACHABILITY, not about a bound.
+   * A separate kind because the claim is about REACHABILITY, not about a bound.
    * ADR-0032's error/warning split cannot decide it - nothing is refused and
    * nothing is altered, so it is advisory by construction. Collapsing it into
    * `engine` was what let six independent audits disagree about whether
    * `sprite_2d.cpp:98`'s `if (region_enabled)` grounds anything: it does, but
-   * not the way an `ERR_FAIL_COND` does, and the arm should say which.
+   * not the way an `ERR_FAIL_COND` does, and the kind should say which.
    */
   | { readonly kind: 'engine-inert'; readonly at: string; readonly unused: string }
   /**
    * No engine counterpart, and legitimately so: the diagnostic is about the
    * FILE or about THIS previewer, not about what Godot does with a value.
    *
-   * This is the arm that must not become comfortable. A condition that is
+   * This is the kind that must not become comfortable. A condition that is
    * neither engine-grounded nor one of these scopes is an invented rule, and
    * the honest outcome for one of those is deletion (ADR-0032: severity comes
    * from engine source, and documentation prose is never a basis).

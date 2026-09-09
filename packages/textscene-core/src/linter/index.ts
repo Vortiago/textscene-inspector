@@ -11,9 +11,9 @@
 // The base Control slice (nodes/2d/ui/control) registers the layout/anchor/
 // offset + theme-override validators shared by the whole 2D UI family; every
 // Control subclass inherits them through the ValidatorRegistry base-walk
-// (see godot/nodeBaseTypes.ts). The individual Control subclass slices remain
-// render-only (ADR-0003) — they carry no index.linter.ts of their own unless
-// they gain type-specific validators or semantic rules.
+// (see godot/nodeBaseTypes.ts). A Control subclass slice carries its own
+// index.linter.ts once it has type-specific validators or semantic rules, which
+// most now do.
 import '../nodes/node/index.linter.js';
 import '../nodes/canvasitem/shared/index.linter.js';
 import '../nodes/2d/ui/canvaslayer/index.linter.js';

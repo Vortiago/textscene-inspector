@@ -23,7 +23,7 @@
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter @textscene/core build && pnpm -r type-check",
     "type-check:tests": "pnpm -r type-check:tests",
-    "validate": "pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:gallery --check && pnpm check:bundle-size && pnpm check:package",
+    "validate": "pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:index --check && pnpm docs:gallery --check && pnpm check:bundle-size && pnpm check:package",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
@@ -50,6 +50,7 @@
     "nodes:base-types": "node scripts/compare-docs/build-node-base-types.mjs",
     "nodes:links": "node scripts/compare-docs/build-node-catalog.mjs --links-only",
     "docs:lint-sections": "node scripts/compare-docs/build-lint-sections.mjs",
+    "docs:index": "node scripts/compare-docs/build-comparison-index.mjs",
     "docs:gallery": "node scripts/compare-docs/build-gallery.mjs",
     "recapture": "node scripts/compare-docs/recapture.mjs"
   },

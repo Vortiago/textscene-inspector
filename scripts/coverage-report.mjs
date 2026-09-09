@@ -31,7 +31,7 @@ import { parseArgs, report } from './coverage-report/report.mjs';
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
-    console.log('usage: node scripts/coverage-report.mjs [--next <n>] [--json]');
+    console.log('usage: node scripts/coverage-report.mjs [--json]');
   } else {
     report(await collectCoverage(), opts);
   }
