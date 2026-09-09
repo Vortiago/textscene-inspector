@@ -1,5 +1,7 @@
 # Commit the ld-58 fixture closure in the private repo; strip it before going public
 
+**Superseded by ADR-0033: the corpus is deployed, never committed.** This record describes the period when this was a private repository, and its two amendments below invert its own decision. ADR-0033 states what holds now. Kept for the reasoning behind the `res://`-mirrored layout and the script-strip.
+
 A curated subset of ld-58 scenes plus their transitive `res://` resource closure
 is committed under `scenes/ld58/` (mirroring the `res://` tree so paths resolve)
 as visual-regression fixtures and showcase progress clips for both apps.

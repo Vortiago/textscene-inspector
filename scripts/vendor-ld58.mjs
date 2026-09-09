@@ -9,7 +9,7 @@
  *
  * The ld-58 repo is public but repo-EXTERNAL: nothing here is committed, and
  * the previewer builds and every committed fixture works without it. The
- * DEPLOYED site does include this corpus (ADR-0010 amendment): `pnpm
+ * DEPLOYED site does include this corpus (ADR-0033): `pnpm
  * build:site` vendors it (script-stripped) alongside the games corpora
  * before the production web build — anonymous fetch, no credentials needed.
  *
