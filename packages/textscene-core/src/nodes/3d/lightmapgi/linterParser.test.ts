@@ -181,7 +181,7 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('rejects past the true ceiling of 16, which the hint\'s or_greater does not actually open', () => {
-      expectError(check('bounces', '17'), 'must be at most 16', "Godot's setter refuses the write");
+      expectError(check('bounces', '17'), 'must be at most 16', 'Godot does not store this value');
     });
 
     it('still refuses a value far past 16 — or_greater opens the HINT, not the setter', () => {

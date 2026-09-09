@@ -214,7 +214,11 @@ function refusalMessage(
       : end.exclusive
         ? 'less than'
         : 'at most';
-  return `Property '${propertyName}' must be ${relation} ${end.at} (got ${num}); Godot's setter refuses the write.`;
+  // Not "refuses the write": the enforced tier covers a setter that ALTERS the
+  // value as well as one that drops it, and roughly half of these ends are a
+  // CLAMP (range.cpp:255) or a MAX (material.cpp:3087). One sentence true of
+  // both beats a sweep that classifies 350-odd ends and drifts.
+  return `Property '${propertyName}' must be ${relation} ${end.at} (got ${num}); Godot does not store this value.`;
 }
 
 /**

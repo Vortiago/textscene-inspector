@@ -189,7 +189,7 @@ describe('ReflectionProbe strict validators', () => {
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_MAX_DISTANCE_VALUE');
       expect(error?.message).toContain('at most 262144');
-      expect(error?.message).toContain("Godot's setter refuses the write");
+      expect(error?.message).toContain('Godot does not store this value');
     });
 
     it('still refuses a value far past the clamp — or_greater opens the HINT, not the clamp', () => {

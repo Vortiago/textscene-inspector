@@ -199,6 +199,15 @@ describe('FileDialog strict validators', () => {
       expect(check('option_1.5/name', '"Format"')?.severity).toBe('error');
     });
 
+    it('errors on a negative option default, floored by both CLAMP branches', () => {
+      // `set_option_default` CLAMPs to (0, 1) when the option has no values and
+      // to (0, values.size() - 1) when it has (file_dialog.cpp:2011-2015). The
+      // ceiling depends on the sibling `values`, which a per-key validator
+      // cannot see; the floor of 0 does not.
+      expect(check('option_0/default', '-1')?.severity).toBe('error');
+      expect(check('option_0/default', '0')).toBeNull();
+    });
+
     it('rejects a leaf FileDialog does not register', () => {
       // Three leaves only, file_dialog.cpp:2201-2203.
       expect(check('option_0/tooltip', '"nope"')?.code).toBe('INVALID_OPTION_KEY');

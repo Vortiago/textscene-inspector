@@ -141,7 +141,7 @@ describe('OpenXRCompositionLayerEquirect strict validators', () => {
       expect(check('lower_vertical_angle', '1.5709')?.severity).toBe('error');
     });
     it('names the setter as the reason at each end', () => {
-      expect(check('upper_vertical_angle', '2')?.message).toContain("Godot's setter refuses the write");
+      expect(check('upper_vertical_angle', '2')?.message).toContain('Godot does not store this value');
       expect(check('upper_vertical_angle', '0')?.message).toContain('greater than 0');
     });
     it.each(['upper_vertical_angle', 'lower_vertical_angle'])(

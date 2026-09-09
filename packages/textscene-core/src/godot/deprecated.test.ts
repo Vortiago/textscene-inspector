@@ -96,6 +96,15 @@ describe('an alias a slice already handles is deliberately absent', () => {
       expect(canonicalPropertyName('AnimationPlayer', key, '1')).toBe(key);
     }
   );
+
+  it('AnimationTree.process_callback is left to the slice too', () => {
+    // animation_tree.cpp:926-927 is its own `_set` arm, not an inherited one,
+    // and the slice registers a validator under the deprecated spelling
+    // (animationtree/linterParser.ts) exactly as AnimationPlayer's does.
+    expect(canonicalPropertyName('AnimationTree', 'process_callback', '1')).toBe(
+      'process_callback'
+    );
+  });
 });
 
 describe('an arm the table cannot express is deliberately absent', () => {

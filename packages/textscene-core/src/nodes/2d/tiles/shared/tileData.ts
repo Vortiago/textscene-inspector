@@ -32,6 +32,32 @@ export interface PlacedCell {
 
 const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
 const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
+/** `CryptoCore::b64_decode`'s alphabet, and the only padding it accepts. */
+const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
+
+/**
+ * Why Godot's TEXT PARSER would refuse this `tile_map_data` literal.
+ *
+ * A fault here is a whole-file `ERR_PARSE_ERROR`, not a bad value: an
+ * unreadable base64 body returns one from `_parse_byte_array`
+ * (variant_parser.cpp:618-622). It therefore outranks every question about
+ * what the bytes MEAN, and the semantic decode must not report on a literal
+ * that never loads — which is what put two errors on one value.
+ *
+ * One owner for the grammar, two readers: the property validator turns each
+ * fault into its own message, and the tile-data rule skips a faulted literal.
+ */
+export function readTileMapDataLiteral(
+  value: string
+): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {
+  const match = PACKED_BYTE_ARRAY_RE.exec(value.trim());
+  if (!match) return { fault: 'not-a-literal' };
+  const body = match[1]!.trim();
+  if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
+    return { fault: 'invalid-base64', body };
+  }
+  return { fault: null, body };
+}
 
 const CELL_BYTES = 12;
 /** Legacy `layer_N/tile_data` packs one cell per three int32s. */

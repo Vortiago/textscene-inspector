@@ -152,8 +152,12 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   name: v.quotedString('name'),
   values: packedStringArrayValidator('values'),
   // CLAMPed against the sibling `values` length (file_dialog.cpp:2012-2014),
-  // which this validator cannot see, so only the format is checkable.
-  default: v.int('default'),
+  // which this validator cannot see, so the CEILING is not checkable. Both
+  // branches floor at 0 regardless of that sibling, and that end is.
+  default: v.int('default', {
+    enforcedMin: { at: 0 },
+    enforced: { min: 'file_dialog.cpp:2012' },
+  }),
 };
 
 /**

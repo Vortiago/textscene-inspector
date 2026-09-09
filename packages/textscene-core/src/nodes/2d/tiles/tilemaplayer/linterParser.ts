@@ -6,7 +6,7 @@ import { propertyError, shape, v } from '../../../../linter/validators/index.js'
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
+import { readTileMapDataLiteral } from '../shared/tileData.js';
 
 /**
  * tile_map_layer.h:341-345, DebugVisibilityMode. BIND_ENUM_CONSTANT count is 3
@@ -21,8 +21,6 @@ const DEBUG_VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' }
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
 // `PackedByteArray ( … )` loads, the same reasoning godot/variantParser.ts
 // states for the NodePath and resource-ref literals.
-const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
-const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
 
 /**
  * `tile_map_data`: `PropertyInfo(Variant::PACKED_BYTE_ARRAY, "tile_map_data",
@@ -45,8 +43,8 @@ const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
  * malformed value.
  */
 const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
-  const match = PACKED_BYTE_ARRAY_RE.exec(value.trim());
-  if (!match) {
+  const literal = readTileMapDataLiteral(value);
+  if (literal.fault === 'not-a-literal') {
     return propertyError(
       key,
       line,
@@ -54,19 +52,17 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
       'INVALID_TILE_MAP_DATA_FORMAT'
     );
   }
-  const body = match[1]!.trim();
-  if (body === '') return null;
-  if (body.startsWith('"')) {
-    if (!QUOTED_BASE64_RE.test(body)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'tile_map_data' contains a malformed base64 string: ${body}`,
-        'INVALID_TILE_MAP_DATA_FORMAT'
-      );
-    }
-    return null;
+  const { body } = literal;
+  if (literal.fault === 'invalid-base64') {
+    return propertyError(
+      key,
+      line,
+      `Property 'tile_map_data' contains a malformed base64 string: ${body}`,
+      'INVALID_TILE_MAP_DATA_FORMAT'
+    );
   }
+  if (body === '') return null;
+  if (body.startsWith('"')) return null;
   // `uint8`, alone among the seven packed-int slots: `_parse_byte_array`
   // (variant_parser.cpp:600) pushes each element into a `Vector<uint8_t>` (:650),
   // so it converts through `Variant::operator uint8_t()`

@@ -30,7 +30,11 @@ import { valueCode } from './codes.js';
  * multiline properties before any validator sees them.
  */
 const QUOTED_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
-const STRING_NAME_RE = /^&?"(?:[^"\\]|\\[\s\S])*"$/;
+// `[&@]`, the same pair QUOTED_RE takes: `case '@':` falls through to the
+// StringName case under `#ifndef DISABLE_DEPRECATED`
+// (variant_parser.cpp:262-265), so both jackets load. The two grammars
+// disagreeing put an error on a value the file's own sibling accepted.
+const STRING_NAME_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
 
 export const scalarCombinators = {
   /** Boolean (`'true'` | `'false'`). */

@@ -24,6 +24,15 @@ function check(property: string, value: string) {
 }
 
 describe('Range strict validators', () => {
+  it('does not tell the reader a clamping setter refused the write', () => {
+    // `set_page` CLAMPs into [0, max - min] (range.cpp:254-255). The value does
+    // not survive either way, which is what the error tier asserts, but it is
+    // stored as 0 rather than dropped.
+    const message = check('page', '-1')?.message ?? '';
+    expect(message).toContain('must be at least 0');
+    expect(message).not.toContain('refuses the write');
+  });
+
   it('registers validators of its own', () => {
     expect(validatorRegistry.getOwnKeys('Range')).not.toEqual([]);
   });

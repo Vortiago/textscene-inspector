@@ -83,7 +83,7 @@ describe('tier assertions', () => {
   });
 
   it('passes, and returns the diagnostic, when tier and message both hold', () => {
-    expect(expectError(ENFORCED(), 'at most 16', "Godot's setter refuses the write").severity).toBe(
+    expect(expectError(ENFORCED(), 'at most 16', 'Godot does not store this value').severity).toBe(
       'error'
     );
     expect(expectWarning(HINTED(), 'Valid values').severity).toBe('warning');

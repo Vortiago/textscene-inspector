@@ -7,7 +7,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
-import { decodeTileMapData } from '../shared/tileData.js';
+import { decodeTileMapData, readTileMapDataLiteral } from '../shared/tileData.js';
 
 function checkTileMapLayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -25,7 +25,15 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (rawProps.tile_map_data !== undefined && decodeTileMapData(rawProps.tile_map_data) === null) {
+  // A literal the text parser cannot read is the property validator's to
+  // report: the file does not load at all, so what the bytes would have meant
+  // is not a question this rule gets to ask.
+  const tileData = rawProps.tile_map_data;
+  if (
+    tileData !== undefined &&
+    readTileMapDataLiteral(tileData).fault === null &&
+    decodeTileMapData(tileData) === null
+  ) {
     diagnostics.push({
       severity: 'error',
       message: `'tile_map_data' is not a decodable PackedByteArray (2-byte header + 12-byte cell records).`,

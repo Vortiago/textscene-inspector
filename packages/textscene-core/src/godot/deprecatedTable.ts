@@ -1,7 +1,31 @@
 /**
- * The alias table behind `deprecated.ts`: one row per `#ifndef
- * DISABLE_DEPRECATED` `_set` arm in `scene/`, keyed by the DECLARING type, and
- * the chain walk that finds a row from a descendant.
+ * The alias table behind `deprecated.ts`, keyed by the DECLARING type, plus the
+ * chain walk that finds a row from a descendant.
+ *
+ * A row spells one deprecated `_set` arm that FORWARDS ONE KEY to one setter:
+ * a rename, or a rename carrying the arm's value test and rewrite. It is not
+ * every such arm in `scene/`, and the four shapes it leaves out are each left
+ * out for a reason:
+ *
+ * - ALREADY OWNED BY A SLICE. `AnimationPlayer`'s three callback-mode arms and
+ *   `AnimationTree`'s `process_callback` register validators under the
+ *   deprecated spelling and read `current ?? deprecated` in their parsers.
+ *   Canonicalising underneath that changes which of two conflicting values
+ *   wins, so the slice keeps them. `deprecated.test.ts` pins each.
+ * - A BULK CONSTRUCTOR. `ItemList` and `PopupMenu` read `items` as an Array
+ *   three elements at a time into `add_item` calls (item_list.cpp:2244-2258).
+ *   There is no single target property to name.
+ * - A `_get`-ONLY arm. `AnimationPlayer`'s `playback/play`
+ *   (animation_player.cpp:71) reads back and nothing assigns it.
+ * - THE RESOURCE SIDE, which no row covers yet: `Environment.background_sky*`,
+ *   `BaseMaterial3D`'s `flags_*`/`params_*`, `Animation.loop`,
+ *   `NavigationMesh.polygon_verts_per_poly` and
+ *   `VisualShaderNodeParameter.uniform_name`.
+ *
+ * A missing row costs no false positive — an unresolved key is simply
+ * unvalidated, as any unknown key is. Nothing can scrape the engine to keep
+ * this honest, since `godot-source-decoupling` forbids reading the checkout at
+ * test time, so this list IS the claim.
  */
 
 import { literalText } from './string.js';

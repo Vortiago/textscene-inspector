@@ -114,6 +114,15 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
       expect(errors[0]!.message).toContain('polygons');
     });
 
+    // `null` is a legal element of any untyped Array, and `set_polygons`
+    // assigns one bare (polygon_2d.cpp:435-437). `_draw` reads the entry into
+    // an empty `Vector<int>` and skips it at `ic < 3` (:328-330), so it draws
+    // nothing and refuses nothing. Four scraped-corpus files carry one.
+    it('accepts a null entry, which the untyped Array setter stores', () => {
+      const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedInt32Array(0, 1, 2), null]\n`;
+      expect(errorsOf(linter.lint(content))).toEqual([]);
+    });
+
     // `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) takes any
     // number token and narrows it, so Godot loads this as index 1.
     it('truncates a float index rather than refusing it', () => {

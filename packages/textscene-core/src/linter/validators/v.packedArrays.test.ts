@@ -132,6 +132,16 @@ describe('float-tuple validators accept the renderer float grammar', () => {
       expect(quoted('&"Head"')).toBeNull();
     });
 
+    it('accepts the 3.x @ prefix on both, which the tokenizer still reads', () => {
+      // `case '@':` falls straight through to the StringName case under
+      // `#ifndef DISABLE_DEPRECATED` (variant_parser.cpp:262-265), so the value
+      // loads and a rejection here would be an error on a file Godot opens.
+      // `quotedString` accepted it already; `stringName` did not, and the two
+      // grammars sit four lines apart in one file.
+      expect(name('@"Footsteps"')).toBeNull();
+      expect(quoted('@"Footsteps"')).toBeNull();
+    });
+
     it('honours an escaped quote inside the value', () => {
       expect(quoted('"a\\"b"')).toBeNull();
       expect(name('"a\\"b"')).toBeNull();

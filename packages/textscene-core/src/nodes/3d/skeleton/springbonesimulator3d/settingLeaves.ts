@@ -74,11 +74,12 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :302, same shape as root_bone_name; set_center_bone_name is :605.
   center_bone_name: v.quotedString('center_bone_name'),
 
-  // :303. set_center_bone applies the same clamp to -1 (:625-627).
-  center_bone: v.strictInt('center_bone', {
-    min: -1,
-    enforced: 'spring_bone_simulator_3d.cpp:625-627',
-  }),
+  // :303. Unbounded, unlike its root_bone and end_bone siblings: the clamp to
+  // -1 (:625-627) sits inside `if (sk)` (:623) and properties apply before
+  // parenting, so no skeleton exists yet, and _validate_bone_names
+  // (:1355-1369) re-runs set_root_bone and set_end_bone but never
+  // set_center_bone. An out-of-range index survives and re-serialises.
+  center_bone: v.strictInt('center_bone'),
 
   // :304, Variant::BOOL. set_individual_config (:870) assigns. Which of the two
   // config blocks below is live depends on it, and that is linter.ts's.
@@ -137,12 +138,22 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // selects WHICH of the two collision lists is live, which is linter.ts's.
   enable_all_child_collisions: v.boolean('enable_all_child_collisions'),
 
-  // :330 and :335, both PROPERTY_HINT_NONE, so no hint bounds them, and NEITHER
+  // :330 and :335, both PROPERTY_HINT_NONE, so no hint bounds them. Neither
   // setter carries the `ERR_FAIL_COND(p_count < 0)` that setting_count (:841)
-  // and joint_count (:1054) have: set_exclude_collision_count (:1123) and
-  // set_collision_count (:1179) hand the value straight to
-  // `LocalVector::resize`, whose `_resize` (local_vector.h:54-71) has no guard
-  // of its own. There is no line to cite for a floor, so no floor is claimed.
-  exclude_collision_count: v.int('exclude_collision_count'),
-  collision_count: v.int('collision_count'),
+  // and joint_count (:1054) have, but the floor is real one layer down:
+  // set_exclude_collision_count (:1123) and set_collision_count (:1179) pass
+  // the value to `LocalVector<NodePath>::resize`, whose size parameter is the
+  // default `U = uint32_t` (local_vector.h:44, :188), so a negative int wraps
+  // to ~4.29 billion and the allocation trips
+  // `CRASH_COND_MSG(!data, "Out of memory")` (local_vector.h:179). On the
+  // disabled one of the two lists the setter returns early and drops the value
+  // instead. Nothing negative round-trips either way.
+  exclude_collision_count: v.int('exclude_collision_count', {
+    enforcedMin: { at: 0 },
+    enforced: { min: 'local_vector.h:179' },
+  }),
+  collision_count: v.int('collision_count', {
+    enforcedMin: { at: 0 },
+    enforced: { min: 'local_vector.h:179' },
+  }),
 };

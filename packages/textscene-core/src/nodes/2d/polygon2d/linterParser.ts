@@ -76,6 +76,11 @@ function polygonsValidator(): PropertyValidator {
       // a parse error, unlike the bracket-array literal it sits inside. Bare
       // `[…]` IS that bracket grammar, so only ITS inner list gets the same
       // trailing-comma tolerance as the outer one.
+      // `null` is a legal element of any untyped Array, and `set_polygons`
+      // assigns one bare (polygon_2d.cpp:435-437), so it is stored; `_draw`
+      // reads it into an empty `Vector<int>` and skips it at `ic < 3`
+      // (:328-330). Nothing refuses it, so nothing here may.
+      if (entry.trim() === 'null') continue;
       const packed = PACKED_INT32_ELEMENT_RE.exec(entry);
       const bare = packed ? null : BARE_INT_ARRAY_ELEMENT_RE.exec(entry);
       const el = packed ?? bare;

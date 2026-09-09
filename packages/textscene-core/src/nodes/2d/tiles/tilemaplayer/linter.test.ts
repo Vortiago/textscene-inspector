@@ -44,6 +44,23 @@ describe('TileMapLayer lint rules', () => {
     );
   });
 
+  it('reports a malformed base64 body once, not once per layer that reads it', () => {
+    // The literal cannot be PARSED (`CryptoCore::b64_decode` failing is an
+    // ERR_PARSE_ERROR for the whole file, variant_parser.cpp:618-622), so the
+    // semantic decode never gets a value to judge and must stay quiet.
+    const diagnostics = lint(
+      scene(
+        `tile_set = SubResource("TileSet_a")\ntile_map_data = PackedByteArray("not base64!!")`,
+        TILESET_RESOURCES
+      )
+    );
+    const onTileData = diagnostics.filter(
+      (d) => d.severity === 'error' && /tile_map_data/.test(d.message)
+    );
+    expect(onTileData).toHaveLength(1);
+    expect(onTileData[0]?.message).toContain('base64');
+  });
+
   it('stays silent on a TileMapLayer with no tile data at all', () => {
     const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES));
     expect(diagnostics.filter((d) => d.ruleName?.startsWith('tilemaplayer'))).toEqual([]);

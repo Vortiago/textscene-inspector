@@ -94,7 +94,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
       const error = check('max_contacts_reported', '4096');
       expect(error?.severity).toBe('error');
       expect(error?.message).toContain('less than 4096');
-      expect(error?.message).toContain("Godot's setter refuses the write");
+      expect(error?.message).toContain('Godot does not store this value');
       expect(check('max_contacts_reported', '100000')?.severity).toBe('error');
     });
 

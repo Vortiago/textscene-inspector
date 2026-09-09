@@ -2,8 +2,8 @@
  * Every property-list route family resolves to a validator, or is a named gap.
  *
  * The table the guard reads is `propertyListRoutes.ts`; its header explains the
- * 38-class population, the four routes a key can arrive by, and what a `sample`
- * proves. This file is only the checking.
+ * population and its limits, the four routes a key can arrive by, and what a
+ * `sample` proves. This file is only the checking.
  *
  * `UNIMPLEMENTED_COUNT` is a ratchet, exactly like `ownValidatorCoverage`'s
  * `UNDECLARED`: the ceiling can only move down, and every row it counts is a
@@ -59,9 +59,13 @@ const unimplementedRows = ROWS.filter(
 );
 
 describe('property-list route coverage', () => {
-  it('covers exactly the 38-class population, MultiplayerSpawner excluded', () => {
+  it('covers the read population, MultiplayerSpawner excluded', () => {
+    // A pin, not a ceiling: the population grows only when someone reads
+    // another override and writes its row, and this number moving is the
+    // reviewable evidence that happened. It cannot prove the population is
+    // complete — nothing may scrape the engine to ask.
     const types = new Set(ROWS.map((row) => row.type));
-    expect(types.size).toBe(38);
+    expect(types.size).toBe(39);
     expect(types.has('MultiplayerSpawner')).toBe(false);
   });
 

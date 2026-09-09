@@ -241,10 +241,20 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('errors below -1, where the setter rewrites the value', () => {
-      // spring_bone_simulator_3d.cpp:460-462 / :497-499 / :625-627.
-      for (const leaf of ['root_bone', 'end_bone', 'center_bone']) {
+      // spring_bone_simulator_3d.cpp:460-462 / :497-499. Both are re-run by
+      // _validate_bone_names (:1355-1369) once the skeleton exists.
+      for (const leaf of ['root_bone', 'end_bone']) {
         expect(check(`settings/0/${leaf}`, '-2')?.severity).toBe('error');
       }
+    });
+
+    it('claims no floor on center_bone, whose clamp never runs at load', () => {
+      // set_center_bone's rewrite to -1 (:625-627) sits inside `if (sk)`
+      // (:623), and properties apply before parenting, so there is no skeleton
+      // yet. _validate_bone_names re-runs set_root_bone and set_end_bone only,
+      // never set_center_bone, so an out-of-range index is stored and
+      // re-serialised unchanged.
+      expect(check('settings/0/center_bone', '-5')).toBeNull();
     });
 
     it('warns that a fractional bone index is truncated', () => {
@@ -391,12 +401,16 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/0/collisions/0/extra', '&"Sphere"')?.severity).toBe('error');
     });
 
-    it('claims no floor on either count, since neither setter guards one', () => {
+    it('errors on a negative count, which LocalVector::resize cannot represent', () => {
       // set_collision_count (:1179) and set_exclude_collision_count (:1123) hand
-      // the value straight to LocalVector::resize, unlike setting_count (:841)
-      // and joint_count (:1054), which both open with ERR_FAIL_COND(p_count < 0).
-      expect(check('settings/0/collision_count', '-1')).toBeNull();
-      expect(check('settings/0/exclude_collision_count', '-1')).toBeNull();
+      // the value to LocalVector<NodePath>::resize, whose size parameter is the
+      // default `U = uint32_t` (local_vector.h:44, :188). A negative int wraps
+      // to ~4.29 billion and the allocation trips
+      // `CRASH_COND_MSG(!data, "Out of memory")` (local_vector.h:179). Where the
+      // sibling list is the disabled one the setter returns early instead, so
+      // the value is dropped rather than stored — no round-trip either way.
+      expect(check('settings/0/collision_count', '-1')?.severity).toBe('error');
+      expect(check('settings/0/exclude_collision_count', '-1')?.severity).toBe('error');
       expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');
     });
   });

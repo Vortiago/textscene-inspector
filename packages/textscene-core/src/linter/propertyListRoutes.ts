@@ -11,9 +11,16 @@
  * declared anywhere a sweep over `ADD_PROPERTY`/XML could find it, so a type
  * can carry a whole family of them and still read as fully covered while
  * `StrictTscnParser` (`if (!validator) return;`) silently accepts every value
- * on that family. That is the gap this file closes: 38 classes, each
+ * on that family. That is the gap this file closes: every class here was
  * confirmed by reading its override to genuinely introduce a key none of the
  * other guards would ever see.
+ *
+ * It is a POPULATION, not a proof of completeness. Nothing scrapes the engine
+ * to find the next such override — `godot-source-decoupling` forbids reading
+ * the checkout at test time — so a class whose override nobody has read yet is
+ * absent from here and invisible everywhere else, which is how
+ * `AudioStreamPlayer`'s `parameters/` family (142 files in the scraped corpus)
+ * went unlisted. Adding a row is how that is fixed, one reading at a time.
  *
  * `MultiplayerSpawner` is the one class this population excludes: its
  * `scenes/<i>/…` pushes carry `PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ARRAY`
@@ -50,6 +57,7 @@
 
 import type { RouteRow } from './propertyListRoutes/types.js';
 import { animationRoutes } from './propertyListRoutes/animation.js';
+import { audioRoutes } from './propertyListRoutes/audio.js';
 import { controlRoutes } from './propertyListRoutes/controls.js';
 import { shaderParameterRoutes } from './propertyListRoutes/shaderParameters.js';
 import { skeletonRoutes } from './propertyListRoutes/skeletons.js';
@@ -60,6 +68,7 @@ export type { RouteRow } from './propertyListRoutes/types.js';
 export const ROWS: readonly RouteRow[] = [
   ...skeletonRoutes,
   ...animationRoutes,
+  ...audioRoutes,
   ...spatialNodeRoutes,
   ...shaderParameterRoutes,
   ...controlRoutes,
