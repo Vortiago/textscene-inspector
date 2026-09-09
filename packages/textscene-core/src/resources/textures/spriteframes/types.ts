@@ -11,8 +11,15 @@
 /** One parsed SpriteFrames animation: ordered frames plus playback timing. */
 export interface SpriteFramesAnimation {
   name: string;
-  /** Ordered frame texture refs (e.g. `ExtResource("2")`). */
-  frames: string[];
+  /**
+   * Ordered frame texture refs (e.g. `ExtResource("2")`), `null` where the
+   * frame's texture slot holds none.
+   *
+   * A blank frame is a real, round-trippable Godot state — the writer emits a
+   * null `Ref` as `null` (sprite_frames.cpp:184) and `_set_animations` reads it
+   * back (:222) — so it occupies a slot rather than shortening the animation.
+   */
+  frames: (string | null)[];
   /** Per-frame duration multipliers, parallel to `frames` (Godot default 1.0). */
   durations: number[];
   /** Playback rate in frames/second (`speed`; Godot default 5). */

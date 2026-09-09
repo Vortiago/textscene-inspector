@@ -5,6 +5,7 @@
 [node name="TestNode" type="MeshInstance3D"]
 mesh = SubResource("mesh_1")
 cast_shadow = 99
+transparency = 5.0
 
 [node name="Title" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
@@ -15,7 +16,7 @@ modulate = Color(1, 1, 0.7, 1)
 
 [node name="Description" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
-text = "Tests invalid cast_shadow value (99 instead of 0-3)"
+text = "cast_shadow=99 now warns (visual_instance_3d.cpp:601 hints the enum, but the setter is a bare assignment); transparency=5.0 still errors (its setter CLAMPs, visual_instance_3d.cpp:236)"
 pixel_size = 0.006
 billboard = 1
 modulate = Color(1, 1, 1, 1)

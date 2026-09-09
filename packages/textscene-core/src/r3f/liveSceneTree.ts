@@ -24,6 +24,7 @@ export type { SceneScope };
 import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { joinPath } from '../utils/nodePath.js';
+import { nodePathNames } from '../godot/nodePath.js';
 
 
 /**
@@ -96,13 +97,25 @@ export function collapseLiveNode(
   sceneCache: CachedSceneSource
 ): TscnNode {
   if (!node.instance) return node;
-  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
+  const authored = authoredScope(node, scope);
+  const scenePath = resolveInstancePath(node.instance, authored.externalResources);
   if (!scenePath) return node;
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return node;
   // The WHOLE scope, because what the merge does with it is stamp it onto the
   // host children it grafts — and those name ids of both kinds.
-  return mergeInstanceRoot(node, cached, scope) ?? node;
+  return mergeInstanceRoot(node, cached, authored) ?? node;
+}
+
+/**
+ * The scope a node's refs resolve against: the one it was AUTHORED in when it
+ * has been grafted into another scene's content (as `DispatchedNode` renders
+ * it), else the scope of the group it sits in. BOTH pools travel — a grafted
+ * node names ids of either kind, and a `SubResource` it carries belongs to the
+ * file its body came from.
+ */
+function authoredScope(node: TscnNode, groupScope: SceneScope): SceneScope {
+  return node.authoredScope ?? groupScope;
 }
 
 /** A node's live children, paired with the scope those children resolve against. */
@@ -178,6 +191,7 @@ export function liveChildGroups(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
+
   // A node's own authored children in the incoming (OUTER) scope — the answer
   // for every non-instance case and every not-(yet-)resolvable instance case.
   const inlineOnly = (): LiveChildGroup[] => [
@@ -196,7 +210,7 @@ export function liveChildGroups(
 
   if (!node.instance) return inlineOnly();
 
-  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
+  const scenePath = resolveInstancePath(node.instance, authoredScope(node, scope).externalResources);
   if (!scenePath) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
@@ -257,7 +271,7 @@ function liveChainLinks(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): LiveChainLink[] | null {
-  const segments = path.split('/').filter((s) => s.length > 0);
+  const segments = nodePathNames(path);
   if (segments.length === 0) return null;
 
   const links: LiveChainLink[] = [];
@@ -278,7 +292,7 @@ function liveChainLinks(
       }
     }
     if (!match) return null;
-    // The collapsed node uses the scope it lives in (its own group's scope).
+    // The collapsed node uses its group's scope, unless it carries `authoredScope`.
     links.push({
       raw: match,
       collapsed: collapseLiveNode(match, matchScope, ctx.sceneCache),

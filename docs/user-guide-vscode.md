@@ -54,7 +54,7 @@ The verifier opened `unit-box-mesh.tscn` and `unit-sphere-mesh.tscn` in separate
 
 ## Ctrl-click `res://` paths — VSCODE-04
 
-**Status:** Known issue (feature not implemented)
+**Status:** Works. `TscnDocumentLinkProvider` turns a `res://` path into a clickable link, resolved from the Godot project root.
 
 The verification flow asks for Ctrl-clicking a `res://` path in a `.tscn` source line to open the referenced file. The current `TscnDefinitionProvider` does **not** implement this. It handles only `SubResource("id")` and `ExtResource("id")` reference call sites, navigating from a usage inside the file to the matching `[sub_resource ... id="..."]` or `[ext_resource ... id="..."]` definition heading **inside the same file**.
 
@@ -194,7 +194,7 @@ Both fixtures contain `[node name="WorldEnvironment" type="WorldEnvironment"]` w
 
 The following gaps were surfaced during Phase 2 verification and are scheduled for fix or follow-up. They are listed in priority order.
 
-1. **`res://` paths are not Go-to-Definition targets.** Ctrl-clicking a `res://` path in a `.tscn` source line does nothing. `TscnDefinitionProvider` handles only `SubResource("id")` and `ExtResource("id")` call sites, jumping within the same file to the matching definition heading. PRD US-9 wants `res://` tokens to open the referenced file on disk. This needs a new branch in the provider: parse the `res://...` substring, resolve workspace-relative, return a `Location`. This is a separate work item from the R3F migration. (Flow affected: VSCODE-04.)
+1. **Two providers answer a click, and they answer different tokens.** `TscnDefinitionProvider` handles `SubResource("id")` and `ExtResource("id")`, jumping within the same file to the matching definition heading. `TscnDocumentLinkProvider` turns a `res://` path into a link that opens the file, resolved from the Godot project root. A path that resolves to neither is inert. (Flow affected: VSCODE-04.)
 
 2. **Viewport pixel-level verification not exercised on the VS Code side.** The PRD flows that compare canvas pixel colors before/after a state change (camera survival, gizmo shapes, WorldEnvironment background, missing-file label text) require reading R3F-rendered pixels inside the webview iframe. The VS Code verification harness can drive UI interactions (click, type, screenshot) but cannot reach the webview's `globalThis` or canvas image data from the workbench frame across the iframe origin boundary. Architectural prerequisites for these flows are in place in the code, and the matching component code paths were directly pixel-verified on the web previewer side (where the canvas is reachable from the top frame). (Flows affected: VSCODE-06 viewport-click direction, VSCODE-07 floating-text label, VSCODE-08 camera coords, BOTH-03 gizmo shapes, BOTH-04 background colors.)
 

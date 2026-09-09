@@ -41,7 +41,7 @@ export interface TileSourceMeshProps {
 }
 
 export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
-  const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'Texture2D');
+  const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
   const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;

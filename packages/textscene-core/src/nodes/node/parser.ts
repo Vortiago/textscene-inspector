@@ -5,6 +5,7 @@
 import type { ParsedHeading } from '../../parser/utils';
 import type { NodeProperties } from './types';
 import { parseOptionalTransform } from '../../utils/transform';
+import { parseHeadingIndex } from '../../parser/valueParsers';
 
 export function parseNode(
   heading: ParsedHeading,
@@ -13,7 +14,7 @@ export function parseNode(
   const name = heading.attributes.name || '';
   const parent = heading.attributes.parent;
   const instance = heading.attributes.instance;
-  const index = heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined;
+  const index = parseHeadingIndex(heading.attributes.index);
   const transform = parseOptionalTransform(properties.transform, name);
 
   return {

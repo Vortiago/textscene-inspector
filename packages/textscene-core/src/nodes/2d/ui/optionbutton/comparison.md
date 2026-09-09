@@ -1,6 +1,7 @@
 ---
 type: OptionButton
 category: 2D
+status: unreviewed
 fixture: unit-optionbutton.tscn
 image: unit-optionbutton
 renders_as: a collapsed dropdown box
@@ -8,86 +9,39 @@ renders_as: a collapsed dropdown box
 
 # OptionButton
 
-A dropdown that collapses to show its currently-selected item. Being a static
-viewer, the previewer draws that selected item's text inside the button's own
-StyleBox — not the open popup, not the whole list. The fixture centres one
-`DifficultySelect` with three items and `selected = 1`, so both renders show
-`Normal` in a dark charcoal rounded box.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `item_count` + `popup/item_N/text` | `3` items: `Easy` / `Normal` / `Hard` | defines the option list; only the selected item is drawn |
-| `selected` | `1` | draws `Normal` (the item at index 1), not the first item |
-| `offset_left/right/top/bottom` | `-75 / 75 / -24 / 8` | sizes the 150x32 button, centred by the `anchors_preset = 8` anchors |
-
-## Divergences
-
-None visible in this fixture. Measured on Godot 4.6.3, `pnpm ref:godot
-scenes/fixtures/unit-optionbutton.tscn --mode 2d --probe <x,y>` against `pnpm
-ref:ours unit-optionbutton.tscn --2d --probe <x,y>`:
-
-| Probe | What it is | Godot | Ours |
-| --- | --- | --- | --- |
-| (564, 315) | the `l` stem, mid-height | rgb(213, 213, 213) | rgb(213, 213, 213) |
-| (511, 318) | the `N` stem, mid-height | rgb(223, 223, 223) | rgb(223, 223, 223) |
-
-The label's ink spans x 510..565 and y 310..321 on both sides, peaking at
-rgb(223, 223, 223) on both — same glyphs, same rows. The arrow's ink spans
-x 636..645 and y 313..318 on both sides and peaks at rgb(158, 158, 158) against
-rgb(157, 157, 157) — the same texture at the same `arrow_margin`.
-
-## Native (WebGL canvas) painter
-
-`nativeSolver.ts` registers `OptionButton::get_minimum_size`
-(`controlSolverRegistry.registerMinimumSize`, honouring `fit_to_longest_item`'s
-engine default of `true` — the minimum size floors on the WIDEST item's text,
-not the selected one's); `Component.tsx` draws the Button-style StyleBox
-chrome, the SELECTED item's text only (never the popup's full list), and the
-chevron (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS.arrow`) at the right
-edge.
-
-### The chevron sits at `arrow_margin`, not the content-margin edge
-
-OptionButton's own `_notification` positions the arrow directly against the
-FULL control size and its own `arrow_margin` theme constant
-(`option_button.cpp:113-121`; `default_theme.cpp:249`, `round(4*scale) = 4` at
-scale 1) — NOT the stylebox's content margin (8px horizontal,
-`default_theme.cpp:212-215`, already `theme.optionButtonMarginX` in
-`godotDefaultTheme.ts`) the text box narrows against. The two numbers are
-independent and, in the default theme, different.
-
-Measured against real Godot 4.6.3 — `pnpm ref:godot
-scenes/fixtures/unit-optionbutton.tscn --mode 2d`: the 150×32 button's box fill
-(`rgb(46,46,46)`) extends flush to its rightmost pixel (probe `649,316` → fill,
-`651,316` → the `rgb(76,76,76)` backdrop, i.e. the box's own right edge), while
-the chevron's own ink sits at probe `641,316` (`rgb(148,148,148)`, a partial-
-coverage sample of the `#b2b2b2`-stroke SVG) — `150 - 12(arrow width) -
-4(arrow_margin) = 134` in from the left, not `150 - 12 - 8`. `modulate_arrow`
-defaults `false` (`:251`), so `NOTIFICATION_DRAW` never enters the font-colour
-switch at all and the chevron always draws opaque white, unaffected by
-`disabled`/state — the native painter models exactly that (no per-state arrow
-tint).
-
-No pointer-dependent draw gate: the chevron's own draw condition
-(`has_theme_icon("arrow")`) is unconditionally true in the default theme, with
-no `mouse_inside`/hover check — unlike the SplitContainer grabber's `autohide`.
+OptionButton is a dropdown that collapses to its selected item. The previewer draws that
+item's text inside a positioned box on the Control overlay, not the open popup or the
+list.
 
 ## Linting
 
 <!-- lint:begin OptionButton -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `OptionButton` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `OptionButton` properties, plus 13 inherited from Button, 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `allow_reselect` | true or false |  |
+| `fit_to_longest_item` | true or false |  |
+| `item_count` | integer >= 0 | error below |
+| `popup/item_#/*` | item |  |
+| `selected` | integer >= -1 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
+| `valid-optionbutton-selected` | `optionbutton-selected-out-of-range` | warning |
 <!-- lint:end -->
 
-`OptionButton` has no strict counterpart of its own for `selected`, `popup/item_N/id`,
-or `disabled`. `selected` goes through the optional-int reader, so an absent or
-unparseable value becomes `undefined` and the control renders with empty label text
-rather than defaulting to item 0. An invalid `popup/item_N/id` silently falls back
-to the item's own loop index, and `disabled` treats any value other than the literal
-string `true` as `false`, both with no warning logged.
+An absent or unparseable `selected` becomes `undefined` and the control renders an empty
+label rather than item 0. An invalid `popup/item_N/id` falls back to the item's own
+index. `linter.ts` warns when `selected` names an index `item_count` never provides.
+
+## Known limitations
+
+- **Approximated** The right-side dropdown arrow is a compiled theme icon and is not
+  drawn, so the collapsed box ends at the label.

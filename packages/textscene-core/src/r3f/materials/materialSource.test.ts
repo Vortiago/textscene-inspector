@@ -53,8 +53,14 @@ describe('resolveMaterialSource', () => {
     expect(resolveMaterialSource('ExtResource("99")', INTERNAL, EXTERNAL)).toBeUndefined();
   });
 
-  it('returns undefined for a sub-resource that is not a StandardMaterial3D', () => {
-    expect(resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL)).toBeUndefined();
+  it('answers with the default surface for a Material it cannot build', () => {
+    // A ShaderMaterial IS a material and the slot holding it was filled, so the
+    // surface is Godot's default one rather than whatever the mesh already wore
+    // (ADR-0041). A sub-resource that is no material at all leaves the slot
+    // empty instead.
+    expect(resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL)).toEqual({
+      kind: 'default',
+    });
     expect(resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL)).toBeUndefined();
   });
 

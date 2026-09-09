@@ -98,3 +98,64 @@ describe('resolveTreeRoot — state machine', () => {
     });
   });
 });
+
+/**
+ * A BlendTree may hold another BlendTree, and nothing in the engine stops that
+ * chain closing on itself: `add_node` guards only the name, null and `/`
+ * (animation_blend_tree.cpp:1489-1493) and `connect_node` only a node feeding
+ * itself (:1615-1619). So a cycle is a file Godot writes out and reloads, and
+ * `resolveTreeRoot` runs inside a render-phase `useMemo` with no error boundary
+ * above it — a stack overflow here blanks the whole preview.
+ */
+describe('resolveTreeRoot — cyclic sub-resource references', () => {
+  it('yields no root for a BlendTree that holds itself', () => {
+    const resources = [
+      res('A', 'AnimationNodeBlendTree', {
+        'nodes/Self/node': 'SubResource("A")',
+        node_connections: '[&"output", 0, &"Self"]',
+      }),
+    ];
+
+    expect(resolveTreeRoot('SubResource("A")', resources)).toBeNull();
+  });
+
+  it('yields no root for two BlendTrees that hold each other', () => {
+    const resources = [
+      res('A', 'AnimationNodeBlendTree', {
+        'nodes/Nested/node': 'SubResource("B")',
+        node_connections: '[&"output", 0, &"Nested"]',
+      }),
+      res('B', 'AnimationNodeBlendTree', {
+        'nodes/Back/node': 'SubResource("A")',
+        node_connections: '[&"output", 0, &"Back"]',
+      }),
+    ];
+
+    expect(resolveTreeRoot('SubResource("A")', resources)).toBeNull();
+  });
+
+  // The guard is per-PATH, not per-tree: one sub-resource wired into two ports
+  // is ordinary reuse, and refusing the second would silence half the blend.
+  it('still resolves one clip sub-resource wired into both Blend2 inputs', () => {
+    const resources = [
+      res('idle', 'AnimationNodeAnimation', { animation: '&"idle"' }),
+      res('blend', 'AnimationNodeBlend2', {}),
+      res('tree', 'AnimationNodeBlendTree', {
+        'nodes/mix/node': 'SubResource("blend")',
+        'nodes/a/node': 'SubResource("idle")',
+        'nodes/b/node': 'SubResource("idle")',
+        node_connections: '[&"output", 0, &"mix", &"mix", 0, &"a", &"mix", 1, &"b"]',
+      }),
+    ];
+
+    const root = resolveTreeRoot('SubResource("tree")', resources);
+
+    expect(root).toEqual({
+      kind: 'blend2',
+      name: 'mix',
+      filtered: false,
+      in0: { kind: 'animation', clip: 'idle' },
+      in1: { kind: 'animation', clip: 'idle' },
+    });
+  });
+});

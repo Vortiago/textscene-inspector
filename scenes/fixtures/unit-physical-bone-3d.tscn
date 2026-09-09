@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3]
+
+; PhysicalBone3D collision_object_3d.cpp:739 ("needs a collision shape") warns
+; without one, so both bones below carry a CollisionShape3D child — the real
+; ragdoll corpus (demos/3d/ragdoll_physics) pairs every PhysicalBone3D with
+; exactly one too.
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bone"]
+radius = 0.1
+height = 0.4
+
+[node name="Root" type="Node3D"]
+
+[node name="MyPhysicalBone3D" type="PhysicalBone3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = "thigh.l"
+joint_type = 2
+joint_offset = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
+joint_rotation = Vector3(0, 0, 0)
+body_offset = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.1)
+mass = 1.0
+friction = 0.6
+bounce = 0.2
+gravity_scale = 1.0
+custom_integrator = false
+linear_damp_mode = 0
+linear_damp = 0.0
+angular_damp_mode = 1
+angular_damp = 0.5
+linear_velocity = Vector3(0, 0, 0)
+angular_velocity = Vector3(0, 0, 0)
+can_sleep = true
+joint_constraints/swing_span = 19.999992
+joint_constraints/twist_span = 19.999992
+joint_constraints/bias = 0.3
+joint_constraints/softness = 0.8
+joint_constraints/relaxation = 1.0
+
+[node name="MyPhysicalBone3DCollision" type="CollisionShape3D" parent="MyPhysicalBone3D"]
+shape = SubResource("CapsuleShape3D_bone")
+
+[node name="MyPhysicalBone3DSixDOF" type="PhysicalBone3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.3)
+joint_type = 5
+joint_constraints/x/linear_limit_enabled = true
+joint_constraints/x/angular_limit_enabled = false
+joint_constraints/x/angular_limit_upper = 45.0
+joint_constraints/y/linear_spring_enabled = false
+joint_constraints/z/angular_spring_enabled = true
+
+[node name="MyPhysicalBone3DSixDOFCollision" type="CollisionShape3D" parent="MyPhysicalBone3DSixDOF"]
+shape = SubResource("CapsuleShape3D_bone")

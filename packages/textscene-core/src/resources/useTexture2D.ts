@@ -94,7 +94,7 @@ export function useTexture2D(
     () => (procedural ? null : resolveExtResourcePath(sourceRef, externalResources)),
     [procedural, sourceRef, externalResources]
   );
-  const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+  const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural ?? loaded.value ?? null;
 
   // Same borrow contract as the procedural branch: the crop is cache-owned and

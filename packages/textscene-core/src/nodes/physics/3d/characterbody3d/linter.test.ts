@@ -16,6 +16,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('CharacterBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -63,22 +64,25 @@ describe('CharacterBody3D Linter', () => {
         valid: ['Vector3(1.5, -2.3, 0.5)'],
         invalid: [{ value: 'Vector2(1, 2)' }],
       },
-      { prop: 'floor_stop_on_slope', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
-      { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'floor_stop_on_slope', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'floor_constant_speed', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
+      { prop: 'floor_block_on_wall', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       {
+        // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
+        // PI is the last legal value, and a table stopping at PI/2 rejects the
+        // upper half of the range as an error.
         prop: 'floor_max_angle',
-        valid: [0, 0.785398, 1.5708],
+        valid: [0, 0.785398, 1.5708, 3.14159],
         invalid: [
-          { value: 3.14159, contains: ['radians'] },
+          { value: 4.0, contains: ['radians'] },
           { value: -0.5 },
           { value: '"45 degrees"' },
         ],
       },
       {
         prop: 'wall_min_slide_angle',
-        valid: [0, 0.261799, 0.785398, 1.5708],
-        invalid: [{ value: 2.0, contains: ['radians'] }, { value: -0.1 }],
+        valid: [0, 0.261799, 0.785398, 1.5708, 2.0, 3.14159],
+        invalid: [{ value: 4.0, contains: ['radians'] }, { value: -0.1 }],
       },
       {
         prop: 'platform_on_leave',
@@ -88,25 +92,18 @@ describe('CharacterBody3D Linter', () => {
       {
         prop: 'platform_floor_layers',
         valid: [0, 1, 255, 4294967295],
-        invalid: [{ value: 5000000000, contains: ['4294967295'] }, { value: -1 }],
+        invalid: [{ value: 5000000000, contains: ['cannot be stored in an integer slot'] }],
       },
       { prop: 'platform_wall_layers', valid: [0, 1, 65535, 4294967295] },
       { prop: 'collision_priority', valid: [0.0, 0.5, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
       {
+        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants. This table asserted 0-1 and encoded the bug.
         prop: 'disable_mode',
-        valid: [0, 1],
-        invalid: [{ value: 5, contains: ['0-1'] }],
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2'] }],
       },
     ]);
-
-    describe('up_direction validation', () => {
-      it('should warn about non-standard up_direction', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 1)' }), collisionShape3d), {
-          ruleName: 'characterbody3d-non-standard-up-direction',
-          severity: 'warning',
-        });
-      });
-    });
 
     describe('floor_snap_length validation', () => {
       it('should accept valid floor_snap_length values', () => {
@@ -124,20 +121,10 @@ describe('CharacterBody3D Linter', () => {
         });
       });
 
-      it('should warn about very small floor_snap_length', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { floor_snap_length: 0.0001 }), collisionShape3d), {
-          ruleName: 'characterbody3d-floor-snap-too-small',
-          severity: 'warning',
-          contains: ['may not work reliably'],
-        });
-      });
-
-      it('should warn about very large floor_snap_length', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { floor_snap_length: 50 }), collisionShape3d), {
-          ruleName: 'characterbody3d-floor-snap-too-large',
-          severity: 'warning',
-          contains: ['glitchy behavior'],
-        });
+      // character_body_3d.cpp:934 hints "0,1,0.01,or_greater" — the high end is
+      // open and the low end is the setter's own ERR_FAIL — so no advisory survives.
+      it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
+        expectClean(scene(node('CharacterBody3D', { floor_snap_length: snap }), collisionShape3d));
       });
     });
 
@@ -149,20 +136,49 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative safe_margin', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 })), {
+      // character_body_3d.cpp:637 is a bare assignment, so the hint at :942
+      // ("0.001,256,0.001,suffix:m") only warns — a negative is not an error.
+      // The bound lives on the validator; no rule reports it.
+      it('should warn, not error, on negative safe_margin', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 }), collisionShape3d), {
           prop: 'safe_margin',
-          severity: 'error',
-          contains: ['>= 0'],
+          severity: 'warning',
+          contains: ['-0.5', '0.001'],
         });
       });
 
-      it('should warn about very large safe_margin', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 0.5 }), collisionShape3d), {
-          ruleName: 'characterbody3d-safe-margin-too-large',
+      it('should warn just below the hint floor', () => {
+        expectDiagnostic(
+          scene(node('CharacterBody3D', { safe_margin: 0.0009 }), collisionShape3d),
+          {
+            prop: 'safe_margin',
+            severity: 'warning',
+            contains: ['between 0.001 and 256'],
+          }
+        );
+      });
+
+      it('should warn about safe_margin above the hint', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: 300 }), collisionShape3d), {
+          prop: 'safe_margin',
           severity: 'warning',
-          contains: ['collision detection issues'],
+          contains: ['300', '256'],
         });
+      });
+
+      it('should warn just above the hint ceiling', () => {
+        expectDiagnostic(
+          scene(node('CharacterBody3D', { safe_margin: 256.001 }), collisionShape3d),
+          {
+            prop: 'safe_margin',
+            severity: 'warning',
+            contains: ['between 0.001 and 256'],
+          }
+        );
+      });
+
+      it.each([0.001, 0.5, 256])('says nothing about safe_margin %s', (margin) => {
+        expectClean(scene(node('CharacterBody3D', { safe_margin: margin }), collisionShape3d));
       });
     });
 
@@ -174,19 +190,18 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative collision_layer', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: -1 })), {
-          prop: 'collision_layer',
-          severity: 'error',
-          contains: ['between 0 and 4294967295'],
-        });
+      // collision_object_3d.cpp:506 hints PROPERTY_HINT_LAYERS_3D_PHYSICS, a
+      // 32-checkbox widget, and the setter assigns unconditionally: the width
+      // is the inspector's, so out of range warns rather than erroring.
+      it('should accept negative collision_layer, which is all layers on', () => {
+        expectNoErrors(scene(node('CharacterBody3D', { collision_layer: -1 }), collisionShape3d));
       });
 
-      it('should reject collision_layer exceeding the 32-bit maximum', () => {
+      it('should error on collision_layer exceeding the 32-bit maximum', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 4294967296 })), {
           prop: 'collision_layer',
           severity: 'error',
-          contains: ['between 0 and 4294967295'],
+          contains: ['cannot be stored in an integer slot'],
         });
       });
     });
@@ -199,8 +214,8 @@ describe('CharacterBody3D Linter', () => {
         }
       });
 
-      it('should reject negative collision_mask', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: -5 })), {
+      it('should error on a collision_mask no 32-bit slot holds', () => {
+        expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: -5000000000 })), {
           prop: 'collision_mask',
           severity: 'error',
         });
@@ -230,40 +245,42 @@ describe('CharacterBody3D Linter', () => {
         });
       });
 
-      it('should warn about low max_slides', () => {
-        expectDiagnostic(scene(node('CharacterBody3D', { max_slides: 2 }), collisionShape3d), {
-          ruleName: 'characterbody3d-max-slides-too-low',
-          severity: 'warning',
-          contains: ['jittery movement'],
-        });
+      // character_body_3d.cpp:926 declares max_slides PROPERTY_HINT_NONE with
+      // PROPERTY_USAGE_NO_EDITOR, so there is no band to be low in.
+      it.each([1, 2, 3])('says nothing about max_slides %s', (slides) => {
+        expectClean(scene(node('CharacterBody3D', { max_slides: slides }), collisionShape3d));
       });
     });
   });
 
   describe('Semantic Validation (CollisionShape3D Children)', () => {
-    it('should warn when CharacterBody3D has no CollisionShape3D children', () => {
+    it('should warn when CharacterBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('CharacterBody3D')), {
-        ruleName: 'characterbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'CharacterBody3D',
-        contains: ['no CollisionShape3D children'],
+        contains: ['no CollisionShape3D or CollisionPolygon3D children'],
       });
     });
 
     it('should pass when CharacterBody3D has CollisionShape3D child', () => {
       expectNoDiagnostic(scene(node('CharacterBody3D'), collisionShape3d), {
-        ruleName: 'characterbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
       });
     });
 
-    it('should pass when CharacterBody3D has nested CollisionShape3D', () => {
-      expectNoDiagnostic(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject3D>(get_parent())`
+    // (collision_shape_3d.cpp:83), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_3d.cpp:739).
+    it('warns when the only CollisionShape3D under CharacterBody3D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('CharacterBody3D'),
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'characterbody3d-needs-collision-shape' }
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -274,13 +291,13 @@ describe('CharacterBody3D Linter', () => {
           node('CollisionShape3D', {}, { name: 'Shape1', parent: '.' }),
           node('CollisionShape3D', {}, { name: 'Shape2', parent: '.' })
         ),
-        { ruleName: 'characterbody3d-needs-collision-shape' }
+        { ruleName: 'collisionobject3d-needs-collision-shape' }
       );
     });
   });
 
   describe('Semantic Validation (Motion Mode Settings)', () => {
-    it('should warn when floor properties are set in FLOATING mode', () => {
+    it('reports when floor properties are set in FLOATING mode', () => {
       expectDiagnostic(
         scene(
           node('CharacterBody3D', {
@@ -292,7 +309,7 @@ describe('CharacterBody3D Linter', () => {
         ),
         {
           ruleName: 'characterbody3d-floor-props-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );
@@ -317,38 +334,63 @@ describe('CharacterBody3D Linter', () => {
         ruleName: 'characterbody3d-floor-props-in-floating-mode',
       });
     });
+
+    it('reports when slide_on_ceiling is set in FLOATING mode', () => {
+      expectDiagnostic(
+        scene(
+          node('CharacterBody3D', { motion_mode: 1, slide_on_ceiling: false }),
+          collisionShape3d
+        ),
+        {
+          ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode',
+          severity: 'info',
+          contains: ['FLOATING', 'GROUNDED'],
+        }
+      );
+    });
+
+    it('leaves slide_on_ceiling alone in GROUNDED mode, where its four reads live', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody3D', { motion_mode: 0, slide_on_ceiling: false }),
+          collisionShape3d
+        ),
+        { ruleName: 'characterbody3d-slide-on-ceiling-in-floating-mode' }
+      );
+    });
+
+    it('has no grounded-mode arm for wall_min_slide_angle: :300-303 reads it there', () => {
+      // The 2D twin's `_validate_property` hides it in GROUNDED
+      // (character_body_2d.cpp:676); character_body_3d.cpp has no such `else`.
+      expectNoErrors(
+        scene(
+          node('CharacterBody3D', { motion_mode: 0, wall_min_slide_angle: 0.5 }),
+          collisionShape3d
+        )
+      );
+      expectNoDiagnostic(
+        scene(node('CharacterBody3D', { wall_min_slide_angle: 0.5 }), collisionShape3d),
+        { ruleName: 'characterbody3d-wall-min-slide-angle-in-grounded-mode' }
+      );
+    });
+
+    it('reports a zero up_direction once — the validator, with no rule beside it', () => {
+      const diagnostics = lint(
+        scene(node('CharacterBody3D', { up_direction: 'Vector3(0, 0, 0)' }), collisionShape3d)
+      );
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('up_direction');
+    });
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'CharacterBody3D',
-        contains: ['collision_layer set to 0'],
-      });
+    // No `collision_layer == 0` check on CharacterBody3D: no engine warning
+    // exists for it, and the voxel demo's Player ships with it deliberately.
+    it('stays quiet when collision_layer is 0', () => {
+      expectClean(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d));
     });
 
-    it('should not warn when collision_layer is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody3D', { collision_layer: 1 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-layer',
-      });
-    });
-
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody3D', { collision_mask: 0 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'CharacterBody3D',
-        contains: ['collision_mask set to 0'],
-      });
-    });
-
-    it('should not warn when collision_mask is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody3D', { collision_mask: 1 }), collisionShape3d), {
-        ruleName: 'characterbody3d-zero-collision-mask',
-      });
-    });
   });
 
   describe('Edge Cases', () => {
@@ -432,21 +474,29 @@ describe('CharacterBody3D Linter', () => {
       const diagnostics = lint(
         scene(
           node('CharacterBody3D', {
+            // character_body_3d.cpp:922 hints "Grounded,Floating" but
+            // set_motion_mode is a bare assignment, so out-of-range warns
+            // rather than errors.
             motion_mode: 10,
             floor_snap_length: 50,
-            collision_layer: 0,
-            max_slides: 2,
+            // collision_layer warns rather than errors now: its width comes
+            // from the 32-checkbox widget, not the engine. max_slides carries
+            // the error, since set_max_slides ERR_FAILs below 1 (character_body_3d.cpp:813).
+            collision_layer: -5,
+            max_slides: 0,
           }),
           collisionShape3d
         )
       );
-      // Should have at least one error (motion_mode=10 is invalid)
-      expect(diagnostics.length).toBeGreaterThanOrEqual(1);
+      expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
-      // Check that the motion_mode error is present
-      const motionModeError = diagnostics.find(d => d.message.includes('motion_mode'));
-      expect(motionModeError).toBeDefined();
+      expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
+      // No collision_layer diagnostic any more: -1 is a legal 32-bit mask.
+      expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
+      const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
+      expect(motionModeDiagnostic).toBeDefined();
+      expect(motionModeDiagnostic?.severity).toBe('warning');
     });
 
     it('should handle zero values correctly', () => {

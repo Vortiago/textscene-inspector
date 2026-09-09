@@ -41,9 +41,20 @@ export interface SceneResourcesProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Stable empty defaults, module-scoped.
+ *
+ * A `= []` default parameter allocates a new array on every render, and both
+ * arrays are `useMemo` dependencies below — so a provider given only one of the
+ * two published a fresh context value every render and re-fired every
+ * `useSceneResources()` consumer beneath it.
+ */
+const NO_INTERNAL: readonly TscnInternalResource[] = [];
+const NO_EXTERNAL: readonly TscnExternalResource[] = [];
+
 export function SceneResourcesProvider({
-  internalResources = [],
-  externalResources = [],
+  internalResources = NO_INTERNAL,
+  externalResources = NO_EXTERNAL,
   children,
 }: SceneResourcesProviderProps) {
   // Inherit the ambient (parent-scene) pool, with this scene's own resources

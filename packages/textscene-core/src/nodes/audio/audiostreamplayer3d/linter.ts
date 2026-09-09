@@ -8,29 +8,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import {
-  extremeVolumeArms,
-  unusualPitchArms,
-  checkInvalidMaxPolyphony,
-} from '../sharedLinterChecks.js';
-
-// 3D tolerates a narrower volume range than the 2D/base players
-const EXTREME_VOLUME_DB_MIN = -40;
-const EXTREME_VOLUME_DB_MAX = 6;
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Validate AudioStreamPlayer3D semantic rules
  */
 function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  // Only run for AudioStreamPlayer3D nodes
-  if (node.type !== 'AudioStreamPlayer3D') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {
@@ -39,74 +24,14 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // ERROR: stream is missing (REQUIRED - no sound without this)
-  if (rawProps.stream === undefined) {
+  // A player with no `stream` at all gets no diagnostic: that is the serialised
+  // default, audio_stream_player_3d.cpp defines no configuration warning, and a
+  // script or an AnimationPlayer audio track may supply the stream instead.
+
+  // emission_angle_degrees without emission_angle_enabled.
+  if (rawProps.emission_angle_degrees !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
-      severity: 'warning',
-      message: `AudioStreamPlayer3D requires 'stream' property to function. This defines what audio to play.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'audiostreamplayer3d-missing-stream',
-    });
-  } else {
-    // ERROR: stream resource doesn't exist
-    if (!checkResourceExists(scene, rawProps.stream)) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Stream resource "${rawProps.stream}" does not exist in scene. AudioStreamPlayer3D will not play audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-missing-stream-resource',
-      });
-    }
-  }
-
-  // ERROR: unit_size must be > 0
-  if (rawProps.unit_size !== undefined) {
-    const unitSize = parseFloat(rawProps.unit_size);
-    if (!isNaN(unitSize) && unitSize <= 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'unit_size' must be greater than 0 (got ${unitSize}). This property controls attenuation range.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-unit-size',
-      });
-    }
-  }
-
-  // ERROR: max_distance must be >= 0
-  if (rawProps.max_distance !== undefined) {
-    const maxDistance = parseFloat(rawProps.max_distance);
-    if (!isNaN(maxDistance) && maxDistance < 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'max_distance' must be non-negative (got ${maxDistance}). Use 0 for unlimited distance.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-max-distance',
-      });
-    }
-  }
-
-  // ERROR: pitch_scale must be > 0
-  if (rawProps.pitch_scale !== undefined) {
-    const pitchScale = parseFloat(rawProps.pitch_scale);
-    if (!isNaN(pitchScale) && pitchScale <= 0) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Property 'pitch_scale' must be greater than 0 (got ${pitchScale}). Zero or negative pitch breaks audio.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'audiostreamplayer3d-invalid-pitch-scale',
-      });
-    }
-  }
-
-  // WARNING: emission_angle_degrees without emission_angle_enabled
-  if (rawProps.emission_angle_degrees !== undefined && rawProps.emission_angle_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'emission_angle_degrees' is set but 'emission_angle_enabled' is not true. The emission angle will have no effect.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -114,26 +39,16 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // WARNING: emission_angle_filter_attenuation_db without emission_angle_enabled
-  if (rawProps.emission_angle_filter_attenuation_db !== undefined && rawProps.emission_angle_enabled !== 'true') {
+  // emission_angle_filter_attenuation_db without emission_angle_enabled.
+  if (rawProps.emission_angle_filter_attenuation_db !== undefined && boolSlotValue(rawProps.emission_angle_enabled) !== true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'emission_angle_filter_attenuation_db' is set but 'emission_angle_enabled' is not true. The filter will have no effect.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
     });
   }
-
-  // Range advisories: volume + pitch bands.
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      volume_db: extremeVolumeArms('audiostreamplayer3d', EXTREME_VOLUME_DB_MIN, EXTREME_VOLUME_DB_MAX),
-      pitch_scale: unusualPitchArms('audiostreamplayer3d'),
-    })
-  );
-
-  checkInvalidMaxPolyphony(rawProps, node.name, node.type, 'audiostreamplayer3d', diagnostics);
 
   return diagnostics;
 }
@@ -144,20 +59,28 @@ function checkAudioStreamPlayer3D(context: RuleContext): Diagnostic[] {
 const audioStreamPlayer3DValidationRule: LintRule = {
   meta: {
     name: 'valid-audiostreamplayer3d-properties',
-    description: 'Validates AudioStreamPlayer3D property values, required properties, and logical consistency',
+    description: 'Validates AudioStreamPlayer3D property values and logical consistency',
     category: 'validation',
     applicableNodeTypes: ['AudioStreamPlayer3D'],
     emits: [
-      { ruleName: 'audiostreamplayer3d-missing-stream', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-missing-stream-resource', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-invalid-unit-size', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-invalid-max-distance', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-invalid-pitch-scale', severity: 'error' },
-      { ruleName: 'audiostreamplayer3d-emission-angle-not-enabled', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-emission-filter-not-enabled', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-extreme-volume', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-unusual-pitch', severity: 'warning' },
-      { ruleName: 'audiostreamplayer3d-invalid-max-polyphony', severity: 'error' },
+      {
+        ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_3d.cpp:898',
+          unused: 'the group-enable toggle gates the whole emission_angle group',
+        },
+      },
+      {
+        ruleName: 'audiostreamplayer3d-emission-filter-not-enabled',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'audio_stream_player_3d.cpp:898',
+          unused: 'the group-enable toggle gates the whole emission_angle group',
+        },
+      },
     ],
   },
   check: checkAudioStreamPlayer3D,

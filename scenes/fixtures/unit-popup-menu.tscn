@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="MyPopupMenu" type="PopupMenu" parent="."]
+; PopupMenu's own properties at valid values, plus two items inside item_count.
+title = "File"
+size = Vector2i(200, 120)
+hide_on_item_selection = true
+hide_on_checkable_item_selection = true
+hide_on_state_item_selection = false
+submenu_popup_delay = 0.3
+allow_search = true
+system_menu_id = 0
+prefer_native_menu = false
+shrink_height = true
+shrink_width = true
+item_count = 2
+item_0/text = "Open"
+item_0/id = 0
+item_1/text = "Autosave"
+item_1/checkable = 1
+item_1/checked = true
+item_1/id = 1

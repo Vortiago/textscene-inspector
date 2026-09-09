@@ -3,7 +3,7 @@
  * badge formatting. No React, no WebGL: the unit-testable seam the linter
  * gutter (`r3f-main.tsx`) builds on.
  */
-import { SEVERITY_ORDER, type Diagnostic, type Severity } from '@textscene/core/linter';
+import { SEVERITY_ORDER, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 
 /** One gutter row's worth of diagnostics: the line's highest severity, and every message on it, in encounter order. */
 export interface LineDiagnostics {
@@ -25,7 +25,15 @@ export function countLines(text: string): number {
   return count;
 }
 
-/** True when `a` is at least as severe as `b` (lower rank = more severe). */
+/**
+ * True when `a` is at least as severe as `b` (lower rank = more severe), both
+ * already through `flooredSeverity`.
+ *
+ * Flooring first is what makes the comparison stick: `SEVERITY_ORDER` yields
+ * `undefined` for a tier outside the union, and `undefined <= n` and
+ * `n <= undefined` are both false, so a bogus severity on a line's FIRST
+ * diagnostic would hold the row against every error after it.
+ */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
   return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
@@ -42,14 +50,15 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
   for (const d of diagnostics) {
     const line = d.location?.line;
     if (line === undefined) continue;
+    const severity = flooredSeverity(d.severity);
     const existing = byLine.get(line);
     if (!existing) {
-      byLine.set(line, { line, severity: d.severity, messages: [d.message] });
+      byLine.set(line, { line, severity, messages: [d.message] });
       continue;
     }
     existing.messages.push(d.message);
-    if (atLeastAsSevere(d.severity, existing.severity)) {
-      existing.severity = d.severity;
+    if (atLeastAsSevere(severity, existing.severity)) {
+      existing.severity = severity;
     }
   }
   return byLine;
@@ -59,17 +68,37 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
 export interface DiagnosticsSummary {
   errors: number;
   warnings: number;
+  infos: number;
   total: number;
 }
 
 export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): DiagnosticsSummary {
   let errors = 0;
   let warnings = 0;
+  let infos = 0;
+  // A switch total over the closed union, not a fall-through `else`: a fourth
+  // tier fails tsc in the `default` arm below rather than passing unnoticed.
   for (const d of diagnostics) {
-    if (d.severity === 'error') errors++;
-    else warnings++;
+    const severity = flooredSeverity(d.severity);
+    switch (severity) {
+      case 'error':
+        errors++;
+        break;
+      case 'warning':
+        warnings++;
+        break;
+      case 'info':
+        infos++;
+        break;
+      default: {
+        // Unreachable: `flooredSeverity` maps an off-union tier onto `info`.
+        // The arm stays for tsc, which fails a fourth tier here.
+        const unmatched: never = severity;
+        void unmatched;
+      }
+    }
   }
-  return { errors, warnings, total: errors + warnings };
+  return { errors, warnings, infos, total: errors + warnings + infos };
 }
 
 /**
@@ -82,5 +111,6 @@ export function formatProblemBadge(summary: DiagnosticsSummary): string | null {
   const parts: string[] = [];
   if (summary.errors > 0) parts.push(`✖ ${summary.errors}`);
   if (summary.warnings > 0) parts.push(`⚠ ${summary.warnings}`);
+  if (summary.infos > 0) parts.push(`ℹ ${summary.infos}`);
   return parts.join(' / ');
 }

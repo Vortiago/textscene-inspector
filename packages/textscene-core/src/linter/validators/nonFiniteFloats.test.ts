@@ -1,0 +1,394 @@
+/**
+ * `inf` / `-inf` / `inf_neg` / `nan` are legal TSCN float literals.
+ *
+ * Godot's parser reads all four (`core/variant/variant_parser.cpp:150-155` for
+ * the string form, `:701-706` for the token form) and its serializer writes
+ * them back, so a scene carrying one is a scene Godot produced. `parseFloat`
+ * returns NaN for every one, so reading them through it makes the shared
+ * numeric validator report a FORMAT error on all of them everywhere.
+ *
+ * That was right for exactly five properties and wrong for every other float in
+ * the repo. These tests pin both halves of the split.
+ */
+
+import { describe, expect, it } from 'vitest';
+import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
+import { makeFloatTupleRegex } from './floatTupleValidator.js';
+import { FLOAT_PATTERN_SOURCE } from '../../godot/number.js';
+import { v } from './v.js';
+import { withFiniteGuard, withNanGuard } from './v/grounding.js';
+
+const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
+
+describe('parseGodotFloat', () => {
+  it.each([
+    ['inf', Infinity],
+    ['-inf', -Infinity],
+    ['inf_neg', -Infinity],
+  ])('reads %s as %s', (text, expected) => {
+    expect(parseGodotFloat(text)).toBe(expected);
+  });
+
+  it('reads nan as NaN rather than as a miss', () => {
+    // The distinction the null sentinel exists for: `nan` is a value, not a
+    // parse failure, and collapsing the two would reject it.
+    expect(parseGodotFloat('nan')).toBeNaN();
+    expect(parseGodotFloat('nan')).not.toBeNull();
+  });
+
+  it('still reads ordinary floats', () => {
+    expect(parseGodotFloat('1.5')).toBe(1.5);
+    expect(parseGodotFloat('-0.25')).toBe(-0.25);
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(parseGodotFloat('  inf  ')).toBe(Infinity);
+  });
+
+  it.each(['', 'abc', 'Infinity', '-Infinity', '+Infinity', 'NaN', 'inf inf'])(
+    'returns null for %o',
+    (text) => {
+      // `Infinity`/`NaN` are JavaScript spellings; Godot's tokenizer matches
+      // only the four above, so they stay format errors.
+      expect(parseGodotFloat(text)).toBeNull();
+    }
+  );
+
+  it('still reads an overflowing literal as infinity, as Godot does', () => {
+    expect(parseGodotFloat('1e999')).toBe(Infinity);
+  });
+});
+
+describe('an ordinary float property', () => {
+  const unbounded = v.float('some_float');
+
+  it.each(NON_FINITE)('accepts %s, which Godot stores unaltered', (value) => {
+    expect(unbounded('some_float', value, 1)).toBeNull();
+  });
+
+  it('still rejects text that is not a float at all', () => {
+    expect(unbounded('some_float', 'wide', 1)?.code).toBe('INVALID_SOME_FLOAT_FORMAT');
+  });
+
+  it('reports inf against a hinted ceiling as a range problem, not a format one', () => {
+    const bounded = v.float('ratio', { min: 0, max: 1, hinted: 'x.cpp:1' });
+    const diagnostic = bounded('ratio', 'inf', 1);
+    expect(diagnostic?.code).toBe('INVALID_RATIO_VALUE');
+    expect(diagnostic?.severity).toBe('warning');
+  });
+
+  it('reports nothing for nan against a bound, since every comparison is false', () => {
+    const bounded = v.float('ratio', { min: 0, max: 1, hinted: 'x.cpp:1' });
+    expect(bounded('ratio', 'nan', 1)).toBeNull();
+  });
+});
+
+describe('a property whose setter guards is_finite', () => {
+  const guarded = v.float('icon_scale', { finite: 'item_list.cpp:2098' });
+
+  it.each(NON_FINITE)('rejects %s as an error', (value) => {
+    const diagnostic = guarded('icon_scale', value, 1);
+    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic?.code).toBe('INVALID_ICON_SCALE_VALUE');
+    expect(diagnostic?.message).toContain('finite');
+  });
+
+  it('accepts an ordinary value', () => {
+    expect(guarded('icon_scale', '1.5', 1)).toBeNull();
+  });
+
+  it('accepts a negative value, which this setter does not refuse', () => {
+    expect(guarded('icon_scale', '-2', 1)).toBeNull();
+  });
+
+  it('carries the finite guard as its grounding', () => {
+    expect(guarded.grounding).toEqual({ kind: 'enforced', cite: 'item_list.cpp:2098' });
+  });
+
+  it('keeps both citations when a range bound is also present', () => {
+    // The finite check and the range check are separate lines in the setter;
+    // recording only one makes the other uncheckable.
+    const both = v.float('radial_initial_angle', {
+      min: 0,
+      max: 360,
+      enforced: 'texture_progress_bar.cpp:594',
+      finite: 'texture_progress_bar.cpp:592',
+    });
+    expect(both.grounding?.cite).toBe('texture_progress_bar.cpp:592, texture_progress_bar.cpp:594');
+  });
+
+  it('keeps the bounds themselves, not just their citation', () => {
+    // `hintImplementationParity` compares `bounds` against the engine's own
+    // PROPERTY_HINT_RANGE numbers. A wrapper that forwarded the cite but
+    // dropped the numbers took the property out of that comparison silently,
+    // and it counted as an unimplemented end while being fully implemented.
+    const both = v.float('radial_initial_angle', {
+      min: 0,
+      max: 360,
+      enforced: 'texture_progress_bar.cpp:594',
+      finite: 'texture_progress_bar.cpp:592',
+    });
+    expect(both.bounds).toEqual({ min: 0, max: 360 });
+    expect(both.tiers).toEqual({ min: 'error', max: 'error' });
+  });
+
+  it('keeps the tags a registry sweep selects and recurses on', () => {
+    // `everyValidator` descends `leaves` and the int-slot sweep selects on
+    // `intSlot`. A wrapper that drops either takes the slot out of the sweep
+    // in silence, so the guard passes by asking a smaller population.
+    const inner = v.int('bits');
+    inner.leaves = [v.float('leaf')];
+    const guarded = withFiniteGuard(inner, 'bits', 'x.cpp:1');
+    expect(guarded.intSlot).toEqual(inner.intSlot);
+    expect(guarded.leaves).toEqual(inner.leaves);
+  });
+
+  it('applies to nonNegativeFloat too, where zoom_step needs it', () => {
+    const step = v.nonNegativeFloat('zoom_step', {
+      enforced: { min: 'graph_edit.cpp:2465' },
+      finite: 'graph_edit.cpp:2466',
+    });
+    expect(step('zoom_step', 'inf', 1)?.severity).toBe('error');
+    expect(step('zoom_step', '1.2', 1)).toBeNull();
+  });
+});
+
+describe('a COMPOSITE literal with a non-finite component', () => {
+  it.each(NON_FINITE)('v.vector3 accepts a %s component', (value) => {
+    // `variant_parser.cpp:577-587` — a constructor argument that is not a
+    // number is run through `stor_fix`, which reads exactly these four; and
+    // the writer puts every Vector3 component through `rtos_fix` (:2056).
+    expect(v.vector3('offset')('offset', `Vector3(0, ${value}, 0)`, 1)).toBeNull();
+  });
+
+  // One case per composite Godot serialises through `rtos_fix`, since each is a
+  // separate arity/type registration even though they share one component
+  // grammar. `inf_neg` is the spelling the .tscn writer actually emits for
+  // negative infinity: `use_compat` is true for a text scene
+  // (`resource_format_text.cpp:1770`) and `rtos_fix` writes `inf_neg` under it
+  // (`variant_parser.cpp:1989-1991`).
+  it.each([
+    ['vector2', 'position', 'Vector2(inf_neg, 0)'],
+    ['color', 'modulate', 'Color(inf, 0, 0, 1)'],
+    ['rect2', 'region_rect', 'Rect2(0, 0, inf, inf)'],
+    ['quaternion', 'quaternion', 'Quaternion(0, 0, 0, nan)'],
+    ['aabb', 'custom_aabb', 'AABB(0, 0, 0, inf, inf, inf)'],
+    ['basis', 'basis', 'Basis(inf, 0, 0, 0, 1, 0, 0, 0, 1)'],
+    ['transform2d', 'transform', 'Transform2D(1, 0, 0, 1, inf_neg, 0)'],
+    ['transform3d', 'transform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -inf, 0)'],
+  ] as const)('v.%s accepts one', (kind, name, literal) => {
+    expect(v[kind](name)(name, literal, 1)).toBeNull();
+  });
+
+  it('still rejects a component that is neither a number nor one of the four', () => {
+    expect(v.vector3('offset')('offset', 'Vector3(0, infinity, 0)', 1)?.code).toBe(
+      'INVALID_OFFSET_FORMAT'
+    );
+    expect(v.vector3('offset')('offset', 'Vector3(0, 1.2.3, 0)', 1)?.code).toBe(
+      'INVALID_OFFSET_FORMAT'
+    );
+  });
+
+  it.each(NON_FINITE)('READS %s in an INTEGER composite, so it is no format error', (value) => {
+    // Vector2i serialises through `itos` (variant_parser.cpp:2044), so Godot
+    // never WRITES one. That bounds nothing: `_parse_construct<int32_t>`
+    // (:577-592) runs the same identifier branch every constructor does, so the
+    // file loads. What the serialiser emits never limits what the loader accepts.
+    expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).not.toBe(
+      'INVALID_SIZE_FORMAT'
+    );
+  });
+
+  it.each(NON_FINITE)('reports %s in an INTEGER composite as altered, not as a bound', (value) => {
+    // Reading is not fitting. Measured on 4.6.3 stable: every one of the four
+    // stores `(-2147483648, 8)`, because `_parse_construct<int32_t>` narrows at
+    // PARSE time — so an integer slot never holds what the file states. That is
+    // an alteration, which is the error tier, and it applies with or without a
+    // bound. The message must not name the stored number: the C++ conversion is
+    // UB and the result is architecture-specific, so only the fact of the
+    // alteration is portable.
+    const reported = v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.message).not.toContain('2147483648');
+
+    const bounded = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
+    expect(bounded('size', `Vector2i(${value}, 8)`, 1)?.severity).toBe('error');
+  });
+});
+
+describe('the widened component grammar and parseGodotFloat', () => {
+  const component = new RegExp(`^${TSCN_FLOAT_PATTERN_SOURCE}$`);
+
+  // The failure this guards is a hand-added alternative in one of the two: a
+  // spelling the pattern lets through but the reader cannot turn into a number,
+  // or the reverse. Both are derived from one table, and this is what says so.
+  it.each([...NON_FINITE, '1.5', '-0.25', '1e-05', '5.', '5.e2', '1e'])(
+    'both accept %o',
+    (text) => {
+      expect(component.test(text)).toBe(true);
+      expect(parseGodotFloat(text)).not.toBeNull();
+    }
+  );
+
+  it.each(['Infinity', '-Infinity', 'NaN', '+inf', '-nan', '-inf_neg', 'INF', 'inf inf', ''])(
+    'both reject %o',
+    (text) => {
+      expect(component.test(text)).toBe(false);
+      expect(parseGodotFloat(text)).toBeNull();
+    }
+  );
+
+  it('is the renderer grammar plus the non-finite spellings, not a second copy', () => {
+    expect(TSCN_FLOAT_PATTERN_SOURCE).toContain(FLOAT_PATTERN_SOURCE);
+  });
+
+  it('adds no capture group, so component groups stay 1..arity', () => {
+    const match = makeFloatTupleRegex('Vector3', 3).exec('Vector3(1, inf_neg, 3)');
+    expect(match).not.toBeNull();
+    expect(match).toHaveLength(4);
+    expect(match![2]).toBe('inf_neg');
+  });
+});
+
+describe('a composite with a per-COMPONENT bound', () => {
+  // gpu_particles_collision_3d.cpp:101 hints `size` "0.01,1024,0.01,or_greater".
+  const bounded = v.boundedVector3('size', { min: 0.01, max: 1024, hinted: 'x.cpp:1' });
+
+  it('reports inf against a hinted ceiling as a range problem, as the scalar path does', () => {
+    const diagnostic = bounded('size', 'Vector3(inf, 1, 1)', 1);
+    expect(diagnostic?.code).toBe('INVALID_SIZE_VALUE');
+    expect(diagnostic?.severity).toBe('warning');
+  });
+
+  it('reports inf_neg under a floor the same way', () => {
+    expect(bounded('size', 'Vector3(1, inf_neg, 1)', 1)?.code).toBe('INVALID_SIZE_VALUE');
+  });
+
+  it('reports nothing for a nan component, since every comparison is false', () => {
+    expect(bounded('size', 'Vector3(nan, 1, 1)', 1)).toBeNull();
+  });
+
+  it('shows the out-of-range component as a number, never as NaN', () => {
+    expect(bounded('size', 'Vector3(inf, 1, 1)', 1)?.message).toContain('Vector3(Infinity, 1, 1)');
+  });
+
+  it.each(NON_FINITE)('reports %s in the INTEGER spelling as altered, not as a bound', (value) => {
+    // The float slot's half of the verdict the `Vector2i` slot already pins.
+    // `Vector3i(...)` arguments run `_parse_construct<int32_t>`, whose
+    // identifier branch takes all four through `stor_fix`
+    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` then
+    // narrows the double before the widening into this Vector3 slot ever
+    // happens. The bound cannot see it: the component reads back NaN, and NaN
+    // is below no floor and above no ceiling, so the property said nothing.
+    const reported = bounded('size', `Vector3i(${value}, 1, 1)`, 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.code).toBe('INVALID_SIZE_VALUE');
+    // UB on the float branch (variant.h:369-370), so the result is
+    // architecture-specific and only the alteration is portable.
+    expect(reported?.message).not.toContain('2147483648');
+  });
+
+  it('reports an INT component outside the band int32 round-trips', () => {
+    // Nothing writes `4294967296`; the engine holds the wrap of it, which is
+    // the alteration tier and not a value this linter names.
+    const reported = bounded('size', 'Vector3i(4294967296, 1, 1)', 1);
+    expect(reported?.severity).toBe('error');
+    expect(reported?.code).toBe('INVALID_SIZE_VALUE');
+  });
+
+  it('leaves an integer spelling every component fits to the bound', () => {
+    // `Vector3i(4294967295, …)` is -1 to the engine, which IS below the floor.
+    expect(bounded('size', 'Vector3i(4294967295, 1, 1)', 1)?.severity).toBe('warning');
+    expect(bounded('size', 'Vector3i(1, 1, 1)', 1)).toBeNull();
+  });
+});
+
+describe('a PACKED array element', () => {
+  const points = v.packedVector2Array('polygon');
+
+  it.each(NON_FINITE)('accepts %s, which the array writer emits too', (value) => {
+    // variant_parser.cpp:2504 puts every PackedVector2Array component through
+    // `rtos_fix`, exactly as the fixed-arity composites do.
+    expect(points('polygon', `PackedVector2Array(0, 0, ${value}, 1)`, 1)).toBeNull();
+  });
+
+  it('still rejects an element that is not a float literal', () => {
+    expect(points('polygon', 'PackedVector2Array(0, 0, wide, 1)', 1)?.code).toBe(
+      'INVALID_POLYGON_FORMAT'
+    );
+    expect(points('polygon', 'PackedVector2Array(0, 0, , 1)', 1)?.code).toBe(
+      'INVALID_POLYGON_FORMAT'
+    );
+  });
+
+  it('rejects an element with trailing garbage that Number() and parseFloat disagree on', () => {
+    // `Number('1abc')` is NaN but `parseFloat('1abc')` is 1: the grammar decides,
+    // and Godot's tokenizer stops the number at `a` and then fails on the
+    // unexpected identifier.
+    expect(points('polygon', 'PackedVector2Array(0, 0, 1abc, 1)', 1)?.code).toBe(
+      'INVALID_POLYGON_FORMAT'
+    );
+  });
+});
+
+/**
+ * The NaN-only tier, beside the finite one.
+ *
+ * `AudioStreamPlayer::set_volume_db` opens with
+ * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` (audio_stream_player.cpp:70)
+ * and refuses nothing else. Measured on 4.6.3: after `volume_db = -12`, writing
+ * NaN leaves -12 and prints the error, while `inf` and `-inf` are stored
+ * unaltered. `withFiniteGuard` cannot stand in — it would reject two values the
+ * setter keeps — and a range bound covers neither, since every comparison
+ * against NaN is false.
+ */
+describe('a property whose setter guards is_nan alone', () => {
+  const guarded = v.float('volume_db', {
+    min: -80,
+    max: 24,
+    hinted: 'audio_stream_player.cpp:282',
+    nan: 'audio_stream_player.cpp:70',
+  });
+
+  it('rejects nan as an error', () => {
+    const diagnostic = guarded('volume_db', 'nan', 1);
+    expect(diagnostic?.severity).toBe('error');
+    expect(diagnostic?.code).toBe('INVALID_VOLUME_DB_VALUE');
+    expect(diagnostic?.message).toContain('must not be NaN');
+  });
+
+  it.each(['inf', '-inf', 'inf_neg'])('reports %s at the hint tier, not as a refusal', (value) => {
+    const diagnostic = guarded('volume_db', value, 1);
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('between -80 and 24');
+  });
+
+  it('accepts an ordinary value inside the band', () => {
+    expect(guarded('volume_db', '-12.0', 1)).toBeNull();
+  });
+
+  it('keeps both citations and the hint tier', () => {
+    expect(guarded.grounding).toEqual({
+      kind: 'hinted',
+      cite: 'audio_stream_player.cpp:70, audio_stream_player.cpp:282',
+    });
+    expect(guarded.bounds).toEqual({ min: -80, max: 24 });
+    expect(guarded.tiers).toEqual({ min: 'warning', max: 'warning' });
+  });
+
+  it('keeps the tags a registry sweep selects and recurses on', () => {
+    const inner = v.int('bits');
+    inner.leaves = [v.float('leaf')];
+    const wrapped = withNanGuard(inner, 'bits', 'x.cpp:1');
+    expect(wrapped.intSlot).toEqual(inner.intSlot);
+    expect(wrapped.leaves).toEqual(inner.leaves);
+  });
+
+  it('yields to the wider guard where a slice names both', () => {
+    // `finite` already refuses every spelling `nan` does; wrapping twice would
+    // stack a second citation onto a property with one setter guard.
+    const both = v.float('icon_scale', { finite: 'item_list.cpp:2098', nan: 'x.cpp:1' });
+    expect(both('icon_scale', 'inf', 1)?.message).toContain('finite');
+    expect(both.grounding).toEqual({ kind: 'enforced', cite: 'item_list.cpp:2098' });
+  });
+});

@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://unit_importer_mesh_instance_3d"]
+
+[sub_resource type="ImporterMesh" id="ImporterMesh_1"]
+
+[sub_resource type="Skin" id="Skin_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyImporterMeshInstance3D" type="ImporterMeshInstance3D" parent="."]
+; Every own property at a valid, non-default value.
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("ImporterMesh_1")
+skin = SubResource("Skin_1")
+skeleton_path = NodePath("../Skeleton3D")
+layer_mask = 3
+cast_shadow = 1
+visibility_range_begin = 0.0
+visibility_range_begin_margin = 1.0
+visibility_range_end = 100.0
+visibility_range_end_margin = 2.0
+visibility_range_fade_mode = 1

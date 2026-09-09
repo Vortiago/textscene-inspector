@@ -13,17 +13,20 @@
  * passes through in the 2D world canvas, where the sub-viewport's own
  * registration blocks the subtree instead.
  *
- * It IS in `TWO_D_UI_TYPES` (that set mirrors the Control registry, and drives
- * the 2D-content hint and the root-workspace rule). The 3D dispatcher subtracts
+ * It IS a Control, so `is2DUIType` claims it for the 2D-content hint and the
+ * root-workspace rule, and it is in `TWO_D_UI_TYPES` because it ships a
+ * component. The 3D dispatcher subtracts
  * it separately via `isViewportSurface`, because "is this 2D UI" and "does the
  * 3D canvas skip its subtree" are different questions here — ADR-0033.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node } from '../../../node/Component';
 import { SubViewportContainer } from './Component';
+// The 3D pass-through, which the 3D barrel imports directly: this file cannot
+// be its home, because it pulls the Control component and so only ever loads
+// from the lazy 2D chunk.
+import './nodePassthrough.r3f';
 import { subViewportContainerMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({
@@ -31,11 +34,5 @@ controlComponentRegistry.register({
   Component: SubViewportContainer,
 });
 controlSolverRegistry.registerMinimumSize('SubViewportContainer', subViewportContainerMinimumSize);
-
-nodeComponentRegistry.register({
-  typeName: 'SubViewportContainer',
-  Component: Node,
-  container: true,
-});
 
 export { SubViewportContainer };

@@ -41,13 +41,18 @@
 import * as THREE from 'three';
 
 /**
- * GLSL `smoothstep`, which clamps — as does Godot's own `Math::smoothstep`.
- * Written out rather than reached for from THREE.MathUtils so the shader
- * correspondence is readable next to the formula it implements.
+ * GLSL `smoothstep`, which clamps — the one the decal term is written in
+ * (`scene_forward_clustered.glsl:1593`).
+ *
+ * Deliberately NOT `godot/math.ts`'s `smoothstep`. That is `Math::smoothstep`,
+ * a different function that happens to share a name: it guards coincident edges
+ * with `is_equal_approx` and answers 0 AT the lower edge. GLSL has no such
+ * guard, so the authority for the degenerate case `normal_fade = 1` reaches is
+ * the spec's division by zero, which is undefined. Stepping to 1 at the edge is
+ * this previewer's choice for it, made here rather than inherited from a
+ * function whose engine call site is not this one.
  */
 function smoothstep(edge0: number, edge1: number, x: number): number {
-  // Godot's `Math::smoothstep` returns a step rather than dividing by zero when
-  // the edges coincide, which `normal_fade = 1` reaches.
   if (edge0 === edge1) return x < edge0 ? 0 : 1;
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);

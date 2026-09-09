@@ -27,7 +27,7 @@ export function parseAudioStreamPlayer2D(
     max_distance: floatOr(properties.max_distance, 2000, ctx),
     attenuation: floatOr(properties.attenuation, 1, ctx),
     panning_strength: floatOr(properties.panning_strength, 1, ctx),
-    area_mask: intOr(properties.area_mask, 1, ctx),
+    area_mask: intOr(properties.area_mask, 1, ctx, 'uint32'),
     playback_type: enumOr(properties.playback_type, PlaybackType.DEFAULT, [
       PlaybackType.DEFAULT,
       PlaybackType.STREAM,

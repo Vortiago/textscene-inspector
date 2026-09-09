@@ -54,6 +54,18 @@ describe('decodeNavigationPolygon', () => {
     ).toBeNull();
   });
 
+  it('returns null instead of throwing on malformed POLYGON indices', () => {
+    // The index reader throws on an element Godot's tokenizer refuses, and this
+    // call sits outside the vertices try/catch — so without its own guard the
+    // throw leaves the decoder and takes the previewer down with it.
+    expect(
+      decodeNavigationPolygon({
+        vertices: 'PackedVector2Array(0, 0, 1, 0, 1, 1)',
+        polygons: '[PackedInt32Array(0, 0x10, 2)]',
+      })
+    ).toBeNull();
+  });
+
   it('returns null instead of throwing on malformed vertices (error path)', () => {
     expect(
       decodeNavigationPolygon({

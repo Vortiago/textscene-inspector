@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+; LightmapProbe binds no property of its own (empty _bind_methods, no ADD_PROPERTY,
+; no ADD_ARRAY_COUNT, no hand-rolled property list — lightmap_probe.h/.cpp declare
+; nothing beyond the GDCLASS macro). transform is Node3D's key, carrying a
+; non-default value: the default Godot omits would exercise nothing.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyLightmapProbe" type="LightmapProbe" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

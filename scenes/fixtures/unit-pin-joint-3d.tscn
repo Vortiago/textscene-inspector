@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+; PinJoint3D: exercises its own params/bias, params/damping, params/impulse_clamp.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyPinJoint3D" type="PinJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+params/bias = 0.5
+params/damping = 2.0
+params/impulse_clamp = 8.0
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("Shape_1")

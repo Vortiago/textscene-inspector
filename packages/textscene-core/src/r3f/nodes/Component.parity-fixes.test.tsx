@@ -352,7 +352,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(cam.position.z).toBeCloseTo(5 - 2, 5);
   });
 
-  it('audit slot 14a — surface_material_override slot 0 + slot 1 → mesh.material is a length-2 array', async () => {
+  it('audit slot 14a — surface_material_override slot 0 applies, slot 1 is refused', async () => {
     const surfaceMap = new Map<number, string>([
       [0, 'SubResource("MatA")'],
       [1, 'SubResource("MatB")'],
@@ -376,6 +376,11 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
+    // A BoxMesh is a PrimitiveMesh with one surface
+    // (primitive_meshes.cpp:141-147), so `_set` refuses slot 1
+    // (mesh_instance_3d.cpp:68) and the box draws slot 0 on all six of its
+    // groups. Splitting it into a length-2 array left four faces unrendered,
+    // because three skips a group whose `material[materialIndex]` is undefined.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const materials = mesh.material as THREE.MeshStandardMaterial[];
     expect(Array.isArray(materials)).toBe(true);

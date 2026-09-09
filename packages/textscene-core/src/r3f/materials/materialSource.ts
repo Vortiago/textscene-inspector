@@ -27,7 +27,17 @@ export type MaterialSource =
   /** A StandardMaterial3D `[sub_resource]` of the previewed scene. */
   | { kind: 'scene'; resource: TscnInternalResource }
   /** A `res://` path the material pipeline loads. */
-  | { kind: 'path'; path: string };
+  | { kind: 'path'; path: string }
+  /**
+   * The slot names a Material this previewer cannot build — Godot's default 3D
+   * surface (ADR-0041).
+   *
+   * Distinct from `undefined`, which means the slot names NO material: a node
+   * with an empty slot keeps whatever it already had (a glTF surface its own
+   * import gave it), while one whose override resolved to this had its material
+   * REPLACED, and Godot draws the replacement.
+   */
+  | { kind: 'default' };
 
 export function resolveMaterialSource(
   ref: string | undefined,
@@ -50,7 +60,7 @@ export function resolveMaterialSource(
       // side warns once — the loader caches what it built, and a scene body has
       // no such cache.
       warn("[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface.");
-      return undefined;
+      return { kind: 'default' };
     }
     if (!resource || resource.type !== 'StandardMaterial3D') return undefined;
     return { kind: 'scene', resource };

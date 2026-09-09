@@ -16,21 +16,40 @@
  */
 
 import { warn } from '../../logger';
+import { indexedKeyRegex, parseGodotInt, toIntIndex } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
 
-const ITEM_KEY_RE = /^item\/(\d+)\/(name|mesh|mesh_transform|mesh_cast_shadow)$/;
+/**
+ * `MeshLibrary::_set` reads FIXED slices — `get_slicec('/', 1)` for the index
+ * and `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — with no
+ * validity gate on either.
+ *
+ * So the index grammar is the whole path segment and {@link toIntIndex} decides
+ * the number (`+7` is item 7, `x` is item 0); the leaf is one segment and
+ * anything below it is ignored, because `get_slicec` returns that slice alone
+ * (ustring.cpp:941-964) — `item/7/name/extra` sets item 7's name.
+ */
+const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
 
+/**
+ * @param selfPath - the `res://` path the library was loaded from. An item mesh
+ *   the library embeds as its own `[sub_resource]` can only be addressed
+ *   relative to that file, so this is an input rather than a convenience.
+ */
 /**
  * `mesh_cast_shadow` is serialised as the `RS::ShadowCastingSetting` ordinal.
  * Anything outside 0-3 lands on Godot's own default branch, which is ON
  * (`scene/resources/3d/mesh_library.cpp:65-67`).
  */
 function decodeCastShadow(rawValue: string): ShadowCastingSetting {
-  switch (parseInt(rawValue, 10)) {
+  // `parseGodotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
+  // slot (`variant.cpp`), so `cast_shadow = 2.0` is DOUBLE_SIDED, and a raw
+  // `parseInt` would read `2` out of text the engine refuses outright.
+  switch (parseGodotInt(rawValue)) {
     case 0:
       return ShadowCastingSetting.OFF;
     case 2:
@@ -42,11 +61,6 @@ function decodeCastShadow(rawValue: string): ShadowCastingSetting {
   }
 }
 
-/**
- * @param selfPath - the `res://` path the library was loaded from. An item mesh
- *   the library embeds as its own `[sub_resource]` can only be addressed
- *   relative to that file, so this is an input rather than a convenience.
- */
 export function meshLibraryFromTres(
   tres: ParsedResource,
   selfPath: string
@@ -67,7 +81,11 @@ export function meshLibraryFromTres(
   for (const [key, rawValue] of Object.entries(tres.properties)) {
     const match = ITEM_KEY_RE.exec(key);
     if (!match) continue;
-    const id = parseInt(match[1]!, 10);
+    const id = toIntIndex(match[1]!);
+    // `create_item`'s `ERR_FAIL_COND(p_item < 0)` (mesh_library.cpp:159) leaves
+    // no item for the `set_item_*` that follows, so a negative index writes
+    // nothing.
+    if (!(id >= 0)) continue;
     const field = match[2]!;
     const item = ensure(id);
 

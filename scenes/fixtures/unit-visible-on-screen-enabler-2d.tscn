@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Target" type="Node2D" parent="."]
+
+[node name="MyVisibleOnScreenEnabler2D" type="VisibleOnScreenEnabler2D" parent="."]
+position = Vector2(10, 20)
+rect = Rect2(-20, -20, 40, 40)
+enable_mode = 1
+enable_node_path = NodePath("../Target")

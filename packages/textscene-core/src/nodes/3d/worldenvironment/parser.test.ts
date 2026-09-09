@@ -43,7 +43,7 @@ describe('WorldEnvironment Parser', () => {
       expect(props.environment).toBe('SubResource("Environment_12345")');
     });
 
-    it('should inherit Node3D properties', () => {
+    it('keeps the heading attributes and the transform the Node base parser reads', () => {
       const props = parseWorldEnvironment(
         heading('WorldEnvironment', { name: 'MyEnvironment', parent: 'Root' }),
         {
@@ -56,6 +56,15 @@ describe('WorldEnvironment Parser', () => {
       expect(props.parent).toBe('Root');
       expect(props.transform).toBeDefined();
       expect(props.environment).toBe('SubResource("Environment_1")');
+    });
+
+    it('reads no Node3D field: a WorldEnvironment is a Node (node_3d.cpp:150)', () => {
+      const props = parseWorldEnvironment(heading('WorldEnvironment'), {
+        visible: 'false',
+        position: 'Vector3(1, 2, 3)',
+      });
+      expect('visible' in props).toBe(false);
+      expect('position' in props).toBe(false);
     });
   });
 });

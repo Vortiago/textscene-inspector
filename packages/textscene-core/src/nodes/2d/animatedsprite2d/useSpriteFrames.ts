@@ -16,7 +16,7 @@
  *
  * The hook is the SpriteFrames slice's host adapter: both homes hand the same
  * property bag to `decodeSpriteFrames`, so the decode never learns which one it
- * came from (or, once #110 lands, which serialization).
+ * came from.
  */
 
 import { useMemo } from 'react';
@@ -58,7 +58,7 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
   // Only text resources can ever parse; a binary `.res` SpriteFrames would park
   // the load in-flight forever (no processor handles it).
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): SpriteFramesResult => {
     if (!spriteFramesRef) return EMPTY;

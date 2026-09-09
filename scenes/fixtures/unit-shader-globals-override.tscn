@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="MyShaderGlobalsOverride" type="ShaderGlobalsOverride" parent="."]
+; params/<name> keys, one per Variant shape the class can override.
+params/fog_enabled = true
+params/tint = Color(1, 0, 0, 1)

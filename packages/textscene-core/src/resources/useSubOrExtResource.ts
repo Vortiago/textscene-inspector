@@ -34,7 +34,7 @@ export function useSubOrExtResource(
     () => (inline ? null : resolveExtResourcePath(ref, externalResources)),
     [inline, ref, externalResources]
   );
-  const external = useResource<ParsedResource>(externalPath ?? '', 'Resource');
+  const external = useResource<ParsedResource>(externalPath ?? '', 'resource');
 
   return useMemo(() => {
     if (inline) return inline;

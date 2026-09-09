@@ -29,6 +29,17 @@ describe('parseCurve2DPoints', () => {
     expect(points[1]!.position).toEqual({ x: 300, y: 50 });
   });
 
+  // `curve.cpp:1241` `PackedVector2Array rp = p_data["points"]` converts through
+  // the Variant, and ARRAY is a strict source for PACKED_VECTOR2_ARRAY
+  // (variant.cpp:449-478), so both array spellings load the same two points.
+  it('reads the bare-array and typed-array spellings of points', () => {
+    const bare = '{\n"points": [Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)]\n}';
+    expect(parseCurve2DPoints(bare)).toHaveLength(2);
+    expect(parseCurve2DPoints(bare)[1]!.position).toEqual({ x: 10, y: 0 });
+    const typed = '{\n"points": Array[Vector2]([Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(0, 0), Vector2(10, 0)])\n}';
+    expect(parseCurve2DPoints(typed)).toHaveLength(2);
+  });
+
   it('reads the points from an object-shaped _data (defensive)', () => {
     const points = parseCurve2DPoints({ points: 'PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,10,0)' });
     expect(points).toHaveLength(2);

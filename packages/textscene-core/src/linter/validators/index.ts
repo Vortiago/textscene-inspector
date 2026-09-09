@@ -2,10 +2,10 @@
 
 export * from './commonValidators.js';
 export * from './vectorValidators.js';
-export * from './physicsValidators.js';
 export * from './resourceValidators.js';
-export { propertyError } from './propertyError.js';
+export { propertyError, keyShapeError, nilShapeError } from './propertyError.js';
 export { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-export { v } from './v.js';
-export { layerBitmask, MAX_LAYER_BITMASK } from './layerBitmask.js';
+export { v, accepts, shape, arrayLiteralElements } from './v.js';
+export { layerBitmask } from './layerBitmask.js';
+export { maskedBitField, hintedBitField } from './maskedBitField.js';
 export type { FloatOpts, IntOpts, EnumOpts } from './v.js';

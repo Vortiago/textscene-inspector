@@ -1,8 +1,9 @@
 /**
- * Linter entry point for VSlider: the Range property-order semantic rule.
- * VSlider's format validators are inherited from Control via the
- * `NODE_BASE_TYPES` base-walk (no `linterParser.ts` of its own). Imports
- * only `.ts` — never `Component.tsx` — to keep the linter bundle
- * React/THREE-free.
+ * vslider linter registration - imports linter components to trigger self-registration.
+ *
+ * The validators live on the abstract Slider tier: this orientation binds no
+ * properties of its own.
  */
+
+import '../slider/linterParser.js';
 import './linter.js';

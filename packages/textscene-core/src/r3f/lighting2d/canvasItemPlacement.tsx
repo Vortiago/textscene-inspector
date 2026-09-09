@@ -34,14 +34,14 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
+import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../godot/rendering.js';
 
 /**
- * `RenderingServer.CANVAS_ITEM_Z_MIN` / `CANVAS_ITEM_Z_MAX`
- * (`servers/rendering/rendering_server_enums.h`), which Godot 4.6.3 reports as
- * -4096 and 4096.
+ * Re-exported rather than re-typed: `godot/rendering.ts` owns the numbers and
+ * the reasoning, and its docblock names a slice re-typing them as THE drift
+ * risk. The clamp below and the linter's bounds must read one constant.
  */
-export const CANVAS_ITEM_Z_MIN = -4096;
-export const CANVAS_ITEM_Z_MAX = 4096;
+export { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX };
 
 /** The world canvas's layer, which is where everything outside a CanvasLayer draws. */
 export const WORLD_CANVAS_LAYER = 0;

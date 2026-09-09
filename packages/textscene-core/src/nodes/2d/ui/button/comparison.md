@@ -1,6 +1,7 @@
 ---
 type: Button
 category: 2D
+status: unreviewed
 fixture: unit-button.tscn
 image: unit-button
 renders_as: a StyleBox quad with a centred text run
@@ -8,139 +9,48 @@ renders_as: a StyleBox quad with a centred text run
 
 # Button
 
-Button is Godot's clickable text control. This is a static viewer, so it draws each
-Button's NORMAL state only — the `normal` StyleBox (or the default-theme StyleBox
-when none is set) as a quad on the canvas, with the label drawn over it. The fixture
-stacks three centered buttons: an unthemed `Click Me`, a green `Styled` one with an
-explicit StyleBox, and a `Disabled` one.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `text` | `"Click Me"` / `"Styled"` / `"Disabled"` | the label on each of the three buttons |
-| `theme_override_styles/normal` | green `StyleBoxFlat` | replaces the default chrome on **Styled** — `bg_color = Color(0.2,0.5,0.35,1)` green fill, `corner_radius = 6` rounded corners, `content_margin 14/6` padding |
-| `disabled` | `true` | switches **Disabled** to the lighter disabled StyleBox and mutes its label |
-| `alignment` | `1` (CENTER) | centres the **Styled** label — Godot's Button default, so no visible change |
-
-## Divergences
-
-Measured on Godot 4.6.3, `pnpm ref:godot scenes/fixtures/unit-button.tscn --mode 2d
---probe <x,y>` against `pnpm ref:ours unit-button.tscn --2d --probe <x,y>`:
-
-| Probe | What it is | Godot | Ours |
-| --- | --- | --- | --- |
-| (583, 370) | a solid stroke of the **Disabled** label | rgb(142, 142, 142) | rgb(142, 142, 142) |
-| (544, 362) | the same stroke where Godot's glyph sits, one column left of ours | rgb(142, 142, 142) | rgb(95, 95, 95) |
-| (576, 306) | the row above **Styled**'s top edge, on the straight part away from both corner arcs | rgb(76, 76, 76) | rgb(76, 76, 76) |
-| (576, 341) | **Styled**'s bottom fill row, same column | rgb(51, 128, 89) | rgb(51, 128, 89) |
-
-Chrome colours are exact. The unthemed **Click Me** fill is the default theme's
-charcoal on both sides (rgb(46, 46, 46) against rgb(45, 45, 45) — one step of
-rounding on a StyleBox whose colour is itself an alpha blend over the backdrop),
-**Styled** is pixel-exact rgb(51, 128, 89) green, and **Disabled** takes the lighter
-rgb(61, 61, 61) disabled StyleBox on both. Every label sits on the same rows and
-in the same columns: **Click Me**'s ink spans x 544..606, y 274..285 on both
-sides, and **Styled**'s x 553..597, y 319..334 on both. **Disabled** is the one
-exception, and only at its leading edge — x 543..607 in Godot against
-x 544..607 here. The whole frame parts by 4658 px (0.624 %) at a mean channel
-error of 0.06/255: almost all of it is a single step on a glyph's own
-anti-aliased edge.
-
-`font_disabled_color` is `control_font_color × Color(1, 1, 1, 0.5)`, and Godot's
-142 at (583, 370) is exactly `223 × 0.5 + 61 × 0.5` over the disabled fill —
-matched on both sides.
-
-All three buttons carry authored offsets 32 px apart, and both engines keep
-that: **Click Me** spans y 264..295 and **Disabled** y 352..383, identically.
-**Styled**'s own StyleBox sets `content_margin_top/bottom = 6`, so its minimum
-height is 35 px (12 + a 23 px font height) against an authored 32, and that 35 px
-rect is the same height on both sides. All three span x 516..635 on both, and
-**Styled**'s solves to y 307..341 on both.
-
-What is left is one glyph's leading edge, not the glyph itself. A solid interior
-stroke of the **Disabled** label at (583, 370) reads rgb(142, 142, 142) on both
-sides, and the label's last stem sits at x 607 in both — so the run is placed
-and advanced identically. Only the first stem's left edge parts: probe
-(544, 362) reads rgb(95, 95, 95) here against Godot's rgb(142, 142, 142), the
-sub-pixel coverage of an edge that starts one column earlier in Godot
-(x 543 against x 544). The RichTextLabel sheet has the mechanism
-(`openSansMetrics.ts`'s continuous per-glyph `advanceWidths` as the shaping
-source).
-
-## Native (WebGL canvas) painter
-
-`nativeSolver.ts` registers `Button::get_minimum_size_for_text_and_icon`
-(`controlSolverRegistry.registerMinimumSize`); `Component.tsx` draws the
-chrome (a `StyleBoxQuad`, skipped when `flat`), the label (`<TextRun>`, centred/
-aligned per `alignment`), and an optional icon (`<ControlQuad>`, honouring
-`icon_alignment`/`vertical_icon_alignment`/`expand_icon`) — Button is the first
-native *composite* painter, so the shared chrome-tint/content-layout math lives in
-`r3f/controls/native/buttonBase.ts` for CheckBox/OptionButton (both `Button`
-subclasses in Godot itself) to reuse rather than re-derive. Draw state is `disabled`
-vs. everything else — no hover/pressed/focus: this is a static viewer, not an
-interactive control.
-
-### font_disabled_color
-
-`control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)`
-(`scene/theme/default_theme.cpp:106`, with `control_font_color = Color(0.875, 0.875,
-0.875)` at `:101`), and Button's own `theme->set_color("font_disabled_color",
-"Button", control_font_disabled_color)` (`:161`) — `nativeSolver.ts`'s
-`BUTTON_DEFAULT_DISABLED_FONT_COLOR` reads exactly this: `{ r: 0.875, g: 0.875, b:
-0.875, a: 0.5 }`, resolved through the same `theme_override_colors/font_disabled_color`
-override key a scene can still author.
-
-Measured against real Godot 4.6.3 — `pnpm ref:godot scenes/fixtures/unit-button.tscn
---mode 2d --probe 583,370` (a solid glyph-stroke pixel inside **Disabled**'s label) →
-`rgb(142, 142, 142)`. That number is exactly `control_font_color` (0.875 → 223)
-alpha-blended at 0.5 over the disabled StyleBox's own fill (rgb(61, 61, 61)):
-`223 × 0.5 + 61 × 0.5 = 142`. The native painter feeds `<TextRun>` the identical
-`{0.875, 0.875, 0.875, 0.5}` colour, tinted by `self_modulate`/ambient `modulate`
-like every other draw call this painter makes, and the same probe reads
-`rgb(142, 142, 142)` on both sides.
-
-### StyleBox corner anti-aliasing
-
-`styleBoxFlatGeometry.ts` (this painter's chrome, shared with every other native
-StyleBox consumer — `panel/comparison.md` measures the same arc on a 40 px radius)
-builds the same AA feather rings `StyleBoxFlat::draw` does
-(`scene/resources/style_box_flat.cpp:511-630`), driven by `StyleBoxFlatData`'s
-`anti_aliased`/`aa_size` fields (defaults `true`/`1`,
-`scene/resources/style_box_flat.h:49,54`).
-
-**Styled**'s own StyleBox draws no border, so this is the fill-only AA branch — the
-whole rect's boundary gets a `aa_size / 2` = 0.5 px feather. On the straight top
-edge, away from the corner arc, `--probe 576,308` reads `rgb(51, 128, 89)` on both
-sides — pixel-exact.
-
-On the top-left arc (`corner_radius = 6`), `--probe 519,308`, `--probe 519,309`
-and `--probe 520,308` all read `rgb(51, 128, 89)` on both sides.
-
-Where the arc does part it parts in the direction the half-pixel offset above
-predicts. `--probe 519,307` reads Godot `rgb(65, 99, 81)` against ours
-`rgb(53, 125, 89)` — ours carries more ink, its rect having started half a pixel
-earlier. `--probe 519,341` reads Godot `rgb(65, 99, 81)` against ours
-`rgb(76, 76, 76)` — ours carries none, its rect having already ended. Extra
-coverage at the top end and missing coverage at the bottom is the signature of
-that translation, so these numbers do not isolate the ring from the placement.
+Button is Godot's clickable text control. The previewer draws its NORMAL state as a
+positioned `<div>` with the `normal` StyleBox, or the default-theme chrome when none is
+set, and the label centred.
 
 ## Linting
 
 <!-- lint:begin Button -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `Button` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `Button` properties, plus 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) | warning |
+| `autowrap_mode` | enum 0-3 (AUTOWRAP_OFF/AUTOWRAP_ARBITRARY/AUTOWRAP_WORD/AUTOWRAP_WORD_SMART) | warning |
+| `autowrap_trim_flags` | bit mask of BREAK_TRIM_INDENT (32) \| BREAK_TRIM_START_EDGE_SPACES (64) \| BREAK_TRIM_END_EDGE_SPACES (128) |  |
+| `clip_text` | true or false |  |
+| `expand_icon` | true or false |  |
+| `flat` | true or false |  |
+| `icon` | null, SubResource("id") or ExtResource("id") |  |
+| `icon_alignment` | enum 0-2 (HORIZONTAL_ALIGNMENT_LEFT/HORIZONTAL_ALIGNMENT_CENTER/HORIZONTAL_ALIGNMENT_RIGHT) | warning |
+| `language` | quoted string, or the &"…" StringName jacket |  |
+| `text` | quoted string, or the &"…" StringName jacket |  |
+| `text_direction` | enum 0-3 (TEXT_DIRECTION_AUTO/TEXT_DIRECTION_LTR/TEXT_DIRECTION_RTL/TEXT_DIRECTION_INHERITED) | error below -1, warning below 0, error above 3 |
+| `text_overrun_behavior` | enum 0-6 (OVERRUN_NO_TRIMMING/OVERRUN_TRIM_CHAR/OVERRUN_TRIM_WORD/OVERRUN_TRIM_ELLIPSIS/OVERRUN_TRIM_WORD_ELLIPSIS/OVERRUN_TRIM_ELLIPSIS_FORCE/OVERRUN_TRIM_WORD_ELLIPSIS_FORCE) | warning |
+| `vertical_icon_alignment` | enum 0-2 (VERTICAL_ALIGNMENT_TOP/VERTICAL_ALIGNMENT_CENTER/VERTICAL_ALIGNMENT_BOTTOM) | warning |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-Button's own fields, `text`, `disabled`, `flat`, `alignment`, `icon`,
-`icon_alignment`, `vertical_icon_alignment`, `expand_icon`, have no strict
-counterpart at all; only the inherited Control set is checked. `disabled`, `flat`,
-and `expand_icon` parse with a bare `=== 'true'` check, so anything but the literal
-string `"true"`, e.g. `"1"`, `"True"`, a typo, silently becomes `false`.
-`alignment`, `icon_alignment`, and `vertical_icon_alignment` use `parseOptionalInt`:
-a malformed value becomes `undefined` with no warning, leaving the button to fall
-back to its own render default.
+Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignment`,
+`vertical_icon_alignment` and `expand_icon`, have no strict counterpart. `disabled`,
+`flat` and `expand_icon` become `false` for any value that does not read as `true`, with
+no warning. The three alignments go through `parseOptionalInt`, so a malformed value
+becomes `undefined` and the render default applies.
+
+## Known limitations
+
+- **Approximated** A disabled label is dimmed by opacity rather than the default theme's
+  disabled font colour, so it reads a little lighter than Godot's.

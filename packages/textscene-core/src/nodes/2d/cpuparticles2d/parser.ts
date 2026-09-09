@@ -45,7 +45,9 @@ export function parseCPUParticles2D(
     explosiveness: floatOr(properties.explosiveness, 0, `${context}.explosiveness`),
     randomness: floatOr(properties.randomness, 0, `${context}.randomness`),
     use_fixed_seed: boolOr(properties.use_fixed_seed, false, context),
-    seed: intOr(properties.seed, 0, `${context}.seed`),
+    // cpu_particles_2d.h:261 — the setter takes uint32_t, so 4294967295 is
+    // the seed the file states rather than -1.
+    seed: intOr(properties.seed, 0, `${context}.seed`, 'uint32'),
     lifetime_randomness: floatOr(properties.lifetime_randomness, 0, `${context}.lifetime_randomness`),
     fixed_fps: intOr(properties.fixed_fps, 0, `${context}.fixed_fps`),
     fract_delta: boolOr(properties.fract_delta, true, context),

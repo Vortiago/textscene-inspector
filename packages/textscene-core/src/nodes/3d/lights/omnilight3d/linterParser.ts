@@ -13,7 +13,16 @@ import { v } from '../../../../linter/validators/index.js';
 const OMNI_SHADOW_MODE = { 0: 'DUAL_PARABOLOID', 1: 'CUBE' };
 
 validatorRegistry.registerAll('OmniLight3D', {
-  omni_range: v.positiveFloat('omni_range'),
-  omni_attenuation: v.nonNegativeFloat('omni_attenuation'),
-  omni_shadow_mode: v.enumInt('omni_shadow_mode', 0, 1, OMNI_SHADOW_MODE),
+  // light_3d.cpp:639, PROPERTY_HINT_RANGE "0,4096,0.001,or_greater,exp":
+  // `or_greater` opens the ceiling and `exp` is slider scaling, so only the 0
+  // floor is a bound. Light3D::set_param:36 guards the param index, not the
+  // value, so it warns.
+  omni_range: v.nonNegativeFloat('omni_range', { hinted: 'light_3d.cpp:639' }),
+  // light_3d.cpp:640, PROPERTY_HINT_RANGE "-10,10,0.001,or_greater,or_less":
+  // the range starts below zero and both ends are soft, so a negative is legal
+  // and means an inverse falloff curve.
+  omni_attenuation: v.float('omni_attenuation'),
+  omni_shadow_mode: v.enumInt('omni_shadow_mode', 0, 1, OMNI_SHADOW_MODE, {
+    hinted: 'light_3d.cpp:641',
+  }),
 });

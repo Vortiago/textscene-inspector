@@ -1,0 +1,27 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+; Exercises ConeTwistJoint3D's own properties at valid values.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyConeTwistJoint3D" type="ConeTwistJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+swing_span = 0.6981317
+twist_span = 1.5707963
+bias = 0.4
+softness = 0.9
+relaxation = 1.2
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("Shape_1")

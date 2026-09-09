@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_walk1"]
+[ext_resource type="Texture2D" path="res://textures/dodge-walk2.png" id="2_walk2"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_walk"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_walk1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_walk2")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 4.0
+}]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyAnimatedSprite3D" type="AnimatedSprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+sprite_frames = SubResource("SpriteFrames_walk")
+animation = &"walk"
+autoplay = "walk"
+frame = 1
+frame_progress = 0.5
+speed_scale = 1.5

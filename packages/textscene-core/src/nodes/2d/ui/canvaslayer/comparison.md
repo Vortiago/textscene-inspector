@@ -1,6 +1,7 @@
 ---
 type: CanvasLayer
 category: 2D
+status: unreviewed
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
 renders_as: a full-rect passthrough layer hosting Control children
@@ -8,44 +9,30 @@ renders_as: a full-rect passthrough layer hosting Control children
 
 # CanvasLayer
 
-CanvasLayer is not a Control and paints nothing of its own — it spans the whole
-viewport and gives its Control children that rect to anchor against. The visible "Score: 0"
-is the child Label, and it lands in the top-right corner of both images, which is
-the evidence the layer hosts and viewport-anchors its child faithfully.
-
-The layer is its own canvas, so an ancestor's `modulate` stops at it: `CanvasLayer`
-derives from `Node`, `CanvasItem::get_parent_item()` returns null under it
-(`scene/main/canvas_item.cpp:565`), and every canvas seeds its root items at pure
-white (`servers/rendering/renderer_canvas_cull.cpp:82`). Visibility does cross,
-because `scene/main/canvas_layer.cpp:57-63` propagates it by hand. This fixture tints
-nothing, so `unit-canvas-layer-modulate-scope.tscn` is what exercises that boundary.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `layer` | `1` | z-order of this layer; with one CanvasLayer it has no visible consequence here |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:godot
-scenes/fixtures/unit-canvas-layer.tscn --mode 2d` against `pnpm ref:ours
-unit-canvas-layer.tscn --2d` differs at a mean channel error of 0.02/255 over
-the 1152x648 frame — all of it on the label's glyph edges.
+CanvasLayer is not a Control and paints nothing of its own. The previewer fills the
+overlay with it and gives its Control children a viewport to anchor against.
 
 ## Linting
 
 <!-- lint:begin CanvasLayer -->
-Strict parsing format-checks nothing on this node: no validators are registered for `CanvasLayer`, and it inherits none.
+Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `follow_viewport_enabled` | true or false |  |
+| `follow_viewport_scale` | float |  |
+| `layer` | integer -2147483648-2147483647 | warning |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `rotation` | float |  |
+| `scale` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `transform` | Transform2D(6 floats) |  |
+| `visible` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-CanvasLayer has no validators of its own, so no property here is ever rejected.
-`layer` and `index` go through `parseOptionalInt`: absent or unparseable, each
-silently becomes `undefined`, and a missing `layer` has no visual consequence
-anyway (see Properties exercised). `visible` skips the shared decoders entirely:
-anything other than the literal string `"false"`, including a typo like
-`"flase"`, renders the layer visible, with no warning logged.
+CanvasLayer has no validators of its own. `layer` and `index` go through
+`parseOptionalInt`, so an absent or unparseable value becomes `undefined` with no
+warning. `visible` is `true` for anything other than a value that reads as `false`.

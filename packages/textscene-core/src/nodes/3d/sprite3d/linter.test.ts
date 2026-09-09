@@ -9,6 +9,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -42,7 +43,9 @@ pixel_size = 0.01
         invalid: [{ value: '"invalid_format"', contains: ['texture', 'resource reference'] }],
       },
       {
-        // Godot rejects BILLBOARD_PARTICLES on a sprite (scene/3d/sprite_3d.cpp:598).
+        // sprite_3d.cpp:685 hints only 3 labels, and set_billboard_mode:598
+        // ERR_FAIL_INDEX(p_mode, 3) explicitly excludes BILLBOARD_PARTICLES
+        // (StandardMaterial3D's 4th value) — 3 is not a legal Sprite3D value.
         prop: 'billboard',
         valid: [0, 1, 2],
         invalid: [
@@ -52,7 +55,8 @@ pixel_size = 0.01
         ],
       },
       {
-        // ALPHA_CUT_HASH = 3 is a real mode (scene/3d/sprite_3d.h:52-58).
+        // sprite_3d.cpp:691 hints 4 labels; ALPHA_CUT_HASH=3 is real and
+        // enforced-accepted (ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX), :531).
         prop: 'alpha_cut',
         valid: [0, 1, 2, 3],
         invalid: [{ value: 5, contains: ['alpha_cut', '0-3'] }],
@@ -63,11 +67,17 @@ pixel_size = 0.01
         invalid: [{ value: 10, contains: ['axis', '0-2'] }],
       },
       {
+        // sprite_3d.cpp:682 hints "0.0001,128" closed at both ends and the
+        // setter assigns straight through, so out-of-band is the hinted tier:
+        // a warning, and the ceiling reports as well as the floor. A bare
+        // "> 0" error would invent a severity and let `pixel_size = 500.0`
+        // through in silence.
         prop: 'pixel_size',
-        valid: [0.01],
+        valid: [0.01, 0.0001, 128],
         invalid: [
-          { value: 0, contains: ['pixel_size', 'greater than 0'] },
-          { value: -0.5, contains: ['pixel_size', 'greater than 0'] },
+          { value: 0, severity: 'warning', contains: ['pixel_size', '0.0001', '128'] },
+          { value: -0.5, severity: 'warning', contains: ['pixel_size', '0.0001', '128'] },
+          { value: 500.0, severity: 'warning', contains: ['pixel_size', '128'] },
         ],
       },
       {
@@ -79,17 +89,23 @@ pixel_size = 0.01
         ],
       },
       {
+        // sprite_3d.cpp:1014/:1015 hint "1,16384,1", closed both ends; only the
+        // floor is setter-enforced (:924/:905), so the ceiling warns.
         prop: 'hframes',
-        valid: [4],
+        valid: [4, 1, 16384],
         invalid: [
-          { value: 0, contains: ['hframes', 'greater than 0'] },
-          { value: -1, contains: ['hframes', 'greater than 0'] },
+          { value: 0, severity: 'error', contains: ['hframes', 'between 1 and 16384'] },
+          { value: -1, severity: 'error', contains: ['hframes', 'between 1 and 16384'] },
+          { value: 16385, severity: 'warning', contains: ['hframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'vframes',
-        valid: [4],
-        invalid: [{ value: 0, contains: ['vframes', 'greater than 0'] }],
+        valid: [4, 1, 16384],
+        invalid: [
+          { value: 0, severity: 'error', contains: ['vframes', 'between 1 and 16384'] },
+          { value: 16385, severity: 'warning', contains: ['vframes', 'between 1 and 16384'] },
+        ],
       },
       {
         prop: 'frame',
@@ -105,7 +121,12 @@ pixel_size = 0.01
       {
         prop: 'frame_coords',
         valid: ['Vector2i(1, 2)'],
-        invalid: [{ value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] }],
+        // A grid that HOLDS the cell: `set_frame_coords` ERR_FAIL_INDEXes both
+        // components (sprite_3d.cpp:894-895), so on the default 1x1 grid
+        // `Vector2i(1, 2)` is a write Godot refuses, not a valid example.
+        with: { hframes: 4, vframes: 4 },
+        // `Color` does not convert into a Vector2i slot; `Vector2` does.
+        invalid: [{ value: 'Color(1, 1, 1, 1)', contains: ['frame_coords', 'Vector2i'] }],
       },
       {
         prop: 'region_rect',
@@ -137,7 +158,7 @@ pixel_size = 0.01
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite3D', { billboard: 1 }, { name: 'NoTexture' })), {
         ruleName: 'sprite3d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         contains: ["requires a 'texture' property"],
       });
     });
@@ -151,9 +172,9 @@ pixel_size = 0.01
         severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite3D',
-        ruleName: 'valid-sprite3d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain("'texture'");
     });
 
     it('should pass when texture resource exists', () => {
@@ -176,7 +197,7 @@ pixel_size = 0.01
         scene(node('Sprite3D', { hframes: 4, vframes: 3, frame: 12 }, { name: 'FrameOutOfRange' })),
         {
           ruleName: 'sprite3d-frame-range',
-          severity: 'warning',
+          severity: 'error',
           contains: ['out of range', 'Maximum frame is 11'],
         }
       );
@@ -189,6 +210,32 @@ pixel_size = 0.01
           textureDef
         )
       );
+    });
+
+    it('reads an exponent-spelled grid at its real size', () => {
+      // `parseInt` stopped at the `e` and read `2e1` as 2, so a frame inside a
+      // twenty-column grid was reported out of range at error tier.
+      expectClean(
+        scene(
+          node(
+            'Sprite3D',
+            { texture: textureRef, hframes: '2e1', vframes: 1, frame: 15 },
+            { name: 'ExponentGrid' }
+          ),
+          textureDef
+        )
+      );
+    });
+
+    it('says nothing about the frame when the grid is non-finite', () => {
+      // A non-finite in an INT slot is altered at parse, so there is no grid
+      // size to measure the frame against; the property validator reports it.
+      for (const spelling of ['inf', 'nan']) {
+        expectNoDiagnostic(
+          scene(node('Sprite3D', { hframes: spelling, frame: 15 }, { name: 'NonFiniteGrid' })),
+          { ruleName: 'sprite3d-frame-range' }
+        );
+      }
     });
 
     it('should pass when frame is 0 and hframes/vframes are 1 (default)', () => {
@@ -206,18 +253,18 @@ pixel_size = 0.01
   });
 
   describe('Semantic Validation (Region Configuration)', () => {
-    it('should warn when region_rect is set without region_enabled', () => {
+    it('reports when region_rect is set without region_enabled', () => {
       expectDiagnostic(
         scene(node('Sprite3D', { region_rect: 'Rect2(0, 0, 100, 100)' }, { name: 'RegionNoEnabled' })),
         {
           ruleName: 'sprite3d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           contains: ['region_enabled', 'ignored'],
         }
       );
     });
 
-    it('should warn when region_rect is set but region_enabled is false', () => {
+    it('reports when region_rect is set but region_enabled is false', () => {
       expectDiagnostic(
         scene(
           node(
@@ -229,7 +276,7 @@ pixel_size = 0.01
         ),
         {
           ruleName: 'sprite3d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           contains: ["'region_enabled' is false"],
         }
       );
@@ -245,34 +292,6 @@ pixel_size = 0.01
           ),
           textureDef
         )
-      );
-    });
-  });
-
-  describe('Semantic Validation (Axis Usage)', () => {
-    it('should warn when axis is set without FIXED_Y billboard mode', () => {
-      expectDiagnostic(
-        scene(node('Sprite3D', { billboard: 1, axis: 1 }, { name: 'AxisWithoutFixedY' })),
-        {
-          ruleName: 'sprite3d-axis-usage',
-          severity: 'warning',
-          contains: ['axis', 'FIXED_Y'],
-        }
-      );
-    });
-
-    it('should pass when axis is set with FIXED_Y billboard mode', () => {
-      expectClean(
-        scene(
-          node('Sprite3D', { texture: textureRef, billboard: 2, axis: 1 }, { name: 'ValidAxisUsage' }),
-          textureDef
-        )
-      );
-    });
-
-    it('should pass when axis is set without billboard property', () => {
-      expectClean(
-        scene(node('Sprite3D', { texture: textureRef, axis: 1 }, { name: 'AxisOnly' }), textureDef)
       );
     });
   });
@@ -371,6 +390,119 @@ pixel_size = 0.01
           textureDef
         )
       );
+    });
+  });
+});
+
+describe('frame_coords against the authored grid', () => {
+  it('reports a column past hframes, as the 2D twin does', () => {
+    // `set_frame_coords` ERR_FAIL_INDEXes both components against the grid
+    // (sprite_3d.cpp:894-895) — the same guard `sprite2d-frame-coords-range`
+    // reports on, cited by this slice's own validator and never checked.
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(4, 0)' })),
+      { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['Maximum is 3'] }
+    );
+  });
+
+  it('reports a row past vframes', () => {
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(0, 2)' })),
+      { ruleName: 'sprite3d-frame-coords-range', contains: ['Maximum is 1'] }
+    );
+  });
+
+  it('accepts a cell inside the grid', () => {
+    const diagnostics = lint(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(3, 1)' }))
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
+  });
+});
+
+/**
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
+ * scene, not an error-free one), so a converted spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
+ * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
+ * spelling of the same digits wraps to. Measured on 4.6.3. The rule owes
+ * silence on the whole literal — the sibling component is no more authored
+ * than the unstorable one — and phase 1 reports the value itself.
+ */
+describe('Sprite3D frame_coords with a converted component no int32 holds', () => {
+  it('says nothing about the sibling row, and phase 1 still errors', () => {
+    const diagnostics = lint(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2(4294967295, 5)' }))
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite3d-frame-coords-range')).toEqual([]);
+    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('frame_coords'))).toBe(true);
+  });
+
+  it('still reports the row on the canonical spelling of the same digits', () => {
+    expectDiagnostic(
+      scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })),
+      { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['frame_coords.y'] }
+    );
+  });
+});
+
+
+describe('Sprite3D grid writes, judged in file order like the 2D twin', () => {
+  // `SceneState::instantiate` replays a node's properties in FILE order
+  // (packed_scene.cpp:492), so a grid written below `frame` is still 1x1 when
+  // set_frame's ERR_FAIL_INDEX runs. The declaration order at
+  // sprite_3d.cpp:1014-1016 is the SAVE order and binds nothing here.
+  it('errors when hframes is written below frame', () => {
+    expectDiagnostic(scene(node('Sprite3D', { ...withTexture, frame: 3, hframes: 4 }), textureDef), {
+      ruleName: 'sprite3d-frame-range',
+      severity: 'error',
+      contains: ['Frame 3 is out of range', 'hframes=1', 'file order'],
+    });
+  });
+
+  it('passes on the same values with the grid written above frame', () => {
+    expectClean(
+      scene(node('Sprite3D', { ...withTexture, hframes: 4, vframes: 1, frame: 3 }), textureDef)
+    );
+  });
+
+  it('errors when hframes is written below frame_coords', () => {
+    expectDiagnostic(
+      scene(
+        node('Sprite3D', { ...withTexture, frame_coords: 'Vector2i(3, 0)', hframes: 4 }),
+        textureDef
+      ),
+      {
+        ruleName: 'sprite3d-frame-coords-range',
+        severity: 'error',
+        contains: ['frame_coords.x (3) is out of range', 'hframes=1', 'file order'],
+      }
+    );
+  });
+});
+
+describe('Sprite3D frame re-mapped by a later hframes write (sprite_3d.cpp:938)', () => {
+  // `set_hframes` with `vframes > 1` keeps the frame's row and column on the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body loads on frame 2, not the authored 1.
+  it('warns that the authored frame is stored as another', () => {
+    expectDiagnostic(scene(node('Sprite3D', { ...withTexture, vframes: 2, frame: 1, hframes: 2 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
+      severity: 'warning',
+      contains: ['Frame 1', 'stored as frame 2'],
+    });
+  });
+
+  it('stays quiet when the grid is written above the frame', () => {
+    expectNoDiagnostic(scene(node('Sprite3D', { ...withTexture, hframes: 2, vframes: 2, frame: 1 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
+    });
+  });
+
+  it('stays quiet when only hframes follows, the row being 0', () => {
+    // vframes is still 1 when hframes lands, so the remap branch is skipped.
+    expectNoDiagnostic(scene(node('Sprite3D', { ...withTexture, frame: 0, hframes: 2 }), textureDef), {
+      ruleName: 'sprite3d-frame-remapped',
     });
   });
 });

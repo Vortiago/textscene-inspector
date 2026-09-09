@@ -1,78 +1,51 @@
 ---
 type: AnimationPlayer
 category: 3D
+status: limitation
 fixture: unit-animation-player.tscn
 image: unit-animation-player
-renders_as: no visual of its own; an invisible driver of other nodes' properties
+renders_as: no geometry of its own, a working driver of other nodes' properties
 ---
 
 # AnimationPlayer
 
-Godot's keyframe animation driver. It has no geometry — it animates other
-nodes' properties over time. In a still capture there is nothing to draw for
-the player itself, so both sides show the scene at its authored rest pose: the
-`Mesh` box unrotated at its resting height. The motion of the `spin` clip is
-documented separately as a GIF, not in this frame.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `autoplay` | `spin` | names the clip that would auto-run; the still shows the rest pose because the capture stops it |
-| `speed_scale` | `1.0` | normal playback rate |
-| `playback_active` | `true` | player marked active |
-| `libraries/` | `bob`, `spin` | two clips are available to the transport |
-| clip `spin` | rotation Y `0 → 2π`, `length 2.0`, `loop` | turns the box once per loop (not shown in this still) |
-| clip `bob` | position Y `0.5 → 1.0 → 0.5`, `length 1.0`, `loop` | bobs the box up and down (not shown in this still) |
-
-## Divergences
-
-None visible in this fixture.
+Godot's keyframe animation driver. It has no geometry of its own, but the previewer plays its clips through a `THREE.AnimationMixer` (ADR-0011). The animated pair above steps through one loop of the `spin` clip, and the box turns in both.
 
 ## Linting
 
 <!-- lint:begin AnimationPlayer -->
-Strict parsing format-checks these `AnimationPlayer` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `AnimationPlayer` properties, plus 13 inherited from AnimationMixer, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `autoplay` |
-| `current_animation` |
-| `current_animation_length` |
-| `current_animation_position` |
-| `method_call_mode` |
-| `playback_active` |
-| `playback_default_blend_time` |
-| `playback_process_mode` |
-| `root_node` |
-| `speed_scale` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `autoplay` | quoted string or &"name" |  |
+| `blend_times` | Array literal of (from, to, time) triples |  |
+| `current_animation` | any value (no format constraint) |  |
+| `method_call_mode` | enum 0-1 (DEFERRED/IMMEDIATE) | warning |
+| `movie_quit_on_finish` | true or false |  |
+| `next/*` | quoted string or &"name" |  |
+| `playback/play` | any value (no format constraint) |  |
+| `playback_active` | true or false |  |
+| `playback_auto_capture` | true or false |  |
+| `playback_auto_capture_duration` | float |  |
+| `playback_auto_capture_ease_type` | enum 0-3 (IN/OUT/IN_OUT/OUT_IN) | warning |
+| `playback_auto_capture_transition_type` | enum 0-11 (LINEAR/SINE/QUINT/QUART/QUAD/EXPO/ELASTIC/CUBIC/CIRC/BOUNCE/BACK/SPRING) | warning |
+| `playback_default_blend_time` | float 0-4096 | warning |
+| `playback_process_mode` | enum 0-2 (PHYSICS/IDLE/MANUAL) | warning |
+| `speed_scale` | float |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-animationplayer-properties` | `animationplayer-extreme-speed` | warning |
-|  | `animationplayer-no-animations` | warning |
-|  | `animationplayer-autoplay-missing` | warning |
-|  | `animationplayer-current-animation-missing` | warning |
-|  | `animationplayer-large-blend-time` | warning |
-|  | `animationplayer-inactive` | warning |
-|  | `animationplayer-invalid-root-path` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-animationplayer-properties` | `animationplayer-autoplay-missing` | warning |
+|  | `animationplayer-current-animation-missing` | error |
+|  | `animationplayer-inactive` | info |
 <!-- lint:end -->
 
-`speed_scale` warns and falls back to `1.0` only when the value fails to parse
-as a float; strict's zero-prohibition and `0.0001`-`1000` magnitude bounds have
-no lenient counterpart, so `0` or an extreme speed plays through unchanged.
-`playback_default_blend_time` falls back to `0.0` the same way, with no
-negative-value check reproduced. `playback_process_mode` and
-`method_call_mode` do re-enforce strict's enum membership via `enumOr`,
-warning and substituting `IDLE` (1) or `DEFERRED` (0) for any value outside
-`0`-`2`/`0`-`1`; `playback_active` falls back to `true`. `autoplay` and
-`current_animation` go through `stripQuotes`, which only strips
-quote/StringName/NodePath sigil characters and never rejects an empty result,
-so strict's empty-string rejection has no lenient effect. `root_node` skips
-that helper entirely: absent, it defaults to the literal `NodePath("..")`;
-present, the raw string is stored verbatim with no quote-stripping and no
-empty-string check, unlike strict's `nonEmptyQuotedString` validator.
-`current_animation_length` and `current_animation_position` fall back to
-`0.0` on a parse failure but accept a negative value with no warning, unlike
-strict's `>= 0` check.
+`speed_scale` and `playback_default_blend_time` fall back to `1.0` and `0.0` only when the value fails to parse as a float. `callback_mode_process` and `callback_mode_method` re-check the enum through `enumOr` and fall back to `IDLE` (1) and `DEFERRED` (0). Each has a deprecated 3.x spelling that Godot forwards to the same setter, so the parser reads both spellings into one field. `root_node` defaults to `NodePath("..")` when absent.
+
+## Known limitations
+
+- **Not drawn** Only transform and value tracks play. `bezier`, `method`, `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
+- **Approximated** Cubic interpolation and per-key `transition` easing play as linear, so an eased clip reaches the same poses on a different curve (ADR-0017).
+- **Approximated** A track path resolves by node name, so two same-named siblings under the root are ambiguous, and a track above the root is dropped.

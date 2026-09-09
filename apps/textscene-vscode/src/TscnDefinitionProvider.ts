@@ -83,9 +83,10 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
         continue;
       }
 
-      // Extract id attribute from heading
-      // Matches: id="value" or id='value'
-      const idMatch = line.match(/id\s*=\s*["']([^"']+)["']/);
+      // Extract the id attribute: id="value" or id='value'. Anchored on a
+      // non-attribute-name character because `uid` ENDS in `id` — unanchored,
+      // an `uid="uid://b18l6iy"` earlier in the heading matches instead.
+      const idMatch = line.match(/(?:^|[^\w-])id\s*=\s*["']([^"']+)["']/);
 
       if (!idMatch) {
         continue;

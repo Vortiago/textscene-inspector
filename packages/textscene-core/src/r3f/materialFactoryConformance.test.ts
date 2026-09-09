@@ -218,7 +218,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':
     "mounts the light's aim target — an empty Object3D, added as a child",
-  'packages/textscene-core/src/r3f/YSortDispatcher.tsx':
+  'packages/textscene-core/src/r3f/LiftedAncestors.tsx':
     "spreads a lifted ancestor's restored transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItem2D.tsx':
     "spreads the canvas item's transform onto a `<group>`, which has no material slot",
@@ -230,7 +230,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
-  'packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx':
+  'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
   'packages/textscene-core/src/r3f/materials/ExternalMaterialSlot.tsx':
     'the `.tres` arrival: the resource pipeline hands over a material constructed complete and never writes to it again, and a re-resolve replaces the whole object',
@@ -267,7 +267,7 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
-  'packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx':
+  'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',

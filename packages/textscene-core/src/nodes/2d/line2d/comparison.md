@@ -1,6 +1,7 @@
 ---
 type: Line2D
 category: 2D
+status: unreviewed
 fixture: unit-line2d.tscn
 image: unit-line2d
 renders_as: a stroked mesh polyline
@@ -8,51 +9,39 @@ renders_as: a stroked mesh polyline
 
 # Line2D
 
-Line2D strokes a chain of points at a fixed width; the previewer draws it as flat
-mesh quads, one per segment, with sharp joint wedges filling the interior corners.
-The fixture places two: a white diagonal bar and a closed blue-purple triangle.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `points` | 2-point / 3-point arrays | the diagonal bar and the triangle's three edges |
-| `width` | `16` / `8` | stroke thickness of each line |
-| `default_color` | white / `(0.5, 0.5, 1)` | the bar is white, the triangle blue-purple |
-| `closed` | `true` (triangle) | wraps the third point back to the first, closing the outline |
-| `position` | `(100,100)` / `(350,100)` | places the two lines side by side |
-
-## Divergences
-
-None visible in this fixture: position, width, cap shape, and closed-outline
-corners match Godot to within a pixel, and both draw the bar pure white
-`(255,255,255)` and the triangle blue-purple `(128,128,255)`.
-
+Line2D strokes a chain of points at a fixed width. The previewer draws one flat quad per
+segment, with a joint wedge filling each interior corner.
 
 ## Linting
 
 <!-- lint:begin Line2D -->
-Strict parsing format-checks these `Line2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Line2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `closed` |
-| `default_color` |
-| `joint_mode` |
-| `round_precision` |
-| `sharp_limit` |
-| `width` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `antialiased` | true or false |  |
+| `begin_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
+| `closed` | true or false |  |
+| `default_color` | Color(r, g, b, a) |  |
+| `end_cap_mode` | enum 0-2 (NONE/BOX/ROUND) | warning |
+| `gradient` | null, SubResource("id") or ExtResource("id") |  |
+| `joint_mode` | enum 0-2 (SHARP/BEVEL/ROUND) | warning |
+| `points` | PackedVector2Array(x, y, …) |  |
+| `round_precision` | integer 1-32 | error below, warning above |
+| `sharp_limit` | float >= 0 | error below 0 |
+| `texture` | null, SubResource("id") or ExtResource("id") |  |
+| `texture_mode` | enum 0-2 (NONE/TILE/STRETCH) | warning |
+| `width` | float >= 0 | error below 0 |
+| `width_curve` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-numeric `width` or `sharp_limit`; the lenient parser warns and falls
-back to `10` / `2` respectively. `closed` falls back to `false` on an unparseable bool, and
-`round_precision` falls back to `8` on an unparseable int, each with a warning. `joint_mode`
-is read with a plain int fallback (`0`) rather than the enum check strict applies, so an
-out-of-range value (anything but `0`/`1`/`2`) is accepted silently, with no warning. A
-malformed `default_color` falls back to white with no warning at all, since `parseColor`
-swallows its own parse failures. Malformed `points` warn and leave the line with no points
-(an empty array), the same fallback an absent `points` gets without a warning.
+`width` falls back to `10` and `sharp_limit` to `2` on a non-numeric value, `closed` to
+`false` and `round_precision` to `8`, each with a warning. `joint_mode` is read as a
+plain int, so an out-of-range value passes silently. A malformed `default_color` falls
+back to white with no warning, and malformed `points` warn and leave the line empty.

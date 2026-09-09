@@ -4,7 +4,6 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry.js';
 import type { WorldEnvironmentProperties } from './types.js';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter.js';
 
 export function formatWorldEnvironmentProperties(properties: WorldEnvironmentProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -22,9 +21,6 @@ export function formatWorldEnvironmentProperties(properties: WorldEnvironmentPro
     title: 'Environment',
     items: environmentItems,
   });
-
-  // Include inherited Node3D transform properties
-  sections.push(...formatNode3DProperties(properties));
 
   return sections;
 }

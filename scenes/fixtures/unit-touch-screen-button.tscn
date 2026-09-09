@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_normal"]
+size = Vector2(64, 64)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_pressed"]
+size = Vector2(64, 64)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 32.0
+
+[sub_resource type="BitMap" id="BitMap_1"]
+data = {
+"data": PackedByteArray(255, 255),
+"size": Vector2i(4, 4)
+}
+
+[node name="Root" type="Node2D"]
+
+[node name="MyTouchScreenButton" type="TouchScreenButton" parent="."]
+position = Vector2(10, 20)
+texture_normal = SubResource("PlaceholderTexture2D_normal")
+texture_pressed = SubResource("PlaceholderTexture2D_pressed")
+bitmask = SubResource("BitMap_1")
+shape = SubResource("CircleShape2D_1")
+shape_centered = true
+shape_visible = true
+passby_press = false
+action = "ui_accept"
+visibility_mode = 1

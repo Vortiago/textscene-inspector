@@ -41,11 +41,22 @@ jobs:
       - name: Build Core
         run: pnpm --filter @textscene/core build
 
+      # `pnpm type-check` skips every test file: each package's build tsconfig
+      # excludes them. vitest transpiles without checking, so this is the only
+      # gate that types them. After Build Core, because the app-side projects
+      # resolve @textscene/core through its emitted declarations.
+      - name: Type Check Tests
+        run: pnpm type-check:tests
+
       - name: Run Tests
         run: pnpm test:unit
 
       - name: Check Generated Lint Sections
         run: pnpm docs:lint-sections --check
+
+      # After the sheets, which the gallery is assembled from.
+      - name: Check Generated Comparison Gallery
+        run: pnpm docs:gallery --check
 
       # The committed font metrics + MSDF atlas are generated from the vendored
       # woff2. Nothing else notices if they drift: eslint deliberately ignores
@@ -59,14 +70,19 @@ jobs:
       - name: Build Linter CLI
         run: pnpm --filter @textscene/linter build
 
+      # After the CLI build, so it lints the binary this run produced. The
+      # vendored demos are scenes Godot itself opens, so an error here is our
+      # false positive rather than a broken scene.
+      - name: Lint shipped scenes
+        run: pnpm lint:scenes:only
+
       - name: Package VS Code Extension
         run: pnpm vsc:package
 
       # Needs the webview + extension host bundles from the packaging step
-      # above: the webview budget is informational (warn-only) until the
-      # remaining gap is closed (see ARCHITECTURE.md, "Bundle Size Target"),
-      # but the host-bundle react/three guard inside this script always
-      # hard-fails regardless of that flag.
+      # above. `check:bundle-size` passes `--enforce`, so both halves hard-fail
+      # here: the webview initial-paint budget and the host-bundle react/three
+      # guard (see ARCHITECTURE.md, "Bundle Size Target").
       - name: Check bundle size
         run: pnpm check:bundle-size
 

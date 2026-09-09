@@ -1,0 +1,19 @@
+[gd_scene format=3]
+; SpringBoneCollisionPlane3D: no visuals, an infinite XZ plane whose normal is the rotated +Y axis.
+; It binds no property of its own, so the shape is placed entirely by the inherited
+; position_offset and rotation_offset on top of the node transform.
+; Parented under a SpringBoneSimulator3D so it is the effective shape Godot would write
+; (elsewhere the simulation never consults it).
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="Sim" type="SpringBoneSimulator3D" parent="Skeleton3D"]
+
+[node name="MySpringBoneCollisionPlane3D" type="SpringBoneCollisionPlane3D" parent="Skeleton3D/Sim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = &"Head"
+bone = 0
+position_offset = Vector3(0, -0.25, 0)
+rotation_offset = Quaternion(0.3826834, 0, 0, 0.9238795)

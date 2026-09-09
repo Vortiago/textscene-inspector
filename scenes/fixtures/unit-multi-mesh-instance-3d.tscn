@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+; Exercises the one property MultiMeshInstance3D declares of its own
+; (multimesh, see linterParser.ts) plus a GeometryInstance3D property
+; inherited through the base-walk, to prove the chain still resolves.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="MultiMesh" id="MultiMesh_1"]
+transform_format = 1
+instance_count = 4
+mesh = SubResource("BoxMesh_1")
+
+[node name="Root" type="Node3D"]
+
+[node name="MyMultiMeshInstance3D" type="MultiMeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+multimesh = SubResource("MultiMesh_1")
+cast_shadow = 2

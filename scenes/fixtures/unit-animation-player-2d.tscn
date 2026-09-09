@@ -54,4 +54,4 @@ texture = ExtResource("1_marker")
 libraries/ = SubResource("AnimationLibrary_default")
 autoplay = "slide"
 speed_scale = 1.0
-playback_active = true
+active = true

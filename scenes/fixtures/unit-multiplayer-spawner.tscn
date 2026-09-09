@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="MyMultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://enemy.tscn")
+spawn_path = NodePath("../SpawnRoot")
+spawn_limit = 8
+
+[node name="SpawnRoot" type="Node" parent="."]

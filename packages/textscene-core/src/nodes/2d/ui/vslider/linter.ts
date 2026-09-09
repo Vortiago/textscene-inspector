@@ -45,7 +45,13 @@ const vSliderPropertyOrderRule: LintRule = {
       'setters silently re-clamp against.',
     category: 'validation',
     applicableNodeTypes: ['VSlider'],
-    emits: [{ ruleName: 'vslider-property-order', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'vslider-property-order',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'range.cpp:106' },
+      },
+    ],
   },
   check: checkVSliderPropertyOrder,
 };

@@ -1,11 +1,38 @@
 /**
- * Tests for PlaneMesh linter validators
+ * Tests for PlaneMesh linter validators, own and inherited.
+ *
+ * The full barrel rather than `./linterValidators`, because `flip_faces` is
+ * PrimitiveMesh's: asking for it through PlaneMesh is the point, and importing
+ * this slice alone would not have loaded the class that declares it.
  */
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { Linter } from '../../../linter/Linter';
-import './linterValidators'; // Import to trigger registration
+import { runResourcePropertyValidation } from '../../../linter/testing/testkit.js';
+import '../../../linter/index';
+
+runResourcePropertyValidation('PlaneMesh', [
+  {
+    prop: 'subdivide_width',
+    valid: ['0', '100', '512'],
+    // `p_divisions > 0 ? p_divisions : 0` stores 0 for a negative
+    // (primitive_meshes.cpp:1543), so the value written is not the value kept.
+    invalid: [{ value: '-1', contains: ['subdivide_width'], severity: 'error' }],
+  },
+  {
+    prop: 'subdivide_depth',
+    valid: ['0', '7'],
+    invalid: [{ value: '-4', contains: ['subdivide_depth'], severity: 'error' }],
+  },
+  {
+    prop: 'orientation',
+    valid: ['0', '1', '2'],
+    // A bare assignment (primitive_meshes.cpp:1575), so an unlisted orientation
+    // is stored as written and only the inspector's list disagrees.
+    invalid: [{ value: '3', contains: ['orientation'], severity: 'warning' }],
+  },
+]);
 
 describe('PlaneMesh Linter Validators', () => {
   describe('flip_faces validator', () => {
@@ -38,8 +65,8 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '1', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
-      expect(result!.message).toContain('must be a boolean (true or false)');
+      expect(result!.severity).toBe('warning');
+      expect(result!.message).toContain('converts');
       expect(result!.code).toBe('INVALID_FLIP_FACES_FORMAT');
     });
 
@@ -48,7 +75,7 @@ describe('PlaneMesh Linter Validators', () => {
       const result = validator!('flip_faces', '0', 1);
 
       expect(result).not.toBeNull();
-      expect(result!.severity).toBe('error');
+      expect(result!.severity).toBe('warning');
     });
 
     it('should reject string "True" (wrong capitalization)', () => {
@@ -142,7 +169,7 @@ flip_faces = 1
         d.message.includes('flip_faces')
       );
       expect(flipFacesErrors.length).toBeGreaterThan(0);
-      expect(flipFacesErrors[0]!.severity).toBe('error');
+      expect(flipFacesErrors[0]!.severity).toBe('warning');
     });
 
     it('should validate PlaneMesh with multiple properties including flip_faces', () => {

@@ -87,14 +87,17 @@ describe('AnimationTree Linter', () => {
       it('should reject invalid tree_root format', () => {
         expectDiagnostic(scene(node('AnimationTree', { tree_root: '"BlendTree_1"' })), {
           prop: 'tree_root',
-          contains: ['tree_root', 'SubResource or ExtResource'],
+          contains: ['tree_root', 'SubResource("id") or ExtResource("id")'],
         });
       });
 
       it('should reject plain string tree_root', () => {
+        // The unresolved-resource rule fires on the same property, so the
+        // format claim names its own rule.
         expectDiagnostic(scene(node('AnimationTree', { tree_root: 'invalid' })), {
           prop: 'tree_root',
-          contains: ['tree_root'],
+          ruleName: 'strict-parser',
+          contains: ['must be a resource reference'],
         });
       });
     });
@@ -123,7 +126,8 @@ describe('AnimationTree Linter', () => {
             'NodePath("/root/AnimPlayer")',
           ],
           invalid: [
-            { value: '"../AnimationPlayer"', contains: ['anim_player', 'NodePath'] },
+            // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+            { value: '&"../AnimationPlayer"', contains: ['anim_player', 'NodePath'] },
             { value: 'AnimationPlayer', contains: ['anim_player'] },
           ],
         },
@@ -159,20 +163,21 @@ describe('AnimationTree Linter', () => {
       {
         prop: 'root_motion_track',
         valid: ['NodePath("")', 'NodePath("Skeleton3D:Root")', 'NodePath("../Skeleton/Root")'],
-        invalid: [{ value: '"Skeleton3D:Root"', contains: ['root_motion_track', 'NodePath'] }],
+        invalid: [{ value: '&"Skeleton3D:Root"', contains: ['root_motion_track', 'NodePath'] }],
       },
       {
         prop: 'advance_expression_base_node',
         valid: ['NodePath("..")'],
-        invalid: [{ value: '".."', contains: ['advance_expression_base_node', 'NodePath'] }],
+        invalid: [{ value: '&".."', contains: ['advance_expression_base_node', 'NodePath'] }],
       },
       {
+        // Two tiers: animation_mixer.cpp:542 ERR_FAILs outside 0..128, the hint
+        // at :2468 is the narrower 1,127. Only the hint band is silent.
         prop: 'audio_max_polyphony',
-        valid: [1, 8, 16, 32, 64, 128],
+        valid: [1, 8, 16, 32, 64, 127],
         invalid: [
-          { value: 0, contains: ['audio_max_polyphony', 'must be >= 1'] },
-          { value: -5, contains: ['audio_max_polyphony', 'must be >= 1'] },
-          { value: 1000, contains: ['audio_max_polyphony', 'impractically large'] },
+          { value: -5, contains: ['audio_max_polyphony', 'at least 0'] },
+          { value: 1000, contains: ['audio_max_polyphony', 'at most 128'] },
           { value: 'many', contains: ['audio_max_polyphony', 'must be a number'] },
         ],
       },
@@ -200,7 +205,7 @@ describe('AnimationTree Linter', () => {
       it('should reject invalid deterministic value', () => {
         expectDiagnostic(scene(node('AnimationTree', { deterministic: 1 })), {
           prop: 'deterministic',
-          contains: ['deterministic', 'boolean'],
+          contains: ['deterministic', 'converts'],
         });
       });
     });
@@ -223,7 +228,7 @@ describe('AnimationTree Linter', () => {
               anim_player: 'NodePath("../AnimationPlayer")',
             })
           ),
-          { prop: 'tree_root', severity: 'error', contains: ['does not exist', 'NonExistent_1'] }
+          { prop: 'tree_root', severity: 'error', contains: ['never declares', 'NonExistent_1'] }
         );
       });
 
@@ -241,14 +246,7 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('anim_player warnings', () => {
-      it('should warn when anim_player is not set', () => {
-        expectDiagnostic(
-          scene(blendTree, node('AnimationTree', { tree_root: 'SubResource("BlendTree_1")' })),
-          { prop: 'anim_player', severity: 'warning', contains: ['not set', 'AnimationPlayer'] }
-        );
-      });
-
+    describe('anim_player diagnostics', () => {
       it('should detect anim_player path issues', () => {
         expectDiagnostic(
           scene(
@@ -262,15 +260,15 @@ describe('AnimationTree Linter', () => {
         );
       });
 
-      it('should not warn when anim_player references AnimationPlayer', () => {
+      it('reports nothing when anim_player references AnimationPlayer', () => {
         expectNoDiagnostic(
           scene(
             blendTree,
-            node('AnimationPlayer', {}, { name: 'Player' }),
             node('AnimationTree', {
               tree_root: 'SubResource("BlendTree_1")',
               anim_player: 'NodePath("Player")',
-            })
+            }),
+            node('AnimationPlayer', {}, { name: 'Player', parent: '.' })
           ),
           { ruleName: 'animationtree-anim-player-wrong-type' }
         );
@@ -344,7 +342,10 @@ describe('AnimationTree Linter', () => {
           node('Label3D', {}, { name: 'NotAPlayer', parent: '.' }),
           node(
             'AnimationTree',
-            { tree_root: 'SubResource("StateMachine_root")', anim_player: 'NodePath("NotAPlayer")' },
+            {
+              tree_root: 'SubResource("StateMachine_root")',
+              anim_player: 'NodePath("../NotAPlayer")',
+            },
             { parent: '.' }
           )
         );
@@ -354,9 +355,10 @@ describe('AnimationTree Linter', () => {
         });
       });
 
-      it('should stay silent when the final path segment is ambiguous (duplicate node names)', () => {
-        // Two "Player" nodes exist; one is a valid AnimationPlayer, so the path is
-        // plausibly correct and the static linter must not guess.
+      // Matching by name alone cannot tell two "Player" nodes apart and has to
+      // decline. A real walk can: the path names GroupB's child specifically
+      // (node.cpp:1941).
+      it('picks the right node when a name repeats, rather than declining', () => {
         const content = scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_root"]',
           node('Node3D', {}, { name: 'Root' }),
@@ -366,7 +368,10 @@ describe('AnimationTree Linter', () => {
           node('AnimationPlayer', {}, { name: 'Player', parent: 'GroupB' }),
           node(
             'AnimationTree',
-            { tree_root: 'SubResource("StateMachine_root")', anim_player: 'NodePath("Player")' },
+            {
+              tree_root: 'SubResource("StateMachine_root")',
+              anim_player: 'NodePath("../GroupB/Player")',
+            },
             { parent: '.' }
           )
         );
@@ -375,30 +380,8 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('active property warnings', () => {
-      it('should warn when active but tree_root not set', () => {
-        expectDiagnostic(
-          scene(node('AnimationTree', { active: true, anim_player: 'NodePath("../AnimationPlayer")' })),
-          { prop: 'active', severity: 'warning', contains: ['missing', 'tree_root'] }
-        );
-      });
-
-      it('should warn when active but anim_player not set', () => {
-        expectDiagnostic(
-          scene(blendTree, node('AnimationTree', { tree_root: 'SubResource("BlendTree_1")', active: true })),
-          { prop: 'active', severity: 'warning', contains: ['missing', 'anim_player'] }
-        );
-      });
-
-      it('should warn when active but both tree_root and anim_player not set', () => {
-        expectDiagnostic(scene(node('AnimationTree', { active: true })), {
-          prop: 'active',
-          severity: 'warning',
-          contains: ['missing', 'tree_root', 'anim_player'],
-        });
-      });
-
-      it('should warn when active is false', () => {
+    describe('active property diagnostics', () => {
+      it('reports when active is false', () => {
         expectDiagnostic(
           scene(
             blendTree,
@@ -408,7 +391,7 @@ describe('AnimationTree Linter', () => {
               active: false,
             })
           ),
-          { prop: 'active', severity: 'warning', contains: ['false', 'will not process'] }
+          { prop: 'active', severity: 'info', contains: ['false', 'will not process'] }
         );
       });
 
@@ -457,29 +440,32 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    describe('audio_max_polyphony warnings', () => {
-      it('should warn when audio_max_polyphony is very low', () => {
-        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 4 })), {
-          prop: 'audio_max_polyphony',
-          severity: 'warning',
-          contains: ['very low', '4'],
-        });
-      });
-
-      it('should warn when audio_max_polyphony is very high', () => {
-        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 256 })), {
-          prop: 'audio_max_polyphony',
-          severity: 'warning',
-          contains: ['very high', '256'],
-        });
-      });
-
-      it('should not warn for normal audio_max_polyphony values', () => {
-        for (const value of [8, 16, 32, 64, 128]) {
+    describe('audio_max_polyphony', () => {
+      it('carries no advisory of its own, only the two bounds', () => {
+        // The old "very low" (< 8) and "very high" (> 128) arms were invented
+        // thresholds. Godot states neither, so inside the hint band there is
+        // nothing to say and 4 is a legal value.
+        for (const value of [1, 4, 8, 32, 127]) {
           expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
             prop: 'audio_max_polyphony',
           });
         }
+      });
+
+      it('warns on the band the setter allows and the hint at :2468 does not', () => {
+        for (const value of [0, 128]) {
+          expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
+            prop: 'audio_max_polyphony',
+            severity: 'warning',
+          });
+        }
+      });
+
+      it('errors past the ceiling the engine enforces', () => {
+        expectDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: 256 })), {
+          prop: 'audio_max_polyphony',
+          severity: 'error',
+        });
       });
     });
 
@@ -504,19 +490,21 @@ describe('AnimationTree Linter', () => {
     it('should handle AnimationTree with no properties', () => {
       const diagnostics = lint(scene(node('AnimationTree')));
       const treeRootWarning = diagnostics.find(d => d.message.includes('tree_root') && d.message.includes('not set'));
-      const animPlayerWarning = diagnostics.find(d => d.message.includes('anim_player') && d.message.includes('not set'));
       expect(treeRootWarning).toBeDefined();
-      expect(animPlayerWarning).toBeDefined();
     });
 
     it('should handle all properties together', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           blendTree,
-          node('AnimationPlayer', {}, { name: 'Player' }),
+          // Both nodes state `parent="."`. Without it the second heading is a
+          // second ROOT, which the tree build drops — so every rule below ran
+          // on nothing at all.
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
           node('AnimationTree', {
             tree_root: 'SubResource("BlendTree_1")',
-            anim_player: 'NodePath("Player")',
+            anim_player: 'NodePath("../Player")',
             active: true,
             process_callback: 1,
             callback_mode_process: 1,
@@ -528,13 +516,9 @@ describe('AnimationTree Linter', () => {
             deterministic: false,
             reset_on_save: true,
             audio_max_polyphony: 32,
-          })
+          }, { parent: '.' })
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
 
     it('should handle multiple validation errors', () => {
@@ -545,7 +529,9 @@ describe('AnimationTree Linter', () => {
             anim_player: 'invalid',
             active: 'maybe',
             process_callback: 10,
-            audio_max_polyphony: 0,
+            // -1, not 0: animation_mixer.cpp:542 permits 0, so the old value
+            // stopped contributing a diagnostic once the bound was corrected.
+            audio_max_polyphony: -1,
           })
         )
       );
@@ -573,15 +559,20 @@ describe('AnimationTree Linter', () => {
     });
 
     it('should handle complex AnimationTree setup', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_1"]',
-          node('AnimationPlayer', {}, { name: 'CharacterPlayer' }),
+          // A real root, and `parent="."` on both children: as two parentless
+          // headings the tree kept only the player and the AnimationTree under
+          // test was never linted. `anim_player` is a path FROM the tree, so
+          // reaching a sibling spells `../`.
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'CharacterPlayer', parent: '.' }),
           node(
             'AnimationTree',
             {
               tree_root: 'SubResource("StateMachine_1")',
-              anim_player: 'NodePath("CharacterPlayer")',
+              anim_player: 'NodePath("../CharacterPlayer")',
               active: true,
               process_callback: 1,
               callback_mode_process: 1,
@@ -595,14 +586,10 @@ describe('AnimationTree Linter', () => {
               audio_max_polyphony: 32,
               advance_expression_base_node: 'NodePath("..")',
             },
-            { name: 'CharacterTree' }
+            { name: 'CharacterTree', parent: '.' }
           )
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
 
     it('should handle boundary values', () => {
@@ -617,23 +604,6 @@ describe('AnimationTree Linter', () => {
           })
         )
       );
-    });
-
-    it('should handle mixed warnings and errors', () => {
-      // Valid parse (no format errors) but semantic issues (warnings)
-      const diagnostics = lint(
-        scene(
-          node('AnimationTree', {
-            tree_root: 'SubResource("Missing_1")',
-            active: true,
-            audio_max_polyphony: 4,
-          })
-        )
-      );
-      const hasError = diagnostics.some(d => d.severity === 'error');
-      const hasWarning = diagnostics.some(d => d.severity === 'warning');
-      expect(hasError).toBe(true); // tree_root references missing resource
-      expect(hasWarning).toBe(true); // active but missing anim_player, low audio_max_polyphony
     });
 
     it('should handle empty NodePaths', () => {
@@ -651,20 +621,21 @@ describe('AnimationTree Linter', () => {
     });
 
     it('should validate AnimationTree with only required properties', () => {
-      const diagnostics = lint(
+      expectClean(
         scene(
           blendTree,
-          node('AnimationPlayer', {}, { name: 'Player' }),
-          node('AnimationTree', {
-            tree_root: 'SubResource("BlendTree_1")',
-            anim_player: 'NodePath("Player")',
-          })
+          node('Node3D', {}, { name: 'Root' }),
+          node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
+          node(
+            'AnimationTree',
+            {
+              tree_root: 'SubResource("BlendTree_1")',
+              anim_player: 'NodePath("../Player")',
+            },
+            { parent: '.' }
+          )
         )
       );
-      const errors = diagnostics.filter(d => d.severity === 'error');
-      const warnings = diagnostics.filter(d => d.severity === 'warning');
-      expect(errors).toHaveLength(0);
-      expect(warnings).toHaveLength(0);
     });
   });
 });

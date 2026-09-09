@@ -9,6 +9,7 @@ nodeComponentRegistry.register({
   typeName: 'AnimationPlayer',
   Component: AnimationPlayer,
   container: true,
+  renderIntent: 'transform-only',
 });
 
 export { AnimationPlayer };

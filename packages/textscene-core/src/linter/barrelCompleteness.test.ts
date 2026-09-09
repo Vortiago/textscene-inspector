@@ -1,16 +1,17 @@
 /**
  * Guard: every slice that has lint code is wired into the linter barrel.
  *
- * Walks the filesystem under `src/nodes/**` for `index.linter.ts` entry
- * points and asserts `linter/index.ts` imports each one — so "slice has lint
- * code but the barrel forgot it" turns red instead of silently shipping a
- * linter that skips the slice. The inverse is asserted too: every relative
+ * Walks `src/nodes/**` for `index.linter.ts` and `src/resources/**` for each
+ * slice's entry point, and asserts `linter/index.ts` imports each one — so
+ * "slice has lint code but the barrel forgot it" turns red instead of silently
+ * shipping a linter that skips the slice. Both halves of the barrel are
+ * covered: rooted at nodes/ alone, a deleted resource import took every
+ * Environment validator with it and left the suite green. The inverse is asserted too: every relative
  * import in the barrel resolves to a file on disk (no stale imports after a
  * slice moves or is deleted).
  *
- * Slices with NO `index.linter.ts` are out of scope by design — e.g. the
- * Control slices (`nodes/2d/ui/*`) are render-only 2D overlay types
- * (ADR-0003) with no validators or rules to register.
+ * A slice with no `index.linter.ts` has no lint code to wire and is out of
+ * scope here; every slice under `nodes/2d/ui/` ships one and is in the barrel.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -21,15 +22,15 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/linter
 const srcRoot = resolve(here, '..'); // .../src
 const nodesRoot = resolve(srcRoot, 'nodes');
+const resourcesRoot = resolve(srcRoot, 'resources');
 const barrelPath = resolve(here, 'index.ts');
 
 /**
  * Intentional exclusions: barrel specifiers (e.g.
  * `'../nodes/2d/ui/control/index.linter.js'`) for slices whose lint entry
- * point deliberately stays OUT of the barrel. Currently empty — Controls
- * have no index.linter.ts at all, so nothing needs excluding. Add an entry
- * here (with a reason) only when a slice gains lint code that must not ship
- * in the linter bundle.
+ * point deliberately stays OUT of the barrel. Empty: every slice's lint entry
+ * ships in the linter bundle. Add an entry here, with a reason, only when one
+ * must not.
  */
 const ALLOWLIST: string[] = [];
 
@@ -41,6 +42,35 @@ function findLinterEntryPoints(dir: string): string[] {
     else if (entry.name === 'index.linter.ts') out.push(full);
   }
   return out;
+}
+
+/**
+ * A resource slice's lint entry point: its `index.linter.ts` when it has one,
+ * else its `linterValidators.ts`. Both exist under `resources/environment/`,
+ * where the index is the entry point and imports the validators itself — so
+ * requiring both would demand an import the barrel deliberately does not make.
+ */
+function findResourceEntryPoints(dir: string): string[] {
+  const out: string[] = [];
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const names = new Set(entries.filter((e) => e.isFile()).map((e) => e.name));
+  const own = names.has('index.linter.ts')
+    ? 'index.linter.ts'
+    : names.has('linterValidators.ts')
+      ? 'linterValidators.ts'
+      : null;
+  if (own) out.push(join(dir, own));
+  for (const entry of entries) {
+    if (entry.isDirectory()) out.push(...findResourceEntryPoints(join(dir, entry.name)));
+  }
+  return out;
+}
+
+/** Every barrel specifier a lint entry point on disk must be imported as. */
+function requiredSpecifiers(): string[] {
+  return [...findLinterEntryPoints(nodesRoot), ...findResourceEntryPoints(resourcesRoot)].map(
+    expectedSpecifier
+  );
 }
 
 /** All relative specifiers in the barrel (side-effect imports and export…from). */
@@ -78,14 +108,30 @@ function expectedSpecifier(entryPoint: string): string {
 
 describe('linter barrel completeness', () => {
   it('finds the slice lint entry points (sanity: the walk is not empty)', () => {
-    expect(findLinterEntryPoints(nodesRoot).length).toBeGreaterThan(0);
+    // Near the real counts, not at 1: `missing` below is computed over this
+    // population, so a walk that respells or relocates the entry point and
+    // matches a handful reports [] over the slices it stopped seeing. 242
+    // under nodes/ and 12 under resources/ today.
+    expect(findLinterEntryPoints(nodesRoot).length).toBeGreaterThan(200);
+    expect(requiredSpecifiers().length).toBeGreaterThan(200);
   });
 
-  it('linter/index.ts imports every nodes/** index.linter.ts (minus the allowlist)', () => {
+  it('covers the Resource half of the barrel, not just nodes/', () => {
+    // The barrel registers resource validators too; a walk rooted only at
+    // nodes/ lets an import be deleted with every suite still green.
+    const required = requiredSpecifiers();
+    expect(required).toContain('../resources/resource/linterValidators.js');
+    expect(required).toContain('../resources/environment/index.linter.js');
+    // environment's index pulls its own linterValidators, so the barrel does
+    // not import that file and must not be asked to.
+    expect(required).not.toContain('../resources/environment/linterValidators.js');
+  });
+
+  it('linter/index.ts imports every lint entry point (minus the allowlist)', () => {
     const imported = new Set(barrelRelativeSpecifiers());
-    const missing = findLinterEntryPoints(nodesRoot)
-      .map(expectedSpecifier)
-      .filter((spec) => !imported.has(spec) && !ALLOWLIST.includes(spec));
+    const missing = requiredSpecifiers().filter(
+      (spec) => !imported.has(spec) && !ALLOWLIST.includes(spec)
+    );
     expect(missing).toEqual([]);
   });
 

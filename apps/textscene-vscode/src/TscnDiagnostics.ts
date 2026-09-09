@@ -1,7 +1,8 @@
 /**
- * Surfaces core Linter diagnostics for .tscn documents in the editor.
+ * Surfaces core Linter diagnostics for Godot text documents in the editor —
+ * `.tscn` scenes and `.tres` resources alike.
  *
- * Owns a DiagnosticCollection: lints all open .tscn documents on
+ * Owns a DiagnosticCollection: lints all open Godot text documents on
  * activation, re-lints on open/save and on change (debounced), and
  * clears entries when a document closes.
  *
@@ -11,7 +12,8 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import { Linter, flooredSeverity, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import { isGodotTextResourcePath } from '@textscene/core/godot';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
 export const DEFAULT_LINT_DEBOUNCE_MS = 300;
@@ -33,7 +35,19 @@ function readDiagnosticsConfig(): DiagnosticsConfig {
 const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
   warning: vscode.DiagnosticSeverity.Warning,
+  info: vscode.DiagnosticSeverity.Information,
 };
+
+/**
+ * The editor squiggle for a tier, an unranked one floored to Information.
+ *
+ * A bare index hands `undefined` to the `vscode.Diagnostic` constructor, which
+ * defaults to Error — so a malformed severity reads to the author as the most
+ * severe thing in the file rather than the least.
+ */
+function squiggleFor(severity: TscnLintDiagnostic['severity']): vscode.DiagnosticSeverity {
+  return SEVERITY_MAP[flooredSeverity(severity)];
+}
 
 /** Minimal slice of `vscode.TextDocument` the mapping needs (testable without a full mock). */
 export interface DocumentLineSource {
@@ -59,7 +73,7 @@ export function toVsCodeDiagnostic(
   const result = new vscode.Diagnostic(
     rangeForDiagnostic(diagnostic, document),
     diagnostic.message,
-    SEVERITY_MAP[diagnostic.severity]
+    squiggleFor(diagnostic.severity)
   );
   result.code = diagnostic.ruleName;
   result.source = 'tscn-lint';
@@ -89,8 +103,15 @@ function rangeForDiagnostic(
   );
 }
 
+/**
+ * The `tscn` language claims `.tres` as well, so the languageId arm already
+ * covers both; the filename arm is the fallback for a document whose
+ * association a user has overridden, and it asks `godot/resourceFormats` so the
+ * editor and the CLI walk answer the same question.
+ */
 function isTscnDocument(document: vscode.TextDocument): boolean {
-  return document.languageId === 'tscn' || document.fileName.endsWith('.tscn');
+  if (document.languageId === 'tscn') return true;
+  return isGodotTextResourcePath(document.fileName);
 }
 
 export class TscnDiagnostics implements vscode.Disposable {

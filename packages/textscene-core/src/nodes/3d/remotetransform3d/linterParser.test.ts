@@ -33,7 +33,8 @@ describe('RemoteTransform3D strict validators', () => {
   });
 
   it('rejects a malformed remote_path', () => {
-    expectDiagnostic(scene(node('RemoteTransform3D', { remote_path: '"../DetachTransform/Geometry"' })), {
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    expectDiagnostic(scene(node('RemoteTransform3D', { remote_path: '&"../DetachTransform/Geometry"' })), {
       prop: 'remote_path',
       severity: 'error',
     });

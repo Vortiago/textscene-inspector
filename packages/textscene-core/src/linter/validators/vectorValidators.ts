@@ -2,7 +2,10 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
+import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
+import { ruleInt } from './commonValidators.js';
+import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 
 /**
  * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
@@ -11,8 +14,50 @@ import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.
  */
 export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
 
-/** Vector2i format: Vector2i(x, y) - two comma-separated integers */
-export const VECTOR2I_REGEX = /^Vector2i\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
+/**
+ * Vector2 format: Vector2(x, y), for the callers that `.exec()` it directly to
+ * reach the two components rather than just validating the shape.
+ *
+ * Exported for the same reason as VECTOR3_REGEX, and belatedly: five call sites
+ * had each built their own `makeFloatTupleRegex('Vector2', 2)` — camera2d,
+ * navigationlink2d, parallax2d, the Node2D base and characterBodyLinterRule.
+ * Identical today, and identical only for as long as nobody edits one.
+ */
+export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
+
+/**
+ * `Vector2i(x, y)`, with the components Godot's parser actually takes.
+ *
+ * `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
+ * token and pushes it into a `Vector<int32_t>`, so a component written as a
+ * float or in exponent notation loads and truncates toward zero. A `-?\d+`
+ * component grammar reported a format error on `Vector2i(2e1, 0)`, which Godot
+ * stores as `Vector2i(20, 0)`.
+ */
+export const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
+
+/**
+ * The two components a `Vector2i` slot HOLDS, or `null` when no int32 holds one.
+ *
+ * The one reader for every phase-2 rule over a `Vector2i` property. Phase 2 runs
+ * after a phase-1 error (`linter/Linter.ts:32` gates on a parsed scene, not on
+ * an error-free one), so a rule that read the components itself named a number
+ * no platform holds: `size = Vector2(4294967295, 1080)` reads back as
+ * `Vector2i(-1, 1080)` on the int branch, where Godot stores -2147483648.
+ *
+ * `null` rather than a component, so the rule's block is skipped and only phase
+ * 1's error stands — a value the file does not state is not a value to quote.
+ */
+export function matchVector2i(raw: string): { x: number; y: number } | null {
+  const match = VECTOR2I_REGEX.exec(raw);
+  if (!match) return null;
+  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+  // the `double -> int32` branch whatever the token looks like.
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(raw));
+  const x = ruleInt(match[1], null, 'int32', converted);
+  const y = ruleInt(match[2], null, 'int32', converted);
+  return x === null || y === null ? null : { x, y };
+}
 
 /**
  * Creates a Vector2 validator
@@ -31,29 +76,68 @@ export function createVector2Validator(
 }
 
 /**
- * Creates a Vector2i validator with optional non-negative constraint
+ * Creates a Vector2i validator with an optional per-COMPONENT minimum.
+ *
+ * `minComponent` was a `requireNonNegative` boolean, which could only ever say
+ * "0". Real setters floor elsewhere: `Viewport::_set_size` does `p_size.maxi(2)`,
+ * so a `SubViewport` sized 1 is altered exactly as a negative one is, and a
+ * boolean had no way to say so.
  */
 export function createVector2iValidator(
   propertyName: string,
-  requireNonNegative: boolean = false,
+  minComponent: number | undefined = undefined,
   errorCodeFormat: string = 'INVALID_FORMAT',
-  errorCodeValue: string = 'INVALID_VALUE'
+  errorCodeValue: string = 'INVALID_VALUE',
+  /** Severity of the minimum branch — `warning` when only a hint backs it. */
+  valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
     const match = VECTOR2I_REGEX.exec(value);
     if (!match) {
-      return propertyError(key, line, `Property '${propertyName}' must be Vector2i format like Vector2i(0, 0), got: "${value}"`, errorCodeFormat);
+      return propertyError(key, line, `Property '${propertyName}' must be Vector2i(x, y) — or the Vector2 spelling Godot converts into it — got: "${value}"`, errorCodeFormat);
     }
 
-    if (requireNonNegative) {
-      const x = parseInt(match[1] || '0', 10);
-      const y = parseInt(match[2] || '0', 10);
-      if (x < 0 || y < 0) {
-        return propertyError(key, line, `Property '${propertyName}' must have non-negative values, got: Vector2i(${x}, ${y})`, errorCodeValue);
+    // A non-finite component READS but does not FIT. `_parse_construct<int32_t>`
+    // narrows at parse time (variant_parser.cpp:593), so the value Godot stores
+    // is not the one the file states — measured as -2147483648 for all four
+    // spellings on 4.6.3 x86_64, and architecture-specific in general, which is
+    // why the message names the literal rather than the result. An alteration
+    // is the error tier under ADR-0032, and this arm is independent of `min`:
+    // it applies to every Vector2i, bounded or not.
+    // Truncated toward zero, the way the int32 conversion does, so `0.9` is
+    // bounded as the 0 Godot stores rather than as the 0.9 it was written.
+    // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
+    // the `double -> int32` branch whatever the token looks like. Measured:
+    // `Vector2(4294967295, 64)` stores the UB sentinel where the `Vector2i`
+    // spelling of the same digits wraps to -1.
+    const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
+    const x = ruleInt(match[1], null, 'int32', converted);
+    const y = ruleInt(match[2], null, 'int32', converted);
+    if (x === null || y === null) {
+      return propertyError(
+        key,
+        line,
+        `Property '${propertyName}' has a component Godot cannot store in an integer slot, got: "${value}". The file loads, but the value is narrowed at parse time to a number the file does not state.`,
+        errorCodeValue,
+        'error'
+      );
+    }
+
+    // Computed here, returned last: a component that is both fractional and
+    // below the floor has a real error to report, and that outranks the warning.
+    const truncated = truncatedComponent(propertyName, key, line, [match[1], match[2]], errorCodeValue);
+
+    if (minComponent !== undefined) {
+      if (x < minComponent || y < minComponent) {
+        // The 0 case keeps its long-standing wording; every per-node test that
+        // asserts a substring of it is asserting the engine's floor, not the phrasing.
+        const requirement =
+          minComponent === 0 ? 'must have non-negative values' : `must have components >= ${minComponent}`;
+        return propertyError(key, line, `Property '${propertyName}' ${requirement}, got: Vector2i(${x}, ${y})`, errorCodeValue, valueSeverity);
       }
     }
 
-    return null;
+    return truncated;
   };
 }
 

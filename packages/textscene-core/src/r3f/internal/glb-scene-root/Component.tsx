@@ -53,6 +53,7 @@ import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -73,7 +74,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // populated by createSceneProcessor; cast through unknown so it
   // satisfies the Node3DProperties union the dispatcher carries.
   const props = node.properties as unknown as GLBSceneRootProperties;
-  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'GLBMesh');
+  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
   // BUG 2: the instancing scene's inline override children (e.g.
   // ceiling_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
@@ -128,7 +129,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     const hidden = new Set<THREE.Object3D>();
     if (!object) return hidden;
     for (const override of overrides) {
-      if (override.rawProperties?.visible !== 'false') continue;
+      if (boolSlotValue(override.rawProperties?.visible) !== false) continue;
       if (!isApplicableGlbOverride(override)) continue;
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (target) hidden.add(target);

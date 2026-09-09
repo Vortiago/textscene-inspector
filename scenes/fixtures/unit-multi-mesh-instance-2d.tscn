@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+; Exercises the two properties MultiMeshInstance2D declares of its own
+; (multimesh, texture — see linterParser.ts) plus a Node2D property
+; inherited through the base-walk, to prove the chain still resolves.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(16, 16)
+
+[sub_resource type="MultiMesh" id="MultiMesh_1"]
+instance_count = 4
+mesh = SubResource("QuadMesh_1")
+
+[node name="Root" type="Node2D"]
+
+[node name="MyMultiMeshInstance2D" type="MultiMeshInstance2D" parent="."]
+position = Vector2(10, 20)
+multimesh = SubResource("MultiMesh_1")
+texture = ExtResource("1_marker")

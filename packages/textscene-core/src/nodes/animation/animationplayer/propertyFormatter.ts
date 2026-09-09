@@ -4,7 +4,6 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { AnimationProcessMode, type AnimationPlayerProperties, MethodCallMode } from './types';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
 export function formatAnimationPlayerProperties(
   properties: AnimationPlayerProperties
@@ -15,7 +14,7 @@ export function formatAnimationPlayerProperties(
     title: 'Playback',
     items: [
       { label: 'Speed Scale', value: properties.speed_scale.toFixed(3) },
-      { label: 'Active', value: properties.playback_active ? 'true' : 'false' },
+      { label: 'Active', value: properties.active ? 'true' : 'false' },
       { label: 'Autoplay', value: properties.autoplay.length > 0 ? properties.autoplay : '(none)' },
       {
         label: 'Current Animation',
@@ -25,8 +24,8 @@ export function formatAnimationPlayerProperties(
         label: 'Blend Time (s)',
         value: properties.playback_default_blend_time.toFixed(3),
       },
-      { label: 'Process Mode', value: processModeName(properties.playback_process_mode) },
-      { label: 'Method Call Mode', value: methodCallModeName(properties.method_call_mode) },
+      { label: 'Process Mode', value: processModeName(properties.callback_mode_process) },
+      { label: 'Method Call Mode', value: methodCallModeName(properties.callback_mode_method) },
     ],
   });
 
@@ -44,8 +43,6 @@ export function formatAnimationPlayerProperties(
       items: [{ label: 'Count', value: '0 — no libraries defined' }],
     });
   }
-
-  sections.push(...formatNode3DProperties(properties));
 
   return sections;
 }

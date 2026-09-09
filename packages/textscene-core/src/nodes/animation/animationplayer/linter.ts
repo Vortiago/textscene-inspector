@@ -8,13 +8,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
-import { rangeAdvisories } from '../../../linter/rangeAdvisory.js';
-import { extractLibraries, stripQuotes } from './parser.js';
-import { resolveAnimations } from './animationResolver.js';
-
-// Thresholds for warnings
-const EXTREME_SLOW_SPEED = 0.1;
-const EXTREME_FAST_SPEED = 10;
+import { extractLibraries, isActive } from './parser.js';
+import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
+import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
 
 /**
  * Validate AnimationPlayer semantic rules
@@ -23,10 +19,6 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for AnimationPlayer nodes
-  if (node.type !== 'AnimationPlayer') {
-    return diagnostics;
-  }
 
   // Type guard for properties
   if (!isValidProperties(node.properties)) {
@@ -35,53 +27,18 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // WARNING: speed_scale extreme values (very slow or very fast)
-  if (rawProps.speed_scale !== undefined) {
-    const speed = parseFloat(rawProps.speed_scale);
-    if (!isNaN(speed)) {
-      const absSpeed = Math.abs(speed);
-      if (absSpeed > 0 && absSpeed < EXTREME_SLOW_SPEED) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'speed_scale' is very slow (${speed}). Values below ${EXTREME_SLOW_SPEED} may cause imperceptible animation playback.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-extreme-speed',
-        });
-      } else if (absSpeed > EXTREME_FAST_SPEED) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'speed_scale' is very fast (${speed}). Values above ${EXTREME_FAST_SPEED} may cause animation to appear too rapid.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-extreme-speed',
-        });
-      }
-    }
-  }
+  // `speed_scale` gets no diagnostic at all: animation_player.cpp:1048 hints
+  // "-4,4,0.001,or_less,or_greater", so BOTH ends are open, and set_speed_scale
+  // (:648) is a bare assignment. Negative is reverse playback; 0 pauses.
 
-  // Negative speed_scale is valid for reverse playback — no diagnostic
-
-  // WARNING: No animations defined (AnimationPlayer without animations is useless)
-  // Note: In TSCN format, animations are typically stored in the anims/ section
-  // We can check if there are any properties starting with "anims/"
+  // Which clip sources the file declares, and in which form: pre-4.0 files put
+  // clips in an `anims/<name>` section, Godot 4 references AnimationLibraries
+  // via `libraries/<name>` keys (the empty-name default library is written
+  // `libraries/`), and older 4.x files used a single `libraries` dict.
   const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
-  // Godot 4 references AnimationLibraries via `libraries/<name>` keys (the
-  // empty-name default library is written `libraries/`); older files used a
-  // single `libraries` dict. Accept either form.
   const hasLibraries = Object.keys(rawProps).some(
     key => key === 'libraries' || key.startsWith('libraries/')
   );
-
-  if (!hasAnimations && !hasLibraries) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `AnimationPlayer has no animations defined. Add animations to the 'libraries/' property (or legacy 'anims/' section) to make this node functional.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animationplayer-no-animations',
-    });
-  }
 
   // Build the set of known clip names. Godot references a clip in the default
   // (empty-name) library bare ("walk") but a clip in a NAMED library prefixed
@@ -102,20 +59,32 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // Only assert a clip is MISSING when the clip set is FULLY enumerable. An
   // ExtResource-backed library is external (often binary .res) and unresolvable
   // here, so its clips are invisible — flagging then would false-positive (the
-  // renderer is deliberately lenient about external libraries). And with no
-  // resolvable clip source at all, the no-animations warning above already
-  // covers it; existence-checking would only duplicate that noise.
-  const hasUnresolvableLibrary = Object.entries(rawProps).some(
-    ([key, value]) => (key === 'libraries' || key.startsWith('libraries/')) && value.includes('ExtResource(')
-  );
+  // renderer is deliberately lenient about external libraries). A file that
+  // declares no clip source at all is equally unenumerable: the clips may be
+  // added by script, so there is nothing here to call the reference dangling.
+  // Both spellings of "external": the library resource itself may be an
+  // ExtResource, and an INLINE library may map a clip name to one. The second is
+  // the ordinary layout once clips are saved as their own `.tres`, and
+  // `resolveAnimations` reads only the SubResource entries, so a library that
+  // carries one enumerates fewer clips than it holds.
+  const hasUnresolvableLibrary =
+    Object.entries(rawProps).some(
+      ([key, value]) =>
+        (key === 'libraries' || key.startsWith('libraries/')) &&
+        EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
+    ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
   // A resolvable-but-empty library is still enumerable (a missing clip IS caught); only an
   // unresolvable ExtResource library, or no clip source at all, suppresses the check.
   const canCheckExistence = (hasAnimations || hasLibraries) && !hasUnresolvableLibrary;
 
   // WARNING: autoplay references animation that may not exist (an empty StringName `&""` means
   // "no autoplay" — guard on the STRIPPED name, like current_animation below, not the raw value).
+  // Godot raises no warning for this: `NOTIFICATION_READY`
+  // (animation_player.cpp:149-155) gates the whole autoplay dispatch on
+  // `animation_set.has(autoplay)`, so a name that resolves to nothing simply
+  // never calls `play()` — no error, no log, nothing.
   if (canCheckExistence && rawProps.autoplay !== undefined) {
-    const autoplayName = stripQuotes(rawProps.autoplay);
+    const autoplayName = literalText(rawProps.autoplay);
     if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {
       diagnostics.push({
         severity: 'warning',
@@ -127,13 +96,16 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: current_animation references animation that may not exist
+  // Unlike `autoplay`, which is only skipped, `current_animation` is applied
+  // through `play()`: the ERR_FAIL_COND_MSG at animation_player.cpp:429 aborts
+  // the assignment, and the property loads empty. Only claimed where the clip
+  // set is fully enumerable, per `canCheckExistence` above.
   if (canCheckExistence && rawProps.current_animation !== undefined) {
-    const currentName = stripQuotes(rawProps.current_animation);
+    const currentName = literalText(rawProps.current_animation);
     if (currentName.length > 0 && !knownClips.has(currentName)) {
       diagnostics.push({
-        severity: 'warning',
-        message: `AnimationPlayer 'current_animation' references animation "${currentName}" which may not exist. Ensure this animation is defined in the AnimationLibrary or anims/ section.`,
+        severity: 'error',
+        message: `AnimationPlayer 'current_animation' references animation "${currentName}", which no library this file declares holds. Godot refuses the assignment, so the property loads empty.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'animationplayer-current-animation-missing',
@@ -141,50 +113,27 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: Large blend time (range advisory)
-  diagnostics.push(
-    ...rangeAdvisories(node, {
-      playback_default_blend_time: [
-        {
-          over: 2.0,
-          ruleName: 'animationplayer-large-blend-time',
-          message: (blendTime) =>
-            `AnimationPlayer 'playback_default_blend_time' is large (${blendTime} seconds). Long blend times may cause noticeable delays between animation transitions.`,
-        },
-      ],
-    })
-  );
+  // `playback_default_blend_time` gets no advisory: linterParser.ts carries the
+  // hint's 0..4096 as a warning-tier bound on the validator.
 
-  // Warning: playback_active is false
-  if (rawProps.playback_active === 'false') {
+  // The mixer is switched off. Godot raises no configuration warning
+  // for this — AnimationMixer declares no get_configuration_warnings() override
+  // — but it is not a style opinion either: seek_internal returns immediately
+  // on `!active` (animation_player.cpp:664), so nothing this node declares can
+  // ever reach the scene.
+  if (!isActive(rawProps)) {
     diagnostics.push({
-      severity: 'warning',
-      message: `AnimationPlayer 'playback_active' is set to false. Animations will not play until this is set to true at runtime.`,
+      severity: 'info',
+      message: `AnimationPlayer 'active' is set to false. Animations will not play until this is set to true at runtime.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animationplayer-inactive',
     });
   }
 
-  // Validate root_node existence
-  if (rawProps.root_node !== undefined) {
-    const rootPath = rawProps.root_node.trim().replace(/^NodePath\("(.*)"\)$/, '$1');
-
-    // Check if root_node is not default ".."
-    if (rootPath !== '..' && rootPath !== '') {
-      // Try to resolve the node path
-      // For now, just check if it's a reasonable path format
-      if (!rootPath.match(/^(\.\.|\.|\/)/) && !rootPath.match(/^[A-Za-z_]/)) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `AnimationPlayer 'root_node' has unusual path format "${rootPath}". Ensure this path resolves correctly at runtime.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animationplayer-invalid-root-path',
-        });
-      }
-    }
-  }
+  // `root_node` gets no diagnostic: animation_player.cpp declares it
+  // PROPERTY_HINT_NONE and set_root_node is a bare assignment, so no path
+  // shape is refused.
 
   return diagnostics;
 }
@@ -199,13 +148,29 @@ const animationPlayerValidationRule: LintRule = {
     category: 'validation',
     applicableNodeTypes: ['AnimationPlayer'],
     emits: [
-      { ruleName: 'animationplayer-extreme-speed', severity: 'warning' },
-      { ruleName: 'animationplayer-no-animations', severity: 'warning' },
-      { ruleName: 'animationplayer-autoplay-missing', severity: 'warning' },
-      { ruleName: 'animationplayer-current-animation-missing', severity: 'warning' },
-      { ruleName: 'animationplayer-large-blend-time', severity: 'warning' },
-      { ruleName: 'animationplayer-inactive', severity: 'warning' },
-      { ruleName: 'animationplayer-invalid-root-path', severity: 'warning' },
+      {
+        ruleName: 'animationplayer-autoplay-missing',
+        severity: 'warning',
+        grounding: {
+          kind: 'no-engine-counterpart',
+          scope: 'dangling-reference',
+          because: 'no library the file declares holds a clip under that name',
+        },
+      },
+      {
+        ruleName: 'animationplayer-current-animation-missing',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'animation_player.cpp:429' },
+      },
+      {
+        ruleName: 'animationplayer-inactive',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'animation_mixer.cpp:446',
+          unused: 'processing is gated on active, so autoplay and current_animation never advance',
+        },
+      },
     ],
   },
   check: checkAnimationPlayer,

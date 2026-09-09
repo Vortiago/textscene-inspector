@@ -11,13 +11,20 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('SpotLight3D', {
-  spot_range: v.positiveFloat('spot_range'),
-  spot_attenuation: v.nonNegativeFloat('spot_attenuation'),
-  // Custom message keeps the "degrees" qualifier the per-node test asserts.
-  spot_angle: v.float('spot_angle', {
-    min: 0,
-    max: 90,
-    message: "Property 'spot_angle' must be between 0 and 90 degrees",
-  }),
-  spot_angle_attenuation: v.nonNegativeFloat('spot_angle_attenuation'),
+  // light_3d.cpp:672, PROPERTY_HINT_RANGE "0,4096,0.001,or_greater,exp,suffix:m":
+  // `or_greater` opens the ceiling, `exp` is slider scaling and `suffix:` a
+  // unit, so only the 0 floor is a bound. Light3D::set_param:36 guards the
+  // param index, not the value, so it warns.
+  spot_range: v.nonNegativeFloat('spot_range', { hinted: 'light_3d.cpp:672' }),
+  // light_3d.cpp:673, PROPERTY_HINT_RANGE "-10,10,0.01,or_greater,or_less":
+  // negative is legal and means an inverse falloff curve.
+  spot_attenuation: v.float('spot_attenuation'),
+  // light_3d.cpp:674, PROPERTY_HINT_RANGE "0,180,0.01,degrees" — both ends
+  // closed. The bare "degrees" token is a display-only suffix, distinct from
+  // "radians_as_degrees", so the stored value is degrees already and the hint
+  // bound applies unconverted. Light3D::set_param:36 guards the param index,
+  // not the value, so both ends warn.
+  spot_angle: v.float('spot_angle', { min: 0, max: 180, hinted: 'light_3d.cpp:674' }),
+  // light_3d.cpp:675, PROPERTY_HINT_EXP_EASING: no range is stated, so no bound.
+  spot_angle_attenuation: v.float('spot_angle_attenuation'),
 });

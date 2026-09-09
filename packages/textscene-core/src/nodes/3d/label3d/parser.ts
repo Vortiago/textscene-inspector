@@ -7,7 +7,9 @@ import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
-import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
+import { floatOr, intOr } from '../../../parser/valueParsers';
+import { ruleInt } from '../../../godot/int.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseLabel3D(
   heading: ParsedHeading,
@@ -21,18 +23,22 @@ export function parseLabel3D(
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     billboard: parseBillboardMode(properties.billboard),
     modulate: parseColor(properties.modulate),
-    outline_size: floatOr(properties.outline_size, 12, 'outline_size'),
+    // `intOr`, not `floatOr`: label_3d.cpp declares both sizes Variant::INT with
+    // an `int` setter, so Godot truncates the fractional part and the renderer
+    // must size the quad by the number the engine holds. Reading them as floats
+    // drew with a value the linter simultaneously reported as dropped.
+    outline_size: intOr(properties.outline_size, 12, 'outline_size'),
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
-    double_sided: properties.double_sided !== 'false', // Godot default true
-    font_size: floatOr(properties.font_size, 32, 'font_size'),
+    double_sided: boolSlotValue(properties.double_sided) !== false, // Godot default true
+    font_size: intOr(properties.font_size, 32, 'font_size'),
     line_spacing: floatOr(properties.line_spacing, 0, 'line_spacing'),
     horizontal_alignment: parseHorizontalAlignment(properties.horizontal_alignment),
-    no_depth_test: properties.no_depth_test === 'true',
+    no_depth_test: boolSlotValue(properties.no_depth_test) === true,
     render_priority: intOr(properties.render_priority, 0, 'render_priority'),
     outline_render_priority: intOr(properties.outline_render_priority, -1, 'outline_render_priority'),
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
-    fixed_size: boolOr(properties.fixed_size, false, 'Label3D fixed_size'),
+    fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };
 }
@@ -57,8 +63,8 @@ function parseHorizontalAlignment(value: string | undefined): HorizontalAlignmen
 }
 
 function parseBillboardMode(value: string | undefined): BillboardMode {
-  if (value === undefined) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
-  const num = parseInt(value, 10);
+  const num = ruleInt(value);
+  if (num === null) return BillboardMode.BILLBOARD_DISABLED;  // Godot default
 
   if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
   if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;

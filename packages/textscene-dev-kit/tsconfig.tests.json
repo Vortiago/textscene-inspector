@@ -1,0 +1,10 @@
+{
+  // The package tsconfig minus its test exclusion: vitest transpiles without
+  // checking, so the suites need a project of their own to be typed at all.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "exclude": ["node_modules", "dist"]
+}

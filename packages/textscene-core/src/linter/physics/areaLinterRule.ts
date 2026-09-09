@@ -6,48 +6,56 @@
  * this rule handles the semantic checks that need full scene context.
  */
 
+import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { hasDescendantOfType } from './hasDescendantOfType.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
+import { boolSlotValue } from '../../godot/index.js';
 
 export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
+  // What an area pair does with the two monitor flags: detection needs the
+  // monitoring side's callback AND the detected side's `monitorable`. Each
+  // dimension has its own copy of the pair, so one literal cannot serve both.
+  const monitorFlagsCite =
+    dim === '2D' ? 'godot_area_pair_2d.cpp:134' : 'godot_area_pair_3d.cpp:135';
+  // The mask test that decides whether an area sees a body at all:
+  // `area->collides_with(body)`, the body's collision_layer against the AREA's
+  // collision_mask. Jolt states the same rule at jolt_area_3d.cpp:451.
+  const areaMaskCite = dim === '2D' ? 'godot_area_pair_2d.cpp:36' : 'godot_area_pair_3d.cpp:37';
   const type = `Area${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const prefix = `area${dimSuffix(dim)}`;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
 
-    if (node.type !== type) {
-      return diagnostics;
-    }
 
     // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    // Warning: Area without collision shape won't detect anything
-    if (!hasDescendantOfType(node, shapeType)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has no ${shapeType} children. Areas need collision shapes to detect bodies entering/exiting.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-collision-shape`,
-      });
-    }
 
-    // Warning: Both monitoring and monitorable false - area does nothing
+    // Godot raises no warning for this either — no `get_configuration_warnings()`
+    // override checks it. Grounded instead in what the two flags DO
+    // (area_2d.cpp / area_3d.cpp: `monitoring` drives whether the area
+    // scans for bodies/areas, `monitorable` whether other monitors can find
+    // it): with both false, the node can neither detect anything nor be
+    // detected by anything.
+    //
+    // DETECTION only, which is why this is not called "inactive". The pair's
+    // `has_space_override` is computed from the gravity/damp override modes
+    // alone and `pre_solve` calls `body->add_area(area)` on that flag
+    // (godot_area_pair_2d.cpp:41-50, :68-71); `has_monitor_callback()` gates
+    // nothing but the body-to-query call beside it. A non-monitoring area is
+    // still a working gravity, damping and audio-bus zone.
     const monitoring = rawProps.monitoring ?? 'true'; // Default is true in Godot
     const monitorable = rawProps.monitorable ?? 'true'; // Default is true in Godot
-    if (monitoring === 'false' && monitorable === 'false') {
+    if (boolSlotValue(monitoring) === false && boolSlotValue(monitorable) === false) {
       diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false. This area cannot detect other bodies and cannot be detected by other areas.`,
+        severity: 'info',
+        message: `${type} '${node.name}' has both 'monitoring' and 'monitorable' set to false, so it detects no bodies or areas and no other area detects it. Its gravity, damping and audio-bus overrides still apply.`,
         nodeName: node.name,
         nodeType: node.type,
-        ruleName: `${prefix}-inactive`,
+        ruleName: `${prefix}-detects-nothing`,
       });
     }
 
@@ -59,28 +67,28 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
     // ("0,1024,0.001,or_greater") and are rejected by each slice's format
     // validator instead.
 
-    // Warning: collision_layer is 0 and monitoring is true (won't detect on any layer)
-    const collisionLayer = rawProps.collision_layer;
-    if (monitoring === 'true' && collisionLayer !== undefined) {
-      const layer = parseInt(collisionLayer, 10);
-      if (!isNaN(layer) && layer === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_layer' is 0. The area won't be on any collision layer.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-monitoring-zero-layer`,
-        });
-      }
-    }
+    // No `collision_layer` check of any kind: no engine warning exists for it,
+    // and the premise would be wrong anyway. Area monitoring matches a target body's
+    // `collision_layer` against the AREA's `collision_mask`, not against the
+    // area's own `collision_layer`, so the area's layer has no bearing on what
+    // it detects. It fired on shipped Godot demos that set `collision_layer = 0`
+    // deliberately.
 
-    // Warning: collision_mask is 0 and monitoring is true (won't detect anything)
+    // collision_mask is 0 while monitoring is true: it detects nothing.
     const collisionMask = rawProps.collision_mask;
-    if (monitoring === 'true' && collisionMask !== undefined) {
-      const mask = parseInt(collisionMask, 10);
-      if (!isNaN(mask) && mask === 0) {
+    // `?? true`, not `=== true`: an unreadable value is a write Godot refuses, so
+  // the constructor's `set_monitoring(true)` stands exactly as it does for an
+  // absent key. Reading it as "not monitoring" silenced the report on the one
+  // file that most needs it.
+  if ((boolSlotValue(monitoring) ?? true) && collisionMask !== undefined) {
+      // `ruleInt`, not `parseInt`: the latter stops at the first
+      // character it cannot use, so `1e-1` read as 1 and missed the zero mask
+      // Godot actually stores. uint32_t setter (collision_object_2d.h:124,
+      // collision_object_3d.h:133).
+      const mask = ruleInt(collisionMask, null, 'uint32');
+      if (mask === 0) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `${type} '${node.name}' has 'monitoring' enabled but 'collision_mask' is 0. The area won't detect any collision layers.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -89,33 +97,9 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: Both layer and mask are 0 with monitoring enabled
-    if (monitoring === 'true' && collisionLayer !== undefined && collisionMask !== undefined) {
-      const layer = parseInt(collisionLayer, 10);
-      const mask = parseInt(collisionMask, 10);
-      if (!isNaN(layer) && !isNaN(mask) && layer === 0 && mask === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has 'monitoring' enabled but both 'collision_layer' and 'collision_mask' are 0. The area won't detect anything.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-monitoring-no-collision`,
-        });
-      }
-    }
-
-    // Warning: audio_bus_override is true but audio_bus_name is not set
-    const audioBusOverride = rawProps.audio_bus_override === 'true';
-    const audioBusName = rawProps.audio_bus_name;
-    if (audioBusOverride && !audioBusName) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has 'audio_bus_override' enabled but 'audio_bus_name' is not set. Specify which audio bus to use.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-audio-override-missing-name`,
-      });
-    }
+    // No `audio_bus_override` + missing `audio_bus_name` check: `audio_bus` has
+    // no initialiser and `get_audio_bus_name()` returns Master for any unset or
+    // unknown name, so absence IS the default and Godot omits the key.
 
     return diagnostics;
   }
@@ -127,12 +111,24 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-inactive`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-zero-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-zero-mask`, severity: 'warning' },
-        { ruleName: `${prefix}-monitoring-no-collision`, severity: 'warning' },
-        { ruleName: `${prefix}-audio-override-missing-name`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-detects-nothing`,
+          severity: 'info',
+          grounding: {
+            kind: 'engine-inert',
+            at: monitorFlagsCite,
+            unused: 'a non-monitoring area never registers the callback this line requires',
+          },
+        },
+        {
+          ruleName: `${prefix}-monitoring-zero-mask`,
+          severity: 'info',
+          grounding: {
+            kind: 'engine-inert',
+            at: areaMaskCite,
+            unused: 'collides_with returns false for every layer, so monitoring detects nothing',
+          },
+        },
       ],
     },
     check,

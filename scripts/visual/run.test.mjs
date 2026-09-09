@@ -30,7 +30,8 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
 });
 
 import { findCaptureTarget, gotoFixture, settleCanvas } from './previewServer.mjs';
-import { captureScene, pixelsMatchBaseline } from './run.mjs';
+import { captureScene } from './run/sceneCapture.mjs';
+import { pixelsMatchBaseline } from './run/baselines.mjs';
 
 function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   const png = new PNG({ width, height });

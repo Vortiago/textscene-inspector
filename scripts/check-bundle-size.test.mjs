@@ -14,7 +14,7 @@
  * substring (but not as a whole word) must NOT trip the guard.
  */
 import { describe, expect, it } from 'vitest';
-import { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size.mjs';
+import { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size/hostBundles.mjs';
 
 describe('findHostBundleViolations (host-bundle react/three guard)', () => {
   it('returns no violations for clean Node/host bundle content', () => {

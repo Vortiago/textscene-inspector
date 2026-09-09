@@ -1,9 +1,9 @@
 /**
  * GPUParticles3D registration — parser.
  *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node3D transform parse; the render component (index.r3f.ts) reuses Node3D.
- * The previewer does not simulate or draw particles.
+ * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
+ * The previewer does not simulate or draw particles, so index.r3f.ts registers
+ * Node3D under `renderIntent: 'pending'` and the tree still reports a gap.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

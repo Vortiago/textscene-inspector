@@ -42,6 +42,18 @@ describe('decodeNavigationMesh', () => {
     expect(decodeNavigationMesh({ polygons: '[PackedInt32Array(0, 1, 2)]' })).toBeNull();
   });
 
+  it('returns null instead of throwing on malformed POLYGON indices', () => {
+    // The index reader throws on an element Godot's tokenizer refuses, and this
+    // call sits outside the vertices try/catch — so without its own guard the
+    // throw leaves the decoder and takes the previewer down with it.
+    expect(
+      decodeNavigationMesh({
+        vertices: 'PackedVector3Array(0, 0, 0, 1, 0, 0, 1, 0, 1)',
+        polygons: '[PackedInt32Array(0, 0x10, 2)]',
+      })
+    ).toBeNull();
+  });
+
   it('returns null instead of throwing on malformed vertices (error path)', () => {
     expect(
       decodeNavigationMesh({
@@ -92,6 +104,15 @@ describe('decodeNavigationMesh', () => {
       polygons: '[PackedInt32Array(0, 1, 5)]',
     });
     expect(outOfRange).toBeNull();
+  });
+
+  it('draws no navmesh for a non-finite vertex, rather than a degenerate one', () => {
+    expect(
+      decodeNavigationMesh({
+        vertices: 'PackedVector3Array(0, 0, 0, 1, 0, 0, inf, 0, 1)',
+        polygons: '[PackedInt32Array(0, 1, 2)]',
+      })
+    ).toBeNull();
   });
 
   it('ignores a trailing partial vertex when range-checking indices (edge case)', () => {

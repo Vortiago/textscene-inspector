@@ -9,7 +9,7 @@ import {
   CallbackModeDiscrete,
   CallbackModeMethod,
 } from './types';
-import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { nodePathLiteral } from '../../../godot/index.js';
 
 export function formatAnimationTreeProperties(
   properties: AnimationTreeProperties
@@ -51,14 +51,11 @@ export function formatAnimationTreeProperties(
     ],
   });
 
-  sections.push(...formatNode3DProperties(properties));
-
   return sections;
 }
 
 function extractNodePath(raw: string): string {
-  const match = raw.match(/^NodePath\("([^"]*)"\)$/);
-  return match ? (match[1] ?? raw) : raw;
+  return nodePathLiteral(raw) ?? raw;
 }
 
 function processModeName(mode: AnimationTreeProcessMode): string {

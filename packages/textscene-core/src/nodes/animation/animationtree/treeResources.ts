@@ -15,6 +15,15 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { findSubResource } from '../../../resources/SubResourceResolver';
+import {
+  ARRAY_LITERAL_RE,
+  arrayLiteralBody,
+  boolSlotValue,
+  dropTrailingComma,
+  ruleInt,
+  splitTopLevel,
+  subResourceRefAnywhere,
+} from '../../../godot/index.js';
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =
@@ -97,24 +106,31 @@ export function resolveTreeRoot(
 
 /** Extract the id from a `SubResource("id")` reference. */
 function extractSubResourceId(ref: string): string | null {
-  const match = /SubResource\(\s*"([^"]+)"\s*\)/.exec(ref);
-  return match?.[1] ?? null;
+  return subResourceRefAnywhere(ref);
 }
 
+/**
+ * The ONE door from a sub-resource id to a node, so the cycle guard covers every
+ * recursion path. A BlendTree may hold another BlendTree and nothing in the
+ * engine stops that chain closing on itself — `add_node` guards only the name,
+ * null and `/` (animation_blend_tree.cpp:1489-1493), `connect_node` only a node
+ * feeding itself (:1615-1619) — and this runs in a render-phase `useMemo` with
+ * no error boundary above it, so an unguarded re-entry blanks the whole preview.
+ *
+ * `visiting` is the path, not the visited set: the copy is per-branch, so one
+ * sub-resource wired into two ports still resolves on both.
+ */
 function resolveNodeById(
   id: string,
   resources: readonly TscnInternalResource[],
-  visiting: Set<string>
+  visiting: Set<string>,
+  name = '',
+  inputs: (port: number) => AnimNode | null = () => null
 ): AnimNode | null {
-  if (visiting.has(id)) return null; // guard cyclic references
+  if (visiting.has(id)) return null;
   const resource = findSubResource(resources, id);
   if (!resource) return null;
-
-  const visited = new Set(visiting).add(id);
-  if (resource.type === 'AnimationNodeBlendTree') {
-    return resolveBlendTree(resource, resources, visited);
-  }
-  return resolveInnerNode(resource, '', resources, visited);
+  return resolveInnerNode(resource, name, resources, new Set(visiting).add(id), inputs);
 }
 
 /**
@@ -139,7 +155,7 @@ function resolveInnerNode(
       return {
         kind: 'blend2',
         name,
-        filtered: asString(resource.data['filter_enabled']) === 'true',
+        filtered: boolSlotValue(asString(resource.data['filter_enabled'])) === true,
         in0: inputs(0),
         in1: inputs(1),
       };
@@ -173,10 +189,8 @@ function resolveBlendTree(
     if (seen.has(localName)) return null; // cyclic connection guard
     const subId = nodeIds.get(localName);
     if (subId === undefined) return null;
-    const resource = findSubResource(resources, subId);
-    if (!resource) return null;
     const nextSeen = new Set(seen).add(localName);
-    return resolveInnerNode(resource, localName, resources, visiting, (port) => {
+    return resolveNodeById(subId, resources, visiting, localName, (port) => {
       const from = connections.get(`${localName}:${port}`);
       return from === undefined ? null : resolveLocal(from, nextSeen);
     });
@@ -205,12 +219,25 @@ function parseBlendTreeNodes(data: Record<string, unknown>): Map<string, string>
  * `"toNode:port" → fromNode` map.
  */
 function parseConnections(raw: string): Map<string, string> {
-  const tokens = raw.match(/&"[^"]*"|-?\d+/g) ?? [];
+  // Split the array, don't scavenge tokens out of it. A `&"…"|-?\d+` scan read
+  // the port `1e1` as the two tokens `1` and `1` — shifting every triple after
+  // it — and skipped a plain `"Blend"`, which `Variant::operator StringName()`
+  // converts and Godot therefore wires.
+  const body = ARRAY_LITERAL_RE.exec(raw.trim());
+  if (!body) return new Map();
+  const tokens = dropTrailingComma(splitTopLevel(body[1]!));
   const out = new Map<string, string>();
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const to = stripStringName(tokens[i]!);
-    const port = tokens[i + 1]!;
+    // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), so
+    // it reads the way every other int slot does — including a STRING, which
+    // `Variant::_to_int` routes through `String::to_int()` (variant.h:372), the
+    // same conversion that lets a plain `"Blend"` reach the StringName slots
+    // beside it. Reading `"0"` as unreadable dropped the whole triple and left
+    // the tree with no root.
+    const port = ruleInt(stripStringName(tokens[i + 1]!));
     const from = stripStringName(tokens[i + 2]!);
+    if (port === null) continue;
     out.set(`${to}:${port}`, from);
   }
   return out;
@@ -233,7 +260,7 @@ function resolveStateMachine(
     const match = /^states\/(.+)\/node$/.exec(unquoteKey(rawKey));
     if (!match || match[1] === undefined) continue;
     const subId = extractSubResourceId(asString(rawValue) ?? '');
-    const node = subId === null ? null : resolveNodeById(subId, resources, new Set(visiting));
+    const node = subId === null ? null : resolveNodeById(subId, resources, visiting);
     states.push({ name: match[1], node });
   }
 
@@ -245,12 +272,18 @@ function resolveStateMachine(
   };
 }
 
-/** Target of a `Start →` transition, else the first authored state. */
+/**
+ * Target of a `Start →` transition, else the first authored state.
+ *
+ * `transitions = [&"Start", &"Idle", SubResource("…"), …]` is split as the
+ * array it is, the way `parseConnections` reads its triples.
+ */
 function pickStartState(
   transitions: string,
   states: StateMachineNode['states']
 ): string | null {
-  const tokens = transitions.match(/"[^"]*"|SubResource\("[^"]+"\)/g) ?? [];
+  const body = arrayLiteralBody(transitions);
+  const tokens = body === null ? [] : dropTrailingComma(splitTopLevel(body));
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const from = stripStringName(tokens[i]!);
     if (from === 'Start') return stripStringName(tokens[i + 1]!);

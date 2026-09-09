@@ -1,9 +1,10 @@
 [gd_scene load_steps=2 format=3]
 
-; The one setting the frozen pose cannot follow, raising an advisory warning
-; rather than an error — perfectly legal Godot. RING samples the engine's
-; process-wide RNG, which no scene file carries, so the previewer emits from
-; the node origin instead.
+; The two settings the frozen pose cannot follow, each raising an advisory
+; warning rather than an error — both are perfectly legal Godot. RING samples
+; the engine's process-wide RNG, which no scene file carries, so the previewer
+; emits from the node origin instead; `fract_delta` sub-steps a restarting
+; particle, which a fixed-rate evaluation skips.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 
@@ -22,6 +23,7 @@ preprocess = 1.5
 use_fixed_seed = true
 seed = 5
 fixed_fps = 30
+fract_delta = true
 local_coords = true
 emission_shape = 6
 emission_ring_radius = 120.0

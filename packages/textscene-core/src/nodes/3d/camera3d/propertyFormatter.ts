@@ -96,8 +96,6 @@ function getKeepAspectModeName(mode: KeepAspectMode): string {
       return 'Keep Width';
     case KeepAspectMode.KEEP_HEIGHT:
       return 'Keep Height';
-    case KeepAspectMode.KEEP_ASPECT_DISABLED:
-      return 'Disabled';
     default:
       return 'Unknown';
   }

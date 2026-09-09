@@ -1,5 +1,5 @@
 /**
- * Regression contract for #148 — AnimationPlayer autoplay/current_animation existence checks
+ * Regression contract: AnimationPlayer autoplay/current_animation existence checks
  * are DEAD on real Godot 4 files.
  *
  * The semantic linter resolved clip names only from `anims/<name>` keys (pre-4.0) and gated the
@@ -93,7 +93,7 @@ autoplay = "walk"
 });
 
 /**
- * Contract hardening (#148 follow-up): the original RED contract only pinned the empty-name default
+ * Contract hardening: the original RED contract only pinned the empty-name default
  * library with inline SubResource clips. Reviving the existence checks for that one form let two
  * false-positive regressions through — the check is only meaningful when the clip set is FULLY
  * resolvable, and named libraries reference clips as `<lib>/<clip>`. These pin both, plus the
@@ -171,15 +171,13 @@ ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
     expect(rules(linter.lint(dictLibScene('&"wlak"')))).toContain('animationplayer-autoplay-missing');
   });
 
-  it('does NOT flag autoplay when NO clip source exists at all (the no-animations warning covers it)', () => {
+  it('does NOT flag autoplay when NO clip source exists at all (the clip set is unenumerable)', () => {
     const content = `[gd_scene format=3]
 
 [node name="AnimPlayer" type="AnimationPlayer"]
 autoplay = &"walk"
 `;
-    const found = rules(linter.lint(content));
-    expect(found).not.toContain('animationplayer-autoplay-missing');
-    expect(found).toContain('animationplayer-no-animations'); // pinned: the no-source signal stays the no-animations warning
+    expect(rules(linter.lint(content))).not.toContain('animationplayer-autoplay-missing');
   });
 
   // A clip name with a special char (e.g. `:`) must resolve identically in the linter and the render

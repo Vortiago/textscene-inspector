@@ -13,9 +13,11 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   runPropertyValidation,
+  type PropValue,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('CharacterBody2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -31,7 +33,8 @@ describe('CharacterBody2D Linter', () => {
             floor_block_on_wall: true,
             floor_max_angle: 0.785398,
             floor_snap_length: 0.1,
-            wall_min_slide_angle: 0.261799,
+            // No `wall_min_slide_angle`: GROUNDED strips it
+            // (character_body_2d.cpp:676), so it earns its own inert warning.
             platform_on_leave: 0,
             platform_floor_layers: 4294967295,
             platform_wall_layers: 0,
@@ -69,36 +72,48 @@ describe('CharacterBody2D Linter', () => {
       {
         prop: 'floor_stop_on_slope',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'floor_constant_speed',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'floor_block_on_wall',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
+        // Godot hints "0,180,0.1,radians_as_degrees" with no `or_greater`, so
+        // PI is the last legal value, and a table stopping at PI/2 rejects the
+        // upper half of the range as an error.
         prop: 'floor_max_angle',
-        valid: [0, 0.785398, 1.5708],
+        valid: [0, 0.785398, 1.5708, 3.14159],
         invalid: [
-          { value: 3.14159, contains: ['radians'] },
+          { value: 4.0, contains: ['radians'] },
           { value: -0.5 },
           { value: '"45 degrees"' },
         ],
       },
       {
+        // character_body_2d.cpp:631, ERR_FAIL_COND(p_floor_snap_length < 0). The
+        // hint at :749 ends in `or_greater`, so nothing above 0 is out of band.
         prop: 'floor_snap_length',
-        valid: [0, 0.001, 0.1, 1.0, 5.0],
+        valid: [0, 0.001, 0.1, 1.0, 5.0, 50],
         invalid: [{ value: -0.5, contains: ['>= 0'] }],
       },
       {
         prop: 'wall_min_slide_angle',
-        valid: [0, 0.261799, 0.785398, 1.5708],
-        invalid: [{ value: 2.0, contains: ['radians'] }, { value: -0.1 }],
+        // FLOATING, the only mode that reads it in 2D.
+        with: { motion_mode: 1 },
+        valid: [0, 0.261799, 0.785398, 1.5708, 2.0, 3.14159],
+        // Named, because the reject scenes carry no `with`: GROUNDED is the
+        // default, so the inert-key warning stands beside the range one.
+        invalid: [
+          { value: 4.0, contains: ['radians'], ruleName: 'strict-parser' },
+          { value: -0.1, ruleName: 'strict-parser' },
+        ],
       },
       {
         prop: 'platform_on_leave',
@@ -108,16 +123,22 @@ describe('CharacterBody2D Linter', () => {
       {
         prop: 'platform_floor_layers',
         valid: [0, 1, 255, 4294967295],
-        invalid: [{ value: 5000000000, contains: ['4294967295'] }, { value: -1 }],
+        invalid: [{ value: 5000000000, contains: ['cannot be stored in an integer slot'] }],
       },
       {
         prop: 'platform_wall_layers',
         valid: [0, 1, 65535, 4294967295],
       },
       {
+        // character_body_2d.cpp:538 is a bare assignment, so the hint at :757
+        // ("0.001,256,0.001,suffix:px") only warns at either end.
         prop: 'safe_margin',
-        valid: [0, 0.001, 0.01, 0.1],
-        invalid: [{ value: -0.5, contains: ['>= 0'] }],
+        valid: [0.001, 0.01, 0.1, 256],
+        invalid: [
+          { value: '"wide"', contains: ['must be a number'] },
+          { value: 0, severity: 'warning', contains: ['between 0.001 and 256'] },
+          { value: 256.001, severity: 'warning', contains: ['between 0.001 and 256'] },
+        ],
       },
       {
         prop: 'collision_priority',
@@ -125,9 +146,11 @@ describe('CharacterBody2D Linter', () => {
         invalid: [{ value: '"high"' }],
       },
       {
+        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants. This table asserted 0-1 and encoded the bug.
         prop: 'disable_mode',
-        valid: [0, 1],
-        invalid: [{ value: 5, contains: ['0-1'] }],
+        valid: [0, 1, 2],
+        invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
         // Valid values warn (e.g. zero-layer) but produce no errors.
@@ -135,14 +158,14 @@ describe('CharacterBody2D Linter', () => {
         valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
         invalid: [
-          { value: -1, contains: ['between 0 and 4294967295'] },
+          { value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
         ],
       },
       {
         prop: 'collision_mask',
         valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
         acceptMode: 'no-error',
-        invalid: [{ value: -5 }],
+        invalid: [{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' }],
       },
       {
         prop: 'max_slides',
@@ -152,85 +175,75 @@ describe('CharacterBody2D Linter', () => {
       },
     ]);
 
-    it('should warn about custom up_direction', () => {
+    // character_body_2d.cpp:749 hints "0,32,0.1,or_greater" — the high end is open
+    // and the low end is the setter's own ERR_FAIL — so no advisory survives.
+    it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
+      expectClean(scene(node('CharacterBody2D', { floor_snap_length: snap }), collisionShape2d));
+    });
+
+    // character_body_2d.cpp:741 declares max_slides PROPERTY_HINT_NONE with
+    // PROPERTY_USAGE_NO_EDITOR, so there is no band to be low in.
+    it.each([1, 2, 3])('says nothing about max_slides %s', (slides) => {
+      expectClean(scene(node('CharacterBody2D', { max_slides: slides }), collisionShape2d));
+    });
+
+    // character_body_2d.cpp:757 hints "0.001,256,0.001", closed at both ends and
+    // enforced at neither, so the validator carries it and no rule reports it.
+    it('should warn about safe_margin above the hint', () => {
       expectDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(1, 0)' }), collisionShape2d),
+        scene(node('CharacterBody2D', { safe_margin: 300 }), collisionShape2d),
         {
-          ruleName: 'characterbody2d-non-standard-up-direction',
+          prop: 'safe_margin',
           severity: 'warning',
+          contains: ['300', '256'],
         }
       );
     });
 
-    it('should warn about very small floor_snap_length', () => {
+    it('should warn about safe_margin below the hint', () => {
       expectDiagnostic(
-        scene(node('CharacterBody2D', { floor_snap_length: 0.0001 }), collisionShape2d),
+        scene(node('CharacterBody2D', { safe_margin: 0.0001 }), collisionShape2d),
         {
-          ruleName: 'characterbody2d-floor-snap-too-small',
+          prop: 'safe_margin',
           severity: 'warning',
-          contains: ['may not work reliably'],
+          contains: ['0.0001', '0.001'],
         }
       );
     });
 
-    it('should warn about very large floor_snap_length', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { floor_snap_length: 50 }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-floor-snap-too-large',
-          severity: 'warning',
-          contains: ['glitchy behavior'],
-        }
-      );
-    });
-
-    it('should warn about very large safe_margin', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { safe_margin: 0.5 }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-safe-margin-too-large',
-          severity: 'warning',
-          contains: ['collision detection issues'],
-        }
-      );
-    });
-
-    it('should warn about low max_slides', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { max_slides: 2 }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-max-slides-too-low',
-          severity: 'warning',
-          contains: ['jittery movement'],
-        }
-      );
+    it.each([0.001, 0.2, 0.5, 256])('says nothing about safe_margin %s', (margin) => {
+      expectClean(scene(node('CharacterBody2D', { safe_margin: margin }), collisionShape2d));
     });
   });
 
   describe('Semantic Validation (CollisionShape2D Children)', () => {
-    it('should warn when CharacterBody2D has no CollisionShape2D children', () => {
+    it('should warn when CharacterBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('CharacterBody2D')), {
-        ruleName: 'characterbody2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'CharacterBody2D',
-        contains: ['no CollisionShape2D children'],
+        contains: ['no CollisionShape2D or CollisionPolygon2D children'],
       });
     });
 
     it('should pass when CharacterBody2D has CollisionShape2D child', () => {
       expectNoDiagnostic(scene(node('CharacterBody2D'), collisionShape2d), {
-        ruleName: 'characterbody2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
       });
     });
 
-    it('should pass when CharacterBody2D has nested CollisionShape2D', () => {
-      expectNoDiagnostic(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under CharacterBody2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('CharacterBody2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
         ),
-        { ruleName: 'characterbody2d-needs-collision-shape' }
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -241,13 +254,13 @@ describe('CharacterBody2D Linter', () => {
           node('CollisionShape2D', {}, { name: 'Shape1', parent: '.' }),
           node('CollisionShape2D', {}, { name: 'Shape2', parent: '.' })
         ),
-        { ruleName: 'characterbody2d-needs-collision-shape' }
+        { ruleName: 'collisionobject2d-needs-collision-shape' }
       );
     });
   });
 
   describe('Semantic Validation (Motion Mode Settings)', () => {
-    it('should warn when floor properties are set in FLOATING mode', () => {
+    it('reports when floor properties are set in FLOATING mode', () => {
       expectDiagnostic(
         scene(
           node('CharacterBody2D', {
@@ -259,7 +272,7 @@ describe('CharacterBody2D Linter', () => {
         ),
         {
           ruleName: 'characterbody2d-floor-props-in-floating-mode',
-          severity: 'warning',
+          severity: 'info',
           contains: ['FLOATING', 'GROUNDED'],
         }
       );
@@ -285,37 +298,76 @@ describe('CharacterBody2D Linter', () => {
         { ruleName: 'characterbody2d-floor-props-in-floating-mode' }
       );
     });
-  });
 
-  describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody2D', { collision_layer: 0 }), collisionShape2d), {
-        ruleName: 'characterbody2d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'CharacterBody2D',
-        contains: ['collision_layer set to 0'],
-      });
+    it('reports when slide_on_ceiling is set in FLOATING mode', () => {
+      expectDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, slide_on_ceiling: false }),
+          collisionShape2d
+        ),
+        {
+          ruleName: 'characterbody2d-slide-on-ceiling-in-floating-mode',
+          severity: 'info',
+          contains: ['FLOATING', 'GROUNDED'],
+        }
+      );
     });
 
-    it('should not warn when collision_layer is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody2D', { collision_layer: 1 }), collisionShape2d), {
-        ruleName: 'characterbody2d-zero-collision-layer',
-      });
+    it('leaves slide_on_ceiling alone in GROUNDED mode, where its four reads live', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 0, slide_on_ceiling: false }),
+          collisionShape2d
+        ),
+        { ruleName: 'characterbody2d-slide-on-ceiling-in-floating-mode' }
+      );
     });
 
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('CharacterBody2D', { collision_mask: 0 }), collisionShape2d), {
-        ruleName: 'characterbody2d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'CharacterBody2D',
-        contains: ['collision_mask set to 0'],
-      });
+    // Annotated, not inferred: the second entry would otherwise widen the union
+    // to `motion_mode?: undefined`, which `PropValue` excludes.
+    const grounded: Record<string, PropValue>[] = [
+      { motion_mode: 0, wall_min_slide_angle: 0.5 },
+      { wall_min_slide_angle: 0.5 },
+    ];
+    it.each(grounded)(
+      'reports when wall_min_slide_angle is set in GROUNDED mode (%o)',
+      (props) => {
+        expectDiagnostic(scene(node('CharacterBody2D', props), collisionShape2d), {
+          ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode',
+          severity: 'info',
+          contains: ['GROUNDED', 'FLOATING'],
+        });
+      }
+    );
+
+    it('leaves wall_min_slide_angle alone in FLOATING mode, its only reader', () => {
+      expectNoDiagnostic(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, wall_min_slide_angle: 0.5 }),
+          collisionShape2d
+        ),
+        { ruleName: 'characterbody2d-wall-min-slide-angle-in-grounded-mode' }
+      );
     });
 
-    it('should not warn when collision_mask is non-zero', () => {
-      expectNoDiagnostic(scene(node('CharacterBody2D', { collision_mask: 1 }), collisionShape2d), {
-        ruleName: 'characterbody2d-zero-collision-mask',
-      });
+    it('says nothing about up_direction in FLOATING mode: move_and_slide reads it either way', () => {
+      // character_body_2d.cpp:106-107, ahead of the mode branch, so the same
+      // `_validate_property` line that strips the keys above does not make it inert.
+      expectNoErrors(
+        scene(
+          node('CharacterBody2D', { motion_mode: 1, up_direction: 'Vector2(0, -1)' }),
+          collisionShape2d
+        )
+      );
+    });
+
+    it('reports a zero up_direction once — the validator, with no rule beside it', () => {
+      const diagnostics = lint(
+        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, 0)' }), collisionShape2d)
+      );
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('up_direction');
     });
   });
 
@@ -347,7 +399,8 @@ describe('CharacterBody2D Linter', () => {
             floor_block_on_wall: true,
             floor_max_angle: 0.785398,
             floor_snap_length: 0.1,
-            wall_min_slide_angle: 0.261799,
+            // No `wall_min_slide_angle`: GROUNDED strips it
+            // (character_body_2d.cpp:676), so it earns its own inert warning.
             platform_on_leave: 0,
             platform_floor_layers: 4294967295,
             platform_wall_layers: 0,
@@ -399,21 +452,29 @@ describe('CharacterBody2D Linter', () => {
       const diagnostics = lint(
         scene(
           node('CharacterBody2D', {
+            // character_body_2d.cpp:737 hints "Grounded,Floating" but
+            // set_motion_mode is a bare assignment, so out-of-range warns
+            // rather than errors.
             motion_mode: 10,
             floor_snap_length: 50,
-            collision_layer: 0,
-            max_slides: 2,
+            // collision_layer warns rather than errors now: its width comes
+            // from the 32-checkbox widget, not the engine. max_slides carries
+            // the error, since set_max_slides ERR_FAILs below 1 (character_body_2d.cpp:613).
+            collision_layer: -5,
+            max_slides: 0,
           }),
           collisionShape2d
         )
       );
-      // Should have at least one error (motion_mode=10 is invalid)
-      expect(diagnostics.length).toBeGreaterThanOrEqual(1);
+      expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
-      // Check that the motion_mode error is present
-      const motionModeError = diagnostics.find(d => d.message.includes('motion_mode'));
-      expect(motionModeError).toBeDefined();
+      expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
+      // No collision_layer diagnostic any more: -1 is a legal 32-bit mask.
+      expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
+      const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
+      expect(motionModeDiagnostic).toBeDefined();
+      expect(motionModeDiagnostic?.severity).toBe('warning');
     });
 
     it('should handle zero values correctly', () => {
@@ -430,24 +491,5 @@ describe('CharacterBody2D Linter', () => {
       );
     });
 
-    it('should handle 2D-specific up_direction standard (0, -1)', () => {
-      expectNoDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, -1)' }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-non-standard-up-direction',
-        }
-      );
-    });
-
-    it('should warn about non-standard 2D up_direction', () => {
-      expectDiagnostic(
-        scene(node('CharacterBody2D', { up_direction: 'Vector2(0, 1)' }), collisionShape2d),
-        {
-          ruleName: 'characterbody2d-non-standard-up-direction',
-          severity: 'warning',
-          contains: ['Vector2(0, -1)'],
-        }
-      );
-    });
   });
 });

@@ -43,16 +43,25 @@ export interface GlbSurfaceMaterialOverrideProps {
 export function GlbSurfaceMaterialOverride({ target, source }: GlbSurfaceMaterialOverrideProps) {
   // Split rather than branched inline: each arrival calls its own hooks, and a
   // reference that changes kind remounts, which is what disposes the old one.
-  return source.kind === 'path' ? (
-    <ExternalGlbMaterialOverride target={target} path={source.path} />
-  ) : (
-    <SceneGlbMaterialOverride target={target} resource={source.resource} />
-  );
+  if (source.kind === 'path') return <ExternalGlbMaterialOverride target={target} path={source.path} />;
+  // An override that resolved to nothing buildable still REPLACED the glTF's
+  // own material, so the surface is Godot's default one rather than the
+  // import's (ADR-0041).
+  if (source.kind === 'default') return <DefaultGlbMaterialOverride target={target} />;
+  return <SceneGlbMaterialOverride target={target} resource={source.resource} />;
+}
+
+/** Godot's default 3D surface, built and disposed here like any scene material. */
+function DefaultGlbMaterialOverride({ target }: { target: THREE.Object3D }) {
+  const material = useMemo(() => materialFromBag(standardMaterialBag(null, {})), []);
+  useEffect(() => () => material.dispose(), [material]);
+  useGlbMaterialSwap(target, material);
+  return null;
 }
 
 /** A `.tres` the material pipeline builds and owns — never disposed here. */
 function ExternalGlbMaterialOverride({ target, path }: { target: THREE.Object3D; path: string }) {
-  const result = useResource<THREE.Material>(path, 'StandardMaterial3D');
+  const result = useResource<THREE.Material>(path, 'material');
   useGlbMaterialSwap(target, result.value ?? null);
   return null;
 }

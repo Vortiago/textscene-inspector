@@ -1,5 +1,5 @@
 /**
- * FrameSelectedShortcut (#224 F-to-frame) — pressing "F" frames the camera
+ * FrameSelectedShortcut (F-to-frame) — pressing "F" frames the camera
  * on the selected node (via resolveFrameTarget + the already-tested
  * frameSceneBounds); with nothing selected it frames the whole scene.
  * Guarded by isTypingTarget so it doesn't hijack "f" from a text field.

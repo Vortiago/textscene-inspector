@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="MyOpenXRRenderModelManager" type="OpenXRRenderModelManager" parent="."]
+tracker = 2
+make_local_to_pose = "grip"

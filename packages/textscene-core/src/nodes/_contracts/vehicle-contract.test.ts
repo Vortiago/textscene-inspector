@@ -45,7 +45,7 @@ describe('#352 fixtures contract — Truck Town vehicle types', () => {
     expect(nodes.map((n) => n.type)).toContain('CollisionShape3D');
     expect(nodes.map((n) => n.type)).toContain('MeshInstance3D');
 
-    // The override is what makes this fixture exercise valid-vehiclebody3d-resources
+    // The override is what makes this fixture exercise dangling-resource-reference
     // at all, and VehicleBody3D reuses parseNode3D — so it survives only in the
     // raw body, and only against a PhysicsMaterial the scene actually defines.
     const override = bodies[0]!.rawProperties?.physics_material_override;

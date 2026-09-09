@@ -3,28 +3,45 @@
  *
  * Note: Format validation (curve resource reference format) is handled by linterParser.ts
  * during strict parsing. This file focuses on semantic validation that requires
- * full scene context (e.g., curve resource exists, PathFollow3D children).
+ * full scene context (e.g., curve resource exists).
+ *
+ * No "no PathFollow3D children" check: `path_3d.h`/`path_3d.cpp` declare a
+ * `get_configuration_warnings()` override only on `PathFollow3D`, never on
+ * `Path3D` itself — Godot raises no warning for a followerless Path3D. A
+ * CSGPolygon3D in PATH mode extruding along a `path_node`, or a SplineIK3D
+ * naming one through its indexed settings, are both first-class consumers
+ * that need no PathFollow3D at all.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
+import {
+  packedArrayBody,
+  packedArrayForms,
+  splitTopLevel,
+  subResourceRefAnywhere,
+} from '../../../godot/index.js';
+import { dictPackedField } from '../../../godot/packedArrayFields.js';
+
+// Both fields convert through the Variant (curve.cpp:2282, :2291), so each takes
+// the three spellings `packedArrayForms` lists.
+const POINTS_RE = dictPackedField('points', 'PackedVector3Array');
+const TILTS_RE = dictPackedField('tilts', 'PackedFloat32Array');
+const POINTS_FORMS = packedArrayForms('PackedVector3Array');
+const TILTS_FORMS = packedArrayForms('PackedFloat32Array');
 
 /**
- * Check if a node has any PathFollow3D children
+ * How many floats a field's value holds: the packed constructor lists them
+ * flat, the two array spellings hold one `groupSize`-float element each.
  */
-function hasPathFollowChildren(node: TscnNode): boolean {
-  for (const child of node.children) {
-    if (child.type === 'PathFollow3D') {
-      return true;
-    }
-    // Recursively check nested children
-    if (hasPathFollowChildren(child)) {
-      return true;
-    }
-  }
-  return false;
+function floatCount(forms: readonly RegExp[], value: string, groupSize: number): number {
+  const matched = packedArrayBody(forms, value);
+  if (!matched || matched.body === '') return 0;
+  const parts = matched.flat ? matched.body.split(',') : splitTopLevel(matched.body);
+  const count = parts.filter((s) => s.trim() !== '').length;
+  return matched.flat ? count : count * groupSize;
 }
 
 /**
@@ -32,55 +49,24 @@ function hasPathFollowChildren(node: TscnNode): boolean {
  */
 function checkPath3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  // Only run for Path3D nodes
-  if (node.type !== 'Path3D') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // WARNING: a curve-less Path3D is valid (the curve can be assigned at
-  // runtime) but draws nothing until one is set.
-  if (!rawProps.curve) {
+  // A curve-less Path3D is valid (the curve can be assigned at runtime) but
+  // draws nothing until one is set.
+  const curve = heldResource(rawProps.curve);
+  if (curve === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Path3D '${node.name}' is missing required property 'curve'. A Path3D without a Curve3D resource is useless.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'path3d-requires-curve',
     });
   } else {
-    // ERROR: Check if curve resource exists in scene
-    const resourceExists = checkResourceExists(scene, rawProps.curve);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Curve resource not found: ${rawProps.curve}. The referenced Curve3D resource must exist in the scene.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-path3d-resources',
-      });
-    } else {
-      diagnostics.push(...checkCurve3DData(context, rawProps.curve));
-    }
-  }
-
-  // WARNING: nothing in the scene appears to consume this path.
-  // PathFollow3D descendants are the usual consumer, but a CSGPolygon3D in PATH
-  // mode extrudes along a Path3D it names through `path_node` and needs no
-  // PathFollow3D at all — a first-class Godot pattern that two vendored scenes
-  // use, and that this rule used to warn about.
-  if (!hasPathFollowChildren(node) && !isReferencedByPathNode(context.scene, node.name)) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Path3D '${node.name}' has no PathFollow3D children. While paths can be used programmatically, they are typically followed by PathFollow3D nodes. Consider adding a PathFollow3D child if you intend to animate objects along this path.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'path3d-unused',
-    });
+    diagnostics.push(...checkCurve3DData(context, curve));
   }
 
   return diagnostics;
@@ -106,8 +92,8 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
  */
 function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] {
   const { node, scene } = context;
-  const id = curveRef.match(/SubResource\s*\(\s*"([^"]+)"\s*\)/)?.[1];
-  if (!id) return [];
+  const id = subResourceRefAnywhere(curveRef);
+  if (id === null) return [];
 
   const resource = scene.internalResources?.find(
     (r: TscnInternalResource) => r.id === id && r.type === 'Curve3D'
@@ -125,7 +111,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ruleName: 'curve3d-loadable',
   });
 
-  const pointsLiteral = data.match(/"points"\s*:\s*PackedVector3Array\(([^)]*)\)/);
+  const pointsLiteral = POINTS_RE.exec(data);
   if (!pointsLiteral) {
     return [problem("its Curve3D has no \"points\" in `_data`; Godot loads the curve with zero points and the path draws nothing.")];
   }
@@ -139,7 +125,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ];
   }
 
-  const floats = pointsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
+  const floats = floatCount(POINTS_FORMS, pointsLiteral[1]!, 3);
   const vector3s = floats / 3;
   if (floats % 3 !== 0 || vector3s % 3 !== 0) {
     return [
@@ -150,11 +136,16 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
     ];
   }
 
-  const tiltsLiteral = data.match(/"tilts"\s*:\s*PackedFloat32Array\(([^)]*)\)/);
+  const tiltsLiteral = TILTS_RE.exec(data);
   if (tiltsLiteral) {
-    const tilts = tiltsLiteral[1]!.split(',').filter((s) => s.trim() !== '').length;
+    const tilts = floatCount(TILTS_FORMS, tiltsLiteral[1]!, 1);
     const expected = vector3s / 3;
-    if (tilts !== expected) {
+    // Too FEW only. `Curve3D::_set_data`'s fill loop is bounded by
+    // `points.size()` (curve.cpp:2294) and indexes `rt[i]` inside it, so a short
+    // `tilts` reads past the end of the array while a long one simply leaves its
+    // extra values untouched — that scene loads, and reporting it was an error
+    // on a file Godot opens.
+    if (tilts < expected) {
       return [
         problem(
           `its Curve3D has ${tilts} tilt values for ${expected} control points; Godot indexes ` +
@@ -173,14 +164,24 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
 const path3DValidationRule: LintRule = {
   meta: {
     name: 'valid-path3d',
-    description: 'Validates Path3D curve resource references and checks for PathFollow3D children',
+    description: 'Validates Path3D curve resource references',
     category: 'validation',
     applicableNodeTypes: ['Path3D'],
     emits: [
-      { ruleName: 'path3d-requires-curve', severity: 'warning' },
-      { ruleName: 'valid-path3d-resources', severity: 'error' },
-      { ruleName: 'path3d-unused', severity: 'warning' },
-      { ruleName: 'curve3d-loadable', severity: 'error' },
+      {
+        ruleName: 'path3d-requires-curve',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'path_3d.cpp:275',
+          unused: 'a PathFollow3D on this path returns before moving, so nothing follows it',
+        },
+      },
+      {
+        ruleName: 'curve3d-loadable',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'curve.cpp:2279' },
+      },
     ],
   },
   check: checkPath3D,
@@ -191,32 +192,3 @@ ruleRegistry.register(path3DValidationRule);
 
 // Export for testing
 export { path3DValidationRule };
-
-/**
- * Is any node in the scene pointing a `path_node` NodePath at this Path3D?
- *
- * Matched by the NodePath's FINAL SEGMENT rather than resolved properly: the
- * linter reads a single static scene, where an instanced sub-scene's internals
- * are opaque and a relative NodePath may leave the file entirely. A false
- * negative (staying quiet about a genuinely unused path) is much cheaper here
- * than warning about a correct scene.
- */
-function isReferencedByPathNode(scene: TscnScene, pathName: string): boolean {
-  let found = false;
-  const visit = (nodes: readonly TscnNode[]): void => {
-    for (const n of nodes) {
-      const raw = (n.properties as Record<string, unknown>).path_node;
-      if (typeof raw === 'string' && nodePathLeaf(raw) === pathName) found = true;
-      if (n.children.length > 0) visit(n.children);
-    }
-  };
-  visit(scene.nodes);
-  return found;
-}
-
-/** Last segment of a `NodePath("a/b/Target")` literal, or the raw string. */
-function nodePathLeaf(raw: string): string {
-  const inner = raw.match(/^NodePath\s*\(\s*"([^"]*)"\s*\)$/)?.[1] ?? raw;
-  const segments = inner.split('/').filter((s) => s.length > 0 && s !== '..' && s !== '.');
-  return segments[segments.length - 1] ?? '';
-}

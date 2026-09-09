@@ -1,0 +1,16 @@
+[gd_scene format=3]
+; ModifierBoneTarget3D: no visuals, exercises bone_name and bone.
+; Parented under a Skeleton3D, the only parent that resolves get_skeleton()
+; (skeleton_modifier_3d.cpp:51), so this is the shape Godot would write.
+; `influence` is absent on purpose: this class strips it to a bare
+; PROPERTY_USAGE_READ_ONLY (modifier_bone_target_3d.cpp:72-74), which carries no
+; STORAGE bit, so Godot never serialises it here.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyModifierBoneTarget3D" type="ModifierBoneTarget3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = "Head"
+bone = 0

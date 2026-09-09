@@ -51,8 +51,10 @@ describe('slice index closures are renderer-free', () => {
     const indexes = findRegisteringIndexes(here);
     expect(indexes.length).toBeGreaterThanOrEqual(30); // not vacuous
     const failures: string[] = [];
+    const sizes: number[] = [];
     for (const index of indexes) {
       const closure = walkImportClosure(index);
+      sizes.push(closure.files.size);
       expect(closure.unresolved).toEqual([]); // the walker must not go blind
       const bare = bareSpecifiers(closure).filter((s) => /^(three|react)($|\/)/.test(s));
       if (bare.length) failures.push(`${relative(srcRoot, index)}: ${bare.join(', ')}`);
@@ -60,6 +62,12 @@ describe('slice index closures are renderer-free', () => {
       if (tsx.length) failures.push(`${relative(srcRoot, index)}: reaches ${tsx[0]}`);
     }
     expect(failures).toEqual([]);
+    // A walk that follows nothing reports no bare specifier, no `.tsx` and no
+    // unresolved specifier either, so all three checks above pass over 39
+    // one-file closures. Floored on the LARGEST rather than on each: five
+    // slice indexes legitimately reach only two files, so a per-closure floor
+    // able to catch a collapse would redden on them. Largest is 31 today.
+    expect(Math.max(...sizes)).toBeGreaterThan(15);
   });
 });
 

@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyStaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="MyCollisionPolygon3D" type="CollisionPolygon3D" parent="MyStaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+polygon = PackedVector2Array(-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5)
+depth = 2.0
+margin = 0.1
+disabled = false
+debug_color = Color(0, 0.6, 0.7, 0.42)
+debug_fill = true

@@ -14,7 +14,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { build, parseSections } from './build-gallery.mjs';
+import { build } from './gallery/build.mjs';
+import { parseSections } from './gallery/sheetParsing.mjs';
 import { collectSheetFiles, parseFrontmatter, sheetLabel } from './sheetSources.mjs';
 
 describe('parseSections', () => {

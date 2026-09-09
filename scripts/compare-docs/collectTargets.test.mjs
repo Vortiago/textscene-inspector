@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { collectTargets } from './recapture.mjs';
+import { collectTargets } from './recapture/targets.mjs';
 import { collectSheetFiles, parseFrontmatter } from './sheetSources.mjs';
 
 describe('collectTargets', () => {

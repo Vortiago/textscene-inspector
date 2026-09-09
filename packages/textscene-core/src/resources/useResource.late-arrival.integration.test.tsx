@@ -78,7 +78,7 @@ const RED_PIXEL_PNG = new Uint8Array([
  * mounting a real <Canvas>.
  */
 function MeshStub(props: { path: string; resourcePath: string }) {
-  const result = useResource<THREE.Texture>(props.resourcePath, 'Texture2D');
+  const result = useResource<THREE.Texture>(props.resourcePath, 'texture');
   return (
     <div data-testid={`mesh-${props.path}`} data-status={result.status}>
       {result.status === 'loaded' ? 'has-texture' : `no-texture (${result.status})`}

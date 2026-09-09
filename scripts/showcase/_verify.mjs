@@ -1,5 +1,7 @@
+import { join } from 'node:path';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';
-import { selectScene } from './record.mjs';
+import { selectScene } from './record/helpers.mjs';
 
 const url = process.env.SHOWCASE_URL || 'http://localhost:4173';
 const label = process.argv[2] || 'Csg Box';
@@ -12,6 +14,6 @@ await page.waitForSelector('canvas', { timeout: 30000 });
 await page.waitForTimeout(800);
 await selectScene(page, label);
 await page.waitForTimeout(700); // extra auto-fit settle beyond selectScene's own wait
-await page.screenshot({ path: 'docs/showcase/_verify.png' });
+await page.screenshot({ path: join(REPO_ROOT, 'docs/showcase/_verify.png') });
 await browser.close();
 console.log(`verify screenshot saved for "${label}"`);

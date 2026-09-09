@@ -47,6 +47,11 @@ export interface ResourceSliceRegistration {
   /** Whether the provider must fetch bytes (not text) for this slice's files. */
   binaryBytes?: boolean;
   /**
+   * Whether a cached value is shared scene-graph state that each consumer must
+   * clone (an `Object3D` has one parent). Read by `useResource` per bus.
+   */
+  clonePerConsumer?: boolean;
+  /**
    * Which processor slot serves this slice's claims. Null for the types the
    * loader never serves (ViewportTexture resolves by NodePath, not by file).
    */
@@ -91,5 +96,8 @@ export const resourceSliceRegistry = {
   /** The routing answer `busTypeFor` used to guess: null means unroutable. */
   busTypeFor: (typeName: string): ResourceBusType | null =>
     byTypeName.get(typeName)?.busType ?? null,
+  /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
+  clonesPerConsumer: (busType: ResourceBusType): boolean =>
+    all.some((r) => r.busType === busType && r.clonePerConsumer === true),
   all: (): readonly ResourceSliceRegistration[] => all,
 };

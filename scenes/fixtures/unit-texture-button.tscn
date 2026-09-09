@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_normal"]
+size = Vector2(64, 24)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_pressed"]
+size = Vector2(64, 24)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_hover"]
+size = Vector2(64, 24)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_disabled"]
+size = Vector2(64, 24)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_focused"]
+size = Vector2(64, 24)
+
+[sub_resource type="BitMap" id="BitMap_1"]
+data = {
+"data": PackedByteArray(255, 255),
+"size": Vector2i(4, 4)
+}
+
+; TextureButton exercising every own member: flip_h, flip_v, ignore_texture_size, stretch_mode, texture_click_mask, texture_disabled, texture_focused, texture_hover, texture_normal, texture_pressed.
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyTextureButton" type="TextureButton" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 72.0
+offset_bottom = 32.0
+flip_h = true
+flip_v = true
+ignore_texture_size = true
+stretch_mode = 4
+texture_click_mask = SubResource("BitMap_1")
+texture_disabled = SubResource("PlaceholderTexture2D_disabled")
+texture_focused = SubResource("PlaceholderTexture2D_focused")
+texture_hover = SubResource("PlaceholderTexture2D_hover")
+texture_normal = SubResource("PlaceholderTexture2D_normal")
+texture_pressed = SubResource("PlaceholderTexture2D_pressed")

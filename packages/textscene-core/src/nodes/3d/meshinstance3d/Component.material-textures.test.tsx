@@ -6,7 +6,7 @@
  *
  * Assertions: 32–39 of `docs/archive/STRICT-VERIFICATION.md`.
  *
- * #47 (UV applies to ALL maps) lives in `Component.material-uv.test.tsx`.
+ * UV-applies-to-all-maps lives in `Component.material-uv.test.tsx`.
  */
 
 import { describe, expect, it } from 'vitest';

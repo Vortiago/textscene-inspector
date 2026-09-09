@@ -1,20 +1,39 @@
+/**
+ * GPUParticles3D draws no particles yet, but it is still a Node3D: its
+ * transform, its `visible` flag and its exclusion from the 2D canvas are all
+ * behaviour a bare `GenericNodeFallback` loses.
+ *
+ * That is why the slice registers the base component under
+ * `renderIntent: 'pending'` rather than registering nothing at all. Dropping
+ * the registration to make the tree badge honest took the three behaviours
+ * below with it, silently — no golden covers this type.
+ */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node3D } from '../../../base/node3d/Component';
 import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
 import type { TscnNode } from '../../../../parser/types';
+import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
+import { drawsInWorkspace } from '../../../../r3f/nodeWorkspaceVisibility';
+import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
+import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
+import '../../../../r3f/nodes/index';
 
 function makeNode(properties: Node3DProperties): TscnNode {
-  return { name: properties.name ?? 'GPUParticles3D', type: 'GPUParticles3D' as const, children: [], properties };
-}
-
-function gpuNode(): TscnNode {
-  return makeNode({ name: 'MyGPUParticles' });
+  return {
+    name: properties.name ?? 'GPUParticles3D',
+    type: 'GPUParticles3D' as const,
+    children: [],
+    properties,
+  };
 }
 
 describe('<Node3D> (gpuparticles3d component)', () => {
   it('renders a named group', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<Node3D node={gpuNode()} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <Node3D node={makeNode({ name: 'MyGPUParticles' })} />
+    );
     expect(renderer.scene.findByProps({ name: 'MyGPUParticles' })).toBeDefined();
   });
 
@@ -40,5 +59,32 @@ describe('<Node3D> (gpuparticles3d component)', () => {
     );
     const group = renderer.scene.findByProps({ name: 'HiddenParticles' });
     expect(group.instance.visible).toBe(false);
+  });
+
+  it('honours visible = false through the dispatcher, not just in isolation', async () => {
+    // The test above mounts Node3D directly, so it passes whatever the
+    // dispatcher decides to mount. This one asks the question that regressed:
+    // does dispatching the TYPE still reach a component that carries `visible`?
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <NodeDispatcher nodes={[makeNode({ name: 'HiddenEmitter', visible: false })]} />
+      </SelectionProvider>
+    );
+    const group = renderer.scene.findByProps({ name: 'HiddenEmitter' });
+    expect(group.instance.visible).toBe(false);
+  });
+});
+
+describe('GPUParticles3D render intent', () => {
+  it('reports the emitter as a gap, not as finished', () => {
+    // Godot draws particles here and we do not, so the tree badge must say so.
+    expect(rendersOwnVisual('GPUParticles3D')).toBe('not-implemented');
+  });
+
+  it('keeps the emitter and its 3D subtree out of the 2D world canvas', () => {
+    // An unregistered type answers `true` here, which drags a 3D subtree into
+    // the 2D canvas of any scene that carries one.
+    expect(drawsInWorkspace('GPUParticles3D', '2d')).toBe(false);
+    expect(drawsInWorkspace('GPUParticles3D', '3d')).toBe(true);
   });
 });

@@ -11,8 +11,10 @@ import {
 } from '../../../../linter/testing/testkit';
 // VehicleBody3D inherits RigidBody3D's validators through nodeBaseTypes, so the
 // sibling slice's registrations must be live for mass / center_of_mass_mode /
-// physics_material_override to be checked at all. Its RULE is imported too, so
-// the "no rigidbody3d-* diagnostics on a vehicle" case below is not vacuous.
+// physics_material_override to be checked at all. Its RULE is imported for the
+// same reason: `rigidBodyLinterRule` matches on descendsFrom, so it is what
+// supplies the shared body checks here, and without it they would be missing
+// rather than merely renamed.
 // The full linter barrel is deliberately NOT imported: it would also register
 // the CollisionShape3D rule, whose shapeless-shape error the testkit's canonical
 // accept-child would then trip on every case.
@@ -21,6 +23,7 @@ import '../rigidbody3d/linterParser';
 import '../rigidbody3d/linter';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 /** A VehicleWheel3D child, so the body is a complete vehicle by default. */
 const wheel = node('VehicleWheel3D', { wheel_radius: 0.25 }, { name: 'Wheel1', parent: '.' });
@@ -58,9 +61,21 @@ describe('VehicleBody3D Linter', () => {
       // vehiclebody3d-needs-wheels warning, which these format cases are not about.
       { nodeType: 'VehicleBody3D', acceptChild: collisionShape3d, acceptMode: 'no-error' },
       [
-        { prop: 'engine_force', valid: [0, 40.0, -25.5], invalid: [{ value: 'fast' }] },
+        // `ruleName` on these two rejections is load-bearing: the wheel-less
+        // scene's needs-wheels warning names engine_force and steering in its
+        // own message, so a rejection matched by property alone is satisfied by
+        // that advisory whether or not the validator fires.
+        {
+          prop: 'engine_force',
+          valid: [0, 40.0, -25.5],
+          invalid: [{ value: 'fast', ruleName: 'strict-parser' }],
+        },
         { prop: 'brake', valid: [0, 25.0], invalid: [{ value: 'hard' }] },
-        { prop: 'steering', valid: [0, -0.4, 0.4], invalid: [{ value: 'left' }] },
+        {
+          prop: 'steering',
+          valid: [0, -0.4, 0.4],
+          invalid: [{ value: 'left', ruleName: 'strict-parser' }],
+        },
         { prop: 'mass', valid: [40.0, 0.5], invalid: [{ value: '0' }, { value: '-1' }] },
         { prop: 'center_of_mass_mode', valid: [0, 1], invalid: [{ value: '5' }] },
         { prop: 'visible', valid: ['true', 'false'], invalid: [{ value: 'maybe' }] },
@@ -68,6 +83,10 @@ describe('VehicleBody3D Linter', () => {
     );
   });
 
+  // The shared body checks below are RigidBody3D's, reaching VehicleBody3D
+  // through `rigidBodyLinterRule`'s descendsFrom matcher. They are asserted here
+  // because a vehicle is where they most need to still fire; the rule name being
+  // `rigidbody3d-*` is the point, not an accident.
   describe('Semantic Validation (Resource References)', () => {
     it('errors when physics_material_override points at a missing resource', () => {
       expectDiagnostic(
@@ -80,7 +99,7 @@ describe('VehicleBody3D Linter', () => {
           wheel,
           collisionShape3d
         ),
-        { ruleName: 'valid-vehiclebody3d-resources', severity: 'error' }
+        { ruleName: 'dangling-resource-reference', severity: 'error' }
       );
     });
 
@@ -98,19 +117,19 @@ describe('VehicleBody3D Linter', () => {
         '',
         '[node name="CollisionShape3D" type="CollisionShape3D" parent="."]',
       ].join('\n');
-      expectNoDiagnostic(content, { ruleName: 'valid-vehiclebody3d-resources' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
     });
   });
 
   describe('Semantic Validation (Vehicle Structure)', () => {
-    it('warns when the body has no VehicleWheel3D children — it cannot drive', () => {
+    it('reports when the body has no VehicleWheel3D children — it cannot drive', () => {
       expectDiagnostic(
         scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), collisionShape3d),
-        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'warning' }
+        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'info' }
       );
     });
 
-    it('still warns when every wheel is nested under a container — Godot attaches only direct children', () => {
+    it('still reports when every wheel is nested under a container — Godot attaches only direct children', () => {
       // VehicleWheel3D registers itself via cast_to<VehicleBody3D>(get_parent()),
       // so a wheel under an intermediate node is never attached and the vehicle
       // has no working wheels at all.
@@ -121,7 +140,7 @@ describe('VehicleBody3D Linter', () => {
           node('VehicleWheel3D', {}, { name: 'Wheel1', parent: 'Axle' }),
           collisionShape3d
         ),
-        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'warning' }
+        { ruleName: 'vehiclebody3d-needs-wheels', severity: 'info' }
       );
     });
 
@@ -130,15 +149,19 @@ describe('VehicleBody3D Linter', () => {
       expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-needs-wheels' });
     });
 
-    it('warns when the body has no CollisionShape3D children', () => {
+    it('warns when the body has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('VehicleBody3D', {}, { name: 'Vehicle' }), wheel), {
-        ruleName: 'vehiclebody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
       });
     });
   });
 
-  describe('Semantic Validation (Scaled Transform)', () => {
+  describe('Semantic Validation (Scaled Transform, inherited from RigidBody3D)', () => {
+    // rigid_body_3d.cpp:667 is RigidBodyLinterRule's (rigidbody3d-scale-overridden-at-runtime),
+    // which reaches VehicleBody3D through the same `descendsFrom` matcher as
+    // the rest of the shared body set. No copy here (`vehiclebody3d-scaled-transform`),
+    // so a scaled VehicleBody3D is not warned about twice under two rule names.
     it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
       expectDiagnostic(
         scene(
@@ -150,7 +173,7 @@ describe('VehicleBody3D Linter', () => {
           wheel,
           collisionShape3d
         ),
-        { ruleName: 'vehiclebody3d-scaled-transform', severity: 'warning' }
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
     });
 
@@ -166,7 +189,52 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
+      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
+    });
+
+    // rigid_body_3d.cpp:665-667 measures `get_basis().get_scale()` and warns when
+    // any axis is further than 0.05 from 1. An infinite basis entry makes that
+    // column's length infinite, so Godot warns; a `nan` one makes every
+    // comparison false, so it does not.
+    it('warns on an infinite basis component, which Godot measures as scaled', () => {
+      const diagnostic = expectDiagnostic(
+        scene(
+          node(
+            'VehicleBody3D',
+            { transform: 'Transform3D(inf, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+            { name: 'Vehicle' }
+          ),
+          wheel,
+          collisionShape3d
+        ),
+        { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
+      );
+      // The measured column lengths, never NaN — the message is the only place
+      // the read shows, and `parseFloat` would make it unreachable entirely.
+      expect(diagnostic.message).toContain('(Infinity, 1, 1)');
+    });
+
+    // A `nan` component poisons the DETERMINANT, not just its own column, and
+    // `get_scale` multiplies every axis by that one shared sign
+    // (basis.cpp:321-322). `SIGN(nan)` is 0 — both of its comparisons are false
+    // (typedefs.h:124-126) — so the clean columns come back as exactly 0, and
+    // `abs(0 - 1) > 0.05` (rigid_body_3d.cpp:666) is true for them. Only the nan
+    // axis itself stays silent. An unsigned reading makes the whole node look
+    // quiet instead.
+    it('warns on a nan basis component, since the poisoned determinant zeroes the rest', () => {
+      const content = scene(
+        node(
+          'VehicleBody3D',
+          { transform: 'Transform3D(nan, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' },
+          { name: 'Vehicle' }
+        ),
+        wheel,
+        collisionShape3d
+      );
+      expectDiagnostic(content, {
+        ruleName: 'rigidbody3d-scale-overridden-at-runtime',
+        severity: 'warning',
+      });
     });
 
     it('stays quiet on an unscaled translated transform', () => {
@@ -179,31 +247,7 @@ describe('VehicleBody3D Linter', () => {
         wheel,
         collisionShape3d
       );
-      expectNoDiagnostic(content, { ruleName: 'vehiclebody3d-scaled-transform' });
-    });
-  });
-
-  describe('Semantic Validation (Collision Layers)', () => {
-    it('warns on a zero collision_layer', () => {
-      expectDiagnostic(
-        scene(
-          node('VehicleBody3D', { collision_layer: 0 }, { name: 'Vehicle' }),
-          wheel,
-          collisionShape3d
-        ),
-        { ruleName: 'vehiclebody3d-zero-collision-layer', severity: 'warning' }
-      );
-    });
-
-    it('warns on a zero collision_mask', () => {
-      expectDiagnostic(
-        scene(
-          node('VehicleBody3D', { collision_mask: 0 }, { name: 'Vehicle' }),
-          wheel,
-          collisionShape3d
-        ),
-        { ruleName: 'vehiclebody3d-zero-collision-mask', severity: 'warning' }
-      );
+      expectNoDiagnostic(content, { ruleName: 'rigidbody3d-scale-overridden-at-runtime' });
     });
   });
 
@@ -214,11 +258,21 @@ describe('VehicleBody3D Linter', () => {
       expect(diagnostics.some((d) => d.severity === 'warning')).toBe(true);
     });
 
-    it('does not apply RigidBody3D rules to a VehicleBody3D', () => {
-      // Both rules exist and both are 3D physics bodies; the vehicle must not
-      // collect rigidbody3d-* diagnostics as well as its own.
+    it('collects the inherited RigidBody3D checks, each reported exactly once', () => {
+      // VehicleBody3D IS a RigidBody3D, so the base rule must reach it. The
+      // vehicle rule therefore declares only what the base one does not, and
+      // this pins that split: no condition may arrive under both prefixes.
       const diagnostics = lint(scene(node('VehicleBody3D', {}, { name: 'Vehicle' })));
-      expect(diagnostics.filter((d) => d.ruleName?.startsWith('rigidbody3d'))).toHaveLength(0);
+      const names = diagnostics.map((d) => d.ruleName);
+
+      expect(names).toContain('collisionobject3d-needs-collision-shape');
+      expect(names).toContain('vehiclebody3d-needs-wheels');
+      expect(new Set(names).size).toBe(names.length);
+
+      const suffix = (n: string | undefined): string =>
+        (n ?? '').replace(/^(valid-)?(rigidbody3d|vehiclebody3d)-?/, '');
+      const suffixes = names.map(suffix);
+      expect(new Set(suffixes).size).toBe(suffixes.length);
     });
 
     it('tolerates scientific notation in the transform (edge)', () => {

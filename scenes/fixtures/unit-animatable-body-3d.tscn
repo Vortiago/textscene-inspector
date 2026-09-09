@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyAnimatableBody3D" type="AnimatableBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+sync_to_physics = false
+
+[node name="Shape" type="CollisionShape3D" parent="MyAnimatableBody3D"]
+shape = SubResource("Shape_1")

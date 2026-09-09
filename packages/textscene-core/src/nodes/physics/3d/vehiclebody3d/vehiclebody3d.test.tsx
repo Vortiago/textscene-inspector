@@ -8,22 +8,30 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import '../../../../r3f/nodes/index'; // side-effect: component registrations
 import '../../../../parser/TscnParser'; // side-effect: parser registrations
-import { isRenderableNodeType } from '../../../../r3f/nodeSupport';
+import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
+import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import type { TscnNode } from '../../../../parser/types';
 
 describe('VehicleBody3D registration', () => {
-  it('is reported as supported, so no "Not Implemented" badge', () => {
-    expect(isRenderableNodeType('VehicleBody3D')).toBe(true);
+  it('is reported as transform-only, so no "Not Implemented" badge', () => {
+    expect(rendersOwnVisual('VehicleBody3D')).toBe('transform-only');
   });
 
   it('reuses the Node3D transform parse', () => {
     const registration = nodeRegistry.getRegistration('VehicleBody3D');
     expect(registration).not.toBeNull();
     expect(registration!.parser).toBe(parseNode3D);
+  });
+
+  it('declares drawing nothing of its own, which is what joins it to the shared contract', () => {
+    // transformOnly.render-contract.test.tsx DERIVES its subjects from this
+    // flag, so dropping it would silently shrink that suite instead of failing
+    // it. Pinned here, where the registration lives.
+    expect(nodeComponentRegistry.isTransformOnly('VehicleBody3D')).toBe(true);
   });
 });
 

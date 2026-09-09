@@ -5,6 +5,10 @@
  * (NaN, out-of-range, wrong format). The asserts pin message text the
  * same way the per-node `linter.test.ts` files do (`toContain` rather
  * than `toBe`) so they survive small wording tweaks without breaking.
+ *
+ * This file holds the scalar combinators. The tuple/reference ones are
+ * `v.tuples.test.ts`, and the packed-array and string grammars are
+ * `v.packedArrays.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -77,6 +81,81 @@ describe('v.int', () => {
     const err = v.int('layers', { min: 1, max: 20 })('layers', '21', 1);
     expect(err!.code).toBe('INVALID_LAYERS_VALUE');
   });
+
+  // The tokenizer sets is_float on the `e` (variant_parser.cpp:446-448) and the
+  // FLOAT is truncated on assignment, so Godot stores 20000 here. `parseInt`
+  // stops at the `e` and reads 2, which clears every bound the property has.
+  it('reads exponent notation the way Godot stores it', () => {
+    const err = v.int('hframes', { min: 1, max: 16384 })('hframes', '2e4', 1);
+    expect(err).not.toBeNull();
+    expect(err!.message).toContain('20000');
+  });
+
+  // Same stop-at-the-first-non-digit accident in the other direction: Godot's
+  // parser cannot read this at all, and `parseInt` reads 8.
+  it('rejects a trailing-garbage value Godot cannot read', () => {
+    const err = v.int('hframes', { min: 1, max: 16384 })('hframes', '8abc', 1);
+    expect(err!.code).toBe('INVALID_HFRAMES_FORMAT');
+  });
+
+  // A float literal in an INT slot loads and truncates toward zero, so the
+  // stored value is not the written one — the truncation warning. It is judged
+  // AFTER the bounds, so `0.9` under a floor of 1 keeps its range error.
+  it('warns that a float literal is truncated toward zero', () => {
+    expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)?.severity).toBe('warning');
+    expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)?.severity).toBe('error');
+  });
+});
+
+describe('the int combinators agree on what Godot can read', () => {
+  // Both combinators READ all four spellings — the tokenizer resolves them for
+  // a bare slot too (variant_parser.cpp:701-707), so the file loads and neither
+  // may call it a FORMAT error. What they then report is a VALUE question,
+  // answered below.
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('neither calls %s a format error', (literal) => {
+    expect(v.int('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
+    expect(v.strictInt('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
+  });
+
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('both report %s as altered in an INT slot', (literal) => {
+    // Measured on 4.6.3 stable: `Vector2i(inf, 8)`, `(-inf, 8)`, `(inf_neg, 8)`
+    // and `(nan, 8)` all store `(-2147483648, 8)`. The narrowing happens at
+    // parse time, so an INT slot never holds the value the file states — an
+    // alteration, which is the error tier. A FLOAT slot stores it verbatim and
+    // stays silent, which is the case directly below.
+    expect(v.int('frame')('frame', literal, 1)?.severity).toBe('error');
+    expect(v.strictInt('frame')('frame', literal, 1)?.severity).toBe('error');
+    expect(v.float('weight')('weight', literal, 1)).toBeNull();
+  });
+
+  it('reports the alteration rather than a bound it cannot compare', () => {
+    // The message must not name the stored number: the C++ narrowing is UB and
+    // the practical result is architecture-specific, so only the ALTERATION is
+    // portable. `nan` and `inf` therefore read alike here, where before `inf`
+    // was wrongly treated as "above the ceiling" and `nan` as unanswerable.
+    for (const literal of ['inf', 'nan']) {
+      const reported = v.int('frame', { min: 0, max: 10 })('frame', literal, 1);
+      expect(reported?.severity).toBe('error');
+      expect(reported?.message).not.toContain('2147483648');
+      expect(reported?.message).toContain('integer slot');
+    }
+  });
+
+  it.each(['8abc', '', 'Infinity', '1.2.3'])('both refuse %o', (literal) => {
+    expect(v.int('frame')('frame', literal, 1)).not.toBeNull();
+    expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
+  });
+
+  // And on a fractional literal too: one engine behaviour, one verdict. Split
+  // between a FORMAT error on 56 slots and silence on 169, the same `.cpp` line
+  // judges Sprite2D and Sprite3D differently.
+  it('agree on a fractional literal, which the INT conversion truncates', () => {
+    for (const validator of [v.int('frame', { min: 0, max: 10 }), v.strictInt('frame', { min: 0, max: 10 })]) {
+      const diagnostic = validator('frame', '5.5', 1);
+      expect(diagnostic?.severity).toBe('warning');
+      expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');
+    }
+  });
 });
 
 describe('v.positiveInt', () => {
@@ -87,6 +166,12 @@ describe('v.positiveInt', () => {
   it('rejects 0 and negative', () => {
     expect(v.positiveInt('count')('count', '0', 1)).not.toBeNull();
     expect(v.positiveInt('count')('count', '-3', 1)).not.toBeNull();
+  });
+
+  // `5e-1` truncates to 0, which is the value this combinator refuses.
+  it('reads exponent notation the way Godot stores it', () => {
+    expect(v.positiveInt('count')('count', '5e-1', 1)).not.toBeNull();
+    expect(v.positiveInt('count')('count', '2e3', 1)).toBeNull();
   });
 });
 
@@ -113,6 +198,13 @@ describe('v.enumInt', () => {
     const err = v.enumInt('mode', 0, 1, labels)('mode', 'abc', 1);
     expect(err!.code).toBe('INVALID_MODE_FORMAT');
   });
+
+  it('reads exponent notation the way Godot stores it', () => {
+    const labels = { 0: 'A', 1: 'B' };
+    const err = v.enumInt('mode', 0, 1, labels)('mode', '1e2', 1);
+    expect(err).not.toBeNull();
+    expect(err!.message).toContain('100');
+  });
 });
 
 describe('v.boolean', () => {
@@ -128,92 +220,6 @@ describe('v.boolean', () => {
   });
 });
 
-describe('v.string', () => {
-  it('accepts non-empty', () => {
-    expect(v.string('audio_bus_name')('audio_bus_name', 'master', 1)).toBeNull();
-  });
-
-  it('rejects whitespace-only', () => {
-    expect(v.string('audio_bus_name')('audio_bus_name', '   ', 1)).not.toBeNull();
-  });
-});
-
-describe('v.vector2 / v.vector2i / v.vector3', () => {
-  it('vector2 accepts Vector2(x, y)', () => {
-    expect(v.vector2('size')('size', 'Vector2(1.5, -2)', 1)).toBeNull();
-  });
-
-  it('vector2 rejects malformed', () => {
-    const err = v.vector2('size')('size', 'Vector2(1)', 1);
-    expect(err!.message).toContain('Vector2');
-  });
-
-  it('vector2i accepts integer pair', () => {
-    expect(v.vector2i('grid')('grid', 'Vector2i(0, 0)', 1)).toBeNull();
-  });
-
-  it('vector2i with requireNonNegative rejects negatives', () => {
-    const err = v.vector2i('grid', true)('grid', 'Vector2i(-1, 0)', 1);
-    expect(err!.code).toBe('INVALID_GRID_VALUE');
-  });
-
-  it('vector3 accepts triplet', () => {
-    expect(v.vector3('position')('position', 'Vector3(0, 1, 2)', 1)).toBeNull();
-  });
-});
-
-describe('v.rect2 / v.transform3d', () => {
-  it('rect2 accepts 4-number rect', () => {
-    expect(v.rect2('region')('region', 'Rect2(0, 0, 100, 100)', 1)).toBeNull();
-  });
-
-  it('transform3d accepts 12-number transform', () => {
-    expect(
-      v.transform3d('transform')(
-        'transform',
-        'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
-        1
-      )
-    ).toBeNull();
-  });
-
-  it('transform3d rejects fewer numbers', () => {
-    const err = v.transform3d('transform')('transform', 'Transform3D(1, 0)', 1);
-    expect(err!.message).toContain('Transform3D');
-  });
-});
-
-describe('v.resourceReference / v.nodePath / v.color', () => {
-  it('resourceReference accepts SubResource and ExtResource', () => {
-    expect(v.resourceReference('mesh')('mesh', 'SubResource("box")', 1)).toBeNull();
-    expect(
-      v.resourceReference('mesh')('mesh', 'ExtResource("1_texture")', 1)
-    ).toBeNull();
-  });
-
-  it('resourceReference rejects raw paths', () => {
-    const err = v.resourceReference('mesh')('mesh', 'res://foo.tres', 1);
-    expect(err!.code).toBe('INVALID_MESH_REFERENCE');
-  });
-
-  it('nodePath accepts NodePath("…")', () => {
-    expect(
-      v.nodePath('skeleton')('skeleton', 'NodePath("../Armature")', 1)
-    ).toBeNull();
-  });
-
-  it('color accepts 4-component Color', () => {
-    expect(
-      v.color('light_color')('light_color', 'Color(1, 0.5, 0, 1)', 1)
-    ).toBeNull();
-  });
-
-  it('color rejects 3-component', () => {
-    const err = v.color('light_color')('light_color', 'Color(1, 0, 0)', 1);
-    expect(err!.message).toContain('4 numbers');
-  });
-});
-
 describe('column offset on every code path', () => {
   // Every per-property validator returns `column: key.length + 3`.
   // This matches the per-node tests' implicit expectation when they
@@ -221,98 +227,5 @@ describe('column offset on every code path', () => {
   it('puts the column at the value position (key.length + 3)', () => {
     const err = v.float('fov')('fov', 'oops', 1);
     expect(err!.column).toBe('fov'.length + 3);
-  });
-});
-
-describe('float-tuple validators accept the renderer float grammar (#190 drift fix)', () => {
-  // The canonical FLOAT_PATTERN_SOURCE (parser/vectors.ts) — the grammar the
-  // renderer parses — accepts leading-dot (.5), trailing-dot (5.), an explicit
-  // plus sign (+5) and scientific notation. The linter must not be STRICTER
-  // than the renderer, so these must all lint clean.
-  it('v.vector2 accepts .5 / 5. / +5 / scientific', () => {
-    expect(v.vector2('offset')('offset', 'Vector2(.5, 5.)', 1)).toBeNull();
-    expect(v.vector2('offset')('offset', 'Vector2(+1, -2.5e-2)', 1)).toBeNull();
-  });
-
-  it('v.vector3 accepts .5 / 5. / +5 / scientific', () => {
-    expect(v.vector3('position')('position', 'Vector3(.5, 5., +5)', 1)).toBeNull();
-    expect(v.vector3('position')('position', 'Vector3(1e3, -2.5e-2, +0)', 1)).toBeNull();
-  });
-
-  it('v.rect2 accepts the lenient grammar', () => {
-    expect(v.rect2('region')('region', 'Rect2(.5, 5., +1, 2)', 1)).toBeNull();
-  });
-
-  it('v.transform3d accepts the lenient grammar', () => {
-    expect(
-      v.transform3d('t')('t', 'Transform3D(1., .5, +0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 1)
-    ).toBeNull();
-  });
-
-  it('v.color accepts the lenient grammar', () => {
-    expect(v.color('albedo_color')('albedo_color', 'Color(.5, 1., +0, 1)', 1)).toBeNull();
-  });
-
-  it('v.aabb accepts the lenient grammar', () => {
-    expect(v.aabb('aabb')('aabb', 'AABB(.5, 5., +1, 1, 1, 1)', 1)).toBeNull();
-  });
-
-  it('v.quaternion accepts the lenient grammar', () => {
-    expect(v.quaternion('q')('q', 'Quaternion(.5, 5., +0, 1)', 1)).toBeNull();
-  });
-
-  it('v.transform2d accepts the lenient grammar', () => {
-    expect(v.transform2d('t')('t', 'Transform2D(1., .5, +0, 1, 0, 0)', 1)).toBeNull();
-  });
-
-  it('v.basis accepts the lenient grammar', () => {
-    expect(v.basis('b')('b', 'Basis(1., .5, +0, 0, 1, 0, 0, 0, 1)', 1)).toBeNull();
-  });
-
-  it('still rejects non-numeric and wrong-arity tuples', () => {
-    expect(v.vector3('position')('position', 'Vector3(a, b, c)', 1)).not.toBeNull();
-    expect(v.vector3('position')('position', 'Vector3(1, 2)', 1)).not.toBeNull();
-    expect(v.color('c')('c', 'Color(1, 1, 1)', 1)).not.toBeNull();
-  });
-
-  describe('v.packedVector2Array', () => {
-    const check = (value: string) => v.packedVector2Array('polygon')('polygon', value, 1);
-
-    it('accepts coordinate pairs', () => {
-      expect(check('PackedVector2Array(0, -1, 0, 0, 2, -1)')).toBeNull();
-    });
-
-    it('accepts an EMPTY array, which is how Godot serialises one', () => {
-      expect(check('PackedVector2Array()')).toBeNull();
-      expect(check('PackedVector2Array(  )')).toBeNull();
-    });
-
-    it('accepts the numeric forms the corpus actually writes', () => {
-      // Scientific notation appears verbatim in the vendored soft-body scenes.
-      expect(check('PackedVector2Array(4.37114e-08, -1.5, +0.5, .25)')).toBeNull();
-    });
-
-    it('rejects an ODD count as a value error, not a format error', () => {
-      // A truncated final vertex parses fine as a grammar but is not a polygon.
-      const err = check('PackedVector2Array(0, -1, 0)');
-      expect(err).not.toBeNull();
-      expect(err!.code).toBe('INVALID_POLYGON_VALUE');
-      expect(err!.message).toContain('pairs');
-    });
-
-    it('rejects a non-numeric entry as a format error', () => {
-      const err = check('PackedVector2Array(0, nope, 1, 2)');
-      expect(err).not.toBeNull();
-      expect(err!.code).toBe('INVALID_POLYGON_FORMAT');
-    });
-
-    it('rejects the wrong wrapper', () => {
-      expect(check('PackedVector3Array(0, 0, 0)')).not.toBeNull();
-      expect(check('[0, 0, 1, 1]')).not.toBeNull();
-    });
-
-    it('rejects a trailing comma rather than reading it as an empty coordinate', () => {
-      expect(check('PackedVector2Array(0, 1,)')).not.toBeNull();
-    });
   });
 });

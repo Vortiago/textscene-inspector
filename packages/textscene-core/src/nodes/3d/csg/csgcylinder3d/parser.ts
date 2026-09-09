@@ -5,6 +5,7 @@ import type { CSGCylinder3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 // Godot's own defaults (class_csgcylinder3d): radius 0.5, height 2.0, sides 8,
 // cone false. An omitted property means Godot's value, so ours must match or a
@@ -29,7 +30,7 @@ export function parseCSGCylinder3D(
     radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGCylinder3D radius'),
     height: floatOr(properties.height, DEFAULTS.height, 'CSGCylinder3D height'),
     sides: intOr(properties.sides, DEFAULTS.sides, 'CSGCylinder3D sides'),
-    cone: properties.cone === undefined ? DEFAULTS.cone : properties.cone === 'true',
+    cone: properties.cone === undefined ? DEFAULTS.cone : boolSlotValue(properties.cone) === true,
     smoothFaces: boolOr(properties.smooth_faces, DEFAULTS.smoothFaces, 'CSGCylinder3D smooth_faces'),
     flipFaces: boolOr(properties.flip_faces, DEFAULTS.flipFaces, 'CSGCylinder3D flip_faces'),
   };

@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+; CCDIK3D under the Skeleton3D it modifies, which is the only placement where a
+; SkeletonModifier3D does anything. CCDIK3D binds no property of its own, so
+; every key here is an inherited one carrying a NON-default value: the defaults
+; Godot omits would exercise nothing. angular_delta_limit is stored in radians
+; while its hint is written in degrees, so 0.0872665 is 5 degrees.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyCCDIK3D" type="CCDIK3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+influence = 0.75
+mutable_bone_axes = false
+max_iterations = 20
+min_distance = 0.005
+angular_delta_limit = 0.0872665
+deterministic = true

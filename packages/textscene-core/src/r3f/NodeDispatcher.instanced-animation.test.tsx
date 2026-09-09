@@ -1,5 +1,5 @@
 /**
- * Acceptance for #114 + ADR-0012/ADR-0013: an AnimationPlayer INSIDE an
+ * Acceptance for ADR-0012/ADR-0013: an AnimationPlayer INSIDE an
  * instanced sub-scene binds the selection-driven Animation transport through
  * the COLLAPSED node path.
  *
@@ -56,9 +56,9 @@ function makeAnimationPlayerNode(): TscnNode {
       name: 'Animation',
       speed_scale: 1.0,
       playback_default_blend_time: 0.0,
-      playback_process_mode: AnimationProcessMode.IDLE,
-      method_call_mode: MethodCallMode.DEFERRED,
-      playback_active: true,
+      callback_mode_process: AnimationProcessMode.IDLE,
+      callback_mode_method: MethodCallMode.DEFERRED,
+      active: true,
       autoplay: '',
       current_animation: '',
       current_animation_length: 0.0,

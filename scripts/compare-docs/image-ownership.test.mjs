@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMPLEX_SCENES } from './capture-complex.mjs';
-import { partitionTargets } from './recapture.mjs';
+import { partitionTargets } from './recapture/targets.mjs';
 
 const COMPLEX_SLUGS = COMPLEX_SCENES.map((c) => c.slug);
 
@@ -67,7 +67,13 @@ describe('comparison image ownership', () => {
  */
 describe('every published image goes through the guarded writer', () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const WRITERS = ['recapture.mjs', 'capture.mjs', 'capture-complex.mjs'];
+  // The modules that actually hold the write, not the CLI entry points that
+  // delegate to them.
+  const WRITERS = [
+    'recapture/oursSide.mjs',
+    'capture/oursSide.mjs',
+    'capture-complex.mjs',
+  ];
 
   it.each(WRITERS)('%s writes captures through writeCaptureImage', (file) => {
     expect(readFileSync(join(here, file), 'utf8')).toContain('writeCaptureImage(');
@@ -86,7 +92,7 @@ describe('every published image goes through the guarded writer', () => {
    * SwiftShader process is the one that can die under load, so whichever scene
    * captures first absorbs the risk unless it is burned on a throwaway page.
    */
-  it.each([...WRITERS, 'capture-animation.mjs'])('%s warms up GL before capturing', (file) => {
+  it.each([...WRITERS, 'animation/previewFrames.mjs'])('%s warms up GL before capturing', (file) => {
     expect(readFileSync(join(here, file), 'utf8')).toContain('await warmUpGLContext(browser)');
   });
 });

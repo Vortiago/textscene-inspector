@@ -19,11 +19,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFile, rm } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isDivider, splitRow } from './markdownTable.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
   collectSheetFiles,
@@ -36,6 +38,7 @@ import {
 } from './sheetSources.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const NODES_ROOT = join(HERE, '../../packages/textscene-core/src/nodes');
 
 const KNOWN_KEYS = new Set([
   'type',
@@ -48,14 +51,28 @@ const KNOWN_KEYS = new Set([
   'group',
   'camera',
 ]);
-const STATUSES = new Set(['done', 'limitation', 'unimplemented', 'unreviewed']);
+const STATUSES = new Set(['done', 'limitation', 'unimplemented', 'unreviewed', 'linter-only']);
 const CATEGORIES = new Set(['3D', '2D', 'Resources', 'Complex Scenes', 'Other']);
+
+/**
+ * The hand-maintained index at docs/comparison/README.md, and the node count in
+ * the root README.
+ *
+ * Neither is generated and neither was guarded, so every wave appended five
+ * entries by hand and a missed one was invisible until somebody read the doc.
+ * Both stay hand-written on purpose: the index's per-node blurbs are richer
+ * than `renders_as:` and generating them would lose that. Only the SET of
+ * entries is asserted, never their prose.
+ */
+const COMPARISON_INDEX = join(HERE, '../../docs/comparison/README.md');
+const ROOT_README = join(HERE, '../../README.md');
 
 const sheets = await Promise.all(
   collectSheetFiles().map(async (file) => {
     const text = await readFile(file, 'utf8');
     const parsed = parseFrontmatter(text);
     return {
+      file,
       label: sheetLabel(file),
       meta: parsed?.meta ?? {},
       body: parsed?.body ?? '',
@@ -90,17 +107,19 @@ describe('comparison sheets', () => {
     expect(unknown.sort()).toEqual([]);
   });
 
-  it('hides no known frontmatter key behind a comment', () => {
-    // `# image: unit-foo` reads, to a human skimming the file, as an already-set
+  it('hides no known frontmatter key behind a comment, `image` aside', () => {
+    // A commented key reads, to a human skimming the file, as an already-set
     // value — but `parseFrontmatter`'s key regex cannot match past the `#`, so
-    // the key is silently absent from `meta` for every consumer (recapture has
-    // no target, build-gallery has no basename). A freshly scaffolded slice
-    // ships with the key OMITTED entirely, never commented out; this is the
-    // loud backstop for that convention slipping (a hand-edit, a stale scaffold,
-    // a copy-paste from an older sheet).
+    // it is silently absent from `meta` for every consumer.
+    //
+    // `image` is the one exception, and a deliberate convention rather than a
+    // slip: an un-captured sheet commits `# image: <basename>` to RESERVE the
+    // basename its capture will write, and the absent key is exactly what tells
+    // the gallery it has no pair yet. Every other key means something the
+    // moment it is written, so a commented one is a typo or a stale paste.
     const bad = sheets.flatMap((s) =>
       findCommentedFrontmatterKeys(s.text)
-        .filter((k) => KNOWN_KEYS.has(k))
+        .filter((k) => KNOWN_KEYS.has(k) && k !== 'image')
         .map((k) => `${s.label}: # ${k}`)
     );
     expect(bad.sort()).toEqual([]);
@@ -163,10 +182,10 @@ describe('comparison sheets', () => {
 
   it('renders the header pair of a sheet that ALSO has sections', async () => {
     // A sheet's own `image:` and its section markers are both sources, never
-    // either/or. The gallery used to resolve the header pair only when a sheet
-    // had no sections, so the first section silently swallowed the sheet's own
-    // comparison — on the whole-scene sheets that overview IS the subject. The
-    // loss was invisible: every other image on the page still rendered, and the
+    // either/or. Resolving the header pair only when a sheet has no sections
+    // lets the first section swallow the sheet's own comparison — and on the
+    // whole-scene sheets that overview IS the subject. The
+    // loss is invisible: every other image on the page still renders, and the
     // build stayed green because nothing was missing, only unreferenced.
     const sectionedWithHeader = sheets.filter(
       (s) => s.meta.image && parseCompareMarkers(s.body).length > 0
@@ -204,6 +223,44 @@ describe('comparison sheets', () => {
         problems.push(`${s.label}: lint block names ${begins[0][1]}, frontmatter says ${s.meta.type}`);
       }
     }
+    expect(problems.sort()).toEqual([]);
+  });
+
+  it('gives every table row the cell count its own header declares', () => {
+    // The one shape both other guards are blind to. `docs:lint-sections --check`
+    // re-runs the generator and diffs it against its own output, so a row the
+    // generator itself malformed reads as up to date; the gallery then splits it
+    // into six `<td>` against three `<th>`. Fourteen committed rows carried an
+    // unescaped `|` from a bit-mask `Accepts` string, printing a mask label
+    // where the severity belongs and dropping the last bits.
+    const problems = [];
+    let tables = 0;
+    for (const s of sheets) {
+      const lines = s.body.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].trim().startsWith('|')) continue;
+        const rows = [];
+        while (i < lines.length && lines[i].trim().startsWith('|')) rows.push(lines[i++]);
+        tables++;
+        const width = splitRow(rows[0]).length;
+        for (const row of rows) {
+          if (isDivider(row.trim())) continue;
+          const got = splitRow(row).length;
+          if (got !== width) problems.push(`${s.label}: ${got} cells in a ${width}-column table — ${row.trim()}`);
+        }
+      }
+    }
+    // Without a coverage floor the guard passes on a corpus whose tables it
+    // never found. DERIVED rather than a fixed count: a sheet holding a table
+    // row must yield at least one table to the sweep, so a corpus that shrinks
+    // moves both sides together while a sweep that stops matching moves only
+    // one. A fixed floor went stale the moment the sheets got shorter, and the
+    // fix for a stale floor is always to lower it, which is the guard dying.
+    const sheetsHoldingARow = sheets.filter((s) =>
+      s.body.split('\n').some((line) => line.trim().startsWith('|'))
+    ).length;
+    expect(tables).toBeGreaterThanOrEqual(sheetsHoldingARow);
+    expect(sheetsHoldingARow).toBeGreaterThan(sheets.length * 0.9);
     expect(problems.sort()).toEqual([]);
   });
 
@@ -286,5 +343,225 @@ describe('comparison sheets', () => {
       .filter((s) => /\]\([^)]*adr\/|\[ADR-\d{4}\]:/.test(s.body))
       .map((s) => s.label);
     expect(bad).toEqual([]);
+  });
+
+  /**
+   * A sheet's status is a claim about what the viewport does; the r3f
+   * registration is what the viewport actually does. Nothing keeps a hand-written
+   * claim honest, and broad node coverage means most sheets are written once and
+   * never looked at again — so the two are asserted against each other.
+   *
+   * `visual:` is deliberately NOT tied to this. The three say different things:
+   * `visual: false` means a plain capture has nothing worth comparing — also true
+   * of a Marker2D whose gizmo is selection-gated (ADR-0018) — while
+   * `renderIntent: 'transform-only'` means the node itself draws nothing. They
+   * come apart in both directions: a gizmo node draws but has no useful pair, and
+   * a RigidBody3D draws nothing yet its sheet's capture usefully shows the child
+   * mesh it carries. Only the registry claim is machine-checkable, so only it is
+   * asserted; whether to show an image pair stays an editorial call per sheet.
+   */
+  /**
+   * The type names an `index.r3f.ts` actually registers.
+   *
+   * Inline `typeName: 'Foo'` literals, plus the one shape that has none: a
+   * family whose members differ only by name registers in a LOOP over a
+   * constant its React-free sibling `index.ts` exports. Resolving that constant
+   * is what makes the answer by-type instead of by-position.
+   */
+  function typesRegisteredBy(r3fFile) {
+    const source = readFileSync(r3fFile, 'utf8');
+    const inline = [...source.matchAll(/typeName:\s*'([A-Za-z0-9_]+)'/g)].map((m) => m[1]);
+    if (inline.length > 0) return inline;
+    const looped = /import \{\s*([A-Z0-9_]+)\s*\} from '\.\/index'/.exec(source);
+    if (!looped) return [];
+    const sibling = readFileSync(join(dirname(r3fFile), 'index.ts'), 'utf8');
+    const literal = new RegExp(`${looped[1]}\\s*=\\s*\\[([^\\]]*)\\]`).exec(sibling);
+    return literal ? [...literal[1].matchAll(/'([A-Za-z0-9_]+)'/g)].map((m) => m[1]) : [];
+  }
+
+  /**
+   * The registration that speaks for `type`, or null — its file and its intent.
+   *
+   * The walk to an ancestor is for the family loops: `physics/2d/index.r3f.ts`
+   * registers StaticBody2D, RigidBody2D and CharacterBody2D, none of which owns
+   * an `index.r3f.ts`, so reading only the slice directory called all three
+   * unregistered and they could never claim `linter-only` however honestly they
+   * drew nothing.
+   *
+   * But the ancestor must NAME the type. Crediting the nearest one positionally
+   * meant any future slice under a family directory inherited an intent from a
+   * file that had never heard of it — and in the direction that stays quiet, a
+   * DRAWING slice under `physics/2d/` could claim `linter-only` and pass.
+   */
+  function registrationFor(sliceDir, type) {
+    for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
+      const candidate = join(dir, 'index.r3f.ts');
+      if (!existsSync(candidate)) continue;
+      if (!typesRegisteredBy(candidate).includes(type)) continue;
+      const source = readFileSync(candidate, 'utf8');
+      const intent = /renderIntent:\s*'([a-z-]+)'/.exec(source);
+      return { file: candidate, intent: intent ? intent[1] : 'draws' };
+    }
+    return null;
+  }
+
+  describe('status agrees with the render registration', () => {
+    /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
+    // Filter first, then read once per slice: the two directional assertions
+    // below would otherwise re-stat and re-read the same index.r3f.ts files.
+    const sliceSheets = sheets
+      .filter((s) => s.file.includes(`${sep}nodes${sep}`))
+      .map((s) => {
+        const registration = registrationFor(dirname(s.file), s.meta.type);
+        return {
+          ...s,
+          hasComponent: registration !== null,
+          transformOnly: registration?.intent === 'transform-only',
+          // A `pending` registration mounts a base component while the node's
+          // own visual is still missing, so it is a gap that happens to be
+          // registered — presence of a file cannot settle the status alone.
+          pending: registration?.intent === 'pending',
+        };
+      });
+
+    it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
+      expect(sliceSheets.length).toBeGreaterThan(50);
+    });
+
+    it('credits a family loop only to the types it registers', () => {
+      // The one loop registration in the tree, and the case the by-type lookup
+      // exists for: three slices own no `index.r3f.ts` and must still resolve,
+      // while a fourth slice in the same directory must not inherit it.
+      const family = join(NODES_ROOT, 'physics/2d/index.r3f.ts');
+      expect(typesRegisteredBy(family).sort()).toEqual([
+        'CharacterBody2D',
+        'RigidBody2D',
+        'StaticBody2D',
+      ]);
+      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'RigidBody2D')?.file).toBe(
+        family
+      );
+      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'ProgressBar')).toBeNull();
+    });
+
+    it('gives every slice-backed sheet a status, so none sits outside the checks', () => {
+      // `KNOWN_KEYS` permits `status:`; nothing required it. Every assertion in
+      // this block filters on a status literal, so a sheet without one matched
+      // none of them — 59 of 251 sheets, a quarter of the gallery, exempt from
+      // the guard this block describes as bidirectional. The count floor above
+      // could not notice: it is built from the path filter alone.
+      //
+      // Resource sheets are in THIS check and not the four below. They have no
+      // render registration to agree with — a Resource slice registers through
+      // `registerResourceSlice` (ADR-0031), and `nodeComponentRegistry` is not
+      // its table — but the status is still a claim, and it was unasserted
+      // twice over: absent, and outside the `nodes` path filter.
+      const slice = (s) =>
+        s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
+      // A SECTIONED sheet is exempt, and forbidden the key outright by the
+      // guard above: its badge rolls up from its sections' own `status=`, so a
+      // frontmatter one would be a second, unread source of truth.
+      const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
+      expect(backed.length).toBeGreaterThan(230);
+      expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
+    });
+
+    it('backs every `linter-only` sheet with a transform-only registration', () => {
+      const bad = sliceSheets
+        .filter((s) => s.meta.status === 'linter-only' && !s.transformOnly)
+        .map((s) => `${s.label}: claims linter-only but its index.r3f.ts is not transform-only`);
+      expect(bad).toEqual([]);
+    });
+
+    it('never calls a transform-only registration `unimplemented`', () => {
+      // The reverse direction, deliberately narrow. Requiring `linter-only` here
+      // was too strong: `renderIntent: 'transform-only'` is a claim about the
+      // node's OWN geometry, while the sheet status is a claim about what there
+      // is to compare against Godot — and a driver has no geometry yet a very
+      // visible effect. AnimationPlayer is the case that proved it: its gallery
+      // entry is a GIF of two synchronised spinning cubes, sitting under a badge
+      // that said "draws nothing, complete". RemoteTransform3D is the same shape.
+      //
+      // What stays forbidden is the contradiction: a node cannot be registered,
+      // deliberate and invisible AND be an unimplemented gap.
+      const bad = sliceSheets
+        .filter((s) => s.transformOnly && s.meta.status === 'unimplemented')
+        .map((s) => `${s.label}: registers transform-only but claims to be unimplemented`);
+      expect(bad).toEqual([]);
+    });
+
+    it('leaves every `unimplemented` sheet without a component that claims to draw', () => {
+      // Not "without a component": a gap may still register its base to keep
+      // `visible` and the workspace split working, and says so with
+      // `renderIntent: 'pending'`. What stays forbidden is a sheet calling the
+      // node a gap while its registration claims a finished visual.
+      const bad = sliceSheets
+        .filter((s) => s.meta.status === 'unimplemented' && s.hasComponent && !s.pending)
+        .map((s) => `${s.label}: claims unimplemented but registers a drawing component`);
+      expect(bad).toEqual([]);
+    });
+
+    it('never lets a `pending` registration claim a finished status', () => {
+      const bad = sliceSheets
+        .filter((s) => s.pending && s.meta.status !== 'unimplemented')
+        .map((s) => `${s.label}: registers pending but its status is '${s.meta.status}'`);
+      expect(bad).toEqual([]);
+    });
+  });
+});
+
+describe('hand-maintained docs stay in step with the sheets', () => {
+  /** Every `- [Name](…comparison.md)` link target in the index, by node type. */
+  const indexed = new Set(
+    [...readFileSync(COMPARISON_INDEX, 'utf8').matchAll(/^- \[([^\]]+)\]\([^)]*comparison\.md\)/gm)].map(
+      (m) => m[1]
+    )
+  );
+
+  it('lists every slice sheet, so a new node cannot be absent from the index', () => {
+    // Loose showcase sheets live outside src/nodes and describe scenes, not
+    // types; the index covers node types only.
+    const sliceTypes = sheets
+      .filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type)
+      .map((s) => s.meta.type);
+    const missing = [...new Set(sliceTypes)].filter((t) => !indexed.has(t)).sort();
+    expect(missing).toEqual([]);
+  });
+
+  it('lists no node the sheets no longer define', () => {
+    const known = new Set(sheets.map((s) => s.meta.type).filter(Boolean));
+    const stale = [...indexed].filter((t) => !known.has(t)).sort();
+    expect(stale).toEqual([]);
+  });
+
+  it("states a node count the ledger agrees with, held to the README's own phrasing", () => {
+    // Two phrasings, two standards, because the README's claim changed in kind
+    // once coverage completed. While it read "Around N node types", N was
+    // allowed to trail the truth by the rounding "Around" implies — but not by a
+    // whole wave. It claims ALL of them, so hedging is gone and so is the
+    // tolerance: an exact claim that is off by one is simply false.
+    const readme = readFileSync(ROOT_README, 'utf8');
+    const sheetTypes = new Set(
+      sheets.filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type).map((s) => s.meta.type)
+    );
+
+    const exact = /All (\d+) of Godot [\d.]+'s instantiable node types/.exec(readme);
+    if (exact) {
+      // Count against ClassDB, not against the sheet directory. `AreaLight3D`
+      // has a slice and a sheet but is absent from 4.6.3's ClassDB entirely, so
+      // it is not one of the types this sentence is counting — including it
+      // would make an exact claim off by one for a node Godot does not have.
+      const catalogued = new Set(
+        JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => n.name)
+      );
+      const instantiable = [...sheetTypes].filter((t) => catalogued.has(t));
+      expect(Number(exact[1])).toBe(instantiable.length);
+      return;
+    }
+
+    const actual = sheetTypes.size;
+
+    const around = Number(/Around (\d+) node types/.exec(readme)?.[1] ?? NaN);
+    expect(Math.abs(around - actual)).toBeLessThanOrEqual(5);
   });
 });

@@ -1,0 +1,47 @@
+[gd_scene format=3]
+; LookAtModifier3D: no visuals, exercises the whole ADD_PROPERTY set that can
+; co-exist in one serialised node.
+; Angles are RADIANS even though the inspector hints degrees: 3.1415927 is the
+; 180-degree ceiling, 6.2831855 the 360-degree one.
+; Forward +Z (axis Z) against primary rotation Y, the non-parallel pairing this
+; slice's linter.ts requires.
+; symmetry_limitation is false, so the positive/negative family is what Godot
+; serialises here; _validate_property drops primary_limit_angle and
+; secondary_limit_angle in this branch, and those two are covered in
+; linterParser.test.ts instead.
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -3)
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyLookAtModifier3D" type="LookAtModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+influence = 0.75
+target_node = NodePath("../../Target")
+bone_name = "Head"
+bone = 3
+forward_axis = 4
+primary_rotation_axis = 1
+use_secondary_rotation = true
+relative = false
+origin_from = 1
+origin_bone_name = "Neck"
+origin_bone = 2
+origin_offset = Vector3(0, 0.05, 0)
+origin_safe_margin = 0.1
+duration = 0.25
+transition_type = 7
+ease_type = 2
+use_angle_limitation = true
+symmetry_limitation = false
+primary_positive_limit_angle = 1.0471976
+primary_positive_damp_threshold = 0.8
+primary_negative_limit_angle = 3.1415927
+primary_negative_damp_threshold = 0.5
+secondary_positive_limit_angle = 0.7853982
+secondary_positive_damp_threshold = 1.0
+secondary_negative_limit_angle = 0.7853982
+secondary_negative_damp_threshold = 0.0

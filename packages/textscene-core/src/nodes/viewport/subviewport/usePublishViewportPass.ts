@@ -21,7 +21,7 @@ import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { useRegisterViewportPass } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import {
-  useRegisterViewportTexture,
+  usePublishViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
@@ -47,14 +47,15 @@ export function usePublishViewportPass({
   height,
   render,
 }: PublishViewportPassOptions): void {
-  const registerViewportTexture = useRegisterViewportTexture();
   const registerViewportPass = useRegisterViewportPass();
 
   const entry = useMemo<ViewportTextureEntry>(
     () => ({ texture, size: { x: width, y: height } }),
     [texture, width, height]
   );
-  useEffect(() => registerViewportTexture(path, entry), [registerViewportTexture, path, entry]);
+  // Through the shared publisher, which also registers the `%UniqueName`
+  // spelling a `viewport_path` may name this viewport by (node.cpp:1930-1938).
+  usePublishViewportTexture(node, path, entry);
 
   const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
   useEffect(

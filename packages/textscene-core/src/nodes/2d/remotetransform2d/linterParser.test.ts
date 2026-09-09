@@ -33,7 +33,8 @@ describe('RemoteTransform2D strict validators', () => {
   });
 
   it('rejects a malformed remote_path', () => {
-    expectDiagnostic(scene(node('RemoteTransform2D', { remote_path: '"../../Camera2D"' })), {
+    // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+    expectDiagnostic(scene(node('RemoteTransform2D', { remote_path: '&"../../Camera2D"' })), {
       prop: 'remote_path',
       severity: 'error',
     });

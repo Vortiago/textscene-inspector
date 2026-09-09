@@ -1,0 +1,32 @@
+[gd_scene format=3]
+; CopyTransformModifier3D: no visuals, exercises setting_count and both settings/<i>/ reference forms.
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyCopyTransformModifier3D" type="CopyTransformModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+active = true
+influence = 0.75
+setting_count = 2
+settings/0/amount = 1.0
+settings/0/apply_bone_name = "Hand.L"
+settings/0/reference_type = 0
+settings/0/reference_bone_name = "Hand.R"
+settings/0/copy = 7
+settings/0/axes = 7
+settings/0/invert = 0
+settings/0/relative = true
+settings/0/additive = false
+settings/1/amount = 0.5
+settings/1/apply_bone_name = "Head"
+settings/1/reference_type = 1
+settings/1/reference_node = NodePath("../../Target")
+settings/1/copy = 2
+settings/1/axes = 5
+settings/1/invert = 2
+settings/1/additive = true

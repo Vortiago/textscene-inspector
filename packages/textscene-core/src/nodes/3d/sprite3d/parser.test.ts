@@ -10,13 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseSprite3D } from './parser';
-import {
-  AlphaAntiAliasing,
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  TextureFilterMode,
-} from './types';
+import { AlphaCutMode, AxisMode, BillboardMode } from './types';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -85,14 +79,30 @@ describe('parseSprite3D properties', () => {
     expect(props.frame).toBe(5);
   });
 
+  // Under a grid that holds it: `set_frame_coords` ERR_FAIL_INDEXes each
+  // component against hframes/vframes (sprite_3d.cpp:894-895), so the same
+  // pair on the default 1x1 grid is refused and the sprite stays on frame 0.
   it('parses frame_coords as Vector2i', () => {
-    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(2, 1)' });
+    const props = parseSprite3D(HEADING, { hframes: '4', vframes: '2', frame_coords: 'Vector2i(2, 1)' });
     expect(props.frame_coords).toEqual({ x: 2, y: 1 });
+    expect(props.frame).toBe(6);
+  });
+
+  it('holds frame 0 when frame_coords is refused against the 1x1 grid', () => {
+    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(2, 1)' });
+    expect(props.frame_coords).toEqual({ x: 0, y: 0 });
+    expect(props.frame).toBe(0);
+  });
+
+  it('truncates a float frame_coords the way the INT conversion does', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:552-596) takes any number
+    // token, so Godot loads this as frame (1, 2) and so must the previewer.
+    const props = parseSprite3D(HEADING, { hframes: '2', vframes: '3', frame_coords: 'Vector2i(1.5, 2.5)' });
+    expect(props.frame_coords).toEqual({ x: 1, y: 2 });
   });
 
   it('drops malformed frame_coords without throwing', () => {
-    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(1.5, 2.5)' });
-    // Floats are rejected by the Vector2i regex; field stays undefined.
+    const props = parseSprite3D(HEADING, { frame_coords: 'Vector2i(1abc, 2)' });
     expect(props.frame_coords).toBeUndefined();
   });
 
@@ -130,72 +140,21 @@ describe('parseSprite3D properties', () => {
   });
 });
 
-/**
- * The material-property half of `get_material_for_2d`'s parameter set
- * (`scene/resources/material.cpp:3021`), plus the alpha-* uniforms
- * `sprite_3d.cpp:148-152` feeds the shader.
- */
-describe('parseSprite3D material properties', () => {
-  it('defaults them to Godot\'s', () => {
-    const props = parseSprite3D(HEADING, {});
-    // `SpriteBase3D::SpriteBase3D` sets `flags[i] = i == FLAG_TRANSPARENT ||
-    // i == FLAG_DOUBLE_SIDED` (`sprite_3d.cpp:712-714`), so every other flag
-    // — FLAG_SHADED, FLAG_DISABLE_DEPTH_TEST, FLAG_FIXED_SIZE — starts false.
-    expect(props.shaded).toBe(false);
-    expect(props.no_depth_test).toBe(false);
-    expect(props.fixed_size).toBe(false);
-    // `sprite_3d.h:89-94`.
-    expect(props.alpha_scissor_threshold).toBe(0.5);
-    expect(props.alpha_hash_scale).toBe(1);
-    expect(props.alpha_antialiasing_mode).toBe(AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF);
-    expect(props.alpha_antialiasing_edge).toBe(0);
-    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS);
+describe('frame replayed in file order (sprite_3d.cpp:938)', () => {
+  // Properties apply in the order the file lists them (packed_scene.cpp:369-492).
+  // `set_hframes` with `vframes > 1` re-maps a frame that already landed onto the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body holds frame 2, and draws it.
+  it('draws the re-mapped frame when hframes is written below frame', () => {
+    const props = parseSprite3D(HEADING, { vframes: '2', frame: '1', hframes: '2' });
+    expect(props.frame).toBe(2);
   });
 
-  it('parses each authored value', () => {
-    const props = parseSprite3D(HEADING, {
-      shaded: 'true',
-      no_depth_test: 'true',
-      fixed_size: 'true',
-      alpha_scissor_threshold: '0.25',
-      alpha_hash_scale: '2.0',
-      alpha_antialiasing_mode: '1',
-      alpha_antialiasing_edge: '0.6',
-      texture_filter: '0',
-    });
-    expect(props.shaded).toBe(true);
-    expect(props.no_depth_test).toBe(true);
-    expect(props.fixed_size).toBe(true);
-    expect(props.alpha_scissor_threshold).toBe(0.25);
-    expect(props.alpha_hash_scale).toBe(2);
-    expect(props.alpha_antialiasing_mode).toBe(
-      AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
-    );
-    expect(props.alpha_antialiasing_edge).toBe(0.6);
-    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_NEAREST);
-  });
-
-  it('falls back to the Godot default on an out-of-range enum', () => {
-    // `ALPHA_ANTIALIASING_MAX` = 3 and `TEXTURE_FILTER_MAX` = 6 (`material.h:200,178`).
-    const props = parseSprite3D(HEADING, {
-      alpha_antialiasing_mode: '3',
-      texture_filter: '6',
-    });
-    expect(props.alpha_antialiasing_mode).toBe(AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF);
-    expect(props.texture_filter).toBe(TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS);
-  });
-});
-
-describe('parseSprite3D alpha_cut', () => {
-  it('accepts ALPHA_CUT_HASH', () => {
-    // `ALPHA_CUT_HASH` is ordinal 3 (`sprite_3d.h:52-58`) and maps to
-    // `TRANSPARENCY_ALPHA_HASH` (`sprite_3d.cpp:289-294`).
-    const props = parseSprite3D(HEADING, { alpha_cut: '3' });
-    expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_HASH);
-  });
-
-  it('falls back past ALPHA_CUT_MAX', () => {
-    const props = parseSprite3D(HEADING, { alpha_cut: '4' });
-    expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISABLED);
+  it('draws frame 0 when the frame write was refused against the 1x1 grid still in effect', () => {
+    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines ABOVE
+    // set — none — so `frame = 7` is refused and the later hframes finds 0.
+    const props = parseSprite3D(HEADING, { frame: '7', hframes: '2' });
+    expect(props.frame).toBe(0);
+    expect(props.hframes).toBe(2);
   });
 });

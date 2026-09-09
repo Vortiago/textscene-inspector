@@ -36,6 +36,10 @@ curve = SubResource("Curve3D_test")
 
 const POINTS = '"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -4)';
 
+function bareSix(): string {
+  return '"points": [Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, -4)]';
+}
+
 function curveErrors(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error' && d.ruleName === 'curve3d-loadable');
 }
@@ -81,8 +85,39 @@ describe('curve3d-loadable', () => {
     expect(errors[0]!.message).toContain('1 tilt values for 2 control points');
   });
 
+  // `_set_data`'s fill loop runs `for (i < points.size())` and only ever reads
+  // `rt[i]` inside it (curve.cpp:2294-2298), so surplus tilts are never touched.
+  it('accepts MORE tilts than control points, which Godot simply ignores', () => {
+    expect(
+      curveErrors(lint(`${POINTS},\n"tilts": PackedFloat32Array(0, 0, 0, 0)`))
+    ).toEqual([]);
+  });
+
+  // `curve.cpp:2282` `PackedVector3Array rp = p_data["points"]` is a Variant
+  // conversion, and `can_convert_strict` lists ARRAY as a source for every
+  // PACKED_* type (variant.cpp:449-478) — so the bare and typed array
+  // spellings load with the same point count. `:2291` reads "tilts" the same way.
+  it('accepts the bare-array and typed-array spellings of points and tilts', () => {
+    const bare =
+      '"points": [Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, -4)]';
+    expect(curveErrors(lint(`${bare},\n"tilts": [0, 0]`))).toEqual([]);
+    const typed =
+      '"points": Array[Vector3]([Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, -4)])';
+    expect(curveErrors(lint(`${typed},\n"tilts": Array[float]([0, 0])`))).toEqual([]);
+  });
+
+  it('still counts the control points of a bare-array spelling', () => {
+    const short = '"points": [Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(1, 0, 0)]';
+    expect(curveErrors(lint(`${short},\n"tilts": [0, 0]`)).map((d) => d.message)).toEqual([
+      expect.stringContaining('holds 12 floats'),
+    ]);
+    expect(curveErrors(lint(`${bareSix()},\n"tilts": [0]`)).map((d) => d.message)).toEqual([
+      expect.stringContaining('1 tilt values for 2 control points'),
+    ]);
+  });
+
   it('stays quiet when the curve reference points at no resource in this scene', () => {
-    // A missing resource is already reported by valid-path3d-resources; this rule must
+    // A missing resource is already reported by dangling-resource-reference; this rule must
     // not pile a second, less useful error on top of it.
     const content = `[gd_scene format=3]
 

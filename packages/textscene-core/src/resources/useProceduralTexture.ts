@@ -31,7 +31,14 @@ import {
  *
  * Which slices those are is `resolveProceduralTexture`'s business, not this
  * hook's: this is the React half (memo + pin), and the walk is shared with the
- * React-free material paths so a new slice reaches every consumer at once.
+ * React-free material paths.
+ *
+ * "Shared" reaches a consumer only if the consumer comes through here or
+ * through `useTexture2D`. `resolveTexture2DSource` answers with a PATH, and a
+ * procedural texture has none, so four consumers that called the resolver
+ * directly — the Decal albedo, the panorama sky, the Button icon and the
+ * TextureRect image — resolved such a reference to nothing and drew untextured.
+ * A Texture2D slot is read through the hook for that reason.
  */
 export function useProceduralTexture(
   ref: string | undefined,

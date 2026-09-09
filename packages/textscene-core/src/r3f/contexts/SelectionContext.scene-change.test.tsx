@@ -6,7 +6,7 @@
  * hidden set) AND empty the `nodeObjectMap` ref-map. Without this,
  * a fixture swap leaves stale selection + a `SelectionHighlight`
  * BoxHelper targeting an unmounted Object3D at the previous fixture's
- * coordinates. See docs ux re-verify on 9aed84b, observation #1.
+ * coordinates.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';

@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_1"]
+size = Vector2(16, 16)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyTabBar" type="TabBar" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 308.0
+offset_bottom = 40.0
+current_tab = 1
+tab_alignment = 1
+clip_tabs = false
+close_with_middle_mouse = false
+tab_close_display_policy = 2
+max_tab_width = 120
+scrolling_enabled = false
+drag_to_rearrange_enabled = true
+switch_on_drag_hover = false
+tabs_rearrange_group = 0
+scroll_to_selected = false
+select_with_rmb = true
+deselect_enabled = true
+tab_count = 3
+tab_0/title = "Inventory"
+tab_0/tooltip = "Everything you carry"
+tab_0/icon = SubResource("PlaceholderTexture2D_1")
+tab_1/title = "Map"
+tab_2/title = "Journal"
+tab_2/disabled = true

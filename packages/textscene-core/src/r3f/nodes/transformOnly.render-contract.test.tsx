@@ -18,24 +18,31 @@ import type { TscnNode } from '../../parser/types';
 import type { Transform3D } from '../../nodes/base/node3d/types';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
+import { nodeComponentRegistry } from '../NodeComponentRegistry';
+import { Node3D } from '../../nodes/base/node3d/Component';
 
 // Side-effect import: registers every node component (same barrel the apps use).
 import './index';
 
-// The transform-only set from r3f/nodes/index.ts ("Non-visual nodes" block).
-// Path3D / PathFollow3D were removed by ADR-0018 (they now have their own
-// components with selection-gated gizmos + curve following). VehicleWheel3D is
-// absent for the same reason — it draws a selection-gated wheel gizmo; its
-// sibling VehicleBody3D has no gizmo and belongs here.
-const TRANSFORM_ONLY_3D_TYPES = [
-  'StaticBody3D',
-  'RigidBody3D',
-  'VehicleBody3D',
-  'CharacterBody3D',
-  'Area3D',
-  'Skeleton3D',
-  'GPUParticles3D',
-] as const;
+/**
+ * DERIVED, not listed: `renderIntent: 'transform-only'` is the registration's
+ * own claim, so a new non-visual slice joins this contract the moment it
+ * registers rather than when someone remembers to extend a literal. A
+ * hand-written list had already fallen six types behind the registry.
+ *
+ * Narrowed to the types mounting the shared Node3D component, because the
+ * assertions below are about a Transform3D: the Node-backed ones (Timer,
+ * AudioStreamPlayer, AnimationPlayer) and the Node2D-backed ones carry no
+ * Transform3D and are covered by their own slices' tests. Path3D / PathFollow3D
+ * are absent because ADR-0018 gave them selection-gated gizmo components.
+ */
+const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
+  .getAllTypeNames()
+  .filter(
+    (type) =>
+      nodeComponentRegistry.isTransformOnly(type) && nodeComponentRegistry.get(type) === Node3D
+  )
+  .sort();
 
 // Identity basis translated to (2, 3, 4).
 const translated: Transform3D = {
@@ -63,6 +70,14 @@ async function renderScene(nodes: TscnNode[]) {
 }
 
 describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
+  it('derives a non-trivial set, so an empty filter cannot vacuously pass', () => {
+    expect(TRANSFORM_ONLY_3D_TYPES.length).toBeGreaterThanOrEqual(10);
+    // A physics body is the safe anchor: ADR-0005 settled it and Godot draws
+    // nothing for one at runtime, so it cannot be re-classified out from under
+    // this assertion the way a contested type could.
+    expect(TRANSFORM_ONLY_3D_TYPES).toContain('StaticBody3D');
+  });
+
   it.each([...TRANSFORM_ONLY_3D_TYPES])(
     '%s renders a bare transform Group with zero own geometry',
     async (type) => {

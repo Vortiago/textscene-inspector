@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_1"]
+
+[sub_resource type="Shortcut" id="Shortcut_1"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyBaseButton" type="BaseButton" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+disabled = false
+toggle_mode = true
+button_pressed = false
+action_mode = 1
+button_mask = 1
+keep_pressed_outside = false
+button_group = SubResource("ButtonGroup_1")
+shortcut = SubResource("Shortcut_1")
+shortcut_feedback = true
+shortcut_in_tooltip = true

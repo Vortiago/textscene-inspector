@@ -75,7 +75,6 @@ surface_material_override/0 = SubResource("StandardMaterial3D_marker")
 [node name="Follower" type="PathFollow3D" parent="TrackPath"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.4)
 progress = 3.0528675
-progress_ratio = 0.5
 
 [node name="FollowerBox" type="MeshInstance3D" parent="TrackPath/Follower"]
 mesh = SubResource("BoxMesh_follower")

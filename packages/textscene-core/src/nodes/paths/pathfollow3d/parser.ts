@@ -1,13 +1,20 @@
 /**
- * PathFollow3D parser — the Node3D surface plus the follow controls. `progress`
- * and `progress_ratio` stay optional (undefined when unset) so the component can
- * tell which one the scene authored; rotation_mode defaults to Godot's XYZ.
+ * PathFollow3D parser — the Node3D surface plus the follow controls.
+ * rotation_mode defaults to Godot's XYZ.
+ *
+ * `progress` and `progress_ratio` stay optional (undefined when unset) so an
+ * unparseable value is reported rather than silently read as 0. Nothing
+ * positions from `progress_ratio` — the component samples `progress` alone,
+ * because Godot binds the parent Path3D on enter-tree, after a node's
+ * properties are applied — but it is still read so a bad value is diagnosed
+ * instead of skipped for being unusable anyway.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import { RotationMode, type PathFollow3DProperties } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 export function parsePathFollow3D(
   heading: ParsedHeading,
@@ -22,7 +29,7 @@ export function parsePathFollow3D(
     cubic_interp: boolOr(properties.cubic_interp, true),
     loop: boolOr(properties.loop, true),
     tilt_enabled: boolOr(properties.tilt_enabled, true),
-    use_model_front: properties.use_model_front === 'true',
+    use_model_front: boolSlotValue(properties.use_model_front) === true,
   };
   if (properties.progress !== undefined) result.progress = floatOr(properties.progress, 0);
   if (properties.progress_ratio !== undefined) {

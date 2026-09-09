@@ -188,7 +188,10 @@ export class FileEventBus {
     // cleared path(s) and lets a follow-up request start a FRESH fetch
     // instead of deduping into the doomed flight — the same rule for the
     // per-path (hot-reload/provideFile) and full (corpus switch) forms.
-    if (path) {
+    // `!== undefined`, not truthiness: `''` is a real key here (a sub-resource
+    // address with an empty file half), and treating it as "no path given"
+    // clears the whole byte cache and strands every unrelated fetch.
+    if (path !== undefined) {
       this.cache.delete(path);
       this.inflight.delete(path);
       logger.info(`[FileEventBus] Cleared cache: ${path}`);

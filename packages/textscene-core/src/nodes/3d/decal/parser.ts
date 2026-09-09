@@ -56,7 +56,7 @@ export function parseDecal(
     // NaN-producing `pow` base later.
     upper_fade: Math.max(0, floatOr(properties.upper_fade, 0.3)),
     lower_fade: Math.max(0, floatOr(properties.lower_fade, 0.3)),
-    cull_mask: intOr(properties.cull_mask, DECAL_DEFAULT_CULL_MASK),
+    cull_mask: intOr(properties.cull_mask, DECAL_DEFAULT_CULL_MASK, 'Decal.cull_mask', 'uint32'),
     distance_fade_enabled: boolOr(properties.distance_fade_enabled, false),
     distance_fade_begin: floatOr(properties.distance_fade_begin, 40),
     distance_fade_length: floatOr(properties.distance_fade_length, 10),

@@ -20,13 +20,19 @@ import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/
 import type { FontCacheReader } from '../../fonts/font/types';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
+import { indexedKeyRegex } from '../../../godot/index.js';
 
+// A theme key is `/`-separated and Godot reads it with `split("/", true, 2)`
+// (`theme.cpp`), so its segments go through the shared segment grammar rather
+// than a spelling of their own — `indexedKeyGrammar.guard.test.ts` holds the
+// whole package to that. `to_int` names the SEGMENT class; a theme's segments
+// are names rather than indices, and nothing here reads one as a number.
 /** `<Type>/fonts/<name>`. */
-const FONT_ENTRY = /^([^/]+)\/fonts\/([^/]+)$/;
+const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)$`, 'to_int');
 /** `<Type>/font_sizes/<name>`. */
-const FONT_SIZE_ENTRY = /^([^/]+)\/font_sizes\/([^/]+)$/;
+const FONT_SIZE_ENTRY = indexedKeyRegex(String.raw`^(#)/font_sizes/(#)$`, 'to_int');
 /** `<variationType>/base_type`. */
-const BASE_TYPE_ENTRY = /^([^/]+)\/base_type$/;
+const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
 
 /**
  * Walk one Theme resource body's properties, resolving every Font-valued one

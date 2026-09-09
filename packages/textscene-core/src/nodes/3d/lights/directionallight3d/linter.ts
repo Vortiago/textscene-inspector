@@ -8,94 +8,48 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { rangeAdvisories } from '../../../../linter/rangeAdvisory.js';
-import { lightEnergyArms } from '../shared/linterChecks.js';
-
-// Thresholds for warnings
-const LARGE_SHADOW_MAX_DISTANCE = 10000;
+import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /**
  * Validate DirectionalLight3D semantic rules
+ *
+ * No range advisory here: `directional_shadow_max_distance`'s and
+ * `light_energy`'s hint floors are validator bounds (light_3d.cpp:584, :389).
+ * What remains is cross-field consistency (shadow mode vs. which split fields
+ * the inspector still shows).
  */
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  // Only run for DirectionalLight3D nodes
-  if (node.type !== 'DirectionalLight3D') {
-    return [];
-  }
+  const diagnostics: Diagnostic[] = [];
 
-  // Range advisories: light energy + very large shadow distance.
-  const diagnostics = rangeAdvisories(node, {
-    light_energy: lightEnergyArms('directionallight3d'),
-    directional_shadow_max_distance: [
-      {
-        over: LARGE_SHADOW_MAX_DISTANCE,
-        ruleName: 'directionallight3d-large-shadow-distance',
-        message: (maxDistance) =>
-          `Shadow max distance is very large (${maxDistance}). Values above ${LARGE_SHADOW_MAX_DISTANCE} can impact performance significantly.`,
-      },
-    ],
-  });
-
-  // The remaining checks are cross-field consistency (shadow split ordering + mode),
-  // not range advisories — they stay hand-written.
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Validate shadow split ordering (split_1 < split_2 < split_3)
-  const split1 = rawProps.directional_shadow_split_1 ? parseFloat(rawProps.directional_shadow_split_1) : undefined;
-  const split2 = rawProps.directional_shadow_split_2 ? parseFloat(rawProps.directional_shadow_split_2) : undefined;
-  const split3 = rawProps.directional_shadow_split_3 ? parseFloat(rawProps.directional_shadow_split_3) : undefined;
+  // Presence, not value: the rule asks which splits the file authors, and the
+  // numbers themselves are never compared.
+  const split1 = Boolean(rawProps.directional_shadow_split_1);
+  const split2 = Boolean(rawProps.directional_shadow_split_2);
+  const split3 = Boolean(rawProps.directional_shadow_split_3);
 
-  if (split1 !== undefined && split2 !== undefined && !isNaN(split1) && !isNaN(split2)) {
-    if (split1 >= split2) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_1 (${split1}) must be less than split_2 (${split2})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
+  // Godot raises no warning for this — it just hides the field. Grounded in
+  // `_validate_property` (light_3d.cpp:542-551): under `ORTHOGONAL`,
+  // `directional_shadow_split_1`/`directional_shadow_blend_splits` get
+  // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
+  // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
+  // inspector simply stops showing the now-inapplicable split fields.
+  // `ruleInt('')` is already null, so an absent key needs no third state.
+  const shadowMode = ruleInt(rawProps.directional_shadow_mode ?? '');
 
-  if (split2 !== undefined && split3 !== undefined && !isNaN(split2) && !isNaN(split3)) {
-    if (split2 >= split3) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_2 (${split2}) must be less than split_3 (${split3})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
-
-  if (split1 !== undefined && split3 !== undefined && !isNaN(split1) && !isNaN(split3)) {
-    if (split1 >= split3) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Shadow split ordering invalid: split_1 (${split1}) must be less than split_3 (${split3})`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'directionallight3d-shadow-split-order',
-      });
-    }
-  }
-
-  // Validate shadow_mode consistency with splits
-  const shadowMode = rawProps.directional_shadow_mode ? parseInt(rawProps.directional_shadow_mode, 10) : undefined;
-
-  if (shadowMode !== undefined && !isNaN(shadowMode)) {
+  if (shadowMode !== null) {
     // ORTHOGONAL mode (0) doesn't use splits
     if (shadowMode === 0) {
-      if (split1 !== undefined || split2 !== undefined || split3 !== undefined) {
+      if (split1 || split2 || split3) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Shadow mode is ORTHOGONAL (0), but split properties are set. Splits are ignored in ORTHOGONAL mode.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -106,9 +60,9 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 
     // PARALLEL_2_SPLITS mode (1) only uses split_1
     if (shadowMode === 1) {
-      if (split2 !== undefined || split3 !== undefined) {
+      if (split2 || split3) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           message: `Shadow mode is PARALLEL_2_SPLITS (1), but split_2 or split_3 are set. Only split_1 is used in 2-split mode.`,
           nodeName: node.name,
           nodeType: node.type,
@@ -130,15 +84,19 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 const directionalLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-directionallight3d-properties',
-    description: 'Validates DirectionalLight3D property values, shadow split ordering, and mode consistency',
+    description: 'Validates DirectionalLight3D property values and shadow mode consistency',
     category: 'validation',
     applicableNodeTypes: ['DirectionalLight3D'],
     emits: [
-      // via lightEnergyArms('directionallight3d')
-      { ruleName: 'directionallight3d-extreme-energy', severity: 'warning' },
-      { ruleName: 'directionallight3d-large-shadow-distance', severity: 'warning' },
-      { ruleName: 'directionallight3d-shadow-split-order', severity: 'error' },
-      { ruleName: 'directionallight3d-unused-splits', severity: 'warning' },
+      {
+        ruleName: 'directionallight3d-unused-splits',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'renderer_scene_cull.cpp:2175',
+          unused: 'the cascade loop reads only the first split offsets for the chosen mode',
+        },
+      },
     ],
   },
   check: checkDirectionalLight3D,

@@ -4,7 +4,8 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { intOr, parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
+import { intOr, parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
@@ -69,11 +70,9 @@ export function parseControl(
 
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
   if (heading.attributes.instance) result.instance = heading.attributes.instance;
-  if (heading.attributes.index) {
-    const idx = parseInt(heading.attributes.index, 10);
-    if (!Number.isNaN(idx)) result.index = idx;
-  }
-  if (properties.visible !== undefined) result.visible = properties.visible !== 'false';
+  const index = parseHeadingIndex(heading.attributes.index);
+  if (index !== undefined) result.index = index;
+  if (properties.visible !== undefined) result.visible = boolSlotValue(properties.visible) !== false;
 
   result.layoutMode = parseOptionalFloat(properties.layout_mode);
   result.anchorsPreset = parseOptionalFloat(properties.anchors_preset);
@@ -107,7 +106,7 @@ export function parseControl(
   // defaults). Never left undefined — an unset Control has these values in
   // real Godot too, so the parsed type should not lie about it.
   result.zIndex = intOr(properties.z_index, 0);
-  result.showBehindParent = properties.show_behind_parent === 'true';
+  result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
   result.textureFilter = intOr(
     properties.texture_filter,

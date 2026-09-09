@@ -12,7 +12,7 @@ import type { ViewportMode } from './contexts/ViewportModeContext';
 // rule works regardless of which canvas (if any) imported them first.
 import './nodes/index.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
+import { is2DUIType } from './controls/has2DUIContent.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 
 /**
@@ -24,7 +24,7 @@ import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBounda
  * (`useLiveSceneNodes(isCanvasItemNode)`) rather than a static walk.
  */
 export function isCanvasItemNode(node: TscnNode): boolean {
-  return TWO_D_UI_TYPES.has(node.type) || nodeComponentRegistry.isCanvasItem(node.type);
+  return is2DUIType(node.type) || nodeComponentRegistry.isCanvasItem(node.type);
 }
 
 /**

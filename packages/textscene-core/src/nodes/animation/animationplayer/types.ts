@@ -7,16 +7,16 @@
  * sub-resources rather than simple scalars.
  */
 
-import type { Node3DProperties } from '../../base/node3d/types';
+import type { NodeProperties } from '../../node/types';
 
-/** Godot AnimationPlayer::AnimationProcessCallback */
+/** Godot AnimationMixer::AnimationCallbackModeProcess (animation_mixer.h:54) */
 export enum AnimationProcessMode {
   PHYSICS = 0,
   IDLE = 1,
   MANUAL = 2,
 }
 
-/** Godot AnimationPlayer::AnimationMethodCallMode */
+/** Godot AnimationMixer::AnimationCallbackModeMethod (animation_mixer.h:60) */
 export enum MethodCallMode {
   DEFERRED = 0,
   IMMEDIATE = 1,
@@ -36,21 +36,21 @@ export interface AnimationLibraryRef {
   subResourceId: string;
 }
 
-export interface AnimationPlayerProperties extends Node3DProperties {
+export interface AnimationPlayerProperties extends NodeProperties {
   /** Playback speed multiplier (default: 1.0). */
   speed_scale: number;
 
   /** Default blend time between animations in seconds (default: 0.0). */
   playback_default_blend_time: number;
 
-  /** Process callback mode (default: IDLE). */
-  playback_process_mode: AnimationProcessMode;
+  /** Process callback mode (default: IDLE); deprecated key `playback_process_mode`. */
+  callback_mode_process: AnimationProcessMode;
 
-  /** Method call mode (default: DEFERRED). */
-  method_call_mode: MethodCallMode;
+  /** Method call mode (default: DEFERRED); deprecated key `method_call_mode`. */
+  callback_mode_method: MethodCallMode;
 
-  /** Whether the player is currently active (default: true). */
-  playback_active: boolean;
+  /** Whether the mixer applies anything (default: true); deprecated key `playback_active`. */
+  active: boolean;
 
   /** Name of the animation to play automatically on ready (empty = none). */
   autoplay: string;

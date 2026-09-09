@@ -5,66 +5,44 @@
  * is kept because ruleCoverage derives the rule name from it, and because the
  * sibling body rules (rigidBody/staticBody/characterBody) are all built this way.
  *
- * Format validation lives in the slice's linterParser.ts; this rule handles the
- * checks that need full scene context — the resource reference, and the two
- * structural facts that make a VehicleBody3D a vehicle rather than a rigid body:
- * it needs wheels, and it needs a collision shape.
+ * Format validation lives in the slice's linterParser.ts. This rule declares
+ * ONLY what a VehicleBody3D adds to a RigidBody3D. `rigidBodyLinterRule` matches
+ * on `descendsFrom`, so it already reaches this type and supplies the whole
+ * shared body set (the physics_material_override reference, the collision-shape
+ * requirement, the mass/damping bounds, the zero layer/mask advisories, and —
+ * as of rigid_body_3d.cpp:667's per-axis scale check — the runtime-overridden-
+ * scale warning too) exactly once; repeating any of them here would report one
+ * condition under two rule names. The no-shape warning reaches every
+ * CollisionObject3D through collisionObjectLinterRule the same way.
+ *
+ * The scale check (`vehiclebody3d-scaled-transform`) is NOT repeated here:
+ * `rigidBodyLinterRule` implements rigid_body_3d.cpp:667 and reaches
+ * VehicleBody3D through the same `descendsFrom` matcher as everything else in
+ * this list, so the
+ * copy here retired rather than double-warning every scaled VehicleBody3D.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { checkResourceExists } from '../resourceChecker.js';
-import { hasDescendantOfType } from './hasDescendantOfType.js';
-import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-
-const TRANSFORM3D_REGEX = makeFloatTupleRegex('Transform3D', 12);
-
-/** Godot's own tolerance in RigidBody3D::get_configuration_warnings(). */
-const SCALE_EPSILON = 0.05;
+import { isTypeOpaque } from '../parentType.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 
 /**
- * Basis column lengths of a `Transform3D(...)` literal, or null if unparsable.
- * The first nine numbers are the basis ROWS (utils/transform.ts documents the
- * convention); column length is the scale along each axis.
+ * `_update_friction` returns before any suspension or traction impulse is
+ * computed when `wheels` is empty. Not dimension-keyed: Godot declares no
+ * VehicleBody2D, so this factory serves one family.
  */
-function basisScale(raw: string): [number, number, number] | null {
-  const match = TRANSFORM3D_REGEX.exec(raw);
-  if (!match) return null;
-  const n = match.slice(1, 10).map((v) => parseFloat(v ?? ''));
-  if (n.some((v) => Number.isNaN(v))) return null;
-  const col = (i: number): number => Math.hypot(n[i]!, n[i + 3]!, n[i + 6]!);
-  return [col(0), col(1), col(2)];
-}
+const NO_WHEELS_AT = 'vehicle_body_3d.cpp:731';
 
 export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const wheelType = `VehicleWheel${dim}`;
   const prefix = `vehiclebody${dimSuffix(dim)}`;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const { node, scene } = context;
-
-    if (node.type !== type) {
-      return diagnostics;
-    }
-
-    const rawProps = node.properties as unknown as Record<string, string>;
-
-    if (rawProps.physics_material_override) {
-      if (!checkResourceExists(scene, rawProps.physics_material_override)) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Physics material resource not found: ${rawProps.physics_material_override}`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `valid-${prefix}-resources`,
-        });
-      }
-    }
+    const { node } = context;
 
     // A vehicle body is driven entirely by its wheels: with none, engine_force
     // and steering do nothing at all and the body behaves as a plain RigidBody3D.
@@ -74,9 +52,16 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
     // wheel under an intermediate node is never attached. Counting descendants
     // here would call a vehicle whose wheels are all nested "fine" when Godot
     // gives it no working wheels at all.
-    if (!node.children.some((child) => child.type === wheelType)) {
+    // `isTypeOpaque` declines on a child whose class this file cannot read — an
+    // instanced sub-scene rooted at a wheel, or a GDExtension one — the way
+    // every other child-presence check in the linter does. `descendsFrom`
+    // because `VehicleWheel3D` registers itself from its own inherited
+    // `_notification`, so a subclass attaches too.
+    if (
+      !node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))
+    ) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `${type} '${node.name}' has no direct ${wheelType} children. A vehicle body is driven by its wheels, and Godot only attaches wheels that are its immediate children; without them engine_force and steering have no effect.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -84,51 +69,25 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    if (!hasDescendantOfType(node, shapeType)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has no ${shapeType} children. Vehicle bodies need collision shapes for their chassis to collide with the world.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-collision-shape`,
-      });
-    }
-
-    // Godot warns on this for every RigidBody3D, and VehicleBody3D inherits it:
-    // "Scale changes to RigidBody3D will be overridden by the physics engine when
-    // running. Please change the size in children collision shapes instead."
-    if (rawProps.transform !== undefined) {
-      const scale = basisScale(rawProps.transform);
-      if (scale !== null && scale.some((s) => Math.abs(s - 1) > SCALE_EPSILON)) {
-        const shown = scale.map((s) => Number(s.toFixed(3))).join(', ');
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has a scaled transform (${shown}). The physics engine overrides scale on a body at runtime; size the child ${shapeType} instead.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-scaled-transform`,
-        });
-      }
-    }
-
-    pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
-
     return diagnostics;
   }
 
   return {
     meta: {
       name: `valid-${prefix}`,
-      description: `Validates ${type} resource references, wheels, collision shapes, and collision layers`,
+      description: `Validates that a ${type} has wheels`,
       category: 'validation',
       applicableNodeTypes: [type],
       emits: [
-        { ruleName: `valid-${prefix}-resources`, severity: 'error' },
-        { ruleName: `${prefix}-needs-wheels`, severity: 'warning' },
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-scaled-transform`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
+        {
+          ruleName: `${prefix}-needs-wheels`,
+          severity: 'info',
+          grounding: {
+            kind: 'engine-inert',
+            at: NO_WHEELS_AT,
+            unused: 'with no wheels the suspension and traction pass returns before applying anything',
+          },
+        },
       ],
     },
     check,

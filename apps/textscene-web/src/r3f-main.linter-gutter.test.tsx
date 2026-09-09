@@ -2,13 +2,12 @@
  * Source pane slice 3: linter surfaced (gutter dots + hover
  * popover + toggle problem-count badge).
  *
- * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx`
- * WebGL-mock pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents`
- * stubbed, everything else real). The known-bad fixture below omits every
- * node identifier (`type=`/`index=`/`instance=`) on line 3 — a strict-parser
- * structural check (`StrictTscnParser`) that fires unconditionally,
- * regardless of which per-node-type validators/rules happen to be
- * registered, so the test doesn't depend on the linter's node-type coverage.
+ * Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx` WebGL-mock
+ * pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents` stubbed,
+ * everything else real). The known-bad fixture below omits `name=` on line 3 —
+ * a `StrictTscnParser` structural check that fires unconditionally, regardless
+ * of which per-node-type validators/rules happen to be registered, so the test
+ * doesn't depend on the linter's node-type coverage.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -25,14 +24,17 @@ const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="StubRoot" type="Node3D"]
 `;
 
-// Line 3 (1-indexed) is missing a type=/index=/instance= attribute — a
-// deterministic strict-parser error regardless of registered node rules.
+// Line 3 (1-indexed) is missing a `name=` attribute — a deterministic
+// strict-parser ERROR regardless of registered node rules. Not a typeless
+// heading: that one is legal (Godot assumes it was instantiated,
+// resource_format_text.cpp:218-221) and only warns, so it cannot drive an
+// error-severity gutter dot.
 const BAD_LINE_TSCN = `[gd_scene load_steps=1 format=3]
 
-[node name="Root"]
+[node type="Node3D"]
 `;
 const BAD_LINE = 3;
-const EXPECTED_MESSAGE = 'Node heading must have "type=", "index=", or "instance=" attribute';
+const EXPECTED_MESSAGE = 'Node heading must have "name=" attribute';
 
 const CLEAN_TSCN = `[gd_scene load_steps=1 format=3]
 

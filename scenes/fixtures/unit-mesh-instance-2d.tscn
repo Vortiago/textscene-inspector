@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+; Exercises the two properties MeshInstance2D declares of its own
+; (mesh, texture — see linterParser.ts) plus a Node2D property inherited
+; through the base-walk, to prove the chain still resolves.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(32, 32)
+
+[node name="Root" type="Node2D"]
+
+[node name="MyMeshInstance2D" type="MeshInstance2D" parent="."]
+position = Vector2(10, 20)
+mesh = SubResource("QuadMesh_1")
+texture = ExtResource("1_marker")

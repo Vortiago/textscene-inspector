@@ -7,25 +7,40 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
+import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
+
+/**
+ * The SpriteFrames reference in effect when Godot replays `key`.
+ *
+ * `SceneState::instantiate` applies a node's stored properties in the order the
+ * FILE lists them (packed_scene.cpp:369-492), and `set_frame_and_progress`
+ * returns without writing while the slot is null
+ * (animated_sprite_2d.cpp:360-362). A `sprite_frames` line written BELOW `frame`
+ * therefore leaves the frame where an absent one does. Measured on 4.6.3:
+ * `frame = 2` above `sprite_frames` loads as frame 0, below it as frame 2.
+ */
+function spriteFramesWhenApplied(
+  rawProps: Record<string, string>,
+  key: string
+): string | undefined {
+  const written = Object.keys(rawProps);
+  const slotAt = written.indexOf('sprite_frames');
+  if (slotAt === -1 || slotAt > written.indexOf(key)) return undefined;
+  return heldResource(rawProps.sprite_frames);
+}
 
 /**
  * Validate AnimatedSprite2D semantic rules (resource references, animation properties, etc.)
  */
 function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  // Only run for AnimatedSprite2D nodes
-  if (node.type !== 'AnimatedSprite2D') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // Check if sprite_frames resource exists (REQUIRED - AnimatedSprite2D is useless without SpriteFrames)
-  if (!rawProps.sprite_frames) {
+  if (heldResource(rawProps.sprite_frames) === undefined) {
     diagnostics.push({
       severity: 'warning',
       message: `AnimatedSprite2D requires a 'sprite_frames' property. AnimatedSprite2D cannot play animations without a SpriteFrames resource.`,
@@ -33,86 +48,52 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
       nodeType: node.type,
       ruleName: 'animatedsprite2d-requires-spriteframes',
     });
-  } else {
-    // sprite_frames is specified - check if it exists
-    const resourceExists = checkResourceExists(scene, rawProps.sprite_frames);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `SpriteFrames resource not found: ${rawProps.sprite_frames}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-animatedsprite2d-resources',
-      });
-    }
   }
 
-  // Warn if autoplay is set but sprite_frames is not set
-  if (rawProps.autoplay && !rawProps.sprite_frames) {
+  // `set_animation` clears the name and ERR_FAIL_MSGs whenever the SpriteFrames
+  // slot is null at that line (animated_sprite_2d.cpp:562-565), which a slot
+  // written BELOW `animation` is too. Measured on 4.6.3: `animation = &"walk"`
+  // above `sprite_frames` loads as the default name, below it as "walk".
+  //
+  // Not `"default"`, though: `set_animation` opens with
+  // `if (animation == p_name) { return; }` (animated_sprite_2d.cpp:554-556) and the
+  // field already holds that name (animated_sprite_2d.h:43), so the clearing branch
+  // this reports is never reached and Godot loads the scene in silence.
+  if (
+    rawProps.animation &&
+    literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
+    spriteFramesWhenApplied(rawProps, 'animation') === undefined
+  ) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Property 'autoplay' is set to "${rawProps.autoplay}" but 'sprite_frames' is not set. Autoplay will not work without a SpriteFrames resource.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'animatedsprite2d-autoplay-no-spriteframes',
-    });
-  }
-
-  // Warn if animation is set but sprite_frames is not set
-  if (rawProps.animation && !rawProps.sprite_frames) {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Property 'animation' is set to "${rawProps.animation}" but 'sprite_frames' is not set. Animation cannot play without a SpriteFrames resource.`,
+      severity: 'error',
+      message: `Property 'animation' is set to "${literalText(rawProps.animation)}" with no 'sprite_frames' in effect at that line. Godot clears 'animation', so the authored name never applies.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'animatedsprite2d-animation-no-spriteframes',
     });
   }
 
-  // Validate speed_scale value
-  if (rawProps.speed_scale !== undefined) {
-    const speedScale = parseFloat(rawProps.speed_scale);
-    if (!isNaN(speedScale)) {
-      // Warn if speed_scale is 0 (animation won't play)
-      if (speedScale === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'speed_scale' is 0. Animation will not advance (paused state). Use play()/stop() methods to control playback instead.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animatedsprite2d-speed-scale-zero',
-        });
-      }
-      // Negative speed_scale is valid for reverse playback — no diagnostic
-    }
-  }
-
-  // Validate frame_progress range (should be 0-1)
-  if (rawProps.frame_progress !== undefined) {
-    const frameProgress = parseFloat(rawProps.frame_progress);
-    if (!isNaN(frameProgress)) {
-      if (frameProgress < 0 || frameProgress > 1) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Property 'frame_progress' is ${frameProgress}. Expected range is 0.0 to 1.0. Godot will clamp this value automatically.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'animatedsprite2d-frame-progress-range',
-        });
-      }
-    }
-  }
-
-  // Warning: deprecated 'playing' property (Godot 4.0+)
-  if (rawProps.playing !== undefined) {
+  // With a null SpriteFrames `set_frame_and_progress` drops EVERY frame
+  // (animated_sprite_2d.cpp:360-362), not only the negative one
+  // `linterParser.ts` floors — so this is that guard's cross-property half.
+  // Above 0 only: a negative frame is the validator's error already, and 0 is
+  // the value the node holds anyway.
+  const frame = ruleInt(rawProps.frame);
+  if (frame !== null && frame > 0 && spriteFramesWhenApplied(rawProps, 'frame') === undefined) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Property 'playing' is deprecated in Godot 4.0+. Use play() and stop() methods in code instead of setting this property in scene files.`,
+      severity: 'error',
+      message: `Property 'frame' is set to ${frame} with no 'sprite_frames' in effect at that line. Godot drops the write, so the node loads on frame 0.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'animatedsprite2d-playing-deprecated',
+      ruleName: 'animatedsprite2d-frame-no-spriteframes',
     });
   }
+
+  // `speed_scale` and `frame_progress` get no diagnostic: both are
+  // PROPERTY_HINT_NONE behind a bare setter, so no value is out of range (0
+  // speed_scale is a legal paused state, and frame_progress is not clamped).
+  // `playing` is not a property at all, so it is a key verdict in
+  // linterParser.ts rather than a value rule here.
 
   return diagnostics;
 }
@@ -123,17 +104,21 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
 const animatedSprite2DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite2d-resources',
-    description: 'Validates AnimatedSprite2D sprite_frames resources, animation properties, and playback settings',
+    description: 'Validates AnimatedSprite2D sprite_frames presence and animation references',
     category: 'validation',
     applicableNodeTypes: ['AnimatedSprite2D'],
     emits: [
-      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning' },
-      { ruleName: 'valid-animatedsprite2d-resources', severity: 'error' },
-      { ruleName: 'animatedsprite2d-autoplay-no-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-animation-no-spriteframes', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-speed-scale-zero', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-frame-progress-range', severity: 'warning' },
-      { ruleName: 'animatedsprite2d-playing-deprecated', severity: 'warning' },
+      { ruleName: 'animatedsprite2d-requires-spriteframes', severity: 'warning', grounding: { kind: 'configuration-warning' } },
+      {
+        ruleName: 'animatedsprite2d-animation-no-spriteframes',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:563' },
+      },
+      {
+        ruleName: 'animatedsprite2d-frame-no-spriteframes',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'animated_sprite_2d.cpp:360' },
+      },
     ],
   },
   check: checkAnimatedSprite2D,

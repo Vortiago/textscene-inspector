@@ -11,12 +11,11 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
-const here = dirname(fileURLToPath(import.meta.url));
-export const REPO_ROOT = join(here, '../..');
+export { REPO_ROOT };
 
 /** Slice roots, walked for `comparison.md`. */
 const SLICE_ROOTS = [
@@ -190,12 +189,17 @@ export function findScene(fixture) {
 }
 
 /**
- * Sheets with no single node type behind them, so no generated lint block: the
- * `complex-*` whole-scene showcases, and resources (validated through
- * `resourceChecker`, not the per-node registries the generator reads).
+ * Sheets with no single type behind them, so no generated lint block: the
+ * `complex-*` whole-scene showcases.
+ *
+ * Resources are NOT exempt: they are validated by the same registry the
+ * generator reads, and with the base-walk covering Godot's resource ancestry a
+ * material sheet has a substantial table to show. Exempting them is a blank
+ * page over real
+ * coverage.
  *
  * Shared because the generator decides which sheets GET a block and the test
  * asserts which sheets must NOT have one; two copies would drift into either a
  * red test or a sheet that silently never gets generated.
  */
-export const LINT_EXEMPT_CATEGORIES = new Set(['Complex Scenes', 'Resources']);
+export const LINT_EXEMPT_CATEGORIES = new Set(['Complex Scenes']);

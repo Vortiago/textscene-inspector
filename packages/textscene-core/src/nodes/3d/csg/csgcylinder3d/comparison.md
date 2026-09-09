@@ -1,6 +1,7 @@
 ---
 type: CSGCylinder3D
 category: 3D
+status: unreviewed
 fixture: unit-csg-cylinder.tscn
 image: unit-csg-cylinder
 renders_as: a solid cylinder or cone mesh
@@ -8,62 +9,31 @@ renders_as: a solid cylinder or cone mesh
 
 # CSGCylinder3D
 
-A CSG cylinder primitive, drawn as a solid cylinder or as a cone when `cone` is
-set (top radius collapses to 0). The geometry is a port of Godot's own
-`_build_brush`, not `THREE.CylinderGeometry`: three gives a collapsed cone apex
-nine distinct radial normals where Godot's `smooth_faces` averages every face
-meeting at one position into a single normal, which on a symmetric cone points
-straight up. That difference alone was the whole of a 0.788% parity gap. CSG
-boolean ops ARE composed (ADR-0027), so a cylinder inside a CSG root contributes
-to that root's result.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `radius` | `0.5` / `0.4` | base radius of the pillar / cone |
-| `height` | `2.0` / `1.0` | the tall pillar vs the shorter cone |
-| `sides` | `16` | radial segments — a smooth silhouette with faint faceting |
-| `cone` | `true` (Cone only) | collapses the top to a point, making a cone |
-| `smooth_faces` | default `true` | one averaged normal at the cone apex, not nine radial ones |
-| `material` | albedo `Color(0.6, 0.5, 0.2)` | the olive surface both shapes share |
-| `transform` | `+1.5` on X (Cone) | offsets the cone to the right of the pillar |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:diff unit-csg-cylinder.tscn` measures it
-against Godot 4.6.3 at a mean channel error of 2.173/255 over the frame, worst
-channel 74/255 — spread across the sky, the lit surfaces and the silhouette's
-antialiased edge rather than localised to the cone apex the normals port fixed.
+A CSG cylinder, drawn as a solid cylinder or as a cone when `cone` is set. The geometry is a port of Godot's own `_build_brush`, so the tessellation and the apex normals match, and the boolean `operation` is evaluated (ADR-0027).
 
 ## Linting
 
 <!-- lint:begin CSGCylinder3D -->
-Strict parsing format-checks these `CSGCylinder3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `CSGCylinder3D` properties, plus 1 inherited from CSGPrimitive3D, 6 inherited from CSGShape3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `cast_shadow` |
-| `cone` |
-| `flip_faces` |
-| `height` |
-| `material` |
-| `operation` |
-| `radius` |
-| `sides` |
-| `smooth_faces` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `cone` | true or false |  |
+| `height` | float >= 0.001 | warning below |
+| `material` | null, SubResource("id") or ExtResource("id") |  |
+| `radius` | float >= 0.001 | warning below |
+| `sides` | integer 3-64 | error below, warning above |
+| `smooth_faces` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-csgshape3d-own-geometry` (type-family match) | `csgmesh3d-requires-mesh` | info |
+|  | `csgpolygon3d-insufficient-points` | info |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-Strict rejects a non-positive `radius`/`height`, `sides` outside 3-64, or a non-boolean
-`cone` as errors. The lenient parser falls back silently when absent, or warns and
-falls back when present but unparseable: `radius` to `0.5`, `height` to `2.0`, `sides`
-to `8`. `cone` skips that contract entirely: it's read as a raw `=== 'true'` string
-comparison, so any non-`true` value (not just an absent one) silently becomes `false`
-with no warning. `operation` is read with `parseOptionalInt`, so it warns neither way;
-a non-zero value is applied by the boolean evaluator rather than dropped (ADR-0027,
-superseding ADR-0004). `material`, if present, is copied through unvalidated.
+The lenient parser falls back silently when a key is absent, and warns then falls back when it is unparseable: `radius` to `0.5`, `height` to `2.0`, `sides` to `8`. `cone` is a raw `=== 'true'` comparison, so any other value silently becomes `false`. `operation` is read with `parseOptionalInt` and warns neither way.

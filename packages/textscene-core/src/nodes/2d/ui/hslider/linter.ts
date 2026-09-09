@@ -46,7 +46,13 @@ const hSliderPropertyOrderRule: LintRule = {
       'setters silently re-clamp against.',
     category: 'validation',
     applicableNodeTypes: ['HSlider'],
-    emits: [{ ruleName: 'hslider-property-order', severity: 'warning' }],
+    emits: [
+      {
+        ruleName: 'hslider-property-order',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'range.cpp:106' },
+      },
+    ],
   },
   check: checkHSliderPropertyOrder,
 };

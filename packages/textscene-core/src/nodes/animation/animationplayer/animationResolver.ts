@@ -14,11 +14,20 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseVector2, parseVector3 } from '../../../parser/vectors';
-import { parseColor } from '../../../utils/colorParser';
+import { parseValueArray } from './keyframeValues.js';
+import type { GodotKeyframeValue } from './keyframeValues.js';
+import { parseGodotFloat } from '../../../godot/number.js';
+import { info, warn } from '../../../logger';
+import {
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
+  dictSubResourceEntries,
+  literalText,
+  packedArrayCallAnywhere,
+} from '../../../godot/index.js';
+import { nodePathLiteral } from '../../../godot/variantParser.js';
 import type { AnimationLibraryRef } from './types';
 
-export type GodotKeyframeValue = number[] | number | boolean;
+export type { GodotKeyframeValue } from './keyframeValues.js';
 
 export interface GodotKeyframe {
   time: number;
@@ -79,14 +88,83 @@ export function resolveAnimations(
   return animations;
 }
 
-const SUB_RESOURCE_ENTRY = /"([^"]+)":\s*SubResource\("([^"]+)"\)/g;
+/**
+ * Raw (unresolved) relative NodePath strings on every 'audio' track across the
+ * given libraries' Animation resources. Used by the AudioStreamPlayer /
+ * AudioStreamPlayer2D / AudioStreamPlayer3D linters: `AnimationMixer` builds
+ * its own polyphonic playback bound to an audio track's target node and never
+ * reads that node's own `stream` property (animation_mixer.cpp:891-898), so a
+ * node driven this way is not silent even with no `stream` of its own.
+ *
+ * Deliberately separate from `resolveAnimations`/`parseTracks`, which drop
+ * 'audio' tracks entirely (THREE's AnimationMixer drives transforms only) —
+ * this never touches the render path.
+ */
+export function resolveAudioTrackPaths(
+  libraries: readonly AnimationLibraryRef[],
+  internalResources: readonly TscnInternalResource[]
+): string[] {
+  const paths: string[] = [];
+  for (const lib of libraries) {
+    const libResource = findById(internalResources, lib.subResourceId);
+    if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
-function parseLibraryData(dataStr: string): Array<[string, string]> {
-  const entries: Array<[string, string]> = [];
-  for (const match of dataStr.matchAll(SUB_RESOURCE_ENTRY)) {
-    if (match[1] !== undefined && match[2] !== undefined) entries.push([match[1], match[2]]);
+    const dataStr = asString(libResource.data['_data']);
+    if (!dataStr) continue;
+
+    for (const [, animId] of parseLibraryData(dataStr)) {
+      const animResource = findById(internalResources, animId);
+      if (!animResource || animResource.type !== 'Animation') continue;
+      paths.push(...audioTrackPaths(animResource.data));
+    }
   }
-  return entries;
+  return paths;
+}
+
+/** Every audio track's raw NodePath inner string within one Animation resource's data. */
+function audioTrackPaths(data: Record<string, unknown>): string[] {
+  const paths: string[] = [];
+  for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
+    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
+    if (type !== 'audio') continue;
+    const inner = extractNodePathInner(asString(data[`tracks/${i}/path`]) ?? '');
+    if (inner !== null) paths.push(inner);
+  }
+  return paths;
+}
+
+/**
+ * Whether any of these libraries holds a clip {@link resolveAnimations} cannot
+ * enumerate.
+ *
+ * `_data` maps a clip name to whichever reference the project saved: an
+ * `ExtResource` when the Animation lives in its own `.tres`, which is the
+ * ordinary layout once clips are shared between scenes. {@link parseLibraryData}
+ * reads only the `SubResource` spelling, so such a library resolves to FEWER
+ * clips than it holds — and a caller that treats the resolved set as complete
+ * calls a live clip name dangling.
+ */
+export function hasUnresolvableClips(
+  libraries: readonly AnimationLibraryRef[],
+  internalResources: readonly TscnInternalResource[]
+): boolean {
+  return libraries.some((lib) => {
+    const libResource = findById(internalResources, lib.subResourceId);
+    if (!libResource || libResource.type !== 'AnimationLibrary') return false;
+    const dataStr = asString(libResource.data['_data']);
+    return dataStr !== undefined && EXT_RESOURCE_CALL_ANYWHERE_RE.test(dataStr);
+  });
+}
+
+/**
+ * `_data`'s `"name": SubResource(…)` clips. An empty name is skipped:
+ * `add_animation` refuses it (`animation_library.cpp:35-36,48`,
+ * `is_valid_animation_name` — `!(p_name.is_empty() || …)`).
+ */
+function parseLibraryData(dataStr: string): Array<[string, string]> {
+  return dictSubResourceEntries(dataStr)
+    .filter(({ key }) => key !== '')
+    .map(({ key, id }) => [key, id]);
 }
 
 function parseAnimation(name: string, resource: TscnInternalResource): GodotAnimation {
@@ -115,7 +193,7 @@ const TRANSFORM_3D_TRACKS: Record<string, { property: string; components: number
 function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   const tracks: GodotTrack[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
-    const type = stripQuotes(asString(data[`tracks/${i}/type`]) ?? '');
+    const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
     const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
     const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';
     // class_animation.html / animation.h: interp defaults to 1 (LINEAR),
@@ -163,11 +241,8 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   return tracks;
 }
 
-/** Extract the inner string of a `NodePath("…")` literal, or null if it isn't one. */
-export function extractNodePathInner(raw: string): string | null {
-  const match = /NodePath\(\s*"([^"]*)"\s*\)/.exec(raw);
-  return match?.[1] ?? null;
-}
+/** The path a whole NodePath-slot value names ({@link nodePathLiteral}), or null. */
+export const extractNodePathInner = nodePathLiteral;
 
 function parseNodePath(raw: string): { targetPath: string; property: string } | null {
   const inner = extractNodePathInner(raw);
@@ -177,8 +252,8 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
   return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };
 }
 
-const PACKED_FLOAT_RE = /"times":\s*PackedFloat32Array\(([^)]*)\)/;
-const PACKED_TRANSITIONS_RE = /"transitions":\s*PackedFloat32Array\(([^)]*)\)/;
+const PACKED_FLOAT_RE = new RegExp(`"times"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
+const PACKED_TRANSITIONS_RE = new RegExp(`"transitions"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];
@@ -186,22 +261,36 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   const timesMatch = PACKED_FLOAT_RE.exec(keysStr);
   if (!timesMatch || timesMatch[1] === undefined) return [];
   const times = parseFloatList(timesMatch[1]);
-  if (times.length === 0) return [];
+  if (times === null || times.length === 0) return [];
 
   const transMatch = PACKED_TRANSITIONS_RE.exec(keysStr);
   const transitions =
     transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
+  if (transitions === null) return [];
 
   const values = parseValueArray(keysStr);
+  if (values === null) return [];
+
+  // Paired by index, so a short list has no value at that time. `values[i] ?? 0`
+  // minted a keyframe AT ZERO instead, which for a scalar property pins the node
+  // there for the clip and for a vector one hands `clipBuilder` a mixed-shape
+  // list whose flattened length is not a multiple of `times`, so every sample is
+  // NaN.
+  if (values.length !== times.length) {
+    info(
+      `[AnimationPlayer] ${values.length} keyframe values for ${times.length} times — dropping the track`
+    );
+    return [];
+  }
 
   return times.map((time, i) => ({
     time,
-    value: values[i] ?? 0,
+    value: values[i]!,
     transition: transitions[i] ?? 1.0,
   }));
 }
 
-const PACKED_FLOAT_ARRAY_RE = /PackedFloat32Array\(([^)]*)\)/;
+const PACKED_FLOAT_ARRAY_RE = packedArrayCallAnywhere('PackedFloat32Array');
 
 /**
  * Decode a 3D transform track's flat key array. Godot serializes these as a
@@ -215,8 +304,15 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
   if (!match || match[1] === undefined) return [];
 
   const nums = parseFloatList(match[1]);
+  if (nums === null) return [];
   const stride = 2 + components;
-  if (nums.length < stride) return [];
+  // Arity is all-or-nothing, as it is in the engine: `Animation::_set` opens
+  // each flat-track branch with `ERR_FAIL_COND_V(vcount % *_TRACK_SIZE, false)`
+  // (`animation.cpp:163` position, `:185` rotation, `:208` scale,
+  // `:230` blend shape) BEFORE the `resize` at `:167`, so a ragged array leaves
+  // the track with no keys at all. Truncating to whole strides animated a track
+  // Godot leaves empty.
+  if (nums.length === 0 || nums.length % stride !== 0) return [];
 
   const keys: GodotKeyframe[] = [];
   for (let i = 0; i + stride <= nums.length; i += stride) {
@@ -229,72 +325,35 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
   return keys;
 }
 
-function parseFloatList(raw: string): number[] {
+/**
+ * A comma-separated float list, read the way Godot's tokenizer does.
+ *
+ * A comma-separated float list, or `null` when an element is not one this
+ * renderer can key — the exit {@link decodeValue} takes for a keyframe value,
+ * for the times, transitions and flat transform components that reach a THREE
+ * `KeyframeTrack` through the same door.
+ *
+ * The RESULT is tested, not the spelling alone: `inf`/`-inf`/`inf_neg`/`nan`
+ * are literals `rtos_fix` writes (variant_parser.cpp:2504) and `1e999`
+ * overflows inside the finite grammar, and a non-finite TIME poisons every
+ * sample after it — three.js divides by the span. `parseFloat` also read the
+ * trailing garbage in `1abc` as 1, where Godot's tokenizer refuses the token.
+ */
+function parseFloatList(raw: string): number[] | null {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return [];
-  return trimmed.split(',').map((s) => parseFloat(s.trim()));
-}
-
-/** Extracts and decodes the `"values": [...]` bracketed array (paren-aware). */
-function parseValueArray(keysStr: string): GodotKeyframeValue[] {
-  const start = keysStr.indexOf('"values":');
-  if (start === -1) return [];
-  const open = keysStr.indexOf('[', start);
-  if (open === -1) return [];
-
-  let depth = 0;
-  let end = -1;
-  for (let i = open; i < keysStr.length; i++) {
-    const ch = keysStr[i];
-    if (ch === '[') depth++;
-    else if (ch === ']') {
-      depth--;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
+  const values: number[] = [];
+  for (const part of trimmed.split(',')) {
+    const num = parseGodotFloat(part);
+    if (num === null || !Number.isFinite(num)) {
+      warn(
+        `[AnimationPlayer] track data element "${part.trim()}" is not a value this renderer can key — dropping the track`
+      );
+      return null;
     }
+    values.push(num);
   }
-  if (end === -1) return [];
-
-  return splitTopLevel(keysStr.slice(open + 1, end)).map(decodeValue);
-}
-
-/** Splits a comma list while ignoring commas nested in parentheses/brackets. */
-function splitTopLevel(body: string): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let current = '';
-  for (const ch of body) {
-    if (ch === '(' || ch === '[') depth++;
-    else if (ch === ')' || ch === ']') depth--;
-    if (ch === ',' && depth === 0) {
-      parts.push(current);
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  if (current.trim().length > 0) parts.push(current);
-  return parts.map((p) => p.trim()).filter((p) => p.length > 0);
-}
-
-function decodeValue(raw: string): GodotKeyframeValue {
-  if (raw === 'true') return true;
-  if (raw === 'false') return false;
-  if (raw.startsWith('Vector3')) {
-    const v = parseVector3(raw);
-    return [v.x, v.y, v.z];
-  }
-  if (raw.startsWith('Vector2')) {
-    const v = parseVector2(raw);
-    return [v.x, v.y];
-  }
-  if (raw.startsWith('Color')) {
-    const c = parseColor(raw);
-    return [c.r, c.g, c.b, c.a];
-  }
-  return parseFloat(raw);
+  return values;
 }
 
 function findById(
@@ -313,10 +372,12 @@ function asString(value: unknown): string | undefined {
 
 function numberOr(value: unknown, fallback: number): number {
   if (typeof value !== 'string') return fallback;
-  const n = parseFloat(value);
-  return Number.isNaN(n) ? fallback : n;
+  const parsed = parseGodotFloat(value);
+  // `??` catches only null. `inf` and `nan` are legal TSCN float spellings that
+  // `parseGodotFloat` returns as real Infinity/NaN, and they reach three.js as
+  // a clip duration and a blend weight — an infinite `AnimationClip` length, or
+  // a weight that fails every `> EPSILON` test so nothing renders at all. The
+  // documented default is what a value the renderer cannot use falls back to.
+  return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;
 }
 
-function stripQuotes(raw: string): string {
-  return raw.replace(/^["']|["']$/g, '').trim();
-}

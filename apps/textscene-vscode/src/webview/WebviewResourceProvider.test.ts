@@ -5,14 +5,14 @@
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { WebviewResourceProvider } from './WebviewResourceProvider';
 
 describe('WebviewResourceProvider', () => {
   let mockVsCode: {
-    postMessage: ReturnType<typeof vi.fn<(message: unknown) => void>>;
-    getState: ReturnType<typeof vi.fn<() => unknown>>;
-    setState: ReturnType<typeof vi.fn<(state: unknown) => void>>;
+    postMessage: Mock<(message: unknown) => void>;
+    getState: Mock<() => unknown>;
+    setState: Mock<(state: unknown) => void>;
   };
   let provider: WebviewResourceProvider;
   let messageListeners: Array<(event: MessageEvent) => void>;

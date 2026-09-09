@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+; Exercises the one own property VisualInstance3D serialises: layers.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyVisualInstance3D" type="VisualInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+layers = 3

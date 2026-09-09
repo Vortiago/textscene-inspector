@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; LimitAngularVelocityModifier3D under the Skeleton3D it modifies, which is the
+; only placement where a SkeletonModifier3D does anything. The subject is
+; max_angular_velocity, the one radians_as_degrees property on this shelf: the
+; hint reads "0,720,or_greater" in DEGREES while the file stores RADIANS, so
+; 3.1415927 here is 180 degrees per second, not 3 of anything. The chains/0/
+; family is carried too, at the -1 unset sentinel rather than a real index: the
+; Skeleton3D is left bare on purpose, since bones would drag in a key space this
+; fixture is not the subject of, and against a bare skeleton set_root_bone
+; rewrites any index at or above the bone count back to -1. -1 is the one index
+; it keeps as written. The names survive either way, being stored verbatim
+; before the index is resolved from them. joint_count and joints/ are absent
+; because Godot derives both and never writes them.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyLimitAngularVelocityModifier3D" type="LimitAngularVelocityModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+max_angular_velocity = 3.1415927
+exclude = true
+chain_count = 1
+chains/0/root_bone_name = "UpperArm.L"
+chains/0/root_bone = -1
+chains/0/end_bone_name = "UpperArm.L"
+chains/0/end_bone = -1

@@ -33,7 +33,7 @@
  * sampling garbage.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type * as THREE from 'three';
 
 import * as logger from '../../../logger.js';
@@ -41,11 +41,17 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
+import {
+  useUniqueNameClaims,
+  useViewportTexture,
+} from '../../../r3f/contexts/ViewportTextureContext.js';
 import {
   resolveViewportTexturePath,
   viewportTextureRegistryKey,
 } from '../../../r3f/viewportTexturePath.js';
+import { unclaimedUniqueNames } from '../../../utils/nodePath.js';
+import { uniqueNameLivePaths } from '../../../utils/uniqueNames.js';
+import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
 /**
@@ -141,7 +147,51 @@ export function useViewportTextureSlot(
     resource?.type === VIEWPORT_TEXTURE_TYPE
       ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
       : null;
-  const key = viewportPath === null ? null : viewportTextureRegistryKey(consumerPath, viewportPath);
+  // The consumer's OWNER's table: a `%Name` authored inside an instanced
+  // sub-scene is claimed on that sub-scene's root, which is what this node
+  // resolves through when it sits there (node.cpp:1930-1938). Only for a slot
+  // that holds a ViewportTexture — every texture slot calls this, and the
+  // owner walk is per node.
+  const claims = useUniqueNameClaims(viewportPath === null ? null : consumerPath);
+  // Live paths, not authored ones: the registry is keyed the way the composed
+  // render tree spells a path, which is what a claim's `livePath` carries. Only
+  // for a slot that holds a ViewportTexture — every texture slot calls this.
+  const uniquePaths = useMemo(
+    () => (viewportPath !== null && claims ? uniqueNameLivePaths(claims) : undefined),
+    [claims, viewportPath]
+  );
+  const key =
+    viewportPath === null
+      ? null
+      : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
+  // In an effect, not in the render body: a module-level "already reported" set
+  // written during render is impure, survives every scene switch — so a literal
+  // fixed and re-broken warned once for the life of the session — and grows
+  // without bound.
+  //
+  // The dedup keys on the SPELLING last warned for, held in a ref, not on the
+  // effect's dependencies: `uniquePaths` descends from the SceneGraph, which is
+  // a fresh object per re-parse, so dependency comparison alone re-fires on
+  // every debounced keystroke. The table is re-checked on every run and the
+  // marker cleared once the name is claimed, so the same spelling warns again
+  // when its claimant is renamed away — the table changed, not the text. Same
+  // hazard and same answer as the publisher, which keys on
+  // `viewportTextureUniqueNameKey` rather than the node.
+  const reported = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!consumerPath || viewportPath === null || !uniquePaths) return;
+    const unclaimed = unclaimedUniqueNames(viewportPath, uniquePaths);
+    if (unclaimed.length === 0) {
+      reported.current = undefined;
+      return;
+    }
+    const spelling = `${consumerPath}\u0000${viewportPath}`;
+    if (reported.current === spelling) return;
+    reported.current = spelling;
+    warn(
+      `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
+    );
+  }, [consumerPath, viewportPath, uniquePaths]);
   // Called unconditionally (rules of hooks) — only `key` varies; a null key
   // resolves to the same `{ texture: null, cyclic: false }` shape a slot
   // naming no ViewportTexture always returned.

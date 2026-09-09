@@ -1,0 +1,15 @@
+{
+  // The app tsconfig minus its test exclusions: vitest transpiles without
+  // checking, so the suites need a project of their own to be typed at all.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "react", "react-dom"],
+    // The manifest guard imports the fixture generator's category module, a
+    // repo-level `.mjs`. Nothing is emitted here, so `rootDir` only has to be
+    // wide enough to contain it.
+    "allowJs": true,
+    "rootDir": "../.."
+  },
+  "exclude": ["node_modules", "dist"]
+}

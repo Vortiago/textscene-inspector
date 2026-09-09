@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+; ConvertTransformModifier3D: no visuals. Exercises setting_count and both
+; two-segment leaf groups, apply/ and reference/, across all three transform
+; modes: Position (0), Rotation (1) and Scale (2). Each mode selects a different
+; PROPERTY_HINT_RANGE for the range_min/range_max pair beside it, so all three
+; arms of that hint are covered.
+; settings/0/apply_bone sits beside settings/0/apply/axis on purpose: one flat
+; leaf and one nested group whose names share a prefix.
+; settings/1 omits relative because its reference_type is Node, the state in
+; which _validate_dynamic_prop clears that key to PROPERTY_USAGE_NONE.
+
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyConvertTransformModifier3D" type="ConvertTransformModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+active = true
+influence = 0.75
+setting_count = 2
+settings/0/amount = 1.0
+settings/0/apply_bone_name = "Hand.L"
+settings/0/apply_bone = 4
+settings/0/reference_type = 0
+settings/0/reference_bone_name = "Hand.R"
+settings/0/reference_bone = 5
+settings/0/apply/transform_mode = 0
+settings/0/apply/axis = 1
+settings/0/apply/range_min = -0.5
+settings/0/apply/range_max = 0.5
+settings/0/reference/transform_mode = 1
+settings/0/reference/axis = 2
+settings/0/reference/range_min = -1.5707964
+settings/0/reference/range_max = 1.5707964
+settings/0/relative = true
+settings/0/additive = false
+settings/1/amount = 0.5
+settings/1/apply_bone_name = "Head"
+settings/1/reference_type = 1
+settings/1/reference_node = NodePath("../../Target")
+settings/1/apply/transform_mode = 2
+settings/1/apply/axis = 0
+settings/1/apply/range_min = 0.0
+settings/1/apply/range_max = 2.0
+settings/1/reference/transform_mode = 0
+settings/1/reference/axis = 0
+settings/1/reference/range_min = -1.0
+settings/1/reference/range_max = 1.0
+settings/1/additive = true

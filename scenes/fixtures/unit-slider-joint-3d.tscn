@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxShape3D" id="Shape_1"]
+
+; Exercises SliderJoint3D's own properties at valid values.
+
+[node name="Root" type="Node3D"]
+
+[node name="MySliderJoint3D" type="SliderJoint3D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+linear_limit/upper_distance = 1.0
+linear_limit/lower_distance = -1.0
+linear_limit/softness = 1.0
+linear_limit/restitution = 0.7
+linear_limit/damping = 1.0
+linear_motion/softness = 1.0
+linear_motion/restitution = 0.7
+linear_motion/damping = 0.0
+linear_ortho/softness = 1.0
+linear_ortho/restitution = 0.7
+linear_ortho/damping = 1.0
+angular_limit/upper_angle = 0.5235988
+angular_limit/lower_angle = -0.5235988
+angular_limit/softness = 1.0
+angular_limit/restitution = 0.7
+angular_limit/damping = 0.0
+angular_motion/softness = 1.0
+angular_motion/restitution = 0.7
+angular_motion/damping = 1.0
+angular_ortho/softness = 1.0
+angular_ortho/restitution = 0.7
+angular_ortho/damping = 1.0
+
+[node name="BodyA" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="BodyB"]
+shape = SubResource("Shape_1")

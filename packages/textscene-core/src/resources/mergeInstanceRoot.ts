@@ -8,6 +8,7 @@
  * inspector reads via `useLiveNode`), so node paths stay consistent —
  * load-bearing for the selection-driven Animation tab (ADR-0012).
  */
+import { canonicalisePropertyBag } from '../godot/deprecated.js';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { graftInstanceChildren } from './graftInstanceChildren.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
@@ -79,9 +80,15 @@ export function mergeInstanceRoot(
   // Layer the instance's raw overrides onto the root's raw props whenever both
   // are available, so a type-specific override survives the merge. Carried on
   // the merged node too, so a nested-root re-dispatch keeps merging raw-first.
+  // The override's keys are canonicalised HERE because the scanner could not:
+  // an `instance=` heading carries no `type=`, so a pre-4.0 alias in the
+  // override survived as-is and lost to the root's own canonical key.
   const mergedRaw =
     root.rawProperties && instanceNode.rawProperties
-      ? { ...root.rawProperties, ...instanceNode.rawProperties }
+      ? {
+          ...canonicalisePropertyBag(root.type, root.rawProperties),
+          ...canonicalisePropertyBag(root.type, instanceNode.rawProperties),
+        }
       : undefined;
 
   let mergedProperties: TscnNode['properties'];

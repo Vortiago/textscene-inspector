@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+; XRHandModifier3D under the Skeleton3D it poses: SkeletonModifier3D resolves its
+; skeleton from the DIRECT parent only. hand_tracker names the right hand rather
+; than the default left, and bone_update = 1 rotates the bones without moving them
+; so the mesh keeps its own bone lengths.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyXRHandModifier3D" type="XRHandModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+influence = 0.75
+hand_tracker = &"/user/hand_tracker/right"
+bone_update = 1

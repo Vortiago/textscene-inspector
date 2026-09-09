@@ -446,7 +446,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     }
   }, [loader, scenePath, instanceRef, externalResources]);
 
-  const result = useResource<TscnScene>(scenePath ?? '', 'PackedScene');
+  const result = useResource<TscnScene>(scenePath ?? '', 'scene');
   const loadedScene = result.status === 'loaded' ? result.value ?? null : null;
 
   // Instance root merge via the shared `collapseLiveNode` — the SAME decision

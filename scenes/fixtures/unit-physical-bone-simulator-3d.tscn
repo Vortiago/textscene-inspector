@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+; PhysicalBoneSimulator3D under the Skeleton3D it drives, the only placement
+; where a SkeletonModifier3D does anything. The node binds no property of its
+; own, so every key here is inherited and carries a NON-default value: the
+; defaults Godot omits would exercise nothing.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyPhysicalBoneSimulator3D" type="PhysicalBoneSimulator3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+influence = 0.75

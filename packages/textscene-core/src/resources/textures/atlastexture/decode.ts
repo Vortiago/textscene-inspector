@@ -16,6 +16,7 @@
  * Pure `.ts`, no THREE — `build.ts` composes the layout into a texture.
  */
 
+import { boolSlotValue } from '../../../godot/index.js';
 import { parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type AtlasRect, type AtlasTextureData, type AtlasTextureLayout } from './types';
 
@@ -31,7 +32,9 @@ export function decodeAtlasTexture(properties: Record<string, unknown>): AtlasTe
     atlas: typeof properties.atlas === 'string' ? properties.atlas : null,
     region: rect(properties.region, 'AtlasTexture region'),
     margin: rect(properties.margin, 'AtlasTexture margin'),
-    filterClip: properties.filter_clip === 'true' || properties.filter_clip === true,
+    filterClip:
+      boolSlotValue(typeof properties.filter_clip === 'string' ? properties.filter_clip : undefined) ===
+        true || properties.filter_clip === true,
   };
 }
 

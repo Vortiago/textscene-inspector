@@ -10,6 +10,8 @@
  */
 
 import { warn } from '../../../../logger';
+import { packedArrayLiteral } from '../../../../godot/index.js';
+import { parseGodotInt } from '../../../../godot/int.js';
 
 export interface Vec2i {
   x: number;
@@ -28,12 +30,43 @@ export interface PlacedCell {
   alternativeId: number;
 }
 
+const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
+const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
+/** `CryptoCore::b64_decode`'s alphabet, and the only padding it accepts. */
+const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
+
+/**
+ * Why Godot's TEXT PARSER would refuse this `tile_map_data` literal.
+ *
+ * A fault here is a whole-file `ERR_PARSE_ERROR`, not a bad value: an
+ * unreadable base64 body returns one from `_parse_byte_array`
+ * (variant_parser.cpp:618-622). It therefore outranks every question about
+ * what the bytes MEAN, and the semantic decode must not report on a literal
+ * that never loads — which is what put two errors on one value.
+ *
+ * One owner for the grammar, two readers: the property validator turns each
+ * fault into its own message, and the tile-data rule skips a faulted literal.
+ */
+export function readTileMapDataLiteral(
+  value: string
+): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {
+  const match = PACKED_BYTE_ARRAY_RE.exec(value.trim());
+  if (!match) return { fault: 'not-a-literal' };
+  const body = match[1]!.trim();
+  if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
+    return { fault: 'invalid-base64', body };
+  }
+  return { fault: null, body };
+}
+
 const CELL_BYTES = 12;
+/** Legacy `layer_N/tile_data` packs one cell per three int32s. */
+const INTS_PER_LEGACY_CELL = 3;
 const HEADER_BYTES = 2;
 const FORMAT_VERSION = 0;
 
 export function decodeTileMapData(value: string): PlacedCell[] | null {
-  const m = value.match(/^PackedByteArray\((.*)\)$/s);
+  const m = PACKED_BYTE_ARRAY_RE.exec(value);
   if (!m) return null;
 
   const bytes = decodeBytes(m[1]!.trim());
@@ -53,6 +86,69 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
 }
 
 /**
+ * The elements of a packed INT body, `null` per element for one no int32 slot
+ * can hold, and `null` overall for text Godot's own tokenizer cannot read.
+ *
+ * Two failure modes, two answers. Text outside the grammar (`nope`, `0x10`) is
+ * a file Godot refuses to load, so the decode gives up. A legal-but-unstorable
+ * element (`inf`, `1e20`) is a file Godot DOES load, narrowing the element to
+ * an architecture-specific sentinel — so only the cell it belongs to is
+ * unknowable, and {@link dropUnstorableRecords} drops that cell alone.
+ */
+function readInt32Elements(body: string, context: string): (number | null)[] | null {
+  // An empty body is an empty array, not an unreadable one: `''.split(',')`
+  // yields `['']`, which matches no grammar and would report a legal empty
+  // layer as corrupt tile data.
+  if (body.trim() === '') return [];
+  const out: (number | null)[] = [];
+  for (const part of body.split(',')) {
+    const num = parseGodotInt(part);
+    if (num === null) {
+      warn(`${context} has entries Godot cannot read — ignoring tile data`);
+      return null;
+    }
+    out.push(Number.isNaN(num) ? null : num);
+  }
+  return out;
+}
+
+/**
+ * Every fixed-stride record that has no unstorable element in it.
+ *
+ * Both serializations pack cells at a fixed stride, so an element the engine
+ * cannot hold costs exactly the cell it belongs to. Voiding the whole stream
+ * instead rendered zero cells for a file Godot opens, and substituting zero
+ * drew a cell at the origin — the two failures this sits between.
+ *
+ * A trailing partial record is passed through untouched, so the caller's own
+ * truncation check still sees it.
+ */
+function dropUnstorableRecords(
+  elements: (number | null)[],
+  stride: number,
+  headerLength: number,
+  context: string
+): number[] | null {
+  const header = elements.slice(0, headerLength);
+  if (header.some((n) => n === null)) {
+    warn(`${context} header is not a value Godot can hold — ignoring tile data`);
+    return null;
+  }
+  const out = header as number[];
+  let i = headerLength;
+  for (; i + stride <= elements.length; i += stride) {
+    const record = elements.slice(i, i + stride);
+    if (record.some((n) => n === null)) {
+      warn(`${context} has a cell Godot cannot place — dropping that cell`);
+      continue;
+    }
+    out.push(...(record as number[]));
+  }
+  for (; i < elements.length; i++) out.push(elements[i] ?? 0);
+  return out;
+}
+
+/**
  * Legacy TileMap `layer_N/tile_data` (PackedInt32Array). The TSCN `format`
  * property is the 0-indexed TileMapDataFormat enum: 2 = TILE_MAP_DATA_FORMAT_3,
  * whose int32 triplets reinterpret as exactly the 12-byte record above (no
@@ -64,15 +160,14 @@ export function decodeLegacyTileData(value: string, format: number): PlacedCell[
     warn(`[TileMap] tile data format ${format} is a Godot 3 format — ignoring tile data`);
     return null;
   }
-  const m = value.match(/^PackedInt32Array\((.*)\)$/s);
+  const m = PACKED_INT32_ARRAY_RE.exec(value);
   if (!m) return null;
 
-  const ints = m[1]!.split(',').map((s) => parseInt(s.trim(), 10));
-  if (ints.some(Number.isNaN)) {
-    warn(`[TileMap] tile_data has non-numeric entries — ignoring tile data`);
-    return null;
-  }
-  if (ints.length % 3 !== 0) {
+  const read = readInt32Elements(m[1]!, '[TileMap] tile_data');
+  if (read === null) return null;
+  const ints = dropUnstorableRecords(read, INTS_PER_LEGACY_CELL, 0, '[TileMap] tile_data');
+  if (ints === null) return null;
+  if (ints.length % INTS_PER_LEGACY_CELL !== 0) {
     warn(`[TileMap] tile_data length ${ints.length} is not a whole number of cells — ignoring tile data`);
     return null;
   }
@@ -103,10 +198,13 @@ function decodeBytes(body: string): Uint8Array | null {
       return null;
     }
   }
-  const ints = body.split(',').map((s) => parseInt(s.trim(), 10));
-  if (ints.some(Number.isNaN)) {
-    warn(`[TileMapLayer] tile_map_data has non-numeric bytes — ignoring tile data`);
-    return null;
-  }
-  return new Uint8Array(ints);
+  const read = readInt32Elements(body, '[TileMapLayer] tile_map_data');
+  if (read === null) return null;
+  const ints = dropUnstorableRecords(
+    read,
+    CELL_BYTES,
+    HEADER_BYTES,
+    '[TileMapLayer] tile_map_data'
+  );
+  return ints === null ? null : new Uint8Array(ints);
 }

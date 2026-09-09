@@ -29,6 +29,45 @@ function bare(props: Record<string, PropValue> = {}): string {
   return scene(node('AudioStreamPlayer2D', props, { name: 'AudioPlayer' }));
 }
 
+/**
+ * An AnimationMixer with one Animation carrying a single 'audio' track whose
+ * NodePath targets `targetName`, plus an AudioStreamPlayer2D of that name with
+ * no `stream` of its own — the `coin.tscn` `Pickup` shape (its stream arrives
+ * through the track's `clips`, not the node's own `stream`). Uses the
+ * empty-name default library (`libraries/ =`), the form Godot actually writes.
+ *
+ * `mixerType` is a parameter because `libraries`, `root_node` and the audio
+ * track cache are all AnimationMixer's, so an AnimationTree feeds the target
+ * exactly as an AnimationPlayer does.
+ */
+function drivenByAudioTrack(
+  targetName: string,
+  playerProps: Record<string, PropValue> = {},
+  mixerType = 'AnimationPlayer'
+): string {
+  return scene(
+    audioStream,
+    `[sub_resource type="Animation" id="anim1"]
+tracks/0/type = "audio"
+tracks/0/path = NodePath("${targetName}")
+tracks/0/keys = {
+"clips": [{
+"end_offset": 0.0,
+"start_offset": 0.0,
+"stream": ExtResource("1_abc")
+}],
+"times": PackedFloat32Array(0)
+}`,
+    `[sub_resource type="AnimationLibrary" id="lib"]
+_data = {
+&"picked": SubResource("anim1")
+}`,
+    node('Node2D', {}, { name: 'Root' }),
+    node(mixerType, { 'libraries/': 'SubResource("lib")' }, { parent: '.' }),
+    node('AudioStreamPlayer2D', playerProps, { name: 'Pickup', parent: '.' })
+  );
+}
+
 describe('AudioStreamPlayer2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass validation for valid AudioStreamPlayer2D properties', () => {
@@ -71,14 +110,42 @@ describe('AudioStreamPlayer2D Linter', () => {
           invalid: [{ value: 'invalid', contains: ['volume_db', 'must be a number'] }],
         },
         {
-          // Extreme-but-valid volume legitimately warns — assert no errors only.
+          // audio_stream_player_2d.cpp:430 hints "-80,24,suffix:dB", closed at both
+          // ends; set_volume_db assigns straight through, so outside it warns.
           prop: 'volume_db',
-          acceptMode: 'no-error',
-          valid: [-80.0],
+          valid: [-80.0, 0, 24],
+          invalid: [
+            { value: -80.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
+            { value: 24.1, contains: ['volume_db', 'between -80 and 24'], severity: 'warning' },
+          ],
         },
         {
+          // audio_stream_player_2d.cpp:210,
+          // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.")
+          // is the setter's only refusal. Measured on 4.6.3: after
+          // `volume_db = -12`, writing NaN leaves -12 and prints the error, while
+          // `inf` and `-inf` are stored unaltered — so this is a NaN-only tier,
+          // not the finite guard, and a range bound covers neither end of it.
+          prop: 'volume_db',
+          invalid: [
+            { value: 'nan', contains: ['volume_db', 'must not be NaN'], severity: 'error' },
+            {
+              value: 'inf',
+              contains: ['volume_db', 'between -80 and 24'],
+              severity: 'warning',
+            },
+            {
+              value: 'inf_neg',
+              contains: ['volume_db', 'between -80 and 24'],
+              severity: 'warning',
+            },
+          ],
+        },
+        {
+          // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0),
+          // and hint :432 is "0.01,4,0.01,or_greater", so the top end is open.
           prop: 'pitch_scale',
-          valid: [0.5, 1.0, 1.5, 2.0],
+          valid: [0.01, 0.5, 1.0, 1.5, 2.0, 3.0, 10.0],
           invalid: [
             { value: 0, contains: ['pitch_scale', 'greater than 0'] },
             { value: -1.0, contains: ['pitch_scale', 'greater than 0'] },
@@ -93,8 +160,10 @@ describe('AudioStreamPlayer2D Linter', () => {
         { prop: 'autoplay', valid: [true] },
         { prop: 'stream_paused', valid: [false] },
         {
+          // audio_stream_player_2d.cpp:300, ERR_FAIL_COND(p_pixels <= 0.0); hint
+          // :436 is "1,4096,1,or_greater", so the top end is open.
           prop: 'max_distance',
-          valid: [10, 100, 1000, 5000],
+          valid: [1, 10, 100, 1000, 5000, 15000],
           invalid: [
             { value: 0, contains: ['max_distance', 'greater than 0'] },
             { value: -10.0, contains: ['max_distance', 'greater than 0'] },
@@ -102,27 +171,25 @@ describe('AudioStreamPlayer2D Linter', () => {
           ],
         },
         {
+          // audio_stream_player_2d.cpp:437 is PROPERTY_HINT_EXP_EASING — no range —
+          // and set_attenuation (:308) is a bare assignment, so nothing is invalid.
           prop: 'attenuation',
-          valid: [0.5, 1.0, 2.0, 5.0],
-          invalid: [
-            { value: 0, contains: ['attenuation', 'greater than 0'] },
-            { value: -1.0, contains: ['attenuation', 'greater than 0'] },
-            { value: 'invalid', contains: ['attenuation', 'must be a number'] },
-          ],
+          valid: [0, 0.05, 0.5, 1.0, 2.0, 5.0, 15, -1.0],
+          invalid: [{ value: 'invalid', contains: ['attenuation', 'must be a number'] }],
         },
         {
+          // audio_stream_player_2d.cpp:349 enforces the floor only
+          // (ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)); the hint's ceiling
+          // (:439, "0,3,0.01,or_greater") is open, so values above 1 are legal.
           prop: 'panning_strength',
-          valid: [0, 0.5, 1],
-          invalid: [
-            { value: -0.1, contains: ['panning_strength', 'between 0 and 1'] },
-            { value: 1.5, contains: ['panning_strength', 'between 0 and 1'] },
-          ],
+          valid: [0, 0.5, 1, 1.5, 3, 10],
+          invalid: [{ value: -0.1, contains: ['panning_strength', 'must be non-negative'] }],
         },
         {
           prop: 'area_mask',
           valid: [0, 1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
         {
@@ -152,28 +219,17 @@ describe('AudioStreamPlayer2D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    describe('missing stream error', () => {
-      it('should error when stream is missing', () => {
-        expectDiagnostic(bare({ volume_db: 0.0, pitch_scale: 1.0 }), {
-          ruleName: 'audiostreamplayer2d-missing-stream',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['requires', 'audio'],
-        });
-      });
-
-      it('should not error when stream is present', () => {
-        expectClean(withStream());
-      });
+    it('stays quiet about a streamless player (the stream may arrive at runtime)', () => {
+      expectClean(bare({ volume_db: 0.0, pitch_scale: 1.0 }));
     });
 
     describe('missing stream resource error', () => {
       it('should error when stream resource does not exist', () => {
         expectDiagnostic(bare({ stream: 'ExtResource("nonexistent")' }), {
-          ruleName: 'audiostreamplayer2d-missing-stream-resource',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'AudioStreamPlayer2D',
-          contains: ['does not exist', 'ExtResource("nonexistent")'],
+          contains: ['never declares', 'ExtResource("nonexistent")'],
         });
       });
 
@@ -182,11 +238,11 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
     });
 
-    describe('autoplay without stream warning', () => {
-      it('should warn when autoplay is enabled without stream', () => {
+    describe('autoplay without stream', () => {
+      it('reports when autoplay is enabled without stream', () => {
         expectDiagnostic(bare({ autoplay: true }), {
           ruleName: 'audiostreamplayer2d-autoplay-without-stream',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'AudioStreamPlayer2D',
           contains: ['autoplay', 'no', 'stream'],
         });
@@ -195,111 +251,92 @@ describe('AudioStreamPlayer2D Linter', () => {
       it('should not warn when autoplay is enabled with stream', () => {
         expectClean(withStream({ autoplay: true }));
       });
-    });
 
-    describe('max_distance warnings', () => {
-      it('should warn when max_distance is very small', () => {
-        expectDiagnostic(withStream({ max_distance: 5 }), {
-          ruleName: 'audiostreamplayer2d-small-max-distance',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['max_distance', 'very small', '5'],
-        });
+      it('stays silent when an AnimationPlayer audio track targets this node', () => {
+        // animation_mixer.cpp:891-898 builds its own polyphonic playback for
+        // the track's target and never reads the node's `stream`.
+        expectClean(drivenByAudioTrack('Pickup', { autoplay: true }));
       });
 
-      it('should warn when max_distance is very large', () => {
-        expectDiagnostic(withStream({ max_distance: 15000 }), {
-          ruleName: 'audiostreamplayer2d-large-max-distance',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['max_distance', 'very large', '15000'],
-        });
+      it('stays silent for an AnimationTree too, which shares that cache', () => {
+        // The suppression is grounded on AnimationMixer, so it must ask the
+        // chain: an exact `AnimationPlayer` test warned about a node the engine
+        // does feed.
+        expectClean(drivenByAudioTrack('Pickup', { autoplay: true }, 'AnimationTree'));
       });
 
-      it('should not warn on normal max_distance values', () => {
-        expectClean(withStream({ max_distance: 2000 }));
+      it('still reports when the audio track targets a DIFFERENT node', () => {
+        expectDiagnostic(drivenByAudioTrack('SomeOtherNode', { autoplay: true }), {
+          ruleName: 'audiostreamplayer2d-autoplay-without-stream',
+          severity: 'info',
+          nodeType: 'AudioStreamPlayer2D',
+        });
       });
     });
 
-    describe('attenuation warnings', () => {
-      it('should warn when attenuation is very flat', () => {
-        expectDiagnostic(withStream({ attenuation: 0.05 }), {
-          ruleName: 'audiostreamplayer2d-flat-attenuation',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['attenuation', 'very flat', '0.05'],
+    // audio_stream_player_2d.cpp:436 — max_distance PROPERTY_HINT_RANGE
+    // "1,4096,1,or_greater,exp,suffix:px": the top end is open, and <= 0 is the
+    // setter's own error (:300), so only 0 < x < 1 warns. Both ends live on the
+    // validator, which carries the setter's floor and the hint's separately.
+    describe('max_distance bands', () => {
+      it('errors at or below the setter floor', () => {
+        expectDiagnostic(withStream({ max_distance: 0 }), {
+          ruleName: 'strict-parser',
+          severity: 'error',
+          contains: ['max_distance', 'greater than 0'],
         });
       });
 
-      it('should warn when attenuation is very steep', () => {
-        expectDiagnostic(withStream({ attenuation: 15 }), {
-          ruleName: 'audiostreamplayer2d-steep-attenuation',
+      it('warns between the setter floor and the hint floor', () => {
+        expectDiagnostic(withStream({ max_distance: 0.5 }), {
+          ruleName: 'strict-parser',
           severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['attenuation', 'very steep', '15'],
+          contains: ['max_distance', '1'],
         });
       });
 
-      it('should not warn on normal attenuation values', () => {
-        expectClean(withStream({ attenuation: 1.0 }));
+      it.each([1, 5, 2000, 15000])('says nothing about max_distance %s', (maxDistance) => {
+        expectClean(withStream({ max_distance: maxDistance }));
       });
     });
 
-    describe('volume_db warnings', () => {
-      it('should warn on very low volume_db', () => {
-        expectDiagnostic(withStream({ volume_db: -70 }), {
-          ruleName: 'audiostreamplayer2d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Volume', 'very low', '-70'],
-        });
-      });
-
-      it('should warn on very high volume_db', () => {
-        expectDiagnostic(withStream({ volume_db: 25 }), {
-          ruleName: 'audiostreamplayer2d-extreme-volume',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Volume', 'very high', '25'],
-        });
-      });
-
-      it('should not warn on normal volume_db values', () => {
-        expectClean(withStream({ volume_db: -6.0 }));
+    // audio_stream_player_2d.cpp:437 — attenuation is PROPERTY_HINT_EXP_EASING,
+    // which states no range at all.
+    describe('attenuation carries no advisory', () => {
+      it.each([0.05, 1.0, 15])('says nothing about attenuation %s', (attenuation) => {
+        expectClean(withStream({ attenuation }));
       });
     });
 
-    describe('pitch_scale warnings', () => {
-      it('should warn on very low pitch_scale', () => {
-        expectDiagnostic(withStream({ pitch_scale: 0.3 }), {
-          ruleName: 'audiostreamplayer2d-unusual-pitch',
-          severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Pitch scale', 'very low', '0.3'],
+    // volume_db's band is the validator's (linterParser.ts), not a rule's — the
+    // accept/reject table above covers it.
+
+    // audio_stream_player_internal.cpp:314 rejects pitch_scale <= 0; the hint
+    // (:432, "0.01,4,0.01,or_greater") leaves the top open, so only 0 < x < 0.01 warns.
+    describe('pitch_scale bands', () => {
+      it('errors at or below the setter floor', () => {
+        expectDiagnostic(withStream({ pitch_scale: 0 }), {
+          ruleName: 'strict-parser',
+          severity: 'error',
+          contains: ['pitch_scale', 'greater than 0'],
         });
       });
 
-      it('should warn on very high pitch_scale', () => {
-        expectDiagnostic(withStream({ pitch_scale: 3.0 }), {
-          ruleName: 'audiostreamplayer2d-unusual-pitch',
+      it('warns between the setter floor and the hint floor', () => {
+        expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
+          ruleName: 'strict-parser',
           severity: 'warning',
-          nodeType: 'AudioStreamPlayer2D',
-          contains: ['Pitch scale', 'very high', '3'],
+          contains: ['pitch_scale', '0.01'],
         });
       });
 
-      it('should not warn on normal pitch_scale values', () => {
-        expectClean(withStream({ pitch_scale: 1.2 }));
+      it.each([0.01, 0.3, 1.2, 3.0])('says nothing about pitch_scale %s', (pitchScale) => {
+        expectClean(withStream({ pitch_scale: pitchScale }));
       });
     });
   });
 
   describe('Edge Cases', () => {
-    it('should handle node with no properties', () => {
-      // Should have error for missing stream
-      expectDiagnostic(bare(), { prop: 'stream' });
-    });
-
     it('should handle all properties together', () => {
       expectClean(
         withStream({
@@ -321,13 +358,12 @@ describe('AudioStreamPlayer2D Linter', () => {
 
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(bare({ pitch_scale: 0, attenuation: -1.0, max_polyphony: 0 }));
-      expect(diagnostics.length).toBeGreaterThan(2);
-      // Should have errors for: pitch_scale, attenuation, max_polyphony, missing stream
-      const hasPitchError = diagnostics.some(d => d.message.includes('pitch_scale'));
-      const hasAttenuationError = diagnostics.some(d => d.message.includes('attenuation'));
-      const hasPolyphonyError = diagnostics.some(d => d.message.includes('max_polyphony'));
-      const hasStreamError = diagnostics.some(d => d.message.includes('stream'));
-      expect(hasPitchError || hasAttenuationError || hasPolyphonyError || hasStreamError).toBe(true);
+      // Errors for pitch_scale and max_polyphony, both of which the engine refuses;
+      // attenuation = -1 is legal (PROPERTY_HINT_EXP_EASING, no range).
+      expect(diagnostics.length).toBeGreaterThan(1);
+      expect(diagnostics.some(d => d.message.includes('pitch_scale'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('max_polyphony'))).toBe(true);
+      expect(diagnostics.some(d => d.message.includes('attenuation'))).toBe(false);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -342,11 +378,12 @@ describe('AudioStreamPlayer2D Linter', () => {
     });
 
     it('should validate mixed warnings and errors', () => {
-      const diagnostics = lint(withStream({ volume_db: -70, pitch_scale: 0.3, max_distance: 5 }));
-      expect(diagnostics.length).toBeGreaterThan(0);
-      // Should have warnings for extreme volume_db, pitch_scale, and max_distance
-      const hasWarnings = diagnostics.some(d => d.severity === 'warning');
-      expect(hasWarnings).toBe(true);
+      const diagnostics = lint(
+        withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5 })
+      );
+      // All three sit below their hints.
+      expect(diagnostics).toHaveLength(3);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle SubResource references', () => {
@@ -368,18 +405,16 @@ describe('AudioStreamPlayer2D Linter', () => {
 
     it('should handle extreme combinations', () => {
       const diagnostics = lint(
-        withStream({ volume_db: -70, pitch_scale: 0.3, max_distance: 5, attenuation: 15 })
+        withStream({ volume_db: -90, pitch_scale: 0.005, max_distance: 0.5, attenuation: 15 })
       );
-      expect(diagnostics.length).toBeGreaterThan(3);
-      // Should have warnings for volume, pitch, max_distance, and attenuation
-      const volumeWarning = diagnostics.find(d => d.message.includes('Volume') && d.message.includes('very low'));
-      const pitchWarning = diagnostics.find(d => d.message.includes('Pitch scale') && d.message.includes('very low'));
-      const distanceWarning = diagnostics.find(d => d.message.includes('max_distance') && d.message.includes('very small'));
-      const attenuationWarning = diagnostics.find(d => d.message.includes('attenuation') && d.message.includes('very steep'));
-      expect(volumeWarning).toBeDefined();
-      expect(pitchWarning).toBeDefined();
-      expect(distanceWarning).toBeDefined();
-      expect(attenuationWarning).toBeDefined();
+      // Three warnings, all three the validators' own hint bands; attenuation
+      // has no hint band (EXP_EASING) and stays silent.
+      expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
+        'strict-parser',
+        'strict-parser',
+        'strict-parser',
+      ]);
+      expect(diagnostics.every(d => d.severity === 'warning')).toBe(true);
     });
 
     it('should handle zero pitch_scale semantic validation', () => {

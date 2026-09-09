@@ -31,13 +31,13 @@ cell_size = Vector3(1, 1, 1)
   it('errors when the mesh_library reference does not resolve', () => {
     expectDiagnostic(
       scene(node('GridMap', { mesh_library: 'ExtResource("9_missing")', cell_size: 'Vector3(1, 1, 1)' })),
-      { ruleName: 'valid-gridmap-resources', severity: 'error', nodeType: 'GridMap' }
+      { ruleName: 'dangling-resource-reference', severity: 'error', nodeType: 'GridMap' }
     );
   });
 
-  it('warns (not errors) when a gridmap has no mesh_library', () => {
+  it('reports at info, not error, when a gridmap has no mesh_library', () => {
     const content = scene(node('GridMap', { cell_size: 'Vector3(1, 1, 1)' }));
     expectNoErrors(content);
-    expectDiagnostic(content, { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' });
+    expectDiagnostic(content, { ruleName: 'gridmap-requires-mesh-library', severity: 'info' });
   });
 });

@@ -1,6 +1,7 @@
 ---
 type: VBoxContainer
 category: 2D
+status: unreviewed
 fixture: unit-vbox-container.tscn
 image: unit-vbox-container
 renders_as: children laid out down a column
@@ -8,53 +9,34 @@ renders_as: children laid out down a column
 
 # VBoxContainer
 
-VBoxContainer stacks its children in a vertical column. The previewer runs Godot's own
-`BoxContainer::_resort`: `separation` spaces the children, `alignment` packs
-whatever is left over, and each child's `size_flags` decide its share of the
-column and its cross-axis fill. Here `alignment = END` packs the two Labels ("Top", "Bottom")
-to the bottom of the container, each carrying `size_flags_horizontal = 3`
-(FILL|EXPAND) so it spans the container's full width.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `anchors_preset` | `15` | the container fills the parent rect (the whole viewport) |
-| `alignment` | `2` (END) | main-axis packing — both labels sit at the bottom of the column |
-| `theme_override_constants/separation` | `16` | 16px gap between "Top" and "Bottom" |
-
-## Divergences
-
-None visible in this fixture. Both images pack "Top" above "Bottom" at the
-lower-left, at the same positions, with the same 16 px separation between them,
-and both draw the labels in the same bundled theme font at the same weight —
-`pnpm ref:godot scenes/fixtures/unit-vbox-container.tscn --mode 2d` against
-`pnpm ref:ours unit-vbox-container.tscn --2d` differs at a mean channel error of
-0.03/255 over the 1152x648 frame, all of it on glyph edges.
-
-`unit-vbox-container-pitch.tscn` is the wider reading of the solve, as flat bands
-with no text to blame an edge on. Every band edge in the `alignment = 1` column
-matches Godot exactly (y 180..239, 264..303, 328..367, 392..481), and in the
-expand column three of four do; the stretched `Green` band runs one pixel long
-(y 274..487 against Godot's 274..486) and carries `Amber` one row down with it,
-because Godot accumulates the truncated stretch shares in float32 where we use
-float64 and the two fractions land either side of a whole pixel at 320/3.
+VBoxContainer stacks its children in a vertical column. The previewer renders it as a
+CSS flex-column `<div>`: `separation` becomes the gap, `alignment` the
+`justify-content`, and each child's `size_flags` its grow and cross-axis fill.
 
 ## Linting
 
 <!-- lint:begin VBoxContainer -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `VBoxContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VBoxContainer` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `VBoxContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `vertical` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`alignment` goes through `parseOptionalInt` (via the shared BoxContainer
-parser): absent or unparseable, it becomes `undefined` with no warning, and
-`alignmentJustify` maps that (or any value besides `1`/`2`) to `flex-start`,
-Godot's BEGIN default. `theme_override_constants/separation` is collected
-generically by the Control parser (`parseOptionalFloat`, same silent-fallback
-contract); when it's missing the Component substitutes its own default of
-`4`px, matching Godot's VBoxContainer default gap.
+`alignment` goes through `parseOptionalInt`, so an absent or unparseable value becomes
+`undefined` with no warning and maps to `flex-start`, Godot's BEGIN default. A missing
+`theme_override_constants/separation` takes the Component's default of `4` px, Godot's
+own.
+
+## Known limitations
+
+- **Approximated** Labels are set in the browser's system font stack, since the VS Code
+  webview blocks web fonts. The glyphs read thinner than Godot's theme font.

@@ -1,85 +1,78 @@
 /**
- * Semantic lint checks shared by the AudioStreamPlayer family. The
- * extreme-volume / unusual-pitch bands were copy-pasted verbatim across the
- * 2D/3D/base `linter.ts` files (architecture review) — only the rule-name prefix
- * and the volume thresholds differed — so they are **Range advisory** arms now,
- * flowing through the shared `rangeAdvisories` combinator. `max_polyphony` stays
- * a hand-written check because it is an ERROR, not an advisory.
+ * Semantic lint checks shared by the AudioStreamPlayer family: the checks that
+ * need the whole scene tree, which no per-property validator can see.
+ *
+ * Hint bands are NOT here. Every one of them lives on the property's validator
+ * in each slice's `linterParser.ts`, which carries the setter's floor and the
+ * hint's as separate ends — a rule beside a bound makes the linter report one
+ * value twice.
  */
 
-import type { Diagnostic } from '../../linter/types.js';
-import type { RangeArm } from '../../linter/rangeAdvisory.js';
-
-const TYPICAL_PITCH_SCALE_MIN = 0.5;
-const TYPICAL_PITCH_SCALE_MAX = 2.0;
+import type { TscnNode, TscnScene } from '../../parser/types.js';
+import { extractNodePath, isValidProperties } from '../../linter/linterUtils.js';
+import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { resolveNodePath } from '../../linter/nodePathResolve.js';
+import { extractLibraries } from '../animation/animationplayer/parser.js';
+import { resolveAudioTrackPaths } from '../animation/animationplayer/animationResolver.js';
 
 /**
- * The two `volume_db` **Range advisory** arms — implausibly low or high.
- * Thresholds differ per node type (2D/base tolerate a wider range than 3D), so
- * the caller passes them. `rulePrefix` is the node-type slug so each slice keeps
- * its own `<prefix>-extreme-volume` rule name.
+ * True when some AnimationMixer anywhere in the scene drives `node` through
+ * an `audio` track — `animation_mixer.cpp:891-898` builds a separate
+ * polyphonic playback bound to the track's target and never reads that
+ * node's own `stream` property, so such a node is not silent even with no
+ * `stream` of its own. The `missing-stream` / `autoplay-without-stream`
+ * rules must stay quiet about it.
+ *
+ * The whole chain, not `AnimationPlayer` by name: `_update_caches`, `libraries`
+ * and `root_node` are all AnimationMixer's, so an AnimationTree drives an audio
+ * track exactly as a player does and an exact-type test left the warning firing
+ * on a node the engine does feed.
+ *
+ * Track paths resolve from the mixer's `root_node`, NOT from the mixer node:
+ * `_update_caches` takes `Node *parent = get_node_or_null(root_node)`
+ * (animation_mixer.cpp:661) and walks every track path from there, and
+ * `root_node` defaults to `NodePath("..")` (scene_string_names.h:129), the
+ * mixer's own parent. Resolving from the mixer instead shifts every track one
+ * level down the tree.
+ *
+ * A target that cannot be resolved confidently is treated as NOT driving this
+ * node — a missed warning beats a wrong one.
  */
-export function extremeVolumeArms(
-  rulePrefix: string,
-  volumeDbMin: number,
-  volumeDbMax: number
-): RangeArm[] {
-  return [
-    {
-      under: volumeDbMin,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      message: (volumeDb) =>
-        `Volume is very low (${volumeDb} dB). Values below ${volumeDbMin} dB are rarely intentional.`,
-    },
-    {
-      over: volumeDbMax,
-      ruleName: `${rulePrefix}-extreme-volume`,
-      message: (volumeDb) =>
-        `Volume is very high (${volumeDb} dB). Values above ${volumeDbMax} dB can cause distortion.`,
-    },
-  ];
+export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode): boolean {
+  for (const mixer of collectMixers(scene.nodes)) {
+    if (!isValidProperties(mixer.properties)) continue;
+    const props = mixer.properties as Record<string, string>;
+    // `root_node` defaults to ".." only when the key is ABSENT. An authored
+    // `NodePath("")` is a different state: `get_node_or_null` fails on
+    // `p_path.is_empty()` (node.cpp:1894), `_update_caches` bails on the null
+    // parent (animation_mixer.cpp:661), and the mixer drives nothing — so
+    // substituting the default there would suppress a warning that is correct.
+    const rootPath =
+      props.root_node === undefined ? '..' : extractNodePath(props.root_node);
+    if (rootPath === null) continue;
+    const mixerRoot = resolveNodePath(scene, mixer, rootPath);
+    if (mixerRoot.status !== 'found') continue;
+
+    const libraries = extractLibraries(props);
+    for (const rawPath of resolveAudioTrackPaths(libraries, scene.internalResources)) {
+      const target = resolveNodePath(scene, mixerRoot.node, rawPath);
+      if (target.status === 'found' && target.node === node) return true;
+    }
+  }
+  return false;
 }
 
-/**
- * The two `pitch_scale` **Range advisory** arms — a POSITIVE pitch outside the
- * typical 0.5–2.0 range (`<prefix>-unusual-pitch`). The `floor: 0` on the low arm
- * keeps non-positive values the slice's own (error-level) concern.
- */
-export function unusualPitchArms(rulePrefix: string): RangeArm[] {
-  return [
-    {
-      under: TYPICAL_PITCH_SCALE_MIN,
-      floor: 0,
-      ruleName: `${rulePrefix}-unusual-pitch`,
-      message: (pitchScale) =>
-        `Pitch scale is very low (${pitchScale}). Values below ${TYPICAL_PITCH_SCALE_MIN} sound very slow/deep.`,
-    },
-    {
-      over: TYPICAL_PITCH_SCALE_MAX,
-      ruleName: `${rulePrefix}-unusual-pitch`,
-      message: (pitchScale) =>
-        `Pitch scale is very high (${pitchScale}). Values above ${TYPICAL_PITCH_SCALE_MAX} sound very fast/high-pitched.`,
-    },
-  ];
+/** Every AnimationMixer heir anywhere in the scene tree (depth-first). */
+function collectMixers(nodes: readonly TscnNode[]): TscnNode[] {
+  const out: TscnNode[] = [];
+  const walk = (list: readonly TscnNode[]): void => {
+    for (const n of list) {
+      if (descendsFrom(n.type, 'AnimationMixer')) out.push(n);
+      walk(n.children);
+    }
+  };
+  walk(nodes);
+  return out;
 }
 
-/** Error when `max_polyphony` parses below 1 (`<prefix>-invalid-max-polyphony`). */
-export function checkInvalidMaxPolyphony(
-  rawProps: Record<string, string>,
-  nodeName: string,
-  nodeType: string,
-  rulePrefix: string,
-  diagnostics: Diagnostic[]
-): void {
-  if (rawProps.max_polyphony === undefined) return;
-  const maxPolyphony = parseInt(rawProps.max_polyphony, 10);
-  if (Number.isNaN(maxPolyphony) || maxPolyphony >= 1) return;
 
-  diagnostics.push({
-    severity: 'error',
-    message: `Property 'max_polyphony' must be at least 1 (got ${maxPolyphony}). Values below 1 cause runtime errors.`,
-    nodeName,
-    nodeType,
-    ruleName: `${rulePrefix}-invalid-max-polyphony`,
-  });
-}

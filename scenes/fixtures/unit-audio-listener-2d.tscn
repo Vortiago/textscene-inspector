@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyAudioListener2D" type="AudioListener2D" parent="."]
+position = Vector2(10, 20)
+current = true

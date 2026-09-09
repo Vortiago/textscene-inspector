@@ -109,6 +109,23 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * the key to the native Control-raster pass (`ControlRasterPass.tsx`) that
  * owns it.
  */
+/**
+ * Godot floors a viewport at 2 (`viewport.cpp:1120`, `p_size.maxi(2)`) and
+ * imposes no ceiling — the GPU driver refuses an oversized allocation instead.
+ * A previewer cannot take that exit: `size = Vector2i(2000000000, 8)` is a file
+ * Godot opens, and the number reaches `new THREE.WebGLRenderTarget` here. So
+ * the ceiling is ours rather than the engine's, and it is WebGL2's common
+ * `MAX_TEXTURE_SIZE`. It bounds each AXIS; the readback's own allocation is
+ * bounded by nothing and answers for its own failure (`readTargetPixels`).
+ */
+const MAX_VIEWPORT_EXTENT = 16384;
+
+export function allocatableExtent(raw: number): number {
+  const rounded = Math.round(raw);
+  if (!Number.isFinite(rounded)) return 2;
+  return Math.min(MAX_VIEWPORT_EXTENT, Math.max(2, rounded));
+}
+
 function OffscreenViewport({
   node,
   path,
@@ -125,8 +142,8 @@ function OffscreenViewport({
   // publishes it here; no rect means no stretching container, and the authored
   // size stands — which is Godot's early return.
   const forcedRect = useViewportRect(path);
-  const width = Math.max(1, Math.round(forcedRect?.x ?? size?.x ?? 512));
-  const height = Math.max(1, Math.round(forcedRect?.y ?? size?.y ?? 512));
+  const width = allocatableExtent(forcedRect?.x ?? size?.x ?? 512);
+  const height = allocatableExtent(forcedRect?.y ?? size?.y ?? 512);
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);

@@ -1,5 +1,5 @@
 /**
- * Tests for MeshInstance3D linter (strict parser + semantic rules)
+ * Tests for MeshInstance3D linting (strict parser + the generic dangling-resource pass)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,7 +13,6 @@ import {
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
 
 describe('MeshInstance3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -36,13 +35,16 @@ describe('MeshInstance3D Linter', () => {
     });
 
     describe('cast_shadow validation', () => {
-      it('should detect invalid cast_shadow value', () => {
+      it('should detect an invalid cast_shadow value as a warning', () => {
+        // visual_instance_3d.cpp:601 hints the enum but set_cast_shadows_setting
+        // (:366-370) is a bare assignment, so out-of-range is a warning, not an
+        // error (ADR-0032).
         const diagnostics = lint(
           scene(node('MeshInstance3D', { cast_shadow: 99 }, { name: 'InvalidShadow' }))
         );
         expect(diagnostics).toHaveLength(1);
         expect(diagnostics[0]).toMatchObject({
-          severity: 'error',
+          severity: 'warning',
           ruleName: 'strict-parser',
         });
         expect(diagnostics[0]!.message).toContain('cast_shadow');
@@ -65,7 +67,11 @@ describe('MeshInstance3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'MeshInstance3D' }, [
       { prop: 'gi_mode', valid: [0, 1, 2], invalid: [{ value: 5, contains: ['0-2'] }] },
-      { prop: 'gi_lightmap_scale', valid: [0, 1, 2, 3], invalid: [{ value: 10, contains: ['0-3'] }] },
+      // `gi_lightmap_scale` had a validator here until GeometryInstance3D took
+      // over this family. It is deprecated and bound PROPERTY_USAGE_NONE
+      // (scene/3d/visual_instance_3d.cpp), so Godot never writes it to a .tscn
+      // and nothing could ever have reached that check. The parser still reads
+      // the key so an older hand-written scene carrying it still loads.
       {
         prop: 'visibility_range_begin',
         valid: ['10.5'],
@@ -157,9 +163,17 @@ describe('MeshInstance3D Linter', () => {
         severity: 'error',
         nodeName: 'MissingMesh',
         nodeType: 'MeshInstance3D',
-        ruleName: 'valid-meshinstance3d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Mesh resource not found');
+      expect(diagnostics[0]!.message).toContain("'mesh'");
+    });
+
+    it('reports nothing for a cleared mesh slot', () => {
+      // `mesh = null` is an emptied slot, not a dangling reference: Godot writes
+      // it and reloads it, so reporting a missing resource is a false error.
+      const content = scene(node('MeshInstance3D', { mesh: 'null' }, { name: 'ClearedMesh' }));
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
+      expectClean(content);
     });
 
     it('should pass when all resources exist', () => {
@@ -176,7 +190,7 @@ describe('MeshInstance3D Linter', () => {
         scene(
           node('MeshInstance3D', { material_override: 'SubResource("nonexistent_material")' }, { name: 'MissingMaterial' })
         ),
-        { prop: 'Material override resource not found', contains: ['Material override resource not found'] }
+        { prop: "'material_override'", severity: 'error' }
       );
     });
 
@@ -185,7 +199,7 @@ describe('MeshInstance3D Linter', () => {
         scene(
           node('MeshInstance3D', { material_overlay: 'SubResource("nonexistent_overlay")' }, { name: 'MissingOverlay' })
         ),
-        { prop: 'Material overlay resource not found', contains: ['Material overlay resource not found'] }
+        { prop: "'material_overlay'", severity: 'error' }
       );
     });
 
@@ -194,7 +208,7 @@ describe('MeshInstance3D Linter', () => {
         scene(node('MeshInstance3D', { skin: 'SubResource("nonexistent_skin")' }, { name: 'MissingSkin' }))
       );
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]!.message).toContain('Skin resource not found');
+      expect(diagnostics[0]!.message).toContain("'skin'");
     });
 
     it('should detect missing surface material override resource', () => {
@@ -206,163 +220,94 @@ describe('MeshInstance3D Linter', () => {
             { name: 'MissingSurfaceMat' }
           )
         ),
-        {
-          prop: 'Surface material override resource not found',
-          contains: ['Surface material override resource not found'],
-        }
+        { prop: "'surface_material_override/0'", severity: 'error' }
       );
     });
-  });
 
-  describe('Semantic Validation (Visibility Range)', () => {
-    it('should detect invalid visibility range (begin > end)', () => {
+    // `_set` reads a FIXED slice for the index — `get_slicec('/', 1)`
+    // (mesh_instance_3d.cpp:66) — and `get_slicec` returns that slice alone
+    // (ustring.cpp:941-964), so the override lands on surface 0 and its
+    // reference is as dangling as any other.
+    it('follows a trailing segment to the surface Godot writes', () => {
       expectDiagnostic(
         scene(
           node(
             'MeshInstance3D',
-            { visibility_range_begin: '100.0', visibility_range_end: '50.0' },
-            { name: 'InvalidRange' }
+            { 'surface_material_override/0/extra': 'SubResource("nonexistent_surface")' },
+            { name: 'TrailingSurfaceMat' }
           )
         ),
-        {
-          ruleName: 'valid-meshinstance3d-visibility-range',
-          severity: 'error',
-          contains: ['begin', 'end'],
-        }
-      );
-    });
-
-    it('should accept valid visibility range (begin < end)', () => {
-      expectClean(
-        scene(
-          node(
-            'MeshInstance3D',
-            { visibility_range_begin: '10.0', visibility_range_end: '100.0' },
-            { name: 'ValidRange' }
-          )
-        )
-      );
-    });
-
-    it('should accept valid visibility range (begin = end)', () => {
-      expectClean(
-        scene(
-          node(
-            'MeshInstance3D',
-            { visibility_range_begin: '50.0', visibility_range_end: '50.0' },
-            { name: 'EqualRange' }
-          )
-        )
-      );
-    });
-
-    it('should not validate range when only begin is specified', () => {
-      expectClean(
-        scene(node('MeshInstance3D', { visibility_range_begin: '100.0' }, { name: 'OnlyBegin' }))
-      );
-    });
-
-    it('should not validate range when only end is specified', () => {
-      expectClean(
-        scene(node('MeshInstance3D', { visibility_range_end: '50.0' }, { name: 'OnlyEnd' }))
+        { prop: "'surface_material_override/0/extra'", severity: 'error' }
       );
     });
   });
 
+  // The real condition (visual_instance_3d.cpp: `!is_zero_approx(end) && end <=
+  // begin`) belongs to `valid-geometryinstance3d-visibility-range`, which
+  // reaches MeshInstance3D through its descendsFrom matcher. This slice reports
+  // nothing of its own.
+  describe('Semantic Validation (Visibility Range)', () => {
+    it('reports nothing for any begin/end pairing', () => {
+      const cases: Record<string, string>[] = [
+        { visibility_range_begin: '100.0', visibility_range_end: '50.0' },
+        { visibility_range_begin: '10.0', visibility_range_end: '100.0' },
+        { visibility_range_begin: '50.0', visibility_range_end: '50.0' },
+        { visibility_range_begin: '100.0' },
+        { visibility_range_end: '50.0' },
+      ];
+      for (const range of cases) {
+        expectClean(scene(node('MeshInstance3D', range, { name: 'Range' })));
+      }
+    });
+  });
+
+  // Godot tolerates a stale or wrong-typed skeleton path: the lookup is
+  // get_node_or_null (its in-source comment notes the path may be outdated
+  // after a reparent) and a non-Skeleton3D target silently yields no skin.
   describe('Semantic Validation (Skeleton)', () => {
-    it('should detect missing skeleton node', () => {
-      const diagnostics = lint(
+    it('reports nothing for a missing, wrong-typed, empty or relative skeleton path', () => {
+      expectClean(
         scene(node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MissingSkeleton' }))
       );
-      expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]).toMatchObject({
-        severity: 'error',
-        ruleName: 'valid-meshinstance3d-skeleton',
-      });
-      expect(diagnostics[0]!.message).toContain('Skeleton node not found');
-    });
-
-    it('should pass when skeleton node exists', () => {
       expectClean(
         scene(
-          node('Skeleton3D', {}, { name: 'MySkeleton' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("MySkeleton")' }, { name: 'MyMesh' })
+          node('Node3D', {}, { name: 'Root' }),
+          node('Skeleton3D', {}, { name: 'MySkeleton', parent: '.' }),
+          node(
+            'MeshInstance3D',
+            { skeleton: 'NodePath("../MySkeleton")' },
+            { name: 'MyMesh', parent: '.' }
+          )
         )
       );
-    });
-
-    it('should detect skeleton pointing to wrong node type', () => {
-      expectDiagnostic(
+      expectClean(
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('Node3D', {}, { name: 'NotASkeleton', parent: '.' }),
           node('MeshInstance3D', { skeleton: 'NodePath("NotASkeleton")' }, { name: 'MyMesh', parent: '.' })
-        ),
-        { prop: 'must point to a Skeleton3D node', contains: ['must point to a Skeleton3D node'] }
+        )
       );
-    });
-
-    it('should accept empty skeleton path', () => {
+      expectClean(scene(node('MeshInstance3D', { skeleton: 'NodePath("")' }, { name: 'MyMesh' })));
       expectClean(
-        scene(node('MeshInstance3D', { skeleton: 'NodePath("")' }, { name: 'MyMesh' }))
-      );
-    });
-
-    it('should not error on a relative (..) skeleton path that escapes the authored scope', () => {
-      // Mirrors scenes/demos/3d/graphics_settings/3d_scene.tscn: a MeshInstance3D
-      // whose skeleton resolves up the tree via "../.." — a relative path the
-      // static linter cannot resolve, so it must not assert not-found.
-      expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'Root' }),
           node('SpotLight3D', {}, { name: 'SpotLight3D', parent: '.' }),
           node('MeshInstance3D', { skeleton: 'NodePath("../..")' }, { name: 'MeshInstance3D', parent: 'SpotLight3D' })
-        ),
-        { ruleName: 'valid-meshinstance3d-skeleton' }
-      );
-    });
-
-    it('should not error when the MeshInstance3D is parented under an instanced sub-scene', () => {
-      // Mirrors the fabrik_ik GLB case: a mesh living inside an instanced
-      // sub-scene references a Skeleton3D that exists only in that sub-scene's
-      // internals, which the static linter cannot see.
-      const content = `[gd_scene format=3]
-
-[ext_resource type="PackedScene" path="res://character.tscn" id="1_char"]
-
-[node name="Root" type="Node3D"]
-
-[node name="Character" parent="." instance=ExtResource("1_char")]
-
-[node name="BodyMesh" type="MeshInstance3D" parent="Character"]
-skeleton = NodePath("Armature/Skeleton3D")
-`;
-
-      expectNoDiagnostic(content, { ruleName: 'valid-meshinstance3d-skeleton' });
-    });
-
-    it('should still error on a missing local skeleton when nested under a non-instance parent', () => {
-      // Boundary: a non-relative path under an ordinary (non-instanced) parent is
-      // fully authored, so a genuinely missing Skeleton3D must still be reported.
-      expectDiagnostic(
-        scene(
-          node('Node3D', {}, { name: 'Root' }),
-          node('Node3D', {}, { name: 'Holder', parent: '.' }),
-          node('MeshInstance3D', { skeleton: 'NodePath("NonexistentSkeleton")' }, { name: 'MyMesh', parent: 'Holder' })
-        ),
-        { ruleName: 'valid-meshinstance3d-skeleton', severity: 'error', contains: ['Skeleton node not found'] }
+        )
       );
     });
   });
 
+  // mesh_instance_3d.cpp:367 bounds the surface index with
+  // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()) — the mesh's own
+  // surface count, which a .tscn does not state — so no fixed index is out of range.
   describe('Semantic Validation (Surface Index Range)', () => {
-    it('should warn about unusually high surface index but accept it', () => {
-      expectDiagnostic(
+    it.each([0, 31, 256, 999])('accepts surface index %s', (index) => {
+      expectClean(
         scene(
           '[sub_resource type="StandardMaterial3D" id="mat_1"]',
-          node('MeshInstance3D', { 'surface_material_override/256': 'SubResource("mat_1")' }, { name: 'ExcessiveIndex' })
-        ),
-        { ruleName: 'valid-meshinstance3d-surface-index', severity: 'warning', contains: ['unusually high'] }
+          node('MeshInstance3D', { [`surface_material_override/${index}`]: 'SubResource("mat_1")' }, { name: 'AnyIndex' })
+        )
       );
     });
 
@@ -384,7 +329,7 @@ skeleton = NodePath("Armature/Skeleton3D")
       );
     });
 
-    it('should warn about high index and check resource existence', () => {
+    it('should check resource existence at any index', () => {
       const diagnostics = lint(
         scene(
           node(
@@ -394,17 +339,10 @@ skeleton = NodePath("Armature/Skeleton3D")
           )
         )
       );
-      expect(diagnostics.length).toBeGreaterThan(0);
-      // Should warn about high index
-      const indexWarning = diagnostics.find(d => d.ruleName === 'valid-meshinstance3d-surface-index');
-      expect(indexWarning).toBeDefined();
-      expect(indexWarning?.severity).toBe('warning');
-      expect(indexWarning?.message).toContain('unusually high');
-
-      // Should also report resource not found
-      const resourceError = diagnostics.find(d => d.message.includes('resource not found'));
-      expect(resourceError).toBeDefined();
-      expect(resourceError?.severity).toBe('error');
+      // The missing resource is the only complaint: the index itself is unbounded.
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.severity).toBe('error');
+      expect(diagnostics[0]?.message).toContain('never declares');
     });
   });
 
@@ -418,15 +356,13 @@ skeleton = NodePath("Armature/Skeleton3D")
               cast_shadow: 10,
               gi_mode: 5,
               mesh: 'SubResource("nonexistent")',
-              visibility_range_begin: '100.0',
-              visibility_range_end: '50.0',
             },
             { name: 'MultipleErrors' }
           )
         )
       );
-      // We expect multiple errors: cast_shadow, gi_mode format errors
-      // plus potentially mesh resource not found and visibility range error
+      // We expect multiple diagnostics: cast_shadow and gi_mode format
+      // complaints plus the missing mesh resource.
       expect(diagnostics.length).toBeGreaterThan(1);
       // Verify at least some of the expected errors are present
       const hasCastShadowError = diagnostics.some(d => d.message.includes('cast_shadow'));
@@ -444,13 +380,15 @@ skeleton = NodePath("Armature/Skeleton3D")
 
 [node name="MySkeleton" type="Skeleton3D"]
 
-[node name="ComplexMesh" type="MeshInstance3D"]
+; parent="." and a relative skeleton path: without them ComplexMesh is a second
+; root, dropped from the tree, and every property below went unchecked.
+[node name="ComplexMesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("mesh_1")
 material_override = SubResource("mat_1")
 material_overlay = SubResource("mat_2")
 surface_material_override/0 = SubResource("mat_1")
 skin = SubResource("skin_1")
-skeleton = NodePath("MySkeleton")
+skeleton = NodePath("..")
 cast_shadow = 2
 gi_mode = 1
 gi_lightmap_scale = 2
@@ -468,5 +406,20 @@ layers = 1023
     it('should handle node with no properties', () => {
       expectClean(scene(node('MeshInstance3D', {}, { name: 'EmptyMesh' })));
     });
+  });
+});
+
+describe('MeshInstance3D surface-override index grammar', () => {
+  it('checks an override written under a non-numeric index, which _set resolves', () => {
+    // `_set` reads the index with a bare
+    // `p_name.get_slicec('/', 1).to_int()` and no validity gate
+    // (mesh_instance_3d.cpp:66), and `to_int` skips a character it cannot use
+    // rather than stopping at it (ustring.cpp:2280-2293), so
+    // `surface_material_override/x1` overrides surface 1 and its dangling
+    // reference is a real one.
+    expectDiagnostic(
+      scene(node('MeshInstance3D', { 'surface_material_override/x1': 'SubResource("mat_missing")' })),
+      { ruleName: 'dangling-resource-reference', severity: 'error', contains: ["'surface_material_override/x1'"] }
+    );
   });
 });

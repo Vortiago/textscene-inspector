@@ -70,7 +70,7 @@ export function AnimationPanel() {
           <select
             className={styles.select}
             value={transport.playbackSpeed}
-            onChange={(e) => transport.setPlaybackSpeed(parseFloat(e.target.value))}
+            onChange={(e) => transport.setPlaybackSpeed(Number(e.target.value))}
           >
             {SPEED_OPTIONS.map((speed) => (
               <option key={speed} value={speed}>
@@ -121,7 +121,7 @@ export function AnimationPanel() {
         max={transport.duration}
         step={0.01}
         value={transport.time}
-        onChange={(e) => transport.seek(parseFloat(e.target.value))}
+        onChange={(e) => transport.seek(Number(e.target.value))}
       />
     </div>
   );

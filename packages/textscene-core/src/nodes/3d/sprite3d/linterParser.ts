@@ -1,58 +1,58 @@
 /**
  * Sprite3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
+ *
+ * Declare only Sprite3D's OWN members — the ones doc/classes/Sprite3D.xml
+ * lists without an `overrides=` attribute, bound in `Sprite3D::_bind_methods`
+ * (sprite_3d.cpp:990-1024). `billboard`, `alpha_cut`, `axis`, `pixel_size`,
+ * `offset`, `modulate` and `render_priority` are SpriteBase3D's own members
+ * (bound in the SEPARATE `SpriteBase3D::_bind_methods`, sprite_3d.cpp:625-710)
+ * and now live in `../sprites/shared/linterParser.ts`, reached through the
+ * base-walk — re-declaring them here would shadow the tier's rule instead of
+ * sharing it with AnimatedSprite3D.
  */
 
+// The tier holding every SpriteBase3D member, which in turn pulls
+// GeometryInstance3D/VisualInstance3D/Node3D, so this module answers for
+// every key Sprite3D is chained to.
+import '../sprites/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
-// PARTICLES is absent: Godot rejects it on a sprite (scene/3d/sprite_3d.cpp:598).
-const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
-const ALPHA_CUT = { 0: 'DISABLED', 1: 'DISCARD', 2: 'OPAQUE_PREPASS', 3: 'HASH' };
-const AXIS = { 0: 'X_AXIS', 1: 'Y_AXIS', 2: 'Z_AXIS' };
-// BaseMaterial3D::TextureFilter, TEXTURE_FILTER_MAX = 6 (scene/resources/material.h:172-178).
-const TEXTURE_FILTER = {
-  0: 'NEAREST',
-  1: 'LINEAR',
-  2: 'NEAREST_WITH_MIPMAPS',
-  3: 'LINEAR_WITH_MIPMAPS',
-  4: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-  5: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
-};
-// BaseMaterial3D::AlphaAntiAliasing, ALPHA_ANTIALIASING_MAX = 3 (material.h:197-200).
-const ALPHA_ANTIALIASING = { 0: 'OFF', 1: 'ALPHA_TO_COVERAGE', 2: 'ALPHA_TO_COVERAGE_AND_TO_ONE' };
-
 validatorRegistry.registerAll('Sprite3D', {
   texture: v.resourceReference('texture'),
-  billboard: v.enumInt('billboard', 0, 2, BILLBOARD),
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, ALPHA_CUT),
-  axis: v.enumInt('axis', 0, 2, AXIS),
-  pixel_size: v.positiveFloat('pixel_size'),
-  transparency: v.float('transparency', { min: 0, max: 1 }),
-  hframes: v.positiveInt('hframes'),
-  vframes: v.positiveInt('vframes'),
-  frame: v.int('frame', { min: 0 }),
-  offset: v.vector2('offset'),
-  frame_coords: v.vector2i('frame_coords'),
-  region_rect: v.rect2('region_rect'),
-  modulate: v.color('modulate'),
-  render_priority: v.int('render_priority'),
-  // Variant::BOOL in Godot (scene/3d/sprite_3d.cpp:677-688, :1019).
-  centered: v.boolean('centered'),
-  flip_h: v.boolean('flip_h'),
-  flip_v: v.boolean('flip_v'),
+  // `transparency` is GeometryInstance3D's and arrives via the base-walk.
+  // sprite_3d.cpp:1014/:1015 hint "1,16384,1", closed both ends.
+  // set_hframes/set_vframes (:924/:905) ERR_FAIL_COND_MSG below 1 — the setter
+  // refuses the floor — while nothing enforces the 16384 ceiling, so it warns.
+  // Same numbers as the Sprite2D twin (sprite_2d.cpp:543-544). `int`, not
+  // `strictInt`: the property is Variant::INT and a float literal in that slot
+  // is read and truncated on assignment (variant_parser.cpp:446-448), so
+  // `hframes = 5.5` is a file Godot opens and must not be a format error.
+  hframes: v.int('hframes', {
+    min: 1,
+    max: 16384,
+    enforced: { min: 'sprite_3d.cpp:924' },
+    hinted: { max: 'sprite_3d.cpp:1014' },
+  }),
+  vframes: v.int('vframes', {
+    min: 1,
+    max: 16384,
+    enforced: { min: 'sprite_3d.cpp:905' },
+    hinted: { max: 'sprite_3d.cpp:1015' },
+  }),
+  // Sprite3D::set_frame:877-879, ERR_FAIL_INDEX(p_frame, int64_t(vframes) *
+  // hframes): the floor (0) is enforced (a negative index fails the same
+  // unsigned bounds check), but the ceiling depends on hframes/vframes as set
+  // at that point in file order, so it is not a static bound this validator
+  // can check.
+  frame: v.int('frame', { min: 0, enforced: 'sprite_3d.cpp:878' }),
+  // set_frame_coords (sprite_3d.cpp:894-895) ERR_FAIL_INDEXes both components
+  // against hframes/vframes, the same guard Sprite2D carries. Only the floor is
+  // checkable here: the ceiling is a sibling property.
+  frame_coords: v.vector2i('frame_coords', { min: 0, enforced: 'sprite_3d.cpp:894' }),
+  // set_region_enabled:848-856 is a bare bool assignment; ADD_PROPERTY
+  // (sprite_3d.cpp:1019) hints PROPERTY_HINT_GROUP_ENABLE, a pure UI-grouping
+  // hint with no value bound.
   region_enabled: v.boolean('region_enabled'),
-  double_sided: v.boolean('double_sided'),
-  transparent: v.boolean('transparent'),
-  // Draw flags, all Variant::BOOL (scene/3d/sprite_3d.cpp:687-690).
-  shaded: v.boolean('shaded'),
-  no_depth_test: v.boolean('no_depth_test'),
-  fixed_size: v.boolean('fixed_size'),
-  texture_filter: v.enumInt('texture_filter', 0, 5, TEXTURE_FILTER),
-  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, ALPHA_ANTIALIASING),
-  // Unbounded: the setters assign without clamping (sprite_3d.cpp:545,558,584),
-  // so the editor's hint range is not a validity rule.
-  alpha_scissor_threshold: v.float('alpha_scissor_threshold'),
-  alpha_hash_scale: v.float('alpha_hash_scale'),
-  alpha_antialiasing_edge: v.float('alpha_antialiasing_edge'),
+  region_rect: v.rect2('region_rect'),
 });

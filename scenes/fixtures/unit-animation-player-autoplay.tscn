@@ -67,7 +67,7 @@ mesh = SubResource("BoxMesh_box")
 libraries/ = SubResource("AnimationLibrary_default")
 autoplay = &"spin"
 speed_scale = 1.0
-playback_active = true
+active = true
 
 [node name="Title" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)

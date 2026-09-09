@@ -14,7 +14,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
+import '../shared/linter';
 
 describe('StaticBody3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -71,6 +71,14 @@ physics_material_override = SubResource("mat_1")
         expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
       });
 
+      // physics_body_3d.cpp's setter is a bare assignment and the property
+      // carries no hint, so an infinite component is stored rather than refused.
+      it('accepts a non-finite constant_linear_velocity without calling it malformed', () => {
+        expectNoErrors(
+          scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(inf, 0, 0)' }), collisionShape3d)
+        );
+      });
+
       it('should reject invalid constant_linear_velocity format', () => {
         expectDiagnostic(
           scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1, 2)' })),
@@ -111,7 +119,7 @@ physics_material_override = SubResource("mat_1")
           prop: 'collision_layer',
           valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"invalid"' },
           ],
         },
@@ -119,7 +127,7 @@ physics_material_override = SubResource("mat_1")
           prop: 'collision_mask',
           valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
           invalid: [
-{ value: -5, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
       {
@@ -135,7 +143,7 @@ physics_material_override = SubResource("mat_1")
       {
         prop: 'input_ray_pickable',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'input_capture_on_drag',
@@ -150,10 +158,10 @@ physics_material_override = SubResource("mat_1")
       expectDiagnostic(
         scene(node('StaticBody3D', { physics_material_override: 'SubResource("nonexistent")' })),
         {
-          ruleName: 'valid-staticbody3d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'StaticBody3D',
-          contains: ['Physics material resource not found'],
+          contains: ["'physics_material_override'"],
         }
       );
     });
@@ -184,12 +192,12 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (CollisionShape3D Children)', () => {
-    it('should warn when StaticBody3D has no CollisionShape3D children', () => {
+    it('should warn when StaticBody3D has no CollisionShape3D or CollisionPolygon3D children', () => {
       expectDiagnostic(scene(node('StaticBody3D')), {
-        ruleName: 'staticbody3d-needs-collision-shape',
+        ruleName: 'collisionobject3d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody3D',
-        contains: ['no CollisionShape3D children'],
+        contains: ['no CollisionShape3D or CollisionPolygon3D children'],
       });
     });
 
@@ -197,13 +205,18 @@ physics_material_override = ExtResource("ext_mat_1")
       expectClean(scene(node('StaticBody3D'), collisionShape3d));
     });
 
-    it('should pass when StaticBody3D has nested CollisionShape3D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject3D>(get_parent())`
+    // (collision_shape_3d.cpp:83), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_3d.cpp:739).
+    it('warns when the only CollisionShape3D under StaticBody3D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('StaticBody3D'),
           node('Node3D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape3D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'collisionobject3d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -218,74 +231,15 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
-  describe('Semantic Validation (Constant Velocities)', () => {
-    it('should warn when constant_linear_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)' }), collisionShape3d),
-        {
-          ruleName: 'staticbody3d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody3D',
-          contains: ['constant_linear_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_linear_velocity is zero', () => {
-      expectClean(scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
-    });
-
-    it('should warn when constant_angular_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0.0, 1.57, 0.0)' }), collisionShape3d),
-        {
-          ruleName: 'staticbody3d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody3D',
-          contains: ['constant_angular_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_angular_velocity is zero', () => {
-      expectClean(scene(node('StaticBody3D', { constant_angular_velocity: 'Vector3(0, 0, 0)' }), collisionShape3d));
-    });
-
-    it('should warn when both velocities are non-zero', () => {
-      const warnings = lint(
-        scene(
-          node('StaticBody3D', {
-            constant_linear_velocity: 'Vector3(1.0, 0.0, 0.0)',
-            constant_angular_velocity: 'Vector3(0.0, 1.0, 0.0)',
-          }),
-          collisionShape3d
-        )
-      ).filter(d => d.ruleName === 'staticbody3d-constant-velocity-warning');
-      expect(warnings.length).toBe(2); // One for linear, one for angular
-    });
-  });
-
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('StaticBody3D', { collision_layer: 0 }), collisionShape3d), {
-        ruleName: 'staticbody3d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-        contains: ['collision_layer set to 0'],
-      });
-    });
-
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('StaticBody3D', { collision_layer: 1 }), collisionShape3d));
     });
 
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d), {
-        ruleName: 'staticbody3d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'StaticBody3D',
-        contains: ['collision_mask set to 0'],
-      });
+    // No `collision_mask == 0` check: no engine warning exists for it, and it
+    // is the standard "only needs to BE detected" static configuration.
+    it('stays quiet when collision_mask is 0', () => {
+      expectClean(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d));
     });
 
     it('should not warn when collision_mask is non-zero', () => {
@@ -301,10 +255,9 @@ physics_material_override = ExtResource("ext_mat_1")
 disable_mode = 10
 collision_layer = -5
 physics_material_override = SubResource("nonexistent")
-constant_linear_velocity = Vector3(1, 0, 0)
 `);
       // Should have multiple errors: disable_mode, collision_layer format errors,
-      // plus potentially resource not found and velocity warnings
+      // plus potentially resource not found
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const hasDisableModeError = diagnostics.some(d => d.message.includes('disable_mode'));
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
@@ -335,14 +288,12 @@ input_capture_on_drag = false
       const diagnostics = lint(scene(node('StaticBody3D')));
       // Should only have warning about missing CollisionShape3D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('staticbody3d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject3d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(
-        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d),
-        { ruleName: 'staticbody3d-constant-velocity-warning' }
+      expectNoErrors(
+        scene(node('StaticBody3D', { constant_linear_velocity: 'Vector3(1e-5, 2.5e3, -3.14e2)' }), collisionShape3d)
       );
     });
 

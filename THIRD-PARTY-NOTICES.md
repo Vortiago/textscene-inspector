@@ -30,11 +30,16 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/csg/csgbox3d/boxGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGBox3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgcylinder3d/cylinderGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGCylinder3D::_build_brush`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgsphere3d/sphereGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGSphere3D::_build_brush`) |
-| `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`) |
+| `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`, the frame-walking loop and its cap/wall emission) |
+| `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/extrusionCounts.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`'s extrusion/end-cap counts, csg_shape.cpp:2201-2231) |
+| `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonSweepFrames.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`'s frame basis), `core/math/triangulate.cpp` (`Triangulate::get_area`) and `core/math/transform_3d.cpp` (`Transform3D::looking_at`) |
+| `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/sweepFaceBuffer.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`'s face buffer and its `face -= extrusion_face_count` rewind) |
 | `packages/textscene-core/src/nodes/3d/csg/csgtorus3d/torusGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGTorus3D::_build_brush`) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
-| `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`, `light_base_color` energy packing, `light_shadow_compute`'s PCF5/PCF13 tap kernels and the `shadow_pos` quadrant block) and `drivers/gles3/rasterizer_canvas_gles3.cpp` (`shadow_pixel_size`, `_update_shadow_atlas`'s atlas filter/wrap state) |
+| `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes and the `shadow_color` mix, `light_base_color` energy packing) |
+| `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_shadow_compute`'s PCF5/PCF13 tap kernels and the `shadow_pos` quadrant block) |
+| `packages/textscene-core/src/r3f/lighting2d/shadowSampling.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`shadow_pixel_size`, the shadow atlas's linear-filter and repeat-wrap state) |
 | `packages/textscene-core/src/r3f/lighting2d/lightCullKey.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`_record_item_commands`'s per-item light test) and `servers/rendering/renderer_viewport.cpp` (`_draw_viewport`'s per-canvas `layer_min`/`layer_max` filter) |
 | `packages/textscene-core/src/r3f/canvasPaintOrder.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`_attach_canvas_item_for_draw`'s per-`z_final` append order and `_cull_canvas_item`'s behind/ahead child split — the whole of Godot's canvas draw order) and `scene/main/canvas_layer.cpp` (`CanvasLayer::set_layer`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemPlacement.tsx` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s `z_relative` accumulation and CLAMP, `_attach_canvas_item_for_draw`'s `ci->z_final`) |
@@ -66,8 +71,15 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*` and horizontal line offset for `HORIZONTAL_ALIGNMENT_*`, including `FILL` falling through to `CENTER`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`, the `_update_internal` preprocess loop, `_update_particle_data_buffer`) |
-| `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (the `_update_internal` preprocess loop and its fixed-step evaluation window) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particlesProcess.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`'s per-frame loop: cycle bookkeeping, restart phase, the emission transform) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleRestart.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s restart branch and its emission-shape offsets) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAdvance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s alive branch: the accelerations, orbit, damping and angular integration) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAppearance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s appearance pass) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleBuffer.ts` | `scene/2d/cpu_particles_2d.cpp` (`_update_particle_data_buffer`, `SortLifetime`) |
+| `packages/textscene-core/src/nodes/2d/cpuparticles2d/affine2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::basis_xform`, `Transform2D::operator*`, `Transform2D::affine_inverse`) |
+| `scripts/godot-ref/bootstrap.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`) |
+| `scripts/godot-ref/refConstants.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditorViewport::Cursor()`) |
 
 ### Reproduced values
 

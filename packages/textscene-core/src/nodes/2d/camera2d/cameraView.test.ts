@@ -85,3 +85,51 @@ describe('camera2DView limit clamping', () => {
     expect(view.center).toEqual({ x: -5000, y: -5000 });
   });
 });
+
+describe('a non-uniform zoom frames per axis, as the engine does', () => {
+  // `zoom_scale = Vector2(1, 1) / zoom` (camera_2d.cpp:107) and the rect is
+  // `screen_size * zoom_scale` (:163) — both per axis. Dividing the height by
+  // `zoom.x` framed 576x324 where Godot frames 576x648, and the halved height
+  // fed the limit clamp and the returned centre as well.
+  const view = (zoom: { x: number; y: number }) =>
+    camera2DView(
+      {
+        zoom,
+        offset: { x: 0, y: 0 },
+        anchor_mode: Camera2DAnchorMode.DRAG_CENTER,
+        limitEnabled: false,
+        limitLeft: -10000000,
+        limitRight: 10000000,
+        limitTop: -10000000,
+        limitBottom: 10000000,
+      } as Parameters<typeof camera2DView>[0],
+      { x: 0, y: 0 },
+      { x: 1152, y: 648 }
+    );
+
+  it('divides each axis by its own zoom', () => {
+    expect(view({ x: 2, y: 1 }).size).toEqual({ x: 576, y: 648 });
+    expect(view({ x: 1, y: 2 }).size).toEqual({ x: 1152, y: 324 });
+  });
+
+  it('leaves a uniform zoom framing what it always did', () => {
+    expect(view({ x: 2, y: 2 }).size).toEqual({ x: 576, y: 324 });
+  });
+});
+
+describe('a zoom set_zoom refuses leaves the default (1, 1) on BOTH axes', () => {
+  // `ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) || Math::is_zero_approx(p_zoom.y), …)`
+  // (camera_2d.cpp:104) returns before `zoom = p_zoom`, so the whole write is
+  // dropped: one zero component must not let the other take effect.
+  it('frames Vector2(0, 2) at the unzoomed viewport', () => {
+    const view = camera2DView(props({ zoom: { x: 0, y: 2 } }), { x: 0, y: 0 }, VIEWPORT);
+    expect(view.size).toEqual(VIEWPORT);
+    expect(view.zoom).toBe(1);
+  });
+
+  it('frames Vector2(2, 1e-9) at the unzoomed viewport', () => {
+    const view = camera2DView(props({ zoom: { x: 2, y: 1e-9 } }), { x: 0, y: 0 }, VIEWPORT);
+    expect(view.size).toEqual(VIEWPORT);
+    expect(view.zoom).toBe(1);
+  });
+});

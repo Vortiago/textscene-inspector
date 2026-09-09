@@ -64,8 +64,12 @@ describe('parseVector3', () => {
     expect(parseVector3('Vector3(1.5e2, -2E-1, 3)')).toEqual({ x: 150, y: -0.2, z: 3 });
   });
 
-  it('parses trailing-dot and leading-dot decimals', () => {
-    expect(parseVector3('Vector3(1., .5, 2)')).toEqual({ x: 1, y: 0.5, z: 2 });
+  it('parses trailing-dot decimals, and refuses leading-dot ones', () => {
+    // `get_token` requires a digit after the optional `-` (variant_parser.cpp:424),
+    // so `.5` never reaches the number branch. Measured on 4.6.3: a scene
+    // carrying `Vector2(.5, 2)` fails the load outright.
+    expect(parseVector3('Vector3(1., 0.5, 2)')).toEqual({ x: 1, y: 0.5, z: 2 });
+    expect(() => parseVector3('Vector3(1., .5, 2)')).toThrow('Invalid Vector3 format');
   });
 
   it('throws on wrong arity and empty input', () => {
@@ -81,5 +85,28 @@ describe('parseVector3', () => {
     // turn into warn-then-fall-back.
     expect(() => parseVector3('Vector3(1.2.3, 1, 2)')).toThrow('Invalid Vector3 format');
     expect(() => parseVector3('Vector3(-, 1, 2)')).toThrow('Invalid Vector3 format');
+  });
+});
+
+/**
+ * `slotTupleRegex` admits `Vector2i`/`Vector3i` into a float slot because
+ * `can_convert_strict` converts them, but their arguments go through
+ * `_parse_construct<int32_t>` (`variant_parser.cpp:721-733`) and are narrowed
+ * to int32 BEFORE the widening runs. Reading them as plain floats put the
+ * renderer 4.29e9 units from where Godot draws the node.
+ */
+describe('an i-suffixed spelling in a float slot', () => {
+  it('narrows each component to int32 the way Godot stores it', () => {
+    expect(parseVector2('Vector2i(4294967295, 0)')).toEqual({ x: -1, y: 0 });
+    expect(parseVector3('Vector3i(4294967295, 0, 0)')).toEqual({ x: -1, y: 0, z: 0 });
+  });
+
+  it('truncates a fractional component rather than keeping it', () => {
+    expect(parseVector2('Vector2i(1.5, 2)')).toEqual({ x: 1, y: 2 });
+  });
+
+  it('leaves the canonical float spelling alone', () => {
+    expect(parseVector2('Vector2(4294967295, 1.5)')).toEqual({ x: 4294967295, y: 1.5 });
+    expect(parseVector3('Vector3(1.5, 2.5, 3.5)')).toEqual({ x: 1.5, y: 2.5, z: 3.5 });
   });
 });

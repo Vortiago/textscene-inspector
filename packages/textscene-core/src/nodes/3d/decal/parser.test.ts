@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseDecal } from './parser';
+import { TscnParser } from '../../../parser/TscnParser';
 
 describe('parseDecal', () => {
   it('parses name, parent, and transform (happy path)', () => {
@@ -95,5 +96,13 @@ describe('parseDecal', () => {
     expect(result.name).toBe('');
     expect(result.parent).toBeUndefined();
     expect(result.transform).toBeUndefined();
+  });
+});
+
+describe('a Godot-3 extents', () => {
+  it('parses as size doubled once the scan has resolved it (decal.cpp:274-276)', () => {
+    // Measured on 4.6.3: `extents = Vector3(1, 2, 3)` loads as size (2, 4, 6).
+    const scene = new TscnParser().parse('[gd_scene format=3]\n\n[node name="D" type="Decal"]\nextents = Vector3(1, 2, 3)\n');
+    expect((scene.nodes[0]!.properties as { size: unknown }).size).toEqual({ x: 2, y: 4, z: 6 });
   });
 });

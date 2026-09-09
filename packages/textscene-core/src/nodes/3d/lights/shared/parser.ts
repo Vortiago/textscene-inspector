@@ -4,6 +4,7 @@
 
 import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
 import { floatOr, parseOptionalFloat } from '../../../../parser/valueParsers';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 /**
  * Parses common light properties shared across all light types.
@@ -18,10 +19,10 @@ export function parseBaseLightProperties(
     light_color: properties.light_color || 'Color(1, 1, 1, 1)',
     light_energy: floatOr(properties.light_energy, 1.0, 'light_energy'),
     light_negative:
-      properties.light_negative !== undefined ? properties.light_negative === 'true' : undefined,
+      properties.light_negative !== undefined ? boolSlotValue(properties.light_negative) === true : undefined,
     light_specular: parseOptionalFloat(properties.light_specular),
     light_volumetric_fog_energy: parseOptionalFloat(properties.light_volumetric_fog_energy),
-    shadow_enabled: properties.shadow_enabled === 'true',
+    shadow_enabled: boolSlotValue(properties.shadow_enabled) === true,
     shadow_bias: parseOptionalFloat(properties.shadow_bias),
     shadow_blur: parseOptionalFloat(properties.shadow_blur),
   };

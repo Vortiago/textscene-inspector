@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveAnimations } from './animationResolver';
+import { hasUnresolvableClips, resolveAnimations } from './animationResolver';
 import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
 import { TscnParser } from '../../../parser/TscnParser';
 
@@ -82,6 +82,24 @@ describe('resolveAnimations — value track parsing (B3)', () => {
   });
 });
 
+describe('resolveAnimations — track path spellings', () => {
+  // `tracks/N/path` is a NodePath slot (`Animation::_set` hands it to
+  // `track_set_path`), and `variant.cpp:746-749` lists STRING as a strict
+  // source for NODE_PATH, so the bare string names the same target.
+  it('reads a bare quoted track path as the NodePath spelling', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': '"Circle:rotation"',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]).toMatchObject({ targetPath: 'Circle', property: 'rotation' });
+  });
+});
+
 describe('resolveAnimations — keyframe values (B4)', () => {
   it('decodes Vector3 keyframe values to number triples', () => {
     const internal = [
@@ -112,6 +130,27 @@ describe('resolveAnimations — keyframe values (B4)', () => {
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks[0]!.keys[0]!.value).toEqual([7, -8]);
     expect(anim.tracks[1]!.keys[0]!.value).toBe(1.5708);
+  });
+
+  it('decodes the `i`-suffixed vectors, which share a prefix with their float twins', () => {
+    // `'Vector2i(...)'.startsWith('Vector2')` is TRUE, so the integer literal
+    // reached `parseVector2`, missed its float grammar and THREW — taking the
+    // whole scene down rather than one keyframe. `SubViewport.size` is declared
+    // `Variant::VECTOR2I` (viewport.cpp:5579), so this is what Godot writes.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("SubViewport:size")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector2i(256, 128)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("GridMap:cell")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3i(1, -2, 3)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks[0]!.keys[0]!.value).toEqual([256, 128]);
+    expect(anim.tracks[1]!.keys[0]!.value).toEqual([1, -2, 3]);
   });
 
   it('decodes Color keyframe values to RGBA quadruples (modulate fade — ADR-0017)', () => {
@@ -148,6 +187,166 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
     ];
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  // `inf` is a legal float literal Godot writes and reloads
+  // (variant_parser.cpp:150-155), outside the finite grammar the render
+  // decoders read. Such a key has no value to interpolate, so the track goes
+  // rather than becoming one that samples NaN for the rest of the clip.
+  it('drops a value track whose FIRST key holds a non-finite component', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:modulate")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, inf), Color(1, 1, 1, 0)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose non-finite component is in a LATER key', () => {
+    // Every downstream shape check reads key 0, so a good first key is exactly
+    // the case that reached a KeyframeTrack.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:modulate")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 0.5, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0.5), Color(1, 1, 1, inf)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose key overflows the finite grammar to Infinity', () => {
+    // `1e999` is ordinary digits and an exponent, so no grammar refuses it —
+    // only the read result is non-finite.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 1e999, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  // `times`, `transitions` and a transform track's flat array are the same
+  // channel as `values`: a non-finite one reaches a THREE `KeyframeTrack`, whose
+  // interpolant divides by the span, so every sample after it is NaN.
+  it('drops a value track whose TIME is non-finite', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, inf),\n"values": [Vector3(0, 0, 0), Vector3(0, 1, 0)]\n}',
+        'tracks/1/type': '"value"',
+        'tracks/1/path': 'NodePath("Good:position")',
+        'tracks/1/keys': '{\n"times": PackedFloat32Array(0),\n"values": [Vector3(0, 0, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks.map((t) => t.targetPath)).toEqual(['Good']);
+  });
+
+  it('drops a value track whose TRANSITION is non-finite', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Fading:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"transitions": PackedFloat32Array(1, nan),\n"values": [Vector3(0, 0, 0), Vector3(0, 1, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a 3D transform track whose flat array holds a non-finite component', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("N")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, inf, 0, 1, 1, 0, 1, 0)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track whose TIME is non-finite on a transform track too', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"rotation_3d"',
+        'tracks/0/path': 'NodePath("N")',
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1, 1e999, 1, 0, 0, 0, 1)',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  // `values[i] ?? 0` minted a keyframe AT ZERO for every time the array did not
+  // reach, which for a scalar property pins the node there for the whole clip.
+  it('drops a value track whose keys dict carries no `values` at all', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:rotation")',
+        'tracks/0/keys': '{\n"times": PackedFloat32Array(0, 1)\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track with fewer values than times', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 0.5, 1),\n"values": [Vector2(0, 0), Vector2(1, 1)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
+  });
+
+  it('drops a value track whose int component is unstorable, rather than keying 0', () => {
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("N:position")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0),\n"values": [Vector3i(99999999999999999999, 0, 0)]\n}',
+      }),
+    ];
+    expect(resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks).toEqual([]);
   });
 
   it('returns the animation with no tracks when a track type is unsupported', () => {
@@ -293,6 +492,23 @@ describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/sca
     const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
     expect(anim.tracks).toEqual([]);
   });
+
+  it('skips a 3D transform track whose flat array is not a whole number of strides', () => {
+    // `Animation::_set` refuses the write outright on `vcount % 5`
+    // (`animation.cpp:163`), so the track carries no keys. Truncating to the
+    // whole strides drew motion between keyframes the engine never stored.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        'tracks/0/type': '"position_3d"',
+        'tracks/0/path': 'NodePath("Mesh")',
+        // 8 floats against a stride of 5: one whole keyframe and 3 strays.
+        'tracks/0/keys': 'PackedFloat32Array(0, 1, 0, 0, 0, 1, 1, 0)',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim.tracks).toEqual([]);
+  });
 });
 
 describe('resolveAnimations — end-to-end from a parsed dict-form scene', () => {
@@ -364,5 +580,66 @@ libraries = {
     const t = anims[0]!.tracks[0]!;
     expect(t).toMatchObject({ targetPath: 'Mesh', property: 'position' });
     expect(t.keys.map((k) => k.value)).toEqual([[0, 0, 0], [0, 2, 0]]);
+  });
+});
+
+describe('resolveAnimations — a scalar the tokenizer cannot read', () => {
+  it('falls back rather than reading a prefix of it', () => {
+    // `parseFloat('5abc')` is 5, so a token Godot refuses to load produced a
+    // five-second clip and every keyframe time was scaled against it.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"idle": SubResource("A")\n}' }),
+      res('A', 'Animation', { length: '5abc', step: '2abc' }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+    expect(anim).toMatchObject({ length: 1.0, step: 0.1 });
+  });
+});
+
+describe('a fractional composite keyframe', () => {
+  it('keeps its fractional components, because a keyframe is not a slot write', () => {
+    // `{ exact: true }` on COMPOSITE_KEYS. Without it the widened `Vector3i`
+    // arm matches `Vector3(...)` first and every component is truncated —
+    // `[0, 1.5, 0]` silently became `[0, 1, 0]` with the whole suite green.
+    const internal = [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
+      res('A', 'Animation', {
+        length: '1.0',
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Pivot:rotation")',
+        'tracks/0/keys':
+          '{\n"times": PackedFloat32Array(0, 1),\n"transitions": PackedFloat32Array(1, 1),\n' +
+          '"update": 0,\n"values": [Vector3(0, 0, 0), Vector3(0, 1.5, 0)]\n}',
+      }),
+    ];
+    const anim = resolveAnimations(DEFAULT_LIB, internal)[0]!;
+
+    expect(anim.tracks[0]!.keys.map((k) => k.value)).toEqual([
+      [0, 0, 0],
+      [0, 1.5, 0],
+    ]);
+  });
+});
+
+/**
+ * `hasUnresolvableClips` is a SUPPRESSION guard: missing an ExtResource here
+ * lets a caller call a live clip name dangling. Godot's tokenizer discards
+ * every character <= 32 before a token (variant_parser.cpp:415-417) and the
+ * `ExtResource` branch then asks only for the next token to be `(` (:1089-1093),
+ * so the padded spelling is a file that loads.
+ */
+describe('hasUnresolvableClips — the padding Godot discards', () => {
+  const libAt = (data: string): TscnInternalResource[] => [res('Lib', 'AnimationLibrary', { _data: data })];
+
+  it('sees the tight spelling', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": ExtResource("1_walk")\n}'))).toBe(true);
+  });
+
+  it('sees the padded spelling the same way', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": ExtResource ("1_walk")\n}'))).toBe(true);
+  });
+
+  it('still says no for a library holding only SubResource clips', () => {
+    expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": SubResource("Anim_walk")\n}'))).toBe(false);
   });
 });

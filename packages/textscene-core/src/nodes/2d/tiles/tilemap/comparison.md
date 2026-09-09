@@ -1,6 +1,7 @@
 ---
 type: TileMap
 category: 2D
+status: unreviewed
 fixture: unit-tile-map.tscn
 image: unit-tile-map
 renders_as: batched textured tile quads
@@ -8,67 +9,49 @@ renders_as: batched textured tile quads
 
 # TileMap
 
-TileMap draws each enabled layer's cells as batched textured quads sampled from
-its TileSet atlas. This fixture lays five cells across two layers into a 3×2 grid,
-reassembling the top-left tiles of the 32px marker atlas into a blocky white "F"
-on blue; the vacant bottom-right cell leaves a notch of background showing
-through. `scale` and `position` enlarge and centre the map so the composition is
-legible.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(384, 196)` | centres the map in the frame |
-| `scale` | `Vector2(4, 4)` | enlarges the tiles 4× so they read clearly |
-| `tile_set` | `SubResource TileSet_b` | supplies the 32px marker atlas the cells sample |
-| `format` | `2` | selects the tile_data encoding so the layers decode; no visual of its own |
-| `layer_0/name` | `"Ground"` | editor layer label; no visual |
-| `layer_0/tile_data` | 4 cells | fills the top row (0,0)(1,0)(2,0) and the left cell (0,1) |
-| `layer_1/name` | `"Props"` | editor layer label; no visual |
-| `layer_1/z_index` | `1` | raises Props above Ground; no visible stacking here — its cell overlaps no Ground cell |
-| `layer_1/tile_data` | 1 cell | fills cell (1,1), the F's centre tile |
-
-## Divergences
-
-None visible in this fixture: same 3x2 footprint, same reconstructed "F", same
-vacant bottom-right cell, and the atlas blue and the white marker strokes read the
-same in both. `pnpm ref:godot scenes/fixtures/unit-tile-map.tscn --mode 2d`
-against `pnpm ref:ours unit-tile-map.tscn --2d`: mean channel error 0.0010/255,
-max channel difference 2/255, on 0.27 % of pixels — the same class of
-sub-pixel bilinear-filter rounding tie `tilemaplayer/comparison.md` measures
-at its own boundary pixel, smaller here because this fixture reconstructs
-fewer glyph edges.
-
+TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The
+previewer decodes the legacy `layer_N/tile_data` groups and draws one mesh per atlas
+source.
 
 ## Linting
 
 <!-- lint:begin TileMap -->
-Strict parsing format-checks these `TileMap` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `format` |
-| `tile_set` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `collision_animatable` | true or false |  |
+| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `format` | INT-typed literal (a FLOAT or BOOL spelling is a dropped write, tile_map.cpp:689) |  |
+| `layer_#/*` | layer |  |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `rendering_quadrant_size` | integer 1-128 | error below, warning above |
+| `tile_set` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-tilemap` | `tilemap-requires-tileset` | warning |
-|  | `valid-tilemap-resources` | error |
-|  | `tilemap-unsupported-format` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-tilemap` | `tilemap-deprecated` | warning |
+|  | `tilemap-y-sort-z-index-conflict` | warning |
+|  | `tilemap-layer-y-sort-without-node` | warning |
+|  | `tilemap-node-y-sort-without-layer` | warning |
+|  | `tilemap-requires-tileset` | info |
+|  | `tilemap-unsupported-format` | error |
 |  | `tilemap-invalid-tile-data` | error |
 <!-- lint:end -->
 
-`format` falls back to `0` when absent or unparseable (`intOr`), warning only when
-a value was present; only `format` `2` decodes, so any other value warns and the
-layer's `tile_data` is dropped rather than the node being rejected. `tile_set` is
-passed through as the raw resource-reference string when present and simply
-omitted when absent, so an unresolvable reference isn't caught here; the map
-renders with no tiles instead.
+`format` falls back to `2`, the current encoding, when absent or unreadable. Only format
+`2` decodes, so another value warns and drops that layer's `tile_data`. `tile_set`
+passes through as the raw reference string, so a dangling reference draws no tiles.
 
 ## Known limitations
 
-- **Cross-source draw order** — tiles batch one mesh per atlas source (a performance requirement), so per-cell interleaving of different sources within a quadrant is not reproduced; sources draw in appearance order, each nudged in z.
-- **Y-sort** — `y_sort_enabled` is applied for static scenes (descendants sorted by world-Y within z buckets); a per-frame re-sort when an AnimationPlayer moves Y is deferred.
-- **Unsupported shapes / formats** — half-offset-square and hexagon tile shapes place on a square grid + warn; legacy `TileMap` format 0/1, scene-collection sources, and per-tile overrides are skipped + warn; animated tiles render their base frame.
+- **Approximated** Cells batch one mesh per atlas source, so cells from different
+  sources in one layer are not interleaved per cell. Sources draw in appearance order,
+  each nudged in z.
+- **Approximated** Y-sort is computed once for the static scene. A Y change driven by an
+  AnimationPlayer is not re-sorted.
+- **Resource gap** Scene-collection sources are skipped with a warning, animated tiles
+  show their first frame, and legacy formats 0 and 1 draw nothing.

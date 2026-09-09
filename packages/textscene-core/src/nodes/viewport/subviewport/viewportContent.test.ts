@@ -48,6 +48,18 @@ describe('viewportContentKind', () => {
   });
 
   /**
+   * `ProgressBar` is a `Range`, so Godot calls it 2D UI, but this previewer
+   * ships no DOM component for it. Reading the component mirror here made the
+   * viewport `'empty'`, which both publishers skip — nothing registers a target
+   * and a `ViewportTexture` naming the path resolves null forever.
+   */
+  it('classifies a Control with no DOM component of its own as dom', () => {
+    expect(
+      viewportContentKind(viewport('\n[node name="Bar" type="ProgressBar" parent="Viewport"]'))
+    ).toBe('dom');
+  });
+
+  /**
    * An instance node has no type until its sub-scene resolves. Godot's own
    * viewport demos instance 3D sub-scenes (`3d_in_2d.tscn` instances
    * `robot_3d.tscn`), so a bare one is assumed to be 3D content.
@@ -211,9 +223,9 @@ z_index = 3
   });
 
   /**
-   * The other direction, and the one that was wrong: `Node` IS registered
-   * (`container: true`), so a "is this type registered" test claimed 3D for
-   * every plain-Node container before looking inside. Every 2D sub-scene whose
+   * The other direction, and the one a registration test gets wrong: `Node` IS
+   * registered (`container: true`), so "is this type registered" claims 3D for
+   * every plain-Node container without looking inside. Every 2D sub-scene whose
    * root is a bare `Node` — the shape a Godot level uses — landed on the 3D
    * pass, found no `Camera3D`, and published a clear-colour target.
    */
@@ -410,5 +422,44 @@ ${extra}`);
     // Untouched: the nested viewport's own child is still the raw instance node.
     expect(resolved.children[0]?.children[0]?.type).toBe('Node');
     expect(viewportContentKind(resolved)).toBe('empty');
+  });
+});
+
+describe('an instance override spelled with an i-suffixed composite', () => {
+  it('reads Vector2i as 2D, which is what Godot writes for a pixel count', () => {
+    // `Vector2i`/`Rect2i` are the NATIVE spelling of `frame_coords`,
+    // `region_rect` and `size`. Listing only `Vector2`/`Rect2` made these match
+    // neither discriminator, so `sawUntypedInstance` stayed true and the scene
+    // fell through to the 3D publisher — which then raced the DOM rasterizer
+    // for the same ViewportTextureRegistry key.
+    const scene = new TscnParser().parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://sprite.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Sprite" parent="Viewport" instance=ExtResource("1")]
+frame_coords = Vector2i(2, 1)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('2d');
+  });
+
+  it('reads Vector3i as 3D', () => {
+    const scene = new TscnParser().parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://grid.tscn" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="Grid" parent="Viewport" instance=ExtResource("1")]
+cell_size = Vector3i(2, 2, 2)
+`);
+    const node = scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
+    expect(viewportContentKind(node)).toBe('3d');
   });
 });

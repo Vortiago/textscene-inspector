@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_fog_volume"]
+
+[sub_resource type="FogMaterial" id="FogMaterial_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyFogVolume" type="FogVolume" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = 2
+size = Vector3(4, 3, 4)
+material = SubResource("FogMaterial_1")

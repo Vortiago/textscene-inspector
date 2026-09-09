@@ -20,7 +20,7 @@
  * The gate FORBIDS patterns, it does not require `painterView` to be
  * present: eight painters read no properties at all.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -51,13 +51,20 @@ const LOOSE_PAINTERS = [join(import.meta.dirname, 'PanelChrome.tsx')];
 const NO_PAINTER = new Set(['shared']);
 
 /**
- * Every native Control painter: one `Component.tsx` per `nodes/2d/ui` slice,
- * plus the loose ones.
+ * Every native Control painter: the `Component.tsx` of each `nodes/2d/ui` slice
+ * that ships one, plus the loose ones.
+ *
+ * A slice with no `Component.tsx` is parsed and validated but not drawn — the
+ * linter covers every Godot Control type, while a painter exists only where the
+ * previewer renders one. `has2DUIContent.driftguard.test.ts` is what holds the
+ * painted set to the component registry; this file only asks how the painters
+ * that DO exist read their view.
  */
 function painterSources(): SourceFile[] {
   const found = readdirSync(UI_ROOT, { withFileTypes: true })
     .filter((e) => e.isDirectory() && !NO_PAINTER.has(e.name))
-    .map((e) => join(UI_ROOT, e.name, 'Component.tsx'));
+    .map((e) => join(UI_ROOT, e.name, 'Component.tsx'))
+    .filter((file) => existsSync(file));
   return [...found, ...LOOSE_PAINTERS].map((file) => ({
     file,
     source: readFileSync(file, 'utf8'),

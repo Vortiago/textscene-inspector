@@ -404,6 +404,10 @@
   background: #d9a441;
 }
 
+.severityInfo {
+  background: #4f8fd6;
+}
+
 .gutterPopover {
   position: absolute;
   top: 0;

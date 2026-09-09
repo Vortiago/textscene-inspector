@@ -100,28 +100,28 @@ export function useMaterialTextures(
 
   // Hooks must be called unconditionally, in stable order, so every slot calls
   // `useResource` even when it has no path — the hook treats `''` as a no-op.
-  const albedoStatus = useResource<THREE.Texture>(textureRequests.albedo_texture ?? '', 'Texture2D');
-  const normalStatus = useResource<THREE.Texture>(textureRequests.normal_texture ?? '', 'Texture2D');
+  const albedoStatus = useResource<THREE.Texture>(textureRequests.albedo_texture ?? '', 'texture');
+  const normalStatus = useResource<THREE.Texture>(textureRequests.normal_texture ?? '', 'texture');
   const roughnessStatus = useResource<THREE.Texture>(
     textureRequests.roughness_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const metallicStatus = useResource<THREE.Texture>(
     textureRequests.metallic_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const emissionStatus = useResource<THREE.Texture>(
     textureRequests.emission_texture ?? '',
-    'Texture2D'
+    'texture'
   );
-  const aoStatus = useResource<THREE.Texture>(textureRequests.ao_texture ?? '', 'Texture2D');
+  const aoStatus = useResource<THREE.Texture>(textureRequests.ao_texture ?? '', 'texture');
   const heightmapStatus = useResource<THREE.Texture>(
     textureRequests.heightmap_texture ?? '',
-    'Texture2D'
+    'texture'
   );
   const anisotropyFlowmapStatus = useResource<THREE.Texture>(
     textureRequests.anisotropy_flowmap ?? '',
-    'Texture2D'
+    'texture'
   );
 
   const textureSlots = useMemo(
@@ -345,9 +345,12 @@ export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMa
   if (source?.kind === 'path') {
     return <ExternalMaterialSlot path={source.path} attach={attach} />;
   }
+  // `'default'` and an absent source reach the same slot: a surface with no
+  // usable material draws Godot's default one, and `SceneMaterialSlot` builds
+  // exactly that from a null resource (ADR-0041).
   return (
     <SceneMaterialSlot
-      resource={source?.resource}
+      resource={source?.kind === 'scene' ? source.resource : undefined}
       attach={attach}
       triplanarMesh={triplanarMesh}
     />

@@ -78,7 +78,7 @@ describe('MeshInstance3D — triplanar planar tiling (WI-HALL-5)', () => {
 
   it('NON-triplanar plane keeps uv1_scale as the literal repeat (no size multiply)', async () => {
     // Regression guard: the size-multiply must only fire for triplanar
-    // materials, or every existing uv1_scale assertion (#40–47) would break.
+    // materials, or every existing uv1_scale assertion (40–47) would break.
     const mat = await renderFloor(
       { albedo_texture: 'ExtResource("1")', uv1_scale: 'Vector3(2, 2, 1)' },
       'Vector2(12, 3.5)'

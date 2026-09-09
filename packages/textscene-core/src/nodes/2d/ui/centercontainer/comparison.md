@@ -1,6 +1,7 @@
 ---
 type: CenterContainer
 category: 2D
+status: unreviewed
 fixture: unit-center-container.tscn
 image: unit-center-container
 renders_as: a rect centred inside its own
@@ -8,35 +9,31 @@ renders_as: a rect centred inside its own
 
 # CenterContainer
 
-CenterContainer places its single child at the exact center of its own rect,
-horizontally and vertically. The container draws nothing itself — only the centred child shows.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `anchors_preset` | `15` | fills the parent Control (full rect), so the container's center is the viewport center |
-| `anchor_right` / `anchor_bottom` | `1.0` | the container spans the full viewport width and height |
-| child `Label.text` | `"Centered"` | the single child; the container pins it dead-center |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:godot
-scenes/fixtures/unit-center-container.tscn --mode 2d` against `pnpm ref:ours
-unit-center-container.tscn --2d` differs at a mean channel error of 0.01/255
-over the 1152x648 frame — all of it on the centred label's glyph edges.
+CenterContainer places its single child at the exact centre of its rect. The previewer
+maps it to a CSS flexbox centred on both axes and draws nothing itself.
 
 ## Linting
 
 <!-- lint:begin CenterContainer -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `CenterContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `CenterContainer` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `use_top_left` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-CenterContainer's parser is a pure passthrough to `parseControl`: it adds no
-property and no fallback of its own, so its lenient-parsing behavior is
-entirely Control's.
+`use_top_left` carries a strict bool check, since `set_use_top_left` assigns straight
+through. The lenient parser is a pure passthrough to `parseControl` and never reads it.
+
+## Known limitations
+
+- **Approximated** `use_top_left = true` is not applied, so the child stays centred on
+  the container rather than around its top-left corner.

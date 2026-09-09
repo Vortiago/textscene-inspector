@@ -8,99 +8,55 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
+import { boolSlotValue } from '../../../godot/index.js';
+import { spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
 /**
  * Validate Sprite3D semantic rules (resource references, frame validation, etc.)
  */
 function checkSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  // Only run for Sprite3D nodes
-  if (node.type !== 'Sprite3D') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // Check if texture resource exists (REQUIRED - Sprite3D is useless without texture)
-  if (!rawProps.texture) {
+  if (heldResource(rawProps.texture) === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Sprite3D requires a 'texture' property. Sprite3D is not visible without a texture.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'sprite3d-requires-texture',
     });
-  } else {
-    // Texture is specified - check if it exists
-    const resourceExists = checkResourceExists(scene, rawProps.texture);
-    if (!resourceExists) {
-      diagnostics.push({
-        severity: 'error',
-        message: `Texture resource not found: ${rawProps.texture}`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'valid-sprite3d-resources',
-      });
-    }
   }
 
-  // Validate frame is within valid range (frame < hframes * vframes)
-  if (rawProps.frame !== undefined) {
-    const frame = parseInt(rawProps.frame, 10);
-    const hframes = rawProps.hframes !== undefined ? parseInt(rawProps.hframes, 10) : 1;
-    const vframes = rawProps.vframes !== undefined ? parseInt(rawProps.vframes, 10) : 1;
-
-    if (!isNaN(frame) && !isNaN(hframes) && !isNaN(vframes)) {
-      const maxFrame = hframes * vframes;
-      if (frame >= maxFrame) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Frame ${frame} is out of range. Maximum frame is ${maxFrame - 1} (hframes=${hframes}, vframes=${vframes})`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'sprite3d-frame-range',
-        });
-      }
-    }
-  }
+  // Frame writes, judged in file order against the grid Godot holds at each
+  // line, with a later `hframes` re-mapping a frame that landed (spriteFrameGrid.ts).
+  diagnostics.push(...spriteFrameDiagnostics(node, rawProps, 'sprite3d'));
 
   // Validate region_rect requires region_enabled
   if (rawProps.region_rect !== undefined && rawProps.region_enabled === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `Property 'region_rect' is set but 'region_enabled' is not true. The region_rect will be ignored.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'sprite3d-region-configuration',
     });
   } else if (rawProps.region_rect !== undefined && rawProps.region_enabled !== undefined) {
-    // Check if region_enabled is explicitly false
-    const regionEnabled = rawProps.region_enabled.toLowerCase();
-    if (regionEnabled === 'false' || regionEnabled === '0') {
+    // Handed to the shared reader unnormalised: `VariantParser` compares the
+    // identifier case-SENSITIVELY (`id == "false"`, variant_parser.cpp:695-697),
+    // so lowercasing first made `region_enabled = FALSE` — a value Godot fails
+    // the load on — read as a boolean the file does not carry.
+    if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Property 'region_rect' is set but 'region_enabled' is false. The region_rect will be ignored.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'sprite3d-region-configuration',
-      });
-    }
-  }
-
-  // Validate axis property is only used with FIXED_Y billboard mode
-  if (rawProps.axis !== undefined && rawProps.billboard !== undefined) {
-    const billboard = parseInt(rawProps.billboard, 10);
-    if (!isNaN(billboard) && billboard !== 2) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Property 'axis' is only used when billboard mode is FIXED_Y (2). Current billboard mode is ${billboard}.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'sprite3d-axis-usage',
       });
     }
   }
@@ -114,15 +70,43 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
 const sprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-sprite3d-resources',
-    description: 'Validates Sprite3D texture resources, frame ranges, and region configuration',
+    description: 'Validates Sprite3D texture presence, frame ranges, and region configuration',
     category: 'validation',
     applicableNodeTypes: ['Sprite3D'],
     emits: [
-      { ruleName: 'sprite3d-requires-texture', severity: 'warning' },
-      { ruleName: 'valid-sprite3d-resources', severity: 'error' },
-      { ruleName: 'sprite3d-frame-range', severity: 'warning' },
-      { ruleName: 'sprite3d-region-configuration', severity: 'warning' },
-      { ruleName: 'sprite3d-axis-usage', severity: 'warning' },
+      {
+        ruleName: 'sprite3d-requires-texture',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_3d.cpp:798',
+          unused: 'the draw clears the base and returns, so the sprite renders nothing',
+        },
+      },
+      {
+        ruleName: 'sprite3d-frame-range',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:878' },
+      },
+      {
+        ruleName: 'sprite3d-frame-coords-range',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:894' },
+      },
+      {
+        ruleName: 'sprite3d-frame-remapped',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'sprite_3d.cpp:938' },
+      },
+      {
+        ruleName: 'sprite3d-region-configuration',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'sprite_3d.cpp:808',
+          unused: 'region_rect is read only inside this branch',
+        },
+      },
     ],
   },
   check: checkSprite3D,

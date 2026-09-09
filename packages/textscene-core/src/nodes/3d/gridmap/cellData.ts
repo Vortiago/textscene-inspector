@@ -9,6 +9,9 @@
  * 0-23 (bits 16-20).
  */
 
+import { warn } from '../../../logger.js';
+import { ruleInt, toInt16, toUint32 } from '../../../godot/int.js';
+
 export interface GridMapCell {
   x: number;
   y: number;
@@ -19,23 +22,33 @@ export interface GridMapCell {
   rot: number;
 }
 
-/** Interpret a 16-bit field as a signed int16. */
-function toInt16(u16: number): number {
-  return u16 >= 0x8000 ? u16 - 0x10000 : u16;
-}
+/** Elements per cell: the two IndexKey halves and the packed cell int. */
+const INTS_PER_CELL = 3;
 
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
+  // `ruleInt` rather than `Number`: `Number('inf')` is NaN, while `inf` is a
+  // literal Godot writes into an INT array, and the two must stay
+  // distinguishable.
   const ints = packedInt32
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => Number(s));
+    .map((s) => ruleInt(s));
 
   const cells: GridMapCell[] = [];
-  for (let i = 0; i + 2 < ints.length; i += 3) {
-    const keyLo = ints[i]! >>> 0;
-    const keyHi = ints[i + 1]! >>> 0;
-    const cell = ints[i + 2]! >>> 0;
+  for (let i = 0; i + 2 < ints.length; i += INTS_PER_CELL) {
+    const record = ints.slice(i, i + INTS_PER_CELL);
+    // The whole RECORD is skipped, not the element. `toUint32(NaN)` is 0, so
+    // substituting for one unstorable element drew a phantom cell at the
+    // origin; the stream is fixed-stride, so dropping the cell it belongs to
+    // costs that cell and no other.
+    if (record.some((n) => n === null)) {
+      warn(`[GridMap] cell data element "${record.join(', ')}" is not a cell Godot can place`);
+      continue;
+    }
+    const keyLo = toUint32(record[0]!);
+    const keyHi = toUint32(record[1]!);
+    const cell = toUint32(record[2]!);
     cells.push({
       x: toInt16(keyLo & 0xffff),
       y: toInt16((keyLo >>> 16) & 0xffff),

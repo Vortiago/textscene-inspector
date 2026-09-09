@@ -1,6 +1,7 @@
 ---
 type: HBoxContainer
 category: 2D
+status: unreviewed
 fixture: unit-hbox-container.tscn
 image: unit-hbox-container
 renders_as: children laid out along a row
@@ -8,43 +9,29 @@ renders_as: children laid out along a row
 
 # HBoxContainer
 
-HBoxContainer stacks its children in a horizontal row. The previewer runs Godot's own
-`BoxContainer::_resort`: `separation` spaces the children, `alignment` packs
-whatever is left over, and each child's `size_flags` decide its share of the
-row and its cross-axis fill. Here two Labels ("Left", "Right") each carry
-`size_flags_horizontal = 3` (FILL|EXPAND), so each takes half the row.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `anchors_preset` | `15` | the container fills the parent rect (the whole viewport) |
-| `alignment` | `1` (CENTER) | main-axis packing — no visible effect here, since both children EXPAND and already fill the row |
-| `theme_override_constants/separation` | `12` | 12px gap between the two labels, at the row's midpoint where their cells meet |
-| `size_flags_horizontal` | `3` (FILL\|EXPAND) | on each Label — the two cells split the row's width evenly |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:godot
-scenes/fixtures/unit-hbox-container.tscn --mode 2d` against `pnpm ref:ours
-unit-hbox-container.tscn --2d` differs at a mean channel error of 0.01/255 over
-the 1152x648 frame — all of it on the two labels' glyph edges.
+HBoxContainer stacks its children in a horizontal row. The previewer renders it as a CSS
+flex-row `<div>`: `separation` becomes the gap, `alignment` the `justify-content`, and
+each child's `size_flags` its grow and cross-axis alignment.
 
 ## Linting
 
 <!-- lint:begin HBoxContainer -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `HBoxContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `HBoxContainer` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `HBoxContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `vertical` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`alignment` goes through `parseOptionalInt` (via the shared BoxContainer
-parser): absent or unparseable, it becomes `undefined` with no warning, and
-`alignmentJustify` maps that (or any value besides `1`/`2`) to `flex-start`,
-Godot's BEGIN default. `theme_override_constants/separation` is collected
-generically by the Control parser (`parseOptionalFloat`, same silent-fallback
-contract); when it's missing the Component substitutes its own default of
-`4`px, matching Godot's HBoxContainer default gap.
+`alignment` goes through `parseOptionalInt`, so an absent or unparseable value becomes
+`undefined` with no warning and maps to `flex-start`, Godot's BEGIN default. A missing
+`theme_override_constants/separation` takes the Component's default of `4` px, Godot's
+own.

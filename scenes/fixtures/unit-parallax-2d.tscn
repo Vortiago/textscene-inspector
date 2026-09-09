@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+; Exercises every Parallax2D property at a value its own setter accepts unaltered.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyParallax2D" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.5, 0.5)
+scroll_offset = Vector2(10, 0)
+repeat_size = Vector2(512, 0)
+autoscroll = Vector2(-20, 0)
+repeat_times = 3
+limit_begin = Vector2(-2000, -2000)
+limit_end = Vector2(2000, 2000)
+follow_viewport = false
+ignore_camera_scroll = true
+screen_offset = Vector2(0, -10)

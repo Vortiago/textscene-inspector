@@ -1,6 +1,7 @@
 ---
 type: MeshInstance3D
 category: 3D
+status: unreviewed
 fixture: unit-torus-mesh.tscn
 image: unit-torus-mesh
 renders_as: a THREE.Mesh
@@ -8,130 +9,31 @@ renders_as: a THREE.Mesh
 
 # MeshInstance3D
 
-MeshInstance3D draws its `mesh` resource as a THREE.Mesh. This fixture feeds it a
-`TorusMesh` with an orange metallic `StandardMaterial3D` override, so the previewer
-builds a `torusGeometry` and shades it. The donut lies flat, hole facing up, with a
-glossy highlight, and the scene's two Label3D captions sit above and below it.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `mesh` | `TorusMesh` sub-resource | the donut geometry that is drawn |
-| `inner_radius` | `0.5` | radius of the hole |
-| `outer_radius` | `1.5` | radius to the outer edge |
-| `rings` / `ring_segments` | `32` / `16` | tessellation — both frames read as a smooth ring |
-| `surface_material_override/0` | `StandardMaterial3D` | replaces the surface material |
-| `albedo_color` | `Color(0.9, 0.5, 0.2, 1)` | the orange body |
-| `metallic` / `roughness` | `0.8` / `0.2` | glossy metal with the tight specular streak both frames share |
-
-## Divergences
-
-The torus now agrees on orientation: both frames lay it flat with the hole opening
-upward, matching outer/inner radii, tessellation, orange albedo, and the paired
-specular highlights. Both also render the two Label3D captions — the pale-yellow
-"TorusMesh Test" title above and the white description line below.
-
-The captions differ only in typeface: Godot draws them in its default font, while ours
-uses the previewer's bundled font, so the glyph shapes and stroke weight of the same
-text read slightly differently. The grey-sky-over-brown-ground preview environment
-otherwise matches.
+Draws its `mesh` resource as a `THREE.Mesh`, with each `surface_material_override/N` replacing that surface's material. The fixture's orange metallic torus lies flat with the hole facing up in both images.
 
 ## Linting
 
 <!-- lint:begin MeshInstance3D -->
-Strict parsing format-checks these `MeshInstance3D` properties, plus 16 inherited from Node3D. Every validator failure is an **error**.
+Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `cast_shadow` |
-| `gi_lightmap_scale` |
-| `gi_mode` |
-| `layers` |
-| `material_overlay` |
-| `material_override` |
-| `mesh` |
-| `skeleton` |
-| `skin` |
-| `surface_material_override/*` |
-| `visibility_range_begin` |
-| `visibility_range_begin_margin` |
-| `visibility_range_end` |
-| `visibility_range_end_margin` |
-| `visibility_range_fade_mode` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `blend_shapes/*` | float -1-1 | warning |
+| `mesh` | null, SubResource("id") or ExtResource("id") |  |
+| `skeleton` | NodePath("path/to/node") |  |
+| `skin` | null, SubResource("id") or ExtResource("id") |  |
+| `surface_material_override/*` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
-| `valid-meshinstance3d-resources` | `valid-meshinstance3d-resources` | error |
-|  | `valid-meshinstance3d-surface-index` | warning |
-|  | `valid-meshinstance3d-visibility-range` | error |
-|  | `valid-meshinstance3d-skeleton` | error |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The enum and range properties (`cast_shadow`, `gi_mode`, `gi_lightmap_scale`,
-`visibility_range_fade_mode`, the four `visibility_range_*` floats, `layers`) go through
-`parseOptionalInt`/`parseOptionalFloat`: an unparseable value is dropped silently, with no
-warning, and any value that parses but sits outside the valid range (say `cast_shadow=99`)
-is kept as-is, since these readers do no range or enum membership check. An absent or
-out-of-range `cast_shadow` behaves the same either way, since the component treats
-anything other than `0`/`2`/`3` as `1` (cast ON), Godot's own default. `mesh`,
-`material_override`, `material_overlay`, `skeleton`, `skin`, and each
-`surface_material_override/<n>` are assigned straight from the raw string whenever
-present; the lenient parser never checks that they resolve to a real resource or node.
-
-## Material precedence
-
-Per surface, Godot binds `material_override`, else `surface_material_override/N`,
-else the surface's own material, else the renderer's default
-(`render_forward_clustered.cpp:4206,4264,4221`; `MeshInstance3D::get_active_material`,
-`scene/3d/mesh_instance_3d.cpp:384`). `material_override` is applied to every
-surface, not to the mesh as a whole, and `N` is the index in the mesh's
-`_surfaces` — an index past the mesh's surface count is dropped rather than
-adding a surface (`scene/3d/mesh_instance_3d.cpp:68,407`).
-
-Every mesh kind resolves that order exactly, and from either source — a `.tres`
-or a scene `[sub_resource]`. Godot cannot tell the two apart: a material property
-is a `Ref<Material>` reduced to `->get_rid()` before the server sees it
-(`scene/3d/mesh_instance_3d.cpp:366`), so where the resource was loaded from is
-not represented past that call.
-
-## Material overlay
-
-`material_overlay` is not part of that precedence chain and never competes for a
-surface slot: `_geometry_instance_add_surface` resolves the surface's own chain
-first and then adds a SECOND surface for the overlay, for every surface
-(`render_forward_clustered.cpp:4228-4241`). So a node carrying both an override
-and an overlay draws the override AND the overlay, and the overlay covers a
-multi-surface mesh entirely rather than one slot of it.
-
-It renders as a second mesh sharing the surface's geometry. That mesh casts no
-shadow of its own — `cast_shadow` belongs to the instance, not to a surface, and
-the geometry is identical, so a second caster could only differ by acne — but it
-does receive, because Godot lights it like any other surface.
-
-Its draw order is pinned with an explicit `renderOrder` rather than left to
-three's sort. Both of three's tie-breaks between coincident draws are creation
-order (object id in the transparent list, material id in the opaque one), and a
-re-parse that remounts one material and not the other would invert them, drawing
-the overlay underneath the surface it covers. The cost is one divergence worth
-naming: a TRANSPARENT overlay therefore also sorts after unrelated transparent
-content at the same depth, where Godot would order the two by depth. Godot's own
-overlay carries no such ambiguity, since it is appended to the surface list
-immediately after the surface's own material chain.
-
-## Render layers
-
-`layers` — Godot's `VisualInstance3D` render mask — reaches the rendered mesh as
-a `userData` tag (`r3f/visualLayers.ts`). It does not change how the mesh itself
-draws; it is what other nodes filter on. Today that is `Decal.cull_mask`, which
-projects onto an instance only where `decal.cull_mask & instance.layers` is
-non-zero, so a mesh on a layer the decal excludes takes no projection.
-
-The mask deliberately does not ride `THREE.Object3D.layers`: that is three's
-camera-cull state, already in use by the 2D lighting passes, and a mesh moved
-off the camera's layer would vanish outright rather than merely go undecalled.
+The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, the `visibility_range_*` floats) go through `parseOptionalInt` and `parseOptionalFloat`. An unparseable value is dropped silently, and an out-of-range `cast_shadow = 99` is kept as is. The component treats any `cast_shadow` other than `0`, `2` or `3` as `1`, Godot's default. `mesh`, `material_override`, `skeleton`, `skin` and each surface override are assigned from the raw string with no resolution check.
 
 ## Divergences
 
@@ -154,5 +56,4 @@ has to come from Godot's own blend and tonemap source.
 
 ## Known limitations
 
-- **CylinderMesh single cap** — three removes both end caps or neither, so a Godot cylinder with exactly one of `cap_top` / `cap_bottom` disabled renders with both caps.
-- **A `.tres` material's `billboard`** — a material that arrives as an external `.tres` is built whole by the resource pipeline and attached as it stands, so `billboard_mode`, which the NODE has to act on rather than the material, does not reach it and the mesh does not turn to face the camera. It does not apply to a material declared as a scene `[sub_resource]`, where the mode reaches the node.
+- **Approximated** three removes both cylinder caps or neither, so a `CylinderMesh` with exactly one of `cap_top` and `cap_bottom` disabled renders with both.

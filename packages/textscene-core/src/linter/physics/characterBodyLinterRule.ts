@@ -1,155 +1,120 @@
 /**
  * Dimension-parameterized semantic linter rule for CharacterBody2D / CharacterBody3D.
  *
- * The two slices were ~85% identical; the genuine dimension-specific seam is the
- * `up_direction` arity and standard value (2D screen-space `Vector2(0, -1)` vs 3D
- * world-space `Vector3(0, 1, 0)`). Format validation stays in each slice's
- * linterParser.ts.
+ * The two slices were ~85% identical; what remains dimension-specific is the
+ * collision-shape family, one engine citation, and the GROUNDED-mode arm only
+ * 2D carries. Format validation, and every per-property bound, stays in each
+ * slice's linterParser.ts.
  */
 
+import { ruleInt } from '../validators/commonValidators.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { hasDescendantOfType } from './hasDescendantOfType.js';
-import { pushZeroCollisionLayerMaskWarnings } from './collisionLayerMask.js';
-import { makeFloatTupleRegex } from '../validators/floatTupleValidator.js';
+import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 
-/** Minimum recommended floor_snap_length (below this, floor snapping may not work well) */
-const MIN_RECOMMENDED_FLOOR_SNAP = 0.001;
-
-/** Maximum recommended floor_snap_length (above this can cause glitchy behavior) */
-const MAX_RECOMMENDED_FLOOR_SNAP = 10;
+/** Stripped together by the FLOATING branch, and read only from the grounded path. */
+const FLOOR_PROPERTIES = [
+  'floor_stop_on_slope',
+  'floor_constant_speed',
+  'floor_block_on_wall',
+  'floor_max_angle',
+  'floor_snap_length',
+];
 
 export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `CharacterBody${dim}`;
-  const shapeType = `CollisionShape${dim}`;
   const prefix = `characterbody${dimSuffix(dim)}`;
+  const is2D = dim === '2D';
+  // `_validate_property` strips PROPERTY_USAGE_EDITOR from every `floor_` key,
+  // from `up_direction` and from `slide_on_ceiling` while motion_mode is
+  // FLOATING, so the inspector offers none of them there.
+  const floatingCite = is2D ? 'character_body_2d.cpp:672' : 'character_body_3d.cpp:957';
 
-  // up_direction seam: 2D is Vector2(0, -1) (screen space), 3D is Vector3(0, 1, 0).
-  const upDirRegex = dim === '2D' ? makeFloatTupleRegex('Vector2', 2) : makeFloatTupleRegex('Vector3', 3);
-  const upStandard = dim === '2D' ? 'Vector2(0, -1)' : 'Vector3(0, 1, 0)';
+  // Each arm's enabling condition, stated once (see `ruleArms.ts`).
+  const arms: RuleArms<
+    | 'floorPropsInFloating'
+    | 'slideOnCeilingInFloating'
+    | 'wallAngleInGrounded'
+  > = {
+    floorPropsInFloating: {
+      severity: 'info',
+      ruleName: `${prefix}-floor-props-in-floating-mode`,
+      grounding: {
+        kind: 'engine-inert',
+        at: floatingCite,
+        unused: 'floating mode strips every floor_ key from the property list',
+      },
+    },
+    slideOnCeilingInFloating: {
+      severity: 'info',
+      ruleName: `${prefix}-slide-on-ceiling-in-floating-mode`,
+      grounding: {
+        kind: 'engine-inert',
+        at: floatingCite,
+        unused: 'the same line strips it, and every read sits in _move_and_slide_grounded',
+      },
+    },
+    // 2D only. `character_body_3d.cpp` has no `else` arm because its :300-303
+    // reads `wall_min_slide_angle` in the grounded path too; the 2D twin's only
+    // read is `character_body_2d.cpp:313`, inside `_move_and_slide_floating`.
+    wallAngleInGrounded: is2D
+      ? {
+          severity: 'info',
+          ruleName: `${prefix}-wall-min-slide-angle-in-grounded-mode`,
+          grounding: {
+            kind: 'engine-inert',
+            at: 'character_body_2d.cpp:676',
+            unused: 'grounded mode strips it, and its only read sits in _move_and_slide_floating',
+          },
+        }
+      : undefined,
+  };
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
+    const report = (arm: RuleArm | undefined, message: string) =>
+      reportArm(diagnostics, arm, node, message);
 
-    if (node.type !== type) {
-      return diagnostics;
-    }
-
-    // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    // Warning: CharacterBody without collision shape is useless
-    if (!hasDescendantOfType(node, shapeType)) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `${type} '${node.name}' has no ${shapeType} children. Character bodies need collision shapes to function in physics.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: `${prefix}-needs-collision-shape`,
-      });
-    }
+    // `floor_snap_length` gets no advisory: its hint (character_body_2d.cpp:749,
+    // character_body_3d.cpp:934) ends in `or_greater`, so the high end is open,
+    // and the low end coincides with the ERR_FAIL_COND(< 0) in the setter
+    // (:631 / :831) that linterParser.ts already reports as an error.
 
-    // Warning: Extreme floor_snap_length values
-    if (rawProps.floor_snap_length !== undefined) {
-      const snapLength = parseFloat(rawProps.floor_snap_length);
-      if (!isNaN(snapLength)) {
-        if (snapLength > 0 && snapLength < MIN_RECOMMENDED_FLOOR_SNAP) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has very small floor_snap_length (${snapLength}). Values below ${MIN_RECOMMENDED_FLOOR_SNAP} may not work reliably for floor snapping.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-floor-snap-too-small`,
-          });
-        }
-        if (snapLength > MAX_RECOMMENDED_FLOOR_SNAP) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has very large floor_snap_length (${snapLength}). Values above ${MAX_RECOMMENDED_FLOOR_SNAP} can cause glitchy behavior or unwanted floor attachment.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-floor-snap-too-large`,
-          });
-        }
-      }
-    }
+    // `up_direction` gets no advisory: `set_up_direction` refuses only the zero
+    // vector, which linterParser.ts reports as an error (:648 / :848), and
+    // normalises everything else, so "standard is the screen-space or
+    // world-space up vector" is a preference with nothing behind it. The
+    // FLOATING branch strips it beside the keys below, but it is NOT inert —
+    // `move_and_slide` reads it before either mode branch
+    // (character_body_2d.cpp:106-107, character_body_3d.cpp:127-128).
 
-    // Warning: Floor-specific properties set but motion_mode is FLOATING (1)
-    const motionMode = rawProps.motion_mode !== undefined ? parseInt(rawProps.motion_mode, 10) : 0;
+    // `max_slides` gets no advisory: character_body_2d.cpp:741 /
+    // character_body_3d.cpp:926 declare it PROPERTY_HINT_NONE with
+    // PROPERTY_USAGE_NO_EDITOR, so no range is stated. The setter's
+    // ERR_FAIL_COND(< 1) (:613 / :813) is an error in linterParser.ts.
+
+    // `safe_margin` gets no advisory: each slice's linterParser.ts carries the
+    // hint's 0.001..256 as a warning-tier bound on the validator.
+
+    // `ruleInt` truncates the way the INT conversion does, so a float or
+    // exponent literal in the enum slot resolves to the constant Godot stores;
+    // `null` means unreadable, so the write never landed and neither branch is
+    // this file's to claim.
+    const motionMode = ruleInt(rawProps.motion_mode, 0);
     if (motionMode === 1) {
-      // FLOATING mode
-      const floorProperties = [
-        'floor_stop_on_slope',
-        'floor_constant_speed',
-        'floor_block_on_wall',
-        'floor_max_angle',
-        'floor_snap_length',
-      ];
-
-      for (const prop of floorProperties) {
-        if (rawProps[prop] !== undefined) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has motion_mode=FLOATING but '${prop}' is set. Floor properties only work in GROUNDED mode (motion_mode=0).`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-floor-props-in-floating-mode`,
-          });
-          break; // Only warn once for all floor properties
-        }
+      const floorProperty = FLOOR_PROPERTIES.find((prop) => rawProps[prop] !== undefined);
+      if (floorProperty !== undefined) {
+        report(arms.floorPropsInFloating, `${type} '${node.name}' has motion_mode=FLOATING but '${floorProperty}' is set. Floor properties only work in GROUNDED mode (motion_mode=0).`);
       }
-    }
-
-    pushZeroCollisionLayerMaskWarnings(diagnostics, node, rawProps, type, prefix);
-
-    // Warning: Unusual up_direction (not the standard value for this dimension)
-    if (rawProps.up_direction !== undefined) {
-      const match = upDirRegex.exec(rawProps.up_direction);
-      if (match) {
-        const x = parseFloat(match[1] || '0');
-        const y = parseFloat(match[2] || '0');
-        const isStandard =
-          dim === '2D' ? x === 0 && y === -1 : x === 0 && y === 1 && parseFloat(match[3] || '0') === 0;
-        if (!isStandard) {
-          diagnostics.push({
-            severity: 'warning',
-            message: `${type} '${node.name}' has non-standard up_direction: ${rawProps.up_direction}. Standard is ${upStandard}. Ensure this is intentional for your game's orientation.`,
-            nodeName: node.name,
-            nodeType: node.type,
-            ruleName: `${prefix}-non-standard-up-direction`,
-          });
-        }
+      if (rawProps.slide_on_ceiling !== undefined) {
+        report(arms.slideOnCeilingInFloating, `${type} '${node.name}' has motion_mode=FLOATING but 'slide_on_ceiling' is set. It is read only in GROUNDED mode (motion_mode=0).`);
       }
-    }
-
-    // Warning: max_slides too low (may cause jittery movement)
-    if (rawProps.max_slides !== undefined) {
-      const maxSlides = parseInt(rawProps.max_slides, 10);
-      if (!isNaN(maxSlides) && maxSlides > 0 && maxSlides < 4) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has max_slides=${maxSlides}. Values below 4 may cause jittery movement on complex geometry. Recommended: 4-6.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-max-slides-too-low`,
-        });
-      }
-    }
-
-    // Warning: Very large safe_margin can cause tunneling or unwanted collisions
-    if (rawProps.safe_margin !== undefined) {
-      const safeMargin = parseFloat(rawProps.safe_margin);
-      if (!isNaN(safeMargin) && safeMargin > 0.1) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `${type} '${node.name}' has large safe_margin (${safeMargin}). Values above 0.1 may cause collision detection issues. Typical range: 0.001-0.1.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: `${prefix}-safe-margin-too-large`,
-        });
-      }
+    } else if (motionMode === 0 && rawProps.wall_min_slide_angle !== undefined) {
+      report(arms.wallAngleInGrounded, `${type} '${node.name}' has motion_mode=GROUNDED but 'wall_min_slide_angle' is set. It is read only in FLOATING mode (motion_mode=1).`);
     }
 
     return diagnostics;
@@ -161,17 +126,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
       description: `Validates ${type} collision shapes, motion mode settings, floor/wall properties, and physics configuration`,
       category: 'validation',
       applicableNodeTypes: [type],
-      emits: [
-        { ruleName: `${prefix}-needs-collision-shape`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-snap-too-small`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-snap-too-large`, severity: 'warning' },
-        { ruleName: `${prefix}-floor-props-in-floating-mode`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-layer`, severity: 'warning' },
-        { ruleName: `${prefix}-zero-collision-mask`, severity: 'warning' },
-        { ruleName: `${prefix}-non-standard-up-direction`, severity: 'warning' },
-        { ruleName: `${prefix}-max-slides-too-low`, severity: 'warning' },
-        { ruleName: `${prefix}-safe-margin-too-large`, severity: 'warning' },
-      ],
+      emits: armEmits(arms),
     },
     check,
   };

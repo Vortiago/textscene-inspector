@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="MyOpenXRCompositionLayerEquirect" type="OpenXRCompositionLayerEquirect" parent="."]
+layer_viewport = NodePath("SubViewport")
+use_android_surface = false
+protected_content = false
+android_surface_size = Vector2i(512, 512)
+sort_order = -1
+alpha_blend = true
+enable_hole_punch = false
+swapchain_state_min_filter = 2
+swapchain_state_mag_filter = 0
+swapchain_state_mipmap_mode = 1
+swapchain_state_horizontal_wrap = 2
+swapchain_state_vertical_wrap = 3
+swapchain_state_red_swizzle = 4
+swapchain_state_green_swizzle = 5
+swapchain_state_blue_swizzle = 1
+swapchain_state_alpha_swizzle = 2
+swapchain_state_max_anisotropy = 8.0
+swapchain_state_border_color = Color(0, 0, 0, 1)
+radius = 3.0
+central_horizontal_angle = 3.14159
+upper_vertical_angle = 1.0
+lower_vertical_angle = 1.0
+fallback_segments = 12
+
+[node name="SubViewport" type="SubViewport" parent="MyOpenXRCompositionLayerEquirect"]

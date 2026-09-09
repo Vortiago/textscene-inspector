@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+
+; Exercises AnimatableBody2D's own sync_to_physics flag.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyAnimatableBody2D" type="AnimatableBody2D" parent="."]
+position = Vector2(10, 20)
+sync_to_physics = false
+
+[node name="Shape" type="CollisionShape2D" parent="MyAnimatableBody2D"]
+shape = SubResource("Shape_1")

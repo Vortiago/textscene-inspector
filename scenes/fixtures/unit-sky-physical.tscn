@@ -29,7 +29,7 @@ size = Vector2(12, 12)
 environment = SubResource("Env_1")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-1, 0, 0, 0, 0.259, 0.966, 0, 0.966, -0.259, 0, 0, 0)
+transform = Transform3D(-1, 0, 0, 0, 0.258819, 0.965926, 0, 0.965926, -0.258819, 0, 0, 0)
 light_angular_distance = 1.0
 
 [node name="Ground" type="MeshInstance3D" parent="."]

@@ -9,65 +9,24 @@ renders_as: two children stacked, split at a computed offset
 
 # VSplitContainer
 
-The same class as `HSplitContainer` with `vertical = true`; the solve, the
-properties and the divergences are all documented there. `_resort` swaps which
-axis the computed offset sizes:
-
-```cpp
-fit_child_in_rect(first,  Rect2(Point2(0, 0), Size2(get_size().width, computed_split_offset)));
-int sofs = computed_split_offset + sep;
-fit_child_in_rect(second, Rect2(Point2(0, sofs), Size2(get_size().width, get_size().height - sofs)));
-```
-
-The axis is load-bearing beyond the obvious, because `_compute_split_offset`
-reads `SIZE_EXPAND` on the SPLIT axis only:
-
-```cpp
-bool first_is_expanded = (vertical ? first->get_v_size_flags() : first->get_h_size_flags()) & SIZE_EXPAND;
-```
-
-so a child that expands horizontally claims nothing here, and a VSplitContainer
-whose children carry only `size_flags_horizontal` takes the "neither expands"
-branch — its boundary sits at `split_offset`, not at the middle. That is why
-`unit-split-container-vertical.tscn` exists as a separate fixture: the
-horizontal one passes whether the implementation reads the right axis or not.
-
-Measured through Godot 4.6.3 — 300 px tall columns (top | gap | bottom):
-
-| Column | Authored | Godot | Ours |
-| --- | --- | --- | --- |
-| Both | both expand vertically | 144 \| 12 \| 144 | 144 \| 12 \| 144 |
-| Offset | `split_offset = 50` | 194 \| 12 \| 94 | 194 \| 12 \| 94 |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:godot
-scenes/fixtures/unit-split-container-vertical.tscn --mode 2d` and `pnpm ref:ours
-unit-split-container-vertical.tscn --2d` are byte-identical over the whole
-1152x648 frame — the `Both` column's bands read
-y 20..163 red, y 164..175 backdrop, y 176..319 green on both sides. The
-limitations HSplitContainer's sheet records apply here unchanged.
+The same class as `HSplitContainer` with `vertical = true`: two children stacked, split at the computed offset with the dragger's band between them. The previewer lays both children out in two grid rows sized as Godot's `_resort` sizes them.
 
 ## Linting
 
 <!-- lint:begin VSplitContainer -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `VSplitContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (10 inherited from SplitContainer, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `VSplitContainer` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `VSplitContainer` also REFUSES `vertical`, which its base declares but this class cannot carry.
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `vertical` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-Identical to HSplitContainer's, and for the same reason: the three properties
-it adds are plain scalars that Godot clamps or ignores at layout time rather
-than at load, so strict and lenient parsing have nothing to disagree about. A
-malformed value leaves the property undefined and the Godot default applies.
-
-## Native (WebGL canvas) painter
-
-The same `shared/splitContainerSolver.ts` port at `vertical = true`;
-`Component.tsx` reads `size_flags_vertical`/`custom_minimum_size.y` and
-draws the `vsplitter` icon (48px across the split axis, 8px along it — the
-transpose of `hsplitter`'s 8×48). See HSplitContainer's comparison sheet for
-the divergences and limitations, identical here.
+Identical to HSplitContainer's. The three properties SplitContainer adds are plain scalars Godot clamps or ignores at layout time, so a malformed `split_offset` leaves the property undefined and the Godot default of 0 applies.

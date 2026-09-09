@@ -26,10 +26,10 @@ export function parseNavigationAgent3D(
   const avoidanceEnabled = parseOptionalBool(properties.avoidance_enabled);
   if (avoidanceEnabled !== undefined) result.avoidance_enabled = avoidanceEnabled;
 
-  const avoidanceLayers = parseOptionalInt(properties.avoidance_layers);
+  const avoidanceLayers = parseOptionalInt(properties.avoidance_layers, 'uint32');
   if (avoidanceLayers !== undefined) result.avoidance_layers = avoidanceLayers;
 
-  const avoidanceMask = parseOptionalInt(properties.avoidance_mask);
+  const avoidanceMask = parseOptionalInt(properties.avoidance_mask, 'uint32');
   if (avoidanceMask !== undefined) result.avoidance_mask = avoidanceMask;
 
   const maxNeighbors = parseOptionalInt(properties.max_neighbors);
@@ -38,7 +38,7 @@ export function parseNavigationAgent3D(
   const maxSpeed = parseOptionalFloat(properties.max_speed);
   if (maxSpeed !== undefined) result.max_speed = maxSpeed;
 
-  const navigationLayers = parseOptionalInt(properties.navigation_layers);
+  const navigationLayers = parseOptionalInt(properties.navigation_layers, 'uint32');
   if (navigationLayers !== undefined) result.navigation_layers = navigationLayers;
 
   const targetDesiredDistance = parseOptionalFloat(properties.target_desired_distance);

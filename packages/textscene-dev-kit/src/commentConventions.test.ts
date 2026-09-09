@@ -37,6 +37,7 @@ const TRACKER_REF = [
   /\bWI-\d+\b/, // WI-<n>
   /\b(?:issue|fixes|closes|resolves|pr)s?\s*#\d+/i, // issue #<n>, closes #<n>
   /\(#\d+\)/, // (#<n>)
+  /(?<![\w#&])#\d{1,4}(?![\dA-Fa-f])/, // #<n>, but not a hex colour
 ];
 
 function* sourceFiles(dir: string): Generator<string> {
@@ -62,11 +63,15 @@ function lineOf(source: string, index: number): number {
 describe('code-comment conventions (AGENTS.md)', () => {
   it('no comment references an issue/WI tracker item', () => {
     const offenders: string[] = [];
+    let scanned = 0;
+    let spans = 0;
 
     for (const root of SCAN_ROOTS) {
       for (const file of sourceFiles(join(repoRoot, root))) {
+        scanned++;
         const source = readFileSync(file, 'utf8');
         for (const span of commentSpans(source, { blockOnly: file.endsWith('.css') })) {
+          spans++;
           for (const ref of TRACKER_REF) {
             const hit = span.text.match(ref);
             if (hit) {
@@ -80,6 +85,12 @@ describe('code-comment conventions (AGENTS.md)', () => {
       }
     }
 
+    // `offenders` comes back empty both when the convention holds and when
+    // nothing was read: a widened SKIP_DIRS, a moved root, or a lexer that
+    // stops returning spans for a file class all report clean. 3,649 files
+    // today, so neither floor is near a legitimate shrink.
+    expect(scanned).toBeGreaterThan(3000);
+    expect(spans).toBeGreaterThan(10000);
     expect(
       offenders,
       `Tracker references in code comments (AGENTS.md forbids them — state the ` +

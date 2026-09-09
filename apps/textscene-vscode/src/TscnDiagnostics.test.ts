@@ -67,6 +67,7 @@ function makeTscnDocument(content: string, fsPath = '/workspace/scene.tscn'): vs
 }
 
 const VALID_TSCN = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]';
+const VALID_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]';
 const INVALID_TSCN = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\nthis is not a property';
 
 // ============================================================================
@@ -85,6 +86,24 @@ describe('toVsCodeDiagnostic', () => {
     it('maps warning to DiagnosticSeverity.Warning', () => {
       const result = toVsCodeDiagnostic(makeCoreDiagnostic({ severity: 'warning' }), doc);
       expect(result.severity).toBe(vscode.DiagnosticSeverity.Warning);
+    });
+
+    it('maps info to DiagnosticSeverity.Information', () => {
+      const result = toVsCodeDiagnostic(makeCoreDiagnostic({ severity: 'info' }), doc);
+      expect(result.severity).toBe(vscode.DiagnosticSeverity.Information);
+    });
+
+    it('floors a severity outside the union to Information, not to the constructor default', () => {
+      // `SEVERITY_MAP[<off-union>]` is `undefined`, and `vscode.Diagnostic`
+      // defaults an absent severity to Error — so the least confident finding
+      // would read as the most severe thing in the file.
+      const result = toVsCodeDiagnostic(
+        makeCoreDiagnostic({
+          severity: 'bogus' as unknown as TscnLintDiagnostic['severity'],
+        }),
+        doc
+      );
+      expect(result.severity).toBe(vscode.DiagnosticSeverity.Information);
     });
   });
 
@@ -231,6 +250,40 @@ describe('TscnDiagnostics', () => {
     diagnostics.lintDocument(document);
 
     expect(collection.set).not.toHaveBeenCalled();
+    diagnostics.dispose();
+  });
+
+  // Both text formats the linter takes, through both arms of `isTscnDocument`:
+  // the `tscn` language claims `.tres` too, and the filename arm is the
+  // fallback for a document whose association a user overrode.
+  it('publishes for a .tres document the tscn language claims', () => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const document = makeTscnDocument(VALID_TRES, '/workspace/material.tres');
+
+    diagnostics.lintDocument(document);
+
+    expect(collection.set).toHaveBeenCalledWith(document.uri, expect.any(Array));
+    diagnostics.dispose();
+  });
+
+  it.each([
+    ['.tres', '/workspace/material.tres', VALID_TRES],
+    ['.tscn', '/workspace/scene.tscn', VALID_TSCN],
+  ])('publishes for a %s document whose language association was overridden', (
+    _extension,
+    fsPath,
+    content
+  ) => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const document = {
+      ...makeTscnDocument(content, fsPath),
+      languageId: 'plaintext',
+      fileName: fsPath,
+    } as unknown as vscode.TextDocument;
+
+    diagnostics.lintDocument(document);
+
+    expect(collection.set).toHaveBeenCalledWith(document.uri, expect.any(Array));
     diagnostics.dispose();
   });
 

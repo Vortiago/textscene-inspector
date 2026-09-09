@@ -62,11 +62,25 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;
   const { internalResources } = useSceneResources();
 
-  // Selection-driven (ADR-0012): this player is "active" — owns the transport
-  // and drives its mixer — only while it is the node selected in the tree.
+  // Selection-driven (ADR-0012): this player owns the transport only while it
+  // is the node selected in the tree.
   const nodePath = useNodePath();
   const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
-  const isActive = nodePath !== null && nodePath === selectedNodePath;
+  const isSelected = nodePath !== null && nodePath === selectedNodePath;
+
+  // Godot's AnimationMixer.active gates whether the mixer applies ANYTHING:
+  // `seek_internal` returns immediately on `!active` (animation_player.cpp:664),
+  // so the scrub this transport performs is refused, not merely the runtime
+  // process callback (animation_mixer.cpp:446-455). An inactive player leaves
+  // every track target at its authored value, so it also builds no mixer.
+  //
+  // It still REGISTERS its clips, because Godot lists an inactive player's
+  // animations too, and it still publishes them to the driver registry,
+  // because an AnimationTree reading them through `anim_player` is gated by
+  // the TREE's own active flag and not by this one (ADR-0019). That is why
+  // registration stays on `isSelected` while everything that applies a pose
+  // moves to `isDriving`.
+  const isDriving = isSelected && properties.active;
 
   const transport = useAnimationTransport();
 
@@ -143,21 +157,22 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     object: mixerRoot,
     clips,
     nodePath,
-    isActive,
+    isActive: isSelected,
+    buildMixer: isDriving,
     autoplay: properties.autoplay || undefined,
     durations,
     onMixerBuilt,
     restore,
   });
 
-  // An inactive player is forced to the 'stopped' state so it never touches
-  // the scene (and restores the authored pose when it loses selection).
-  const effectiveState: PlayState = isActive ? transport.playState : 'stopped';
+  // A player that is not driving is forced to the 'stopped' state so it never
+  // touches the scene (and restores the authored pose when it stops driving).
+  const effectiveState: PlayState = isDriving ? transport.playState : 'stopped';
   usePlaybackLoop({
     playState: effectiveState,
-    selectedClip: isActive ? transport.selectedClip : null,
+    selectedClip: isDriving ? transport.selectedClip : null,
     transportTime: transport.time,
-    // #224: the preview speed multiplier stacks on top of the authored
+    // The preview speed multiplier stacks on top of the authored
     // speed_scale — it never replaces it.
     speedScale: (properties.speed_scale ?? 1) * transport.playbackSpeed,
     mixerRef,
@@ -181,11 +196,11 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // The selected clip's value-push tracks with target paths resolved once
   // (the player path / root_node / track target are constant for the clip).
   const valueTargets = useMemo(() => {
-    if (!isActive || nodePath === null) return null;
+    if (!isDriving || nodePath === null) return null;
     const clip = animations.find((a) => a.name === transport.selectedClip);
     if (!clip) return null;
     const targets = clip.tracks
-      .filter((t) => t.type === 'value' && t.property in VALUE_PUSH_PROPERTIES)
+      .filter((t) => t.type === 'value' && Object.hasOwn(VALUE_PUSH_PROPERTIES, t.property))
       .map((t) => ({
         path: resolveTargetNodePath(nodePath, properties.root_node, t.targetPath),
         property: t.property,
@@ -193,7 +208,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
         interp: t.interp,
       }));
     return targets.length > 0 ? { clipName: clip.name, targets } : null;
-  }, [isActive, nodePath, animations, transport.selectedClip, properties.root_node]);
+  }, [isDriving, nodePath, animations, transport.selectedClip, properties.root_node]);
 
   // Owned (path, property) pairs currently driven, keyed by `${path}:${property}`.
   const ownedValues = useRef<Map<string, { path: string; property: string }>>(new Map());
@@ -216,7 +231,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     const owned = ownedValues.current;
     const next = new Map<string, { path: string; property: string }>();
     for (const { path, property, keys, interp } of valueTargets.targets) {
-      const value = VALUE_PUSH_PROPERTIES[property]
+      const value = Object.hasOwn(VALUE_PUSH_PROPERTIES, property) && VALUE_PUSH_PROPERTIES[property]
         ? sampleInterpolatedValue(keys, action.time, interp)
         : [sampleSteppedValue(keys, action.time)];
       valueRegistry.set(path, property, value);

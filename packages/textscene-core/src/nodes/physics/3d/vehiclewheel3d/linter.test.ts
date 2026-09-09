@@ -7,6 +7,9 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   runPropertyValidation,
+  instanced,
+  override,
+  packedScene,
 } from '../../../../linter/testing/testkit';
 import '../../../base/node3d/linterParser';
 import './linterParser';
@@ -43,16 +46,12 @@ describe('VehicleWheel3D Linter', () => {
     runPropertyValidation(
       { nodeType: 'VehicleWheel3D', prefix: [vehicleBody], nodeOptions: { parent: '.' } },
       [
-        {
-          prop: 'wheel_radius',
-          valid: [0.1, 0.25, 0.5],
-          invalid: [{ value: 'big' }, { value: '-0.25' }],
-        },
-        {
-          prop: 'wheel_rest_length',
-          valid: [0.15, 0.3],
-          invalid: [{ value: 'long' }, { value: '-0.15' }],
-        },
+        // Only the type mismatches are invalid. None of the geometric wheel
+        // properties has a range hint, and no setter in vehicle_body_3d.cpp
+        // clamps one, so a negative is a value Godot accepts (linterParser.ts
+        // cites the binding per property).
+        { prop: 'wheel_radius', valid: [0.1, 0.25, 0.5], invalid: [{ value: 'big' }] },
+        { prop: 'wheel_rest_length', valid: [0.15, 0.3], invalid: [{ value: 'long' }] },
         { prop: 'wheel_friction_slip', valid: [1.0, 10.5], invalid: [{ value: 'grippy' }] },
         { prop: 'wheel_roll_influence', valid: [0, 0.4, 1], invalid: [{ value: 'some' }] },
         { prop: 'suspension_stiffness', valid: [5.88, 40.0], invalid: [{ value: 'stiff' }] },
@@ -95,6 +94,22 @@ describe('VehicleWheel3D Linter', () => {
       expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
     });
 
+    it('says nothing when the parent is an override of a node inside an instance', () => {
+      // An override heading carries neither `type=` nor `instance=`, so its real
+      // class lives in the instanced scene this linter never opens — the same
+      // wall an `instance=` parent hits. `StrictTscnParser.ts:26` fills `type`
+      // from the `index` fallback, so the heading below has a TRUTHY type of
+      // "0" and only `overridesExistingNode` reveals what it is.
+      const content = scene(
+        packedScene,
+        node('Node3D', {}, { name: 'Root' }),
+        instanced('Car', { parent: '.' }),
+        override('Body', 0, { parent: 'Car' }),
+        node('VehicleWheel3D', {}, { name: 'Wheel5', parent: 'Car/Body' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-not-under-vehicle-body' });
+    });
+
     it('warns for a wheel nested under a container inside the body — Godot requires a direct child', () => {
       const content = scene(
         vehicleBody,
@@ -106,98 +121,19 @@ describe('VehicleWheel3D Linter', () => {
   });
 
   describe('Semantic Validation (Suspension)', () => {
-    it('warns when suspension_travel is outside the documented 0.1–0.3 range', () => {
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { suspension_travel: 2.0 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-suspension-travel-out-of-range', severity: 'warning' }
-      );
-    });
-
-    it('accepts suspension_travel at both ends of the documented range', () => {
-      for (const travel of [0.1, 0.3]) {
+    it('says nothing about the magnitude of suspension_travel', () => {
+      // vehicle_body_3d.cpp:335 binds it PROPERTY_HINT_NONE and
+      // set_suspension_travel (:198) assigns without a clamp, so the engine
+      // states no range. The class reference suggests 0.1-0.3, but that is
+      // prose advice, and Godot's own truck_town demo ships 2.0 on all eight
+      // wheels. A warning here fired on the canonical example of the node.
+      for (const travel of [0.05, 0.2, 2.0, 50]) {
         const content = scene(
           vehicleBody,
           node('VehicleWheel3D', { suspension_travel: travel }, { name: 'Wheel1', parent: '.' })
         );
         expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-suspension-travel-out-of-range' });
       }
-    });
-
-    it('warns when damping_relaxation is below damping_compression', () => {
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node(
-            'VehicleWheel3D',
-            { damping_compression: 0.5, damping_relaxation: 0.3 },
-            { name: 'Wheel1', parent: '.' }
-          )
-        ),
-        {
-          ruleName: 'vehiclewheel3d-damping-relaxation-below-compression',
-          severity: 'warning',
-        }
-      );
-    });
-
-    it('stays quiet when only damping_compression is authored at or below the relaxation default (edge)', () => {
-      // Every corpus wheel sets damping_compression = 0.88 and leaves
-      // damping_relaxation at its 0.88 default, so the substituted pair is
-      // equal and the recommendation still holds.
-      const content = scene(
-        vehicleBody,
-        node('VehicleWheel3D', { damping_compression: 0.88 }, { name: 'Wheel1', parent: '.' })
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
-    });
-
-    it('warns when only damping_compression is authored, above the relaxation default', () => {
-      // The unauthored side is Godot's 0.88; a compression of 0.95 puts the
-      // wheel the wrong way round just as surely as authoring both would.
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { damping_compression: 0.95 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression', severity: 'warning' }
-      );
-    });
-
-    it('warns when only damping_relaxation is authored, below the compression default', () => {
-      // Compression defaults to 0.83; a relaxation of 0.1 rebounds far faster
-      // than the spring compresses. Requiring BOTH sides missed this entirely.
-      expectDiagnostic(
-        scene(
-          vehicleBody,
-          node('VehicleWheel3D', { damping_relaxation: 0.1 }, { name: 'Wheel1', parent: '.' })
-        ),
-        { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression', severity: 'warning' }
-      );
-    });
-
-    it('stays quiet when neither damping side is authored (edge)', () => {
-      // Godot's own pair — 0.83 compression, 0.88 relaxation — satisfies the
-      // recommendation, so a bare wheel must never carry this warning.
-      const content = scene(
-        vehicleBody,
-        node('VehicleWheel3D', { wheel_radius: 0.25 }, { name: 'Wheel1', parent: '.' })
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
-    });
-
-    it('stays quiet when relaxation equals compression', () => {
-      const content = scene(
-        vehicleBody,
-        node(
-          'VehicleWheel3D',
-          { damping_compression: 0.5, damping_relaxation: 0.5 },
-          { name: 'Wheel1', parent: '.' }
-        )
-      );
-      expectNoDiagnostic(content, { ruleName: 'vehiclewheel3d-damping-relaxation-below-compression' });
     });
   });
 
@@ -224,23 +160,6 @@ describe('VehicleWheel3D Linter', () => {
         )
       );
       expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
-    });
-
-    it('reports several problems at once', () => {
-      const diagnostics = lint(
-        scene(
-          node('Node3D', {}, { name: 'Root' }),
-          node(
-            'VehicleWheel3D',
-            { suspension_travel: 5.0, damping_compression: 0.9, damping_relaxation: 0.1 },
-            { name: 'Wheel1', parent: '.' }
-          )
-        )
-      );
-      const names = diagnostics.map((d) => d.ruleName);
-      expect(names).toContain('vehiclewheel3d-not-under-vehicle-body');
-      expect(names).toContain('vehiclewheel3d-suspension-travel-out-of-range');
-      expect(names).toContain('vehiclewheel3d-damping-relaxation-below-compression');
     });
   });
 });

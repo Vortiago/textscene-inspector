@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
+import { stripComments } from '@textscene/dev-kit';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { frameSceneBounds } from './frameSceneBounds.js';
@@ -138,11 +139,6 @@ describe('frameSceneBounds — routes subtree bounds through the sanctioned util
     expect(centre.z).toBeCloseTo(0, 4);
   });
 });
-
-/** Strip `//` and block comments so a doc reference to the pattern is not a hit. */
-function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-}
 
 /** All non-test `.ts`/`.tsx` source files under `src`. */
 function productionSourceFiles(dir: string): string[] {

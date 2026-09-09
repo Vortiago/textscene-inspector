@@ -161,6 +161,15 @@ function lintErrorCount(raw: string): number {
   return new Linter().lint(raw).filter((d) => d.severity === 'error').length;
 }
 
+/**
+ * Any diagnostic, whatever its severity. A range violation is a warning when
+ * only Godot's hint states the bound (ADR-0032), so a contract asserting that a
+ * validator EXISTS must not also assume it errors.
+ */
+function lintDiagnosticCount(raw: string): number {
+  return new Linter().lint(raw).length;
+}
+
 /** Assert the r3f component is registered; false (short-circuit) until GREEN. */
 function requireComp(): boolean {
   const Comp = nodeComponentRegistry.get('PointLight2D');
@@ -272,11 +281,13 @@ enabled = false
     expect(lightMeshes(await renderScene(litScene('enabled = false'))).length).toBe(0);
   });
 
-  it('registers a linter validator that REJECTS an invalid blend_mode', () => {
+  it('registers a linter validator that CATCHES an invalid blend_mode', () => {
     // With no validator an invalid value passes silently and NO gate catches it (the
-    // profile blind spot). The delta isolates the validator from any baseline errors.
-    expect(lintErrorCount(litScene('blend_mode = 9'))).toBeGreaterThan(
-      lintErrorCount(litScene('blend_mode = 0'))
+    // profile blind spot). The delta isolates the validator from any baseline
+    // diagnostics. Counted at any severity: light_2d.cpp:307 states the enum
+    // through its hint and set_blend_mode bare-assigns, so 9 is a warning.
+    expect(lintDiagnosticCount(litScene('blend_mode = 9'))).toBeGreaterThan(
+      lintDiagnosticCount(litScene('blend_mode = 0'))
     );
   });
 

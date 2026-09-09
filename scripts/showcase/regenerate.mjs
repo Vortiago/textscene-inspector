@@ -8,39 +8,29 @@
  *   node scripts/showcase/regenerate.mjs
  */
 
-import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import {
+  assertPortFree,
+  killPreviewGroup,
+  startPreview,
+  waitForServer,
+} from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
-const PORT = 4188; // uncommon fixed port so we know the URL without parsing stdout
+// Uncommon fixed port so we know the URL without parsing stdout, overridable
+// because `assertPortFree` tells the user to override it — a caller that names
+// no variable prints the shared default and sends them round the loop again.
+const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
 
-function startPreview() {
-  // strictPort: fail fast if 4188 is somehow taken, rather than silently
-  // auto-incrementing to a port we'd then have to discover.
-  const proc = spawn(
-    'pnpm',
-    ['--filter', '@textscene/web-previewer', 'preview', '--port', String(PORT), '--strictPort'],
-    { shell: true, stdio: 'ignore' }
-  );
-  return { proc, baseUrl: `http://localhost:${PORT}` };
-}
 
-async function waitForServer(url, timeoutMs = 40000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(url, { method: 'GET' });
-      if (res.ok) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`preview server at ${url} not ready in ${timeoutMs}ms`);
-}
-
-const { proc, baseUrl } = startPreview();
+// Before the spawn, never after: `--strictPort` plus `stdio: 'ignore'` means our
+// own server fails silently on a taken port, and `waitForServer` then gets its
+// 200 from the stranger — every .webm, poster and 2D screenshot below would be
+// recorded against a foreign build, exiting 0. Every other `startPreview` caller
+// checks first.
+await assertPortFree(PORT, 'SHOWCASE_PORT');
+const { proc, baseUrl } = startPreview(PORT);
 let exitCode = 0;
 try {
   await waitForServer(`${baseUrl}/`);
@@ -78,6 +68,8 @@ try {
   console.error('[regenerate] failed:', err.message);
   exitCode = 1;
 } finally {
-  proc.kill();
+  // The whole group: `proc` is the shell, not the pnpm→vite grandchild holding
+  // the port, and an orphaned grandchild keeps this script's event loop open.
+  killPreviewGroup(proc);
 }
 process.exit(exitCode);

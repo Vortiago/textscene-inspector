@@ -1,0 +1,41 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_item_list"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyItemList" type="ItemList" parent="."]
+; Every ItemList property at a valid, non-default value, plus three items
+; covering all four per-item leaves the PropertyListHelper registers.
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 232.0
+offset_bottom = 144.0
+select_mode = 1
+allow_reselect = true
+allow_rmb_select = true
+allow_search = false
+max_text_lines = 2
+auto_width = true
+auto_height = true
+text_overrun_behavior = 1
+wraparound_items = false
+scroll_hint_mode = 2
+tile_scroll_hint = true
+max_columns = 2
+same_column_width = true
+fixed_column_width = 96
+icon_mode = 0
+icon_scale = 1.5
+fixed_icon_size = Vector2i(24, 24)
+item_count = 3
+item_0/text = "Sword"
+item_0/icon = ExtResource("1_icon")
+item_1/text = "Shield"
+item_1/selectable = false
+item_2/text = "Potion"
+item_2/disabled = true

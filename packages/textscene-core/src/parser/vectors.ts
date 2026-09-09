@@ -1,3 +1,14 @@
+/**
+ * The lenient parser's vector decoders.
+ *
+ * The GRAMMAR they read is an engine fact and lives in `godot/number.ts`; this
+ * file is the render-side decoding built on it, so its types may be domain
+ * types. Anything here that a second domain would want belongs there instead.
+ */
+
+import { slotTupleRegex, allFinite } from '../godot/number.js';
+import { slotComponents } from '../godot/int.js';
+
 export interface Vector2 {
   x: number;
   y: number;
@@ -9,24 +20,8 @@ export interface Vector3 {
   z: number;
 }
 
-/**
- * One float component as Godot serializes it, including scientific
- * notation (`1e-05`), which Godot emits for small values. Strict by
- * construction: `1.2.3` or a lone `-` fail the whole anchored match,
- * so callers throw (and the value-decoder wrappers warn-then-fall-back)
- * instead of silently mis-parsing.
- *
- * The integer branch is `\d+(?:\.\d*)?`, NOT `\d+\.?\d*`: the latter lets a
- * digit run split between `\d+` and `\d*` in O(n) ways, so a non-matching tail
- * (e.g. a long digit run in untrusted .tscn input) backtracks quadratically —
- * a ReDoS. `\d+(?:\.\d*)?` matches the SAME language but consumes each digit
- * run in one `\d+`, keeping the match linear.
- */
-export const FLOAT_PATTERN_SOURCE = String.raw`[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?`;
-
-const F = FLOAT_PATTERN_SOURCE;
-const VECTOR2_RE = new RegExp(String.raw`^Vector2\s*\(\s*(${F})\s*,\s*(${F})\s*\)$`);
-const VECTOR3_RE = new RegExp(String.raw`^Vector3\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`);
+const VECTOR2_RE = slotTupleRegex('Vector2', 2);
+const VECTOR3_RE = slotTupleRegex('Vector3', 3);
 
 /**
  * `Color(r, g, b, a)` — the SAME float grammar as the vectors above. Compiled ONCE and shared by
@@ -34,9 +29,7 @@ const VECTOR3_RE = new RegExp(String.raw`^Vector3\s*\(\s*(${F})\s*,\s*(${F})\s*,
  * the channel grammar and never rebuild this regex per parse/lint call. No `g` flag, so `.test()`
  * and `.match()` on the shared instance are stateless.
  */
-export const COLOR_RE = new RegExp(
-  String.raw`^Color\s*\(\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*,\s*(${F})\s*\)$`,
-);
+export const COLOR_RE = slotTupleRegex('Color', 4);
 
 export function parseVector2(value: string): Vector2 {
   const match = value.match(VECTOR2_RE);
@@ -45,10 +38,12 @@ export function parseVector2(value: string): Vector2 {
     throw new Error(`Invalid Vector2 format: ${value}`);
   }
 
-  return {
-    x: parseFloat(match[1]),
-    y: parseFloat(match[2]),
-  };
+  // An overflowing exponent is inside the finite grammar but not inside what a
+  // viewport can draw, so it takes the same warn-then-fall-back path as a
+  // literal the grammar refuses. A `Vector2i` spelling narrows to int32 first.
+  const components = slotComponents(value, 'Vector2', [match[1], match[2]]);
+  if (!allFinite(components)) throw new Error(`Non-finite Vector2: ${value}`);
+  return { x: components[0]!, y: components[1]! };
 }
 
 export function parseVector3(value: string): Vector3 {
@@ -58,9 +53,7 @@ export function parseVector3(value: string): Vector3 {
     throw new Error(`Invalid Vector3 format: ${value}`);
   }
 
-  return {
-    x: parseFloat(match[1]),
-    y: parseFloat(match[2]),
-    z: parseFloat(match[3]),
-  };
+  const components = slotComponents(value, 'Vector3', [match[1], match[2], match[3]]);
+  if (!allFinite(components)) throw new Error(`Non-finite Vector3: ${value}`);
+  return { x: components[0]!, y: components[1]!, z: components[2]! };
 }

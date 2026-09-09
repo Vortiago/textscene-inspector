@@ -16,21 +16,32 @@ function nodeWith(properties: Record<string, string>): TscnNode {
 describe('rangeAdvisories', () => {
   it('returns [] when properties are not a record', () => {
     const node = { name: 'N', type: 'T', children: [], properties: null as unknown as Record<string, string> };
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm' }] })).toEqual([]);
+    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
   });
 
   it('skips a property that is absent from the node', () => {
     const node = nodeWith({ other: '999' });
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm' }] })).toEqual([]);
+    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
   });
 
   it('skips a non-numeric value', () => {
     const node = nodeWith({ x: 'not-a-number' });
-    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm' }] })).toEqual([]);
+    expect(rangeAdvisories(node, { x: [{ over: 10, ruleName: 'r', message: () => 'm', cite: 'light_3d.cpp:389' }] })).toEqual([]);
   });
 
   describe('over arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}` }] };
+    const table: RangeAdvisoryTable = { x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
+
+    // `inf` is a legal literal Godot stores unaltered (variant_parser.cpp:150-155),
+    // and it is above every bound. `parseFloat` read it as NaN, which the
+    // non-numeric guard then dropped, so the advisory silently stopped applying.
+    it('trips on inf, which is above every bound', () => {
+      expect(rangeAdvisories(nodeWith({ x: 'inf' }), table)).toHaveLength(1);
+    });
+
+    it('stays silent on nan, whose every comparison is false', () => {
+      expect(rangeAdvisories(nodeWith({ x: 'nan' }), table)).toEqual([]);
+    });
 
     it('trips strictly above the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '11' }), table)).toHaveLength(1);
@@ -44,7 +55,7 @@ describe('rangeAdvisories', () => {
   });
 
   describe('under arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ under: 5, ruleName: 'x-under', message: (v) => `x is ${v}` }] };
+    const table: RangeAdvisoryTable = { x: [{ under: 5, ruleName: 'x-under', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     it('trips strictly below the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '4' }), table)).toHaveLength(1);
@@ -55,7 +66,7 @@ describe('rangeAdvisories', () => {
   });
 
   describe('floor on an under arm', () => {
-    const table: RangeAdvisoryTable = { x: [{ under: 1, floor: 0, ruleName: 'x-tiny', message: (v) => `x is ${v}` }] };
+    const table: RangeAdvisoryTable = { x: [{ under: 1, floor: 0, ruleName: 'x-tiny', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     it('trips between the floor and the bound', () => {
       expect(rangeAdvisories(nodeWith({ x: '0.5' }), table)).toHaveLength(1);
@@ -72,8 +83,8 @@ describe('rangeAdvisories', () => {
     it('shares one rule name across both arms', () => {
       const table: RangeAdvisoryTable = {
         x: [
-          { under: 0.1, ruleName: 'x-extreme', message: (v) => `low ${v}` },
-          { over: 5, ruleName: 'x-extreme', message: (v) => `high ${v}` },
+          { under: 0.1, ruleName: 'x-extreme', message: (v) => `low ${v}`, cite: 'light_3d.cpp:389' },
+          { over: 5, ruleName: 'x-extreme', message: (v) => `high ${v}`, cite: 'light_3d.cpp:389' },
         ],
       };
       const low = rangeAdvisories(nodeWith({ x: '0.05' }), table);
@@ -88,8 +99,8 @@ describe('rangeAdvisories', () => {
     it('carries distinct rule names per arm', () => {
       const table: RangeAdvisoryTable = {
         x: [
-          { under: 0.1, ruleName: 'x-small', message: () => 'small' },
-          { over: 5, ruleName: 'x-large', message: () => 'large' },
+          { under: 0.1, ruleName: 'x-small', message: () => 'small', cite: 'light_3d.cpp:389' },
+          { over: 5, ruleName: 'x-large', message: () => 'large', cite: 'light_3d.cpp:389' },
         ],
       };
       expect(rangeAdvisories(nodeWith({ x: '0.05' }), table)[0]?.ruleName).toBe('x-small');
@@ -99,8 +110,8 @@ describe('rangeAdvisories', () => {
 
   it('emits one diagnostic per tripped property across a multi-property table', () => {
     const table: RangeAdvisoryTable = {
-      a: [{ over: 10, ruleName: 'a', message: () => 'a' }],
-      b: [{ under: 5, ruleName: 'b', message: () => 'b' }],
+      a: [{ over: 10, ruleName: 'a', message: () => 'a', cite: 'light_3d.cpp:389' }],
+      b: [{ under: 5, ruleName: 'b', message: () => 'b', cite: 'light_3d.cpp:389' }],
     };
     const diagnostics = rangeAdvisories(nodeWith({ a: '11', b: '4' }), table);
     expect(diagnostics.map((d) => d.ruleName).sort()).toEqual(['a', 'b']);
@@ -108,7 +119,7 @@ describe('rangeAdvisories', () => {
 
   it('emits a warning carrying the node identity and a message built from the parsed value', () => {
     const table: RangeAdvisoryTable = {
-      x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}` }],
+      x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }],
     };
     const [diagnostic] = rangeAdvisories(nodeWith({ x: '12.50' }), table);
     expect(diagnostic).toEqual({

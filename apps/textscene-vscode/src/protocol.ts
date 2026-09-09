@@ -101,8 +101,12 @@ export type ErrorMessage = {
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
-  /** Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier). */
-  path: string;
+  /**
+   * Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier).
+   * Optional: a legacy webview sends `nodeName` alone, which `webviewDispatch`
+   * admits and the handler answers with its first-name-match fallback.
+   */
+  path?: string;
   /**
    * Raw Godot `parent=` value of the node (`undefined` for root, `"."` for a
    * direct child, else the `/`-joined ancestor path minus the root). Used to
@@ -142,3 +146,16 @@ export type WebviewToHostMessage =
   | LoadResourceMessage
   | ResourceNeededMessage
   | LogMessage;
+
+/**
+ * A webview can post anything to its host, so the host listener narrows before
+ * it reads: a message is a non-null object carrying a string `type`. Mirrors
+ * `isHostToWebviewMessage` so the wire is policed the same way both directions.
+ */
+export function isWebviewToHostMessage(data: unknown): data is WebviewToHostMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as { type?: unknown }).type === 'string'
+  );
+}

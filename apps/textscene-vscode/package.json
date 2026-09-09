@@ -39,7 +39,8 @@
       {
         "id": "tscn",
         "extensions": [
-          ".tscn"
+          ".tscn",
+          ".tres"
         ],
         "aliases": [
           "TSCN"
@@ -87,7 +88,7 @@
       "commandPalette": [
         {
           "command": "textscene.openPreviewToSide",
-          "when": "editorLangId == tscn || resourceExtname == .tscn"
+          "when": "resourceExtname == .tscn"
         }
       ]
     },
@@ -96,7 +97,7 @@
         "command": "textscene.openPreviewToSide",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
-        "when": "editorLangId == tscn"
+        "when": "resourceExtname == .tscn"
       }
     ],
     "configuration": {
@@ -145,7 +146,9 @@
     "test:integration:debug": "node --inspect-brk ./dist/test/integration/runTests.js",
     "test:web": "vscode-test-web --browserType=chromium --headless --extensionDevelopmentPath=. .test-workspace-web",
     "pretype-check": "pnpm --filter @textscene/core build",
-    "type-check": "tsc --noEmit -p tsconfig.typecheck.json",
+    "type-check": "tsc --noEmit",
+    "pretype-check:tests": "pnpm --filter @textscene/core build",
+    "type-check:tests": "tsc --noEmit -p tsconfig.unit-tests.json",
     "package": "npx @vscode/vsce package --no-dependencies",
     "publish": "npx @vscode/vsce publish --no-dependencies",
     "clean": "rimraf dist out .test-workspace .vscode-test-web"

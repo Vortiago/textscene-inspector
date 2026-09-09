@@ -4,6 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { CollisionShape2DProperties } from './types';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { parseDebugColor } from '../../shared/debugColor';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 export function parseCollisionShape2D(
   heading: ParsedHeading,
@@ -18,7 +19,7 @@ export function parseCollisionShape2D(
     result.shape = properties.shape;
   }
   if (properties.disabled !== undefined) {
-    result.disabled = properties.disabled === 'true';
+    result.disabled = boolSlotValue(properties.disabled) === true;
   }
   return result;
 }

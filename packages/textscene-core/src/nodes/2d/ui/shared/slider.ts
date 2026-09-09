@@ -11,6 +11,7 @@ import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valuePar
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 import { parseRange, type RangeProperties } from './range';
+import { MAX_WALKED_ELEMENTS } from './countWalk';
 
 export interface SliderProperties extends ControlProperties, RangeProperties {
   /**
@@ -55,7 +56,9 @@ export function parseSlider(
  * unless `ticks_on_borders` is set.
  */
 export function sliderTickIndices(props: SliderProperties): number[] {
-  const ticks = props.tickCount ?? SLIDER_DEFAULT_TICK_COUNT;
+  // `tick_count` is an unbounded INT slot, and a slider is at most a few
+  // hundred CSS pixels wide here (countWalk.ts).
+  const ticks = Math.min(props.tickCount ?? SLIDER_DEFAULT_TICK_COUNT, MAX_WALKED_ELEMENTS);
   if (ticks <= 1) return [];
   const onBorders = props.ticksOnBorders ?? false;
   const indices: number[] = [];

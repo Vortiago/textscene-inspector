@@ -7,4 +7,4 @@
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Node } from '../../node/Component';
 
-nodeComponentRegistry.register({ typeName: 'NavigationAgent3D', Component: Node, container: true });
+nodeComponentRegistry.register({ typeName: 'NavigationAgent3D', Component: Node, container: true, renderIntent: 'transform-only' });

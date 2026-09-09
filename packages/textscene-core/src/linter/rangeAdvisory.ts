@@ -1,7 +1,7 @@
 /**
  * The shared **Range advisory** combinator: warns when a single numeric property
  * falls outside a plausible `[low, high]` band. It owns the mechanics every
- * threshold check used to hand-repeat — presence check, `parseFloat`, NaN guard,
+ * threshold check would otherwise hand-repeat — presence check, `parseFloat`, NaN guard,
  * and the direction comparison — so each rule is a declarative table of **arms**
  * rather than branching code.
  *
@@ -14,12 +14,26 @@
 import type { Diagnostic } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 import { isValidProperties } from './linterUtils.js';
+import { parseGodotFloat } from './validators/commonValidators.js';
 
 interface ArmBase {
   /** Rule name carried on the emitted diagnostic (may be shared across a property's arms). */
   ruleName: string;
   /** Build the warning message from the parsed numeric value. */
   message: (value: number) => string;
+  /**
+   * `file:line` in the Godot source that states this threshold — the
+   * `ADD_PROPERTY`'s `PROPERTY_HINT_RANGE`, since an arm is always a warning and
+   * ADR-0032 grounds warnings in the inspector hint.
+   *
+   * Required, and checked by `rangeAdvisoryGrounding.test.ts`. An arm is a
+   * value-based diagnostic exactly like a validator bound, but it lived outside
+   * `boundGrounding`'s sweep entirely, so a threshold could be invented here
+   * while the bound ratchet read zero. Class-reference prose is not a citation:
+   * "try a value between 0.1 and 0.3" is advice to a level designer, not a
+   * statement about what the engine accepts.
+   */
+  cite: string;
 }
 
 /** Warn when the parsed value is strictly greater than `over`. */
@@ -51,8 +65,11 @@ export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable): Diag
   for (const [property, arms] of Object.entries(table)) {
     const raw = props[property];
     if (raw === undefined) continue;
-    const value = parseFloat(raw);
-    if (Number.isNaN(value)) continue;
+    // `parseGodotFloat`, not `parseFloat`: `inf` is a value above every bound,
+    // not an unreadable property. `nan` reads as NaN and trips nothing, since
+    // every comparison against it is false.
+    const value = parseGodotFloat(raw);
+    if (value === null) continue;
 
     for (const arm of arms) {
       const tripped =

@@ -1,0 +1,30 @@
+; The relay addresses its target by unique name from an unrelated branch.
+
+[gd_scene load_steps=4 format=3 uid="uid://unitremotetransformunique"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_target"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_target"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="TargetCube" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+mesh = SubResource("BoxMesh_target")
+surface_material_override/0 = SubResource("StandardMaterial3D_target")
+
+[node name="Holder" type="Node3D" parent="."]
+
+[node name="Relay" type="RemoteTransform3D" parent="Holder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+remote_path = NodePath("%TargetCube")

@@ -9,6 +9,7 @@ import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
+import { isUri } from './uriArgument';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -42,11 +43,17 @@ export function activate(context: vscode.ExtensionContext) {
     // click on a scene that was never opened has no active editor at all.
     // Only the command palette invokes this bare, and there the active editor
     // is the sole thing the user could have meant.
-    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
+    // `isUri`, not a truthiness test: a keybinding or a task can invoke this
+    // command with an argument that is not a Uri at all, and reading `.fsPath`
+    // off one would answer `undefined` while still counting as "handed a
+    // resource" — silently previewing nothing.
+    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: unknown) => {
+      const clicked = isUri(resource) ? resource : undefined;
       const activeEditor = vscode.window.activeTextEditor;
       const target =
-        resource?.fsPath?.endsWith('.tscn') ? resource
-        : !resource && activeEditor?.document.fileName.endsWith('.tscn') ? activeEditor.document.uri
+        clicked?.fsPath?.endsWith('.tscn') ? clicked
+        : !clicked && activeEditor?.document.fileName.endsWith('.tscn') ?
+          activeEditor.document.uri
         : undefined;
 
       if (target) {

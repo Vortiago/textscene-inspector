@@ -4,9 +4,8 @@
  * `ViewportTexture` consumer), never by the parent's own walker (ADR-0033).
  *
  * Lives here, next to the slice that defines the behaviour, rather than in a
- * central set: it is consulted by the Control overlay walker, the workspace
- * rule, and the linter, and a leaf module keeps the **React-free linter
- * boundary** intact (no THREE, no React, no registry).
+ * central set, and stays a leaf module so every consumer can read it without
+ * pulling in THREE, React or the registry.
  *
  * Note this is NOT the same question as "does the 3D canvas skip it". The 3D
  * canvas deliberately passes a sub-viewport through, because Godot shares the
@@ -26,16 +25,14 @@ export function isViewportBoundary(type: string): boolean {
  * Controls that DISPLAY a sub-viewport's target — the viewport surfaces.
  *
  * These are the one exception to "the 3D workspace drops CanvasItem subtrees".
- * A surface is a Control, so it belongs in `TWO_D_UI_TYPES` (which is defined as
- * a mirror of the Control registry, and drives the 2D-content hint and the
- * root-workspace rule). But dropping its SUBTREE in the 3D workspace would take
- * a contained sub-viewport's 3D content with it, and that content really does
- * draw in Godot's 3D view — a sub-viewport shares the parent's World3D unless
- * `own_world_3d` (`Viewport::find_world_3d`).
+ * A surface is a Control, so `is2DUIType` claims it. But dropping its SUBTREE in
+ * the 3D workspace would take a contained sub-viewport's 3D content with it, and
+ * that content really does draw in Godot's 3D view — a sub-viewport shares the
+ * parent's World3D unless `own_world_3d` (`Viewport::find_world_3d`).
  *
- * So the two questions `TWO_D_UI_TYPES` used to answer at once — "is this 2D UI"
- * and "does the 3D canvas skip it" — diverge here for the first time, and the
- * drop rule subtracts this set.
+ * So the two questions — "is this 2D UI" and "does the 3D canvas skip it" —
+ * diverge here, which is why the drop rule subtracts this set rather than
+ * reading the 2D-UI answer alone.
  */
 export const VIEWPORT_SURFACE_TYPES: ReadonlySet<string> = new Set(['SubViewportContainer']);
 

@@ -56,6 +56,12 @@ export default defineConfig({
         '**/*.spec.tsx',
         '**/test/**',
         '**/__tests__/**',
+        // Test-only sources that are neither: helpers a suite imports rather
+        // than a suite itself. The tsconfig excludes exactly these two shapes
+        // from the build, so a list keyed only on the `.test.` infix counts
+        // them in the denominator while nothing ships them.
+        '**/*.testkit.ts',
+        'src/**/testing/**',
       ],
     },
     include: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],

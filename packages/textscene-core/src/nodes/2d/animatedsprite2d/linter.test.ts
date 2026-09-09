@@ -73,15 +73,18 @@ describe('AnimatedSprite2D Linter', () => {
         {
           prop: 'frame',
           valid: [5, 0],
+          // A reject node carries no `sprite_frames`, so the dropped-write rule
+          // fires beside the validator and a `frame` lookup finds it first.
+          // Naming the phase pins each case to the diagnostic it is about.
           invalid: [
-            { value: -1, contains: ['frame', 'non-negative'] },
-            { value: 1.5, contains: ['frame', 'integer'] },
+            { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
+            { value: 1.5, ruleName: 'strict-parser', contains: ['frame', 'integer'] },
           ],
         },
         {
           prop: 'centered',
           valid: [true, false],
-          invalid: [{ value: 1, contains: ['centered', 'boolean'] }],
+          invalid: [{ value: 1, severity: 'warning', contains: ['centered', 'converts'] }],
         },
         {
           prop: 'offset',
@@ -91,7 +94,7 @@ describe('AnimatedSprite2D Linter', () => {
         {
           prop: 'flip_h',
           valid: [true],
-          invalid: [{ value: 1, contains: ['flip_h', 'boolean'] }],
+          invalid: [{ value: 1, severity: 'warning', contains: ['flip_h', 'converts'] }],
         },
         {
           prop: 'flip_v',
@@ -99,12 +102,6 @@ describe('AnimatedSprite2D Linter', () => {
           invalid: [{ value: 'yes', contains: ['flip_v', 'boolean'] }],
         },
         { prop: 'autoplay', valid: ['"idle"', '""'] },
-        {
-          prop: 'playing',
-          valid: [true, false],
-          invalid: [{ value: 1, contains: ['playing', 'boolean'] }],
-          acceptMode: 'no-error',
-        },
       ]
     );
 
@@ -180,9 +177,9 @@ describe('AnimatedSprite2D Linter', () => {
         severity: 'error',
         nodeName: 'MissingSpriteFrames',
         nodeType: 'AnimatedSprite2D',
-        ruleName: 'valid-animatedsprite2d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('SpriteFrames resource not found');
+      expect(diagnostics[0]!.message).toContain("'sprite_frames'");
     });
 
     it('should pass when sprite_frames resource exists (SubResource)', () => {
@@ -197,20 +194,41 @@ describe('AnimatedSprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Animation Properties)', () => {
-    it('should warn when autoplay is set but sprite_frames is not', () => {
-      expectDiagnostic(scene(node('AnimatedSprite2D', { autoplay: '"idle"' })), {
-        ruleName: 'animatedsprite2d-autoplay-no-spriteframes',
-        severity: 'warning',
-        contains: ['autoplay', "sprite_frames' is not set"],
+    it('errors when animation is set but sprite_frames is not, since Godot clears it', () => {
+      expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"walk"' })), {
+        ruleName: 'animatedsprite2d-animation-no-spriteframes',
+        severity: 'error',
+        contains: ['animation', "no 'sprite_frames' in effect"],
       });
     });
 
-    it('should warn when animation is set but sprite_frames is not', () => {
-      expectDiagnostic(scene(node('AnimatedSprite2D', { animation: '"walk"' })), {
-        ruleName: 'animatedsprite2d-animation-no-spriteframes',
-        severity: 'warning',
-        contains: ['animation', "sprite_frames' is not set"],
-      });
+    // The slot is null until its own line runs (packed_scene.cpp:492), so
+    // set_animation clears the name and ERR_FAIL_MSGs. Measured on 4.6.3: this
+    // body loads the default animation, the one below it loads "walk".
+    it('errors when sprite_frames is written below animation', () => {
+      expectDiagnostic(
+        scene(spriteFrames, node('AnimatedSprite2D', { animation: '"walk"', ...withFrames })),
+        {
+          ruleName: 'animatedsprite2d-animation-no-spriteframes',
+          severity: 'error',
+          contains: ['animation', 'in effect at that line'],
+        }
+      );
+    });
+
+    it('passes on the same values with sprite_frames written above animation', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"walk"' })));
+    });
+
+    // `set_animation` returns at animated_sprite_2d.cpp:554-556 when the name equals the
+    // one already held, and animated_sprite_2d.h:43 seeds it with SceneStringName(default_)
+    // — so this scene never reaches the clearing branch the rule reports.
+    it('stays silent on animation "default" without sprite_frames, which Godot accepts', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { animation: '"default"' })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-animation-no-spriteframes')
+      ).toHaveLength(0);
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
     });
 
     it('should pass when both animation and sprite_frames are set', () => {
@@ -222,71 +240,48 @@ describe('AnimatedSprite2D Linter', () => {
     });
   });
 
-  describe('Semantic Validation (Speed Scale)', () => {
-    it('should warn when speed_scale is 0', () => {
-      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 0.0 })), {
-        ruleName: 'animatedsprite2d-speed-scale-zero',
-        severity: 'warning',
-        contains: ['speed_scale', '0', 'will not advance'],
+  // `set_frame_and_progress` returns at animated_sprite_2d.cpp:360-362 while the
+  // SpriteFrames slot is null, so the whole write is dropped. Measured on 4.6.3.
+  describe('Semantic Validation (Frame Without SpriteFrames)', () => {
+    it('errors on a frame above 0 with no sprite_frames', () => {
+      expectDiagnostic(scene(node('AnimatedSprite2D', { frame: 2 })), {
+        ruleName: 'animatedsprite2d-frame-no-spriteframes',
+        severity: 'error',
+        contains: ['frame', 'drops the write', 'frame 0'],
       });
     });
 
-    it('should not flag negative speed_scale (reverse playback is valid)', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: -1.0 })));
-    });
-
-    it('should pass with positive speed_scale', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 2.0 })));
-    });
-
-    it('should pass with default speed_scale (1.0)', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, speed_scale: 1.0 })));
-    });
-  });
-
-  describe('Semantic Validation (Frame Progress)', () => {
-    it('should warn when frame_progress is below 0', () => {
+    // Properties replay in FILE order (packed_scene.cpp:492), so the slot is
+    // still null on the line above it. Measured: this body loads on frame 0.
+    it('errors when sprite_frames is written below frame', () => {
       expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: -0.5 })),
+        scene(spriteFrames, node('AnimatedSprite2D', { frame: 2, ...withFrames })),
         {
-          ruleName: 'animatedsprite2d-frame-progress-range',
-          severity: 'warning',
-          contains: ['frame_progress', '0.0 to 1.0'],
+          ruleName: 'animatedsprite2d-frame-no-spriteframes',
+          severity: 'error',
+          contains: ['frame', 'in effect at that line'],
         }
       );
     });
 
-    it('should warn when frame_progress is above 1', () => {
-      expectDiagnostic(
-        scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 1.5 })),
-        {
-          ruleName: 'animatedsprite2d-frame-progress-range',
-          severity: 'warning',
-          contains: ['frame_progress', '0.0 to 1.0'],
-        }
-      );
+    it('passes on the same values with sprite_frames written above frame', () => {
+      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame: 2 })));
     });
 
-    it('should pass with frame_progress in valid range', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 0.5 })));
+    it('stays silent on frame 0, the value the node already holds', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: 0 })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
+      ).toHaveLength(0);
     });
 
-    it('should pass with frame_progress = 0', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 0.0 })));
-    });
-
-    it('should pass with frame_progress = 1', () => {
-      expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, frame_progress: 1.0 })));
-    });
-  });
-
-  describe('Semantic Validation (Deprecated Playing Property)', () => {
-    it('should warn when playing property is used (deprecated)', () => {
-      expectDiagnostic(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, playing: true })), {
-        ruleName: 'animatedsprite2d-playing-deprecated',
-        severity: 'warning',
-        contains: ['playing', 'deprecated', 'Godot 4.0+'],
-      });
+    // The `>= 0` floor in linterParser.ts already reports a negative frame; a
+    // second error on the same line is the double-report ADR-0032 forbids.
+    it('leaves a negative frame to the validator alone', () => {
+      const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: -1 })));
+      expect(
+        diagnostics.filter((d) => d.ruleName === 'animatedsprite2d-frame-no-spriteframes')
+      ).toHaveLength(0);
     });
   });
 
@@ -379,26 +374,6 @@ describe('AnimatedSprite2D Linter', () => {
       );
     });
 
-    it('should catch multiple semantic errors in complex scene', () => {
-      const diagnostics = lint(
-        scene(
-          node('AnimatedSprite2D', {
-            sprite_frames: 'SubResource("missing_frames")',
-            animation: '"walk"',
-            autoplay: '"idle"',
-            frame_progress: 1.5,
-            speed_scale: 0.0,
-            playing: true,
-          })
-        )
-      );
-      expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.message.includes('SpriteFrames resource not found'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('frame_progress') && d.message.includes('0.0 to 1.0'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('speed_scale') && d.message.includes('0'))).toBe(true);
-      expect(diagnostics.some(d => d.message.includes('playing') && d.message.includes('deprecated'))).toBe(true);
-    });
-
     it('should not flag reverse playback configuration (negative speed_scale is valid)', () => {
       expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames, animation: '"rewind"', speed_scale: -2.0 })));
     });
@@ -406,5 +381,30 @@ describe('AnimatedSprite2D Linter', () => {
     it('should validate minimal valid configuration', () => {
       expectClean(scene(spriteFrames, node('AnimatedSprite2D', { ...withFrames })));
     });
+  });
+});
+
+describe('the pre-4.0 `frames` spelling', () => {
+  // `AnimatedSprite2D::_set` forwards `frames` to `set_sprite_frames`
+  // (animated_sprite_2d.cpp:616-618), so the resource IS set and the animation
+  // name survives. Reading only the canonical key reported "Godot clears
+  // 'animation'" on 25 scenes across two shipped projects.
+  const scene = `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_1"]
+
+[node name="Sprite" type="AnimatedSprite2D"]
+frames = SubResource("SpriteFrames_1")
+animation = &"idle"
+`;
+
+  it('resolves to sprite_frames, so no rule fires', () => {
+    expect(lint(scene).filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('does not ask for a sprite_frames that is already set', () => {
+    expect(lint(scene).map((d) => d.ruleName)).not.toContain(
+      'animatedsprite2d-requires-spriteframes'
+    );
   });
 });

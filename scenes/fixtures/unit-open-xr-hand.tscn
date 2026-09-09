@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyOpenXRHand" type="OpenXRHand" parent="."]
+hand = 1
+motion_range = 1
+hand_skeleton = NodePath("../Skeleton3D")
+skeleton_rig = 1
+bone_update = 1

@@ -1,92 +1,72 @@
 ---
 type: Camera2D
 category: 2D
-fixture: unit-remote-transform-2d.tscn
-image: unit-remote-transform-2d
+status: unreviewed
+fixture: unit-sub-viewport-container-camera-2d.tscn
+# image: unit-sub-viewport-container-camera-2d
 renders_as: a 2D view frame with no drawn geometry
 ---
 
 # Camera2D
 
-Camera2D is a Node2D that defines the 2D view — which slice of the canvas the
-viewport shows. The previewer draws no geometry for it; it only tags its group so
-the Cameras panel can frame the view through it. The camera's outline is an
-editor-only gizmo, drawn in neither capture. This fixture contains no Camera2D
-node at all: what fills the frame is the fixture's two Polygon2D pentagons, the
-blue one dragged up to the right by a RemoteTransform2D relay while the grey ghost
-stays at the authored spot. Nothing on screen exercises Camera2D.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| — | — | the fixture defines no Camera2D node, so no Camera2D property is set or exercised |
-
-## Divergences
-
-None visible in this fixture.
+Camera2D defines which slice of the canvas the viewport shows, and the previewer draws
+no geometry for it. A sub-viewport's 2D pass frames through it, while the main 2D stage
+frames the whole scene (ADR-0006).
 
 ## Linting
 
 <!-- lint:begin Camera2D -->
-Strict parsing format-checks these `Camera2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Camera2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `anchor_mode` |
-| `drag_bottom_margin` |
-| `drag_horizontal_enabled` |
-| `drag_horizontal_offset` |
-| `drag_left_margin` |
-| `drag_right_margin` |
-| `drag_top_margin` |
-| `drag_vertical_enabled` |
-| `drag_vertical_offset` |
-| `editor_draw_drag_margin` |
-| `editor_draw_limits` |
-| `editor_draw_screen` |
-| `enabled` |
-| `ignore_rotation` |
-| `limit_bottom` |
-| `limit_enabled` |
-| `limit_left` |
-| `limit_right` |
-| `limit_smoothed` |
-| `limit_top` |
-| `offset` |
-| `position_smoothing_enabled` |
-| `position_smoothing_speed` |
-| `process_callback` |
-| `rotation_smoothing_enabled` |
-| `rotation_smoothing_speed` |
-| `zoom` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `anchor_mode` | enum 0-1 (FIXED_TOP_LEFT/DRAG_CENTER) | warning |
+| `drag_bottom_margin` | float 0-1 | warning |
+| `drag_horizontal_enabled` | true or false |  |
+| `drag_horizontal_offset` | float -1-1 | warning |
+| `drag_left_margin` | float 0-1 | warning |
+| `drag_right_margin` | float 0-1 | warning |
+| `drag_top_margin` | float 0-1 | warning |
+| `drag_vertical_enabled` | true or false |  |
+| `drag_vertical_offset` | float -1-1 | warning |
+| `editor_draw_drag_margin` | true or false |  |
+| `editor_draw_limits` | true or false |  |
+| `editor_draw_screen` | true or false |  |
+| `enabled` | true or false |  |
+| `ignore_rotation` | true or false |  |
+| `limit_bottom` | integer |  |
+| `limit_enabled` | true or false |  |
+| `limit_left` | integer |  |
+| `limit_right` | integer |  |
+| `limit_smoothed` | true or false |  |
+| `limit_top` | integer |  |
+| `offset` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `position_smoothing_enabled` | true or false |  |
+| `position_smoothing_speed` | float >= 0 | error below |
+| `process_callback` | enum 0-1 (PHYSICS/IDLE) | warning |
+| `rotation_smoothing_enabled` | true or false |  |
+| `rotation_smoothing_speed` | float >= 0 | error below |
+| `zoom` | Vector2(x, y), neither component (near-)zero |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-camera2d-properties` | `camera2d-multiple-enabled` | warning |
-|  | `camera2d-invalid-zoom` | error |
-|  | `camera2d-invalid-horizontal-limits` | warning |
-|  | `camera2d-invalid-vertical-limits` | warning |
-|  | `camera2d-smoothing-speed-missing` | warning |
-|  | `camera2d-smoothing-speed-invalid` | warning |
-|  | `camera2d-rotation-smoothing-speed-missing` | warning |
-|  | `camera2d-rotation-smoothing-speed-invalid` | warning |
-|  | `camera2d-horizontal-margins-without-drag` | warning |
-|  | `camera2d-vertical-margins-without-drag` | warning |
-|  | `camera2d-horizontal-offset-without-drag` | warning |
-|  | `camera2d-vertical-offset-without-drag` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-camera2d-properties` | `camera2d-multiple-enabled` | info |
+|  | `camera2d-invalid-horizontal-limits` | info |
+|  | `camera2d-invalid-vertical-limits` | info |
+|  | `camera2d-smoothing-speed-zero` | info |
+|  | `camera2d-rotation-smoothing-speed-zero` | info |
 <!-- lint:end -->
 
-Strict rejects a non-positive `zoom` component as `INVALID_ZOOM_VALUE`; the lenient parser's
-`vec2Or` only re-checks the `Vector2(x, y)` grammar, so `Vector2(0, 0)` or a negative zoom
-parses through unchanged and renders as authored, falling back to `(1, 1)` only when the
-property is missing or the grammar itself fails to match. `anchor_mode` falls back to
-`DRAG_CENTER` (`1`), `limit_left`/`limit_top`/`limit_right`/`limit_bottom` fall back to
-`-10000000`/`-10000000`/`10000000`/`10000000`, `limit_enabled` falls back to `true`, and
-`offset` falls back to `(0, 0)`, each warning first if present but unparseable. `enabled` skips
-that family entirely: any value other than the literal string `'false'` is treated as true, and
-it defaults to `true` when absent. `ignore_rotation`, `process_callback`, `limit_smoothed`,
-every smoothing and drag property, and the `editor_draw_*` flags are validated by strict but
-never read by the lenient parser at all, consistent with Camera2D drawing no geometry in the
-previewer.
+`zoom` falls back to `(1, 1)` only when absent or ungrammatical, so a zero or negative
+component that strict rejects renders as authored. `anchor_mode` falls back to
+`DRAG_CENTER`, the four `limit_*` keys to plus or minus `10000000`, `limit_enabled` to
+`true` and `offset` to `(0, 0)`. `enabled` is `true` unless the value reads as `false`.
+The smoothing, drag and `editor_draw_*` keys are never read.
+
+## Known limitations
+
+- **Approximated** The main 2D stage opens on the whole scene rather than the enabled
+  camera's view. A Cameras panel row frames the stage through the camera on request.

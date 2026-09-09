@@ -1,6 +1,7 @@
 ---
 type: ColorRect
 category: 2D
+status: unreviewed
 fixture: unit-color-rect.tscn
 image: unit-color-rect
 renders_as: a flat-filled quad
@@ -8,48 +9,28 @@ renders_as: a flat-filled quad
 
 # ColorRect
 
-A Control that fills its rect with a single flat `color`. The previewer draws a quad in that colour,
-alpha included.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `color` (Solid) | `Color(0.85, 0.2, 0.2, 1)` | opaque red box |
-| `color` (Translucent) | `Color(0.2, 0.4, 0.85, 0.5)` | blue box at half alpha — the grey background shows through, muting it |
-| `color` (NoColor) | *unset* | opaque white box — an omitted `color` is Godot's `Color(1,1,1,1)` default, not "no fill" |
-| `offset_left/top/right/bottom` | `20–420` / `20–100` | places three 120×80 boxes in a row along the top |
-
-## Divergences
-
-None visible in this fixture. `pnpm ref:godot scenes/fixtures/unit-color-rect.tscn
---mode 2d` and `pnpm ref:ours unit-color-rect.tscn --2d` agree on every opaque
-pixel. The two opaque boxes are byte-identical (rgb(217, 51, 51) and
-rgb(255, 255, 255)), and all three land on the same
-columns; the only difference in the frame is the half-alpha box's blend against
-the backdrop, rgb(64, 89, 147) against rgb(64, 89, 146) — one count of rounding
-on the blue channel, over that box alone.
-
-Blue is the only channel of the three whose `value × 255` is fractional
-(0.85 → 216.75), which is exactly the case the reference tool cannot resolve:
-blending into an 8-bit attachment is rounded by the rasterizer, and the swap to
-`--rendering-driver opengl3` moves these bytes. There is no expected value to
-port here — Godot's own C++ and GLSL mandate neither result.
+ColorRect fills its rect with one flat `color`. The previewer draws a positioned `<div>`
+with that colour as its background, alpha included.
 
 ## Linting
 
 <!-- lint:begin ColorRect -->
-Strict parsing format-checks the inherited set (35 inherited from Control); `ColorRect` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `ColorRect` properties, plus 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `color` | Color(r, g, b, a) |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `control-property-order` (type-family match) | `control-property-order` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-ColorRect's only own property, `color`, has no strict validator; only the inherited
-Control set is checked. The parser doesn't parse `color` at all: `properties.color
-|| DEFAULT_COLOR` keeps whatever string is present verbatim, so even a malformed
-`Color(...)` literal reaches the renderer unexamined, and only an absent or empty
-value falls back to `Color(1, 1, 1, 1)` (opaque white), matching Godot's own
-default for an omitted property.
+`color` gets a format-only check, since `set_color` assigns any value unclamped and a
+component outside 0 to 1 is legal HDR. The render parser keeps the raw string verbatim,
+so even a malformed literal reaches the renderer, and only an absent or empty value
+falls back to `Color(1, 1, 1, 1)`.

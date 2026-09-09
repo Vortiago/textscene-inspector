@@ -93,6 +93,18 @@ describe('<CsgPrimitive> material resolution', () => {
     expect(linear.r).toBeCloseTo(0.6, 5);
   });
 
+  it('keeps the default material when the ExtResource is not a Material', async () => {
+    // `material` is a `Ref<Material>`; a Texture2D does not load into it, so the
+    // write is dropped and the solid keeps Godot's default shader (not the
+    // unresolved-resource white).
+    const renderer = await render('ExtResource("2_tex")');
+    const linear = materialOf(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
+    expect(linear.r).toBeCloseTo(0.6, 5);
+  });
+
   it('falls back to Godot’s default material shader when no material is declared', async () => {
     const renderer = await render(undefined);
     // ALBEDO = vec3(0.6) in Godot's hardcoded default shader, linear.

@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+; Exercises the one own key Skeleton2D serialises: modification_stack. A bare
+; Skeleton2D writes it not at all, so the stack has to be present for the
+; fixture to exercise anything; the shape was measured against Godot 4.6.3.
+
+[sub_resource type="SkeletonModificationStack2D" id="SkeletonModificationStack2D_stack"]
+
+[node name="Root" type="Node2D"]
+
+[node name="MySkeleton2D" type="Skeleton2D" parent="."]
+position = Vector2(10, 20)
+modification_stack = SubResource("SkeletonModificationStack2D_stack")

@@ -70,6 +70,35 @@ describe('noiseImage', () => {
   });
 });
 
+describe('seamlessNoiseImage with a skirt wider than half the image', () => {
+  // `wr`/`rd_dest` are `img_buff`s over the OUTPUT, so both wrap on the output
+  // size: `img[(x + offset_x) % width + ((y + offset_y) % height) * width]`
+  // (noise.h:66-67). Past a 0.5 skirt the blend loops run x to
+  // half_width + skirt_width, beyond the image, and that modulo carries the
+  // writes onto the opposite edge. `seamless_blend_skirt` is
+  // PROPERTY_HINT_RANGE "0,1,0.001" (noise_texture_2d.cpp:97), so 1 is an
+  // ordinary authored value, and the decoder does not clamp it.
+  const sample = (x: number, y: number) => ((x * 7 + y * 13) % 251) / 251;
+
+  it('blends the columns the skirt wraps onto, which raw indexing dropped', () => {
+    // Indexing `dest[x + y * width]` raw put those writes past the end of the
+    // Uint8Array, where a store is a silent no-op — so the left half kept its
+    // bare quadrant-swap value and 768 of these 1024 pixels were wrong.
+    const out = seamlessNoiseImage(sample, 16, 16, false, false, 1);
+    expect([out[0], out[3], out[16 * 3 + 2], out[16 * 7 + 5]]).toEqual([194, 207, 212, 147]);
+  });
+
+  it('leaves a skirt of half the image or less untouched', () => {
+    // The wrap only ever engages past 0.5; at or below it every index is
+    // already inside the image, so this pins that the change is confined.
+    for (const skirt of [0.1, 0.5]) {
+      const out = seamlessNoiseImage(sample, 16, 16, false, false, skirt);
+      expect(out).toHaveLength(256);
+      expect([...out].every((v) => Number.isInteger(v) && v >= 0 && v <= 255)).toBe(true);
+    }
+  });
+});
+
 describe('seamlessNoiseImage', () => {
   it('produces edges that match across the wrap', () => {
     // The whole point of the blend skirt: column 0 and column width-1 are

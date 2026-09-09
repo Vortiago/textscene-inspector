@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+; RetargetModifier3D between the Skeleton3D it reads poses from and the child
+; Skeleton3D it writes them to; the target has to be a DIRECT child or the node
+; collects nothing. enable is the Position | Rotation subset of its three flags,
+; and use_global_pose stays false because true removes enable from the property
+; list altogether, so Godot would never save the two together.
+
+[sub_resource type="SkeletonProfileHumanoid" id="SkeletonProfileHumanoid_ret1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MyRetargetModifier3D" type="RetargetModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+influence = 0.75
+profile = SubResource("SkeletonProfileHumanoid_ret1")
+use_global_pose = false
+enable = 3
+
+[node name="TargetSkeleton" type="Skeleton3D" parent="Skeleton3D/MyRetargetModifier3D"]

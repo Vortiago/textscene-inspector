@@ -33,7 +33,8 @@ import { join } from 'node:path';
 
 import * as logger from '../logger';
 import { parseOptionalVector2 } from './valueParsers';
-import { parseVector2, FLOAT_PATTERN_SOURCE } from './vectors';
+import { parseVector2 } from './vectors';
+import { FLOAT_PATTERN_SOURCE } from '../godot/number.js';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
 import { parseBaseLightProperties } from '../nodes/3d/lights/shared/parser';
@@ -71,7 +72,8 @@ describe('#175 parseOptionalVector2 — the promoted optional reader on the shar
     // The drifted control/styleBox copies matched a double sign or a dangling exponent and
     // parsed them to NaN / a wrong number. The anchored canonical grammar rejects them outright.
     expect(parseOptionalVector2('Vector2(--1, 2)')).toBeUndefined();
-    expect(parseOptionalVector2('Vector2(1e-, 2)')).toBeUndefined();
+    expect(parseOptionalVector2('Vector2(+1, 2)')).toBeUndefined();
+    expect(parseOptionalVector2('Vector2(.5, 2)')).toBeUndefined();
     expect(parseOptionalVector2('Vector2(1.2.3, 4)')).toBeUndefined();
     expect(parseOptionalVector2('Vector2(1, 2) trailing-garbage')).toBeUndefined();
     expect(parseOptionalVector2('not a vector at all')).toBeUndefined();

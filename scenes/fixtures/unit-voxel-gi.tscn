@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_1"]
+
+[sub_resource type="VoxelGIData" id="VoxelGIData_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="MyVoxelGI" type="VoxelGI" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+subdiv = 2
+size = Vector3(30, 20, 30)
+camera_attributes = SubResource("CameraAttributesPractical_1")
+data = SubResource("VoxelGIData_1")

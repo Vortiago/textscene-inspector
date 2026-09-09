@@ -19,7 +19,6 @@ import {
   floatOr,
   intOr,
   parseOptionalRect2,
-  parseOptionalVector2i,
   vec2Or,
 } from '../../../parser/valueParsers';
 import {
@@ -30,11 +29,13 @@ import {
   TextureFilterMode,
   type Sprite3DProperties,
 } from './types';
+import { frameCoords, replaySpriteFrames } from '../../../godot/spriteFrames.js';
 
 export function parseSprite3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): Sprite3DProperties {
+  const frames = replaySpriteFrames(properties);
   const baseProps = parseNode3D(heading, properties);
 
   const result: Sprite3DProperties = {
@@ -58,9 +59,12 @@ export function parseSprite3D(
     ]),
     pixel_size: floatOr(properties.pixel_size, 0.01),
     transparency: floatOr(properties.transparency, 0),
-    hframes: intOr(properties.hframes, 1),
-    vframes: intOr(properties.vframes, 1),
-    frame: intOr(properties.frame, 0),
+    // The grid and frame Godot HOLDS after replaying the body in file order:
+    // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
+    // re-maps one that landed (godot/spriteFrames.ts).
+    hframes: frames.hframes,
+    vframes: frames.vframes,
+    frame: frames.frame,
     offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'Sprite3D'),
     centered: boolOr(properties.centered, true),
     flip_h: boolOr(properties.flip_h, false),
@@ -109,10 +113,9 @@ export function parseSprite3D(
     result.texture = properties.texture;
   }
 
-  if (properties.frame_coords) {
-    const coords = parseOptionalVector2i(properties.frame_coords, 'Sprite3D frame_coords');
-    if (coords) result.frame_coords = coords;
-  }
+  // The stored frame's own coordinates: the renderer prefers this field, and
+  // the authored pair may have been refused or re-mapped.
+  if (frames.writes.some((w) => w.key === 'frame_coords')) result.frame_coords = frameCoords(frames);
 
   if (properties.region_rect) {
     const rect = parseOptionalRect2(properties.region_rect, 'Sprite3D region_rect');

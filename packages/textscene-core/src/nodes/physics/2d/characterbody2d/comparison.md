@@ -1,0 +1,48 @@
+---
+type: CharacterBody2D
+category: 2D
+status: linter-only
+fixture: unit-characterbody2d.tscn
+visual: false
+renders_as: a transform-only group
+---
+
+# CharacterBody2D
+
+A 2D body moved by script rather than by the solver. It draws nothing in Godot, and the previewer mounts it as a transform-only Node2D group (ADR-0008) whose children carry the picture.
+
+## Linting
+
+<!-- lint:begin CharacterBody2D -->
+Strict parsing format-checks these `CharacterBody2D` properties, plus 5 inherited from CollisionObject2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `floor_block_on_wall` | true or false |  |
+| `floor_constant_speed` | true or false |  |
+| `floor_max_angle` | radians, 0° to 180° | warning |
+| `floor_snap_length` | float >= 0 | error below |
+| `floor_stop_on_slope` | true or false |  |
+| `max_slides` | integer >= 1 | error below |
+| `motion_mode` | enum 0-1 (GROUNDED/FLOATING) | warning |
+| `platform_floor_layers` | 32-bit layer mask (layers 1-32) |  |
+| `platform_on_leave` | enum 0-2 (ADD_VELOCITY/ADD_UPWARD_VELOCITY/DO_NOTHING) | warning |
+| `platform_wall_layers` | 32-bit layer mask (layers 1-32) |  |
+| `safe_margin` | float 0.001-256 | warning |
+| `slide_on_ceiling` | true or false |  |
+| `up_direction` | Vector2(x, y) other than the zero vector, or the Vector2i spelling Godot converts |  |
+| `velocity` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `wall_min_slide_angle` | radians, 0° to 180° | warning |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-characterbody2d` | `characterbody2d-floor-props-in-floating-mode` | info |
+|  | `characterbody2d-slide-on-ceiling-in-floating-mode` | info |
+|  | `characterbody2d-wall-min-slide-angle-in-grounded-mode` | info |
+| `valid-collisionobject2d` (type-family match) | `collisionobject2d-needs-collision-shape` | warning |
+<!-- lint:end -->
+
+`velocity` is checked for `Vector2(x, y)` shape only. It has no bound in either direction, since Godot neither clamps nor rejects a value there, and the lenient parser never reads it.
