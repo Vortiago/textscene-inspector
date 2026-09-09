@@ -1,0 +1,36 @@
+---
+type: ConeTwistJoint3D
+category: 3D
+status: linter-only
+fixture: unit-cone-twist-joint-3d.tscn
+# image: unit-cone-twist-joint-3d
+visual: false
+renders_as: nothing (a transform-only group)
+---
+
+# ConeTwistJoint3D
+
+A ball-and-socket joint between two 3D physics bodies. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008). Godot shows the cone only as an editor gizmo.
+
+## Linting
+
+<!-- lint:begin ConeTwistJoint3D -->
+Strict parsing format-checks these `ConeTwistJoint3D` properties, plus 4 inherited from Joint3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `bias` | float 0.01-16 | warning |
+| `relaxation` | float 0.01-16 | warning |
+| `softness` | float 0.01-16 | warning |
+| `swing_span` | radians, -180° to 180° | warning |
+| `twist_span` | radians, -40000° to 40000° | warning |
+
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-joint` (type-family match) | `joint-not-connected` | warning |
+|  | `joint-same-body` | warning |
+<!-- lint:end -->
+
+`index.ts` registers `parseNode3D` directly, which reads only `transform` and `visible`. An out-of-range `swing_span` or a malformed `bias` is dropped from the lenient tree rather than substituted or warned on.

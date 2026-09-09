@@ -10,7 +10,6 @@ import {
   expectClean,
   expectDiagnostic,
   expectNoDiagnostic,
-  expectNoErrors,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
@@ -32,16 +31,19 @@ describe('DirectionalLight3D Linter', () => {
     });
 
     it('should accept zero light_energy', () => {
-      expectNoErrors(scene(node('DirectionalLight3D', { light_energy: 0 })));
+      expectClean(scene(node('DirectionalLight3D', { light_energy: 0 })));
     });
 
     runPropertyValidation({ nodeType: 'DirectionalLight3D' }, [
       {
+        // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
+        // guards the param index, not the value, so a negative energy warns. 0 is
+        // the hint's floor, 150 is above its open ceiling.
         prop: 'light_energy',
-        valid: [1.5],
+        valid: [1.5, 0, 150],
         invalid: [
-          { value: '-1.0', contains: ['non-negative'] },
           { value: 'invalid', contains: ['must be a number'] },
+          { value: '-1.0', contains: ['non-negative'], severity: 'warning' },
         ],
       },
       {
@@ -79,14 +81,17 @@ describe('DirectionalLight3D Linter', () => {
       {
         prop: 'shadow_blur',
         valid: ['5.0', 0],
-        invalid: [{ value: '-1.0', contains: ['non-negative'] }],
+        invalid: [{ value: '-1.0', contains: ['between 0 and 10'] }],
       },
       {
+        // light_3d.cpp:406 hints "-16,16,0.001" (both ends closed, no
+        // or_greater/or_less), so 16 is a real bound; still a warning, since
+        // set_param:36 only guards the param index.
         prop: 'shadow_transmittance_bias',
-        valid: [-10, -5, 0, 5, 10],
+        valid: [-16, -5, 0, 5, 16],
         invalid: [
-          { value: -11, contains: ['between -10 and 10'] },
-          { value: 11, contains: ['between -10 and 10'] },
+          { value: -17, contains: ['between -16 and 16'] },
+          { value: 17, contains: ['between -16 and 16'] },
         ],
       },
       {
@@ -123,9 +128,14 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: 1.2, contains: ['between 0 and 1'] }],
       },
       {
+        // light_3d.cpp:584 hints "0,8192,0.1,or_greater,exp", unenforced, so a
+        // negative loads and only warns; 15000 is above the open ceiling.
         prop: 'directional_shadow_max_distance',
-        valid: ['100.0', 0],
-        invalid: [{ value: -100, contains: ['non-negative'] }],
+        valid: ['100.0', 0, 15000],
+        invalid: [
+          { value: 'invalid', contains: ['must be a number'] },
+          { value: -100, contains: ['non-negative'], severity: 'warning' },
+        ],
       },
       {
         prop: 'directional_shadow_pancake_size',
@@ -133,9 +143,13 @@ describe('DirectionalLight3D Linter', () => {
         invalid: [{ value: '-5.0', contains: ['non-negative'] }],
       },
       {
+        // light_3d.cpp:397 hints "0,16,0.001,or_greater": or_greater softens the
+        // 16, so 2.0 is a legal stylised boost, not an error. Only the 0 floor
+        // is a real bound, and set_param:36 (index-only guard) makes it a
+        // warning rather than an error.
         prop: 'light_specular',
-        valid: [0, 0.5, 1],
-        invalid: [{ value: '2.0', contains: ['between 0 and 1'] }],
+        valid: [0, 0.5, 1, 2.0],
+        invalid: [{ value: -1.0, contains: ['non-negative'] }],
       },
       {
         prop: 'light_bake_mode',
@@ -182,130 +196,81 @@ describe('DirectionalLight3D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
+    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
     describe('light energy warnings', () => {
-      it('should warn on very low light_energy', () => {
-        expectDiagnostic(scene(node('DirectionalLight3D', { light_energy: 0.005 })), {
-          prop: 'Light energy',
+      it('should warn on negative light_energy', () => {
+        expectDiagnostic(scene(node('DirectionalLight3D', { light_energy: -0.005 })), {
+          prop: 'light_energy',
           severity: 'warning',
-          contains: ['Light energy is very low', '0.005'],
+          contains: ['non-negative', '-0.005'],
         });
       });
 
-      it('should warn on very high light_energy', () => {
-        expectDiagnostic(scene(node('DirectionalLight3D', { light_energy: 150 })), {
-          prop: 'Light energy',
-          severity: 'warning',
-          contains: ['Light energy is very high', '150'],
+      it('should not warn above the open top of the hint', () => {
+        expectNoDiagnostic(scene(node('DirectionalLight3D', { light_energy: 150 })), {
+          prop: 'light_energy',
         });
       });
 
       it('should not warn on normal light_energy values', () => {
         expectNoDiagnostic(scene(node('DirectionalLight3D', { light_energy: 1.5 })), {
-          prop: 'Light energy',
+          prop: 'light_energy',
         });
       });
     });
 
+    // Nothing enforces split ordering: the cascade consumer reads the offsets as
+    // authored, and each split's own hint bounds the value, never the ordering.
     describe('shadow split ordering', () => {
-      it('should pass with correctly ordered splits', () => {
-        expectClean(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.1,
-              directional_shadow_split_2: 0.3,
-              directional_shadow_split_3: 0.7,
-            })
-          )
-        );
-      });
-
-      it('should error if split_1 >= split_2', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.5,
-              directional_shadow_split_2: 0.3,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_1', 'split_2'],
-          }
-        );
-      });
-
-      it('should error if split_2 >= split_3', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_2: 0.7,
-              directional_shadow_split_3: 0.5,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_2', 'split_3'],
-          }
-        );
-      });
-
-      it('should error if split_1 >= split_3', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.8,
-              directional_shadow_split_3: 0.6,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering', 'split_1', 'split_3'],
-          }
-        );
-      });
-
-      it('should error if splits are equal', () => {
-        expectDiagnostic(
-          scene(
-            node('DirectionalLight3D', {
-              directional_shadow_split_1: 0.5,
-              directional_shadow_split_2: 0.5,
-            })
-          ),
-          {
-            ruleName: 'directionallight3d-shadow-split-order',
-            severity: 'error',
-            contains: ['split ordering'],
-          }
-        );
+      it('reports nothing whatever the order', () => {
+        const cases: Record<string, number>[] = [
+          { directional_shadow_split_1: 0.1, directional_shadow_split_2: 0.3, directional_shadow_split_3: 0.7 },
+          { directional_shadow_split_1: 0.5, directional_shadow_split_2: 0.3 },
+          { directional_shadow_split_2: 0.7, directional_shadow_split_3: 0.5 },
+          { directional_shadow_split_1: 0.8, directional_shadow_split_3: 0.6 },
+          { directional_shadow_split_1: 0.5, directional_shadow_split_2: 0.5 },
+        ];
+        for (const splits of cases) {
+          expectClean(scene(node('DirectionalLight3D', splits)));
+        }
       });
     });
 
-    describe('large shadow distance warning', () => {
-      it('should warn on very large shadow_max_distance', () => {
+    // light_3d.cpp:584 — directional_shadow_max_distance PROPERTY_HINT_RANGE
+    // "0,8192,0.1,or_greater,exp": the high end is open, so 15000 is in band.
+    describe('negative shadow distance warning', () => {
+      it('should warn on negative shadow_max_distance', () => {
         expectDiagnostic(
-          scene(node('DirectionalLight3D', { directional_shadow_max_distance: 15000 })),
+          scene(node('DirectionalLight3D', { directional_shadow_max_distance: -1 })),
           {
-            ruleName: 'directionallight3d-large-shadow-distance',
+            prop: 'directional_shadow_max_distance',
             severity: 'warning',
-            contains: ['Shadow max distance is very large', '15000', 'performance'],
+            contains: ['non-negative', '-1'],
           }
+        );
+      });
+
+      it('accepts the hint floor of 0', () => {
+        expectClean(scene(node('DirectionalLight3D', { directional_shadow_max_distance: 0 })));
+      });
+
+      it('should not warn above the open top of the hint', () => {
+        expectNoDiagnostic(
+          scene(node('DirectionalLight3D', { directional_shadow_max_distance: 15000 })),
+          { prop: 'directional_shadow_max_distance' }
         );
       });
 
       it('should not warn on reasonable shadow_max_distance', () => {
         expectNoDiagnostic(
           scene(node('DirectionalLight3D', { directional_shadow_max_distance: 500 })),
-          { prop: 'Shadow max distance' }
+          { prop: 'directional_shadow_max_distance' }
         );
       });
     });
 
     describe('shadow mode and split consistency', () => {
-      it('should warn if ORTHOGONAL mode has split properties', () => {
+      it('reports if ORTHOGONAL mode has split properties', () => {
         expectDiagnostic(
           scene(
             node('DirectionalLight3D', {
@@ -315,13 +280,13 @@ describe('DirectionalLight3D Linter', () => {
           ),
           {
             ruleName: 'directionallight3d-unused-splits',
-            severity: 'warning',
+            severity: 'info',
             contains: ['ORTHOGONAL', 'Splits are ignored'],
           }
         );
       });
 
-      it('should warn if PARALLEL_2_SPLITS has split_2 or split_3', () => {
+      it('reports if PARALLEL_2_SPLITS has split_2 or split_3', () => {
         expectDiagnostic(
           scene(
             node('DirectionalLight3D', {
@@ -332,7 +297,7 @@ describe('DirectionalLight3D Linter', () => {
           ),
           {
             ruleName: 'directionallight3d-unused-splits',
-            severity: 'warning',
+            severity: 'info',
             contains: ['PARALLEL_2_SPLITS', 'Only split_1 is used'],
           }
         );
@@ -401,7 +366,7 @@ describe('DirectionalLight3D Linter', () => {
       );
     });
 
-    it('should handle multiple validation errors', () => {
+    it('should report out-of-band hints as warnings, not errors', () => {
       const diagnostics = lint(
         scene(
           node('DirectionalLight3D', {
@@ -413,11 +378,16 @@ describe('DirectionalLight3D Linter', () => {
           })
         )
       );
-      expect(diagnostics).toHaveLength(2);
-      // Should have errors for: shadow_mode, shadow_opacity; light_energy=0 is valid; splits ignored because mode defaults to ORTHOGONAL
-      const hasModeError = diagnostics.some(d => d.message.includes('directional_shadow_mode'));
-      const hasOpacityError = diagnostics.some(d => d.message.includes('shadow_opacity'));
-      expect(hasModeError && hasOpacityError).toBe(true);
+      // light_energy = 0 is valid. directional_shadow_mode (light_3d.cpp:578)
+      // and shadow_opacity (light_3d.cpp:407, via Light3D::set_param's
+      // index-only guard) are both hints, not enforcement (ADR-0032), so the
+      // out-of-range mode and opacity WARN instead of erroring, and nothing
+      // here reaches the error tier.
+      expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
+      const warnings = diagnostics.filter((d) => d.severity === 'warning');
+      const hasModeWarning = warnings.some(d => d.message.includes('directional_shadow_mode'));
+      const hasOpacityWarning = warnings.some(d => d.message.includes('shadow_opacity'));
+      expect(hasModeWarning && hasOpacityWarning).toBe(true);
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -435,10 +405,9 @@ describe('DirectionalLight3D Linter', () => {
       const diagnostics = lint(
         scene(
           node('DirectionalLight3D', {
-            light_energy: 150,
-            directional_shadow_max_distance: 15000,
-            directional_shadow_split_1: 0.5,
-            directional_shadow_split_2: 0.3,
+            light_energy: -150,
+            directional_shadow_max_distance: -15000,
+            transform: 'Transform3D(1, 0, 0)',
           })
         )
       );

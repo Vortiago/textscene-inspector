@@ -1,0 +1,13 @@
+; Godot 3 era: format=2, integer ext_resource ids, pre-4.0 class names.
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://icon.png" type="Texture" id=1]
+
+[node name="Root" type="Spatial"]
+
+[node name="Camera" type="Camera" parent="."]
+fov = 900
+cull_mask = "not a number"
+
+[node name="Sprite" type="Sprite" parent="."]
+texture = ExtResource( 1 )

@@ -3,7 +3,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { node, scene, lint, expectClean, expectDiagnostic } from '../../../../linter/testing/testkit';
+import {
+  node,
+  scene,
+  lint,
+  expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
+  instanced,
+  override,
+  packedScene,
+  subResource,
+} from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -60,7 +71,7 @@ shape = ExtResource("ext_shape")
           node('StaticBody3D', {}, { name: 'StaticBody' }),
           node('CollisionShape3D', { shape: 'SubResource(box shape)' }, { name: 'BadShape', parent: '.' })
         );
-        expectDiagnostic(content, { contains: ['shape'] });
+        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['shape'] });
       });
     });
 
@@ -102,7 +113,7 @@ disabled = false
 shape = SubResource("shape_1")
 disabled = 1
 `;
-        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['boolean'] });
+        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['converts'] });
       });
 
       it('should reject string non-boolean disabled value', () => {
@@ -156,12 +167,30 @@ shape = SubResource("shape_1")
         node('CollisionShape3D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
       );
       const resourceError = expectDiagnostic(content, {
-        ruleName: 'valid-collisionshape3d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'CollisionShape3D',
-        contains: ['Shape resource not found'],
+        contains: ["'shape'"],
       });
       expect(resourceError.nodeName).toBe('MissingResource');
+    });
+
+    it('reports nothing missing for a shape that is not a reference at all', () => {
+      // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
+      // `ExtResource` identifiers into the resource arm, so a quoted string
+      // names no id and nothing can be absent. Its format is the strict
+      // parser's diagnostic, and a second "not found" beside it names a
+      // resource nobody wrote — while a well-formed `SubResource("nonexistent")`
+      // still errors, per the case above.
+      const content = scene(
+        node('StaticBody3D', {}, { name: 'StaticBody' }),
+        node('CollisionShape3D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
+      expectDiagnostic(content, {
+        ruleName: 'strict-parser',
+        contains: ['shape', 'resource reference'],
+      });
     });
 
     it('should pass when shape resource exists', () => {
@@ -260,9 +289,49 @@ shape = SubResource("shape_1")
         ruleName: 'collisionshape3d-invalid-parent',
         severity: 'warning',
         nodeType: 'CollisionShape3D',
-        contains: ['Node3D', 'should be a child of'],
+        contains: ['Node3D', 'not a CollisionObject3D'],
       });
       expect(parentError.nodeName).toBe('Collision');
+    });
+
+    it('accepts a PhysicalBone3D parent, which IS a CollisionObject3D', () => {
+      // Godot's test is `cast_to<CollisionObject3D>(get_parent())`
+      // (collision_shape_3d.cpp), which PhysicalBone3D passes.
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="Bone" type="PhysicalBone3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-invalid-parent' });
+    });
+
+    it('says nothing about a parent whose type is declared in another scene', () => {
+      // An `instance=` heading names a PackedScene, so `type` is the
+      // ExtResource ref; an override heading has neither `type=` nor
+      // `instance=` and parses with the index fallback's truthy "0". Neither is
+      // a class this file states, and warning anyway fires on every body
+      // assembled by instancing one.
+      const instancedParent = scene(
+        packedScene,
+        subResource('BoxShape3D', {}, 'shape_1'),
+        node('Node3D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        node('CollisionShape3D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body' })
+      );
+      const overrideParent = scene(
+        packedScene,
+        subResource('BoxShape3D', {}, 'shape_1'),
+        node('Node3D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        override('Inner', 0, { parent: 'Body' }),
+        node('CollisionShape3D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body/Inner' })
+      );
+      expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape3d-invalid-parent' });
+      expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape3d-invalid-parent' });
     });
 
     it('should warn when parent is invalid type (MeshInstance3D)', () => {
@@ -322,6 +391,211 @@ shape = SubResource("shape_1")
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("shape_1")
 `);
+    });
+  });
+
+  describe('Semantic Validation (Transform Scale)', () => {
+    it('warns on a non-uniformly scaled transform', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-non-uniform-scale',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['non-uniformly scaled'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('does not warn on a uniformly scaled transform', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 0)
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-non-uniform-scale' });
+    });
+
+    it('does not warn on a flattened basis, where SIGN(det) makes Godot read (0, 0, 0)', () => {
+      // `Basis::get_scale()` is `SIGN(determinant()) * get_scale_abs()`
+      // (basis.cpp:321), and `SIGN` is three-valued (typedefs.h:123-126). A
+      // determinant of 0 therefore reads as a UNIFORM (0, 0, 0) and
+      // collision_shape_3d.cpp:153-156 stays silent, however unequal the
+      // column magnitudes are.
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+transform = Transform3D(2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0)
+`,
+        { ruleName: 'collisionshape3d-non-uniform-scale' }
+      );
+    });
+
+    it('does not warn when transform is absent, since the identity is uniform', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="shape_1"]
+
+[node name="StaticBody" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("shape_1")
+`,
+        { ruleName: 'collisionshape3d-non-uniform-scale' }
+      );
+    });
+  });
+
+  describe('Semantic Validation (Shape/Body Compatibility)', () => {
+    it('warns on a ConcavePolygonShape3D under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-rigidbody',
+        severity: 'warning',
+        nodeType: 'CollisionShape3D',
+        contains: ['ConcavePolygonShape3D', 'RigidBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('names VehicleBody3D specifically, since it is also a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Vehicle" type="VehicleBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-rigidbody',
+        contains: ['VehicleBody3D'],
+      });
+      // Godot picks the more specific name once cast_to<VehicleBody3D> succeeds
+      // (collision_shape_3d.cpp:137-140); the generic "RigidBody3D" never appears.
+      expect(diag.message).not.toContain('RigidBody3D');
+    });
+
+    it('warns unconditionally regardless of freeze/freeze_mode ("except when frozen" is message prose only)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ball" type="RigidBody3D"]
+freeze = true
+freeze_mode = 0
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      expectDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+    });
+
+    it('warns on a WorldBoundaryShape3D under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="WorldBoundaryShape3D" id="wb_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("wb_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-worldboundary-under-rigidbody',
+        severity: 'warning',
+        contains: ['WorldBoundaryShape3D', 'RigidBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('warns on a ConcavePolygonShape3D under a CharacterBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Player" type="CharacterBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      const diag = expectDiagnostic(content, {
+        ruleName: 'collisionshape3d-concave-under-characterbody',
+        severity: 'warning',
+        contains: ['ConcavePolygonShape3D', 'CharacterBody3D'],
+      });
+      expect(diag.nodeName).toBe('Collision');
+    });
+
+    it('does not warn about WorldBoundaryShape3D under a CharacterBody3D (Godot has no such check)', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="WorldBoundaryShape3D" id="wb_1"]
+
+[node name="Player" type="CharacterBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("wb_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-worldboundary-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-characterbody' });
+    });
+
+    it('does not warn on a ConcavePolygonShape3D under a StaticBody3D, which suits it', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConcavePolygonShape3D" id="concave_1"]
+
+[node name="Ground" type="StaticBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("concave_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-characterbody' });
+    });
+
+    it('does not warn on a Convex shape under a RigidBody3D', () => {
+      const content = `[gd_scene format=3]
+
+[sub_resource type="ConvexPolygonShape3D" id="convex_1"]
+
+[node name="Ball" type="RigidBody3D"]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("convex_1")
+`;
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-concave-under-rigidbody' });
+      expectNoDiagnostic(content, { ruleName: 'collisionshape3d-worldboundary-under-rigidbody' });
     });
   });
 

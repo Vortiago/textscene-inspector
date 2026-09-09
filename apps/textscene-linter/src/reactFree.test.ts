@@ -40,6 +40,12 @@ describe('linter-app React-free boundary', () => {
   });
 
   it('walker resolves every workspace import (guard stays exhaustive)', () => {
+    // Every other assertion here is an emptiness check, and a closure collapsed
+    // to the entry file alone satisfies all of them. 749 files today; the floor
+    // catches a walker that stopped following, not a tree that shrank. Inline
+    // rather than core's shared scrape floor: core publishes no test-helper
+    // subpath and this app must not deep-import past its exports map.
+    expect(closure.files.size).toBeGreaterThan(400);
     expect(closure.unresolved).toEqual([]);
   });
 

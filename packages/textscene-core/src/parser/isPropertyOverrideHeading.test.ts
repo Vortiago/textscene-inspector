@@ -45,6 +45,14 @@ describe('isPropertyOverrideHeading', () => {
     ).toBe(false);
   });
 
+  it('is false for an instance_placeholder heading — that declares a new InstancePlaceholder node', () => {
+    expect(
+      isPropertyOverrideHeading(
+        heading('[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]')
+      )
+    ).toBe(false);
+  });
+
   it('is false for a non-node section', () => {
     expect(isPropertyOverrideHeading(heading('[sub_resource type="BoxMesh" id="1"]'))).toBe(false);
   });
@@ -64,12 +72,29 @@ describe('the two node creators agree', () => {
   ].join('\n');
 
   const CASES = [
-    // Godot always writes an override with `index=` — it is how the editor
-    // addresses a node it did not declare — so these are the real shapes.
+    // An override addresses a node the heading did not declare; the editor
+    // writes `index=` only when sibling order has to be pinned.
     '[node name="Robot" parent="Player/Skeleton/Skeleton3D" index="0"]',
+    '[node name="Robot" parent="Player/Skeleton/Skeleton3D"]',
+    '[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]',
     '[node name="CoinCount" type="Label3D" parent="Player/Skeleton"]',
     '[node name="Crate" type="Node3D" parent="."]',
   ];
+
+  it('agrees that an instance_placeholder heading declares an InstancePlaceholder', () => {
+    // The two creators otherwise spell an undeclared type differently on
+    // purpose — the renderer falls back to `Node` so it can draw something,
+    // the linter keeps the heading's own marker. A placeholder is the one
+    // case where Godot names a class of its own (packed_scene.cpp:255), so
+    // both must say it or the two trees hold different nodes.
+    const line = '[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]';
+    const rendered = parseNodeWithRegistry(heading(line), {});
+    const linted = new StrictTscnParser().parse([PREAMBLE, line, ''].join('\n'));
+    const strict = findNode(linted.scene?.nodes ?? [], 'Rock');
+
+    expect(rendered?.type).toBe('InstancePlaceholder');
+    expect(strict?.type).toBe('InstancePlaceholder');
+  });
 
   it.each(CASES)('sets overridesExistingNode identically for %s', (line) => {
     const parsed = heading(line);

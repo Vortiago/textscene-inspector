@@ -17,33 +17,19 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-
-/** The node that holds `target` in its `children`, or null when it is a root. */
-function findParent(nodes: readonly TscnNode[], target: TscnNode): TscnNode | null {
-  for (const node of nodes) {
-    if (node.children.includes(target)) return node;
-    const nested = findParent(node.children, target);
-    if (nested) return nested;
-  }
-  return null;
-}
+import { parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 
 function checkParallaxLayer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (node.type !== 'ParallaxLayer') return [];
 
-  const parent = findParent(scene.nodes, node);
-  // An instanced parent's type lives in another file; treat it as unknown.
-  if (parent && (parent.instance || !parent.type)) return [];
-  if (parent?.type === 'ParallaxBackground') return [];
+  const verdict = parentTypeVerdict(scene, node, 'ParallaxBackground');
+  if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
-  const where = parent ? `a ${parent.type} node` : 'the scene root';
   return [
     {
       severity: 'warning',
-      message: `ParallaxLayer '${node.name}' is ${parent ? 'a child of' : ''} ${where}. ParallaxLayer only works as a direct child of a ParallaxBackground; elsewhere its motion_scale, motion_offset and motion_mirroring have no effect.`,
+      message: `ParallaxLayer '${node.name}' is ${placementPhrase(verdict)}. ParallaxLayer only works as a direct child of a ParallaxBackground; elsewhere its motion_scale, motion_offset and motion_mirroring have no effect.`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'parallaxlayer-outside-parallaxbackground',
@@ -58,7 +44,7 @@ const parallaxLayerParentRule: LintRule = {
       'Warns when a ParallaxLayer is not a direct child of a ParallaxBackground, where Godot never applies its motion properties',
     category: 'validation',
     applicableNodeTypes: ['ParallaxLayer'],
-    emits: [{ ruleName: 'parallaxlayer-outside-parallaxbackground', severity: 'warning' }],
+    emits: [{ ruleName: 'parallaxlayer-outside-parallaxbackground', severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },
   check: checkParallaxLayer,
 };

@@ -25,7 +25,7 @@ export {
   decodeGradient,
   decodeGradientTexture2D,
   gradientFromResource,
-  parsePackedColorArray,
+  parseColorStops,
   parsePackedFloat32Array,
   resolveGradient,
 } from './decode';

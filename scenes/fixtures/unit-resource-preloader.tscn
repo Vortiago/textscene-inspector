@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://unit_resource_preloader"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
+
+[sub_resource type="Resource" id="Resource_1"]
+
+[node name="Root" type="Node"]
+
+[node name="MyResourcePreloader" type="ResourcePreloader" parent="."]
+; Two preloaded resources: matching name/resource counts, one SubResource and
+; one ExtResource entry.
+resources = [PackedStringArray("blank", "icon"), [SubResource("Resource_1"), ExtResource("1_tex")]]

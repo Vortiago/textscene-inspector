@@ -14,6 +14,7 @@ import {
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+import '../shared/linter';
 
 describe('Area2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -23,7 +24,6 @@ describe('Area2D Linter', () => {
           node('Area2D', {
             monitoring: true,
             monitorable: true,
-            space_override: 0,
             gravity_space_override: 0,
             gravity_point: false,
             gravity_point_center: 'Vector2(0, 0)',
@@ -47,13 +47,8 @@ describe('Area2D Linter', () => {
     });
 
     runPropertyValidation({ nodeType: 'Area2D', acceptChild: collisionShape2d }, [
-      { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, contains: ['boolean'] }] },
+      { prop: 'monitoring', valid: [true, false], invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }] },
       { prop: 'monitorable', valid: [true, false], invalid: [{ value: '"yes"', contains: ['boolean'] }] },
-      {
-        prop: 'space_override',
-        valid: [0, 1, 2, 3, 4],
-        invalid: [{ value: 5, contains: ['0-4', 'DISABLED'] }, { value: -1 }],
-      },
       {
         prop: 'gravity_space_override',
         valid: [0, 1, 2, 3, 4],
@@ -63,7 +58,7 @@ describe('Area2D Linter', () => {
         prop: 'gravity_point',
         valid: [true, false],
         with: { gravity_point_unit_distance: 1.0 },
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       {
         prop: 'gravity_point_center',
@@ -110,19 +105,25 @@ describe('Area2D Linter', () => {
         valid: [0, 0.5, 2.0, 15.0],
         invalid: [{ value: -2.0, contains: ['cannot be negative'] }],
       },
-      { prop: 'priority', valid: [0, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
+      {
+        prop: 'priority',
+        // An INT slot: `1.0` is whole and silent, `100.5` is truncated on the
+        // way in and says so.
+        valid: [0, 1.0, -1.0],
+        invalid: [{ value: '"high"' }, { value: 100.5, contains: ['fractional part'] }],
+      },
       {
         prop: 'audio_bus_override',
         valid: [true, false],
         with: { audio_bus_name: '"Master"' },
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
       { prop: 'audio_bus_name', valid: ['"Master"', '"SFX"'] },
       {
           prop: 'collision_layer',
           valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"layer1"' },
           ],
         },
@@ -130,7 +131,7 @@ describe('Area2D Linter', () => {
           prop: 'collision_mask',
           valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
           invalid: [
-{ value: -5, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
       {
@@ -142,12 +143,12 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (CollisionShape2D Children)', () => {
-    it('should warn when Area2D has no CollisionShape2D children', () => {
+    it('should warn when Area2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('Area2D')), {
-        ruleName: 'area2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'Area2D',
-        contains: ['no CollisionShape2D children'],
+        contains: ['no CollisionShape2D or CollisionPolygon2D children'],
       });
     });
 
@@ -155,13 +156,18 @@ describe('Area2D Linter', () => {
       expectClean(scene(node('Area2D'), collisionShape2d));
     });
 
-    it('should pass when Area2D has nested CollisionShape2D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under Area2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('Area2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -177,12 +183,12 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (Monitoring Configuration)', () => {
-    it('should warn when both monitoring and monitorable are false', () => {
+    it('reports when both monitoring and monitorable are false', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: false, monitorable: false }), collisionShape2d), {
-        ruleName: 'area2d-inactive',
-        severity: 'warning',
+        ruleName: 'area2d-detects-nothing',
+        severity: 'info',
         nodeType: 'Area2D',
-        contains: ['both', 'cannot detect'],
+        contains: ['both', 'detects no bodies', 'overrides still apply'],
       });
     });
 
@@ -220,27 +226,21 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0 and monitoring is true', () => {
-      expectDiagnostic(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d), {
-        ruleName: 'area2d-monitoring-zero-layer',
-        severity: 'warning',
-        nodeType: 'Area2D',
-      });
+    // No `collision_layer == 0` + monitoring check: no engine warning exists
+    // for it, and the premise would be wrong anyway — Area monitoring matches a target
+    // body's `collision_layer` against the AREA's `collision_mask`, not the
+    // area's own `collision_layer`, so the area's own layer has no bearing on
+    // what it detects. dodge-the-creeps' Coin ships with it deliberately.
+    it('stays quiet when collision_layer is 0 and monitoring is true', () => {
+      expectClean(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d));
     });
 
-    it('should warn when collision_mask is 0 and monitoring is true', () => {
+    it('reports when collision_mask is 0 and monitoring is true', () => {
       expectDiagnostic(scene(node('Area2D', { monitoring: true, collision_mask: 0 }), collisionShape2d), {
         ruleName: 'area2d-monitoring-zero-mask',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Area2D',
       });
-    });
-
-    it('should warn when both collision_layer and collision_mask are 0 with monitoring', () => {
-      expectDiagnostic(
-        scene(node('Area2D', { monitoring: true, collision_layer: 0, collision_mask: 0 }), collisionShape2d),
-        { ruleName: 'area2d-monitoring-no-collision', severity: 'warning', nodeType: 'Area2D' }
-      );
     });
 
     it('should not warn when monitoring is false', () => {
@@ -256,31 +256,12 @@ describe('Area2D Linter', () => {
     });
   });
 
-  describe('Semantic Validation (Audio Bus)', () => {
-    it('should warn when audio_bus_override is true but audio_bus_name is not set', () => {
-      expectDiagnostic(scene(node('Area2D', { audio_bus_override: true }), collisionShape2d), {
-        ruleName: 'area2d-audio-override-missing-name',
-        severity: 'warning',
-        nodeType: 'Area2D',
-        contains: ['audio_bus_name'],
-      });
-    });
-
-    it('should pass when audio_bus_override is true and audio_bus_name is set', () => {
-      expectClean(scene(node('Area2D', { audio_bus_override: true, audio_bus_name: '"Master"' }), collisionShape2d));
-    });
-
-    it('should not check audio_bus_name when audio_bus_override is false', () => {
-      expectClean(scene(node('Area2D', { audio_bus_override: false }), collisionShape2d));
-    });
-  });
-
   describe('Edge Cases', () => {
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(
         scene(
           node('Area2D', {
-            space_override: 10,
+            gravity_space_override: 10,
             gravity_point_unit_distance: -5,
             collision_layer: -1,
             monitoring: '"invalid"',
@@ -296,7 +277,6 @@ describe('Area2D Linter', () => {
           node('Area2D', {
             monitoring: true,
             monitorable: true,
-            space_override: 3,
             gravity_space_override: 3,
             gravity_point: true,
             gravity_point_center: 'Vector2(0, 0)',
@@ -322,7 +302,7 @@ describe('Area2D Linter', () => {
     it('should handle node with no properties', () => {
       const diagnostics = lint(scene(node('Area2D')));
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('area2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in numeric values', () => {
@@ -356,8 +336,8 @@ describe('Area2D Linter', () => {
       );
       expect(diagnostics.length).toBeGreaterThan(0);
       const hasFormatError = diagnostics.some(d => d.message.includes('greater than 0'));
-      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-inactive');
-      const hasMissingShape = diagnostics.some(d => d.ruleName === 'area2d-needs-collision-shape');
+      const hasSemanticError = diagnostics.some(d => d.ruleName === 'area2d-detects-nothing');
+      const hasMissingShape = diagnostics.some(d => d.ruleName === 'collisionobject2d-needs-collision-shape');
       expect(hasFormatError || hasSemanticError || hasMissingShape).toBe(true);
     });
 

@@ -17,16 +17,14 @@
  */
 
 import { useMemo, type CSSProperties } from 'react';
-import type * as THREE from 'three';
 import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
 import { controlStyle } from '../../../../r3f/controls/controlLayout';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveTexture2DSource } from '../../../../resources/SubResourceResolver';
 import { atlasRegionDataUrl } from '../../../../resources/textures/atlastexture/build';
 import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
-import { useResource } from '../../../../resources/useResource';
 import type { TextureRectProperties } from './types';
+import { useTexture2DSource } from '../../../../resources/useTexture2D';
 
 export function TextureRect({ node, children }: ControlComponentProps) {
   const props = node.properties as TextureRectProperties;
@@ -38,10 +36,12 @@ export function TextureRect({ node, children }: ControlComponentProps) {
   // rather than windowed with UVs — and the control's intrinsic size is the
   // cell's, since Godot sizes it from `texture->get_size()`, which for an
   // AtlasTexture is its region (atlas_texture.cpp:33-42).
-  const { path, region } = resolveTexture2DSource(props.texture, externalResources, internalResources);
-
-  // Always call the hook (rules of hooks); '' short-circuits to pending.
-  const tex = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+  // `useTexture2DSource`, not the bare resolver: a Texture2D slot also holds a
+  // procedurally generated sub-resource, which resolves to no path at all and
+  // drew nothing here. The hook owns that walk and still reports the region.
+  const source = useTexture2DSource(props.texture, externalResources, internalResources);
+  const region = source.region;
+  const tex = { value: source.texture ?? undefined };
   const src = useMemo(
     () =>
       region ? atlasRegionDataUrl(tex.value?.image, region) : imageToDataUrl(tex.value?.image),
@@ -86,7 +86,7 @@ export function TextureRect({ node, children }: ControlComponentProps) {
         minHeight: 32,
         outline: '1px dashed #c792ea',
       }}
-      title={path ?? 'no texture'}
+      title={source.path ?? 'no texture'}
     >
       {children}
     </div>

@@ -2,10 +2,9 @@
  * Tests for Scene Tree Builder
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { buildSceneTree } from './sceneTreeBuilder';
+import { describe, it, expect } from 'vitest';
+import { buildSceneTree, rootDeclaringParent, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
-import * as logger from '../logger';
 
 describe('buildSceneTree', () => {
   describe('empty and basic cases', () => {
@@ -311,23 +310,17 @@ describe('buildSceneTree', () => {
       // A malformed authored path, not an instance override. Godot drops these
       // too, and so must we — otherwise a fixture named "deep" would silently
       // re-root fifteen levels as siblings and stop testing depth.
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
       const nodes = [node('Level0'), node('Level1', { parent: '.' }), node('Level3', { parent: 'Level2' })];
 
       const [root] = buildSceneTree(nodes);
 
       expect(root!.children.map((c) => c.name)).toEqual(['Level1']);
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      loggerWarnSpy.mockRestore();
     });
 
     it('does not anchor at a plain node that merely shares the path prefix', () => {
       // `Player` here is an ordinary node, not an instance — so nothing inside
       // it can be addressed that we cannot already see, and an unresolvable
       // path is a mistake rather than an override.
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
       const nodes = [
         node('Main'),
         node('Player', { parent: '.' }),
@@ -337,10 +330,110 @@ describe('buildSceneTree', () => {
       const [root] = buildSceneTree(nodes);
 
       expect(root!.children[0]!.children).toEqual([]);
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      loggerWarnSpy.mockRestore();
+    });
+
+    it('descends through an override heading standing between the instance and the path', () => {
+      // What Godot writes for editable children: `Inside` overrides properties
+      // on a node the base scene declares, so it carries no `type=` and its own
+      // children live in that scene, not here. Reading it as an ordinary node
+      // makes `StaticBody2D` a name this file "fails to find" and strands a
+      // heading the engine places.
+      const nodes = [
+        node('Root'),
+        node('Building', { parent: '.', instance: 'ExtResource("1")' }),
+        node('Inside', { parent: 'Building', type: 'Node', overridesExistingNode: true }),
+        node('CollisionPolygon2D', { parent: 'Building/Inside/StaticBody2D' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      const building = root!.children[0]!;
+      expect(building.children.map((c) => c.name)).toEqual(['Inside', 'CollisionPolygon2D']);
+      expect(building.children[1]!.instanceSubPath).toBe('Inside/StaticBody2D');
+    });
+
+    it('descends through an override heading below an instanced ROOT', () => {
+      // The inherited-scene shape: the root itself is the instance, so every
+      // override below it names base-scene content and the same opacity applies
+      // from the scene root down.
+      const nodes = [
+        node('Root', { instance: 'ExtResource("1")' }),
+        node('Mid', { parent: '.', type: 'Node', overridesExistingNode: true }),
+        node('Leaf', { parent: 'Mid/Ghost' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['Mid', 'Leaf']);
+      expect(root!.children[1]!.instanceSubPath).toBe('Mid/Ghost');
+    });
+
+    it('jumps a %Name in a parent= to the node claiming it', () => {
+      // `get_node_or_null` looks a `%Name` up in the owner's claim table rather
+      // than descending (`node.cpp:1930-1938`), so the path continues from
+      // whatever it finds.
+      const nodes = [
+        node('Root'),
+        node('Player', {
+          parent: '.',
+          rawProperties: { unique_name_in_owner: 'true' },
+        }),
+        node('Hat', { parent: '%Player' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      const player = root!.children[0]!;
+      expect(player.name).toBe('Player');
+      expect(player.children.map((c) => c.name)).toEqual(['Hat']);
+    });
+
+    it('strands a %Name whose claim is declared LATER in the file', () => {
+      // The table holds only what the headings before this one seated, so the
+      // claim is not there yet. Probed on 4.7.2: Godot warns "Parent path
+      // './%Player' for node 'Hat' has vanished" and renames it `_Player#Hat`.
+      const nodes = [
+        node('Root'),
+        node('Hat', { parent: '%Player' }),
+        node('Player', {
+          parent: '.',
+          rawProperties: { unique_name_in_owner: 'true' },
+        }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['Player']);
+      expect(root!.children[0]!.children).toEqual([]);
+    });
+
+    it('strands a %Name no node in the file claims', () => {
+      // Without the flag there is no claim, and Godot warns the parent path has
+      // vanished rather than treating `%Player` as an ordinary child name.
+      const nodes = [
+        node('Root'),
+        node('Player', { parent: '.' }),
+        node('Hat', { parent: '%Player' }),
+      ];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['Player']);
+      expect(root!.children[0]!.children).toEqual([]);
+    });
+
+    it('strands a parent= naming a node declared LATER in the file', () => {
+      // `NODE_FROM_ID` resolves against `ret_nodes[0]` as it stands at heading
+      // `i` (`packed_scene.cpp:157-165`), so only the headings above this one
+      // are reachable. Probed on 4.7.2: `Body` re-roots as `Later#Body` with
+      // the vanished-path warning, and the same two headings swapped seat it
+      // under `Later` with no warning.
+      const nodes = [node('Root'), node('Body', { parent: 'Later' }), node('Later', { parent: '.' })];
+
+      const [root] = buildSceneTree(nodes);
+
+      expect(root!.children.map((c) => c.name)).toEqual(['Later']);
+      expect(root!.children[0]!.children).toEqual([]);
     });
 
     it('prefers the DEEPEST instance on the path', () => {
@@ -363,9 +456,7 @@ describe('buildSceneTree', () => {
   });
 
   describe('error handling', () => {
-    it('should warn and treat node as root when parent not found', () => {
-      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-
+    it('drops a node whose parent is not found, and reports it', () => {
       const nodes: TscnNode[] = [
         {
           type: 'Node3D',
@@ -382,23 +473,17 @@ describe('buildSceneTree', () => {
         },
       ];
 
+      const origins = nodes.map((node, i) => ({ node, line: i + 1, declaredParent: node.parent }));
       const result = buildSceneTree(nodes);
 
-      // New behavior: warns about orphaned nodes being dropped
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'WARNING: 1 orphaned nodes will be dropped from scene tree!'
-      );
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        '  Orphaned: "Orphan" (type: Node3D, parent: "NonExistentParent", instance: none)'
-      );
-      // Orphaned nodes are dropped (not added as roots)
-      expect(result).toHaveLength(1);
-      expect(result[0]!.name).toBe('Root');
-
-      loggerWarnSpy.mockRestore();
+      // Dropped from the tree, and named by the report rather than by a log
+      // line: `strandedNodes` is the single derivation, and it is what the
+      // linter and the console both read.
+      expect(result.map((r) => r.name)).toEqual(['Root']);
+      expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Orphan']);
     });
 
-    it('should handle all nodes having parent attributes (no explicit root)', () => {
+    it('roots at heading 0 when no heading declares itself parentless', () => {
       const nodes: TscnNode[] = [
         {
           type: 'Node3D',
@@ -415,15 +500,42 @@ describe('buildSceneTree', () => {
           children: [],
         },
       ];
-
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const origins = nodes.map((node, i) => ({
+        node,
+        line: i + 1,
+        declaredParent: node.parent,
+      }));
 
       const result = buildSceneTree(nodes);
 
-      // All nodes should become roots when parent not found
-      expect(result.length).toBeGreaterThanOrEqual(1);
+      // Handing the flat list back as roots makes every node reachable — the set
+      // `strandedNodes` subtracts from — so the report empties on exactly the
+      // file `packed_scene.cpp:219` refuses. Heading 0 is the root here as it is in the engine, and every
+      // later heading is stranded and named.
+      expect(result.map((r) => r.name)).toEqual(['Node1']);
+      expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Node2']);
+      expect(rootDeclaringParent(origins)?.node.name).toBe('Node1');
+    });
 
-      consoleWarnSpy.mockRestore();
+    it('names heading 0 even when a LATER heading became the root', () => {
+      // The two derivations disagree by design: the builder prefers a parentless
+      // heading wherever it sits, while Godot's root is `i == 0` and nothing
+      // else. Only the positional one still names the heading that is refused.
+      const nodes: TscnNode[] = [
+        { type: 'Node3D', name: 'A', parent: '.', properties: {}, children: [] },
+        { type: 'Node3D', name: 'Root', properties: {}, children: [] },
+      ];
+      const origins = nodes.map((node, i) => ({
+        node,
+        line: i + 1,
+        declaredParent: node.parent,
+      }));
+
+      const result = buildSceneTree(nodes);
+
+      expect(result.map((r) => r.name)).toEqual(['Root']);
+      expect(strandedNodes(origins, result)).toEqual([]);
+      expect(rootDeclaringParent(origins)?.node.name).toBe('A');
     });
   });
 

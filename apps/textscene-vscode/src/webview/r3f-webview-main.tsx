@@ -102,11 +102,10 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
 
     window.addEventListener('message', onMessage);
 
-    // Signal handshake-ready to the extension host. The host caches
-    // any `loadTscn` payload that arrived before this point (the
-    // initial open is a race: the host calls postMessage from its
-    // constructor, but React hooks fire async). The host re-posts
-    // the cached payload on receipt of this message.
+    // Signal handshake-ready to the extension host: the initial open is a race,
+    // since the host posts `loadTscn` from its constructor while this effect
+    // runs async. The host replays the current scene text on every ready, so a
+    // REMOUNT — which lands here with `content` empty again — is refilled too.
     vscode.postMessage({ type: 'webviewReady' } satisfies WebviewToHostMessage);
 
     return () => {

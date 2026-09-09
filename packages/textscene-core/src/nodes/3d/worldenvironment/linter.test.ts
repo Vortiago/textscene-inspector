@@ -16,6 +16,8 @@ import {
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
+// The Environment slice's validators: the `sky` slot inside the sub-resource.
+import '../../../resources/environment/index.linter';
 
 describe('WorldEnvironment Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -148,9 +150,51 @@ camera_attributes = invalid
           {
             ruleName: 'worldenvironment-requires-environment',
             severity: 'warning',
-            contains: ["requires an 'environment' property", 'does nothing'],
+            contains: ["neither an 'environment' nor a 'camera_attributes'", 'no visible effect'],
           }
         );
+      });
+
+      it('stays quiet on a camera_attributes-only node, which Godot accepts', () => {
+        // world_environment.cpp:187 guards on `environment.is_null() &&
+        // camera_attributes.is_null()`. Either resource gives the node an
+        // effect; testing `environment` alone warned about a valid scene.
+        expectNoDiagnostic(
+          `[gd_scene load_steps=2 format=3]
+
+[sub_resource type="CameraAttributesPractical" id="Cam_1"]
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+camera_attributes = SubResource("Cam_1")
+`,
+          { ruleName: 'worldenvironment-requires-environment' }
+        );
+      });
+
+      it('treats a leading cleared environment as an empty slot, not as the winner', () => {
+        // `environment = null` is `Ref::is_null()`, so the node never joins the
+        // group (world_environment.cpp:39-40) and the next one along is the one
+        // Godot honours — while the cleared node itself has no visible effect.
+        const content = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="ClearedEnv" type="WorldEnvironment" parent="."]
+environment = null
+
+[node name="RealEnv" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+`;
+
+        expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
+        expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
+        const cleared = expectDiagnostic(content, {
+          ruleName: 'worldenvironment-requires-environment',
+          severity: 'warning',
+        });
+        expect(cleared.nodeName).toBe('ClearedEnv');
       });
 
       it('should detect non-existent environment resource', () => {
@@ -161,9 +205,9 @@ camera_attributes = invalid
 environment = SubResource("nonexistent_env")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
+            ruleName: 'dangling-resource-reference',
             severity: 'error',
-            contains: ['Environment resource not found'],
+            contains: ["'environment'"],
           }
         );
       });
@@ -192,9 +236,9 @@ sky = SubResource("Sky_missing")
 environment = SubResource("env_1")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
+            ruleName: 'dangling-resource-reference',
             severity: 'error',
-            contains: ['Sky resource not found'],
+            contains: ["'sky'"],
           }
         );
       });
@@ -226,13 +270,13 @@ background_mode = 1
 [node name="WorldEnvironment" type="WorldEnvironment"]
 environment = SubResource("env_1")
 `,
-          { prop: 'Sky resource not found' }
+          { prop: "'sky'" }
         );
       });
     });
 
     describe('camera_attributes resource existence', () => {
-      it('should warn about non-existent camera_attributes resource', () => {
+      it('errors on a non-existent camera_attributes resource', () => {
         expectDiagnostic(
           `[gd_scene format=3]
 
@@ -243,9 +287,9 @@ environment = SubResource("env_1")
 camera_attributes = SubResource("nonexistent_cam")
 `,
           {
-            ruleName: 'valid-worldenvironment-resources',
-            severity: 'warning',
-            contains: ['Camera attributes resource not found'],
+            ruleName: 'dangling-resource-reference',
+            severity: 'error',
+            contains: ["'camera_attributes'"],
           }
         );
       });
@@ -274,6 +318,79 @@ environment = SubResource("env_1")
     });
   });
 
+  // `get_configuration_warnings` carries the same first-wins test three times,
+  // one per resource slot (world_environment.cpp:195-205), each fed by its own
+  // group and its own `_update_current_*` (:39-52, :75-105). A node can win one
+  // group and lose another, so the winner is resolved per slot.
+  describe('the camera_attributes and compositor groups', () => {
+    it('warns on the second node to declare camera_attributes', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="CameraAttributesPractical" id="cam_1"]
+[sub_resource type="CameraAttributesPractical" id="cam_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("cam_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+camera_attributes = SubResource("cam_2")
+`,
+        {
+          ruleName: 'single-worldenvironment',
+          severity: 'warning',
+          prop: "'WE2'",
+          contains: ['Only one WorldEnvironment is allowed per scene'],
+        }
+      );
+    });
+
+    it('warns on the second node to declare a compositor', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Compositor" id="c_1"]
+[sub_resource type="Compositor" id="c_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_2")
+`,
+        {
+          ruleName: 'single-worldenvironment',
+          severity: 'warning',
+          prop: "'WE2'",
+          contains: ['Only the first Compositor has an effect'],
+        }
+      );
+    });
+
+    it('resolves each group independently, so an environment-only leader does not claim the rest', () => {
+      // WE1 joins only the environment group, so WE2 is FIRST in the compositor
+      // one and Godot says nothing about its compositor.
+      const diagnostics = lint(`[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Compositor" id="c_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WE1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="WE2" type="WorldEnvironment" parent="."]
+compositor = SubResource("c_1")
+`);
+      expect(diagnostics.filter((d) => d.ruleName === 'single-worldenvironment')).toEqual([]);
+    });
+  });
+
   describe('Semantic Validation (Multiple WorldEnvironment)', () => {
     it('should warn when multiple WorldEnvironment nodes exist', () => {
       expectDiagnostic(
@@ -293,8 +410,50 @@ environment = SubResource("env_2")
         {
           ruleName: 'single-worldenvironment',
           severity: 'warning',
-          contains: ['2 WorldEnvironment nodes', 'Only one WorldEnvironment should be active'],
+          prop: "'WorldEnvironment2'",
+          contains: ['Only the first Environment has an effect'],
         }
+      );
+    });
+
+    // world_environment.cpp:195 compares against the world's own Environment, and
+    // `_update_current_environment` (:76-80) took that from the FIRST node in the
+    // group. The first node's comparison is therefore equal, and Godot says nothing.
+    it('leaves the first WorldEnvironment alone, since it is the one that wins', () => {
+      const diagnostics = lint(`[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Environment" id="env_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="."]
+environment = SubResource("env_2")
+`);
+      const named = diagnostics.filter((d) => d.ruleName === 'single-worldenvironment');
+      expect(named.map((d) => d.nodeName)).toEqual(['WorldEnvironment2']);
+    });
+
+    // The engine's test is `Ref<Environment> != environment`, i.e. resource
+    // identity. Two nodes naming one ExtResource hold the same instance.
+    it('stays silent when both nodes name the same environment resource', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[ext_resource type="Environment" path="res://shared.tres" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = ExtResource("env_1")
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="."]
+environment = ExtResource("env_1")
+`,
+        { ruleName: 'single-worldenvironment' }
       );
     });
 
@@ -317,7 +476,7 @@ environment = SubResource("env_2")
 [node name="WorldEnvironment3" type="WorldEnvironment" parent="."]
 environment = SubResource("env_3")
 `,
-        { ruleName: 'single-worldenvironment', contains: ['3 WorldEnvironment nodes'] }
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment3'" }
       );
     });
 
@@ -351,7 +510,7 @@ environment = SubResource("env_1")
 [node name="WorldEnvironment2" type="WorldEnvironment" parent="Container"]
 environment = SubResource("env_2")
 `,
-        { ruleName: 'single-worldenvironment', contains: ['2 WorldEnvironment nodes'] }
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment2'" }
       );
     });
   });
@@ -373,12 +532,10 @@ environment = SubResource("env_1")
 `);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      // Should have environment resource not found error
-      const envError = diagnostics.find(d => d.message.includes('Environment resource not found'));
+      const envError = diagnostics.find(d => d.message.includes("'environment'"));
       expect(envError).toBeDefined();
 
-      // Should have camera attributes warning
-      const camWarning = diagnostics.find(d => d.message.includes('Camera attributes resource not found'));
+      const camWarning = diagnostics.find(d => d.message.includes("'camera_attributes'"));
       expect(camWarning).toBeDefined();
 
       // Should have multiple WorldEnvironment warning
@@ -443,6 +600,35 @@ camera_attributes = invalid_format
       );
     });
 
+    it('reads an empty environment value as an empty slot, not as a reference that failed to resolve', () => {
+      // `environment = ` is a format error, and the strict parser reports it.
+      // The semantic rule must then read the slot the way every other swept
+      // resource slot reads it, as holding nothing, rather than resolving
+      // `''` as a reference and reporting a second, rule-level error, and
+      // rather than counting the node as one that declares an environment,
+      // which hands it the group's first place and blames the node that
+      // actually has one.
+      const content = `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Empty" type="WorldEnvironment" parent="."]
+environment =
+
+[node name="Real" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+`;
+      expectDiagnostic(content, { ruleName: 'strict-parser', severity: 'error' });
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
+      expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
+      expectDiagnostic(content, {
+        ruleName: 'worldenvironment-requires-environment',
+        severity: 'warning',
+      });
+    });
+
     it('should handle WorldEnvironment with no properties at all', () => {
       expectDiagnostic(
         `[gd_scene format=3]
@@ -484,7 +670,7 @@ environment = SubResource("nonexistent")
       // Should have resource not found error for InvalidWorldEnv
       const resourceError = diagnostics.find(d =>
         d.nodeName === 'InvalidWorldEnv' &&
-        d.message.includes('Environment resource not found')
+        d.message.includes("'environment'")
       );
       expect(resourceError).toBeDefined();
 

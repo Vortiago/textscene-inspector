@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyNavigationLink2D" type="NavigationLink2D" parent="."]
+position = Vector2(10, 20)
+enabled = true
+bidirectional = false
+navigation_layers = 3
+start_position = Vector2(0, 0)
+end_position = Vector2(100, 50)
+enter_cost = 0.5
+travel_cost = 2.0

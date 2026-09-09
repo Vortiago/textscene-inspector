@@ -1,8 +1,171 @@
-/** GridMap strict validators for linting (format validation). */
+/**
+ * GridMap strict validators for linting (format validation).
+ *
+ * `data` and `baked_meshes` are a hand-rolled `_set`/`_get`/`_get_property_list`
+ * route (grid_map.cpp:61-158), zero `ADD_PROPERTY`, zero XML `<member>`. See
+ * propertyListRouteCoverage.test.ts.
+ */
 
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { v } from '../../../linter/validators/index.js';
+import { accepts, layerBitmask, propertyError, v } from '../../../linter/validators/index.js';
+import { ARRAY_LITERAL_RE, packedArrayCallAnywhere, resourceRef } from '../../../godot/index.js';
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
+import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
+import {
+  markIntSlot,
+  readIntSlot,
+  storedNotWritten,
+  unrepresentableInt,
+} from '../../../linter/validators/intSlot.js';
+
+const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;
+const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedInt32Array').source}`);
+
+/**
+ * `data`: a packed cell Dictionary, `{ "cells": PackedInt32Array(key_lo,
+ * key_hi, cell, …) }` (grid_map.cpp:64-80 `_set`, :117-137 `_get`, :158
+ * `_get_property_list`). `d.has("cells")` (:67) guards the whole branch, so a
+ * Dictionary without that key is accepted untouched — GridMap's own writer
+ * always includes it, but nothing refuses its absence.
+ *
+ * `ERR_FAIL_COND_V(amount % 3, false)` (:71) is a REAL enforced whole-value
+ * bound: a malformed length drops the entire write (`cell_map` is left as it
+ * was, not partially updated).
+ */
+const dataValidator: PropertyValidator = accepts((key, value, line) => {
+  const trimmed = value.trim();
+  if (!DICT_LITERAL_RE.test(trimmed)) {
+    return propertyError(
+      key,
+      line,
+      `Property 'data' must be a Dictionary literal like { "cells": PackedInt32Array(...) }, got: ${value}`,
+      'INVALID_DATA_FORMAT'
+    );
+  }
+  const cellsMatch = CELLS_RE.exec(trimmed);
+  if (!cellsMatch) return null; // no "cells" key: grid_map.cpp:67 skips processing entirely.
+  const body = cellsMatch[1]!.trim();
+  const cells = body === '' ? [] : splitTopLevel(body);
+  const bad = badIntElement('data', key, line, cells, {
+      format: 'INVALID_DATA_CELLS_FORMAT',
+      value: 'INVALID_DATA_CELLS_VALUE',
+  });
+  if (bad.error !== null) return bad.error;
+  const count = cells.length;
+  if (count % 3 !== 0) {
+    return propertyError(
+      key,
+      line,
+      `Property 'data' cells must be a flat list of (key_lo, key_hi, cell) triples; got ${count} int(s), not a multiple of 3 (grid_map.cpp:71)`,
+      'INVALID_DATA_CELLS_COUNT'
+    );
+  }
+  // Last: the truncation WARNING must not preempt the grounded count error
+  // above it, which is what returning the scan's single answer did.
+  return bad.truncated;
+}, 'Dictionary literal { "cells": PackedInt32Array(...) }');
+dataValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:71' };
+// The cell stream is an INT slot too: a key no int32 holds places the cell
+// somewhere the file does not state.
+markIntSlot(dataValidator);
+
+/**
+ * `baked_meshes`: an Array of baked ArrayMesh resources (grid_map.cpp:84-106
+ * `_set`, :138-145 `_get`, :154-156 `_get_property_list`, conditionally pushed
+ * only while `baked_meshes.size() > 0`). `ERR_CONTINUE(bm.mesh.is_null())`
+ * (:97) silently drops a null entry rather than failing the whole write, which
+ * is still ADR-0032's error tier (the setter alters the value — the array
+ * shrinks by one, shifting every later mesh's index) — so a null entry is
+ * rejected here.
+ */
+const bakedMeshesValidator: PropertyValidator = accepts((key, value, line) => {
+  const match = ARRAY_LITERAL_RE.exec(value.trim());
+  if (!match) {
+    return propertyError(
+      key,
+      line,
+      `Property 'baked_meshes' must be an Array literal of resource references like [SubResource("id")], got: ${value}`,
+      'INVALID_BAKED_MESHES_FORMAT'
+    );
+  }
+  const body = match[1]!.trim();
+  if (body === '') return null;
+  for (const entry of dropTrailingComma(splitTopLevel(body))) {
+    if (resourceRef(entry) === null) {
+      return propertyError(
+        key,
+        line,
+        `Property 'baked_meshes' entry "${entry}" must be SubResource(...) or ExtResource(...); grid_map.cpp:97 drops a null mesh silently, shifting every later index`,
+        'INVALID_BAKED_MESHES_ENTRY'
+      );
+    }
+  }
+  return null;
+}, 'Array of resource references ([SubResource("id"), …])');
+bakedMeshesValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:97' };
+
+const CELL_OCTANT_SIZE_HINT_MIN = 1;
+const CELL_OCTANT_SIZE_HINT_MAX = 1024;
+
+/**
+ * `cell_octant_size`: grid_map.cpp:1253 `PROPERTY_HINT_RANGE "1,1024,1"`, but
+ * `set_octant_size` (:313-317) only guards `ERR_FAIL_COND(p_size == 0)`
+ * (:314) — an ENFORCED refusal of exactly zero, not a floor. A negative or
+ * >1024 value that is not 0 is not refused by the setter at all, so it only
+ * warns, per the hint. Zero is checked first so the error wins over the
+ * warning.
+ */
+const cellOctantSizeValidator: PropertyValidator = accepts((key, value, line) => {
+  // `readIntSlot`, so `5e-1` truncates to 0 and trips the zero guard below, an
+  // unstorable literal stays NaN for `unrepresentableInt` to report, and the
+  // double the int came from is still there for the truncation tier.
+  const read = readIntSlot(value);
+  const parsed = read.stored;
+  if (parsed === null) {
+    return propertyError(
+      key,
+      line,
+      `Property 'cell_octant_size' must be a number, got: "${value}"`,
+      'INVALID_CELL_OCTANT_SIZE_FORMAT'
+    );
+  }
+  const unfit = unrepresentableInt(
+    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', parsed
+  );
+  if (unfit) return unfit;
+  if (parsed === 0) {
+    return propertyError(
+      key,
+      line,
+      "Property 'cell_octant_size' must not be 0 (grid_map.cpp:314 refuses the write)",
+      'INVALID_CELL_OCTANT_SIZE_VALUE'
+    );
+  }
+  if (parsed < CELL_OCTANT_SIZE_HINT_MIN || parsed > CELL_OCTANT_SIZE_HINT_MAX) {
+    return propertyError(
+      key,
+      line,
+      `Property 'cell_octant_size' should be between ${CELL_OCTANT_SIZE_HINT_MIN} and ${CELL_OCTANT_SIZE_HINT_MAX} (got ${parsed})`,
+      'INVALID_CELL_OCTANT_SIZE_VALUE',
+      'warning'
+    );
+  }
+  // Last, after both bounds: an out-of-range value has a diagnostic of its own.
+  return storedNotWritten(
+    'cell_octant_size', key, value, line, 'INVALID_CELL_OCTANT_SIZE_VALUE', read
+  );
+}, 'integer, nonzero, 1-1024 hinted');
+// An INT slot, hand-rolled: it already refuses an unstorable literal above.
+markIntSlot(cellOctantSizeValidator);
+cellOctantSizeValidator.grounding = { kind: 'enforced', cite: 'grid_map.cpp:314, grid_map.cpp:1253' };
+// Both ends of the hint, at the hinted tier: nothing in `set_octant_size`
+// applies either. Declared because `ground()` cannot reach a hand-rolled
+// validator, and an unrecorded bound reads as unimplemented to the hint ledger.
+// The zero refusal above is a separate predicate, not an end of this range.
+cellOctantSizeValidator.bounds = { min: CELL_OCTANT_SIZE_HINT_MIN, max: CELL_OCTANT_SIZE_HINT_MAX };
+cellOctantSizeValidator.tiers = { min: 'warning', max: 'warning' };
 
 validatorRegistry.registerAll('GridMap', {
   mesh_library: v.resourceReference('mesh_library'),
@@ -10,4 +173,24 @@ validatorRegistry.registerAll('GridMap', {
   cell_center_x: v.boolean('cell_center_x'),
   cell_center_y: v.boolean('cell_center_y'),
   cell_center_z: v.boolean('cell_center_z'),
+  data: dataValidator,
+  baked_meshes: bakedMeshesValidator,
+  // grid_map.cpp:1265 — plain BOOL, no hint.
+  bake_navigation: v.boolean('bake_navigation'),
+  cell_octant_size: cellOctantSizeValidator,
+  // grid_map.cpp:1257 — plain FLOAT, no hint. set_cell_scale (:1273-1276) is a
+  // bare assignment: nothing to bound.
+  cell_scale: v.float('cell_scale'),
+  // grid_map.cpp:1260 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_layer
+  // (:162-165) is a bare assignment.
+  collision_layer: layerBitmask('collision_layer', { hinted: 'grid_map.cpp:1260', width: 'uint32' /* grid_map.h:245 */ }),
+  // grid_map.cpp:1261 — PROPERTY_HINT_LAYERS_3D_PHYSICS. set_collision_mask
+  // (:171-174) is a bare assignment.
+  collision_mask: layerBitmask('collision_mask', { hinted: 'grid_map.cpp:1261', width: 'uint32' /* grid_map.h:248 */ }),
+  // grid_map.cpp:1262 — plain FLOAT, no hint. set_collision_priority
+  // (:210-213) is a bare assignment: nothing to bound.
+  collision_priority: v.float('collision_priority'),
+  // grid_map.cpp:1249 — PROPERTY_HINT_RESOURCE_TYPE "PhysicsMaterial". Godot
+  // omits the key when the slot is cleared, so never require it here.
+  physics_material: v.resourceReference('physics_material'),
 });

@@ -21,6 +21,7 @@ import {
   nonNegativeOr,
   nonNegativeSizeOr,
   parseOptionalRect2,
+  parseHeadingIndex,
 } from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -30,6 +31,35 @@ beforeEach(() => {
 });
 afterEach(() => {
   warnSpy.mockRestore();
+});
+
+describe('scalar readers speak the tokenizer grammar', () => {
+  it('reads an exponent at its real magnitude, as the linter does', () => {
+    // `parseInt` gave 2, so the previewer drew a 2-column grid while the
+    // linter judged the frame index against Godot's 20.
+    expect(intOr('2e1', 1)).toBe(20);
+    expect(parseOptionalInt('2e1')).toBe(20);
+    expect(floatOr('2e1', -1)).toBe(20);
+  });
+
+  it('truncates toward zero in an int slot, as the conversion does', () => {
+    expect(intOr('5.9', 0)).toBe(5);
+    expect(intOr('-5.9', 0)).toBe(-5);
+  });
+
+  it('falls back on text Godot cannot read, instead of taking its prefix', () => {
+    for (const bad of ['1.2.3', '1abc', '+1', '.5', '0x10']) {
+      expect(floatOr(bad, -1)).toBe(-1);
+      expect(intOr(bad, -1)).toBe(-1);
+    }
+  });
+
+  it('still falls back on a non-finite, which is the documented renderer split', () => {
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(floatOr(spelling, -1)).toBe(-1);
+      expect(intOr(spelling, -1)).toBe(-1);
+    }
+  });
 });
 
 describe('floatOr', () => {
@@ -162,17 +192,21 @@ describe('vec2iOr / parseOptionalVector2i', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('REJECTS float components — the reason this is not parseVector2 (error path)', () => {
-    // `Vector2i(1.5, 2)` is not a thing Godot writes; accepting it would let a
-    // float silently become a pixel count via parseInt truncation.
-    expect(vec2iOr('Vector2i(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 9, y: 9 });
-    expect(parseOptionalVector2i('Vector2i(1.5, 2)')).toBeUndefined();
+  it('TRUNCATES a float or exponent component, as the INT conversion does', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:552-596) takes any number
+    // token and pushes it into a `Vector<int32_t>`, so Godot loads these and
+    // narrows toward zero. Refusing them fell back to a default size on a
+    // scene Godot opens. That `itos` cannot WRITE one bounds nothing.
+    expect(vec2iOr('Vector2i(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 1, y: 2 });
+    expect(vec2iOr('Vector2i(-1.5, 2)', { x: 9, y: 9 })).toEqual({ x: -1, y: 2 });
+    expect(vec2iOr('Vector2i(2e1, 2e1)', { x: 9, y: 9 })).toEqual({ x: 20, y: 20 });
+    expect(parseOptionalVector2i('Vector2i(1.5, 2)')).toEqual({ x: 1, y: 2 });
   });
 
   it('warns-then-falls-back on a present-but-malformed value (error path)', () => {
     expect(vec2iOr('Vector2i(nope)', { x: 512, y: 512 })).toEqual({ x: 512, y: 512 });
     expect(vec2iOr('Vector2i(1, 2) trailing', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
-    expect(vec2iOr('Vector2(1, 2)', { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    // `Vector2(...)` is NOT here: it converts. See the test below.
     expect(warnSpy).toHaveBeenCalled();
   });
 });
@@ -184,8 +218,10 @@ describe('parseNodePathLiteral', () => {
   it('returns an empty string for an empty NodePath("") literal (edge case)', () => {
     expect(parseNodePathLiteral('NodePath("")')).toBe('');
   });
-  it('returns null for a value that is not a NodePath literal (error path)', () => {
-    expect(parseNodePathLiteral('"../Camera2D"')).toBeNull();
+  // variant.cpp:746-749 lists STRING as a strict source for NODE_PATH, so the
+  // bare string is the same path; an unquoted word is no spelling at all.
+  it('reads the bare string a NodePath slot converts, and null for anything else', () => {
+    expect(parseNodePathLiteral('"../Camera2D"')).toBe('../Camera2D');
     expect(parseNodePathLiteral('../Camera2D')).toBeNull();
   });
   it('returns null for an absent value, without warning', () => {
@@ -266,9 +302,116 @@ describe('parseOptionalRect2', () => {
   });
 
   it('warns and reports unset for every malformed component the loose grammar accepted', () => {
-    for (const bad of ['Rect2(1.2.3, 0, 8, 8)', 'Rect2(--1, 0, 8, 8)', 'Rect2(1e-, 0, 8, 8)', 'Rect2(1, 2, 3)', 'notarect']) {
+    for (const bad of ['Rect2(1.2.3, 0, 8, 8)', 'Rect2(--1, 0, 8, 8)', 'Rect2(+1, 0, 8, 8)', 'Rect2(1, 2, 3)', 'notarect']) {
       expect(parseOptionalRect2(bad, 'Rect')).toBeUndefined();
     }
     expect(warnSpy).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('vec2iOr takes the spellings can_convert_strict converts', () => {
+  // The renderer half of the conversion widening. Nothing asserted it, so
+  // dropping `compositeSpellings` from `slotTupleRegex` would revert this —
+  // and every reader in tileset, curve and vectors with it — while the suite
+  // stayed green.
+  it('reads a Vector2 into a Vector2i slot rather than falling back', () => {
+    expect(vec2iOr('Vector2(1920, 1080)', { x: 512, y: 512 })).toEqual({ x: 1920, y: 1080 });
+  });
+
+  it('truncates a fractional component, as the int32 conversion does', () => {
+    expect(vec2iOr('Vector2(1.9, 2.9)', { x: 0, y: 0 })).toEqual({ x: 1, y: 2 });
+  });
+
+  it('still refuses a type that does NOT convert', () => {
+    expect(vec2iOr('Color(1, 1, 1, 1)', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+  });
+});
+
+describe('the conversion branch follows the composite type, not the token', () => {
+  // MEASURED on 4.6.3: `ItemList.fixed_icon_size = Vector2(4294967295, 64)`
+  // stores `(-2147483648, 64)` — the UB double->int32 sentinel, because a
+  // Vector2 holds doubles — while `Vector2i(4294967295, 64)` stores
+  // `(-1, 64)` by wrapping an int64. The token is identical in both.
+  it('refuses a converted component the double branch cannot hold', () => {
+    expect(vec2iOr('Vector2(4294967295, 64)', { x: -1, y: -1 })).toEqual({ x: -1, y: -1 });
+  });
+
+  it('still wraps the same digits in the canonical spelling', () => {
+    expect(vec2iOr('Vector2i(4294967295, 64)', { x: -9, y: -9 })).toEqual({ x: -1, y: 64 });
+  });
+
+  it('leaves an ordinary converted value alone', () => {
+    expect(vec2iOr('Vector2(100, 64)', { x: -9, y: -9 })).toEqual({ x: 100, y: 64 });
+  });
+
+  it('reads the optional arm through the same branch', () => {
+    // `frame_coords` on Sprite2D/Sprite3D, where -1 is a frame Godot never
+    // selects.
+    expect(parseOptionalVector2i('Vector2(4294967295, 64)')).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(parseOptionalVector2i('Vector2i(4294967295, 64)')).toEqual({ x: -1, y: 64 });
+    expect(parseOptionalVector2i('Vector2(100, 64)')).toEqual({ x: 100, y: 64 });
+  });
+});
+
+describe('parseOptionalInt width', () => {
+  // The bitmask slots it reads are uint32 in the engine and declared uint32 on
+  // the linter side, so a value the linter accepts must not read back narrowed.
+  it('reads a uint32 slot without narrowing to int32', () => {
+    expect(parseOptionalInt('2147483648', 'uint32')).toBe(2147483648);
+    expect(parseOptionalInt('4294967295', 'uint32')).toBe(4294967295);
+  });
+
+  it('keeps a FLOAT literal inside the uint32 range instead of dropping it', () => {
+    // int32 called 3e9 unrepresentable and returned undefined, and every caller
+    // then fell back to its default — layers 3e9 rendered as layer 1.
+    expect(parseOptionalInt('3e9', 'uint32')).toBe(3000000000);
+  });
+
+  it('still defaults to int32', () => {
+    expect(parseOptionalInt('2147483648')).toBe(-2147483648);
+  });
+});
+
+describe('an overflowing exponent is inside the finite grammar', () => {
+  it('falls back rather than handing three.js an Infinity', () => {
+    expect(vec2Or('Vector2(1e999, 0)', { x: 9, y: 9 })).toEqual({ x: 9, y: 9 });
+    expect(vec2Or('Vector2(1.5, 2)', { x: 9, y: 9 })).toEqual({ x: 1.5, y: 2 });
+    expect(parseOptionalRect2('Rect2(0, 0, 1e999, 4)')).toBeUndefined();
+    expect(parseOptionalRect2('Rect2(0, 0, 3, 4)')).toEqual({ x: 0, y: 0, width: 3, height: 4 });
+  });
+});
+
+/**
+ * `resource_format_text.cpp:269-270` assigns the `index=` tag field into an
+ * `int`, so it goes through `Variant::_to_int`, whose STRING arm is
+ * `String::to_int()` — a leading-integer reader that never fails.
+ */
+describe('parseHeadingIndex', () => {
+  it('reads a plain index', () => {
+    expect(parseHeadingIndex('3')).toBe(3);
+    expect(parseHeadingIndex('0')).toBe(0);
+    expect(parseHeadingIndex('-2')).toBe(-2);
+  });
+
+  it('takes the leading integer of trailing text rather than storing NaN', () => {
+    expect(parseHeadingIndex('3px')).toBe(3);
+  });
+
+  it('reads text with no leading digits as index 0, the way to_int does', () => {
+    expect(parseHeadingIndex(' ')).toBe(0);
+    expect(parseHeadingIndex('abc')).toBe(0);
+  });
+
+  it('has no index for an absent or empty attribute', () => {
+    expect(parseHeadingIndex(undefined)).toBeUndefined();
+    expect(parseHeadingIndex('')).toBeUndefined();
+  });
+
+  it('declines a non-integer spelling whose digits overrun the to_int reader', () => {
+    // A clean integer spelling goes through `Number` for its SIGN and keeps a
+    // value past 2^53; only the `String::to_int` path surrenders to NaN.
+    expect(parseHeadingIndex(`${'9'.repeat(40)}px`)).toBeUndefined();
+    expect(parseHeadingIndex('9'.repeat(40))).toBe(Number('9'.repeat(40)));
   });
 });

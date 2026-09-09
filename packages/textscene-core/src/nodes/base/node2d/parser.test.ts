@@ -129,3 +129,21 @@ describe('decomposeTransform2D', () => {
     expect(decomposeTransform2D('Transform2D(0, 1, -1, 0, 0, 0)')!.skew).toBeCloseTo(0, 6);
   });
 });
+
+describe('an int scalar the engine narrows', () => {
+  it('reads z_index as the int32 Godot stores, so the linter agrees', () => {
+    // Unnarrowed, the previewer put the node at z = 4.29e8 — behind the camera
+    // — while the linter, reading -1, found it in range and said nothing.
+    const p = parseNode2D(heading('Node2D', { name: 'N' }), { z_index: '4294967295' });
+
+    expect(p.z_index).toBe(-1);
+  });
+
+  it('keeps an unsigned mask unsigned, because its setter takes uint32_t', () => {
+    // `CanvasItem::set_light_mask(int)` is signed (canvas_item.h:98), so the
+    // same spelling reads differently here on purpose.
+    const p = parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '4294967295' });
+
+    expect(p.light_mask).toBe(-1);
+  });
+});

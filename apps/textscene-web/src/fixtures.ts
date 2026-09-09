@@ -68,6 +68,31 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Accept Dialog",
+    "file": "unit-accept-dialog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Aim Modifier 3d",
+    "file": "unit-aim-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatable Body 2d",
+    "file": "unit-animatable-body-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animatable Body 3d",
+    "file": "unit-animatable-body-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Animated Sprite 3d",
+    "file": "unit-animated-sprite-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d Atlas",
     "file": "unit-animatedsprite2d-atlas.tscn",
     "category": "Other"
@@ -148,8 +173,53 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Aspect Ratio Container",
+    "file": "unit-aspect-ratio-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Back Buffer Copy",
+    "file": "unit-back-buffer-copy.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Base Button",
+    "file": "unit-base-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone 2d",
+    "file": "unit-bone-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Attachment 3d",
+    "file": "unit-bone-attachment-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Constraint 3d",
+    "file": "unit-bone-constraint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Bone Twist Disperser 3d",
+    "file": "unit-bone-twist-disperser-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Group",
+    "file": "unit-canvas-group.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Ccdik 3d",
+    "file": "unit-ccdik-3d.tscn",
     "category": "Other"
   },
   {
@@ -163,8 +233,58 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Button",
+    "file": "unit-check-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit",
+    "file": "unit-code-edit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Coin Glow",
     "file": "unit-coin-glow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker Button",
+    "file": "unit-color-picker-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker",
+    "file": "unit-color-picker.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cone Twist Joint 3d",
+    "file": "unit-cone-twist-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Confirmation Dialog",
+    "file": "unit-confirmation-dialog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Container",
+    "file": "unit-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Convert Transform Modifier 3d",
+    "file": "unit-convert-transform-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Copy Transform Modifier 3d",
+    "file": "unit-copy-transform-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpu Particles 3d",
+    "file": "unit-cpu-particles-3d.tscn",
     "category": "Other"
   },
   {
@@ -203,6 +323,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Damped Spring Joint 2d",
+    "file": "unit-damped-spring-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Cull Mask",
     "file": "unit-decal-cull-mask.tscn",
     "category": "Other"
@@ -213,6 +338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directional Light 2d",
+    "file": "unit-directional-light-2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directional Light 3d",
     "file": "unit-directional-light-3d.tscn",
     "category": "Other"
@@ -220,6 +350,41 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fabrik 3d",
+    "file": "unit-fabrik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "File Dialog",
+    "file": "unit-file-dialog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Flow Container",
+    "file": "unit-flow-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume",
+    "file": "unit-fog-volume.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Foldable Container",
+    "file": "unit-foldable-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Generic 6d Of Joint 3d",
+    "file": "unit-generic-6d-of-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Geometry Instance 3d",
+    "file": "unit-geometry-instance-3d.tscn",
     "category": "Other"
   },
   {
@@ -268,8 +433,68 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gpu Particles 2d",
+    "file": "unit-gpu-particles-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Attractor Box 3d",
+    "file": "unit-gpu-particles-attractor-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Attractor Sphere 3d",
+    "file": "unit-gpu-particles-attractor-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Attractor Vector Field 3d",
+    "file": "unit-gpu-particles-attractor-vector-field-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Box 3d",
+    "file": "unit-gpu-particles-collision-box-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Height Field 3d",
+    "file": "unit-gpu-particles-collision-height-field-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Sdf 3d",
+    "file": "unit-gpu-particles-collision-sdf-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpu Particles Collision Sphere 3d",
+    "file": "unit-gpu-particles-collision-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gpuparticles3d",
     "file": "unit-gpuparticles3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit",
+    "file": "unit-graph-edit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Element",
+    "file": "unit-graph-element.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Frame",
+    "file": "unit-graph-frame.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Node",
+    "file": "unit-graph-node.tscn",
     "category": "Other"
   },
   {
@@ -283,8 +508,43 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Groove Joint 2d",
+    "file": "unit-groove-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "H Flow Container",
+    "file": "unit-h-flow-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "H Scroll Bar",
+    "file": "unit-h-scroll-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "H Separator",
+    "file": "unit-h-separator.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Hinge Joint 3d",
+    "file": "unit-hinge-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Hslider",
     "file": "unit-hslider.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Http Request",
+    "file": "unit-http-request.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Importer Mesh Instance 3d",
+    "file": "unit-importer-mesh-instance-3d.tscn",
     "category": "Other"
   },
   {
@@ -303,6 +563,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List",
+    "file": "unit-item-list.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Jacobian Ik 3d",
+    "file": "unit-jacobian-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -310,6 +580,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Layer Bitmask 32bit",
     "file": "unit-layer-bitmask-32bit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Legacy Format",
+    "file": "unit-legacy-format.tscn",
     "category": "Other"
   },
   {
@@ -335,6 +610,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Transport Sky",
     "file": "unit-light-transport-sky.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi",
+    "file": "unit-lightmap-gi.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Probe",
+    "file": "unit-lightmap-probe.tscn",
     "category": "Other"
   },
   {
@@ -378,13 +663,43 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Limit Angular Velocity Modifier 3d",
+    "file": "unit-limit-angular-velocity-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lineedit",
     "file": "unit-lineedit.tscn",
     "category": "Other"
   },
   {
+    "name": "Link Button",
+    "file": "unit-link-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Look At Modifier 3d",
+    "file": "unit-look-at-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Bar",
+    "file": "unit-menu-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Button",
+    "file": "unit-menu-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Modifier Bone Target 3d",
+    "file": "unit-modifier-bone-target-3d.tscn",
     "category": "Other"
   },
   {
@@ -398,6 +713,31 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Multi Mesh Instance 2d",
+    "file": "unit-multi-mesh-instance-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multi Mesh Instance 3d",
+    "file": "unit-multi-mesh-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multiplayer Spawner",
+    "file": "unit-multiplayer-spawner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Multiplayer Synchronizer",
+    "file": "unit-multiplayer-synchronizer.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Nine Patch Rect",
+    "file": "unit-nine-patch-rect.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"
@@ -408,8 +748,58 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Occluder Instance 3d",
+    "file": "unit-occluder-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Omni Light 3d",
     "file": "unit-omni-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Binding Modifier Editor",
+    "file": "unit-open-xr-binding-modifier-editor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Composition Layer Cylinder",
+    "file": "unit-open-xr-composition-layer-cylinder.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Composition Layer Equirect",
+    "file": "unit-open-xr-composition-layer-equirect.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Composition Layer Quad",
+    "file": "unit-open-xr-composition-layer-quad.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Hand",
+    "file": "unit-open-xr-hand.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Interaction Profile Editor",
+    "file": "unit-open-xr-interaction-profile-editor.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Render Model Manager",
+    "file": "unit-open-xr-render-model-manager.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Render Model",
+    "file": "unit-open-xr-render-model.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Open Xr Visibility Mask",
+    "file": "unit-open-xr-visibility-mask.tscn",
     "category": "Other"
   },
   {
@@ -425,6 +815,31 @@ export const fixtures: Fixture[] = [
   {
     "name": "Photo Frame Base",
     "file": "unit-photo-frame-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Physical Bone 2d",
+    "file": "unit-physical-bone-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Physical Bone 3d",
+    "file": "unit-physical-bone-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Physical Bone Simulator 3d",
+    "file": "unit-physical-bone-simulator-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pin Joint 2d",
+    "file": "unit-pin-joint-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pin Joint 3d",
+    "file": "unit-pin-joint-3d.tscn",
     "category": "Other"
   },
   {
@@ -478,8 +893,53 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Menu",
+    "file": "unit-popup-menu.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Panel",
+    "file": "unit-popup-panel.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup",
+    "file": "unit-popup.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Preview Lighting",
     "file": "unit-preview-lighting.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Progress Bar",
+    "file": "unit-progress-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Range",
+    "file": "unit-range.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Ray Cast 2d",
+    "file": "unit-ray-cast-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Ray Cast 3d",
+    "file": "unit-ray-cast-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reference Rect",
+    "file": "unit-reference-rect.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflection Probe",
+    "file": "unit-reflection-probe.tscn",
     "category": "Other"
   },
   {
@@ -493,6 +953,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Remote Transform Unique Name",
+    "file": "unit-remote-transform-unique-name.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Resource Preloader",
+    "file": "unit-resource-preloader.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Retarget Modifier 3d",
+    "file": "unit-retarget-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Rigidbody2d",
     "file": "unit-rigidbody2d.tscn",
     "category": "Other"
@@ -503,6 +978,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Root Motion View",
+    "file": "unit-root-motion-view.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Script Create Dialog",
+    "file": "unit-script-create-dialog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shader Globals Override",
+    "file": "unit-shader-globals-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Shader Sky Env",
     "file": "unit-shader-sky-env.tscn",
     "category": "Other"
@@ -510,6 +1000,31 @@ export const fixtures: Fixture[] = [
   {
     "name": "Shadows Only",
     "file": "unit-shadows-only.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shape Cast 2d",
+    "file": "unit-shape-cast-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Shape Cast 3d",
+    "file": "unit-shape-cast-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Skeleton 2d",
+    "file": "unit-skeleton-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Skeleton Ik 3d",
+    "file": "unit-skeleton-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Skeleton Modifier 3d",
+    "file": "unit-skeleton-modifier-3d.tscn",
     "category": "Other"
   },
   {
@@ -533,8 +1048,28 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Slider Joint 3d",
+    "file": "unit-slider-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Soft Body 3d",
+    "file": "unit-soft-body-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Softbody3d",
     "file": "unit-softbody3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spin Box",
+    "file": "unit-spin-box.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spline Ik 3d",
+    "file": "unit-spline-ik-3d.tscn",
     "category": "Other"
   },
   {
@@ -550,6 +1085,36 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light 3d",
     "file": "unit-spot-light-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Arm 3d",
+    "file": "unit-spring-arm-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision 3d",
+    "file": "unit-spring-bone-collision-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Capsule 3d",
+    "file": "unit-spring-bone-collision-capsule-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Plane 3d",
+    "file": "unit-spring-bone-collision-plane-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Collision Sphere 3d",
+    "file": "unit-spring-bone-collision-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Spring Bone Simulator 3d",
+    "file": "unit-spring-bone-simulator-3d.tscn",
     "category": "Other"
   },
   {
@@ -573,6 +1138,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Status Indicator",
+    "file": "unit-status-indicator.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Subtree Under Leaf Nodes",
     "file": "unit-subtree-under-leaf-nodes.tscn",
     "category": "Other"
@@ -580,6 +1150,31 @@ export const fixtures: Fixture[] = [
   {
     "name": "Surface Material Override",
     "file": "unit-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Bar",
+    "file": "unit-tab-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Container",
+    "file": "unit-tab-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit",
+    "file": "unit-text-edit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texture Button",
+    "file": "unit-texture-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texture Progress Bar",
+    "file": "unit-texture-progress-bar.tscn",
     "category": "Other"
   },
   {
@@ -593,6 +1188,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Touch Screen Button",
+    "file": "unit-touch-screen-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tree",
+    "file": "unit-tree.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Two Bone Ik 3d",
+    "file": "unit-two-bone-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -603,8 +1213,63 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "V Flow Container",
+    "file": "unit-v-flow-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "V Scroll Bar",
+    "file": "unit-v-scroll-bar.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "V Separator",
+    "file": "unit-v-separator.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Video Stream Player",
+    "file": "unit-video-stream-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Enabler 2d",
+    "file": "unit-visible-on-screen-enabler-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Enabler 3d",
+    "file": "unit-visible-on-screen-enabler-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Notifier 2d",
+    "file": "unit-visible-on-screen-notifier-2d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visible On Screen Notifier 3d",
+    "file": "unit-visible-on-screen-notifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visual Instance 3d",
+    "file": "unit-visual-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Voxel Gi",
+    "file": "unit-voxel-gi.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Vslider",
     "file": "unit-vslider.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Window",
+    "file": "unit-window.tscn",
     "category": "Other"
   },
   {
@@ -615,6 +1280,46 @@ export const fixtures: Fixture[] = [
   {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Anchor 3d",
+    "file": "unit-xr-anchor-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Body Modifier 3d",
+    "file": "unit-xr-body-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Camera 3d",
+    "file": "unit-xr-camera-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Controller 3d",
+    "file": "unit-xr-controller-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Face Modifier 3d",
+    "file": "unit-xr-face-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Hand Modifier 3d",
+    "file": "unit-xr-hand-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Node 3d",
+    "file": "unit-xr-node-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Xr Origin 3d",
+    "file": "unit-xr-origin-3d.tscn",
     "category": "Other"
   },
   {
@@ -765,11 +1470,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spot Light No Range",
     "file": "edge-spot-light-no-range.tscn",
-    "category": "Edge Cases"
-  },
-  {
-    "name": "Tilemap Bad Tile Data",
-    "file": "edge-tilemap-bad-tile-data.tscn",
     "category": "Edge Cases"
   },
   {
@@ -928,6 +1628,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax 2d",
+    "file": "unit-parallax-2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Parallax Background",
     "file": "unit-parallax-background.tscn",
     "category": "Unit - 2D Canvas"
@@ -1008,8 +1713,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Material Override",
+    "file": "unit-arraymesh-material-override.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Own Material",
     "file": "unit-arraymesh-own-material.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Arraymesh Scene Material Override",
+    "file": "unit-arraymesh-scene-material-override.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -1020,6 +1735,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Arraymesh",
     "file": "unit-arraymesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Box Container",
+    "file": "unit-box-container.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -1035,6 +1755,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cylinder Mesh",
     "file": "unit-cylinder-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Mesh Instance 2d",
+    "file": "unit-mesh-instance-2d.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -1081,6 +1806,16 @@ export const fixtures: Fixture[] = [
     "name": "Torus Mesh",
     "file": "unit-torus-mesh.tscn",
     "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Audio Listener 2d",
+    "file": "unit-audio-listener-2d.tscn",
+    "category": "Unit - Audio"
+  },
+  {
+    "name": "Audio Listener 3d",
+    "file": "unit-audio-listener-3d.tscn",
+    "category": "Unit - Audio"
   },
   {
     "name": "Audio Stream Player 2d",
@@ -1231,6 +1966,16 @@ export const fixtures: Fixture[] = [
     "name": "Node3d Basic",
     "file": "unit-node3d-basic.tscn",
     "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Collision Polygon 2d",
+    "file": "unit-collision-polygon-2d.tscn",
+    "category": "Unit - Physics"
+  },
+  {
+    "name": "Collision Polygon 3d",
+    "file": "unit-collision-polygon-3d.tscn",
+    "category": "Unit - Physics"
   },
   {
     "name": "Collision Shapes",
@@ -1428,8 +2173,28 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Navigation Agent 2d",
+    "file": "unit-navigation-agent-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
     "name": "Navigation Agent 3d",
     "file": "unit-navigation-agent-3d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Link 2d",
+    "file": "unit-navigation-link-2d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Link 3d",
+    "file": "unit-navigation-link-3d.tscn",
+    "category": "Unit - Navigation"
+  },
+  {
+    "name": "Navigation Obstacle 2d",
+    "file": "unit-navigation-obstacle-2d.tscn",
     "category": "Unit - Navigation"
   },
   {

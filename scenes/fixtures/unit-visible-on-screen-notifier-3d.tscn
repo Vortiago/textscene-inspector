@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+; Exercises the one own property VisibleOnScreenNotifier3D serialises: aabb.
+; layers is inherited from VisualInstance3D (see linterParser.ts) so it is
+; left at its default here rather than duplicating visualinstance3d's fixture.
+
+[node name="Root" type="Node3D"]
+
+[node name="MyVisibleOnScreenNotifier3D" type="VisibleOnScreenNotifier3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+aabb = AABB(-2, -2, -2, 4, 4, 4)

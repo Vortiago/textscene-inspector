@@ -122,8 +122,8 @@ export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): Tsc
  * Tree/inspector node name + type for a GLB's animations. Godot's glTF importer
  * exposes a model's clips on an `AnimationPlayer` node *inside* the imported
  * hierarchy (a child of the root), not on the root itself — so we surface them
- * the same way. The type is `GLB`-prefixed so `isRenderableNodeType` treats it
- * as a supported display type; selecting this row drives the Animation tab.
+ * the same way. The type is `GLB`-prefixed so `rendersOwnVisual` reports it as
+ * drawing; selecting this row drives the Animation tab.
  */
 export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';

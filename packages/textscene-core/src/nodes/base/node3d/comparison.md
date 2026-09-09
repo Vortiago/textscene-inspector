@@ -1,6 +1,7 @@
 ---
 type: Node3D
 category: 3D
+status: linter-only
 fixture: unit-node3d-basic.tscn
 image: unit-node3d-basic
 visual: false
@@ -9,68 +10,41 @@ renders_as: an invisible transform group
 
 # Node3D
 
-Node3D is the base 3D node — a pure transform with no geometry of its own. The
-previewer renders it as a `<group>` that positions its children and draws nothing
-itself, decomposing each `Transform3D` into position/rotation/scale.
-
-The fixture nests a root with two children and a grandchild, then parents two
-Label3D captions high above origin (y = 4 and y = 3). Both are framed out by the
-shared editor camera, so each capture shows only the editor preview sky — a
-light blue-grey band fading to the procedural ground colour, with no visible
-geometry or text.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `transform` | translation offsets on Child1 / Child2 / GrandChild | repositions invisible containers; nothing is drawn |
-
-## Divergences
-
-None visible in this fixture.
+The base 3D node: a pure transform with no geometry of its own. The previewer renders it as a `<group>` that positions its children, decomposing each `Transform3D` into position, rotation and scale. Both captures show only the preview sky.
 
 ## Linting
 
 <!-- lint:begin Node3D -->
-Strict parsing format-checks these `Node3D` properties. Every validator failure is an **error**.
+Strict parsing format-checks these `Node3D` properties, plus 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `basis` |
-| `global_basis` |
-| `global_position` |
-| `global_rotation` |
-| `global_rotation_degrees` |
-| `global_transform` |
-| `position` |
-| `quaternion` |
-| `rotation` |
-| `rotation_degrees` |
-| `rotation_order` |
-| `scale` |
-| `top_level` |
-| `transform` |
-| `visibility_parent` |
-| `visible` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `basis` | Basis(9 floats) |  |
+| `global_basis` | Basis(9 floats) |  |
+| `global_position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `global_rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `global_rotation_degrees` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `global_transform` | Transform3D(12 floats) |  |
+| `position` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `quaternion` | Quaternion(x, y, z, w) |  |
+| `rotation` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `rotation_degrees` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `rotation_edit_mode` | enum 0-2 (Euler/Quaternion/Basis) | warning |
+| `rotation_order` | enum 0-5 (XYZ/XZY/YXZ/YZX/ZXY/ZYX) | error |
+| `scale` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
+| `top_level` | true or false |  |
+| `transform` | Transform3D(12 floats) |  |
+| `visibility_parent` | NodePath("path/to/node") |  |
+| `visible` | true or false |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error, warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-Node3D's lenient parser reads exactly two properties: `transform` and
-`visible`. An absent `transform` stays `undefined`; a malformed one warns and
-falls back to the identity `Transform3D`, matching neither strict's rejection
-nor any authored value. `visible` resolves via plain string equality
-(`!== 'false'`) with no warning for a malformed value, and stays `undefined`
-when absent rather than defaulting to `true`. Every other validated property,
-including `position`, `rotation`, `rotation_degrees`, `scale`, `basis`,
-`quaternion`, `rotation_order`, `top_level`, `visibility_parent`, and the four
-`global_*` fields, is never read by the lenient parser at all: only the
-composite `Transform3D` literal is parsed, not Godot's discrete transform
-alternatives.
+The lenient parser reads exactly two properties, `transform` and `visible`. A malformed `transform` warns and falls back to the identity, and `visible` resolves through plain string equality with no warning. `position`, `rotation`, `scale`, `basis`, `quaternion` and the `global_*` fields are never read, so only the composite `Transform3D` literal places a node.
 
 ## Known limitations
 
-- **top_level** — with `top_level = true` a Node3D ignores ancestor transforms, but our renderer nests every node in its parent's group, so the parent transform is always inherited. No corpus fixture sets it.
+- **Approximated** `top_level = true` is not honoured. Every node nests in its parent's group, so the parent transform is always inherited.

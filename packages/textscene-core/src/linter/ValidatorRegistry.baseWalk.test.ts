@@ -1,19 +1,25 @@
 /**
- * Base-class walk for `findValidator`. A subclass with no validator of
- * its own inherits its base type's validators, so the single Node3D/Node2D/
- * Control base validator sets reach every subclass instead of silently passing.
- * The walk is driven by an injected base-type map; the registry defaults to no
- * inheritance (empty map) and the singleton wires the real NODE_BASE_TYPES.
+ * How `findValidator` resolves a key: the base-class walk, the indexed-wildcard
+ * routing that mirrors `PropertyListHelper`, and the members it must refuse to
+ * resolve at all.
+ *
+ * A subclass with no validator of its own inherits its base type's validators,
+ * so the single Node3D/Node2D/Control base validator sets reach every subclass
+ * instead of silently passing. The walk is driven by an injected base-type map;
+ * the registry defaults to no inheritance (empty map) and the singleton wires
+ * the real NODE_BASE_TYPES.
+ *
+ * Every case here builds its own scratch registry, so nothing depends on the
+ * barrel. The two guards that read the live singleton are the siblings
+ * `ValidatorRegistry.unavailableKeys.test.ts` and
+ * `ValidatorRegistry.shadowCopies.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, type Dirent } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
+import { ValidatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
-import './index.js'; // trigger all validator registrations
+import { v } from './validators/v.js';
+import { propertyError } from './validators/propertyError.js';
 
 // Child → Parent → Grandparent → (root). Grandparent has no further base.
 const CHAIN = { Child: 'Parent', Parent: 'Grandparent' };
@@ -79,211 +85,104 @@ describe('ValidatorRegistry base-class walk', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Meta-guard: no linterParser.ts may re-declare a key that its base chain
-// already carries — a shadow copy silently drifts from the base validator.
-// ---------------------------------------------------------------------------
-
-/**
- * Keys that are intentionally re-declared in a subclass (e.g., a stricter
- * override that passes both linting and tests). Starts empty — add here only
- * after explicit review.
- */
-const INTENTIONAL_OVERRIDES = new Set<string>([]);
-
-/** Walk the filesystem for all linterParser.ts source files. */
-function walkLinterParsers(dir: string): string[] {
-  const results: string[] = [];
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return results;
+describe('indexed wildcard routing mirrors the engine', () => {
+  /**
+   * Godot tests `is_valid_int()` BEFORE it looks at the value
+   * (property_list_helper.cpp:52-58), so a signed index is a well-formed key that
+   * the helper then refuses to resolve. Routing has to agree, or the dispatcher
+   * that owns the negative-index diagnostic never runs and a key the engine
+   * silently drops reads as clean.
+   */
+  function registryWithItems() {
+    const r = new ValidatorRegistry();
+    const seen: string[] = [];
+    const dispatcher: PropertyValidator = (key, _value, line) => {
+      seen.push(key);
+      return propertyError(key, line, `dispatched ${key}`, 'DISPATCHED');
+    };
+    r.registerAll('Menu', { 'item_#/*': dispatcher });
+    return { r, seen };
   }
-  for (const entry of entries) {
-    const full = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) {
-      results.push(...walkLinterParsers(full));
-    } else if (entry.name === 'linterParser.ts') {
-      results.push(full);
-    }
-  }
-  return results;
-}
 
-/**
- * Slice of `source` from `start` (just past an opening `{`) to its balanced
- * closing `}`. Good enough for validator registrations: none of the scanned
- * sources put braces inside string literals.
- */
-function balancedBody(source: string, start: number): string {
-  let depth = 1;
-  for (let i = start; i < source.length; i++) {
-    const ch = source[i];
-    if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return source.slice(start, i);
-  }
-  return source.slice(start);
-}
-
-/**
- * Extract (nodeType, key[]) from a linterParser.ts source file. Finds each
- * `validatorRegistry.registerAll('TypeName', { … })` call, captures the full
- * balanced object literal, and reads only its top-level keys — nested option
- * objects like `v.int('rings', { min: 1 })` are stripped first so keys
- * declared after them are still seen.
- */
-function extractRegisteredKeys(source: string): Array<{ nodeType: string; keys: string[] }> {
-  const results: Array<{ nodeType: string; keys: string[] }> = [];
-  const headRe = /registerAll\(\s*'([^']+)'\s*,\s*\{/g;
-  let head: RegExpExecArray | null;
-  while ((head = headRe.exec(source)) !== null) {
-    const nodeType = head[1]!;
-    let body = balancedBody(source, headRe.lastIndex);
-    // Repeatedly drop innermost object literals until only top-level keys remain.
-    for (let prev = ''; prev !== body; ) {
-      prev = body;
-      body = body.replace(/\{[^{}]*\}/g, '');
-    }
-    const keys: string[] = [];
-    const keyRe = /^\s*(?:'([^']+)'|([\w/*]+))\s*:/gm;
-    let keyMatch: RegExpExecArray | null;
-    while ((keyMatch = keyRe.exec(body)) !== null) {
-      const key = keyMatch[1] ?? keyMatch[2];
-      if (key) keys.push(key);
-    }
-    results.push({ nodeType, keys });
-  }
-  return results;
-}
-
-/**
- * The guard itself: every key a registration re-declares while its base chain
- * already carries it is a violation, unless allowlisted as `Type:key`.
- */
-function findShadowViolations(
-  registrations: Array<{ nodeType: string; keys: string[] }>,
-  inheritedKeysOf: (nodeType: string) => Set<string>,
-  intentionalOverrides: Set<string>
-): string[] {
-  const violations: string[] = [];
-  for (const { nodeType, keys } of registrations) {
-    const inherited = inheritedKeysOf(nodeType);
-    for (const key of keys) {
-      if (inherited.has(key) && !intentionalOverrides.has(`${nodeType}:${key}`)) {
-        violations.push(`'${nodeType}' re-declares '${key}' which is already in its base chain`);
-      }
-    }
-  }
-  return violations;
-}
-
-/** Collect all keys registered for a type by walking up its base chain. */
-function baseChainKeys(nodeType: string): Set<string> {
-  const keys = new Set<string>();
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
-  const visited = new Set<string>();
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    const ownKeys = validatorRegistry.getOwnKeys(current);
-    for (const k of ownKeys) keys.add(k);
-    current = NODE_BASE_TYPES[current];
-  }
-  return keys;
-}
-
-describe('ValidatorRegistry meta-guard: no shadow copies', () => {
-  // A scratch chain where 'Child' inherits 'transform': proves the guard fires
-  // before trusting the filesystem scan's silence.
-  const scratchInherited = (nodeType: string): Set<string> =>
-    new Set(nodeType === 'Child' ? ['transform'] : []);
-
-  it('fails on a seeded duplicate key', () => {
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        transform: v.transform3d('transform'),
-        own_prop: v.boolean('own_prop'),
-      });
-    `;
-    const violations = findShadowViolations(
-      extractRegisteredKeys(source),
-      scratchInherited,
-      new Set()
-    );
-    expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain("'Child' re-declares 'transform'");
+  it('routes a NEGATIVE index to the dispatcher rather than dropping the key', () => {
+    const { r, seen } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_-1/text')).not.toBeNull();
+    r.findValidator('Menu', 'item_-1/text')!('item_-1/text', '"x"', 1);
+    expect(seen).toContain('item_-1/text');
   });
 
-  it('an INTENTIONAL_OVERRIDES entry suppresses the seeded violation', () => {
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        transform: v.transform3d('transform'),
-      });
-    `;
-    const violations = findShadowViolations(
-      extractRegisteredKeys(source),
-      scratchInherited,
-      new Set(['Child:transform'])
-    );
-    expect(violations).toHaveLength(0);
+  it('routes an explicitly POSITIVE index too, which is_valid_int also accepts', () => {
+    const { r } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_+2/text')).not.toBeNull();
   });
 
-  it('sees keys declared after a nested option object', () => {
-    // The deleted shadow copies sat at the END of registrations that contain
-    // option objects — the extraction must not stop at the first nested `}`.
-    const source = `
-      validatorRegistry.registerAll('Child', {
-        rings: v.int('rings', { min: 1 }),
-        transform: v.transform3d('transform'),
-      });
-    `;
-    const parsed = extractRegisteredKeys(source);
-    expect(parsed[0]!.keys).toEqual(['rings', 'transform']);
+  /**
+   * A NON-NUMERIC index is the same case as a signed one, one step further on.
+   * `PropertyListHelper::_get_property` returns nullptr when the index is not
+   * `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns false
+   * and Godot DROPS the write. Routing has to deliver the key to the family's
+   * dispatcher for that to be reportable at all: an unrouted `item_x/text`
+   * reads as clean.
+   *
+   * A lone sign IS a valid index shape to route (the dispatcher decides), which
+   * is why only the empty index below stays unrouted: with nothing between the
+   * prefix and the slash there is no index text to report on.
+   */
+  it('routes a NON-NUMERIC index to the dispatcher, since Godot drops that write too', () => {
+    const { r, seen } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_x/text')).not.toBeNull();
+    r.findValidator('Menu', 'item_x/text')!('item_x/text', '"x"', 1);
+    expect(seen).toContain('item_x/text');
   });
 
-  it('no linterParser.ts re-declares a key that its base chain already registers', () => {
-    const here = dirname(fileURLToPath(import.meta.url)); // .../src/linter
-    const nodesDir = resolve(here, '../nodes');
-    const files = walkLinterParsers(nodesDir);
-    expect(files.length).toBeGreaterThan(0);
-
-    const violations: string[] = [];
-
-    for (const file of files) {
-      const source = readFileSync(file, 'utf8');
-      const found = findShadowViolations(
-        extractRegisteredKeys(source),
-        baseChainKeys,
-        INTENTIONAL_OVERRIDES
-      );
-      violations.push(...found.map((v) => `${file}\n  → ${v}`));
-    }
-
-    if (violations.length > 0) {
-      throw new Error(
-        `Shadow copy anti-pattern detected — remove the duplicate key(s) and let the base-walk deliver them:\n\n${violations.join('\n\n')}`
-      );
-    }
+  it('routes a sign with no digits, which is_valid_int also refuses', () => {
+    const { r } = registryWithItems();
+    expect(r.findValidator('Menu', 'item_-/text')).not.toBeNull();
   });
 
-  it('Light3D validators are reachable for every concrete light subclass via the base-walk', () => {
-    const lightLeaves = ['DirectionalLight3D', 'OmniLight3D', 'SpotLight3D', 'AreaLight3D'];
-    const sharedKeys = [
-      'light_energy',
-      'light_color',
-      'shadow_enabled',
-      'shadow_opacity',
-      'shadow_blur',
-    ];
-
-    for (const lightType of lightLeaves) {
-      for (const key of sharedKeys) {
-        const validator = validatorRegistry.findValidator(lightType, key);
-        expect(
-          validator,
-          `'${key}' should be reachable for ${lightType} via the base-walk`
-        ).not.toBeNull();
-      }
+  it('routes an EMPTY index, an empty leaf and a nested leaf, which the helper drops', () => {
+    const { r } = registryWithItems();
+    // `rsplit("/", true, 1)` puts `item_0/deep` in the index half
+    // (property_list_helper.cpp:47), which fails `is_valid_int()` (:53) as
+    // the empty index does; an empty leaf resolves no property (:63). Each
+    // is a dropped write, and only the dispatcher can report it.
+    for (const key of ['item_/text', 'item_0/', 'item_0/deep/text', 'item_x/deep/text']) {
+      expect(r.findValidator('Menu', key), key).not.toBeNull();
     }
+    // No `/` past the prefix is a different key, not a member of the family.
+    expect(r.findValidator('Menu', 'item_count')).toBeNull();
+  });
+});
+
+describe('an inherited member name is not a validator', () => {
+  it('does not resolve Object.prototype members as registered keys', () => {
+    // `toString = 5` must not resolve Object.prototype.toString: it is truthy,
+    // so the caller would push its return value into the diagnostic list in
+    // place of a ParseError.
+    const r = new ValidatorRegistry();
+    r.registerAll('Thing', { real: v.boolean('real') });
+    for (const inherited of ['toString', 'constructor', 'valueOf', 'hasOwnProperty']) {
+      expect(r.findValidator('Thing', inherited), inherited).toBeNull();
+    }
+    expect(r.findValidator('Thing', 'real')).not.toBeNull();
+  });
+
+  it('memoises a removal per citation, not just per reason', () => {
+    // Two keys on one type can share wording and cite different guards; the
+    // cached validator must not report the first one's file:line for both.
+    const r = new ValidatorRegistry();
+    r.registerUnavailable('Thing', {
+      a: { reason: 'fixed by the class', cite: 'f.cpp:1' },
+      b: { reason: 'fixed by the class', cite: 'f.cpp:2' },
+    });
+    expect(r.declarationFor('Thing', 'a')?.grounding?.cite).toBe('f.cpp:1');
+    expect(r.declarationFor('Thing', 'b')?.grounding?.cite).toBe('f.cpp:2');
+  });
+
+  it('does not resolve them through a removal map either', () => {
+    const r = new ValidatorRegistry();
+    r.registerUnavailable('Thing', { gone: { reason: 'fixed by the class', cite: 'f.cpp:1' } });
+    expect(r.findValidator('Thing', 'toString')).toBeNull();
+    expect(r.findValidator('Thing', 'gone')).not.toBeNull();
   });
 });

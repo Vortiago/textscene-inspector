@@ -1,6 +1,7 @@
 ---
 type: OptionButton
 category: 2D
+status: unreviewed
 fixture: unit-optionbutton.tscn
 image: unit-optionbutton
 renders_as: a collapsed dropdown box
@@ -8,41 +9,38 @@ renders_as: a collapsed dropdown box
 
 # OptionButton
 
-A dropdown that collapses to show its currently-selected item. Being a static
-viewer, the previewer draws that selected item's text inside a positioned HTML
-box on the Control overlay — not the open popup, not the whole list. The fixture
-centres one `DifficultySelect` with three items and `selected = 1`, so both
-renders show `Normal` in a dark charcoal rounded box.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `item_count` + `popup/item_N/text` | `3` items: `Easy` / `Normal` / `Hard` | defines the option list; only the selected item is drawn |
-| `selected` | `1` | draws `Normal` (the item at index 1), not the first item |
-| `offset_left/right/top/bottom` | `-75 / 75 / -24 / 8` | sizes the 150x32 button, centred by the `anchors_preset = 8` anchors |
-
-## Divergences
-
-Godot draws a right-side chevron arrow icon inside the box; the previewer draws
-none. The arrow is a default-theme icon texture outside the fill/radius/padding
-chrome the previewer synthesises, so the collapsed affordance ends at the label.
-The box fill (dark charcoal ~rgb(46,46,46)), corner radius, padding, font, and the
-`Normal` label otherwise match.
+OptionButton is a dropdown that collapses to its selected item. The previewer draws that
+item's text inside a positioned box on the Control overlay, not the open popup or the
+list.
 
 ## Linting
 
 <!-- lint:begin OptionButton -->
-Strict parsing format-checks the inherited set (28 inherited from Control); `OptionButton` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks these `OptionButton` properties, plus 13 inherited from Button, 10 inherited from BaseButton, 53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `allow_reselect` | true or false |  |
+| `fit_to_longest_item` | true or false |  |
+| `item_count` | integer >= 0 | error below |
+| `popup/item_#/*` | item |  |
+| `selected` | integer >= -1 | error below |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
+| `valid-optionbutton-selected` | `optionbutton-selected-out-of-range` | warning |
 <!-- lint:end -->
 
-`OptionButton` has no strict counterpart of its own for `selected`, `popup/item_N/id`,
-or `disabled`. `selected` goes through the optional-int reader, so an absent or
-unparseable value becomes `undefined` and the control renders with empty label text
-rather than defaulting to item 0. An invalid `popup/item_N/id` silently falls back
-to the item's own loop index, and `disabled` treats any value other than the literal
-string `true` as `false`, both with no warning logged.
+An absent or unparseable `selected` becomes `undefined` and the control renders an empty
+label rather than item 0. An invalid `popup/item_N/id` falls back to the item's own
+index. `linter.ts` warns when `selected` names an index `item_count` never provides.
+
+## Known limitations
+
+- **Approximated** The right-side dropdown arrow is a compiled theme icon and is not
+  drawn, so the collapsed box ends at the label.

@@ -4,7 +4,8 @@
  *
  * These tests verify that:
  * - `dispatchWebviewMessage` routes every protocol message type to the
- *   correct handler (happy path + all six types).
+ *   correct handler (happy path + all six types), and narrows the receiver
+ *   before it reads, since a webview can post anything at all.
  * - The `webviewReady` handshake replay travels through the production
  *   dispatch path — the path that was previously unreachable from tests
  *   because the retired test-plumbing message simulator omitted the
@@ -15,7 +16,7 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel, dispatchWebviewMessage } from './TscnPreviewPanel';
-import type { WebviewToHostMessage } from './protocol';
+import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
@@ -67,6 +68,33 @@ describe('dispatchWebviewMessage', () => {
     for (const handler of Object.values(handlers)) {
       expect(handler).not.toHaveBeenCalled();
     }
+  });
+
+  // The receiver, not the key: `postMessage(null)` reads `null.type` unless the
+  // dispatcher narrows first, and `onDidReceiveMessage` has no catch around it.
+  const NON_MESSAGES: Array<[string, unknown]> = [
+    ['null', null],
+    ['undefined', undefined],
+    ['a number', 42],
+    ['a bare string', 'webviewReady'],
+    ['an object carrying no type', { data: 'x' }],
+    ['an object whose type is not a string', { type: 42 }],
+  ];
+
+  it.each(NON_MESSAGES)('rejects %s at the guard and dispatches nothing', (_label, msg) => {
+    // Both halves: the guard's own verdict, and that the dispatcher returns
+    // rather than throwing out of the host's uncaught listener.
+    expect(isWebviewToHostMessage(msg)).toBe(false);
+
+    const handlers = makeHandlers();
+    expect(() => dispatchWebviewMessage(msg, handlers)).not.toThrow();
+    for (const handler of Object.values(handlers)) {
+      expect(handler).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each(ROUTING_CASES)('accepts a real $type message at the guard', (msg) => {
+    expect(isWebviewToHostMessage(msg)).toBe(true);
   });
 });
 
@@ -129,7 +157,7 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
 
 describe('TscnPreviewPanel — all message types through fake onDidReceiveMessage', () => {
   async function makeReadyPanel(
-    triggerMessage: (msg: { type: string; [key: string]: unknown }) => void
+    triggerMessage: (msg: unknown) => void
   ): Promise<TscnPreviewPanel> {
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(MINIMAL_TSCN));
     const panel = TscnPreviewPanel.create(
@@ -220,5 +248,55 @@ describe('TscnPreviewPanel — all message types through fake onDidReceiveMessag
         args: [],
       })
     ).not.toThrow();
+  });
+
+  it('null: the production listener survives a webview posting a non-object', async () => {
+    const { triggerMessage } = setupMockPanel();
+    await makeReadyPanel(triggerMessage);
+
+    // Nothing catches inside `onDidReceiveMessage`, so a throw here escapes
+    // into the extension host.
+    expect(() => triggerMessage(null)).not.toThrow();
+  });
+});
+
+describe('a message whose type is known but whose body is not', () => {
+  const handlers = () => ({
+    webviewReady: vi.fn(),
+    error: vi.fn(),
+    jumpToNode: vi.fn(),
+    loadResource: vi.fn(),
+    resourceNeeded: vi.fn(),
+    log: vi.fn(),
+  });
+
+  it('drops a log with no args array, which the relay would call .map on', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x' }, h);
+    expect(h.log).not.toHaveBeenCalled();
+  });
+
+  it('drops a resourceNeeded with no resource, whose fields the relay reads', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'resourceNeeded' }, h);
+    expect(h.resourceNeeded).not.toHaveBeenCalled();
+  });
+
+  it('drops a jumpToNode whose path is not a string', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'N', path: 7 }, h);
+    expect(h.jumpToNode).not.toHaveBeenCalled();
+  });
+
+  it('still routes a root jumpToNode, whose optional parent is absent', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' }, h);
+    expect(h.jumpToNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('still routes a well-formed log', () => {
+    const h = handlers();
+    dispatchWebviewMessage({ type: 'log', level: 'warn', message: 'x', args: [] }, h);
+    expect(h.log).toHaveBeenCalledTimes(1);
   });
 });

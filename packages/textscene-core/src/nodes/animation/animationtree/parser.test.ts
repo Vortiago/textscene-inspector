@@ -121,11 +121,17 @@ describe('parseAnimationTree properties', () => {
     expect(props.parameters).toEqual({});
   });
 
-  it('inherits Node3D transform from base parser', () => {
+  it('keeps the transform the Node base parser reads', () => {
     const props = parseAnimationTree(HEADING, {
       transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)',
     });
     expect(props.transform?.origin).toEqual({ x: 5, y: 0, z: 0 });
+  });
+
+  it('reads no Node3D field: an AnimationTree is a Node (node_3d.cpp:150)', () => {
+    const props = parseAnimationTree(HEADING, { visible: 'false', position: 'Vector3(1, 2, 3)' });
+    expect('visible' in props).toBe(false);
+    expect('position' in props).toBe(false);
   });
 
   it('handles NaN gracefully — falls back to integer default', () => {

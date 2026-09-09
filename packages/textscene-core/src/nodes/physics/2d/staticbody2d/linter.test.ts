@@ -14,7 +14,7 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
+import '../shared/linter';
 
 describe('StaticBody2D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -118,7 +118,7 @@ physics_material_override = SubResource("mat_1")
           prop: 'collision_layer',
           valid: [1, 100, 1048575, 2000000, 2147483648, 4294967295],
           invalid: [
-{ value: -1, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           { value: '"invalid"' },
           ],
         },
@@ -126,7 +126,7 @@ physics_material_override = SubResource("mat_1")
           prop: 'collision_mask',
           valid: [1, 255, 1048575, 5000000, 2147483648, 4294967295],
           invalid: [
-{ value: -5, contains: ['must be between 0 and 4294967295'] },
+{ value: 4294967296, contains: ['cannot be stored in an integer slot'], severity: 'error' },
           ],
         },
       {
@@ -137,7 +137,7 @@ physics_material_override = SubResource("mat_1")
       {
         prop: 'input_pickable',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['converts'] }],
       },
     ]);
   });
@@ -147,10 +147,10 @@ physics_material_override = SubResource("mat_1")
       expectDiagnostic(
         scene(node('StaticBody2D', { physics_material_override: 'SubResource("nonexistent")' })),
         {
-          ruleName: 'valid-staticbody2d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
           nodeType: 'StaticBody2D',
-          contains: ['Physics material resource not found'],
+          contains: ["'physics_material_override'"],
         }
       );
     });
@@ -181,12 +181,12 @@ physics_material_override = ExtResource("ext_mat_1")
   });
 
   describe('Semantic Validation (CollisionShape2D Children)', () => {
-    it('should warn when StaticBody2D has no CollisionShape2D children', () => {
+    it('should warn when StaticBody2D has no CollisionShape2D or CollisionPolygon2D children', () => {
       expectDiagnostic(scene(node('StaticBody2D')), {
-        ruleName: 'staticbody2d-needs-collision-shape',
+        ruleName: 'collisionobject2d-needs-collision-shape',
         severity: 'warning',
         nodeType: 'StaticBody2D',
-        contains: ['no CollisionShape2D children'],
+        contains: ['no CollisionShape2D or CollisionPolygon2D children'],
       });
     });
 
@@ -194,13 +194,18 @@ physics_material_override = ExtResource("ext_mat_1")
       expectClean(scene(node('StaticBody2D'), collisionShape2d));
     });
 
-    it('should pass when StaticBody2D has nested CollisionShape2D', () => {
-      expectClean(
+    // A shape under an intervening node registers with nothing: `_notification`
+    // attaches on `Object::cast_to<CollisionObject2D>(get_parent())`
+    // (collision_shape_2d.cpp:55), so this body's `shapes` map stays empty and
+    // Godot raises its own warning (collision_object_2d.cpp:587).
+    it('warns when the only CollisionShape2D under StaticBody2D sits below an intervening node', () => {
+      expectDiagnostic(
         scene(
           node('StaticBody2D'),
           node('Node2D', {}, { name: 'Container', parent: '.' }),
           node('CollisionShape2D', {}, { parent: 'Container' })
-        )
+        ),
+        { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
       );
     });
 
@@ -215,71 +220,17 @@ physics_material_override = ExtResource("ext_mat_1")
     });
   });
 
-  describe('Semantic Validation (Constant Velocities)', () => {
-    it('should warn when constant_linear_velocity is non-zero', () => {
-      expectDiagnostic(
-        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1.0, 0.0)' }), collisionShape2d),
-        {
-          ruleName: 'staticbody2d-constant-velocity-warning',
-          severity: 'warning',
-          nodeType: 'StaticBody2D',
-          contains: ['constant_linear_velocity', 'confusing'],
-        }
-      );
-    });
-
-    it('should not warn when constant_linear_velocity is zero', () => {
-      expectClean(scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(0, 0)' }), collisionShape2d));
-    });
-
-    it('should warn when constant_angular_velocity is non-zero', () => {
-      expectDiagnostic(scene(node('StaticBody2D', { constant_angular_velocity: 1.57 }), collisionShape2d), {
-        ruleName: 'staticbody2d-constant-velocity-warning',
-        severity: 'warning',
-        nodeType: 'StaticBody2D',
-        contains: ['constant_angular_velocity', 'confusing'],
-      });
-    });
-
-    it('should not warn when constant_angular_velocity is zero', () => {
-      expectClean(scene(node('StaticBody2D', { constant_angular_velocity: 0.0 }), collisionShape2d));
-    });
-
-    it('should warn when both velocities are non-zero', () => {
-      const warnings = lint(
-        scene(
-          node('StaticBody2D', {
-            constant_linear_velocity: 'Vector2(1.0, 0.0)',
-            constant_angular_velocity: 1.0,
-          }),
-          collisionShape2d
-        )
-      ).filter(d => d.ruleName === 'staticbody2d-constant-velocity-warning');
-      expect(warnings.length).toBe(2); // One for linear, one for angular
-    });
-  });
-
   describe('Semantic Validation (Collision Layers)', () => {
-    it('should warn when collision_layer is 0', () => {
-      expectDiagnostic(scene(node('StaticBody2D', { collision_layer: 0 }), collisionShape2d), {
-        ruleName: 'staticbody2d-zero-collision-layer',
-        severity: 'warning',
-        nodeType: 'StaticBody2D',
-        contains: ['collision_layer set to 0'],
-      });
-    });
-
     it('should not warn when collision_layer is non-zero', () => {
       expectClean(scene(node('StaticBody2D', { collision_layer: 1 }), collisionShape2d));
     });
 
-    it('should warn when collision_mask is 0', () => {
-      expectDiagnostic(scene(node('StaticBody2D', { collision_mask: 0 }), collisionShape2d), {
-        ruleName: 'staticbody2d-zero-collision-mask',
-        severity: 'warning',
-        nodeType: 'StaticBody2D',
-        contains: ['collision_mask set to 0'],
-      });
+    // No `collision_mask == 0` check: no engine warning exists for it, and it
+    // is the standard "only needs to BE detected" static configuration
+    // (squash-the-creeps' Ground/Walls, the platformer's PlatformStatic,
+    // dodge-the-creeps' Mob all ship with it).
+    it('stays quiet when collision_mask is 0', () => {
+      expectClean(scene(node('StaticBody2D', { collision_mask: 0 }), collisionShape2d));
     });
 
     it('should not warn when collision_mask is non-zero', () => {
@@ -294,17 +245,15 @@ physics_material_override = ExtResource("ext_mat_1")
           node('StaticBody2D', {
             collision_layer: -5,
             physics_material_override: 'SubResource("nonexistent")',
-            constant_linear_velocity: 'Vector2(1, 0)',
           })
         )
       );
       // Should have at least one error (format errors may prevent semantic checks)
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
-      const hasResourceError = diagnostics.some(d => d.message.includes('resource not found'));
-      const hasVelocityWarning = diagnostics.some(d => d.message.includes('constant_linear_velocity'));
+      const hasResourceError = diagnostics.some(d => d.message.includes('never declares'));
       // At least one of these errors should be present
-      expect(hasCollisionLayerError || hasResourceError || hasVelocityWarning).toBe(true);
+      expect(hasCollisionLayerError || hasResourceError).toBe(true);
     });
 
     it('should handle all properties together', () => {
@@ -329,14 +278,12 @@ input_pickable = true
       const diagnostics = lint(scene(node('StaticBody2D')));
       // Should only have warning about missing CollisionShape2D
       expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.ruleName).toBe('staticbody2d-needs-collision-shape');
+      expect(diagnostics[0]!.ruleName).toBe('collisionobject2d-needs-collision-shape');
     });
 
     it('should handle scientific notation in velocities', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(
-        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1e-5, 2.5e3)' }), collisionShape2d),
-        { ruleName: 'staticbody2d-constant-velocity-warning' }
+      expectNoErrors(
+        scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1e-5, 2.5e3)' }), collisionShape2d)
       );
     });
 
@@ -346,16 +293,7 @@ input_pickable = true
       );
     });
 
-    it('should handle negative angular velocity', () => {
-      // Should have warning about non-zero velocity
-      expectDiagnostic(scene(node('StaticBody2D', { constant_angular_velocity: -3.14159 }), collisionShape2d), {
-        ruleName: 'staticbody2d-constant-velocity-warning',
-        contains: ['constant_angular_velocity'],
-      });
-    });
-
     it('should handle whitespace in Vector2', () => {
-      // Should only have warning about non-zero velocity
       expectNoErrors(
         scene(
           node('StaticBody2D', { constant_linear_velocity: 'Vector2(  10.5  ,  -20.3  )' }),
@@ -363,5 +301,18 @@ input_pickable = true
         )
       );
     });
+  });
+});
+
+describe('the subclasses the matcher reaches', () => {
+  // descendsFrom pulls AnimatableBody2D in; the message must name the type the
+  // author can find in their file, not the base the rule factory was built for.
+  it('names AnimatableBody2D, not StaticBody2D, in its own diagnostic', () => {
+    const found = expectDiagnostic(
+      scene(node('AnimatableBody2D', {}, { name: 'MovingPlatform' })),
+      { ruleName: 'collisionobject2d-needs-collision-shape', severity: 'warning' }
+    );
+    expect(found.message).toContain("AnimatableBody2D 'MovingPlatform'");
+    expect(found.message).not.toContain('StaticBody2D');
   });
 });

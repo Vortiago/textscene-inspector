@@ -9,43 +9,33 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
-  expectNoDiagnostic,
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
 describe('Path3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
-    it('should pass format validation for valid Path3D with curve (with unused warning)', () => {
-      const content = `[gd_scene format=3]
+    it('should pass format validation for a valid Path3D with curve, even with no PathFollow3D child', () => {
+      // Path3D declares no get_configuration_warnings() at all (only
+      // PathFollow3D/PathFollow2D do, for the opposite condition) — a
+      // followerless Path3D is not a Godot warning.
+      expectClean(`[gd_scene format=3]
 
 [sub_resource type="Curve3D" id="curve_1"]
 
 [node name="Path3D" type="Path3D"]
 curve = SubResource("curve_1")
-`;
-
-      const diagnostics = lint(content);
-      // Should only have unused warning, no format errors
-      expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.severity).toBe('warning');
-      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
+`);
     });
 
-    it('should pass format validation for Path3D with ExtResource curve (with unused warning)', () => {
-      const content = `[gd_scene format=3]
+    it('should pass format validation for Path3D with ExtResource curve', () => {
+      expectClean(`[gd_scene format=3]
 
 [ext_resource type="Curve3D" path="res://curves/path.tres" id="curve_ext"]
 
 [node name="Path3D" type="Path3D"]
 curve = ExtResource("curve_ext")
-`;
-
-      const diagnostics = lint(content);
-      // Should only have unused warning, no format errors
-      expect(diagnostics.length).toBe(1);
-      expect(diagnostics[0]!.severity).toBe('warning');
-      expect(diagnostics[0]!.ruleName).toBe('path3d-unused');
+`);
     });
 
     it('should pass validation for Path3D with PathFollow3D child', () => {
@@ -118,6 +108,48 @@ curve = ExtResource("curve_ext")
         });
       });
     });
+
+    describe('debug_custom_color property validation', () => {
+      it('should accept a valid Color literal', () => {
+        expectClean(`[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("curve_1")
+debug_custom_color = Color(1, 0.5, 0, 1)
+`);
+      });
+
+      it('should reject a malformed debug_custom_color', () => {
+        expectDiagnostic(scene(node('Path3D', { debug_custom_color: 'Color(1, 0, 0)' })), {
+          prop: 'debug_custom_color',
+          severity: 'error',
+        });
+      });
+
+      it('should accept non-finite components (inf/-inf/inf_neg/nan), which variant_parser.cpp writes into every Color and set_debug_custom_color (path_3d.cpp:175-178) never checks', () => {
+        expectClean(`[gd_scene format=3]
+
+[sub_resource type="Curve3D" id="curve_1"]
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("curve_1")
+debug_custom_color = Color(inf, -inf, inf_neg, nan)
+`);
+      });
+
+      it('should accept both SubResource and ExtResource on curve alongside a set debug_custom_color', () => {
+        expectClean(`[gd_scene format=3]
+
+[ext_resource type="Curve3D" path="res://curves/path.tres" id="curve_ext"]
+
+[node name="Path3D" type="Path3D"]
+curve = ExtResource("curve_ext")
+debug_custom_color = Color(0, 0, 0, 1)
+`);
+      });
+    });
   });
 
   describe('Semantic Validation (Resource Existence)', () => {
@@ -125,16 +157,16 @@ curve = ExtResource("curve_ext")
       it('should detect missing curve property', () => {
         expectDiagnostic(scene(node('Path3D')), {
           ruleName: 'path3d-requires-curve',
-          severity: 'warning',
+          severity: 'info',
           contains: ["missing required property 'curve'", 'useless'],
         });
       });
 
       it('should detect non-existent curve resource', () => {
         expectDiagnostic(scene(node('Path3D', { curve: 'SubResource("nonexistent_curve")' })), {
-          ruleName: 'valid-path3d-resources',
+          ruleName: 'dangling-resource-reference',
           severity: 'error',
-          contains: ['Curve resource not found'],
+          contains: ["'curve'"],
         });
       });
 
@@ -164,91 +196,6 @@ curve = ExtResource("curve_ext")
     });
   });
 
-  describe('Semantic Validation (PathFollow3D Children)', () => {
-    it('should warn when Path3D has no PathFollow3D children', () => {
-      expectDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="Path3D" type="Path3D"]
-curve = SubResource("curve_1")
-`,
-        {
-          ruleName: 'path3d-unused',
-          severity: 'warning',
-          contains: ['no PathFollow3D children', 'programmatically'],
-        }
-      );
-    });
-
-    it('should not warn when Path3D has PathFollow3D child', () => {
-      expectNoDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="Path3D" type="Path3D"]
-curve = SubResource("curve_1")
-
-[node name="PathFollow3D" type="PathFollow3D" parent="."]
-`,
-        { ruleName: 'path3d-unused' }
-      );
-    });
-
-    it('should not warn when Path3D has multiple PathFollow3D children', () => {
-      expectNoDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="CameraRail" type="Path3D"]
-curve = SubResource("curve_1")
-
-[node name="PathFollow3D1" type="PathFollow3D" parent="."]
-
-[node name="PathFollow3D2" type="PathFollow3D" parent="."]
-`,
-        { ruleName: 'path3d-unused' }
-      );
-    });
-
-    it('should detect nested PathFollow3D children', () => {
-      expectNoDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="Path3D" type="Path3D"]
-curve = SubResource("curve_1")
-
-[node name="Container" type="Node3D" parent="."]
-
-[node name="PathFollow3D" type="PathFollow3D" parent="Container"]
-`,
-        { ruleName: 'path3d-unused' }
-      );
-    });
-
-    it('should warn when Path3D has other children but no PathFollow3D', () => {
-      expectDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="Path3D" type="Path3D"]
-curve = SubResource("curve_1")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-
-[node name="Camera3D" type="Camera3D" parent="."]
-`,
-        { ruleName: 'path3d-unused', severity: 'warning' }
-      );
-    });
-  });
-
   describe('Combined Validation', () => {
     it('should report errors for nonexistent curve resource', () => {
       const content = scene(
@@ -261,18 +208,10 @@ curve = SubResource("curve_1")
       // Path3D1: should have curve resource not found error
       const curveError = diagnostics.find(d =>
         d.nodeName === 'Path3D1' &&
-        d.message.includes('Curve resource not found')
+        d.message.includes("'curve'")
       );
       expect(curveError).toBeDefined();
       expect(curveError?.severity).toBe('error');
-
-      // Path3D1: should also have unused warning
-      const unusedWarning = diagnostics.find(d =>
-        d.nodeName === 'Path3D1' &&
-        d.ruleName === 'path3d-unused'
-      );
-      expect(unusedWarning).toBeDefined();
-      expect(unusedWarning?.severity).toBe('warning');
     });
 
     it('should validate Path3D with valid curve and PathFollow3D child', () => {
@@ -321,14 +260,9 @@ curve = ExtResource("curve_ext")
 `);
     });
 
-    it('should handle missing curve and format error together', () => {
+    it('should handle missing curve', () => {
       const content = scene(node('Path3D'));
-
-      // Should have missing curve error
-      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'warning' });
-
-      // Should also have unused warning
-      expectDiagnostic(content, { ruleName: 'path3d-unused', severity: 'warning' });
+      expectDiagnostic(content, { ruleName: 'path3d-requires-curve', severity: 'info' });
     });
 
     it('should handle Path3D with invalid curve format', () => {
@@ -349,23 +283,6 @@ curve = ExtResource("curve_ext")
         d.nodeType === 'Path3D'
       );
       expect(path3dErrors).toHaveLength(0);
-    });
-
-    it('should handle Path3D with PathFollow3D via intermediate nodes', () => {
-      expectNoDiagnostic(
-        `[gd_scene format=3]
-
-[sub_resource type="Curve3D" id="curve_1"]
-
-[node name="Path3D" type="Path3D"]
-curve = SubResource("curve_1")
-
-[node name="Container" type="Node3D" parent="."]
-
-[node name="PathFollow3D" type="PathFollow3D" parent="Container"]
-`,
-        { ruleName: 'path3d-unused' }
-      );
     });
 
     it('should handle Path3D as child of another node', () => {
@@ -420,16 +337,9 @@ curve = SubResource("nonexistent")
       // InvalidPath should have resource not found error
       const resourceError = diagnostics.find(d =>
         d.nodeName === 'InvalidPath' &&
-        d.message.includes('Curve resource not found')
+        d.message.includes("'curve'")
       );
       expect(resourceError).toBeDefined();
-
-      // InvalidPath should also have unused warning
-      const unusedWarning = diagnostics.find(d =>
-        d.nodeName === 'InvalidPath' &&
-        d.ruleName === 'path3d-unused'
-      );
-      expect(unusedWarning).toBeDefined();
     });
 
     it('should handle Path3D used for camera rails (common use case)', () => {

@@ -8,24 +8,36 @@
  * behaves exactly like the lenient renderer path always has (skip-and-continue recovery).
  */
 
-import type { TscnScene, TscnNode, TscnExternalResource, TscnInternalResource } from './types.js';
+import { resolveDeprecatedProperty } from '../godot/deprecated.js';
+import type {
+  TscnScene,
+  TscnNode,
+  TscnExternalResource,
+  TscnInternalResource,
+  NodeOrigin,
+} from './types.js';
 import {
   parseHeading,
   parseProperty,
   isHeading,
   isSectionHeading,
-  isComment,
   isEmpty,
   scanValueChunk,
   isIncompleteState,
   INITIAL_SCAN_STATE,
+  stripLineComment,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree } from './sceneTreeBuilder.js';
+import {
+  buildSceneTree,
+  emptyParentHeadings,
+  rootDeclaringParent,
+  strandedNodes,
+} from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
-export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource';
+export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
 /**
  * Callback function to create a TscnNode from parsed heading and properties
@@ -49,9 +61,11 @@ export interface ParseObserver {
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
   /**
    * A property value completed (after any multiline accumulation). `line` is the
-   * property's STARTING line; `ownerType` is the heading's type attribute for
-   * node/sub_resource sections, undefined otherwise; `isMultiline` is true when
-   * the value spans multiple physical lines.
+   * property's STARTING line; `ownerType` is the type the section's properties
+   * belong to — the heading's own `type=` for node/sub_resource, the
+   * `[gd_resource type="…"]` header's for a `[resource]` body, undefined
+   * elsewhere; `isMultiline` is true when the value spans multiple physical
+   * lines.
    */
   onProperty?(
     section: SectionType,
@@ -77,18 +91,31 @@ export class TscnParserCore {
    * @returns Parsed scene structure
    */
   parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
-    logger.info('Starting TSCN parsing');
+    logger.info('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF so Windows-authored .tscn files don't leave a
     // trailing \r on each line (which would otherwise corrupt accumulated
     // multi-line string values).
     const lines = content.split(/\r?\n/);
 
-    const nodes: TscnNode[] = [];
+    // Every node beside the line its heading is on, in scan order. The line
+    // lives here rather than on `TscnNode` because only the orphan report below
+    // reads it, and every node in the tree would otherwise carry a field
+    // nothing else uses. One array, not two: a parallel `nodes` list is an
+    // invariant two push sites have to keep, and a missed push yields an orphan
+    // with no line.
+    const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
+    let currentHeadingLine = 0;
+    // The type a standalone `.tres` declares once, in its file header. Its
+    // `[resource]` body carries no type of its own — `res_type` comes from the
+    // header (resource_format_text.cpp:1166) and is what
+    // `ClassDB::instantiate(res_type)` builds when the `resource` tag opens
+    // (:741). A `.tscn` has no such header, so this stays undefined there.
+    let headerResourceType: string | undefined;
     let currentProperties: Record<string, string> = {};
     // Accumulator for a string value whose opening quote isn't closed on its
     // own line (Godot multi-line text). Subsequent raw lines are appended
@@ -110,7 +137,12 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          nodes.push(node);
+          origins.push({
+            node,
+            line: currentHeadingLine,
+            declaredParent: currentHeading.attributes.parent,
+            recoverableById: currentHeading.attributes.parent_id_path !== undefined,
+          });
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);
@@ -128,19 +160,22 @@ export class TscnParserCore {
       currentProperties = {};
     };
 
-    // ownerType for the observer: the heading's type attribute, but only for
-    // sections whose body properties belong to a typed owner.
-    const currentOwnerType = (): string | undefined =>
-      currentSection === 'node' || currentSection === 'sub_resource'
-        ? currentHeading?.attributes.type
-        : undefined;
+    // ownerType for the observer: the type the current section's body
+    // properties belong to, or undefined where the section names none.
+    const currentOwnerType = (): string | undefined => {
+      if (currentSection === 'node' || currentSection === 'sub_resource') {
+        return currentHeading?.attributes.type;
+      }
+      return currentSection === 'resource' ? headerResourceType : undefined;
+    };
 
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
         // Join happens exactly once per value, here — O(total length), not
         // per appended line.
         const value = pendingMultiline.lines.join('\n');
-        currentProperties[pendingMultiline.key] = value;
+        const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
+        currentProperties[resolved.key] = resolved.value;
         observer?.onProperty?.(
           currentSection,
           currentOwnerType(),
@@ -154,7 +189,9 @@ export class TscnParserCore {
     };
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!; // Array access within bounds is safe
+      // A `;` comment ends the line for Godot's reader wherever it sits, so it
+      // is gone before the line is read as heading, property or continuation.
+      const line = stripLineComment(lines[i]!, pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
 
       // Inside an open multi-line string: append raw lines (preserving blank
@@ -181,7 +218,9 @@ export class TscnParserCore {
         }
       }
 
-      if (isEmpty(line) || isComment(line)) {
+      // A comment-only line is already whitespace: `stripLineComment` above is
+      // the single place a `;` is understood.
+      if (isEmpty(line)) {
         continue;
       }
 
@@ -191,6 +230,10 @@ export class TscnParserCore {
         currentHeading = parseHeading(line);
         if (currentHeading) {
           currentSection = this.identifySection(currentHeading);
+          currentHeadingLine = lineNumber;
+          if (currentHeading.type === 'gd_resource') {
+            headerResourceType = currentHeading.attributes.type;
+          }
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -237,7 +280,19 @@ export class TscnParserCore {
               scanState,
             };
           } else {
-            currentProperties[property.key] = property.value;
+            // Stored under the name the SETTER writes and with the literal it
+            // receives: a pre-4.0 alias like `frames` is the same field as
+            // `sprite_frames` to the engine, and `extents` is `size` doubled, so
+            // every reader downstream — typed parser, render component and
+            // rule alike — sees one key and one value. The observer still
+            // receives both as written, because a diagnostic must name what is
+            // in the file.
+            const resolved = resolveDeprecatedProperty(
+              currentOwnerType(),
+              property.key,
+              property.value
+            );
+            currentProperties[resolved.key] = resolved.value;
             observer?.onProperty?.(
               currentSection,
               currentOwnerType(),
@@ -254,14 +309,25 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
-    const sceneTree = buildSceneTree(nodes);
+    const sceneTree = buildSceneTree(origins.map((o) => o.node));
+    const orphanedNodes = strandedNodes(origins, sceneTree);
+    const rootWithParent = rootDeclaringParent(origins);
+    const emptyParents = emptyParentHeadings(origins);
+    for (const { node } of orphanedNodes) {
+      logger.warn(
+        `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+      );
+    }
 
-    logger.info(`Parsing complete: ${nodes.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
+    logger.info(`[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`);
 
     return {
       nodes: sceneTree,
       externalResources,
       internalResources,
+      ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
+      ...(rootWithParent ? { rootWithParent } : {}),
+      ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
     };
   }
 
@@ -271,6 +337,7 @@ export class TscnParserCore {
     if (heading.type === 'node') return 'node';
     if (heading.type === 'ext_resource') return 'ext_resource';
     if (heading.type === 'sub_resource') return 'sub_resource';
+    if (heading.type === 'resource') return 'resource';
 
     return 'none';
   }

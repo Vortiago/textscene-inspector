@@ -13,6 +13,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { inlineSurfacesWithMaterial } from './arrayMeshSurfaces.testkit';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -67,7 +68,26 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mat.color.r).toBe(1); // override (red), not mesh-own (blue)
   });
 
-  it('#13 surface_material_override/0 wins over material_override', async () => {
+  // The ArrayMesh branch builds its material slots from the DECODED mesh, not
+  // from the override map the primitive branch reads, so the override reaches
+  // it only through the prop this asserts.
+  it('#12b material_override replaces a scene ArrayMesh surface material', async () => {
+    const node = makeNode({
+      mesh: 'SubResource("Wall_1")',
+      materialOverride: 'SubResource("Override")',
+    });
+    const renderer = await render(node, [
+      sub('ArrayMesh', 'Wall_1', { _surfaces: inlineSurfacesWithMaterial('MeshOwn') }),
+      sub('StandardMaterial3D', 'MeshOwn', { albedo_color: 'Color(0, 0, 1, 1)' }),
+      sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
+    ]);
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial;
+    expect(mat.color.r).toBe(1); // override (red), not the surface's own (blue)
+    expect(mat.color.b).toBe(0);
+  });
+
+  it('#13 material_override wins over surface_material_override/0', async () => {
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf0")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -79,13 +99,17 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('StandardMaterial3D', 'Override', { albedo_color: 'Color(1, 0, 0, 1)' }),
       sub('StandardMaterial3D', 'Surf0', { albedo_color: 'Color(0, 1, 0, 1)' }),
     ]);
+    // `_geometry_instance_add_surface` takes `material_override` ahead of the
+    // material it was handed, and that caller had already chosen
+    // `surface_materials[j]` over the mesh's own
+    // (render_forward_clustered.cpp:4206, :4267).
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshStandardMaterial;
-    expect(mat.color.r).toBe(0);
-    expect(mat.color.g).toBe(1);
+    expect(mat.color.r).toBe(1);
+    expect(mat.color.g).toBe(0);
   });
 
-  it('#14 surface_material_override/1 with slot 0 absent → slot 1 lands at material index 1', async () => {
+  it('#14 surface_material_override/1 on a primitive mesh is dropped, as Godot drops it', async () => {
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -95,17 +119,21 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
       sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       sub('StandardMaterial3D', 'Surf1', { albedo_color: 'Color(1, 1, 0, 1)' }),
     ]);
-    // Multi-surface fix: mesh.material is an array — slot 0
-    // defaults to grey placeholder, slot 1 carries the yellow override.
-    // Each surface gets its own material slot in the array, mirroring
-    // the pre-migration imperative renderer's `materials[N]` semantics.
+    // A PrimitiveMesh has one surface (primitive_meshes.cpp:141-147), so
+    // `_set` refuses `idx >= surface_override_materials.size()`
+    // (mesh_instance_3d.cpp:68) and Godot draws the whole box with slot 0.
+    // Honouring the write here made `mesh.material` a length-2 array over a
+    // BoxGeometry's SIX groups, and three renders only the groups whose
+    // `material[materialIndex]` exists — four faces vanished. On a
+    // Plane/Sphere/Capsule/Torus, whose geometries declare no groups at all,
+    // an array material drew nothing whatsoever.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const materials = mesh.material as THREE.MeshStandardMaterial[];
-    expect(Array.isArray(mesh.material)).toBe(true);
-    expect(materials).toHaveLength(2);
-    expect(materials[1]!.color.r).toBe(1);
-    expect(materials[1]!.color.g).toBe(1);
-    expect(materials[1]!.color.b).toBe(0);
+    expect(Array.isArray(mesh.material)).toBe(false);
+    // Godot's default 3D material, not the yellow the refused write named.
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    expect(material.color.r).toBeCloseTo(0.6, 5);
+    expect(material.color.g).toBeCloseTo(0.6, 5);
+    expect(material.color.b).toBeCloseTo(0.6, 5);
   });
 
   it('#15 visible=false propagates to mesh.visible', async () => {

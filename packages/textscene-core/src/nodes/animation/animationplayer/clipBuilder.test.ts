@@ -11,7 +11,8 @@
 import { describe, it, expect } from 'vitest';
 import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D } from 'three';
 import { buildClip, loopSettingsFor, resolveTrackBinding } from './clipBuilder';
-import type { GodotAnimation, GodotTrack } from './animationResolver';
+import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
+import type { TscnInternalResource } from '../../../parser/types';
 
 const DEG2RAD = Math.PI / 180;
 
@@ -373,5 +374,54 @@ describe('buildClip — unsupported property (C5)', () => {
       ])
     );
     expect(clip.tracks.map((t) => t.name)).toEqual(['Target.position']);
+  });
+});
+
+describe('buildClip — keyframe values three.js cannot key', () => {
+  // A track resolved from a `.tscn`, so the decoder and the clip are exercised
+  // together: a value outside the finite grammar (`inf`, legal per
+  // variant_parser.cpp:150-155) or overflowing it must never reach a
+  // KeyframeTrack, where one NaN sample poisons the rest of the clip.
+  function positionClip(values: string) {
+    const internal: TscnInternalResource[] = [
+      { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"a": SubResource("A")\n}' } },
+      {
+        id: 'A',
+        type: 'Animation',
+        data: {
+          length: '1.0',
+          'tracks/0/type': '"value"',
+          'tracks/0/path': 'NodePath("Target:position")',
+          'tracks/0/keys': `{\n"times": PackedFloat32Array(0, 1),\n"values": [${values}]\n}`,
+        },
+      },
+    ];
+    return buildClip(resolveAnimations([{ name: '', subResourceId: 'Lib' }], internal)[0]!);
+  }
+
+  const everyValueFinite = (clip: ReturnType<typeof buildClip>): boolean =>
+    clip.tracks.every((t) => Array.from(t.values).every((v) => Number.isFinite(v)));
+
+  it('keys nothing when the FIRST key overflows the grammar to Infinity', () => {
+    // `1e999` is inside the finite grammar and keeps the Vector3 shape, so the
+    // key-0 shape checks pass it — only the read result is non-finite.
+    const clip = positionClip('Vector3(0, 1e999, 0), Vector3(0, 1, 0)');
+    expect(clip.tracks).toEqual([]);
+    expect(everyValueFinite(clip)).toBe(true);
+  });
+
+  it('keys nothing when a LATER key is outside the finite grammar', () => {
+    // The shape checks read key 0 only, so a good first key is what carried the
+    // rest of the list into a KeyframeTrack.
+    const clip = positionClip('Vector3(0, 1, 0), Vector3(0, inf, 0)');
+    expect(clip.tracks).toEqual([]);
+    expect(everyValueFinite(clip)).toBe(true);
+  });
+
+  it('keys the whole track when every component is finite', () => {
+    const clip = positionClip('Vector3(0, 1, 0), Vector3(0, 2, 0)');
+    expect(clip.tracks.map((t) => t.name)).toEqual(['Target.position']);
+    expect(Array.from(clip.tracks[0]!.values)).toEqual([0, 1, 0, 0, 2, 0]);
+    expect(everyValueFinite(clip)).toBe(true);
   });
 });

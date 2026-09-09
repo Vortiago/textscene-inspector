@@ -53,6 +53,14 @@ export interface Texture2DSourceResult {
   texture: THREE.Texture | null;
   /** The AtlasTexture cell the reference windows to, in sheet pixels. */
   region?: SpriteRect;
+  /**
+   * The `res://` path the reference resolved to, or null when it names none —
+   * a procedural sub-resource has no file, and neither does an unresolvable
+   * reference. Reported because a caller drawing a PLACEHOLDER wants to name
+   * what it could not draw, and because resolving through the sub-scene's own
+   * ExtResource scope is a behaviour worth being able to observe.
+   */
+  path: string | null;
   /** True when the reference names something this renderer cannot resolve. */
   missing: boolean;
 }
@@ -76,14 +84,15 @@ export function useTexture2DSource(
     [procedural, ref, externalResources, internalResources]
   );
   const path = source.path;
-  const loaded = useResource<THREE.Texture>(path ?? '', 'Texture2D');
+  const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
 
-  if (procedural) return { texture: procedural, missing: false };
-  if (!ref) return { texture: null, missing: false };
-  if (!path) return { texture: null, missing: true };
+  if (procedural) return { texture: procedural, path: null, missing: false };
+  if (!ref) return { texture: null, path: null, missing: false };
+  if (!path) return { texture: null, path: null, missing: true };
   return {
     texture: loaded.value ?? null,
     region: source.region,
+    path,
     missing: loaded.status === 'unavailable',
   };
 }

@@ -5,10 +5,15 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; use_top_left pins the documented default (CenterContainer.xml) so
+; linterParser.ts's validator runs against a real corpus value; true would
+; move the child off-center in real Godot (center_container.cpp:83), which
+; neither the golden render nor the previewer currently reproduces.
 [node name="MyCenterContainer" type="CenterContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+use_top_left = false
 
 [node name="Label" type="Label" parent="MyCenterContainer"]
 layout_mode = 2

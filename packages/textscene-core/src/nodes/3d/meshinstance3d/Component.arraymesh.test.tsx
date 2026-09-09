@@ -19,6 +19,7 @@ import type { ArrayMeshResource } from '../../../resources/processors/createArra
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { INLINE_SURFACES, inlineSurfacesWithMaterial } from './arrayMeshSurfaces.testkit';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -54,24 +55,6 @@ _surfaces = [{
 }]
 blend_shape_mode = 0
 `;
-
-/**
- * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline — the wall
- * quad's bytes, minus the file wrapper. `trailer_truck.tscn` writes its trailer
- * body exactly this way, which is why the trailer rendered as nothing.
- */
-const INLINE_SURFACES = `[{
-"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
-"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
-"format": 34359742487,
-"index_count": 6,
-"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
-"name": "inline",
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 4,
-"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
-}]`;
 
 function inlineMeshNode(subResourceId: string): TscnNode {
   return {
@@ -249,7 +232,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
             {
               id: 'ArrayMesh_inline',
               type: 'ArrayMesh',
-              data: { _surfaces: INLINE_SURFACES.replace('"name": "inline",', '"material": SubResource("Mat_blue"),\n"name": "inline",') },
+              data: { _surfaces: inlineSurfacesWithMaterial('Mat_blue') },
             },
             {
               id: 'Mat_blue',
@@ -272,6 +255,48 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     // The material's albedo, not ExternalMaterialSlot's 0xffffff default.
     expect(colours).not.toContain(0xffffff);
     expect(colours.some((c) => c !== 0xffffff)).toBe(true);
+  });
+
+  it("re-reads an inline surface's material sub-resource without re-decoding the mesh", async () => {
+    // The material sub-resource lives BESIDE `_surfaces`, not in it, so editing
+    // its `albedo_color` leaves the decode key untouched — resolving it inside
+    // the decode memo froze the surface at whatever colour the first parse had.
+    // The geometry must survive that edit: re-decoding and re-uploading the
+    // whole inline mesh per keystroke is what the key exists to avoid.
+    const loader = makeLoader();
+    const tree = (albedo: string) => (
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            {
+              id: 'ArrayMesh_inline',
+              type: 'ArrayMesh',
+              data: { _surfaces: inlineSurfacesWithMaterial('Mat_edit') },
+            },
+            { id: 'Mat_edit', type: 'StandardMaterial3D', data: { albedo_color: albedo } },
+          ]}
+          externalResources={[]}
+        >
+          <MeshInstance3D node={inlineMeshNode('ArrayMesh_inline')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const renderer = await ReactThreeTestRenderer.create(tree('Color(1, 0, 0, 1)'));
+    await new Promise<void>((r) => setTimeout(r, 10));
+    const before = firstMeshGeometry(renderer);
+    const colourOf = () =>
+      (
+        renderer.scene.findAllByType('MeshStandardMaterial')[0]!
+          .instance as THREE.Object3D & THREE.MeshStandardMaterial
+      ).color;
+    expect(colourOf().r).toBeCloseTo(1, 5);
+
+    await renderer.update(tree('Color(0, 0, 1, 1)'));
+
+    expect(colourOf().b).toBeCloseTo(1, 5);
+    expect(colourOf().r).toBeCloseTo(0, 5);
+    expect(firstMeshGeometry(renderer)).toBe(before);
   });
 
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {

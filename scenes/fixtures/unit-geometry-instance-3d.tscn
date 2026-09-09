@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+; Exercises every own property GeometryInstance3D serialises, in the same
+; ADD_GROUP order the engine declares them (Geometry, Global Illumination,
+; Visibility Range, Sorting) — plus sorting_offset/sorting_use_aabb_center,
+; which VisualInstance3D declares but GeometryInstance3D re-enables for this
+; whole hierarchy (see linterParser.ts).
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_override"]
+albedo_color = Color(0.9, 0.1, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_overlay"]
+albedo_color = Color(0.1, 0.1, 0.9, 0.3)
+
+[node name="Root" type="Node3D"]
+
+[node name="MyGeometryInstance3D" type="GeometryInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+material_override = SubResource("StandardMaterial3D_override")
+material_overlay = SubResource("StandardMaterial3D_overlay")
+transparency = 0.25
+cast_shadow = 2
+extra_cull_margin = 0.5
+custom_aabb = AABB(-1, -1, -1, 2, 2, 2)
+lod_bias = 2.0
+ignore_occlusion_culling = true
+gi_mode = 2
+gi_lightmap_texel_scale = 2.0
+visibility_range_begin = 10.0
+visibility_range_begin_margin = 1.0
+visibility_range_end = 50.0
+visibility_range_end_margin = 2.0
+visibility_range_fade_mode = 1
+sorting_offset = 0.5
+sorting_use_aabb_center = false

@@ -1,36 +1,24 @@
 /**
  * Parses Godot resource references (`SubResource("id")` / `ExtResource("id")`).
  *
- * Historical note: this module previously also exported `resolveGeometry`
- * and `resolveMaterial` async helpers that the imperative renderer used
- * to turn TSCN references into THREE.BufferGeometry / THREE.Material.
- * Those were deleted along with the imperative path. The R3F
- * components resolve geometry/material synchronously inside their own
- * Component.tsx files using only the parsers from the `meshes` and
- * `materials` folders, so the runtime resolver layer is gone.
+ * Reference parsing only: there is no resolver layer here. An R3F component
+ * resolves geometry and material synchronously in its own `Component.tsx`,
+ * through the parsers in `meshes/` and `materials/`.
  *
- * `parseResourceReference` survives because both R3F MeshInstance3D and
- * R3F WorldEnvironment use it to read raw TSCN property strings.
+ * `parseResourceReference` is shared because both R3F MeshInstance3D and R3F
+ * WorldEnvironment read raw TSCN property strings through it.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { decodeAtlasTexture } from './textures/atlastexture/decode.js';
 import { ATLAS_TEXTURE_TYPE, type AtlasRegion } from './textures/atlastexture/types.js';
+import { resourceRef } from '../godot/index.js';
 
 export function parseResourceReference(
   ref: string
 ): { type: 'SubResource' | 'ExtResource'; id: string } | null {
-  const subMatch = ref.match(/^SubResource\s*\(\s*"([^"]+)"\s*\)$/);
-  if (subMatch && subMatch[1]) {
-    return { type: 'SubResource', id: subMatch[1] };
-  }
-
-  const extMatch = ref.match(/^ExtResource\s*\(\s*"([^"]+)"\s*\)$/);
-  if (extMatch && extMatch[1]) {
-    return { type: 'ExtResource', id: extMatch[1] };
-  }
-
-  return null;
+  const parsed = resourceRef(ref);
+  return parsed ? { type: parsed.kind, id: parsed.id } : null;
 }
 
 /**

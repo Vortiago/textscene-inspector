@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+; Exercises GraphFrame's own title, autoshrink, drag margin and tint properties.
+
+[node name="MyGraphFrame" type="GraphFrame" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+title = "Notes"
+autoshrink_enabled = true
+autoshrink_margin = 40
+drag_margin = 16
+tint_color_enabled = true
+tint_color = Color(0.3, 0.3, 0.3, 0.75)

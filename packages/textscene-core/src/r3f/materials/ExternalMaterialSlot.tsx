@@ -25,7 +25,7 @@ interface ExternalMaterialSlotProps {
 }
 
 export function ExternalMaterialSlot({ path, attach, shadowSide }: ExternalMaterialSlotProps) {
-  const result = useResource<THREE.Material>(path ?? '', 'StandardMaterial3D');
+  const result = useResource<THREE.Material>(path ?? '', 'material');
   if (path && result.value) {
     return <primitive object={result.value} attach={attach} />;
   }

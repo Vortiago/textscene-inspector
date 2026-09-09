@@ -2,7 +2,7 @@
  * WorldEnvironment node type definitions
  */
 
-import type { Node3DProperties } from '../../base/node3d/types.js';
+import type { NodeProperties } from '../../node/types.js';
 
 /**
  * WorldEnvironment node properties
@@ -11,7 +11,7 @@ import type { Node3DProperties } from '../../base/node3d/types.js';
  * background, fog, tonemapping, and other post-processing effects via
  * an Environment SubResource.
  */
-export interface WorldEnvironmentProperties extends Node3DProperties {
+export interface WorldEnvironmentProperties extends NodeProperties {
   /**
    * Reference to Environment SubResource (required)
    * Format: SubResource("Environment_123")

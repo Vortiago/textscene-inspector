@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="XROrigin3D" type="XROrigin3D"]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="MyOpenXRRenderModel" type="OpenXRRenderModel" parent="."]

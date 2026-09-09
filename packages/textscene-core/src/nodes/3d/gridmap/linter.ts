@@ -1,42 +1,30 @@
 /**
  * Semantic linter rules for GridMap.
  *
- * Validates that the optional mesh_library reference resolves and that a
- * GridMap without one is flagged as a warning (it will render nothing).
+ * Validates that the optional mesh_library reference resolves, and reports a
+ * GridMap without one: legal, and it renders nothing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { checkResourceExists } from '../../../linter/resourceChecker.js';
+import { heldResource } from '../../../linter/resourceChecker.js';
 
 function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  if (node.type !== 'GridMap') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // If mesh_library is absent, flag as a warning — valid in Godot but the
-  // GridMap will render nothing and likely isn't visible.
-  if (!rawProps.mesh_library) {
+  // An absent mesh_library is valid in Godot, but the GridMap renders nothing
+  // and likely isn't visible.
+  if (heldResource(rawProps.mesh_library) === undefined) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message:
         'GridMap has no mesh_library. It will render nothing and is not visible.',
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'gridmap-requires-mesh-library',
-    });
-  } else if (!checkResourceExists(scene, rawProps.mesh_library)) {
-    diagnostics.push({
-      severity: 'error',
-      message: `MeshLibrary resource not found: ${rawProps.mesh_library} (mesh_library)`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'valid-gridmap-resources',
     });
   }
 
@@ -46,12 +34,18 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
 const gridMapValidationRule: LintRule = {
   meta: {
     name: 'valid-gridmap-resources',
-    description:
-      'Validates GridMap mesh_library reference resolves and flags missing mesh_library as a warning',
+    description: 'Flags a GridMap with no mesh_library, which renders nothing',
     category: 'validation',
     emits: [
-      { ruleName: 'gridmap-requires-mesh-library', severity: 'warning' },
-      { ruleName: 'valid-gridmap-resources', severity: 'error' },
+      {
+        ruleName: 'gridmap-requires-mesh-library',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'grid_map.cpp:676',
+          unused: 'every cell is skipped while the library is null, so the map draws nothing',
+        },
+      },
     ],
     applicableNodeTypes: ['GridMap'],
   },

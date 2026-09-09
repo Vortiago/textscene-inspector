@@ -68,22 +68,37 @@ function namedGroup(renderer: Awaited<ReturnType<typeof render>>): THREE.Object3
 }
 
 describe('<PathFollow3D>', () => {
-  it('places the group at the curve midpoint for progress_ratio = 0.5', async () => {
-    const renderer = await render(STRAIGHT, { progress_ratio: '0.5' });
+  it('places the group at the curve midpoint for progress = half the length', async () => {
+    const renderer = await render(STRAIGHT, { progress: '5' });
     const group = namedGroup(renderer)!;
     expect(group.position.x).toBeCloseTo(5, 3);
     expect(group.position.y).toBeCloseTo(0, 3);
     expect(group.position.z).toBeCloseTo(0, 3);
   });
 
-  it('uses absolute progress when progress_ratio is unset', async () => {
+  it('ignores progress_ratio, which a scene file cannot deliver to the node', async () => {
+    // `set_progress_ratio` needs the Path3D parent bound, which happens on
+    // enter-tree, after the loader has applied properties (path_3d.cpp:503).
+    // A ratio of 1.0 on a 10 m curve would be the far end; Godot loads 0.
+    const renderer = await render(STRAIGHT, { progress_ratio: '1.0' });
+    expect(namedGroup(renderer)!.position.x).toBeCloseTo(0, 3);
+  });
+
+  it('clamps rather than wrapping a progress past the end, whatever loop says', async () => {
+    // The sampler clamps (curve.cpp:2024) and nothing wraps a scene-loaded
+    // progress, so 15 on a 10 m curve is the END, not 5 in from the start.
+    const renderer = await render(STRAIGHT, { progress: '15', loop: 'true' });
+    expect(namedGroup(renderer)!.position.x).toBeCloseTo(10, 3);
+  });
+
+  it('uses absolute progress', async () => {
     const renderer = await render(STRAIGHT, { progress: '2.5' });
     expect(namedGroup(renderer)!.position.x).toBeCloseTo(2.5, 3);
   });
 
   it('applies v_offset along the up axis in NONE rotation mode', async () => {
     const renderer = await render(STRAIGHT, {
-      progress_ratio: '0.5',
+      progress: '5',
       rotation_mode: '0',
       v_offset: '3',
     });
@@ -103,9 +118,9 @@ describe('<PathFollow3D>', () => {
   });
 
   it('hides the follow handle unless selected', async () => {
-    const hidden = await render(STRAIGHT, { progress_ratio: '0.5' }, null);
+    const hidden = await render(STRAIGHT, { progress: '5' }, null);
     expect(hidden.scene.findAllByType('LineSegments')).toHaveLength(0);
-    const shown = await render(STRAIGHT, { progress_ratio: '0.5' }, 'MyFollow');
+    const shown = await render(STRAIGHT, { progress: '5' }, 'MyFollow');
     expect(shown.scene.findAllByType('LineSegments')).toHaveLength(1);
   });
 });

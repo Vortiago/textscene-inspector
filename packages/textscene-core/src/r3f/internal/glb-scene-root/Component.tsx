@@ -51,8 +51,9 @@ import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { resolveMaterialSlotSource } from '../../materials/materialSlotSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Reserved node type the createSceneProcessor synthesises for binary
@@ -73,7 +74,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // populated by createSceneProcessor; cast through unknown so it
   // satisfies the Node3DProperties union the dispatcher carries.
   const props = node.properties as unknown as GLBSceneRootProperties;
-  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'GLBMesh');
+  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
   // BUG 2: the instancing scene's inline override children (e.g.
   // ceiling_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
@@ -128,7 +129,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     const hidden = new Set<THREE.Object3D>();
     if (!object) return hidden;
     for (const override of overrides) {
-      if (override.rawProperties?.visible !== 'false') continue;
+      if (boolSlotValue(override.rawProperties?.visible) !== false) continue;
       if (!isApplicableGlbOverride(override)) continue;
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (target) hidden.add(target);
@@ -253,7 +254,7 @@ function useGlbMaterialOverrides(
   entries: readonly GlbObjectEntry[],
   overrides: readonly TscnNode[]
 ): ReactNode {
-  const { externalResources } = useSceneResources();
+  const { internalResources, externalResources } = useSceneResources();
 
   return useMemo(() => {
     if (!object) return null;
@@ -265,8 +266,14 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the scene that AUTHORED it, which is
       // the outer one — not the sub-scene whose provider it now renders under.
-      const path = resolveExtResourcePath(ref, override.authoredResources ?? externalResources);
-      if (!path) continue;
+      // Godot fills a `Ref<Material>` slot only from a Material, so a reference
+      // that is not one leaves the GLB's own material in place.
+      const source = resolveMaterialSlotSource(
+        ref,
+        internalResources,
+        override.authoredResources ?? externalResources
+      );
+      if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
@@ -275,10 +282,10 @@ function useGlbMaterialOverrides(
         <GlbSurfaceMaterialOverride
           key={joinPath(override.instanceSubPath ?? '', override.name)}
           target={target}
-          path={path}
+          source={source}
         />
       );
     }
     return slots.length > 0 ? <>{slots}</> : null;
-  }, [object, entries, overrides, externalResources]);
+  }, [object, entries, overrides, internalResources, externalResources]);
 }

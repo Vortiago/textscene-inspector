@@ -172,7 +172,7 @@ export function ViewportToolbar() {
     downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
   }
 
-  // #224: persistence happens HERE, at the explicit user choice, never via a
+  // Persistence happens HERE, at the explicit user choice, never via a
   // blanket context→storage sync — programmatic writers (WorkspaceAutoSelect's
   // typed-root pick, the Cameras panel's 2D framing) must not overwrite the
   // user's stored preference. See VIEWPORT_MODE_STORAGE_KEY's doc.

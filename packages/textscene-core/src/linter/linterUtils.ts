@@ -1,6 +1,8 @@
 /** Small shared helpers for node-type semantic linters. */
 
 import type { TscnNode } from '../parser/types.js';
+import { nodePathLiteral } from '../godot/index.js';
+import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
  * Narrow a node's `properties` to a string-keyed record before reading raw
@@ -13,8 +15,7 @@ export function isValidProperties(props: unknown): props is Record<string, strin
 
 /**
  * Precomputed scene-tree facts, built in ONE depth-first pass, that the
- * NodePath-resolution helpers below used to recompute (via a fresh full-tree
- * walk) on EVERY call. A semantic rule calls these once per matching node, so
+ * NodePath-resolution helpers below read rather than recomputing per call. A semantic rule calls these once per matching node, so
  * without this cache checking every node in an N-node scene cost O(N) per
  * lookup * O(N) nodes = O(N^2) total; with it, the first lookup against a
  * given tree pays the one O(N) walk and every lookup after (same tree) is
@@ -27,6 +28,16 @@ interface SceneIndex {
   byName: Map<string, TscnNode[]>;
   /** Nodes that have an ANCESTOR (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
+  /**
+   * type -> every node of that type, in depth-first (= Godot tree) order.
+   *
+   * One ordered list rather than a count plus a first-node map, because the
+   * conditional `add_to_group` lookups need the Nth entry that satisfies a
+   * predicate, not just the first node outright. Scanning this list is O(nodes
+   * of that type); re-walking the tree per call was O(whole tree), and the
+   * rules that need it are exactly the ones that fire when the type repeats.
+   */
+  nodesByType: Map<string, TscnNode[]>;
 }
 
 /**
@@ -44,6 +55,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   const parentOf = new Map<TscnNode, TscnNode | null>();
   const byName = new Map<string, TscnNode[]>();
   const underInstanceAncestor = new Set<TscnNode>();
+  const nodesByType = new Map<string, TscnNode[]>();
 
   const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
@@ -53,6 +65,10 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
       if (named) named.push(node);
       else byName.set(node.name, [node]);
 
+      const ofType = nodesByType.get(node.type);
+      if (ofType) ofType.push(node);
+      else nodesByType.set(node.type, [node]);
+
       if (ancestorIsInstance) underInstanceAncestor.add(node);
 
       walk(node.children, node, ancestorIsInstance || Boolean(node.instance));
@@ -60,12 +76,22 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   };
   walk(roots, null, false);
 
-  // Freeze each name bucket: `findNodesByName` hands these arrays straight
-  // to callers (no per-call copy, matching `RuleRegistry`'s hot-path
+  // Freeze each bucket: `findNodesByName` and `nodesOfType` hand these arrays
+  // straight to callers (no per-call copy, matching `RuleRegistry`'s hot-path
   // contract) — freezing here makes that contract enforced, not just documented.
   for (const matches of byName.values()) Object.freeze(matches);
+  for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
-  return { parentOf, byName, underInstanceAncestor };
+  return { parentOf, byName, underInstanceAncestor, nodesByType };
+}
+
+/**
+ * The `%Name` claim table, built once per tree and shared with the render
+ * path's consumers through the cache in `utils/uniqueNames.ts`. Lazy rather
+ * than a `SceneIndex` field, because most scenes carry no `%Name` path at all.
+ */
+export function sceneUniqueClaims(roots: TscnNode[]): ReturnType<typeof uniqueNameClaims> {
+  return cachedUniqueNameClaims(roots);
 }
 
 function getSceneIndex(roots: TscnNode[]): SceneIndex {
@@ -75,6 +101,65 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
     sceneIndexCache.set(roots, index);
   }
   return index;
+}
+
+/** Shared empty result for a type or name miss — one frozen instance, not a fresh allocation per miss. */
+const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
+
+/**
+ * Every node of `type` in the scene, in depth-first (= Godot tree) order.
+ *
+ * Several of Godot's configuration warnings are "only the first of these has an
+ * effect", or "these contend with each other" — `ShaderGlobalsOverride` and
+ * `WorldEnvironment` through {@link countNodesOfType} and
+ * {@link firstNodeOfType}, `Camera2D` through this list, which it tallies by
+ * viewport scope. A rule that answers such a question by recursing the whole
+ * tree inside `check` is O(matches x nodes), and the pathological input is
+ * precisely the case the rule exists to detect. The list comes off the cached
+ * per-scene index instead, built in the same single walk that already produces
+ * the parent and name maps, and is returned frozen rather than copied per call.
+ *
+ * Exact-name, not base-walked: Godot's own checks compare `get_class()` or scan
+ * a type-keyed group, never a subclass closure.
+ */
+export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
+  return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
+}
+
+/** How many nodes of `type` the scene contains, off the same cached index. */
+export function countNodesOfType(roots: TscnNode[], type: string): number {
+  return nodesOfType(roots, type).length;
+}
+
+/**
+ * The first node of `type` in depth-first order, which is the one Godot's
+ * `SceneTree::get_first_node_in_group` returns: `_update_group_order`
+ * (`scene_tree.cpp:333-347`) sorts the group with `Node::Comparator`
+ * (`node.h:132-134`), whose `is_greater_than` is tree order. Several engine
+ * warnings are about being the node that did NOT win such a lookup, and that
+ * winner is decidable from the file rather than only from a live tree.
+ *
+ * Exact-name for the same reason `countNodesOfType` is: the engine's groups are
+ * keyed by concrete class, not by a subclass closure.
+ *
+ * `joins` narrows to the nodes that actually ENTER the group, because several of
+ * these `add_to_group` calls are conditional — `WorldEnvironment` joins only
+ * `if (environment.is_valid())` (world_environment.cpp:39-40), so a leading node
+ * without one is not the winner and must not be treated as it.
+ *
+ * Both paths read the cached per-type list, so `joins` costs a scan of that
+ * type's own nodes rather than a fresh walk of the whole tree, which would make
+ * the one production caller quadratic in exactly the scenes the rule exists for:
+ * the ones where the type appears more than once.
+ */
+export function firstNodeOfType(
+  roots: TscnNode[],
+  type: string,
+  joins?: (node: TscnNode) => boolean
+): TscnNode | null {
+  const ofType = getSceneIndex(roots).nodesByType.get(type);
+  if (!ofType) return null;
+  return (joins ? ofType.find(joins) : ofType[0]) ?? null;
 }
 
 /**
@@ -94,12 +179,11 @@ export function findParentNode(nodes: TscnNode[], target: TscnNode): TscnNode | 
  * anim_player) that resolve a node reference before checking its type.
  */
 export function extractNodePath(value: string): string | null {
-  const match = value.match(/^NodePath\("([^"]*)"\)$/);
-  return match && match[1] ? match[1] : null;
+  // Stricter than `nodePathLiteral` on one point only: an EMPTY path is "no
+  // path" to a rule resolving a reference, where a display formatter still has
+  // an empty string to show.
+  return nodePathLiteral(value) || null;
 }
-
-/** Shared empty result for `findNodesByName` misses — one frozen instance, not a fresh allocation per miss. */
-const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
 
 /**
  * Collect every node named `name` anywhere in the scene tree (depth-first).
@@ -127,53 +211,3 @@ export function isUnderInstance(roots: TscnNode[], target: TscnNode): boolean {
   return getSceneIndex(roots).underInstanceAncestor.has(target);
 }
 
-/**
- * True when a NodePath cannot be safely resolved against the authored root scope
- * — either a relative (`..`) segment escapes that scope, or the referencing node
- * sits under an instanced sub-scene whose internals the linter never sees. In
- * both cases a not-found / wrong-type assertion would be a false positive, so
- * callers should skip the check. Keep strict checking only for purely-local,
- * non-relative paths under authored root nodes.
- */
-export function nodePathEscapesAuthoredScope(
-  roots: TscnNode[],
-  referencingNode: TscnNode,
-  pathParts: string[]
-): boolean {
-  return pathParts.some(part => part === '..') || isUnderInstance(roots, referencingNode);
-}
-
-/**
- * Outcome of resolving a NodePath property's target against the STATIC authored
- * tree. The NodePath-target rules (anim_player, skeleton, sub_emitter) diagnose
- * ONLY when resolution is confident, and stay silent otherwise — the linter is
- * React/THREE-free (cannot see into instanced sub-scenes) and Godot allows node
- * names to repeat across parents:
- *  - `escapes`   — a `..` segment leaves authored scope, or the referencing node
- *                  sits under an instance; the real target may be unseeable.
- *  - `ambiguous` — more than one node matches the path's final segment, so the
- *                  linter cannot tell which is meant (don't guess by tree order).
- *  - `missing`   — no node matches: a confident not-found.
- *  - `found`     — exactly one node matches: a confident target to type-check.
- */
-export type NodePathResolution =
-  | { status: 'escapes' }
-  | { status: 'ambiguous' }
-  | { status: 'missing' }
-  | { status: 'found'; node: TscnNode };
-
-export function resolveNodePathTarget(
-  roots: TscnNode[],
-  referencingNode: TscnNode,
-  path: string
-): NodePathResolution {
-  const pathParts = path.split('/');
-  if (nodePathEscapesAuthoredScope(roots, referencingNode, pathParts)) {
-    return { status: 'escapes' };
-  }
-  const name = pathParts[pathParts.length - 1] ?? '';
-  const matches = findNodesByName(roots, name);
-  if (matches.length === 0) return { status: 'missing' };
-  if (matches.length > 1) return { status: 'ambiguous' };
-  return { status: 'found', node: matches[0]! };
-}

@@ -12,12 +12,27 @@
  * limits".
  */
 
+import { isZeroApprox } from '../../../godot/index.js';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
 
 export interface Camera2DView {
   /** View center in Godot canvas pixels. */
   center: { x: number; y: number };
-  /** Magnification (Godot zoom; higher = closer). */
+  /**
+   * The framed extent in Godot canvas pixels, PER AXIS.
+   *
+   * `zoom_scale` is `Vector2(1, 1) / zoom` and the rect is `screen_size *
+   * zoom_scale` (camera_2d.cpp:107, :163), so a non-uniform zoom frames a
+   * different width and height. Returned rather than left to each consumer to
+   * re-derive: dividing the viewport by a single magnification is exactly the
+   * mistake this replaces.
+   */
+  size: { x: number; y: number };
+  /**
+   * Magnification on the X axis, for a consumer that can only hold one — the
+   * "look through this camera" control frames an orbit camera and has no second
+   * axis to give. Anything framing a RECT wants {@link Camera2DView.size}.
+   */
   zoom: number;
 }
 
@@ -53,9 +68,18 @@ export function camera2DView(
   worldPosition: { x: number; y: number },
   viewportSize: { x: number; y: number }
 ): Camera2DView {
-  const zoom = props.zoom.x || 1;
+  // `set_zoom` refuses the WHOLE write when either component is zero-approx
+  // (`ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) ||
+  // Math::is_zero_approx(p_zoom.y), …)`, camera_2d.cpp:104), so the default
+  // (1, 1) stays on both axes — `Vector2(0, 2)` frames at (1, 1), not (1, 2).
+  // The slice's own validator reads it the same way (linterParser.ts:45).
+  // Framing is then per axis: `zoom_scale = Vector2(1, 1) / zoom` and the rect
+  // is `screen_size * zoom_scale` (camera_2d.cpp:107, :163).
+  const refused = isZeroApprox(props.zoom.x) || isZeroApprox(props.zoom.y);
+  const zoom = refused ? 1 : props.zoom.x;
+  const zoomY = refused ? 1 : props.zoom.y;
   const viewWidth = viewportSize.x / zoom;
-  const viewHeight = viewportSize.y / zoom;
+  const viewHeight = viewportSize.y / zoomY;
 
   // Godot clamps the view RECT, so work in top-left space and convert back.
   let left = worldPosition.x;
@@ -75,6 +99,7 @@ export function camera2DView(
       x: left + viewWidth / 2 + props.offset.x,
       y: top + viewHeight / 2 + props.offset.y,
     },
+    size: { x: viewWidth, y: viewHeight },
     zoom,
   };
 }

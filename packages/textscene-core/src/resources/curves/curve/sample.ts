@@ -39,9 +39,8 @@
  */
 
 import type { Curve, CurvePoint } from './types';
+import { CMP_EPSILON } from '../../../godot/index.js';
 
-/** Godot's `CMP_EPSILON`, the threshold `Math::is_zero_approx` compares against. */
-const CMP_EPSILON = 0.00001;
 
 /**
  * `Curve::sample` — the value at `offset`. Out-of-range offsets clamp to the
@@ -66,8 +65,11 @@ export function sampleCurve(curve: Curve, offset: number): number {
  * `Curve::get_index` — a lower-bound binary search for the span containing
  * `offset`. Answers the LAST index when the offset is past the end and 0 when
  * it is before the start, so `sample` can clamp on both sides.
+ *
+ * Exported because `decode.ts` seats a padded point through the same search
+ * `Curve::_add_point` uses.
  */
-function curveIndex(points: readonly CurvePoint[], offset: number): number {
+export function curveIndex(points: readonly CurvePoint[], offset: number): number {
   let imin = 0;
   let imax = points.length - 1;
 

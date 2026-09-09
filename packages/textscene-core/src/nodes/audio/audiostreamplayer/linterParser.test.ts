@@ -6,7 +6,20 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
+
+/**
+ * The error a validator returns for a value, or null when it accepts it.
+ * Used for `mix_target`/`playback_type`: unlike the rest of this file, these
+ * assert directly through `validatorRegistry` rather than the full `Linter`,
+ * since the unit under test is the validator itself.
+ */
+function check(property: string, value: string) {
+  const validator = validatorRegistry.findValidator('AudioStreamPlayer', property);
+  expect(validator, `no validator registered for AudioStreamPlayer.${property}`).not.toBeNull();
+  return validator!(property, value, 1);
+}
 
 describe('AudioStreamPlayer LinterParser', () => {
   let linter: Linter;
@@ -50,6 +63,8 @@ stream = ExtResource("1_abc")
     it('should accept SubResource stream reference', () => {
       const content = `[gd_scene format=3]
 
+[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_1"]
+
 [node name="Player" type="AudioStreamPlayer"]
 stream = SubResource("AudioStreamWAV_1")
 `;
@@ -73,6 +88,37 @@ stream = "res://sound.ogg"
   });
 
   describe('volume_db validation', () => {
+    // audio_stream_player.cpp:282 hints "-80,24,suffix:dB", closed at both ends;
+    // set_volume_db assigns straight through, so outside it warns.
+    it('warns, not errors, one step past each end of the hint', () => {
+      for (const value of ['-80.1', '24.1']) {
+        const error = check('volume_db', value);
+        expect(error).not.toBeNull();
+        expect(error!.severity).toBe('warning');
+        expect(error!.message).toContain('between -80 and 24');
+      }
+    });
+
+    // audio_stream_player.cpp:70,
+    // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.").
+    // Measured on 4.6.3: after `volume_db = -12`, writing NaN leaves -12 and
+    // prints the error, while `inf` and `-inf` are stored unaltered. A range
+    // bound cannot cover it — every comparison against NaN is false, so the
+    // refusal produced no diagnostic at all.
+    it('errors on nan, which the setter refuses', () => {
+      const error = check('volume_db', 'nan');
+      expect(error?.severity).toBe('error');
+      expect(error?.message).toContain('must not be NaN');
+    });
+
+    it('still only warns on inf, which the setter stores', () => {
+      for (const value of ['inf', '-inf', 'inf_neg']) {
+        const error = check('volume_db', value);
+        expect(error?.severity, value).toBe('warning');
+        expect(error?.message, value).toContain('between -80 and 24');
+      }
+    });
+
     it('should accept positive, zero, and negative volume_db', () => {
       const validValues = ['24.0', '0.0', '-80.0'];
       for (const value of validValues) {
@@ -142,6 +188,24 @@ pitch_scale = -1.0
       expect(diagnostics[0]!.message).toContain('greater than 0');
     });
 
+    // audio_stream_player.cpp:284 hints "0.01,4,0.01,or_greater" while
+    // audio_stream_player_internal.cpp:314 refuses `<= 0`, so the two ends sit
+    // apart and (0, 0.01) is a band Godot loads and the inspector excludes.
+    it('reports the refused floor and the hinted floor at different tiers', () => {
+      const at = (value: string) =>
+        linter.lint(`[gd_scene format=3]
+
+[node name="Player" type="AudioStreamPlayer"]
+pitch_scale = ${value}
+`);
+      expect(at('0')[0]!.severity).toBe('error');
+      const warned = at('0.005');
+      expect(warned).toHaveLength(1);
+      expect(warned[0]!.severity).toBe('warning');
+      expect(warned[0]!.message).toContain('0.01');
+      expect(at('0.01')).toHaveLength(0);
+    });
+
     it('should reject non-numeric pitch_scale', () => {
       const content = `[gd_scene format=3]
 
@@ -181,7 +245,7 @@ autoplay = 1
       const diagnostics = linter.lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
       expect(diagnostics[0]!.message).toContain('autoplay');
-      expect(diagnostics[0]!.message).toContain('boolean');
+      expect(diagnostics[0]!.message).toContain('converts');
     });
   });
 
@@ -318,6 +382,48 @@ bus = Master
       expect(diagnostics.length).toBeGreaterThan(0);
       expect(diagnostics[0]!.message).toContain('bus');
       expect(diagnostics[0]!.message).toContain('must be a string');
+    });
+  });
+
+  describe('mix_target validation', () => {
+    it('accepts every value the 3-entry MixTarget hint names (Stereo,Surround,Center)', () => {
+      for (const value of [0, 1, 2]) {
+        expect(check('mix_target', String(value))).toBeNull();
+      }
+    });
+
+    it('warns, not errors, past the hint (audio_stream_player.cpp:161-163 is a bare assignment)', () => {
+      const error = check('mix_target', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('0-2');
+    });
+
+    it('rejects a non-numeric value', () => {
+      const error = check('mix_target', 'Stereo');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('must be a number');
+    });
+  });
+
+  describe('playback_type validation', () => {
+    it('accepts every value the 3-entry AudioServer::PlaybackType hint names (Default,Stream,Sample)', () => {
+      for (const value of [0, 1, 2]) {
+        expect(check('playback_type', String(value))).toBeNull();
+      }
+    });
+
+    it('warns, not errors, past the hint (audio_stream_player_internal.cpp:337-339 is a bare assignment)', () => {
+      const error = check('playback_type', '3');
+      expect(error).not.toBeNull();
+      expect(error!.severity).toBe('warning');
+      expect(error!.message).toContain('0-2');
+    });
+
+    it('rejects a non-numeric value', () => {
+      const error = check('playback_type', 'Stream');
+      expect(error).not.toBeNull();
+      expect(error!.message).toContain('must be a number');
     });
   });
 });

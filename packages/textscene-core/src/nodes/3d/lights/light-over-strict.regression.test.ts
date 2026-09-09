@@ -1,5 +1,5 @@
 /**
- * Regression contract for #146 — Light3D linter is over-strict.
+ * Regression contract: the Light3D linter must not be over-strict.
  *
  * The linter wrongly emitted ERROR diagnostics for valid Godot light scenes:
  *  - `light_energy = 0` (a switched-off light, e.g. a headlight that is off)

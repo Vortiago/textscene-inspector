@@ -3,7 +3,7 @@ import {
   gradientFromResource,
   decodeGradient,
   decodeGradientTexture2D,
-  parsePackedColorArray,
+  parseColorStops,
   parsePackedFloat32Array,
   resolveGradient,
 } from './decode';
@@ -18,6 +18,15 @@ describe('parsePackedFloat32Array', () => {
     ]);
   });
 
+  it('reads the typed and bare spellings the slot converts', () => {
+    // Gradient.offsets is PACKED_FLOAT32_ARRAY (gradient.cpp:80); a scalar
+    // slot's bare and typed bodies are the same comma-separated numbers the
+    // constructor's flat argument list holds.
+    expect(parsePackedFloat32Array('Array[float]([0, 0.5, 1])')).toEqual([0, 0.5, 1]);
+    expect(parsePackedFloat32Array('[0, 0.5, 1]')).toEqual([0, 0.5, 1]);
+    expect(parsePackedFloat32Array('[]')).toEqual([]);
+  });
+
   it('returns an empty array for an empty literal', () => {
     expect(parsePackedFloat32Array('PackedFloat32Array()')).toEqual([]);
   });
@@ -29,11 +38,27 @@ describe('parsePackedFloat32Array', () => {
   it('throws when a component is not a number', () => {
     expect(() => parsePackedFloat32Array('PackedFloat32Array(1, x, 3)')).toThrow();
   });
+
+  it('refuses the spellings Godot cannot read, instead of taking a prefix', () => {
+    // `parseFloat` read `1.2.3` as 1.2 and `0x10` as 0, and let `+1` / `.5`
+    // through, all of which fail Godot's own tokenizer.
+    for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
+      expect(() => parsePackedFloat32Array(`PackedFloat32Array(0, ${bad}, 1)`)).toThrow(
+        'Invalid number in PackedFloat32Array'
+      );
+    }
+  });
+
+  it('refuses a non-finite offset, matching its packed siblings', () => {
+    expect(() => parsePackedFloat32Array('PackedFloat32Array(0, inf, 1)')).toThrow(
+      'Invalid number in PackedFloat32Array'
+    );
+  });
 });
 
-describe('parsePackedColorArray', () => {
+describe('parseColorStops', () => {
   it('groups the flat run into RGBA quadruples', () => {
-    const colors = parsePackedColorArray(
+    const colors = parseColorStops(
       'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)'
     );
     expect(colors).toEqual([
@@ -43,8 +68,25 @@ describe('parsePackedColorArray', () => {
     ]);
   });
 
+  it('reads the typed and bare spellings, whose bodies hold Color() elements', () => {
+    // `can_convert_strict` lists ARRAY as a valid source for PACKED_COLOR_ARRAY
+    // (variant.cpp:467-473) and `Gradient::set_colors` (gradient.cpp:81) takes
+    // the converted array, so both load. Reading only the constructor threw,
+    // `safeColors` swallowed the throw, and the gradient sampled opaque black
+    // with nothing reported.
+    const expected = [
+      { r: 1, g: 0, b: 0, a: 1 },
+      { r: 0, g: 0, b: 1, a: 1 },
+    ];
+    expect(parseColorStops('[Color(1, 0, 0, 1), Color(0, 0, 1, 1)]')).toEqual(expected);
+    expect(
+      parseColorStops('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')
+    ).toEqual(expected);
+    expect(parseColorStops('[]')).toEqual([]);
+  });
+
   it('drops a trailing partial quadruple', () => {
-    const colors = parsePackedColorArray('PackedColorArray(1, 0, 0, 1, 0, 1)');
+    const colors = parseColorStops('PackedColorArray(1, 0, 0, 1, 0, 1)');
     expect(colors).toEqual([{ r: 1, g: 0, b: 0, a: 1 }]);
   });
 });

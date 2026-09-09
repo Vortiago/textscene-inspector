@@ -24,644 +24,106 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
-import { PARAM_SLOTS } from '../nodes/2d/cpuparticles2d/types.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { baseChain } from '../godot/nodeBaseTypes.js';
+import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
+import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
+import {
+  extractNodeType,
+  findLinterParserDirs,
+  nodesRoot,
+} from './testing/propertyGrammarParityScan.js';
 import './index.js';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const nodesRoot = resolve(here, '../nodes');
+/** One slice as the staleness scan sees it: the type it speaks for, and the keys its parser reads. */
+interface SliceReads {
+  nodeType: string;
+  parserProps: ReadonlySet<string>;
+}
 
-// ---------------------------------------------------------------------------
-// Base-type to parser directory mapping.
-// Used to walk the inherited parser property chain in parallel with the
-// NODE_BASE_TYPES validator chain.
-// ---------------------------------------------------------------------------
-
-const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
-  Node3D: 'base/node3d/parser.ts',
-  Node2D: 'base/node2d/parser.ts',
-  Light3D: '3d/lights/shared/parser.ts',
-  Control: '2d/ui/control/parser.ts',
-  Node: 'node/parser.ts',
-};
-
-// ---------------------------------------------------------------------------
-// Allowlist of known, justified asymmetries.
-//
-// "parserOnly"  — parser reads this property for rendering but no linter
-//                 validator is registered (acceptable: the renderer needs it,
-//                 the linter has nothing to check).
-// "linterOnly"  — linter validates this key but the parser never reads it
-//                 (acceptable: valid TSCN property the renderer ignores).
-//
-// Shared keys that span every Node2D or Node3D leaf are recorded on the base
-// type (Node2D / Node3D) and inherited automatically; leaf-specific entries
-// only contain keys that are unique to that slice.
-// ---------------------------------------------------------------------------
-
-interface AsymmetryEntry {
-  parserOnly?: readonly string[];
-  linterOnly?: readonly string[];
-  reason: string;
+interface StaleScanInput {
+  allowlist: Readonly<Record<string, AsymmetryEntry>>;
+  slices: readonly SliceReads[];
+  baseChainOf: (nodeType: string) => readonly string[];
+  validatorKeysOf: (nodeType: string) => ReadonlySet<string>;
 }
 
 /**
- * Light3D base validators (registered once under the abstract 'Light3D' key
- * in 3d/lights/shared/linterParser.ts and inherited by every concrete light
- * via the base-walk) that the shared parser helpers never read: bake/cull and
- * fine shadow-tuning properties with no effect on the static preview.
+ * The allowlist entries that no longer describe a live asymmetry.
+ *
+ * Takes its world as arguments so the quantifier below can be pinned on seeded
+ * data. On the real tree it discriminates only because some descendants close a
+ * base's key while their siblings do not — an accident of today's content, not a
+ * property of the guard — so `.every()` vs `.some()` is settled by the seeded
+ * partial-closure cases beside this guard, never by what the tree happens to hold.
+ *
+ * The slices an entry answers for: its own, plus every slice below it.
+ *
+ * A base class validates for its descendants without parsing anything of its
+ * own (it reuses the base parser), so it has no parser.ts and never appears in
+ * `collectSlices`. Asking only for its own slice therefore let a `continue` skip
+ * the whole entry, and 89 keys across 9 base entries — all 32 Viewport gaps
+ * among them — were never checked at all: closing one of those gaps moved
+ * nothing. The entry is consulted up the base chain, so the slices below it are
+ * exactly the population it speaks for.
  */
-const LIGHT3D_LINTER_ONLY_KEYS = [
-  'light_bake_mode', 'light_cull_mask', 'light_indirect_energy',
-  'shadow_opacity', 'shadow_reverse_cull_face', 'shadow_transmittance_bias',
-] as const;
+function findStaleEntries({
+  allowlist,
+  slices,
+  baseChainOf,
+  validatorKeysOf,
+}: StaleScanInput): string[] {
+  const staleSections: string[] = [];
+  const coveredSlices = (nodeType: string) =>
+    slices.filter((s) => s.nodeType === nodeType || baseChainOf(s.nodeType).includes(nodeType));
 
-/**
- * Keys read by the parseAudioBase shared helper (not captured by the per-file
- * scrape of each audio player's parser.ts); each linterParser.ts registers
- * them explicitly.
- */
-/**
- * CPUParticles2D's twelve parameter slots. `parser.ts` reads every one of
- * `<prefix>_min` / `_max` / `_curve`, but through a TABLE
- * (`properties[`${prefix}_min`]`) rather than a literal access, so the
- * `properties.X` scrape sees none of them — the same blind spot as the audio
- * base helper below. Derived from the parser's OWN table, so a renamed prefix or
- * a dropped slot moves both sides at once instead of leaving the allowlist
- * asserting coverage of a key nothing reads any more.
- */
-const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
-  `${prefix}_min`,
-  `${prefix}_max`,
-  ...(curve ? [`${prefix}_curve`] : []),
-]);
-
-const AUDIO_BASE_KEYS = [
-  'stream', 'volume_db', 'pitch_scale', 'playing', 'autoplay',
-  'stream_paused', 'bus', 'max_polyphony',
-] as const;
-
-const ASYMMETRY_ALLOWLIST: Readonly<Record<string, AsymmetryEntry>> = {
-  // -------------------------------------------------------------------------
-  // Base types
-  // -------------------------------------------------------------------------
-
-  Node3D: {
-    linterOnly: [
-      // Godot serialises spatial state as either a single `transform` matrix
-      // (what the lenient parser reads) or as discrete components; the linter
-      // validates the component form so each property is individually
-      // checkable, but the renderer only needs the matrix.
-      'position', 'rotation', 'rotation_degrees', 'scale', 'quaternion', 'basis',
-      // Global-space equivalents — Godot writes these in some export modes;
-      // the renderer ignores them (uses local transform).
-      'global_transform', 'global_position', 'global_rotation', 'global_rotation_degrees',
-      'global_basis',
-      // Scene-tree / editor properties with no render effect.
-      'top_level', 'rotation_order', 'visibility_parent',
-    ],
-    reason: 'Parser uses the transform matrix; linter validates discrete component forms and global equivalents that the renderer ignores.',
-  },
-
-  Light3D: {
-    linterOnly: LIGHT3D_LINTER_ONLY_KEYS,
-    reason: 'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk; bake/cull-mask and fine shadow-tuning keys are runtime-only, so the shared parser helpers never read them.',
-  },
-
-  Node2D: {
-    parserOnly: [
-      // CanvasItem draw-order / tint properties parsed by the renderer but
-      // not validated by the linter (no format constraints that could fail).
-      'visible', 'modulate', 'self_modulate', 'show_behind_parent',
-      // y_sort_origin only meaningful for TileMapLayer tiles; no linter
-      // validator needed (any number is valid).
-      'y_sort_origin',
-    ],
-    linterOnly: [
-      // Global-space equivalents — valid TSCN but the renderer ignores them
-      // (uses local transform / draw order).
-      'global_position', 'global_rotation', 'global_rotation_degrees',
-      'global_scale', 'global_skew', 'global_transform',
-    ],
-    reason: 'Parser reads CanvasItem tint/draw-order, y_sort_enabled and y_sort_origin fields not covered by linter validators; linter validates global-space properties the renderer ignores.',
-  },
-
-  Control: {
-    parserOnly: [
-      // Control.transform in TSCN is a Transform2D that Godot sometimes
-      // emits; the parser reads it for compatibility but there is no
-      // linter validator (it conflicts with the anchor/offset layout model).
-      'transform',
-    ],
-    linterOnly: [
-      // (`modulate`, `self_modulate`, `rotation`, `scale` and `pivot_offset`
-      // used to sit here as "not read by the parser for rendering"; they are
-      // all rendered now.)
-      // Theme-override wildcard keys — validated by pattern match in the
-      // linter; the parser uses a loop over `theme_override_*/*` keys and
-      // there is no fixed per-key scraping surface to compare against.
-      'theme_override_colors/*', 'theme_override_constants/*',
-      'theme_override_font_sizes/*', 'theme_override_styles/*',
-      'theme_override_fonts/*',
-    ],
-    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare.',
-  },
-
-  // -------------------------------------------------------------------------
-  // 2D leaf slices
-  // -------------------------------------------------------------------------
-
-  AnimatedSprite2D: {
-    linterOnly: [
-      // Playback-state properties: valid in TSCN but the renderer reads the
-      // initial frame directly; runtime playback is not modelled.
-      'autoplay', 'playing', 'frame_progress', 'speed_scale',
-    ],
-    reason: 'AnimatedSprite2D linter validates runtime playback properties (autoplay, playing, speed_scale, frame_progress) that the static renderer ignores.',
-  },
-
-  Camera2D: {
-    linterOnly: [
-      // Viewport behaviour / editor aids: valid TSCN keys with no effect
-      // on the static scene preview.
-      // (`limit_left/top/right/bottom` used to sit here; the Cameras panel
-      // clamps the framed view to them now.)
-      'ignore_rotation', 'process_callback', 'limit_smoothed',
-      'position_smoothing_enabled', 'position_smoothing_speed',
-      'rotation_smoothing_enabled', 'rotation_smoothing_speed',
-      'drag_horizontal_enabled', 'drag_vertical_enabled',
-      'drag_horizontal_offset', 'drag_vertical_offset',
-      'drag_left_margin', 'drag_right_margin', 'drag_top_margin', 'drag_bottom_margin',
-      'editor_draw_limits', 'editor_draw_screen', 'editor_draw_drag_margin',
-    ],
-    reason: 'Camera2D linter validates follow/drag/smoothing properties that only matter at runtime; the static previewer ignores them.',
-  },
-
-  Line2D: {
-    parserOnly: [
-      // PackedVector2Array body: complex binary-encoded data with no
-      // per-key validator available (same convention as Polygon2D.polygon).
-      'points',
-    ],
-    reason: 'Line2D points is a PackedVector2Array (opaque encoded data); no format validator exists for packed arrays.',
-  },
-
-  Polygon2D: {
-    parserOnly: [
-      // PackedVector2Array / Array-of-PackedInt32Array / PackedColorArray
-      // bodies (same pattern as Line2D.points above): opaque encoded data with
-      // no per-key grammar. (`uv` used to sit here; it has one now.)
-      'polygon', 'polygons', 'vertex_colors',
-    ],
-    linterOnly: [
-      // Display tweak with no rendering parity requirement. (`invert_enabled`,
-      // `invert_border` and the whole texture transform used to sit here; all
-      // are rendered now.)
-      'antialiased',
-    ],
-    reason: 'polygon/polygons/vertex_colors are encoded packed arrays with no per-key grammar; antialiased is a display tweak the renderer has no equivalent for.',
-  },
-
-  CPUParticles2D: {
-    parserOnly: [
-      // Godot's setter takes ANY int and reads everything but 1 as Index — its
-      // own 2D platformer demo ships `draw_order = 215832976` — so a range
-      // validator would error on a scene the engine opens without complaint.
-      'draw_order',
-    ],
-    linterOnly: [
-      ...PARTICLE_PARAM_KEYS,
-      // Emission shapes the frozen pose cannot reproduce (they sample Godot's
-      // global RNG), so the parser has no reason to read their point data —
-      // but a malformed packed array is still worth reporting.
-      'emission_points', 'emission_normals',
-      // Per-axis scale curves, not implemented; a particle scales uniformly.
-      'split_scale', 'scale_curve_x', 'scale_curve_y',
-    ],
-    reason:
-      'The parameter min/max/curve keys ARE read, but through a table-driven `properties[`${prefix}_min`]` lookup the scrape cannot see; emission_points/normals and the split-scale curves are validated but deliberately unrendered; draw_order is validator-free because Godot accepts any int for it.',
-  },
-
-  TileMapLayer: {
-    parserOnly: [
-      // Raw tile cell stream (PackedByteArray): decoded by a dedicated
-      // helper; the linter has no format validator for packed cell data.
-      'tile_map_data',
-    ],
-    reason: 'tile_map_data is a PackedByteArray decoded by decodeTileMapData; transform/position are covered by the Node2D base on both parser and validator sides.',
-  },
-
-  TileMap: {
-    reason: 'No unique asymmetries; transform/position covered by Node2D base on both sides.',
-  },
-
-  // -------------------------------------------------------------------------
-  // 3D leaf slices
-  // -------------------------------------------------------------------------
-
-  GridMap: {
-    parserOnly: [
-      // Godot GridMap cell dictionary (`{ "cells": PackedInt32Array(...) }`):
-      // decoded by extractCells; no linter format validator for packed cell
-      // data exists.
-      'data',
-    ],
-    reason: 'data is a packed cell dictionary decoded by a bespoke helper; transform is covered by Node3D base on both parser and validator sides.',
-  },
-
-  Label3D: {
-    parserOnly: [
-      // double_sided toggle: read for rendering but not validated by the
-      // linter (boolean with Godot-default=true, no range constraint).
-      'double_sided',
-    ],
-    reason: 'Label3D.double_sided is a boolean read by the parser; the linter has no constraint to enforce.',
-  },
-
-  Sprite3D: {
-    parserOnly: [
-      // Properties read by the parser for rendering but not validated by the
-      // linter (booleans with Godot defaults, no range constraints).
-      'centered', 'flip_h', 'flip_v', 'region_enabled', 'double_sided', 'transparent',
-    ],
-    reason: 'Sprite3D boolean toggles (centered, flip_h/v, region_enabled, double_sided, transparent) are read for rendering but the linter enforces no constraint on boolean values that are always valid.',
-  },
-
-  CSGBox3D: {
-    linterOnly: [
-      // CSG parsers call finishCsgParse which reads material/operation from
-      // shared helper; linter registers them explicitly per slice but they
-      // are not visible to the per-file parser scrape.
-      'material', 'operation',
-    ],
-    reason: 'CSG parsers read material/operation via finishCsgParse shared helper (not scrape-visible in parser.ts); linter registers them explicitly.',
-  },
-
-  CSGCylinder3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGSphere3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGTorus3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGMesh3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  CSGPolygon3D: {
-    linterOnly: ['material', 'operation'],
-    reason: 'Same as CSGBox3D: finishCsgParse reads material/operation via shared helper not visible to the scrape.',
-  },
-
-  Decal: {
-    reason: 'No unique asymmetries; transform is covered by Node3D base on both parser and validator sides.',
-  },
-
-  MeshInstance3D: {
-    linterOnly: [
-      // Wildcard slot validator (surface_material_override/N) registered as
-      // a pattern; parser reads via a loop over Object.keys and is not
-      // captured by the properties.X scrape pattern.
-      'surface_material_override/*',
-    ],
-    reason: 'MeshInstance3D linter uses a wildcard pattern for surface_material_override/N; the parser reads those via an Object.keys loop not captured by the scrape.',
-  },
-
-  NavigationAgent3D: {
-    parserOnly: [
-      // NavigationAgent3D's parser inherits `transform` via parseNode
-      // (node/parser.ts), but NODE_BASE_TYPES maps NavigationAgent3D to Node,
-      // which registers no spatial validators — so transform is parser-only.
-      'transform',
-    ],
-    reason: 'NavigationAgent3D parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps NavigationAgent3D to Node with no spatial validators, so transform is parser-only.',
-  },
-
-  // -------------------------------------------------------------------------
-  // Animation
-  // -------------------------------------------------------------------------
-
-  AnimationPlayer: {
-    parserOnly: [
-      // Complex multi-form dictionary: parsed by extractLibraries via
-      // Object.keys loop and dict matching; no linter validator exists.
-      'libraries',
-      // AnimationPlayer parser calls parseNode3D (reads transform/visible)
-      // but NODE_BASE_TYPES maps it to Node (no Node3D validators).
-      'transform',
-    ],
-    reason: 'AnimationPlayer.libraries uses a bespoke dictionary decoder; parser calls parseNode3D for transform but NODE_BASE_TYPES declares it a plain Node with no spatial validators.',
-  },
-
-  AnimationTree: {
-    parserOnly: [
-      // AnimationTree parser calls parseNode3D but NODE_BASE_TYPES maps it
-      // to Node (same pattern as AnimationPlayer).
-      'transform',
-    ],
-    reason: 'AnimationTree parser calls parseNode3D but NODE_BASE_TYPES declares it a plain Node; transform is parser-only.',
-  },
-
-  // -------------------------------------------------------------------------
-  // Audio (parseAudioBase shared-helper pattern)
-  // -------------------------------------------------------------------------
-
-  AudioStreamPlayer: {
-    parserOnly: [
-      // AudioStreamPlayer parser calls parseNode (reads transform) but
-      // NODE_BASE_TYPES maps it to Node with no spatial validators.
-      'transform',
-    ],
-    linterOnly: AUDIO_BASE_KEYS,
-    reason: 'AudioStreamPlayer reads audio properties via parseAudioBase shared helper (not visible to per-file scrape); linter registers them explicitly. parser/parser.ts delegates entirely to helpers.',
-  },
-
-  AudioStreamPlayer2D: {
-    linterOnly: AUDIO_BASE_KEYS,
-    reason: 'AudioStreamPlayer2D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
-  },
-
-  AudioStreamPlayer3D: {
-    linterOnly: AUDIO_BASE_KEYS,
-    reason: 'AudioStreamPlayer3D reads audio base properties via parseAudioBase shared helper not captured by per-file scrape; linter registers them explicitly.',
-  },
-
-  // -------------------------------------------------------------------------
-  // Lights (Light3D base level: shared validators + parseBaseLight* helpers,
-  // both walked via the Light3D entries in NODE_BASE_TYPES and
-  // BASE_TYPE_TO_PARSER_SUBPATH; base-level asymmetries live on Light3D above)
-  // -------------------------------------------------------------------------
-
-  DirectionalLight3D: {
-    linterOnly: [
-      // DirectionalLight3D linter registers additional shadow/sky properties
-      // beyond what the parser reads for the preview.
-      'directional_shadow_blend_splits', 'directional_shadow_fade_start',
-      'directional_shadow_pancake_size',
-      'directional_shadow_split_1', 'directional_shadow_split_2', 'directional_shadow_split_3',
-      'sky_mode',
-    ],
-    reason: 'DirectionalLight3D linter validates additional shadow-cascade/sky tuning properties the static renderer ignores; the Light3D base keys are covered by the Light3D entry on both sides.',
-  },
-
-  OmniLight3D: {
-    reason: 'No unique asymmetries; omni_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
-  },
-
-  SpotLight3D: {
-    reason: 'No unique asymmetries; spot_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
-  },
-
-  AreaLight3D: {
-    reason: 'No unique asymmetries; area_* keys are symmetric and Light3D base keys are covered by the Light3D entry on both sides.',
-  },
-
-  // -------------------------------------------------------------------------
-  // Physics (linter-only physics properties)
-  // -------------------------------------------------------------------------
-
-  Area2D: {
-    linterOnly: [
-      // Physics simulation properties: valid TSCN but the static renderer
-      // reads only collision_layer/collision_mask for display.
-      'space_override', 'gravity_space_override', 'gravity_point',
-      'gravity_point_center', 'gravity_point_unit_distance',
-      'gravity_direction', 'gravity', 'linear_damp_space_override',
-      'linear_damp', 'angular_damp_space_override', 'angular_damp',
-      'priority', 'audio_bus_override', 'audio_bus_name', 'disable_mode',
-    ],
-    reason: 'Area2D physics simulation properties (gravity, damping, space-override) are linter-validated but ignored by the static previewer which only needs collision_layer/mask.',
-  },
-
-  CollisionShape2D: {
-    linterOnly: [
-      // Physics-behaviour properties with no visual counterpart. (`debug_color`
-      // used to sit here; the gizmo draws in it now.)
-      'one_way_collision', 'one_way_collision_margin',
-    ],
-    reason: 'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',
-  },
-
-  // -------------------------------------------------------------------------
-  // Nodes that parser uses parseNode3D but NODE_BASE_TYPES maps to Node
-  // -------------------------------------------------------------------------
-
-  WorldEnvironment: {
-    parserOnly: [
-      // WorldEnvironment parser calls parseNode3D but NODE_BASE_TYPES
-      // declares it a plain Node; transform/visible are parsed but no
-      // Node3D validators are inherited.
-      'transform',
-    ],
-    reason: 'WorldEnvironment parser calls parseNode3D but NODE_BASE_TYPES declares it a plain Node; transform is parser-only with no counterpart validator.',
-  },
-
-  Timer: {
-    parserOnly: [
-      // Timer parser calls parseNode which reads transform; NODE_BASE_TYPES
-      // maps Timer to Node with no spatial validators.
-      'transform',
-    ],
-    reason: 'Timer parser inherits transform via parseNode (node/parser.ts); NODE_BASE_TYPES maps Timer to Node with no spatial validators.',
-  },
-
-  SubViewport: {
-    parserOnly: [
-      // This guard reads the parser SOURCE chain, so it sees `transform` in
-      // parseNode. The SubViewport slice actually discards it (a Viewport is
-      // not a spatial node, and SubViewportProperties omits the field), so
-      // there is deliberately no validator for it.
-      'transform',
-    ],
-    reason: 'SubViewport inherits transform from parseNode in the source chain but discards it — a Viewport is not spatial, so no validator exists.',
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Walk dir recursively; collect paths where both parser.ts and linterParser.ts exist. */
-function findSliceDirs(dir: string): string[] {
-  const entries = readdirSync(dir, { withFileTypes: true });
-  const names = new Set(entries.map((e) => e.name));
-  const result = names.has('parser.ts') && names.has('linterParser.ts') ? [dir] : [];
-  for (const e of entries) {
-    if (e.isDirectory()) result.push(...findSliceDirs(join(dir, e.name)));
-  }
-  return result;
-}
-
-/**
- * Scrape `properties.X` and `properties['X']` accesses from a parser source.
- * Returns only identifier-shaped keys (alphanumeric + underscore).
- */
-function scrapeParserProps(src: string): Set<string> {
-  const props = new Set<string>();
-  // properties.identifier
-  const dotRe = /\bproperties\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
-  let m: RegExpExecArray | null;
-  while ((m = dotRe.exec(src)) !== null) props.add(m[1]!);
-  // properties['key'] or properties["key"]
-  const bracketRe = /\bproperties\[['"]([^'"]+)['"]\]/g;
-  while ((m = bracketRe.exec(src)) !== null) props.add(m[1]!);
-  return props;
-}
-
-/** Ancestor chain of a node type (excluding the type itself), cycle-safe. */
-function baseChain(nodeType: string): string[] {
-  const chain: string[] = [];
-  const visited = new Set<string>([nodeType]);
-  let current: string | undefined = NODE_BASE_TYPES[nodeType];
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    chain.push(current);
-    current = NODE_BASE_TYPES[current];
-  }
-  return chain;
-}
-
-/**
- * All `properties.X` accesses inherited from the base parser files of a node
- * type's NODE_BASE_TYPES chain. Throws if a mapped base parser file has moved,
- * so a broken mapping fails loudly instead of surfacing as bogus asymmetries.
- */
-function getInheritedParserProps(nodeType: string): Set<string> {
-  const result = new Set<string>();
-  for (const base of baseChain(nodeType)) {
-    const subpath = BASE_TYPE_TO_PARSER_SUBPATH[base];
-    if (!subpath) continue;
-    const parserPath = join(nodesRoot, subpath);
-    if (!existsSync(parserPath)) {
-      throw new Error(
-        `BASE_TYPE_TO_PARSER_SUBPATH['${base}'] points at a missing file: ${subpath}`
+  for (const [nodeType, entry] of Object.entries(allowlist)) {
+    const covered = coveredSlices(nodeType);
+    if (covered.length === 0) {
+      // Node type no longer has a slice pair — allowlist entry is stale.
+      staleSections.push(
+        `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
       );
-    }
-    for (const p of scrapeParserProps(readFileSync(parserPath, 'utf8'))) result.add(p);
-  }
-  return result;
-}
-
-/** Validator keys registered directly for a node type or any of its ancestors. */
-function getFullValidatorKeys(nodeType: string): Set<string> {
-  const result = new Set(validatorRegistry.getOwnKeys(nodeType));
-  for (const base of baseChain(nodeType)) {
-    for (const k of validatorRegistry.getOwnKeys(base)) result.add(k);
-  }
-  return result;
-}
-
-/**
- * Extract the node type name from a linterParser.ts source via
- * `registerAll('TypeName', ...)`.  Returns null for shared helpers that
- * export constants but do not call registerAll.
- */
-function extractNodeType(src: string): string | null {
-  const m = /registerAll\s*\(\s*'([^']+)'/.exec(src);
-  return m ? m[1]! : null;
-}
-
-// ---------------------------------------------------------------------------
-// Slice inventory: one walk + one scrape per slice, shared by all tests.
-// ---------------------------------------------------------------------------
-
-interface SliceInfo {
-  /** Slice directory relative to src/nodes. */
-  slice: string;
-  nodeType: string;
-  /** Own scraped props + inherited base parser props. */
-  parserProps: Set<string>;
-  /** Own registered keys + inherited base validator keys. */
-  validatorKeys: Set<string>;
-}
-
-let cachedSlices: SliceInfo[] | null = null;
-
-function collectSlices(): SliceInfo[] {
-  if (cachedSlices) return cachedSlices;
-  cachedSlices = [];
-  for (const dir of findSliceDirs(nodesRoot).sort()) {
-    const linterSrc = readFileSync(join(dir, 'linterParser.ts'), 'utf8');
-    const nodeType = extractNodeType(linterSrc);
-    if (!nodeType) continue; // shared-helper file — no registerAll
-
-    const parserSrc = readFileSync(join(dir, 'parser.ts'), 'utf8');
-    cachedSlices.push({
-      slice: dir.slice(nodesRoot.length + 1),
-      nodeType,
-      parserProps: new Set([
-        ...scrapeParserProps(parserSrc),
-        ...getInheritedParserProps(nodeType),
-      ]),
-      validatorKeys: getFullValidatorKeys(nodeType),
-    });
-  }
-  return cachedSlices;
-}
-
-// ---------------------------------------------------------------------------
-// Core guard logic
-// ---------------------------------------------------------------------------
-
-interface ParityViolation {
-  slice: string;
-  nodeType: string;
-  parserOnlyNotAllowlisted: string[];
-  linterOnlyNotAllowlisted: string[];
-}
-
-function checkParity(): ParityViolation[] {
-  const violations: ParityViolation[] = [];
-
-  for (const { slice, nodeType, parserProps, validatorKeys } of collectSlices()) {
-    // Collect allowlist entries from this type AND all ancestor types so a
-    // base-type entry (e.g. Node3D.linterOnly) applies to every leaf slice.
-    const allowedParserOnly = new Set<string>();
-    const allowedLinterOnly = new Set<string>();
-    for (const t of [nodeType, ...baseChain(nodeType)]) {
-      const e = ASYMMETRY_ALLOWLIST[t];
-      if (!e) continue;
-      for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);
-      for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
+      continue;
     }
 
-    const parserOnlyNotAllowlisted = [...parserProps]
-      .filter((k) => !validatorKeys.has(k) && !allowedParserOnly.has(k))
-      .sort();
-    const linterOnlyNotAllowlisted = [...validatorKeys]
-      .filter((k) => !parserProps.has(k) && !allowedLinterOnly.has(k))
-      .sort();
+    // The asymmetry has closed once EVERY slice the entry answers for reads
+    // the key; one leaf reading it leaves the entry doing real work for the
+    // rest. So a base covering many slices — CanvasItem 37, VisualInstance3D
+    // 16, GeometryInstance3D 10 — only reports once the last of them closes,
+    // and narrowing such an entry to the leaves that still need it is an edit
+    // to the allowlist rather than to this guard.
+    const readEverywhere = (key: string) => covered.every((s) => s.parserProps.has(key));
+    // Validators resolve up the base chain with no slice needed, so this is
+    // the same set a slice of this type would carry.
+    const validatorKeys = validatorKeysOf(nodeType);
 
-    if (parserOnlyNotAllowlisted.length > 0 || linterOnlyNotAllowlisted.length > 0) {
-      violations.push({ slice, nodeType, parserOnlyNotAllowlisted, linterOnlyNotAllowlisted });
+    // parserOnly keys should NOT have a validator; linterOnly keys should
+    // NOT be read by the parser — otherwise the asymmetry has been fixed.
+    for (const key of entry.parserOnly ?? []) {
+      if (validatorKeys.has(key)) {
+        staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
+      }
+    }
+    for (const key of entry.linterOnly ?? []) {
+      if (readEverywhere(key)) {
+        staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
+      }
+    }
+    for (const key of entry.renderGap ?? []) {
+      if (readEverywhere(key)) {
+        staleSections.push(
+          `${nodeType}.renderGap['${key}']: now read by the parser — the gap closed, remove from allowlist`
+        );
+      }
     }
   }
 
-  return violations;
+  return staleSections;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('property-grammar parity guard', () => {
-  it('finds slice pairs to check (sanity: walk is not empty)', () => {
-    expect(collectSlices().length).toBeGreaterThan(0);
-  });
-
   it('every slice pair has symmetric property coverage (or an allowlisted asymmetry)', () => {
     const violations = checkParity();
 
@@ -678,31 +140,219 @@ describe('property-grammar parity guard', () => {
   });
 
   it('allowlist entries stay honest: every listed key is genuinely asymmetric', () => {
-    const slicesByType = new Map(collectSlices().map((s) => [s.nodeType, s]));
-    const staleSections: string[] = [];
-
-    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      const slice = slicesByType.get(nodeType);
-      if (!slice) {
-        // Node type no longer has a slice pair — allowlist entry is stale.
-        staleSections.push(`${nodeType}: no parser.ts+linterParser.ts pair found`);
-        continue;
-      }
-
-      // parserOnly keys should NOT have a validator; linterOnly keys should
-      // NOT be read by the parser — otherwise the asymmetry has been fixed.
-      for (const key of entry.parserOnly ?? []) {
-        if (slice.validatorKeys.has(key)) {
-          staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
-        }
-      }
-      for (const key of entry.linterOnly ?? []) {
-        if (slice.parserProps.has(key)) {
-          staleSections.push(`${nodeType}.linterOnly['${key}']: now read by the parser — remove from allowlist`);
-        }
-      }
-    }
+    const staleSections = findStaleEntries({
+      allowlist: ASYMMETRY_ALLOWLIST,
+      slices: collectSlices(),
+      baseChainOf: baseChain,
+      validatorKeysOf: getFullValidatorKeys,
+    });
 
     expect(staleSections, `Stale allowlist entries found:\n  ${staleSections.join('\n  ')}`).toEqual([]);
+  });
+
+  /**
+   * The staleness verdict, seeded rather than borrowed.
+   *
+   * On the real tree the quantifier bites only because of a live split —
+   * MeshInstance3D closes VisualInstance3D's `layers` while its siblings do not.
+   * Close that split either way and `.every()` and `.some()` agree on every
+   * entry, so a weakening edit would pass in silence. These cases own the
+   * semantics: a partly-closed key still has work to do, a fully-closed one does not.
+   */
+  describe('staleness verdict on seeded slices', () => {
+    const BASE = 'ScratchBase';
+    const CLOSER = 'ScratchCloser'; // a descendant whose parser reads the key
+    const LAGGARD = 'ScratchLaggard'; // a descendant whose parser does not
+    const KEY = 'scratch_key';
+    const reason = 'seeded';
+
+    const CHAINS: Readonly<Record<string, readonly string[]>> = {
+      [CLOSER]: [BASE],
+      [LAGGARD]: [BASE],
+      Unrelated: [],
+    };
+    const noValidators = () => new Set<string>();
+
+    const scan = (
+      reads: Readonly<Record<string, readonly string[]>>,
+      entry: AsymmetryEntry,
+      validatorKeysOf: (nodeType: string) => ReadonlySet<string> = noValidators
+    ) =>
+      findStaleEntries({
+        allowlist: { [BASE]: entry },
+        slices: Object.entries(reads).map(([nodeType, keys]) => ({
+          nodeType,
+          parserProps: new Set(keys),
+        })),
+        baseChainOf: (nodeType) => CHAINS[nodeType] ?? [],
+        validatorKeysOf,
+      });
+
+    const PARTIAL = { [CLOSER]: [KEY], [LAGGARD]: [] };
+    const CLOSED = { [CLOSER]: [KEY], [LAGGARD]: [KEY] };
+    const OPEN = { [CLOSER]: [], [LAGGARD]: [] };
+
+    it('partial closure keeps a linterOnly entry alive — the laggard still needs it', () => {
+      expect(scan(PARTIAL, { linterOnly: [KEY], reason })).toEqual([]);
+    });
+
+    it('partial closure keeps a renderGap entry alive', () => {
+      expect(scan(PARTIAL, { renderGap: [KEY], reason })).toEqual([]);
+    });
+
+    it('no descendant reading the key keeps the entry alive', () => {
+      expect(scan(OPEN, { renderGap: [KEY], reason })).toEqual([]);
+    });
+
+    it('full closure reports a linterOnly entry stale', () => {
+      expect(scan(CLOSED, { linterOnly: [KEY], reason })).toEqual([
+        `${BASE}.linterOnly['${KEY}']: now read by the parser — remove from allowlist`,
+      ]);
+    });
+
+    it('full closure reports a renderGap entry stale', () => {
+      expect(scan(CLOSED, { renderGap: [KEY], reason })).toEqual([
+        `${BASE}.renderGap['${KEY}']: now read by the parser — the gap closed, remove from allowlist`,
+      ]);
+    });
+
+    it('a slice outside the entry’s subtree does not vote, in either direction', () => {
+      const entry: AsymmetryEntry = { renderGap: [KEY], reason };
+      // Abstaining outsider cannot keep a closed entry alive.
+      expect(scan({ ...CLOSED, Unrelated: [] }, entry)).toEqual([
+        `${BASE}.renderGap['${KEY}']: now read by the parser — the gap closed, remove from allowlist`,
+      ]);
+      // Reading outsider cannot close it either.
+      expect(scan({ [LAGGARD]: [], Unrelated: [KEY] }, entry)).toEqual([]);
+    });
+
+    it('a parserOnly key is stale exactly when a validator exists', () => {
+      const entry: AsymmetryEntry = { parserOnly: [KEY], reason };
+      expect(scan(OPEN, entry)).toEqual([]);
+      expect(scan(OPEN, entry, () => new Set([KEY]))).toEqual([
+        `${BASE}.parserOnly['${KEY}']: now has a validator — remove from allowlist`,
+      ]);
+    });
+
+    it('an entry no slice answers for is stale', () => {
+      expect(scan({}, { linterOnly: [KEY], reason })).toEqual([
+        `${BASE}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`,
+      ]);
+    });
+  });
+
+  it('every allowlisted key is a key some side actually declares', () => {
+    // The honesty check above asks whether a listed key has become symmetric.
+    // It never asks whether the key EXISTS, so a typo or a leftover placeholder
+    // sits in the table forever, silently inflating the render-gap count and
+    // describing a property Godot never had. Caught for real: a placeholder
+    // string survived a full review pass in the Viewport render-gap list purely
+    // because nothing looked.
+    //
+    // Wildcards are patterns rather than keys, so they are exempt by shape.
+    const unknown: string[] = [];
+    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
+      // Inherited keys count: an entry sits on the type whose PARSER is silent
+      // about them, which is routinely a descendant of the type that declares
+      // them (Control lists CanvasItem's z_index, and rightly).
+      const declared = new Set([
+        ...getFullValidatorKeys(nodeType),
+        ...(collectSlices().find((s) => s.nodeType === nodeType)?.parserProps ?? []),
+      ]);
+      const listed = [
+        ...(entry.parserOnly ?? []),
+        ...(entry.linterOnly ?? []),
+        ...(entry.renderGap ?? []),
+      ];
+      for (const key of listed) {
+        if (key.includes('*') || key.includes('#')) continue;
+        if (!declared.has(key)) unknown.push(`${nodeType}.${key}`);
+      }
+    }
+    expect(
+      unknown,
+      `Allowlisted keys that neither the validators nor the parser declare, so they describe nothing:\n  ${unknown.join('\n  ')}`
+    ).toEqual([]);
+  });
+
+  it('no key is claimed as both deliberate scope and a render gap', () => {
+    // Two kinds only: a pre-4.0 spelling is canonicalised before either side
+    // sees it and has no validator of its own, so no alias category exists.
+    const conflicts: string[] = [];
+    for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
+      const deliberate = new Set(entry.linterOnly ?? []);
+      for (const key of entry.renderGap ?? []) {
+        if (deliberate.has(key)) conflicts.push(`${nodeType}: '${key}'`);
+      }
+    }
+    expect(
+      conflicts,
+      `A key is either out of render scope or a gap, never both:\n  ${conflicts.join('\n  ')}`
+    ).toEqual([]);
+  });
+
+  // The render-gap surface is the previewer's honest to-do list, so it gets a
+  // number rather than a pile. Exact equality, not a ceiling: it moves only when
+  // someone deliberately adds a slice or closes a gap, and either way the diff
+  // should say which.
+  //
+  // A rise is usually the list becoming honest rather than growing. This guard
+  // can only ask "should the renderer be reading this?" about a key one side
+  // already declares, so a key the previewer never read becomes VISIBLE the
+  // moment a validator exists for it.
+  const EXPECTED_RENDER_GAP_KEYS = 143;
+
+  it('the render-gap surface matches its recorded size', () => {
+    const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
+      (entry.renderGap ?? []).map((key) => `${nodeType}.${key}`)
+    );
+    expect(
+      gaps.length,
+      `Render gaps now number ${gaps.length}, not ${EXPECTED_RENDER_GAP_KEYS}:\n  ${gaps.join('\n  ')}`
+    ).toBe(EXPECTED_RENDER_GAP_KEYS);
+  });
+
+  /**
+   * Slices this guard does NOT see, counted so the blind spot moves visibly.
+   *
+   * `findSliceDirs` admits a directory only when it holds BOTH `parser.ts` and
+   * `linterParser.ts`. Every slice that reuses a base parser has no `parser.ts`
+   * of its own — ADR-0008's transform-only shape and the whole Control-reuse
+   * pattern — so the guard's most valuable question, "is this validated key
+   * something the renderer should be reading?", is never asked of them. All 28
+   * skeleton slices are in this set.
+   *
+   * That is a real limitation, and the number is here because the alternative is
+   * worse than the limitation: an untouched `ASYMMETRY_ALLOWLIST` reads as "the
+   * new slices are symmetric" when it actually means "they were never examined".
+   * A wave that adds ten base-reusing slices now moves a number and must say so.
+   *
+   * Widening the population wholesale is not the answer. For a transform-only
+   * type Godot draws nothing, and for a `pending` one the whole type is a single
+   * declared gap `renderIntent` already carries, so the per-key "should the
+   * renderer read this?" question has nothing to answer on either — it would add
+   * one allowlist row per key saying what `renderIntent` says once. Where the
+   * question does have an answer and the slice reuses a family parser, the fix is
+   * a hop in `BASE_TYPE_TO_PARSER_SUBPATH`, not a wider population.
+   */
+  // Both are ratchets, not derived: computing either side would make the
+  // assertion below compare a number to itself. Moving one is a deliberate act
+  // that belongs in a commit message — a slice entering the swept set, or a new
+  // base-parser reuser entering the blind spot the docblock above sizes.
+  const SWEPT_SLICES = 75;
+  const PARSER_REUSING_SLICES = 176;
+
+  it('accounts for every linterParser.ts, swept or knowingly not', () => {
+    const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
+      extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8'))
+    );
+    // Doubles as the population floor: an empty walk fails here, and again in
+    // the honesty check, which would then call every allowlist entry stale.
+    expect(collectSlices()).toHaveLength(SWEPT_SLICES);
+    expect(
+      withLinterParser.length - collectSlices().length,
+      'Slices outside this guard changed. Update the count, and say in the commit ' +
+        'whether the new ones are base-parser reusers (expected) or are missing a parser.ts they should have.'
+    ).toBe(PARSER_REUSING_SLICES);
   });
 });

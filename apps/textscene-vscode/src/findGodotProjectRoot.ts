@@ -18,6 +18,19 @@ function normalizeFsPath(fsPath: string): string {
   return fsPath.replace(/\\/g, '/').toLowerCase();
 }
 
+/**
+ * Whether a normalized path sits strictly under the root.
+ *
+ * The separator is what makes it a boundary: a bare `startsWith` also accepts
+ * every SIBLING whose path merely begins with the root's spelling, so a
+ * document in `/home/u/proj-other` would be walked as if it were inside
+ * `/home/u/proj`. A root that already ends in one must not gain a second.
+ */
+function isUnderRoot(rootNormalized: string, candidateNormalized: string): boolean {
+  const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
+  return candidateNormalized.startsWith(prefix);
+}
+
 export async function findGodotProjectRoot(
   workspaceRoot: vscode.Uri,
   documentUri: vscode.Uri
@@ -38,7 +51,7 @@ export async function findGodotProjectRoot(
 
     if (
       currentPathNormalized === workspaceRootNormalized ||
-      !currentPathNormalized.startsWith(workspaceRootNormalized)
+      !isUnderRoot(workspaceRootNormalized, currentPathNormalized)
     ) {
       return workspaceRoot;
     }

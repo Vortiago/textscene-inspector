@@ -11,6 +11,7 @@ import type { EnvironmentProperties } from './types';
 import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
 import { floatOr, intOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
+import { boolSlotValue } from '../../godot/index.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -63,21 +64,21 @@ export function decodeEnvironment(
     ),
 
     // Screen-space fog (Godot defaults: density 0.01, light_color ~bluish-grey)
-    fog_enabled: properties.fog_enabled === 'true',
+    fog_enabled: boolSlotValue(properties.fog_enabled) === true,
     fog_density: floatOr(properties.fog_density, 0.01, 'fog_density'),
     fog_light_color: colorOr(properties.fog_light_color, { r: 0.518, g: 0.553, b: 0.608, a: 1 }),
     fog_mode: intOr(properties.fog_mode, 0, 'fog_mode'),
 
     // Volumetric Fog
-    volumetric_fog_enabled: properties.volumetric_fog_enabled === 'true',
+    volumetric_fog_enabled: boolSlotValue(properties.volumetric_fog_enabled) === true,
     volumetric_fog_density: floatOr(properties.volumetric_fog_density, 0.05, 'volumetric_fog_density'),
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
 
     // Glow / bloom (Godot Environment defaults)
-    glow_enabled: properties.glow_enabled === 'true',
+    glow_enabled: boolSlotValue(properties.glow_enabled) === true,
     glow_levels: parseGlowLevels(properties),
-    glow_normalized: properties.glow_normalized === 'true',
+    glow_normalized: boolSlotValue(properties.glow_normalized) === true,
     glow_intensity: floatOr(properties.glow_intensity, 0.3, 'glow_intensity'),
     glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
     glow_mix: floatOr(properties.glow_mix, 0.05, 'glow_mix'),
@@ -93,12 +94,12 @@ export function decodeEnvironment(
     glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
 
     // Adjustments
-    adjustment_enabled: properties.adjustment_enabled === 'true',
+    adjustment_enabled: boolSlotValue(properties.adjustment_enabled) === true,
     adjustment_brightness: floatOr(properties.adjustment_brightness, 1.0, 'adjustment_brightness'),
     adjustment_contrast: floatOr(properties.adjustment_contrast, 1.0, 'adjustment_contrast'),
     adjustment_saturation: floatOr(properties.adjustment_saturation, 1.0, 'adjustment_saturation'),
 
     // SSR
-    ssr_enabled: properties.ssr_enabled === 'true',
+    ssr_enabled: boolSlotValue(properties.ssr_enabled) === true,
   };
 }

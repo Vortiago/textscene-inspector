@@ -2,8 +2,10 @@
  * <PathFollow2D> — positions its children along the parent Path2D's curve.
  *
  * It reads the nearest ancestor Path2D's curve via Path2DCurveContext, samples
- * the point at `progress_ratio` (preferred) or absolute `progress` (looping when
- * `loop`), nudges it by `h_offset` (along the tangent) / `v_offset` (perpendicular),
+ * the point at absolute `progress` — the only one of the two position keys a
+ * scene file can carry, and unwrapped whatever `loop` says, for the reason
+ * `computeFollowTransform` gives —
+ * nudges it by `h_offset` (along the tangent) / `v_offset` (perpendicular),
  * and rotates children to the tangent when `rotates`. That computed transform —
  * conjugated by diag(1,-1,1) like every Node2D — drives the group (Godot derives
  * the follower's transform from the curve, overriding the authored position).
@@ -91,15 +93,14 @@ function computeFollowTransform(
   | null {
   if (!sampler || sampler.length <= 0) return null;
 
-  const rawDistance =
-    props.progress_ratio !== undefined
-      ? props.progress_ratio * sampler.length
-      : props.progress ?? 0;
-  const distance = props.loop
-    ? ((rawDistance % sampler.length) + sampler.length) % sampler.length
-    : rawDistance;
-
-  const sample = sampler.sampleAt(distance);
+  // `progress` alone, unwrapped. Godot applies a node's stored properties
+  // BEFORE parenting it (packed_scene.cpp:492 sets, :541 parents) and binds
+  // `PathFollow2D::path` only on enter-tree, so `set_progress_ratio` refuses
+  // every authored ratio (path_2d.cpp:472) and `set_progress`'s own wrap/clamp
+  // branch is skipped for want of a curve. What is left is the raw value and
+  // the sampler's clamp (curve.cpp:1079) — which is why `loop` does not wrap a
+  // scene-loaded progress either, measured both ways against 4.6.3.
+  const sample = sampler.sampleAt(props.progress ?? 0);
   // Tangent + perpendicular (Godot space): h_offset along tangent, v_offset normal.
   const cos = Math.cos(sample.angle);
   const sin = Math.sin(sample.angle);

@@ -35,7 +35,7 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
   // Only text resources can ever parse; requesting e.g. a binary `.res`
   // TileSet would park the load in-flight forever (no processor handles it).
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'Resource');
+  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): TileSetModelResult => {
     if (!tileSetRef) return { model: null, status: 'unavailable' };

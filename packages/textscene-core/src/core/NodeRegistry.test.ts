@@ -91,4 +91,19 @@ describe('parseNodeWithRegistry — raw override retention', () => {
     expect(result!.instance).toBe('ExtResource("1_t0f53")');
     expect(result!.rawProperties).toEqual(raw);
   });
+
+  it('builds an InstancePlaceholder node from an instance_placeholder heading', () => {
+    // packed_scene.cpp:255 instantiates an InstancePlaceholder for the flag
+    // resource_format_text.cpp:254 sets; it is a node of its own, not an
+    // override of one already there.
+    const heading: ParsedHeading = {
+      type: 'node',
+      attributes: { name: 'Rock', parent: '.', instance_placeholder: 'res://rock.tscn' },
+    };
+
+    const result = parseNodeWithRegistry(heading, { position: 'Vector2(5, 5)' });
+
+    expect(result!.type).toBe('InstancePlaceholder');
+    expect(result!.overridesExistingNode).toBeUndefined();
+  });
 });

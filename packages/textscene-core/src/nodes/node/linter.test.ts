@@ -11,7 +11,7 @@ import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testk
 import './linter';
 
 describe('binary-resource-reference', () => {
-  it('warns when a node instances a binary .scn scene', () => {
+  it('reports when a node instances a binary .scn scene', () => {
     expectDiagnostic(
       `[gd_scene format=3]
 
@@ -21,11 +21,11 @@ describe('binary-resource-reference', () => {
 
 [node name="GridMap" type="Node3D" parent="." instance=ExtResource("1")]
 `,
-      { ruleName: 'binary-resource-reference', severity: 'warning', contains: ['grid_map.scn'] }
+      { ruleName: 'binary-resource-reference', severity: 'info', contains: ['grid_map.scn'] }
     );
   });
 
-  it('warns when a property references a binary .res resource', () => {
+  it('reports when a property references a binary .res resource', () => {
     expectDiagnostic(
       `[gd_scene format=3]
 

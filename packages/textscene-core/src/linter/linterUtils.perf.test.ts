@@ -1,11 +1,10 @@
 /**
  * Perf regression test for the NodePath-resolution helpers.
  *
- * Semantic lint rules call `findParentNode` / `resolveNodePathTarget` (which
+ * Semantic lint rules call `findParentNode` / `resolveNodePath` (which
  * itself calls `findNodesByName` and `isUnderInstance`) once per matching
- * node, and each of those used to re-walk the ENTIRE scene tree from scratch
- * every single call. On a scene with N nodes, checking every node this way
- * costs O(N) per lookup * O(N) nodes = O(N^2) total — the "per-node rule
+ * node. Re-walking the ENTIRE scene tree per call costs O(N) per lookup *
+ * O(N) nodes = O(N^2) total on a scene with N nodes — the "per-node rule
  * filtering + O(N^2) NodePath helpers" half of the throughput regression.
  *
  * This test simulates that call pattern directly (one lookup per node, over
@@ -32,8 +31,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TscnNode } from '../parser/types.js';
-import { findParentNode, resolveNodePathTarget } from './linterUtils.js';
+import type { TscnNode, TscnScene } from '../parser/types.js';
+import { findParentNode } from './linterUtils.js';
+import { resolveNodePath } from './nodePathResolve.js';
 
 /**
  * A wide, shallow tree (root -> groups -> leaves) so the traversal-depth cost
@@ -82,21 +82,30 @@ function collectLeaves(roots: TscnNode[]): TscnNode[] {
 
 /** Simulate what a semantic rule does per node: resolve its parent + a NodePath. */
 function runLookupsForEveryNode(roots: TscnNode[], leaves: TscnNode[]): void {
+  const scene = { nodes: roots } as TscnScene;
   for (const leaf of leaves) {
     findParentNode(roots, leaf);
-    // "Nonexistent" so resolution always reaches the missing case, exercising
-    // the full findNodesByName scan (the realistic worst case for a rule
-    // checking a NodePath that doesn't resolve).
-    resolveNodePathTarget(roots, leaf, 'Nonexistent');
+    // "../Nonexistent" so resolution climbs (touching the parent index) and then
+    // misses, the realistic worst case for a rule checking a path that does not
+    // resolve. A bare name would stop at the leaf's own empty child list.
+    resolveNodePath(scene, leaf, '../Nonexistent');
   }
 }
+
+/**
+ * Repetitions per timed sample. One pass over the small tree costs ~0.7ms, and
+ * a sub-millisecond denominator makes the ratio below a measure of the big side
+ * alone rather than of scaling. Ten puts the small side around 7ms, clear of
+ * timer resolution and scheduler granularity, without paying for more.
+ */
+const REPEATS = 10;
 
 /** Best-of-`trials` timing for repeated lookups against the SAME tree. */
 function bestOf(roots: TscnNode[], leaves: TscnNode[], trials: number): number {
   let best = Infinity;
   for (let t = 0; t < trials; t++) {
     const start = performance.now();
-    runLookupsForEveryNode(roots, leaves);
+    for (let r = 0; r < REPEATS; r++) runLookupsForEveryNode(roots, leaves);
     best = Math.min(best, performance.now() - start);
   }
   return best;
@@ -140,7 +149,7 @@ describe('NodePath helper lookup performance', () => {
     for (let m = 0; m < RATIO_MEASUREMENTS && bestRatio >= THRESHOLD; m++) {
       const smallMs = bestOf(smallTree, smallLeaves, TRIALS);
       const bigMs = bestOf(bigTree, bigLeaves, TRIALS);
-      bestRatio = Math.min(bestRatio, bigMs / Math.max(smallMs, 1));
+      bestRatio = Math.min(bestRatio, bigMs / smallMs);
     }
 
     expect(bestRatio).toBeLessThan(THRESHOLD);

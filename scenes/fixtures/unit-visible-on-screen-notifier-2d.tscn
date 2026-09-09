@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+; Exercises both own properties VisibleOnScreenNotifier2D serialises: rect, show_rect.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyVisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+position = Vector2(10, 20)
+rect = Rect2(-32, -32, 64, 64)
+show_rect = false

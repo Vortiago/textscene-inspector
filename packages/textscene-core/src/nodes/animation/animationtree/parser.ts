@@ -1,9 +1,13 @@
 /**
  * AnimationTree parser — lenient parser for the renderer.
+ *
+ * A plain Node: a Node3D below it finds no Node3D parent
+ * (node_3d.cpp:150, `data.parent = Object::cast_to<Node3D>(get_parent())`),
+ * so the chain is `parseNode`, which carries no `visible` or placement fields.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, intOr } from '../../../parser/valueParsers';
 import {
   AnimationTreeProcessMode,
@@ -16,7 +20,7 @@ export function parseAnimationTree(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): AnimationTreeProperties {
-  const baseProps = parseNode3D(heading, properties);
+  const baseProps = parseNode(heading, properties);
 
   const result: AnimationTreeProperties = {
     ...baseProps,

@@ -40,6 +40,7 @@ import { stampVisualLayers } from '../../visualLayers';
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
  * Walk `root`'s descendants and, for every override node that carries a
@@ -100,7 +101,7 @@ export function applyGlbNodeOverrides(
     // would write its 3.33x scale and 7.5-unit offset onto the whole robot.
     if (!isApplicableGlbOverride(override)) continue;
 
-    const layers = parseOptionalInt(override.rawProperties?.layers);
+    const layers = parseOptionalInt(override.rawProperties?.layers, 'uint32');
     const visible = override.rawProperties?.visible;
     const transform = (override.properties as Node3DProperties).transform;
     // Nothing to write means nothing to resolve. The town's four terrain
@@ -117,7 +118,7 @@ export function applyGlbNodeOverrides(
     // glTF node with several primitives becomes a Group of Meshes in three,
     // and the mask is read per mesh with no inheritance.
     if (layers !== undefined) stampVisualLayers(target, layers);
-    if (visible !== undefined) target.visible = visible !== 'false';
+    if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
     if (!transform) continue;
 
     const { position, rotation, scale } = decomposeForR3F(transform);

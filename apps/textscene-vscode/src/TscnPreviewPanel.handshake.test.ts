@@ -7,18 +7,25 @@
  * the initial payload is dropped and the preview is stuck on
  * "Loading scene…".
  *
- * The fix caches the last `loadTscn` payload until the webview
- * posts `webviewReady`, then replays it. This test exercises that
- * path against the panel's message handler.
+ * The handshake replays the last text read off disk on EVERY
+ * `webviewReady`, so a remount — which posts a fresh ready with an
+ * empty React tree — gets the current scene too.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
-import { createMockUri, createMockFileData, setupMockPanel } from './test-setup';
+import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
 
-describe('TscnPreviewPanel webview-ready handshake (VSCODE-01)', () => {
+function loadTscnContents(webview: MockWebview): string[] {
+  return webview.postMessage.mock.calls
+    .map((call) => call[0] as { type: string; content?: string })
+    .filter((message) => message.type === 'loadTscn')
+    .map((message) => message.content!);
+}
+
+describe('TscnPreviewPanel webview-ready handshake', () => {
   it('caches the initial loadTscn payload until the webview signals ready', async () => {
     const { webview, triggerMessage } = setupMockPanel();
 
@@ -34,8 +41,7 @@ describe('TscnPreviewPanel webview-ready handshake (VSCODE-01)', () => {
     // Allow the constructor's _loadTscnContent (async) to finish.
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // BEFORE the handshake, no loadTscn should have been posted —
-    // the payload is sitting in _pendingLoadContent.
+    // BEFORE the handshake, no loadTscn should have been posted.
     const loadCallsBefore = webview.postMessage.mock.calls.filter(
       (call) => (call[0] as { type: string }).type === 'loadTscn'
     );
@@ -85,5 +91,34 @@ describe('TscnPreviewPanel webview-ready handshake (VSCODE-01)', () => {
     );
     expect(loadCalls).toHaveLength(1);
     expect((loadCalls[0]![0] as { content: string }).content).toBe(updatedContent);
+  });
+
+  it('replays the current text on a remount ready, not only the first one', async () => {
+    const { webview, triggerMessage } = setupMockPanel();
+
+    (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
+      createMockFileData(MINIMAL_TSCN)
+    );
+
+    const resourceUri = createMockUri('/workspace/test.tscn');
+    const panel = TscnPreviewPanel.create(createMockUri('/extension'), resourceUri);
+
+    await new Promise<void>((r) => setTimeout(r, 10));
+    triggerMessage({ type: 'webviewReady' });
+    webview.postMessage.mockClear();
+
+    // Moving the panel to another editor group remounts the React tree:
+    // `retainContextWhenHidden` covers hidden, not remounted. The fresh tree's
+    // `content` state is empty and it posts ready again.
+    triggerMessage({ type: 'webviewReady' });
+
+    expect(loadTscnContents(webview)).toEqual([MINIMAL_TSCN]);
+
+    // And the unchanged file re-read that follows stays a no-op, because the
+    // remounted webview already holds this text.
+    panel.update(resourceUri);
+    await new Promise<void>((r) => setTimeout(r, 10));
+
+    expect(loadTscnContents(webview)).toEqual([MINIMAL_TSCN]);
   });
 });

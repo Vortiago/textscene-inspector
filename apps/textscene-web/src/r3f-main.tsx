@@ -11,16 +11,7 @@
  * "Upload TSCN File" for user-supplied .tscn content, and
  * "Reset Camera" to frame the orbit controls back to default.
  */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type DragEvent as ReactDragEvent,
-  type MouseEvent as ReactMouseEvent,
-} from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import {
@@ -28,141 +19,33 @@ import {
   resourceFilePath,
   ResourceLoaderProvider,
   TscnPreviewShell,
-  useMissingResources,
-  usePersistedState,
-  type ViewportSelectorOption,
 } from '@textscene/core';
-import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { fixtures } from './fixturesAll';
-import { FixtureTreeView } from './FixtureTree';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
-import {
-  groupDiagnosticsByLine,
-  summarizeDiagnostics,
-  formatProblemBadge,
-  countLines,
-} from './lineDiagnostics';
 import { SourceGutter } from './SourceGutter';
-import { info, warn } from '@textscene/core/logger';
-import {
-  pickRootMostTscn,
-  matchResourceFiles,
-  extResourcePaths,
-  type MatchResult,
-} from './multiFileUpload';
-import { useSceneSource, DEBOUNCE_MS } from './useSceneSource';
+import { useSceneSource } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
+import { DEFAULT_FIXTURE, NO_FIXTURE, fixtureOptions } from './sceneSelection';
+import { useSourcePane } from './sourcePane';
+import { useSourceDiagnostics } from './useSourceDiagnostics';
+import { downloadFilename, downloadTscn } from './downloadTscn';
+import { createFileIngest } from './fileIngest';
+import { useFileDrop } from './useFileDrop';
+import { useUploadError } from './useUploadError';
+import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
 
-/** Sentinel value used by `<ViewportSelector>` when no fixture is active (user is on an uploaded .tscn). */
-const NO_FIXTURE = '';
-
-const SOURCE_PANE_STORAGE_KEY = 'tscn-web-source-pane';
-
-/**
- * The web app is the first browser consumer of `@textscene/core/linter`.
- * One instance for the app's lifetime — `Linter` carries no per-call state,
- * and the rule/validator registries it reads from are populated once at
- * import time (self-registration side effects in `linter/index.ts`).
- */
-const linter = new Linter();
-
-/** The Source pane's persisted shape: shown/hidden + its dragged width. */
-interface SourcePaneState {
-  visible: boolean;
-  width: number;
-}
-
-const DEFAULT_SOURCE_PANE_STATE: SourcePaneState = { visible: true, width: 320 };
-
-/** Reject a corrupt/unexpected persisted shape (any missing/invalid field) in favor of the default. */
-function isSourcePaneState(value: unknown): value is SourcePaneState {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.visible === 'boolean' &&
-    typeof v.width === 'number' &&
-    Number.isFinite(v.width) &&
-    v.width > 0
-  );
-}
-/**
- * First-visit default. Pick a fixture with zero `ext_resource`
- * lines so a new visitor's first paint shows a clean scene, not a wall
- * of missing-file warnings. `unit-plane-mesh.tscn` is the canonical
- * "hello world" of the app: single PlaneMesh, no externals, parses
- * instantly. Falls back to `integration-all-primitives.tscn` (the
- * previous default) and then `fixtures[0]` so the app never lands on
- * an undefined fixture.
- */
-const DEFAULT_FIXTURE =
-  fixtures.find((f) => f.file === 'unit-plane-mesh.tscn')?.file ??
-  fixtures.find((f) => f.file === 'integration-all-primitives.tscn')?.file ??
-  fixtures[0]?.file ??
-  '';
-
 export function R3FApp() {
-  // The same debounced-write persistence `<TscnPreviewShell>` uses for dock
-  // layout — a plain `useEffect` writing on every state change (the previous
-  // approach here) fires a synchronous `localStorage.setItem` on EVERY
-  // splitter `mousemove`, putting main-thread I/O inside the exact drag
-  // interaction where frame budget matters; `usePersistedState` debounces the
-  // write (trailing edge, flushed on unmount/pagehide) instead.
-  const [sourcePane, setSourcePane] = usePersistedState(
-    SOURCE_PANE_STORAGE_KEY,
-    DEFAULT_SOURCE_PANE_STATE,
-    isSourcePaneState
-  );
-
-  const splitterStartRef = useRef<number>(0);
-
-  const onSplitterMove = useCallback(
-    (e: MouseEvent) => {
-      const dx = e.clientX - splitterStartRef.current;
-      setSourcePane((prev) => ({
-        ...prev,
-        width: Math.max(180, Math.min(800, prev.width + dx)),
-      }));
-      splitterStartRef.current = e.clientX;
-    },
-    [setSourcePane]
-  );
-
-  // The mouse-up handler ends the drag by detaching both document listeners.
-  // Kept as one callback so the exact detach sequence lives in a single place —
-  // the unmount cleanup below reuses it (self-removing as the 'mouseup' handler).
-  const detachDragListeners = useCallback(() => {
-    document.removeEventListener('mousemove', onSplitterMove);
-    document.removeEventListener('mouseup', detachDragListeners);
-  }, [onSplitterMove]);
-
-  const onSplitterMouseDown = useCallback(
-    (e: ReactMouseEvent) => {
-      e.preventDefault();
-      splitterStartRef.current = e.clientX;
-      document.addEventListener('mousemove', onSplitterMove);
-      document.addEventListener('mouseup', detachDragListeners);
-    },
-    [onSplitterMove, detachDragListeners]
-  );
-
-  // Detach any in-flight drag listeners if the app unmounts mid-drag, so we
-  // don't leak document listeners or setState on an unmounted component.
-  useEffect(() => detachDragListeners, [detachDragListeners]);
+  const { sourcePane, toggleVisible: toggleSourcePane, onSplitterMouseDown } = useSourcePane();
 
   // When non-null, the user has loaded a TSCN file from their disk via
   // the toolbar's Upload button. We track the display name so the
   // toolbar can show what's active when the fixture dropdown is
   // deselected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
-
-  // Upload-path errors (unreadable file, no .tscn among the dropped/selected
-  // files). Distinct from `loadError`, which useSceneSource owns for fixture
-  // fetches; cleared on the next successful upload, fixture switch, or edit.
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // useFixtureSelection owns: deep-link init, localStorage persistence, URL writeback.
   const { fixtureFile, setFixtureFile } = useFixtureSelection({
@@ -237,23 +120,8 @@ export function R3FApp() {
       'Discard your Source-pane edits? They are not saved anywhere — use "Download .tscn" first to keep them.'
     );
 
-  // Two error channels owned by different layers (uploadError here, loadError
-  // inside useSceneSource) feed one toolbar banner, which must show whichever
-  // was set most recently. Value order can't encode that — an in-flight fixture
-  // fetch can reject AFTER an upload error was set — so set-order is tracked
-  // explicitly: upload failures bump the channel at their set sites, and this
-  // effect records a fetch error's arrival.
-  const [newestErrorChannel, setNewestErrorChannel] = useState<'upload' | 'load'>('upload');
-  useEffect(() => {
-    if (loadError !== null) setNewestErrorChannel('load');
-  }, [loadError]);
-
-  // Drag-and-drop a .tscn (+ resource files) onto the page. A counter,
-  // not a boolean, because dragenter/dragleave bubble from every descendant
-  // as the cursor crosses child element boundaries during one continuous
-  // drag over the app root — only net-zero really means "left the window".
-  const dragCounterRef = useRef(0);
-  const [dragActive, setDragActive] = useState(false);
+  const { effectiveError: effectiveLoadError, reportUploadError, clearUploadError } =
+    useUploadError(loadError);
 
   // Latest missing-paths set, fed by the shell's onMissingPathsChange. A ref,
   // not state, so handleFilesUpload (outside MissingResourcesProvider) reads
@@ -267,47 +135,10 @@ export function R3FApp() {
     missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
-  // Lint the buffer continuously, debounced at the same cadence as
-  // useSceneSource's render-forward — but independent of its gate (a buffer
-  // that fails to RENDER can still be LINTED; the gutter is what tells the
-  // user why). Re-runs whenever the buffer changes for any reason (typing,
-  // fixture load, upload).
-  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDiagnostics(linter.lint(buffer));
-    }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [buffer]);
-  const diagnosticsByLine = useMemo(() => groupDiagnosticsByLine(diagnostics), [diagnostics]);
-  const problemBadge = useMemo(
-    () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
-    [diagnostics]
-  );
-  // Counts newlines directly instead of `buffer.split('\n').length`, which
-  // would materialize a full array of every source line on every render
-  // (this recomputes on each keystroke, since `buffer` is R3FApp state).
-  const lineCount = useMemo(() => countLines(buffer), [buffer]);
+  const { diagnosticsByLine, problemBadge, lineCount } = useSourceDiagnostics(buffer);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
-  const options = useMemo<ViewportSelectorOption[]>(() => {
-    const fixtureOptions: ViewportSelectorOption[] = fixtures.map((f) => ({
-      value: f.file,
-      label: f.name,
-      category: f.category,
-    }));
-    // When the user is on an uploaded TSCN the dropdown's `value` is
-    // `''`, but a native `<select>` falls back to the first `<option>`
-    // visually if no option matches. Inject a placeholder so the
-    // dropdown stays in an explicit "(Uploaded file)" state.
-    if (uploadedTscnName) {
-      return [
-        { value: NO_FIXTURE, label: `(Uploaded: ${uploadedTscnName})` },
-        ...fixtureOptions,
-      ];
-    }
-    return fixtureOptions;
-  }, [uploadedTscnName]);
+  const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
     // Re-selecting the already-active fixture is a state no-op (the fetch
@@ -327,7 +158,7 @@ export function R3FApp() {
     // Switching to a fixture replaces any user-loaded TSCN content — and
     // supersedes any upload-path error still on screen.
     setUploadedTscnName(null);
-    setUploadError(null);
+    clearUploadError();
     tearDownIfCrossingCorpus(corpusRootFor(newFixture, fixtures));
     setFixtureFile(newFixture);
   }
@@ -356,139 +187,24 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // Surfaces one matching round's diagnostics and wires every matched file
-  // into the resource pipeline.
-  function applyMatchResult({ matches, ambiguousMatches, unmatched }: MatchResult) {
-    for (const { candidates, file } of ambiguousMatches) {
-      warn(
-        `[MultiFileUpload] Ambiguous basename match for "${file.name}": candidates are ${candidates.join(', ')}. Using first match.`
-      );
-    }
-    if (unmatched.length > 0) {
-      info(`[MultiFileUpload] ${unmatched.length} dropped file(s) matched no res:// reference and were ignored.`);
-    }
-    for (const { path, file } of matches) {
-      handleResourceUpload(path, file);
-    }
-  }
+  const handleFilesUpload = createFileIngest({
+    resourceRoot,
+    missingPathsRef,
+    confirmDiscardEdits,
+    tearDownIfCrossingCorpus,
+    onTscnUpload: handleTscnUpload,
+    onResourceUpload: handleResourceUpload,
+    reportUploadError,
+    clearUploadError,
+  });
 
-  // Shared entry point for BOTH drag-and-drop and the toolbar's (now
-  // multi-select) file input, implementing the Multi-file matching contract:
-  //
-  // 1. Root-most scene pick: the .tscn whose basename no other dropped .tscn
-  //    references becomes the active scene; tie/cycle falls back to first.
-  // 2. Missing-list matching: every other file is matched against the picked
-  //    scene's ExtResources AND the current missing paths (as last reported
-  //    by the shell), so a sub-scene's own dependencies arrive by
-  //    repeated drops.
-  // 3. No-.tscn drop: when there are no .tscn files, attempt to fulfill the
-  //    missing paths directly instead of surfacing an error.
-  async function handleFilesUpload(files: readonly File[]) {
-    const missingPaths = missingPathsRef.current;
-    const tscnFiles = files.filter((f) => f.name.toLowerCase().endsWith('.tscn'));
-
-    // A batch with a .tscn replaces the active scene (and the pane buffer);
-    // a resource-only batch fulfills missing rows without touching edits.
-    if (tscnFiles.length > 0) {
-      if (!confirmDiscardEdits()) return;
-      // An uploaded scene lives in the base ('') corpus, so this drop may cross
-      // a boundary. This MUST stay ahead of the awaited reads below: the
-      // viewport is r3f's own reconciler root, so the teardown's flushSync
-      // commits the DOM tree but only SCHEDULES r3f's unmount. The awaited read
-      // is the gap in which that unmount actually lands, and without it
-      // handleTscnUpload clears the caches while the outgoing scene's consumers
-      // are still subscribed — measured to refetch their res:// paths under the
-      // incoming corpus, which is the leak this whole change exists to close.
-      // The cost is that a read which then throws leaves the viewport empty.
-      tearDownIfCrossingCorpus('');
-    }
-
-    if (tscnFiles.length === 0) {
-      // No .tscn — the drop can still fulfill currently-missing res:// rows.
-      const result = matchResourceFiles([], files, missingPaths);
-      if (result.matches.length === 0) {
-        setUploadError('No .tscn file found among the dropped/selected files.');
-        setNewestErrorChannel('upload');
-        return;
-      }
-      setUploadError(null);
-      applyMatchResult(result);
-      return;
-    }
-
-    // Read all tscn texts for the root-most pick.
-    let tscnPairs: { file: File; text: string }[];
-    try {
-      tscnPairs = await Promise.all(
-        tscnFiles.map(async (file) => ({ file, text: await file.text() }))
-      );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setUploadError(`Failed to read TSCN file: ${message}`);
-      setNewestErrorChannel('upload');
-      return;
-    }
-
-    const picked = pickRootMostTscn(tscnPairs);
-    if (picked.ambiguous) {
-      info(
-        '[MultiFileUpload] Could not determine root-most scene unambiguously; using first .tscn file.'
-      );
-    }
-
-    setUploadError(null);
-    handleTscnUpload(picked.file, picked.text);
-
-    const others = files.filter((f) => f !== picked.file);
-    if (others.length > 0) {
-      // Tier-2 (missing-list) matching exists for the repeated-drop workflow
-      // WITHIN the '' upload corpus. When this drop leaves a fixture corpus
-      // (resourceRoot !== ''), the outgoing scene's missing paths belong to a
-      // namespace the upload keying just abandoned — matching against them
-      // would silently store files under keys the new scene can never request.
-      const replaceMissingPaths = resourceRoot === '' ? missingPaths : new Set<string>();
-      // A multi-.tscn pick already parsed the scene — reuse those paths; a
-      // single-.tscn batch parses here, only because there are files to match.
-      applyMatchResult(
-        matchResourceFiles(
-          picked.extResourcePaths ?? extResourcePaths(picked.text),
-          others,
-          replaceMissingPaths
-        )
-      );
-    }
-  }
-
-  function handleDragEnter(e: ReactDragEvent) {
-    e.preventDefault();
-    if (!e.dataTransfer.types.includes('Files')) return;
-    dragCounterRef.current += 1;
-    setDragActive(true);
-  }
-
-  // Required so the browser's default "reject the drop" behavior doesn't
-  // win — without this, `onDrop` never fires.
-  function handleDragOver(e: ReactDragEvent) {
-    e.preventDefault();
-  }
-
-  function handleDragLeave(e: ReactDragEvent) {
-    e.preventDefault();
-    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-    if (dragCounterRef.current === 0) setDragActive(false);
-  }
-
-  function handleDrop(e: ReactDragEvent) {
-    e.preventDefault();
-    dragCounterRef.current = 0;
-    setDragActive(false);
-    void handleFilesUpload(Array.from(e.dataTransfer.files));
-  }
+  const { dragActive, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
+    useFileDrop((files) => void handleFilesUpload(files));
 
   function handleBufferChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const newValue = e.target.value;
     // Clear any upload-level error when the user starts editing.
-    setUploadError(null);
+    clearUploadError();
     handleSourceChange(newValue);
   }
 
@@ -502,34 +218,9 @@ export function R3FApp() {
     loader.provideFile(path);
   }
 
-  // Download .tscn — a Blob + anchor export, no write-back to disk
-  // (ADR-0020). Named after whatever is active so a batch of downloads
-  // doesn't collide on a generic "scene.tscn".
-  function downloadFilename(): string {
-    const base = uploadedTscnName || fixtureFile.split('/').pop() || 'scene.tscn';
-    return base.endsWith('.tscn') ? base : `${base}.tscn`;
-  }
-
   function handleDownloadTscn() {
-    const blob = new Blob([buffer], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    try {
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = downloadFilename();
-      anchor.click();
-    } finally {
-      URL.revokeObjectURL(url);
-    }
+    downloadTscn(buffer, downloadFilename(uploadedTscnName, fixtureFile));
   }
-
-  // The toolbar shows the most recently SET error (newestErrorChannel above);
-  // if that channel has since been cleared, the other one — if still live —
-  // shows instead. Each error is cleared by the interactions that supersede
-  // it: edits clear both, fixture switches clear uploadError, replace()
-  // clears loadError.
-  const effectiveLoadError =
-    newestErrorChannel === 'load' ? (loadError ?? uploadError) : (uploadError ?? loadError);
 
   // Nothing has EVER rendered (forwardedContent stays '' once a valid
   // render has occurred — hold-last-valid never reverts it) AND the current
@@ -640,9 +331,7 @@ export function R3FApp() {
                 onFixtureChange={handleFixtureChange}
                 onFilesSelected={handleFilesUpload}
                 paneVisible={sourcePane.visible}
-                onTogglePane={() =>
-                  setSourcePane((prev) => ({ ...prev, visible: !prev.visible }))
-                }
+                onTogglePane={toggleSourcePane}
                 problemBadge={problemBadge}
               />
             }
@@ -672,269 +361,6 @@ export function R3FApp() {
         </div>
       </div>
     </ResourceLoaderProvider>
-  );
-}
-
-interface ToolbarProps {
-  options: readonly ViewportSelectorOption[];
-  fixtureFile: string;
-  uploadedTscnName: string | null;
-  loadError: string | null;
-  onFixtureChange: (value: string) => void;
-  /**
-   * One or more files picked via the file input — a scene plus, optionally,
-   * its resources. The handler matches them against the shell-reported
-   * missing-paths set.
-   */
-  onFilesSelected: (files: File[]) => void;
-  paneVisible: boolean;
-  onTogglePane: () => void;
-  /** Compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
-  problemBadge: string | null;
-}
-
-/** Small scene/node glyph for the scene chip. */
-function SceneGlyph() {
-  return (
-    <svg className={styles.sceneGlyph} viewBox="0 0 16 16" aria-hidden focusable="false">
-      <path d="M8 1.6 14 5v6L8 14.4 2 11V5z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M2 5l6 3 6-3M8 8v6.4" fill="none" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-/**
- * Web toolbar: a compact "scene chip" in the shell top bar that opens a
- * command palette (click, or Ctrl/Cmd+K) for opening a `.tscn` and switching
- * scenes. The palette LEADS with "Open a .tscn from disk…" — the real-world
- * primary action — and lists the built-in fixtures below under a "dev only"
- * heading. Those fixtures are development scaffolding slated for removal; when
- * `options` is empty the palette degrades cleanly to just the open action +
- * the current-file chip.
- *
- * Note on missing files: a scene's missing `res://` dependencies are provided
- * separately and per-path in the shell's Resources tab — deliberately kept
- * distinct from "open a scene" so a picked file always maps to a known
- * target. A compact badge nudges the user toward that tab without
- * requiring it be open first.
- */
-function Toolbar({
-  options,
-  fixtureFile,
-  uploadedTscnName,
-  loadError,
-  onFixtureChange,
-  onFilesSelected,
-  paneVisible,
-  onTogglePane,
-  problemBadge,
-}: ToolbarProps) {
-  // Reset Camera lives in the shared <ViewportToolbar>, floated over the viewport.
-  const tscnInputRef = useRef<HTMLInputElement | null>(null);
-  const searchRef = useRef<HTMLInputElement | null>(null);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-
-  // `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
-  // a descendant of the shell's own `<MissingResourcesProvider>` — so this
-  // reads the SAME live missing-paths set the shell's own
-  // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
-  // new plumbing. Surfacing it here means a missing texture/scene is visible
-  // without opening that tab first.
-  const { missingPaths } = useMissingResources();
-
-  // Built-in dev fixtures to switch between (drop the uploaded-placeholder
-  // option, whose value is the empty sentinel).
-  const scenes = useMemo(() => options.filter((o) => o.value !== NO_FIXTURE), [options]);
-
-  const currentLabel =
-    uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
-
-  // Ctrl/Cmd+K toggles the palette; Escape closes it.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setOpen((v) => !v);
-      } else if (e.key === 'Escape') {
-        setOpen(false);
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  // Reset + focus search each time the palette opens.
-  useEffect(() => {
-    if (!open) return;
-    setQuery('');
-    const id = window.setTimeout(() => searchRef.current?.focus(), 0);
-    return () => window.clearTimeout(id);
-  }, [open]);
-
-  function selectScene(value: string) {
-    onFixtureChange(value);
-    setOpen(false);
-  }
-
-  function handleTscnFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    onFilesSelected(Array.from(files));
-    // Reset so the same filename(s) can be re-opened.
-    if (tscnInputRef.current) tscnInputRef.current.value = '';
-    setOpen(false);
-  }
-
-  return (
-    <div className={styles.toolbar}>
-      <button
-        type="button"
-        className={styles.openButton}
-        data-testid="source-pane-toggle"
-        onClick={onTogglePane}
-        aria-expanded={paneVisible}
-        title="Toggle the source pane"
-      >
-        {paneVisible ? 'Hide' : 'Show'} Source
-        {problemBadge && (
-          <span className={styles.problemBadge} data-testid="problem-badge">
-            {problemBadge}
-          </span>
-        )}
-      </button>
-      {/* Primary action — open your own .tscn from disk. Triggers the same
-          hidden input the ⌘K palette uses; kept visible because the built-in
-          fixtures are dev-only scaffolding, so this is the real entry point. */}
-      <button
-        type="button"
-        className={styles.openButton}
-        onClick={() => tscnInputRef.current?.click()}
-        title="Open a .tscn file from disk"
-      >
-        <span className={styles.openIcon} aria-hidden>
-          ⤓
-        </span>
-        Open <code className={styles.openExt}>.tscn</code>
-      </button>
-      <button
-        type="button"
-        className={styles.sceneChip}
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title="Current scene — click to switch (Ctrl+K)"
-      >
-        <SceneGlyph />
-        {uploadedTscnName ? (
-          <span
-            className={styles.sceneName}
-            data-testid="uploaded-tscn-label"
-            title={uploadedTscnName}
-          >
-            {uploadedTscnName}
-          </span>
-        ) : (
-          <span className={styles.sceneName}>{currentLabel}</span>
-        )}
-        <span className={styles.caret} aria-hidden>
-          ▾
-        </span>
-      </button>
-
-      {/* Opens the staged Godot-vs-ours comparison gallery (public/parity/,
-          served at /parity/ in dev and on the deployed site). */}
-      <a
-        className={styles.openButton}
-        href="parity/index.html"
-        target="_blank"
-        rel="noopener"
-        title="Open the Godot ⇄ ours render-comparison gallery"
-      >
-        <span className={styles.openIcon} aria-hidden>
-          ⇄
-        </span>
-        Parity
-      </a>
-
-      {missingPaths.size > 0 && (
-        <span
-          className={styles.missingResourcesBadge}
-          data-testid="missing-resources-badge"
-          title="Resources referenced by this scene are missing — see the Resources tab"
-        >
-          ⚠ {missingPaths.size} missing
-        </span>
-      )}
-
-      {loadError && (
-        <span role="alert" className={styles.errorMessage}>
-          {loadError}
-        </span>
-      )}
-
-      {/* Always rendered (visually hidden) so the open-file action — and the
-          upload tests — can reach it whether or not the palette is open. */}
-      <input
-        ref={tscnInputRef}
-        type="file"
-        // Multi-select — a .tscn plus its resource files can be picked
-        // in one gesture. `accept` covers the file kinds handleFilesUpload's
-        // basename-matching can actually resolve: the binary resource
-        // extensions (resourceProviderUtils.isBinaryResourceType) plus the
-        // text resources the pipeline routes (.tres materials/tilesets) —
-        // missing rows are routinely .tres, and drag-and-drop already
-        // accepts them, so the picker must too.
-        accept=".tscn,.tres,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
-        multiple
-        onChange={handleTscnFileChange}
-        className={styles.srOnly}
-        data-testid="upload-tscn-input"
-        tabIndex={-1}
-        aria-hidden
-      />
-
-      {open && (
-        <>
-          <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden />
-          <div className={styles.palette} role="dialog" aria-label="Open or switch scene">
-            {/* Primary action — open the user's own .tscn. */}
-            <button
-              type="button"
-              className={styles.openDisk}
-              onClick={() => tscnInputRef.current?.click()}
-            >
-              <span className={styles.openDiskIcon} aria-hidden>
-                ⤓
-              </span>
-              Open a <code>.tscn</code> from disk…
-            </button>
-
-            {scenes.length > 0 && (
-              <>
-                <input
-                  ref={searchRef}
-                  className={styles.search}
-                  placeholder="Search built-in scenes…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  aria-label="Filter built-in scenes"
-                />
-                <div className={styles.list}>
-                  <FixtureTreeView
-                    fixtures={fixtures}
-                    query={query}
-                    selectedFile={uploadedTscnName ? '' : fixtureFile}
-                    onSelect={selectScene}
-                  />
-                </div>
-                <div className={styles.devNote}>Built-in scenes are a development aid.</div>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
 

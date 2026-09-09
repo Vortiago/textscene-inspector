@@ -12,5 +12,7 @@ point_count = 3
 position = Vector2(420, 280)
 curve = SubResource("Curve2D_arc")
 
+; Half the curve's baked length (368.938416), spelled absolutely: a stored
+; progress_ratio never reaches the node, so only progress can place a follower.
 [node name="Follower" type="PathFollow2D" parent="ArcPath"]
-progress_ratio = 0.5
+progress = 184.469208

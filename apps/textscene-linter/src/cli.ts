@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * TSCN Linter CLI - Command-line tool for linting .tscn files
+ * TextScene Linter CLI — lints Godot's text formats, `.tscn` scenes and
+ * `.tres` resources. A directory argument is walked for both.
  */
 
 import { readFileSync } from 'fs';
@@ -53,9 +54,9 @@ const program = new Command();
 
 program
   .name('tscn-lint')
-  .description('Lint and validate Godot TSCN files')
+  .description('Lint and validate Godot text scenes (.tscn) and resources (.tres)')
   .version(getVersion())
-  .argument('<files...>', 'TSCN files or directories to lint (directories are searched recursively)')
+  .argument('<files...>', '.tscn/.tres files or directories to lint (directories are searched recursively)')
   .option('--no-color', 'Disable colored output (text format only)')
   .option(
     '--format <format>',

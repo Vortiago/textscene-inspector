@@ -10,6 +10,10 @@ function errorsOf(diagnostics: ReturnType<Linter['lint']>) {
   return diagnostics.filter((d) => d.severity === 'error');
 }
 
+function warningsOf(diagnostics: ReturnType<Linter['lint']>) {
+  return diagnostics.filter((d) => d.severity === 'warning');
+}
+
 describe('Decal strict validators', () => {
   let linter: Linter;
 
@@ -58,16 +62,84 @@ size = Vector3(1, 2)
     expect(errors[0]!.message).toContain('size');
   });
 
-  it('rejects an albedo_mix outside 0..1', () => {
+  it('accepts the enforced size floor exactly', () => {
+    // Vector3(0.001, …) is `size = p_size.maxf(0.001)`'s fixed point, and
+    // scenes/demos/3d/decals/decal.tscn ships exactly this value.
+    const content = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://albedo.png" id="1_a"]
+
+[node name="X" type="Decal"]
+texture_albedo = ExtResource("1_a")
+size = Vector3(0.001, 0.001, 0.001)
+`;
+
+    expect(linter.lint(content)).toEqual([]);
+  });
+
+  it('errors one step below the size floor, which the setter clamps up', () => {
+    // decal.cpp:34 rewrites any component under 0.001, so the value in the file
+    // is not the value Godot loads: the error tier, not the hint's warning.
+    const content = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+size = Vector3(0.0009, 2, 2)
+`;
+
+    const errors = errorsOf(linter.lint(content));
+    expect(errors.length).toBe(1);
+    expect(errors[0]!.message).toContain('size');
+  });
+
+  it('accepts a size far above the hinted 1024, which `or_greater` leaves open', () => {
+    const content = `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://albedo.png" id="1_a"]
+
+[node name="X" type="Decal"]
+texture_albedo = ExtResource("1_a")
+size = Vector3(4096, 4096, 4096)
+`;
+
+    expect(linter.lint(content)).toEqual([]);
+  });
+
+  it('warns (not errors) on an albedo_mix outside 0..1', () => {
+    // decal.cpp:248 hints "0,1,0.01" but set_albedo_mix (:79-83) is a bare
+    // assignment, so out-of-range is a warning, not an error (ADR-0032).
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]
 albedo_mix = 1.5
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]!.message).toContain('albedo_mix');
+    expect(errorsOf(linter.lint(content))).toEqual([]);
+    const warnings = warningsOf(linter.lint(content));
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]!.message).toContain('albedo_mix');
+  });
+
+  it('accepts normal_fade at the 0.999 ceiling and warns at 1.0', () => {
+    // decal.cpp:251 hints "0,0.999,0.001" — 1.0 makes the decal invisible even
+    // when fully perpendicular, so the hint stops one step short. The setter
+    // (:106-109) is a bare assignment, so past the ceiling is a warning.
+    const atCeiling = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+normal_fade = 0.999
+`;
+    const pastCeiling = `[gd_scene format=3]
+
+[node name="X" type="Decal"]
+normal_fade = 1.0
+`;
+
+    expect(linter.lint(atCeiling).filter((d) => d.message.includes('normal_fade'))).toEqual([]);
+
+    const found = linter.lint(pastCeiling).filter((d) => d.message.includes('normal_fade'));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('warning');
+    expect(found[0]!.message).toContain('0.999');
   });
 
   it('accepts an upper_fade/lower_fade above 1 — they are curve exponents, not ratios', () => {
@@ -97,19 +169,21 @@ upper_fade = -0.5
     expect(errors[0]!.message).toContain('upper_fade');
   });
 
-  it('rejects a cull_mask outside the 32-bit layer range', () => {
-    // 0 is legal (renders nothing); 2^32 is not. class_camera3d.html's 1048575
-    // is the DEFAULT — the 20 editor-visible layers — never the bound.
+  it('errors on a cull_mask past the width of the int slot that holds it', () => {
+    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, a widget hint that
+    // grounds no numeric bound, and the setter never rejects: every 32-bit
+    // pattern passes. 4294967296 needs a 33rd bit the `uint32_t` slot
+    // (decal.h:106) does not hold, which is the error tier. 1048575 is
+    // Camera3D's DEFAULT, never a bound.
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]
 cull_mask = 4294967296
 `;
 
-    const errors = errorsOf(linter.lint(content));
-    expect(errors.length).toBeGreaterThan(0);
-
-    expect(errors[0]!.message).toContain('cull_mask');
+    const found = linter.lint(content).filter((x) => x.message.includes('cull_mask'));
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('error');
   });
 
   it('rejects an invalid texture_albedo reference format', () => {

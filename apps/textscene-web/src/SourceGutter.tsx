@@ -21,6 +21,7 @@ export interface SourceGutterProps {
 const SEVERITY_CLASS: Record<Severity, string> = {
   error: styles.severityError ?? '',
   warning: styles.severityWarning ?? '',
+  info: styles.severityInfo ?? '',
 };
 
 /**

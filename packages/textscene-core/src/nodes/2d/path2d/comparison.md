@@ -1,51 +1,35 @@
 ---
 type: Path2D
 category: 2D
+status: unreviewed
 fixture: unit-path2d.tscn
 image: unit-path2d
 visual: false
-renders_as: nothing at runtime; a selection-gated curve gizmo
+renders_as: nothing at runtime, a selection-gated curve gizmo
 ---
 
 # Path2D
 
-A Node2D that carries a `Curve2D` for children to follow. It has no runtime visual
-of its own: the previewer draws the curve as a selection-gated white polyline gizmo
-(ADR-0018), shown only while the node is selected, mirroring Godot's 2D editor path
-line. In a plain capture nothing is selected, so both images are an empty grey field.
-The `PathFollow2D` child is a transform-only relay with no geometry, so it draws
-nothing either.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `position` | `Vector2(420, 280)` | where the path origin sits; nothing is drawn there |
-| `curve` | `SubResource("Curve2D_arc")` | the followed path; drawn only as a selection-gated gizmo, so invisible here |
-| `Follower.progress_ratio` | `0.5` | places the follower halfway along the curve; transform-only, no visual |
-
-## Divergences
-
-None visible in this fixture.
+Path2D carries a `Curve2D` for children to follow. It has no runtime visual, and the
+previewer draws the curve only as a selection-gated white polyline (ADR-0018), so a
+plain capture is empty on both sides.
 
 ## Linting
 
 <!-- lint:begin Path2D -->
-Strict parsing format-checks these `Path2D` properties, plus 18 inherited from Node2D. Every validator failure is an **error**.
+Strict parsing format-checks these `Path2D` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property |
-| --- |
-| `curve` |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `curve` | null, SubResource("id") or ExtResource("id") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
-| `valid-path2d` | `path2d-missing-curve` | warning |
-|  | `valid-path2d-resources` | error |
-|  | `path2d-unused` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-path2d` | `path2d-missing-curve` | info |
 <!-- lint:end -->
 
-Path2D carries a single property of its own, `curve`. The lenient parser only checks
-that it is present (`if (properties.curve)`); it applies none of strict's
-resource-reference format checking, so a malformed reference is stored as-is and
-only surfaces as a problem when the component tries to resolve it.
+`curve` is only checked for presence. A malformed reference is stored as-is and surfaces
+when the component fails to resolve it.

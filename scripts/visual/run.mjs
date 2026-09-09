@@ -28,32 +28,25 @@
  *
  * On failure, <name>.actual.png and <name>.diff.png land in
  * scripts/visual/output/ (gitignored; uploaded as a CI artifact).
+ *
+ * The parts live in `run/`: `cli` (flags, scene selection, the summary),
+ * `sceneCapture` (one scene driven to its settled frame) and `baselines`
+ * (the committed PNGs and the pixel arithmetic against them).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
-import { PNG } from 'pngjs';
-import pixelmatch from 'pixelmatch';
-import { DEFAULT_MAX_DIFF_PCT, GOLDEN_SCENES } from './scenes.mjs';
 import {
   assertPortFree,
   createCaptureContext,
   ensureWebBuilt,
-  findCanvas,
-  gotoFixture,
   killPreviewGroup,
-  setDisplayToggle,
-  settleCanvas,
   startPreview,
   waitForServer,
 } from './previewServer.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const BASELINE_DIR = join(here, 'baselines');
-const OUTPUT_DIR = join(here, 'output');
+import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
+import { captureScene } from './run/sceneCapture.mjs';
+import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
 
 // Dedicated uncommon port: never collides with a manually running
 // `pnpm preview` (4173) or the showcase pipeline (4188). Override with
@@ -64,153 +57,9 @@ const OUTPUT_DIR = join(here, 'output');
 // first, with no error.
 const PORT = Number(process.env.VISUAL_PORT) || 4317;
 
-// Strictly greater than CameraFit's last load-time fit timer (1100ms after
-// the scene mounts), with a comfortable margin for render-loop latency under
-// host contention. See the wait in `captureScene`.
-const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
-
-function parseArgs(argv) {
-  const opts = { update: false, scene: null };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--update') opts.update = true;
-    else if (a === '--scene') opts.scene = argv[++i];
-    else {
-      console.error(`[visual] unknown argument: ${a}`);
-      process.exit(2);
-    }
-  }
-  return opts;
-}
-
-/**
- * Navigate to a scene and capture the canvas once it is provably settled:
- * two consecutive byte-identical screenshots. Returns the PNG buffer, or
- * null with a reason when the scene never stabilizes.
- *
- * When `scene.select` is set, the harness drives a real tree selection first
- * (expand the tree, click that node's row) so a selection-gated gizmo
- * (Marker/Path/PathFollow, ADR-0018) renders — exercising the full
- * tree-click → SelectionContext → NodeDispatcher → useGizmoVisible path in the
- * browser, not just the component's gating logic in isolation.
- */
-async function captureScene(page, baseUrl, scene) {
-  // Silence here is how a stalled resource chain becomes a baseline, so say so.
-  await gotoFixture(page, baseUrl, scene.file, (ms) =>
-    console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
-  );
-  const { canvas, reason: canvasReason } = await findCanvas(page);
-  if (!canvas) return { buffer: null, reason: canvasReason };
-
-  if (scene.navigation) {
-    // The navmesh overlay defaults ON, but drive it explicitly so the scene's
-    // state does not depend on a default a future change could flip out from
-    // under the baseline.
-    const reason = await setDisplayToggle(page, 'Navigation', true);
-    if (reason) return { buffer: null, reason };
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
-    await page.mouse.move(0, 0);
-  }
-
-  if (scene.collisions) {
-    // "Visible Collision Shapes" is OFF by default (ADR-0005/0006), so a
-    // CollisionShape gizmo is invisible to every other golden — which is how
-    // capsule/sphere/cylinder shapes drew a unit box unnoticed.
-    const reason = await setDisplayToggle(page, 'Collisions', true);
-    if (reason) return { buffer: null, reason };
-    // Let CameraFit's load-time timers finish before changing what is on
-    // screen, and take the pointer off the toolbar so no hover is captured.
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
-    await page.mouse.move(0, 0);
-  }
-
-  if (scene.select) {
-    // Expand the whole tree so nested nodes are reachable, then click the row.
-    await page.locator('[aria-label="Expand all"]').click();
-    const row = page.locator(`[data-node-path="${scene.select}"] [role="treeitem"]`).first();
-    try {
-      await row.waitFor({ timeout: 10000 });
-    } catch {
-      return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
-    }
-    // Click only after CameraFit's load-time fit timers (150/500/1100ms after
-    // the scene mounts) have ALL fired. Selection never moves the camera (by
-    // design; see CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx),
-    // so a click that lands BEFORE the 1100ms timer lets that timer see the
-    // just-mounted gizmo and widen the frame, while a click AFTER it leaves
-    // the tight pre-selection framing: two individually stable equilibria
-    // whose winner depends on host load. The tree row's presence
-    // above is our scene-ready signal: rows render from the same scene-graph
-    // state whose arrival starts CameraFit's timers, so waiting comfortably
-    // past the last timer from here guarantees the timers are spent and pins
-    // every `-selected` capture to the single tight equilibrium.
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
-    await row.click();
-    // `.click()` moves the mouse over the row first, which fires a real
-    // `mouseenter` and leaves that row's hover-highlight engaged (since the
-    // mouse never moves away afterward) — an accidental artifact of driving
-    // a real click, not something these `-selected` scenes intend to capture
-    // (this harness exercises the selection path, per the doc comment above;
-    // hover is a separate, untested-here affordance). Move the pointer off
-    // the tree entirely so only true selection state renders.
-    await page.mouse.move(0, 0);
-  }
-
-  return settleCanvas(page, canvas);
-}
-
-function compareToBaseline(scene, actualBuffer) {
-  const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
-  if (!existsSync(baselinePath)) {
-    return { status: 'missing-baseline', detail: `no baseline — run pnpm test:visual:update` };
-  }
-  const expected = PNG.sync.read(readFileSync(baselinePath));
-  const actual = PNG.sync.read(actualBuffer);
-  if (expected.width !== actual.width || expected.height !== actual.height) {
-    return {
-      status: 'fail',
-      detail: `size mismatch: baseline ${expected.width}x${expected.height}, actual ${actual.width}x${actual.height}`,
-      actual,
-    };
-  }
-  const { width, height } = expected;
-  const diff = new PNG({ width, height });
-  const diffPixels = pixelmatch(expected.data, actual.data, diff.data, width, height, {
-    threshold: 0.1,
-  });
-  const diffPct = (diffPixels / (width * height)) * 100;
-  const maxDiffPct = scene.maxDiffPct ?? DEFAULT_MAX_DIFF_PCT;
-  if (diffPct > maxDiffPct) {
-    return {
-      status: 'fail',
-      detail: `${diffPixels} px differ (${diffPct.toFixed(3)}% > ${maxDiffPct}%)`,
-      actual,
-      diff,
-    };
-  }
-  return { status: 'pass', detail: `${diffPixels} px differ (${diffPct.toFixed(3)}%)` };
-}
-
-function writeFailureArtifacts(scene, actualBuffer, result) {
-  mkdirSync(OUTPUT_DIR, { recursive: true });
-  writeFileSync(join(OUTPUT_DIR, `${scene.name}.actual.png`), actualBuffer);
-  if (result.diff) {
-    writeFileSync(join(OUTPUT_DIR, `${scene.name}.diff.png`), PNG.sync.write(result.diff));
-  }
-}
-
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  let scenes = GOLDEN_SCENES;
-  if (opts.scene) {
-    scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
-    if (scenes.length === 0) {
-      console.error(
-        `[visual] unknown scene "${opts.scene}". Known: ${GOLDEN_SCENES.map((s) => s.name).join(', ')}`
-      );
-      process.exit(2);
-    }
-  }
+  const scenes = selectScenes(opts);
 
   // Build BEFORE the port check: the build is now unconditional, and a cold
   // one is long enough that another worktree's harness could claim the port in
@@ -245,8 +94,7 @@ async function main() {
         continue;
       }
       if (opts.update) {
-        mkdirSync(BASELINE_DIR, { recursive: true });
-        writeFileSync(join(BASELINE_DIR, `${scene.name}.png`), buffer);
+        writeBaseline(scene, buffer);
         results.push({ scene, status: 'updated', detail: `${buffer.length} bytes` });
         continue;
       }
@@ -255,19 +103,19 @@ async function main() {
       results.push({ scene, status: result.status, detail: result.detail });
     }
   } finally {
-    await browser?.close();
+    // A crashed browser REJECTS close(); letting that propagate would skip the
+    // kill below and strand a `vite preview` holding the port.
+    try {
+      await browser?.close();
+    } catch {
+      /* already gone */
+    }
     killPreviewGroup(proc);
   }
 
   console.log('\n=== visual regression summary ===');
-  const pad = Math.max(...results.map((r) => r.scene.name.length));
-  let failed = 0;
-  for (const r of results) {
-    const ok = r.status === 'pass' || r.status === 'updated';
-    if (!ok) failed++;
-    const mark = ok ? '✓' : '✗';
-    console.log(`  ${mark} ${r.scene.name.padEnd(pad)}  ${r.status.toUpperCase()}  ${r.detail}`);
-  }
+  const { lines, failed } = summarize(results);
+  for (const line of lines) console.log(line);
   if (opts.update) {
     console.log(
       `\n[visual] baselines written to scripts/visual/baselines/ — eyeball them, then commit.`

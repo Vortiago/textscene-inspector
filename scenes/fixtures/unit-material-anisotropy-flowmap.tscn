@@ -55,5 +55,5 @@ mesh = SubResource("SphereMesh_1")
 surface_material_override/0 = SubResource("Material_scalar_only")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 4, 4)
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 4, 4)
 light_energy = 2.0

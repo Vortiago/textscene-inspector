@@ -4,6 +4,7 @@
 
 import type { Color } from './types';
 import { COLOR_RE } from '../../../parser/vectors';
+import { matchedFloat } from '../../../godot/number.js';
 
 /**
  * Parse Color from Godot format: Color(r, g, b, a)
@@ -17,9 +18,9 @@ export function parseColor(value: string): Color {
   }
 
   return {
-    r: parseFloat(match[1]),
-    g: parseFloat(match[2]),
-    b: parseFloat(match[3]),
-    a: parseFloat(match[4]),
+    r: matchedFloat(match[1]),
+    g: matchedFloat(match[2]),
+    b: matchedFloat(match[3]),
+    a: matchedFloat(match[4]),
   };
 }

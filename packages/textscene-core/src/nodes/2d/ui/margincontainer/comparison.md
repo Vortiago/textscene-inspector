@@ -1,6 +1,7 @@
 ---
 type: MarginContainer
 category: 2D
+status: unreviewed
 fixture: unit-margin-container.tscn
 image: unit-margin-container
 renders_as: a padded flex container
@@ -8,37 +9,23 @@ renders_as: a padded flex container
 
 # MarginContainer
 
-MarginContainer insets its single child by four theme-override margin constants.
-The previewer maps it to a CSS flex box whose padding is those margins, so the
-container draws nothing itself — the child's blue fill sits inset by the margins,
-and the grey background shows through the padding band.
-
-## Properties exercised
-
-| Property | Value | Effect |
-| --- | --- | --- |
-| `anchors_preset` / `anchor_right` / `anchor_bottom` | `15` / `1.0` / `1.0` | the container fills the parent Control, so it spans the whole viewport |
-| `theme_override_constants/margin_left` · `margin_right` | `32` | wider grey band down the left and right edges of the blue fill |
-| `theme_override_constants/margin_top` · `margin_bottom` | `16` | shorter grey band top and bottom — half the horizontal inset |
-| child `ColorRect.color` | `Color(0.2, 0.4, 0.8, 1)` | the blue fill occupying the padded box |
-
-## Divergences
-
-None visible in this fixture.
+MarginContainer insets its single child by four margin constants. The previewer maps it
+to a CSS flex box whose padding is those margins and draws nothing itself.
 
 ## Linting
 
 <!-- lint:begin MarginContainer -->
-Strict parsing format-checks the inherited set (28 inherited from Control); `MarginContainer` declares none of its own. Every validator failure is an **error**.
+Strict parsing format-checks the inherited set (53 inherited from Control, 16 inherited from CanvasItem, 10 inherited from Node); `MarginContainer` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | warning |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 <!-- lint:end -->
 
-MarginContainer's parser adds nothing beyond Control; the four margins are
-collected generically as `theme_override_constants` via `parseOptionalFloat`,
-which returns `undefined` (no warning) for an absent or unparseable
-`margin_left` / `margin_top` / `margin_right` / `margin_bottom`. The Component
-then substitutes `0` for whichever margins are `undefined`, so a missing or
-garbled constant just removes that side's padding rather than failing.
+The four margins are collected as `theme_override_constants` through
+`parseOptionalFloat`, which returns `undefined` with no warning for an absent or
+unparseable value. The Component then substitutes `0` for that side, so a garbled
+constant removes its padding rather than failing.

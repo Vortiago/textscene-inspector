@@ -1,0 +1,136 @@
+/**
+ * Godot engine facts, with ZERO dependencies.
+ *
+ * The one module in `src/` that every other domain may import freely — linter,
+ * parser, resources, nodes, r3f alike — because it imports nothing itself and so
+ * can never carry a domain's weight into another's bundle.
+ *
+ * What belongs here: a constant or pure function that is a fact about the ENGINE
+ * rather than about this codebase, and that more than one domain needs.
+ * `CMP_EPSILON` is the founding case: the linter grounds bounds on it and the
+ * resource pipeline samples curves with it, and neither should have to import
+ * the other, nor re-declare the number and let the two drift.
+ *
+ * What does NOT belong here: anything touching `ParseError`, `PropertyValidator`,
+ * THREE, React, or a node/resource type. Those are domain concepts, and admitting
+ * one would give this module the dependency it exists to be free of.
+ *
+ * `noDependencies.test.ts` enforces the rule, since it is one an ordinary review
+ * cannot see: a single added import silently converts this from a leaf into a
+ * bridge between two bundles.
+ *
+ * ## One file per engine area, never one file of constants
+ *
+ * A file here is named for the part of Godot it describes — `math.ts` for
+ * `math_defs.h`/`math_funcs.h`, `string.ts` for `ustring.cpp`'s parses — so a
+ * reader looking for a fact knows where it is, and so each file's docblock can
+ * explain ONE area properly. A single `constants.ts` would collect unrelated
+ * facts behind one name and grow a docblock nobody reads; the value here is the
+ * reasoning attached to each fact, and that only survives if the files stay
+ * small and topical. Add a new file rather than a new section.
+ */
+
+export {
+  CMP_EPSILON,
+  basisDeterminant,
+  clamp,
+  degToRad,
+  isZeroApprox,
+  isEqualApprox,
+  lerp,
+  sign,
+  smoothstep,
+} from './math.js';
+export {
+  type BasisComponents,
+  basisGetScale,
+  basisGetScaleAbs,
+  basisHasUnitScale,
+  basisIsOrthonormal,
+} from './basis.js';
+export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
+export {
+  IS_VALID_INT_RE,
+  literalText,
+  dropTrailingComma,
+  splitTopLevel,
+  stringToInt,
+  toIntIndex,
+} from './string.js';
+export {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+  CANVAS_ITEM_Z_MIN,
+  CANVAS_ITEM_Z_MAX,
+  CANVAS_LAYER_MIN,
+  CANVAS_LAYER_MAX,
+} from './rendering.js';
+export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
+export { CURSOR_ARROW, CURSOR_MAX, CURSOR_SHAPES } from './control.js';
+export {
+  allFinite,
+  FLOAT_PATTERN_SOURCE,
+  TSCN_FLOAT_PATTERN_SOURCE,
+  TSCN_FLOAT_RE,
+  slotTupleRegex,
+  parseGodotFloat,
+} from './number.js';
+export {
+  INT32_MAX,
+  type IntWidth,
+  parseGodotInt,
+  ruleCount,
+  ruleInt,
+  readerLimitedInt,
+  storedFromFloat,
+  storedInt,
+  toInt16,
+  toInt32,
+  toUint32,
+} from './int.js';
+export { DEFAULT_ANIMATION_NAME } from './animation.js';
+export { canonicalPropertyName, isDeprecatedPropertyName } from './deprecated.js';
+export {
+  ARRAY_LITERAL_RE,
+  NODE_PATH_LITERAL_RE,
+  NODE_PATH_LITERAL_ANYWHERE_RE,
+  TYPED_OR_BARE_ARRAY_RE,
+  TYPED_WRAPPER_RE,
+  compositeCallPrefix,
+  isNilLiteral,
+  packedArrayCallAnywhere,
+  packedArrayLiteral,
+  nodePathLiteral,
+  arrayLiteralBody,
+} from './variantParser.js';
+export {
+  EXT_RESOURCE_CALL_ANYWHERE_RE,
+  type ResourceRef,
+  dictSubResourceEntries,
+  keyedResourceRefReader,
+  resourceRef,
+  subResourceRefAnywhere,
+} from './resourceRef.js';
+export { dictPackedField } from './packedArrayFields.js';
+export {
+  MAX_BASE_CHAIN_HOPS,
+  NODE_BASE_TYPES,
+  UNCATALOGUED_BASE_TYPES,
+  baseChain,
+  descendsFrom,
+  isCatalogedType,
+} from './nodeBaseTypes.js';
+export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
+export { INSTANCE_PLACEHOLDER_TYPE } from './packedScene.js';
+export { nodePathNames } from './nodePath.js';
+export {
+  GODOT_TEXT_RESOURCE_EXTENSIONS,
+  isGodotTextResourcePath,
+} from './resourceFormats.js';
+export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
+export {
+  packedArrayBody,
+  packedArrayForms,
+  packedElementType,
+  type PackedArrayBody,
+} from './variantParser.js';

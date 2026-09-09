@@ -6,7 +6,7 @@
       "name": "AcceptDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Window",
         "Viewport",
@@ -20,7 +20,7 @@
       "name": "AimModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",
@@ -35,7 +35,7 @@
       "name": "AnimatableBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "StaticBody2D",
         "PhysicsBody2D",
@@ -52,7 +52,7 @@
       "name": "AnimatableBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "StaticBody3D",
         "PhysicsBody3D",
@@ -82,7 +82,7 @@
       "name": "AnimatedSprite3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpriteBase3D",
         "GeometryInstance3D",
@@ -153,7 +153,7 @@
       "name": "AspectRatioContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -168,7 +168,7 @@
       "name": "AudioListener2D",
       "category": "2D",
       "group": "Audio",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -182,7 +182,7 @@
       "name": "AudioListener3D",
       "category": "3D",
       "group": "Audio",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -234,7 +234,7 @@
       "name": "BackBufferCopy",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -248,7 +248,7 @@
       "name": "BaseButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -262,7 +262,7 @@
       "name": "Bone2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -276,7 +276,7 @@
       "name": "BoneAttachment3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -289,7 +289,7 @@
       "name": "BoneConstraint3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -303,7 +303,7 @@
       "name": "BoneTwistDisperser3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -317,7 +317,7 @@
       "name": "BoxContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -374,7 +374,7 @@
       "name": "CanvasGroup",
       "category": "2D",
       "group": "Canvas effects",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -414,7 +414,7 @@
       "name": "CCDIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -446,7 +446,7 @@
       "name": "CharacterBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -493,7 +493,7 @@
       "name": "CheckButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -509,7 +509,7 @@
       "name": "CodeEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "TextEdit",
         "Control",
@@ -524,7 +524,7 @@
       "name": "CollisionPolygon2D",
       "category": "2D",
       "group": "Collision shapes",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -538,7 +538,7 @@
       "name": "CollisionPolygon3D",
       "category": "3D",
       "group": "Collision shapes",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -578,7 +578,7 @@
       "name": "ColorPicker",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VBoxContainer",
         "BoxContainer",
@@ -595,7 +595,7 @@
       "name": "ColorPickerButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -625,7 +625,7 @@
       "name": "ConeTwistJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -639,7 +639,7 @@
       "name": "ConfirmationDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "AcceptDialog",
         "Window",
@@ -654,7 +654,7 @@
       "name": "Container",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -681,7 +681,7 @@
       "name": "ConvertTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",
@@ -696,7 +696,7 @@
       "name": "CopyTransformModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BoneConstraint3D",
         "SkeletonModifier3D",
@@ -725,7 +725,7 @@
       "name": "CPUParticles3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GeometryInstance3D",
         "VisualInstance3D",
@@ -858,7 +858,7 @@
       "name": "DampedSpringJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -887,7 +887,7 @@
       "name": "DirectionalLight2D",
       "category": "2D",
       "group": "Lighting",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Light2D",
         "Node2D",
@@ -917,7 +917,7 @@
       "name": "FABRIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -934,7 +934,7 @@
       "name": "FileDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ConfirmationDialog",
         "AcceptDialog",
@@ -950,7 +950,7 @@
       "name": "FlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -965,7 +965,7 @@
       "name": "FogVolume",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -979,7 +979,7 @@
       "name": "FoldableContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -994,7 +994,7 @@
       "name": "Generic6DOFJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -1008,7 +1008,7 @@
       "name": "GeometryInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -1022,7 +1022,7 @@
       "name": "GPUParticles2D",
       "category": "2D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1051,7 +1051,7 @@
       "name": "GPUParticlesAttractorBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1066,7 +1066,7 @@
       "name": "GPUParticlesAttractorSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1081,7 +1081,7 @@
       "name": "GPUParticlesAttractorVectorField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesAttractor3D",
         "VisualInstance3D",
@@ -1096,7 +1096,7 @@
       "name": "GPUParticlesCollisionBox3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1111,7 +1111,7 @@
       "name": "GPUParticlesCollisionHeightField3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1126,7 +1126,7 @@
       "name": "GPUParticlesCollisionSDF3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1141,7 +1141,7 @@
       "name": "GPUParticlesCollisionSphere3D",
       "category": "3D",
       "group": "Particles",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GPUParticlesCollision3D",
         "VisualInstance3D",
@@ -1156,7 +1156,7 @@
       "name": "GraphEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1170,7 +1170,7 @@
       "name": "GraphElement",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -1185,7 +1185,7 @@
       "name": "GraphFrame",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GraphElement",
         "Container",
@@ -1201,7 +1201,7 @@
       "name": "GraphNode",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GraphElement",
         "Container",
@@ -1245,7 +1245,7 @@
       "name": "GrooveJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -1276,7 +1276,7 @@
       "name": "HFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "FlowContainer",
         "Container",
@@ -1292,7 +1292,7 @@
       "name": "HingeJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -1306,7 +1306,7 @@
       "name": "HScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ScrollBar",
         "Range",
@@ -1322,7 +1322,7 @@
       "name": "HSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Separator",
         "Control",
@@ -1337,7 +1337,7 @@
       "name": "HSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Slider",
         "Range",
@@ -1353,7 +1353,7 @@
       "name": "HSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SplitContainer",
         "Container",
@@ -1369,7 +1369,7 @@
       "name": "HTTPRequest",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1381,7 +1381,7 @@
       "name": "ImporterMeshInstance3D",
       "category": "3D",
       "group": "Import / editor internals",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1394,7 +1394,7 @@
       "name": "ItemList",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1408,7 +1408,7 @@
       "name": "JacobianIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IterateIK3D",
         "ChainIK3D",
@@ -1454,7 +1454,7 @@
       "name": "LightmapGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -1468,7 +1468,7 @@
       "name": "LightmapProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1495,7 +1495,7 @@
       "name": "LimitAngularVelocityModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1523,7 +1523,7 @@
       "name": "LineEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1537,7 +1537,7 @@
       "name": "LinkButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BaseButton",
         "Control",
@@ -1552,7 +1552,7 @@
       "name": "LookAtModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1608,7 +1608,7 @@
       "name": "MenuBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1622,7 +1622,7 @@
       "name": "MenuButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Button",
         "BaseButton",
@@ -1638,7 +1638,7 @@
       "name": "MeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1667,7 +1667,7 @@
       "name": "ModifierBoneTarget3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -1681,7 +1681,7 @@
       "name": "MultiMeshInstance2D",
       "category": "2D",
       "group": "2D rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1695,7 +1695,7 @@
       "name": "MultiMeshInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "GeometryInstance3D",
         "VisualInstance3D",
@@ -1710,7 +1710,7 @@
       "name": "MultiplayerSpawner",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1722,7 +1722,7 @@
       "name": "MultiplayerSynchronizer",
       "category": "Other",
       "group": "Networking",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1734,7 +1734,7 @@
       "name": "NavigationAgent2D",
       "category": "Other",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -1758,7 +1758,7 @@
       "name": "NavigationLink2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1772,7 +1772,7 @@
       "name": "NavigationLink3D",
       "category": "3D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1785,7 +1785,7 @@
       "name": "NavigationObstacle2D",
       "category": "2D",
       "group": "Navigation",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -1839,7 +1839,7 @@
       "name": "NinePatchRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -1889,7 +1889,7 @@
       "name": "OccluderInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -1918,7 +1918,7 @@
       "name": "OpenXRBindingModifierEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PanelContainer",
         "Container",
@@ -1934,7 +1934,7 @@
       "name": "OpenXRCompositionLayerCylinder",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1948,7 +1948,7 @@
       "name": "OpenXRCompositionLayerEquirect",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1962,7 +1962,7 @@
       "name": "OpenXRCompositionLayerQuad",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRCompositionLayer",
         "Node3D",
@@ -1976,7 +1976,7 @@
       "name": "OpenXRHand",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -1989,7 +1989,7 @@
       "name": "OpenXRInteractionProfileEditor",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "OpenXRInteractionProfileEditorBase",
         "HBoxContainer",
@@ -2007,7 +2007,7 @@
       "name": "OpenXRRenderModel",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2020,7 +2020,7 @@
       "name": "OpenXRRenderModelManager",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2033,7 +2033,7 @@
       "name": "OpenXRVisibilityMask",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2092,7 +2092,7 @@
       "name": "Parallax2D",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2106,7 +2106,7 @@
       "name": "ParallaxBackground",
       "category": "Other",
       "group": "Canvas layers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "CanvasLayer",
         "Node",
@@ -2119,7 +2119,7 @@
       "name": "ParallaxLayer",
       "category": "2D",
       "group": "Parallax & scrolling",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2187,7 +2187,7 @@
       "name": "PhysicalBone2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "RigidBody2D",
         "PhysicsBody2D",
@@ -2204,7 +2204,7 @@
       "name": "PhysicalBone3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody3D",
         "CollisionObject3D",
@@ -2219,7 +2219,7 @@
       "name": "PhysicalBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2233,7 +2233,7 @@
       "name": "PinJoint2D",
       "category": "2D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint2D",
         "Node2D",
@@ -2248,7 +2248,7 @@
       "name": "PinJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -2291,7 +2291,7 @@
       "name": "Popup",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Window",
         "Viewport",
@@ -2305,7 +2305,7 @@
       "name": "PopupMenu",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Popup",
         "Window",
@@ -2320,7 +2320,7 @@
       "name": "PopupPanel",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Popup",
         "Window",
@@ -2335,7 +2335,7 @@
       "name": "ProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -2350,7 +2350,7 @@
       "name": "Range",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2364,7 +2364,7 @@
       "name": "RayCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2378,7 +2378,7 @@
       "name": "RayCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2391,7 +2391,7 @@
       "name": "ReferenceRect",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2405,7 +2405,7 @@
       "name": "ReflectionProbe",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2446,7 +2446,7 @@
       "name": "ResourcePreloader",
       "category": "Other",
       "group": "Resources",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -2458,7 +2458,7 @@
       "name": "RetargetModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2486,7 +2486,7 @@
       "name": "RigidBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -2517,7 +2517,7 @@
       "name": "RootMotionView",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -2531,7 +2531,7 @@
       "name": "ScriptCreateDialog",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ConfirmationDialog",
         "AcceptDialog",
@@ -2562,7 +2562,7 @@
       "name": "ShaderGlobalsOverride",
       "category": "Other",
       "group": "Rendering globals",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -2574,7 +2574,7 @@
       "name": "ShapeCast2D",
       "category": "2D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2588,7 +2588,7 @@
       "name": "ShapeCast3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2601,7 +2601,7 @@
       "name": "Skeleton2D",
       "category": "2D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -2628,7 +2628,7 @@
       "name": "SkeletonIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2642,7 +2642,7 @@
       "name": "SkeletonModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2655,7 +2655,7 @@
       "name": "SliderJoint3D",
       "category": "3D",
       "group": "Physics — joints",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Joint3D",
         "Node3D",
@@ -2669,7 +2669,7 @@
       "name": "SoftBody3D",
       "category": "3D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "MeshInstance3D",
         "GeometryInstance3D",
@@ -2685,7 +2685,7 @@
       "name": "SpinBox",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -2700,7 +2700,7 @@
       "name": "SplineIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ChainIK3D",
         "IKModifier3D",
@@ -2716,7 +2716,7 @@
       "name": "SplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -2746,7 +2746,7 @@
       "name": "SpringArm3D",
       "category": "3D",
       "group": "Physics — queries",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2759,7 +2759,7 @@
       "name": "SpringBoneCollision3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -2772,7 +2772,7 @@
       "name": "SpringBoneCollisionCapsule3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -2786,7 +2786,7 @@
       "name": "SpringBoneCollisionPlane3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -2800,7 +2800,7 @@
       "name": "SpringBoneCollisionSphere3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SpringBoneCollision3D",
         "Node3D",
@@ -2814,7 +2814,7 @@
       "name": "SpringBoneSimulator3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -2858,7 +2858,7 @@
       "name": "StaticBody2D",
       "category": "2D",
       "group": "Physics — bodies",
-      "supported": false,
+      "supported": true,
       "chain": [
         "PhysicsBody2D",
         "CollisionObject2D",
@@ -2889,7 +2889,7 @@
       "name": "StatusIndicator",
       "category": "Other",
       "group": "OS integration",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node",
         "Object"
@@ -2901,7 +2901,7 @@
       "name": "SubViewport",
       "category": "Other",
       "group": "Viewports",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Viewport",
         "Node",
@@ -2914,7 +2914,7 @@
       "name": "SubViewportContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -2929,7 +2929,7 @@
       "name": "TabBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2943,7 +2943,7 @@
       "name": "TabContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Container",
         "Control",
@@ -2958,7 +2958,7 @@
       "name": "TextEdit",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -2972,7 +2972,7 @@
       "name": "TextureButton",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "BaseButton",
         "Control",
@@ -2987,7 +2987,7 @@
       "name": "TextureProgressBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Range",
         "Control",
@@ -3056,7 +3056,7 @@
       "name": "TouchScreenButton",
       "category": "2D",
       "group": "Touch input",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -3070,7 +3070,7 @@
       "name": "Tree",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -3084,7 +3084,7 @@
       "name": "TwoBoneIK3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "IKModifier3D",
         "SkeletonModifier3D",
@@ -3144,7 +3144,7 @@
       "name": "VFlowContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "FlowContainer",
         "Container",
@@ -3160,7 +3160,7 @@
       "name": "VideoStreamPlayer",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Control",
         "CanvasItem",
@@ -3174,7 +3174,7 @@
       "name": "VisibleOnScreenEnabler2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisibleOnScreenNotifier2D",
         "Node2D",
@@ -3189,7 +3189,7 @@
       "name": "VisibleOnScreenEnabler3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisibleOnScreenNotifier3D",
         "VisualInstance3D",
@@ -3204,7 +3204,7 @@
       "name": "VisibleOnScreenNotifier2D",
       "category": "2D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node2D",
         "CanvasItem",
@@ -3218,7 +3218,7 @@
       "name": "VisibleOnScreenNotifier3D",
       "category": "3D",
       "group": "Visibility",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -3232,7 +3232,7 @@
       "name": "VisualInstance3D",
       "category": "3D",
       "group": "Meshes & rendering",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3245,7 +3245,7 @@
       "name": "VoxelGI",
       "category": "3D",
       "group": "Reflection & global illumination",
-      "supported": false,
+      "supported": true,
       "chain": [
         "VisualInstance3D",
         "Node3D",
@@ -3259,7 +3259,7 @@
       "name": "VScrollBar",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "ScrollBar",
         "Range",
@@ -3275,7 +3275,7 @@
       "name": "VSeparator",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Separator",
         "Control",
@@ -3290,7 +3290,7 @@
       "name": "VSlider",
       "category": "2D",
       "group": "UI — controls",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Slider",
         "Range",
@@ -3306,7 +3306,7 @@
       "name": "VSplitContainer",
       "category": "2D",
       "group": "UI — containers",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SplitContainer",
         "Container",
@@ -3322,7 +3322,7 @@
       "name": "Window",
       "category": "Other",
       "group": "UI — windows",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Viewport",
         "Node",
@@ -3347,7 +3347,7 @@
       "name": "XRAnchor3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "XRNode3D",
         "Node3D",
@@ -3361,7 +3361,7 @@
       "name": "XRBodyModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -3375,7 +3375,7 @@
       "name": "XRCamera3D",
       "category": "3D",
       "group": "Cameras",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Camera3D",
         "Node3D",
@@ -3389,7 +3389,7 @@
       "name": "XRController3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "XRNode3D",
         "Node3D",
@@ -3403,7 +3403,7 @@
       "name": "XRFaceModifier3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3416,7 +3416,7 @@
       "name": "XRHandModifier3D",
       "category": "3D",
       "group": "Skeleton, bones & IK",
-      "supported": false,
+      "supported": true,
       "chain": [
         "SkeletonModifier3D",
         "Node3D",
@@ -3430,7 +3430,7 @@
       "name": "XRNode3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",
@@ -3443,7 +3443,7 @@
       "name": "XROrigin3D",
       "category": "3D",
       "group": "XR / AR",
-      "supported": false,
+      "supported": true,
       "chain": [
         "Node3D",
         "Node",

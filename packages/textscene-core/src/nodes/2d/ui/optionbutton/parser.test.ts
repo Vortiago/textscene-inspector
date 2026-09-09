@@ -58,3 +58,37 @@ describe('parseOptionButton', () => {
     expect(p.selected).toBeUndefined();
   });
 });
+
+describe('a Variant int Godot reads differently from `parseInt`', () => {
+  it('builds the item count the exponent spelling names', () => {
+    // `parseInt` stops at the `e`, so `2e1` built two items where Godot builds
+    // twenty and every index past the second went missing.
+    const p = parseOptionButton(h({ name: 'Big', type: 'OptionButton' }), {
+      item_count: '2e1',
+      'popup/item_19/text': '"Last"',
+    });
+
+    expect(p.items).toHaveLength(20);
+    expect(p.items?.[19]?.text).toBe('Last');
+  });
+
+  it('reads an item id the same way', () => {
+    const p = parseOptionButton(h({ name: 'Ids', type: 'OptionButton' }), {
+      item_count: '1',
+      'popup/item_0/text': '"One"',
+      'popup/item_0/id': '2e1',
+    });
+
+    expect(p.items?.[0]?.id).toBe(20);
+  });
+
+  it('reads an item key spelled the way _get_property resolves it', () => {
+    // The gate is `is_valid_int()` and the read is `to_int()`
+    // (property_list_helper.cpp:53-55), so `item_00` and `item_+0` are item 0.
+    const result = parseOptionButton(h({ name: 'Menu', type: 'OptionButton' }), {
+      item_count: '1',
+      'popup/item_00/text': '"Play"',
+    });
+    expect(result.items?.[0]?.text).toBe('Play');
+  });
+});

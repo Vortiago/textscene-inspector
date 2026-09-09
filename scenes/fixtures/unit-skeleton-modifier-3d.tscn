@@ -1,0 +1,11 @@
+[gd_scene format=3]
+; SkeletonModifier3D: no visuals, exercises active + influence.
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="MySkeletonModifier3D" type="SkeletonModifier3D" parent="Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+active = false
+influence = 0.75

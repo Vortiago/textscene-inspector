@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "type-check:tests": "tsc --noEmit"
   },
   "keywords": [
     "tscn",

@@ -74,4 +74,43 @@ describe('decodeLegacyTileData (TileMap layer_N/tile_data, TSCN format = 2)', ()
     expect(decodeLegacyTileData('PackedInt32Array(0, nope, 0)', 2)).toBeNull();
     expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
+
+  it('keeps decoding a body Godot loads, however the ints are spelled', () => {
+    // An empty body is an empty layer, not corrupt data.
+    expect(decodeLegacyTileData('PackedInt32Array()', 2)).toEqual([]);
+
+    // `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430) takes any
+    // number token and narrows it, so all three of these are files Godot opens
+    // — and `parseInt` read `2e3` as 2, put the cell 998 tiles from where Godot
+    // puts it, and NaN'd the whole layer on `inf`.
+    expect(decodeLegacyTileData('PackedInt32Array(2e3, 0, 0)', 2)).toEqual([
+      { coords: { x: 2000, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+    ]);
+    // Truncation toward zero, matching the C++ conversion.
+    expect(decodeLegacyTileData('PackedInt32Array(1e-3, 0, 0)', 2)).toEqual([
+      { coords: { x: 0, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+    ]);
+    // A non-finite is narrowed at parse to an architecture-specific sentinel,
+    // so there is no cell position to draw. Only that CELL is unknowable, and
+    // here it is the only one, so the layer decodes to no cells — never to a
+    // cell the file did not place, and never to a null that voids the layer.
+    for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
+      expect(decodeLegacyTileData(`PackedInt32Array(${spelling}, 0, 0)`, 2)).toEqual([]);
+    }
+  });
+});
+
+describe('an element no int32 slot can hold', () => {
+  it('drops that cell and keeps the rest of the layer', () => {
+    // One legal-but-unstorable element voided the whole layer, so a file Godot
+    // opens rendered zero cells instead of all-but-one.
+    const cells = decodeLegacyTileData('PackedInt32Array(inf, 0, 0, 0, 2, 65536)', 2);
+
+    expect(cells).toHaveLength(1);
+    expect(cells?.[0]).toMatchObject({ sourceId: 2 });
+  });
+
+  it('still refuses a body the tokenizer cannot read at all', () => {
+    expect(decodeLegacyTileData('PackedInt32Array(nope, 0, 0)', 2)).toBeNull();
+  });
 });

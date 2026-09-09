@@ -4,7 +4,7 @@
  *
  * This is the reuse check for the **Sub-resource path** seam: GridMap already
  * feeds `ArrayMeshResource.materialPaths[0]` straight into
- * `useResource(path, 'StandardMaterial3D')`, so it picks the third kind of
+ * `useResource(path, 'material')`, so it picks the third kind of
  * reference up with NO change of its own. If that stops being true, the seam has
  * grown a per-consumer special case and this goes red while
  * `Component.arraymesh.test.tsx` stays green.

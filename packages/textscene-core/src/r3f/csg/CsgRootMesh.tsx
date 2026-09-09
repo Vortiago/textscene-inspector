@@ -14,11 +14,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
-import { resolveStandardMaterial } from '../materials/resolveStandardMaterial';
 import { StandardMaterialSlot } from '../materials/StandardMaterialSlot';
 import { ExternalMaterialSlot } from '../materials/ExternalMaterialSlot';
-import { resolveExtResourcePath } from '../../resources/SubResourceResolver';
+import { resolveMaterialSlotSource, scalarSlotFor } from '../materials/materialSlotSource';
 import { useSceneResources } from '../SceneResourcesContext';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
@@ -96,12 +94,9 @@ export function CsgRootMesh({ plan, fallback, children }: CsgRootMeshProps) {
   const surfaces = useMemo(() => {
     if (!evaluation) return [];
     return evaluation.surfaceSlots.map((planSurface) => {
-      const reference = plan.surfaces[planSurface];
-      const sub = resolveStandardMaterial(reference, internalResources);
-      return {
-        scalars: sub ? parseStandardMaterial3DScalars(sub.data as Record<string, string>) : null,
-        externalPath: sub ? null : resolveExtResourcePath(reference, externalResources),
-      };
+      return scalarSlotFor(
+        resolveMaterialSlotSource(plan.surfaces[planSurface], internalResources, externalResources)
+      );
     });
   }, [evaluation, plan.surfaces, internalResources, externalResources]);
 

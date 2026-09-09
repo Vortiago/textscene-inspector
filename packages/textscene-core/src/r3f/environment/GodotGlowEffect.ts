@@ -152,7 +152,22 @@ export class GodotGlowEffect extends Effect {
    */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     const previousTarget = renderer.getRenderTarget();
+    try {
+      this.renderPyramid(renderer, inputBuffer);
+    } finally {
+      // In a `finally`, as in every other pass that binds an offscreen target: a
+      // throw out of any of the sixteen renders below would otherwise leave the
+      // renderer bound to a glow target at a fraction of the canvas resolution,
+      // and r3f's own render then draws the whole scene into it.
+      renderer.setRenderTarget(previousTarget);
+    }
+    this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
+  }
 
+  private renderPyramid(
+    renderer: THREE.WebGLRenderer,
+    inputBuffer: THREE.WebGLRenderTarget
+  ): void {
     this.screen.material = this.brightPassMaterial;
     const brightUniforms = this.brightPassMaterial.uniforms;
     brightUniforms['inputBuffer']!.value = inputBuffer.texture;
@@ -184,9 +199,6 @@ export class GodotGlowEffect extends Effect {
       setTexelSize(uniforms, source);
       this.renderTo(renderer, this.accumulationTargets[level]!);
     }
-
-    renderer.setRenderTarget(previousTarget);
-    this.uniforms.get('godotGlowBuffer')!.value = this.accumulationTargets[0]!.texture;
   }
 
   private renderTo(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
@@ -254,7 +266,11 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
  * raster path takes four bilinear taps per 4x4 block, the compute path a separable
  * gaussian — and it runs the compute one wherever storage buffers are supported,
  * which is every desktop target. Neither transplants onto a normalised-UV pass, so
- * this shares the 13-tap downsample; the sheet records which measured closer.
+ * this shares the 13-tap downsample, with a 9-tap tent upsample. Measured with
+ * `ref:godot`, that pair lands closer than a port of the raster gather did: the
+ * gather moved the REPLACE fixture, which shows the bare glow buffer, from exact
+ * to 0.1% off. The per-level weighting and the pyramid's resolution are what set
+ * the halo's shape and size, and those are ported exactly.
  */
 function brightPassFragmentShader(glow: GlowParams): string {
   return /* glsl */ `

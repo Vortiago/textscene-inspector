@@ -6,45 +6,108 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
-import { makeFloatTupleRegex } from '../../../linter/validators/index.js';
-
-// Shared canonical float grammar (accepts .5 / 5. / +5 / scientific), matching
-// the Camera2D linterParser and the renderer.
-const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
+import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
+import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { searchAncestors } from '../../../linter/parentType.js';
+import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /**
- * Count enabled Camera2D nodes in the scene
+ * The Viewport a node draws into, or null for the scene's own viewport.
+ *
+ * Godot's current-camera slot is per-viewport: `Camera2D` takes
+ * `viewport = get_viewport()` (camera_2d.cpp:342), joins
+ * `"__cameras_" + itos(vp.get_id())` (:349), and `make_current` is gated on
+ * `!viewport->get_camera_2d()` (:354), where `camera_2d` is a member of
+ * Viewport itself (viewport.h:764). Two enabled cameras in different viewports
+ * each become current in their own and never contend.
+ *
+ * The scope is therefore the nearest Viewport ANCESTOR (`node.cpp:345-347`),
+ * every subclass included: `Window` is a Viewport (`window.h:43`), so a camera
+ * inside a window, popup or dialog is scoped exactly as one inside a
+ * SubViewport. Read off the base chain rather than a type list, so a subclass
+ * needs no edit here.
+ *
+ * `undefined` rather than `null` for an ancestor whose class this file does not
+ * declare: an instanced sub-scene may be rooted at a Viewport, and reading it
+ * as an ordinary node pools its cameras into the outer viewport's scope — the
+ * very false positive this scoping exists to prevent. Distinct from `null`,
+ * which is the real scene-root viewport, so two such cameras never compare equal.
  */
-function countEnabledCameras(scene: TscnScene): number {
-  let count = 0;
+function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
+  // `searchAncestors` hands `visit` only ancestors whose type this file states
+  // and the catalog knows, which is what makes a bare `descendsFrom` correct.
+  const search = searchAncestors(scene, node, (ancestor) =>
+    descendsFrom(ancestor.type, 'Viewport') ? ancestor : undefined
+  );
+  if (search.kind === 'unknowable') return undefined;
+  return search.kind === 'found' ? search.value : null;
+}
 
-  function traverse(nodes: TscnScene['nodes']): void {
-    for (const node of nodes) {
-      if (node.type === 'Camera2D') {
-        if (isValidProperties(node.properties)) {
-          const props = node.properties as Record<string, string>;
-          // Default is enabled=true if not specified
-          const enabled = props.enabled !== 'false';
-          if (enabled) {
-            count++;
-          }
-        } else {
-          // No properties means defaults, so enabled=true
-          count++;
-        }
-      }
-      // Recursively check children
-      if (node.children && node.children.length > 0) {
-        traverse(node.children);
-      }
+/** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
+function cameraIsEnabled(node: TscnNode): boolean {
+  if (!isValidProperties(node.properties)) return true;
+  return boolSlotValue((node.properties as Record<string, string>).enabled) !== false;
+}
+
+/**
+ * Enabled Camera2D nodes per viewport scope, tallied once per scene.
+ *
+ * The rule runs on every Camera2D and every one of them asks for the same
+ * table, so it is built from the shared per-type index rather than recursed
+ * per call: a fresh walk of `scene.nodes` with a depth-N ancestor climb inside
+ * it made this O(matches x nodes x depth), and the pathological input is
+ * exactly the scene the rule exists to detect. Keyed on the roots array like
+ * every other per-scene fact, and correct on the same terms — `searchAncestors`
+ * reads nothing of `scene` but `nodes`.
+ */
+const enabledCamerasByScope = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
+
+/** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
+function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): number {
+  let tally = enabledCamerasByScope.get(scene.nodes);
+  if (!tally) {
+    tally = new Map<TscnNode | null, number>();
+    for (const camera of nodesOfType(scene.nodes, 'Camera2D')) {
+      if (!cameraIsEnabled(camera)) continue;
+      // A camera whose viewport this file cannot determine is left out of the
+      // contending set: `undefined` is never a scope a caller holds.
+      const cameraScope = viewportScopeOf(scene, camera);
+      if (cameraScope === undefined) continue;
+      tally.set(cameraScope, (tally.get(cameraScope) ?? 0) + 1);
     }
+    enabledCamerasByScope.set(scene.nodes, tally);
   }
+  return tally.get(scope) ?? 0;
+}
 
-  traverse(scene.nodes);
-  return count;
+/**
+ * Smoothing is on, but the speed freezes it: enabled with a speed of exactly 0.
+ *
+ * ZERO is the only tier this rule owns. `MAX(0, p_speed)` (camera_2d.cpp:703,
+ * :715) does refuse a NEGATIVE speed, but so does this slice's own
+ * `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`, at the same tier
+ * and from the same line — a rule for it reports the one value twice and still
+ * misses `-inf`, which the validator reads and `parseFloat` does not. Zero is
+ * what the validator cannot see: a legal non-negative value that the setter
+ * stores unchanged, leaving the interpolation factor at 0 so the smoothed
+ * position never moves (:199-200, :216-217).
+ *
+ * Only the CLASSIFICATION is shared between the two axes. Each `ruleName` stays
+ * a literal at its push site, because `ruleCoverage.test.ts` pairs `severity:`
+ * with the next `ruleName:` by reading the source — a name reached through a
+ * config object is a name the guard cannot see, so it reads as invented.
+ */
+function smoothingIsFrozen(
+  rawProps: Record<string, string>,
+  enabledKey: string,
+  speedKey: string
+): boolean {
+  const raw = rawProps[speedKey];
+  if (boolSlotValue(rawProps[enabledKey]) !== true || raw === undefined) return false;
+  return parseGodotFloat(raw) === 0;
 }
 
 /**
@@ -54,20 +117,16 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Only run for Camera2D nodes
-  if (node.type !== 'Camera2D') {
-    return diagnostics;
-  }
 
   // Check for multiple enabled cameras first (before properties guard)
   // This check should run even if properties are empty (defaults to enabled=true)
   const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
-  const thisEnabled = rawProps.enabled !== 'false'; // Default is enabled=true
-  if (thisEnabled) {
-    const enabledCount = countEnabledCameras(scene);
+  const scope = viewportScopeOf(scene, node);
+  if (cameraIsEnabled(node) && scope !== undefined) {
+    const enabledCount = countEnabledCamerasInScope(scene, scope);
     if (enabledCount > 1) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Multiple enabled Camera2D nodes detected in scene (${enabledCount} total). Only one Camera2D should typically be enabled at a time to avoid viewport conflicts.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -81,34 +140,14 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     return diagnostics;
   }
 
-  // Validate zoom components (parsed value check for semantic validation)
-  if (rawProps.zoom !== undefined) {
-    const match = rawProps.zoom.match(VECTOR2_REGEX);
-    if (match && match[1] && match[2]) {
-      const x = parseFloat(match[1]);
-      const y = parseFloat(match[2]);
-
-      // Already checked in linterParser, but double-check for semantic context
-      if (x <= 0 || y <= 0) {
-        diagnostics.push({
-          severity: 'error',
-          message: `Camera2D 'zoom' components must be positive (got Vector2(${x}, ${y})). Zero or negative zoom will cause rendering issues.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-invalid-zoom',
-        });
-      }
-    }
-  }
-
   // Validate limit consistency
   if (rawProps.limit_left !== undefined && rawProps.limit_right !== undefined) {
-    const left = parseInt(rawProps.limit_left, 10);
-    const right = parseInt(rawProps.limit_right, 10);
+    const left = ruleInt(rawProps.limit_left);
+    const right = ruleInt(rawProps.limit_right);
 
-    if (!isNaN(left) && !isNaN(right) && right < left) {
+    if (left !== null && right !== null && right < left) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Camera2D 'limit_right' (${right}) is less than 'limit_left' (${left}). This creates an invalid horizontal scroll area and may cause unexpected camera behavior.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -118,12 +157,12 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   }
 
   if (rawProps.limit_top !== undefined && rawProps.limit_bottom !== undefined) {
-    const top = parseInt(rawProps.limit_top, 10);
-    const bottom = parseInt(rawProps.limit_bottom, 10);
+    const top = ruleInt(rawProps.limit_top);
+    const bottom = ruleInt(rawProps.limit_bottom);
 
-    if (!isNaN(top) && !isNaN(bottom) && bottom < top) {
+    if (top !== null && bottom !== null && bottom < top) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         message: `Camera2D 'limit_bottom' (${bottom}) is less than 'limit_top' (${top}). This creates an invalid vertical scroll area and may cause unexpected camera behavior.`,
         nodeName: node.name,
         nodeType: node.type,
@@ -132,96 +171,23 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // WARNING: position_smoothing_enabled without valid speed
-  if (rawProps.position_smoothing_enabled === 'true') {
-    if (rawProps.position_smoothing_speed === undefined) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is not set. Smoothing may not work as expected without a speed value.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera2d-smoothing-speed-missing',
-      });
-    } else {
-      const speed = parseFloat(rawProps.position_smoothing_speed);
-      if (!isNaN(speed) && speed <= 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is ${speed}. Speed must be greater than 0 for smoothing to work.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-smoothing-speed-invalid',
-        });
-      }
-    }
-  }
-
-  // WARNING: rotation_smoothing_enabled without valid speed
-  if (rawProps.rotation_smoothing_enabled === 'true') {
-    if (rawProps.rotation_smoothing_speed === undefined) {
-      diagnostics.push({
-        severity: 'warning',
-        message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is not set. Rotation smoothing may not work as expected without a speed value.`,
-        nodeName: node.name,
-        nodeType: node.type,
-        ruleName: 'camera2d-rotation-smoothing-speed-missing',
-      });
-    } else {
-      const speed = parseFloat(rawProps.rotation_smoothing_speed);
-      if (!isNaN(speed) && speed <= 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is ${speed}. Speed must be greater than 0 for rotation smoothing to work.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'camera2d-rotation-smoothing-speed-invalid',
-        });
-      }
-    }
-  }
-
-  // WARNING: drag margins set but drag not enabled
-  const hasHorizontalMargins = rawProps.drag_left_margin !== undefined || rawProps.drag_right_margin !== undefined;
-  const hasVerticalMargins = rawProps.drag_top_margin !== undefined || rawProps.drag_bottom_margin !== undefined;
-
-  if (hasHorizontalMargins && rawProps.drag_horizontal_enabled !== 'true') {
+  if (smoothingIsFrozen(rawProps, 'position_smoothing_enabled', 'position_smoothing_speed')) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has horizontal drag margins set (drag_left_margin or drag_right_margin) but 'drag_horizontal_enabled' is not true. These margins will have no effect.`,
+      severity: 'info',
+      message: `Camera2D has 'position_smoothing_enabled' set to true but 'position_smoothing_speed' is 0. The value is kept, but it makes the interpolation factor 0, so the smoothed position never follows the camera.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'camera2d-horizontal-margins-without-drag',
+      ruleName: 'camera2d-smoothing-speed-zero',
     });
   }
 
-  if (hasVerticalMargins && rawProps.drag_vertical_enabled !== 'true') {
+  if (smoothingIsFrozen(rawProps, 'rotation_smoothing_enabled', 'rotation_smoothing_speed')) {
     diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has vertical drag margins set (drag_top_margin or drag_bottom_margin) but 'drag_vertical_enabled' is not true. These margins will have no effect.`,
+      severity: 'info',
+      message: `Camera2D has 'rotation_smoothing_enabled' set to true but 'rotation_smoothing_speed' is 0. The value is kept, but it makes the step 0, so the smoothed rotation never follows the camera.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'camera2d-vertical-margins-without-drag',
-    });
-  }
-
-  // WARNING: drag offsets set but drag not enabled
-  if (rawProps.drag_horizontal_offset !== undefined && rawProps.drag_horizontal_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has 'drag_horizontal_offset' set but 'drag_horizontal_enabled' is not true. This offset will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-horizontal-offset-without-drag',
-    });
-  }
-
-  if (rawProps.drag_vertical_offset !== undefined && rawProps.drag_vertical_enabled !== 'true') {
-    diagnostics.push({
-      severity: 'warning',
-      message: `Camera2D has 'drag_vertical_offset' set but 'drag_vertical_enabled' is not true. This offset will have no effect.`,
-      nodeName: node.name,
-      nodeType: node.type,
-      ruleName: 'camera2d-vertical-offset-without-drag',
+      ruleName: 'camera2d-rotation-smoothing-speed-zero',
     });
   }
 
@@ -234,22 +200,55 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
 const camera2DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera2d-properties',
-    description: 'Validates Camera2D property values, zoom constraints, limit consistency, smoothing configuration, and drag settings',
+    description: 'Validates Camera2D limit consistency and smoothing configuration',
     category: 'validation',
     applicableNodeTypes: ['Camera2D'],
     emits: [
-      { ruleName: 'camera2d-multiple-enabled', severity: 'warning' },
-      { ruleName: 'camera2d-invalid-zoom', severity: 'error' },
-      { ruleName: 'camera2d-invalid-horizontal-limits', severity: 'warning' },
-      { ruleName: 'camera2d-invalid-vertical-limits', severity: 'warning' },
-      { ruleName: 'camera2d-smoothing-speed-missing', severity: 'warning' },
-      { ruleName: 'camera2d-smoothing-speed-invalid', severity: 'warning' },
-      { ruleName: 'camera2d-rotation-smoothing-speed-missing', severity: 'warning' },
-      { ruleName: 'camera2d-rotation-smoothing-speed-invalid', severity: 'warning' },
-      { ruleName: 'camera2d-horizontal-margins-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-vertical-margins-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-horizontal-offset-without-drag', severity: 'warning' },
-      { ruleName: 'camera2d-vertical-offset-without-drag', severity: 'warning' },
+      {
+        ruleName: 'camera2d-multiple-enabled',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:354',
+          unused: 'a second camera entering a tree that already has a current one never becomes current',
+        },
+      },
+      {
+        ruleName: 'camera2d-invalid-horizontal-limits',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:229',
+          unused: 'the degenerate branch centres the view instead of applying the limits',
+        },
+      },
+      {
+        ruleName: 'camera2d-invalid-vertical-limits',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:241',
+          unused: 'the degenerate branch centres the view instead of applying the limits',
+        },
+      },
+      {
+        ruleName: 'camera2d-smoothing-speed-zero',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:199',
+          unused: 'a zero factor leaves the smoothed position where it started',
+        },
+      },
+      {
+        ruleName: 'camera2d-rotation-smoothing-speed-zero',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'camera_2d.cpp:216',
+          unused: 'a zero step leaves lerp_angle at the angle it started from',
+        },
+      },
     ],
   },
   check: checkCamera2D,

@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+
+; Exercises GrooveJoint2D's own length and initial_offset.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyGrooveJoint2D" type="GrooveJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+position = Vector2(10, 20)
+length = 80.0
+initial_offset = 15.0
+
+[node name="BodyA" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="BodyB"]
+shape = SubResource("Shape_1")

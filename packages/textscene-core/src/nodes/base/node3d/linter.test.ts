@@ -9,6 +9,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser'; // Import to trigger validator registration
@@ -64,11 +65,12 @@ describe('Node3D Linter', () => {
   describe('Strict Parser Validation - Scale Properties', () => {
     runPropertyValidation({ nodeType: 'Node3D' }, [
       {
-        // Any nonzero magnitude is valid Godot and lints clean, including
-        // negative (a mirror/flip) and extreme-but-finite values; only a zero
-        // axis (a collapsed transform) and malformed values error. See
+        // Any magnitude is valid Godot and lints clean, including zero
+        // (`Node3D::set_scale`, node_3d.cpp:812-827, is a bare assignment with
+        // no zero guard, unlike Node2D's), negative (a mirror/flip), and
+        // extreme-but-finite values; only malformed values error. See
         // linterParser.ts — the base-walk inherits this to every Node3D
-        // subclass, so it must match what the renderer accepts (and Node2D).
+        // subclass.
         prop: 'scale',
         valid: [
           'Vector3(1, 1, 1)',
@@ -77,11 +79,10 @@ describe('Node3D Linter', () => {
           'Vector3(0.0001, 1, 1)',
           'Vector3(1, -1, 1)',
           'Vector3(-2, -2, -2)',
+          'Vector3(0, 1, 1)',
+          'Vector3(0, 0, 0)',
         ],
-        invalid: [
-          { value: 'Vector3(0, 1, 1)', contains: ['scale', 'non-zero'] },
-          { value: 'Vector3(1, 1)', contains: ['scale', '3 numbers'] },
-        ],
+        invalid: [{ value: 'Vector3(1, 1)', contains: ['scale', '3 numbers'] }],
       },
     ]);
   });
@@ -106,7 +107,7 @@ describe('Node3D Linter', () => {
       {
         prop: 'visible',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['visible', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['visible', 'converts'] }],
       },
       {
         prop: 'top_level',
@@ -116,15 +117,24 @@ describe('Node3D Linter', () => {
       {
         prop: 'visibility_parent',
         valid: ['NodePath("")'],
-        invalid: [{ value: '"../ParentNode"', contains: ['visibility_parent', 'NodePath'] }],
+        // variant.cpp:746-749 lists STRING (not STRING_NAME) as a strict source for NODE_PATH.
+        invalid: [{ value: '&"../ParentNode"', contains: ['visibility_parent', 'NodePath'] }],
       },
     ]);
 
-    it('should pass validation for valid visibility_parent with absolute path', () => {
+    it('should pass validation for a visibility_parent that names a sibling', () => {
+      // Every node below the root states `parent="."`. Without it the second
+      // heading is a second ROOT, which Godot refuses (packed_scene.cpp:206)
+      // and the tree build drops — so the rule under test never ran on it.
       expectClean(
         scene(
-          node('Node3D', {}, { name: 'ParentNode' }),
-          node('Node3D', { visibility_parent: 'NodePath("ParentNode")' }, { name: 'ValidNode' })
+          node('Node3D', {}, { name: 'Root' }),
+          node('Node3D', {}, { name: 'ParentNode', parent: '.' }),
+          node(
+            'Node3D',
+            { visibility_parent: 'NodePath("../ParentNode")' },
+            { name: 'ValidNode', parent: '.' }
+          )
         )
       );
     });
@@ -141,14 +151,12 @@ describe('Node3D Linter', () => {
 
   describe('Semantic Validation - Visibility Parent References', () => {
     it('should pass when visibility_parent node exists', () => {
+      // `parent="."`, not `parent="ParentNode"`: a child of the root names the
+      // root as `.`, and the longer spelling resolves against nothing.
       expectClean(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),
-          node(
-            'Node3D',
-            { visibility_parent: 'NodePath("ParentNode")' },
-            { name: 'ChildNode', parent: 'ParentNode' }
-          )
+          node('Node3D', { visibility_parent: 'NodePath("..")' }, { name: 'ChildNode', parent: '.' })
         )
       );
     });
@@ -164,22 +172,41 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { visibility_parent: 'NodePath("")' }, { name: 'ChildNode' })));
     });
 
-    it('should warn about relative visibility_parent paths', () => {
-      const diagnostics = lint(
+    // `%Name` resolves through the owner's `owned_unique_nodes`
+    // (node.cpp:1931-1933), not by tree position, and it is what the inspector's
+    // node picker writes. Comparing it against a position-keyed path map called a
+    // working reference "not found", at error tier. The flag is what puts the
+    // name in the table (node.cpp:2222), so the target must carry it.
+    it('should report nothing for a %unique-name visibility_parent', () => {
+      expectNoDiagnostic(
+        scene(
+          node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode' }),
+          node(
+            'Node3D',
+            { visibility_parent: 'NodePath("%ParentNode")' },
+            { name: 'ChildNode', parent: '.' }
+          )
+        ),
+        { ruleName: 'valid-node3d-visibility' }
+      );
+    });
+
+    it('should report nothing for a relative visibility_parent path', () => {
+      // `..` walks to the parent and the next segment reads ITS children, so a
+      // relative path resolves like any other — the rule declines only the
+      // absolute form, whose root is the live SceneTree's and not this file's.
+      expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),
+          node('Node3D', {}, { name: 'OtherNode', parent: '.' }),
           node(
             'Node3D',
             { visibility_parent: 'NodePath("../OtherNode")' },
-            { name: 'ChildNode', parent: 'ParentNode' }
+            { name: 'ChildNode', parent: '.' }
           )
-        )
+        ),
+        { ruleName: 'valid-node3d-visibility' }
       );
-      const visibilityWarning = diagnostics.find(d => d.ruleName === 'valid-node3d-visibility');
-      if (visibilityWarning) {
-        expect(visibilityWarning.severity).toBe('warning');
-        expect(visibilityWarning.message).toContain('Relative');
-      }
     });
   });
 
@@ -203,7 +230,7 @@ describe('Node3D Linter', () => {
         scene(
           node('Node3D', {
             position: 'Vector3(1, 2)',
-            scale: 'Vector3(0, 1, 1)',
+            scale: 'Vector3(1, 1)',
             visible: 'maybe',
           })
         )
@@ -228,6 +255,11 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { scale: 'Vector3(100, 100, 100)' })));
     });
 
+    it('accepts a zero-component scale: Node3D::set_scale has no zero guard, unlike Node2D', () => {
+      expectClean(scene(node('Node3D', { scale: 'Vector3(0, 1, 1)' })));
+      expectClean(scene(node('Node3D', { scale: 'Vector3(0, 0, 0)' })));
+    });
+
     it('should handle Node3D properties on subclasses (e.g., MeshInstance3D)', () => {
       const content = `[gd_scene format=3]
 
@@ -235,12 +267,13 @@ describe('Node3D Linter', () => {
 
 [node name="MeshNode" type="Node3D"]
 position = Vector3(1, 2, 3)
-scale = Vector3(0, 1, 1)
+scale = Vector3(1, 1)
 `;
 
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
-      // Should catch the zero scale error
+      // Should catch the malformed scale (base-walk delivers Node3D's own
+      // validator to the subclass)
       expect(diagnostics.some(d => d.message.includes('scale'))).toBe(true);
     });
   });

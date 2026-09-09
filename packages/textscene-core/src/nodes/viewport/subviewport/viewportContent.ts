@@ -14,9 +14,28 @@
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
-import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
+import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import { liveChildGroups, type CachedSceneSource } from '../../../r3f/liveSceneTree.js';
+import { compositeCallPrefix } from '../../../godot/index.js';
+
+/**
+ * The `i`-suffixed spellings are listed, not derived: this asks whether a value
+ * is 2D or 3D, and `Vector2i` is as 2D as `Vector2`. They are also what Godot
+ * NATIVELY writes for every pixel-count property — `frame_coords`,
+ * `region_rect`, `size` — so leaving them out made an instance override spelled
+ * `frame_coords = Vector2i(2, 1)` match neither list, which fell through to the
+ * 3D publisher and sampled an empty target.
+ */
+const TWO_D_COMPOSITE = compositeCallPrefix('Vector2', 'Vector2i', 'Transform2D', 'Rect2', 'Rect2i');
+const THREE_D_COMPOSITE = compositeCallPrefix(
+  'Vector3',
+  'Vector3i',
+  'Transform3D',
+  'Basis',
+  'Quaternion',
+  'AABB'
+);
 
 /**
  * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
@@ -55,8 +74,8 @@ function instanceOverrideKind(node: TscnNode): '2d' | '3d' | null {
   if (!raw) return null;
   for (const [key, value] of Object.entries(raw)) {
     if (CANVAS_ITEM_ONLY_PROPERTIES.has(key)) return '2d';
-    if (/^\s*(Vector2|Transform2D|Rect2)\s*\(/.test(value)) return '2d';
-    if (/^\s*(Vector3|Transform3D|Basis|Quaternion|AABB)\s*\(/.test(value)) return '3d';
+    if (TWO_D_COMPOSITE.test(value)) return '2d';
+    if (THREE_D_COMPOSITE.test(value)) return '3d';
   }
   return null;
 }
@@ -97,7 +116,10 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
   const hasNode3DContent = (nodes: readonly TscnNode[]): boolean =>
     nodes.some((child) => {
       if (child.type === 'SubViewport') return false;
-      if (TWO_D_UI_TYPES.has(child.type)) {
+      // Godot's question (`is2DUIType`), not the DOM registry's mirror: this
+      // decides whether a raster host mounts at all, so a Control with no
+      // component of its own — `Tree`, `ProgressBar` — must still reach one.
+      if (is2DUIType(child.type)) {
         sawDom = true;
         return hasNode3DContent(child.children);
       }

@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1"]
+_data = {}
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("AnimationLibrary_1")
+
+[node name="MyRootMotionView" type="RootMotionView" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+animation_path = NodePath("../Player")
+color = Color(0.2, 0.6, 0.9, 1)
+cell_size = 2.0
+radius = 8.0
+zero_y = false

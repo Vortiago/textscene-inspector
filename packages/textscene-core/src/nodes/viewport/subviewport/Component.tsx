@@ -39,7 +39,7 @@ import {
   useCanvasWorkspace,
 } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import {
-  useRegisterViewportTexture,
+  usePublishViewportTexture,
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
@@ -51,9 +51,9 @@ import {
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
+  readTargetPixels,
   selectViewportCamera,
   selectViewportCamera2D,
-  targetPixelsToImageData,
   viewportAspect,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
@@ -111,6 +111,23 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * WebGL source — a Control-only one publishes nothing at all rather than a
  * cleared target, leaving the key to the DOM rasterizer that owns it.
  */
+/**
+ * Godot floors a viewport at 2 (`viewport.cpp:1120`, `p_size.maxi(2)`) and
+ * imposes no ceiling — the GPU driver refuses an oversized allocation instead.
+ * A previewer cannot take that exit: `size = Vector2i(2000000000, 8)` is a file
+ * Godot opens, and the number reaches `new THREE.WebGLRenderTarget` here. So
+ * the ceiling is ours rather than the engine's, and it is WebGL2's common
+ * `MAX_TEXTURE_SIZE`. It bounds each AXIS; the readback's own allocation is
+ * bounded by nothing and answers for its own failure (`readTargetPixels`).
+ */
+const MAX_VIEWPORT_EXTENT = 16384;
+
+export function allocatableExtent(raw: number): number {
+  const rounded = Math.round(raw);
+  if (!Number.isFinite(rounded)) return 2;
+  return Math.min(MAX_VIEWPORT_EXTENT, Math.max(2, rounded));
+}
+
 function OffscreenViewport({
   node,
   path,
@@ -127,12 +144,11 @@ function OffscreenViewport({
   // publishes it here; no rect means no stretching container, and the authored
   // size stands — which is Godot's early return.
   const forcedRect = useViewportRect(path);
-  const width = Math.max(1, Math.round(forcedRect?.x ?? size?.x ?? 512));
-  const height = Math.max(1, Math.round(forcedRect?.y ?? size?.y ?? 512));
+  const width = allocatableExtent(forcedRect?.x ?? size?.x ?? 512);
+  const height = allocatableExtent(forcedRect?.y ?? size?.y ?? 512);
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);
-  const registerViewportTexture = useRegisterViewportTexture();
 
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
@@ -157,28 +173,26 @@ function OffscreenViewport({
     hasRendered.current = false;
   }, [target]);
 
-  const readPixels = useCallback((): ImageData | null => {
-    if (!hasRendered.current) return null;
-    const buffer = new Uint8Array(width * height * 4);
-    try {
-      gl.readRenderTargetPixels(target, 0, 0, width, height, buffer);
-    } catch {
-      // No real GL context (headless harnesses, a lost context) — "not ready",
-      // which is exactly what null means here.
-      return null;
-    }
-    return targetPixelsToImageData(buffer, width, height);
-  }, [gl, target, width, height]);
+  // A throw here is "not ready", which is what null means: no real GL context
+  // (headless harnesses, a lost context), or a heap too small for the readback.
+  const readPixels = useCallback(
+    (): ImageData | null =>
+      hasRendered.current
+        ? readTargetPixels(
+            (buffer) => gl.readRenderTargetPixels(target, 0, 0, width, height, buffer),
+            width,
+            height
+          )
+        : null,
+    [gl, target, width, height]
+  );
 
   const entry = useMemo<ViewportTextureEntry>(
     () => ({ texture: target.texture, size: { x: width, y: height }, readPixels }),
     [target, width, height, readPixels]
   );
 
-  useEffect(
-    () => registerViewportTexture(path, entry),
-    [registerViewportTexture, path, entry]
-  );
+  usePublishViewportTexture(node, path, entry);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its CANVAS TRANSFORM, which is the identity until a Camera2D in the

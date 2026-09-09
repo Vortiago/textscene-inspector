@@ -2,6 +2,7 @@
  * Tests for Sprite2D linter (strict parser + semantic rules)
  */
 
+import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { describe, it, expect } from 'vitest';
 import {
   node,
@@ -9,6 +10,7 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -54,7 +56,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'centered',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['centered', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['centered', 'converts'] }],
       },
       {
         prop: 'offset',
@@ -64,7 +66,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'flip_h',
         valid: [true],
-        invalid: [{ value: 1, contains: ['flip_h', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['flip_h', 'converts'] }],
       },
       {
         prop: 'flip_v',
@@ -74,7 +76,7 @@ describe('Sprite2D Linter', () => {
       {
         prop: 'region_enabled',
         valid: [true, false],
-        invalid: [{ value: 1, contains: ['region_enabled', 'boolean'] }],
+        invalid: [{ value: 1, severity: 'warning', contains: ['region_enabled', 'converts'] }],
       },
       {
         prop: 'region_rect',
@@ -83,28 +85,36 @@ describe('Sprite2D Linter', () => {
         invalid: [{ value: '"0, 0, 100, 100"', contains: ['region_rect', 'Rect2'] }],
       },
       {
+        prop: 'region_filter_clip_enabled',
+        valid: [true, false],
+        invalid: [{ value: 1, severity: 'warning', contains: ['region_filter_clip_enabled', 'converts'] }],
+      },
+      {
         prop: 'hframes',
-        valid: [4],
+        valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['hframes', 'greater than 0', 'division by zero'] },
-          { value: -1, contains: ['hframes', 'greater than 0'] },
+          { value: 0, contains: ['hframes', 'between 1 and 16384'] },
+          { value: -1, contains: ['hframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'vframes',
-        valid: [4],
+        valid: [4, 16384],
         invalid: [
-          { value: 0, contains: ['vframes', 'greater than 0', 'division by zero'] },
-          { value: -1, contains: ['vframes', 'greater than 0'] },
+          { value: 0, contains: ['vframes', 'between 1 and 16384'] },
+          { value: -1, contains: ['vframes', 'between 1 and 16384'] },
         ],
       },
       {
         prop: 'frame',
         valid: [5, 0],
         with: { hframes: 3, vframes: 2 },
+        // A reject node carries no grid, so `sprite2d-frame-range` fires beside
+        // the validator on any index above 0. Naming the phase pins each case to
+        // the diagnostic it is about.
         invalid: [
-          { value: -1, contains: ['frame', 'non-negative'] },
-          { value: 1.5, contains: ['frame'] },
+          { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
+          { value: 1.5, ruleName: 'strict-parser', contains: ['frame'] },
         ],
       },
       {
@@ -113,18 +123,43 @@ describe('Sprite2D Linter', () => {
         with: { hframes: 4, vframes: 3 },
         invalid: [
           { value: 'Vector2i(-1, 0)', contains: ['frame_coords', 'non-negative'] },
-          { value: 'Vector2(1, 2)', contains: ['frame_coords', 'Vector2i'] },
-          { value: 'Vector2i(1.5, 2.5)', contains: ['frame_coords'] },
+          // `Color` does not convert into a Vector2i slot; `Vector2` does.
+          { value: 'Color(1, 1, 1, 1)', contains: ['frame_coords', 'Vector2i'] },
         ],
       },
     ]);
+
+    describe('ADR-0032 tiering: enforced floor, hinted ceiling', () => {
+      // set_hframes ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:344); nothing
+      // enforces the 16384 hint (sprite_2d.cpp:543) but the format is real.
+      it('errors below the enforced hframes floor', () => {
+        expectDiagnostic(scene(node('Sprite2D', { hframes: 0 })), {
+          prop: 'hframes',
+          severity: 'error',
+        });
+      });
+
+      it('warns above the hinted hframes ceiling', () => {
+        expectDiagnostic(scene(node('Sprite2D', { hframes: 20000 })), {
+          prop: 'hframes',
+          severity: 'warning',
+        });
+      });
+
+      it('warns above the hinted vframes ceiling', () => {
+        expectDiagnostic(scene(node('Sprite2D', { vframes: 20000 })), {
+          prop: 'vframes',
+          severity: 'warning',
+        });
+      });
+    });
   });
 
   describe('Semantic Validation (Resource References)', () => {
     it('should detect missing texture (REQUIRED)', () => {
       expectDiagnostic(scene(node('Sprite2D', { centered: true })), {
         ruleName: 'sprite2d-requires-texture',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Sprite2D',
         contains: ["requires a 'texture' property"],
       });
@@ -139,9 +174,9 @@ describe('Sprite2D Linter', () => {
         severity: 'error',
         nodeName: 'MissingTexture',
         nodeType: 'Sprite2D',
-        ruleName: 'valid-sprite2d-resources',
+        ruleName: 'dangling-resource-reference',
       });
-      expect(diagnostics[0]!.message).toContain('Texture resource not found');
+      expect(diagnostics[0]!.message).toContain("'texture'");
     });
 
     it('should pass when texture resource exists (SubResource)', () => {
@@ -167,7 +202,7 @@ describe('Sprite2D Linter', () => {
     it('should detect frame out of range (frame >= hframes * vframes)', () => {
       expectDiagnostic(scene(node('Sprite2D', { hframes: 4, vframes: 3, frame: 12 })), {
         ruleName: 'sprite2d-frame-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['out of range', 'Maximum frame is 11'],
       });
@@ -191,6 +226,16 @@ describe('Sprite2D Linter', () => {
       );
     });
 
+    it('stays loud when hframes is a value no int slot holds', () => {
+      // `1e20` cleared the old `min: 1` bound and made `maxFrame` 1e20, so
+      // phase 1 said nothing and the rule approved every frame index. The grid
+      // is unknowable, so the rule is right to stay quiet — but the property
+      // must not be.
+      expectDiagnostic(scene(node('Sprite2D', { hframes: '1e20', frame: 5 })), {
+        contains: ['cannot be stored in an integer slot'],
+      });
+    });
+
     it('should detect frame out of range with single frame', () => {
       expectDiagnostic(scene(node('Sprite2D', { frame: 1 })), {
         ruleName: 'sprite2d-frame-range',
@@ -206,13 +251,42 @@ describe('Sprite2D Linter', () => {
         )
       );
     });
+
+    // Godot replays a node's properties in FILE order (packed_scene.cpp:492), so
+    // a grid written below `frame` is still 1x1 when set_frame's ERR_FAIL_INDEX
+    // runs. Measured on 4.6.3: this body loads on frame 0.
+    it('errors when hframes is written below frame', () => {
+      expectDiagnostic(scene(node('Sprite2D', { frame: 3, hframes: 4, vframes: 1 })), {
+        ruleName: 'sprite2d-frame-range',
+        severity: 'error',
+        contains: ['Frame 3 is out of range', 'hframes=1', 'file order'],
+      });
+    });
+
+    it('passes on the same values with the grid written above frame', () => {
+      expectClean(
+        scene(
+          node('Sprite2D', { texture: 'SubResource("tex_1")', hframes: 4, vframes: 1, frame: 3 }),
+          '[sub_resource type="Texture2D" id="tex_1"]'
+        )
+      );
+    });
+
+    it('stays loud when the unusable grid literal is written below frame', () => {
+      // Only the keys ABOVE `frame` decide the grid, so a literal phase 1
+      // already reports does not silence the rule from below it.
+      expectDiagnostic(scene(node('Sprite2D', { frame: 5, hframes: '1e20' })), {
+        ruleName: 'sprite2d-frame-range',
+        contains: ['out of range'],
+      });
+    });
   });
 
   describe('Semantic Validation (Frame Coords Range)', () => {
     it('should detect frame_coords.x out of range', () => {
       expectDiagnostic(scene(node('Sprite2D', { hframes: 4, frame_coords: 'Vector2i(4, 0)' })), {
         ruleName: 'sprite2d-frame-coords-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['frame_coords.x', 'out of range'],
       });
@@ -221,7 +295,7 @@ describe('Sprite2D Linter', () => {
     it('should detect frame_coords.y out of range', () => {
       expectDiagnostic(scene(node('Sprite2D', { vframes: 3, frame_coords: 'Vector2i(0, 3)' })), {
         ruleName: 'sprite2d-frame-coords-range',
-        severity: 'warning',
+        severity: 'error',
         nodeType: 'Sprite2D',
         contains: ['frame_coords.y', 'out of range'],
       });
@@ -234,6 +308,19 @@ describe('Sprite2D Linter', () => {
       expect(diagnostics.length).toBeGreaterThan(1);
       const coordErrors = diagnostics.filter(d => d.ruleName === 'sprite2d-frame-coords-range');
       expect(coordErrors).toHaveLength(2);
+    });
+
+    // Same replay order, same guard (sprite_2d.cpp:312). Measured on 4.6.3:
+    // this body raises ERR_FAIL_INDEX and keeps frame_coords at (0, 0).
+    it('errors when hframes is written below frame_coords', () => {
+      expectDiagnostic(
+        scene(node('Sprite2D', { frame_coords: 'Vector2i(3, 0)', hframes: 4 })),
+        {
+          ruleName: 'sprite2d-frame-coords-range',
+          severity: 'error',
+          contains: ['frame_coords.x (3)', 'hframes=1', 'file order'],
+        }
+      );
     });
 
     it('should pass when frame_coords is within range', () => {
@@ -252,16 +339,16 @@ describe('Sprite2D Linter', () => {
   });
 
   describe('Semantic Validation (Region Configuration)', () => {
-    it('should warn when region_rect is set without region_enabled', () => {
+    it('reports when region_rect is set without region_enabled', () => {
       expectDiagnostic(scene(node('Sprite2D', { region_rect: 'Rect2(0, 0, 100, 100)' })), {
         ruleName: 'sprite2d-region-configuration',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'Sprite2D',
         contains: ['region_enabled', 'ignored'],
       });
     });
 
-    it('should warn when region_rect is set but region_enabled is false', () => {
+    it('reports when region_rect is set but region_enabled is false', () => {
       expectDiagnostic(
         scene(
           node('Sprite2D', {
@@ -273,7 +360,7 @@ describe('Sprite2D Linter', () => {
         ),
         {
           ruleName: 'sprite2d-region-configuration',
-          severity: 'warning',
+          severity: 'info',
           nodeType: 'Sprite2D',
           contains: ["'region_enabled' is false"],
         }
@@ -462,9 +549,93 @@ describe('Sprite2D Linter', () => {
         )
       );
       expect(diagnostics.length).toBeGreaterThan(2);
-      expect(diagnostics.some(d => d.message.includes('Texture resource not found'))).toBe(true);
+      expect(diagnostics.some(d => d.ruleName === 'dangling-resource-reference')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('frame') && d.message.includes('out of range'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('region_rect') && d.message.includes('ignored'))).toBe(true);
+    });
+  });
+});
+
+describe('a grid count the setter refuses', () => {
+  it('does not report a frame against a grid Godot never accepted', () => {
+    // `set_hframes` ERR_FAIL_COND_MSGs below 1 (sprite_2d.cpp:344), so Godot
+    // keeps hframes at 1 and frame 0 is legal. Reading the authored 0 gave
+    // maxFrame 0 and printed "Maximum frame is -1" for every frame index.
+    const diagnostics = lint(scene(node('Sprite2D', { hframes: 0, frame: 0 })));
+
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite2d-frame-range')).toEqual([]);
+  });
+
+  it('still measures a frame against the grid Godot does accept', () => {
+    expectDiagnostic(scene(node('Sprite2D', { hframes: 0, frame: 3 })), {
+      ruleName: 'sprite2d-frame-range',
+      contains: ['Maximum frame is 0'],
+    });
+  });
+});
+
+describe('a fractional frame_coords component', () => {
+  it('warns that Godot truncates it, matching the verdict `frame` gets', () => {
+    // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) converts it, so
+    // Godot stores (1, 2) — the file loads, but not with the written value.
+    // `frame = 1.5` and `frame_coords = Vector2i(1.5, 2.5)` disagreed until the
+    // truncation tier reached composite components.
+    const validator = validatorRegistry.findValidator('Sprite2D', 'frame_coords')!;
+    const diagnostic = validator('frame_coords', 'Vector2i(1.5, 2.5)', 1);
+
+    expect(diagnostic?.severity).toBe('warning');
+    expect(diagnostic?.message).toContain('1.5');
+  });
+});
+
+/**
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
+ * scene, not an error-free one), so a converted spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
+ * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
+ * spelling of the same digits wraps to. Measured on 4.6.3. The rule owes
+ * silence on the whole literal — the sibling component is no more authored
+ * than the unstorable one — and phase 1 reports the value itself.
+ */
+describe('Sprite2D frame_coords with a converted component no int32 holds', () => {
+  it('says nothing about the sibling row, and phase 1 still errors', () => {
+    const diagnostics = lint(
+      scene(node('Sprite2D', { hframes: 4, vframes: 3, frame_coords: 'Vector2(4294967295, 5)' }))
+    );
+    expect(diagnostics.filter((d) => d.ruleName === 'sprite2d-frame-coords-range')).toEqual([]);
+    expect(diagnostics.some((d) => d.severity === 'error' && d.message.includes('frame_coords'))).toBe(true);
+  });
+
+  it('still reports the row on the canonical spelling of the same digits', () => {
+    expectDiagnostic(
+      scene(node('Sprite2D', { hframes: 4, vframes: 3, frame_coords: 'Vector2i(4294967295, 5)' })),
+      { ruleName: 'sprite2d-frame-coords-range', severity: 'error', contains: ['frame_coords.y'] }
+    );
+  });
+});
+
+describe('Sprite2D frame re-mapped by a later hframes write (sprite_2d.cpp:358)', () => {
+  // `set_hframes` with `vframes > 1` keeps the frame's row and column on the
+  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
+  // 4.6.3: this body loads on frame 2, not the authored 1.
+  it('warns that the authored frame is stored as another', () => {
+    expectDiagnostic(scene(node('Sprite2D', { vframes: 2, frame: 1, hframes: 2 })), {
+      ruleName: 'sprite2d-frame-remapped',
+      severity: 'warning',
+      contains: ['Frame 1', 'stored as frame 2'],
+    });
+  });
+
+  it('stays quiet when the grid is written above the frame', () => {
+    expectNoDiagnostic(scene(node('Sprite2D', { hframes: 2, vframes: 2, frame: 1 })), {
+      ruleName: 'sprite2d-frame-remapped',
+    });
+  });
+
+  it('stays quiet when only hframes follows, the row being 0', () => {
+    // vframes is still 1 when hframes lands, so the remap branch is skipped.
+    expectNoDiagnostic(scene(node('Sprite2D', { frame: 0, hframes: 2 })), {
+      ruleName: 'sprite2d-frame-remapped',
     });
   });
 });

@@ -1,8 +1,9 @@
 /** File linting and exit-code logic for the TSCN linter CLI. */
 
 import { readdirSync, readFileSync, statSync } from 'fs';
-import { extname, join, resolve } from 'path';
+import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
+import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { formatDiagnostics, formatError } from './format';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -42,7 +43,7 @@ export interface CollectDiagnosticsResult {
 }
 
 /**
- * Expands directory arguments into the `.tscn` files they contain
+ * Expands directory arguments into the `.tscn`/`.tres` files they contain
  * (recursively, sorted for deterministic output); plain file paths -
  * including ones the shell already expanded from a glob - pass through
  * unchanged. A path that does not exist on disk is also passed through
@@ -73,7 +74,7 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
 }
 
 /**
- * Recursively collect the `.tscn` FILES under `dir`, appending into `found`
+ * Recursively collect the lintable FILES under `dir`, appending into `found`
  * (threaded through the recursion so nested results are never re-copied at
  * each ancestor level). Dirent-based so the file/directory distinction comes
  * for free from each readdir for ordinary entries (no extra `statSync`
@@ -81,7 +82,7 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
  * the previous `readdirSync(recursive)` behavior, which never follows
  * directory symlinks either. A symlinked FILE, though, is resolved with one
  * `statSync` (mirroring the previous implementation's `statSync(fullPath)
- * .isFile()` check, which follows symlinks) so a `.tscn` symlinked in from
+ * .isFile()` check, which follows symlinks) so a scene symlinked in from
  * elsewhere is still linted rather than silently dropped.
  */
 function collectTscnFiles(dir: string, found: string[] = []): string[] {
@@ -94,11 +95,11 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
       } catch {
         continue; // broken symlink — skip rather than throw
       }
-      if (stats.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+      if (stats.isFile() && isGodotTextResourcePath(entry.name)) found.push(fullPath);
       continue;
     }
     if (entry.isDirectory()) collectTscnFiles(fullPath, found);
-    else if (entry.isFile() && extname(entry.name) === '.tscn') found.push(fullPath);
+    else if (entry.isFile() && isGodotTextResourcePath(entry.name)) found.push(fullPath);
   }
   return found;
 }

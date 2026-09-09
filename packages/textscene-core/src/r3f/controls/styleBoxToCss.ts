@@ -7,7 +7,7 @@
  * A box type the slice does not decode (`StyleBoxTexture`, or a reference that
  * resolved to a non-StyleBox) maps to `{}` rather than throwing.
  *
- * `styleBoxToCss` is the type-plus-property-bag entry — the shape the #175
+ * `styleBoxToCss` is the type-plus-property-bag entry — the shape the
  * value-grammar contract pins (`valueDecoderGrammar.contract.test.ts`), which is
  * why it stays even though Controls reach a box by reference through
  * `resolveStyleBox` instead.
@@ -17,13 +17,16 @@ import type { CSSProperties } from 'react';
 import { parseColor } from '../../utils/colorParser';
 import { buildStyleBoxCss, controlColorToCss } from '../../resources/styles/stylebox/build';
 import { decodeStyleBox } from '../../resources/styles/stylebox/decode';
+import { compositeCallPrefix } from '../../godot/index.js';
+
+const COLOR_CALL = compositeCallPrefix('Color');
 
 export { controlColorToCss };
 
 export function colorToCss(value: string): string | undefined {
   // parseColor() falls back to white on bad input rather than throwing, so we
   // gate on the Color(...) form here to avoid silently emitting white.
-  if (!/^Color\s*\(/.test(value.trim())) return undefined;
+  if (!COLOR_CALL.test(value.trim())) return undefined;
   return controlColorToCss(parseColor(value));
 }
 

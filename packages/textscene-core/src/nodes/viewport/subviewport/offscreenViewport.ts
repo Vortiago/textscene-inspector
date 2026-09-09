@@ -192,8 +192,10 @@ export function orthoFrameForCamera2D(
   const width = size.x > 0 ? size.x : 1;
   const height = size.y > 0 ? size.y : 1;
   const view = camera2DView(framing, worldPosition, { x: width, y: height });
-  const halfWidth = width / view.zoom / 2;
-  const halfHeight = height / view.zoom / 2;
+  // The framed extent the view already computed, per axis. Re-deriving it from
+  // one magnification dropped the Y zoom.
+  const halfWidth = view.size.x / 2;
+  const halfHeight = view.size.y / 2;
   return {
     left: -halfWidth,
     right: halfWidth,
@@ -259,6 +261,33 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
   };
+}
+
+/**
+ * Read a render target back through `read`, as `ImageData`.
+ *
+ * Deliberately takes the readback as a callback: the GL call is the only part
+ * that needs a renderer, so the buffer arithmetic and the failure contract are
+ * asserted here rather than through a mounted tree.
+ *
+ * ALLOCATION included in the guard, not just the GL call. A viewport within
+ * this previewer's per-axis cap still asks for a gigabyte at 16384x16384, and
+ * the row-flipped copy behind `targetPixelsToImageData` doubles it — a heap
+ * that refuses either owes the caller the `null` this contract defines for
+ * "not ready", never a thrown RangeError.
+ */
+export function readTargetPixels(
+  read: (buffer: Uint8Array) => void,
+  width: number,
+  height: number
+): ImageData | null {
+  try {
+    const buffer = new Uint8Array(width * height * 4);
+    read(buffer);
+    return targetPixelsToImageData(buffer, width, height);
+  } catch {
+    return null;
+  }
 }
 
 /**

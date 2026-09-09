@@ -1,0 +1,17 @@
+[gd_scene format=3]
+; SpringBoneCollision3D: no visuals, exercises bone, bone_name, position_offset, rotation_offset.
+; Parented under a SpringBoneSimulator3D so it is the effective shape Godot would write
+; (an unparented one is inert — see this slice's linter.ts).
+
+[node name="Root" type="Node3D"]
+
+[node name="Skeleton3D" type="Skeleton3D" parent="."]
+
+[node name="Sim" type="SpringBoneSimulator3D" parent="Skeleton3D"]
+
+[node name="MySpringBoneCollision3D" type="SpringBoneCollision3D" parent="Skeleton3D/Sim"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+bone_name = &"Head"
+bone = 0
+position_offset = Vector3(0, 0.05, 0)
+rotation_offset = Quaternion(0, 0.7071068, 0, 0.7071068)

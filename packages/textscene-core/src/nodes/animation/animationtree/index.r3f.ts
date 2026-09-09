@@ -9,6 +9,7 @@ nodeComponentRegistry.register({
   typeName: 'AnimationTree',
   Component: AnimationTree,
   container: true,
+  renderIntent: 'transform-only',
 });
 
 export { AnimationTree };

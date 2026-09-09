@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+; MenuBar's six own properties at valid values, over the two PopupMenu children
+; that give it something to draw. The children carry only `title`, the one
+; property MenuBar itself reads off them for the menu label.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyMenuBar" type="MenuBar" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 208.0
+offset_bottom = 40.0
+flat = false
+start_index = 0
+switch_on_hover = true
+prefer_global_menu = true
+text_direction = 1
+language = "en"
+
+[node name="FileMenu" type="PopupMenu" parent="MyMenuBar"]
+title = "File"
+
+[node name="EditMenu" type="PopupMenu" parent="MyMenuBar"]
+title = "Edit"

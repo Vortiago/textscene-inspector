@@ -15,6 +15,7 @@
  */
 
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
@@ -99,14 +100,18 @@ export function parseNodeWithRegistry(
 ): TscnNode | null {
   // Check if this is an instance node (has instance attribute but no type)
   const instanceRef = heading.attributes.instance || properties.instance;
-  const hasInstanceAttribute = !!instanceRef;
+  // An `instance_placeholder=` heading is an InstancePlaceholder node
+  // (packed_scene.cpp:255): a node of its own, not an override.
+  const placeholderPath = heading.attributes.instance_placeholder;
+  const hasInstanceAttribute = !!instanceRef || !!placeholderPath;
 
   const registration = nodeRegistry.findRegistration(heading);
 
   // If no registration found, use base Node type as fallback
   // This keeps unsupported types and instance nodes in the tree hierarchy
   if (!registration) {
-    const originalType = heading.attributes.type || 'Node';
+    const originalType =
+      heading.attributes.type || (placeholderPath ? INSTANCE_PLACEHOLDER_TYPE : 'Node');
 
     // Warn for truly unsupported types, but not for instance nodes (which have no type until loaded)
     if (!hasInstanceAttribute) {
@@ -130,6 +135,7 @@ export function parseNodeWithRegistry(
     };
 
     if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
+    if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
     // Preserve instance attribute for external scene loading
     if (hasInstanceAttribute) {
@@ -149,6 +155,8 @@ export function parseNodeWithRegistry(
     properties: parsedProps,
     rawProperties: properties,
   };
+
+  if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
   // Capture instance property for external scene references
   // instance can be in heading attributes OR body properties

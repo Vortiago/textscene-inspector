@@ -78,8 +78,8 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
 
     // Load a Node3D-rooted scene next — WorkspaceAutoSelect's Godot-editor
     // parity claim (typed root -> its workspace, every scene) takes
-    // precedence over the persisted preference, exactly as it did before
-    // #224 for a manually-toggled mode.
+    // precedence over the persisted preference, exactly as it does for a
+    // manually-toggled mode.
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
   });

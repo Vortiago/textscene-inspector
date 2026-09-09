@@ -48,4 +48,13 @@ describe('resolveAnimPlayerPath', () => {
   it('returns null for a non-NodePath value', () => {
     expect(resolveAnimPlayerPath('Root/Tree', 'garbage')).toBeNull();
   });
+
+  it('returns null for a %Name segment, which no claim table here can resolve', () => {
+    // `get_node_or_null` looks the name up in the owner's table and descends
+    // from whatever it finds (node.cpp:1930-1938). Without one there is nothing
+    // to look it up in, and `%` is an invalid node-name character
+    // (ustring.cpp:5071), so treating it as an ordinary child would build a
+    // path no node can occupy.
+    expect(resolveAnimPlayerPath('Root/Tree', 'NodePath("%Hud/Player")')).toBeNull();
+  });
 });

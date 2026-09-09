@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_status_indicator"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+[node name="Root" type="Node"]
+
+[node name="TrayMenu" type="PopupMenu" parent="."]
+
+[node name="MyStatusIndicator" type="StatusIndicator" parent="."]
+; Every own property at a valid, non-default value.
+tooltip = "Server status"
+icon = ExtResource("1_icon")
+menu = NodePath("../TrayMenu")
+visible = true

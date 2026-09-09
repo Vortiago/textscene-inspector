@@ -3,4 +3,3 @@
  */
 
 import './linterParser.js';
-import './linter.js';

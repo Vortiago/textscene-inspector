@@ -49,6 +49,25 @@ describe('groupDiagnosticsByLine', () => {
     expect(byLine.size).toBe(0);
   });
 
+  it('floors a severity outside the union rather than letting it hold the row', () => {
+    // `SEVERITY_ORDER[<off-union>]` is `undefined` and every comparison against
+    // it is false, so an unfloored first severity keeps the gutter against the
+    // error behind it.
+    const diagnostics = [
+      diagnostic({
+        severity: 'bogus' as unknown as Diagnostic['severity'],
+        message: 'off-union',
+        location: { line: 4 },
+      }),
+      diagnostic({ severity: 'error', message: 'fatal', location: { line: 4 } }),
+    ];
+    expect(groupDiagnosticsByLine(diagnostics).get(4)).toEqual({
+      line: 4,
+      severity: 'error',
+      messages: ['off-union', 'fatal'],
+    });
+  });
+
   it('keeps diagnostics on different lines as separate entries', () => {
     const diagnostics = [
       diagnostic({ severity: 'error', message: 'bad line 2', location: { line: 2 } }),
@@ -76,33 +95,47 @@ describe('summarizeDiagnostics', () => {
       diagnostic({ severity: 'error', message: 'b' }),
       diagnostic({ severity: 'warning', message: 'c' }),
       diagnostic({ severity: 'warning', message: 'd' }),
+      diagnostic({ severity: 'info', message: 'e' }),
     ];
     expect(summarizeDiagnostics(diagnostics)).toEqual({
       errors: 2,
       warnings: 2,
-      total: 4,
+      infos: 1,
+      total: 5,
     });
   });
 
   it('returns all-zero counts for no diagnostics', () => {
-    expect(summarizeDiagnostics([])).toEqual({ errors: 0, warnings: 0, total: 0 });
+    expect(summarizeDiagnostics([])).toEqual({ errors: 0, warnings: 0, infos: 0, total: 0 });
+  });
+
+  it('counts a severity outside the union rather than throwing the badge away', () => {
+    // The switch is total for tsc; at runtime it floors, because this runs in a
+    // `useMemo` and the app carries no error boundary.
+    const odd = diagnostic({
+      severity: 'bogus' as unknown as Diagnostic['severity'],
+      message: 'off-union',
+    });
+
+    expect(summarizeDiagnostics([odd])).toEqual({ errors: 0, warnings: 0, infos: 1, total: 1 });
   });
 });
 
 describe('formatProblemBadge', () => {
   it('returns null when there are no problems (badge should not render)', () => {
-    expect(formatProblemBadge({ errors: 0, warnings: 0, total: 0 })).toBeNull();
+    expect(formatProblemBadge({ errors: 0, warnings: 0, infos: 0, total: 0 })).toBeNull();
   });
 
   it('formats errors and warnings together, errors first', () => {
-    expect(formatProblemBadge({ errors: 1, warnings: 2, total: 3 })).toBe('✖ 1 / ⚠ 2');
+    expect(formatProblemBadge({ errors: 1, warnings: 2, infos: 0, total: 3 })).toBe('✖ 1 / ⚠ 2');
+    expect(formatProblemBadge({ errors: 1, warnings: 0, infos: 2, total: 3 })).toBe('✖ 1 / ℹ 2');
   });
 
   it('formats only errors when there are no warnings', () => {
-    expect(formatProblemBadge({ errors: 3, warnings: 0, total: 3 })).toBe('✖ 3');
+    expect(formatProblemBadge({ errors: 3, warnings: 0, infos: 0, total: 3 })).toBe('✖ 3');
   });
 
   it('formats only warnings when there are no errors', () => {
-    expect(formatProblemBadge({ errors: 0, warnings: 2, total: 2 })).toBe('⚠ 2');
+    expect(formatProblemBadge({ errors: 0, warnings: 2, infos: 0, total: 2 })).toBe('⚠ 2');
   });
 });

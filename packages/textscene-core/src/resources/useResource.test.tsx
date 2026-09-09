@@ -58,7 +58,7 @@ describe('useResource', () => {
     loader.textures.cache.set('res://t.png', textureA);
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://t.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -76,7 +76,7 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(requestSpy);
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://t.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -96,7 +96,7 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://gone.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://gone.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -115,7 +115,7 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://broken.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://broken.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -136,7 +136,7 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://late.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://late.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -171,11 +171,11 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(() => {});
 
     const consumerA = renderHook(
-      () => useResource<THREE.Texture>('res://shared.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://shared.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
     const consumerB = renderHook(
-      () => useResource<THREE.Texture>('res://shared.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://shared.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -206,11 +206,11 @@ describe('useResource', () => {
     template.add(mesh);
 
     const consumerA = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'GLBMesh'),
+      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
       { wrapper: withLoader(loader) }
     );
     const consumerB = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'GLBMesh'),
+      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
       { wrapper: withLoader(loader) }
     );
 
@@ -253,7 +253,7 @@ describe('useResource', () => {
     template.add(mesh);
 
     const { result, unmount } = renderHook(
-      () => useResource<THREE.Object3D>('res://glb.glb', 'GLBMesh'),
+      () => useResource<THREE.Object3D>('res://glb.glb', 'glb'),
       { wrapper: withLoader(loader) }
     );
 
@@ -288,7 +288,7 @@ describe('useResource', () => {
     loader.glbMeshes.cache.set('res://b.glb', templateB);
 
     const { result, rerender } = renderHook(
-      ({ path }: { path: string }) => useResource<THREE.Object3D>(path, 'GLBMesh'),
+      ({ path }: { path: string }) => useResource<THREE.Object3D>(path, 'glb'),
       { wrapper: withLoader(loader), initialProps: { path: 'res://a.glb' } }
     );
 
@@ -311,7 +311,7 @@ describe('useResource', () => {
     let renderCount = 0;
     function TestComp() {
       renderCount += 1;
-      const result = useResource<THREE.Texture>('res://cached.png', 'Texture2D');
+      const result = useResource<THREE.Texture>('res://cached.png', 'texture');
       return <span data-testid="status">{result.status}</span>;
     }
 
@@ -341,7 +341,7 @@ describe('useResource', () => {
 
   it('reports unavailable (with a diagnostic error string) when no ResourceLoader is provided', () => {
     const { result } = renderHook(() =>
-      useResource<THREE.Texture>('res://t.png', 'Texture2D')
+      useResource<THREE.Texture>('res://t.png', 'texture')
     );
 
     // The no-provider case is a programming error, but it surfaces through
@@ -357,7 +357,7 @@ describe('useResource', () => {
     loader.textures.setRequestImpl(() => {});
 
     const { result } = renderHook(
-      () => useResource<THREE.Texture>('res://mine.png', 'Texture2D'),
+      () => useResource<THREE.Texture>('res://mine.png', 'texture'),
       { wrapper: withLoader(loader) }
     );
 
@@ -376,7 +376,7 @@ describe('useResource', () => {
     loader.materials.setRequestImpl(() => {});
 
     const { result } = renderHook(
-      () => useResource<THREE.Material>('res://mat.tres', 'StandardMaterial3D'),
+      () => useResource<THREE.Material>('res://mat.tres', 'material'),
       { wrapper: withLoader(loader) }
     );
 
@@ -398,7 +398,7 @@ describe('useResource', () => {
       const beforeFailed = loader.eventBus.getHandlerCount('texture', 'failed');
 
       const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        () => useResource<THREE.Texture>('res://t.png', 'texture'),
         { wrapper: withLoader(loader) }
       );
 
@@ -416,7 +416,7 @@ describe('useResource', () => {
       const before = loader.eventBus.getHandlerCount('texture', 'loaded');
 
       const { rerender } = renderHook(
-        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'texture'),
         { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
       );
 
@@ -433,7 +433,7 @@ describe('useResource', () => {
       loader.textures.setRequestImpl(() => {});
 
       const { result, rerender } = renderHook(
-        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'texture'),
         { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
       );
 
@@ -466,7 +466,7 @@ describe('useResource', () => {
       const before = loader.eventBus.getHandlerCount('texture', 'loaded');
 
       const { result } = renderHook(
-        () => useResource<THREE.Texture>('', 'Texture2D'),
+        () => useResource<THREE.Texture>('', 'texture'),
         { wrapper: withLoader(loader) }
       );
 
@@ -488,7 +488,7 @@ describe('useResource', () => {
       loader.textures.cache.set('res://t.png', textureA);
 
       const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        () => useResource<THREE.Texture>('res://t.png', 'texture'),
         { wrapper: withLoader(loader) }
       );
 
@@ -503,11 +503,11 @@ describe('useResource', () => {
       loader.textures.cache.set('res://t.png', textureA);
 
       const hookA = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        () => useResource<THREE.Texture>('res://t.png', 'texture'),
         { wrapper: withLoader(loader) }
       );
       const hookB = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        () => useResource<THREE.Texture>('res://t.png', 'texture'),
         { wrapper: withLoader(loader) }
       );
 
@@ -525,7 +525,7 @@ describe('useResource', () => {
       loader.textures.cache.set('res://b.png', textureB);
 
       const { rerender } = renderHook(
-        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'Texture2D'),
+        ({ path }: { path: string }) => useResource<THREE.Texture>(path, 'texture'),
         { wrapper: withLoader(loader), initialProps: { path: 'res://a.png' } }
       );
 
@@ -550,7 +550,7 @@ describe('useResource', () => {
       );
 
       const { result, unmount } = renderHook(
-        () => useResource<THREE.Texture>('res://t.png', 'Texture2D'),
+        () => useResource<THREE.Texture>('res://t.png', 'texture'),
         { wrapper: StrictWrapper }
       );
 
@@ -566,7 +566,7 @@ describe('useResource', () => {
 
     it('empty path does not pin anything', () => {
       const { unmount } = renderHook(
-        () => useResource<THREE.Texture>('', 'Texture2D'),
+        () => useResource<THREE.Texture>('', 'texture'),
         { wrapper: withLoader(loader) }
       );
 

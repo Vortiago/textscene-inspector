@@ -1,5 +1,5 @@
 /**
- * Regression contract for #150 — parseHeading truncates array-valued attributes.
+ * Regression contract: parseHeading must not truncate array-valued attributes.
  *
  * The heading attribute scanner matched unquoted values with `[^\s]+`, so an
  * array literal like `node_paths=PackedStringArray("a", "b")` or `groups=["a",

@@ -11,6 +11,10 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   runPropertyValidation,
+  instanced,
+  override,
+  packedScene,
+  subResource,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -80,14 +84,14 @@ describe('CollisionShape2D Linter', () => {
               ruleName: 'strict-parser',
               contains: ['shape', 'resource reference'],
             },
-            { value: 'SubResource(rect shape)', contains: ['shape'] },
+            { value: 'SubResource(rect shape)', ruleName: 'strict-parser', contains: ['shape'] },
           ],
         },
         {
           prop: 'disabled',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', contains: ['disabled', 'boolean'] },
+            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['disabled', 'converts'] },
             { value: '"yes"', contains: ['disabled', 'boolean'] },
           ],
         },
@@ -95,7 +99,7 @@ describe('CollisionShape2D Linter', () => {
           prop: 'one_way_collision',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', contains: ['one_way_collision', 'boolean'] },
+            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['one_way_collision', 'converts'] },
           ],
         },
         {
@@ -107,21 +111,37 @@ describe('CollisionShape2D Linter', () => {
             {
               value: -1.0,
               ruleName: 'strict-parser',
-              contains: ['one_way_collision_margin', 'non-negative'],
+              // Both ends share the derived message; a min-only override read
+              // as satisfied by an over-max value.
+              contains: ['one_way_collision_margin', 'between 0 and 128'],
             },
             { value: '"invalid"', contains: ['one_way_collision_margin', 'number'] },
           ],
         },
         {
           prop: 'debug_color',
-          valid: ['Color(1, 0, 0)', 'Color(0, 0.6, 0.7, 0.42)', 'Color( 0.5 , 0.5 , 0.5 , 1.0 )'],
+          valid: [
+            'Color(0, 0.6, 0.7, 0.42)',
+            'Color( 0.5 , 0.5 , 0.5 , 1.0 )',
+            // Every component is a plain float the setter assigns unaltered, and
+            // `rtos_fix` writes all three of these forms: an overbright/negative
+            // channel, the scientific notation Godot emits for small values, and
+            // a non-finite channel (variant_parser.cpp:2145).
+            'Color(-0.5, 0, 0, 1)',
+            'Color(1e-05, 0, 0, 1)',
+            'Color(inf, 0, 0, 1)',
+          ],
           invalid: [
             { value: '"red"', ruleName: 'strict-parser', contains: ['debug_color', 'Color'] },
             { value: 'Color(1, 0)', contains: ['debug_color'] },
+            // variant_parser.cpp:913 — `args.size() != 4` is ERR_PARSE_ERROR, so
+            // the three-argument spelling GDScript allows does not load from a
+            // .tscn at all. The renderer's COLOR_RE has always required four.
+            { value: 'Color(1, 0, 0)', contains: ['debug_color'] },
           ],
         },
       ]
-    );
+      );
   });
 
   describe('Semantic Validation (Required Properties)', () => {
@@ -157,12 +177,30 @@ describe('CollisionShape2D Linter', () => {
         node('CollisionShape2D', { shape: 'SubResource("nonexistent")' }, { name: 'MissingResource', parent: '.' })
       );
       const resourceError = expectDiagnostic(content, {
-        ruleName: 'valid-collisionshape2d-resources',
+        ruleName: 'dangling-resource-reference',
         severity: 'error',
         nodeType: 'CollisionShape2D',
-        contains: ['Shape resource not found'],
+        contains: ["'shape'"],
       });
       expect(resourceError.nodeName).toBe('MissingResource');
+    });
+
+    it('reports nothing missing for a shape that is not a reference at all', () => {
+      // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
+      // `ExtResource` identifiers into the resource arm, so a quoted string
+      // names no id and nothing can be absent. Its format is the strict
+      // parser's diagnostic, and a second "not found" beside it names a
+      // resource nobody wrote — while a well-formed `SubResource("nonexistent")`
+      // still errors, per the case above.
+      const content = scene(
+        staticBody,
+        node('CollisionShape2D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
+      expectDiagnostic(content, {
+        ruleName: 'strict-parser',
+        contains: ['shape', 'resource reference'],
+      });
     });
 
     it('should pass when shape resource exists', () => {
@@ -258,9 +296,43 @@ shape = SubResource("capsule_shape")
         ruleName: 'collisionshape2d-invalid-parent',
         severity: 'warning',
         nodeType: 'CollisionShape2D',
-        contains: ['Node2D', 'should be a child of'],
+        contains: ['Node2D', 'not a CollisionObject2D'],
       });
       expect(parentError.nodeName).toBe('Collision');
+    });
+
+    it('accepts a PhysicalBone2D parent, which IS a CollisionObject2D', () => {
+      // Godot's test is `cast_to<CollisionObject2D>(get_parent())`
+      // (collision_shape_2d.cpp), which PhysicalBone2D passes.
+      const content = scene(
+        rectShape,
+        node('PhysicalBone2D', {}, { name: 'Bone' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })
+      );
+      expectNoDiagnostic(content, { ruleName: 'collisionshape2d-invalid-parent' });
+    });
+
+    it('says nothing about a parent whose type is declared in another scene', () => {
+      // The 3D twin carries the same case: an `instance=` parent's `type` is
+      // the ExtResource ref, an override heading's is the index fallback's "0",
+      // and neither can be measured against CollisionObject2D.
+      const instancedParent = scene(
+        packedScene,
+        subResource('RectangleShape2D', {}, 'shape_1'),
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body' })
+      );
+      const overrideParent = scene(
+        packedScene,
+        subResource('RectangleShape2D', {}, 'shape_1'),
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Body', { parent: '.' }),
+        override('Inner', 0, { parent: 'Body' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: 'Body/Inner' })
+      );
+      expectNoDiagnostic(instancedParent, { ruleName: 'collisionshape2d-invalid-parent' });
+      expectNoDiagnostic(overrideParent, { ruleName: 'collisionshape2d-invalid-parent' });
     });
 
     it('should warn when parent is invalid type (Sprite2D)', () => {
@@ -288,7 +360,7 @@ shape = SubResource("capsule_shape")
   });
 
   describe('Semantic Validation (One-Way Collision Configuration)', () => {
-    it('should warn when one_way_collision_margin is set but one_way_collision is false', () => {
+    it('reports when one_way_collision_margin is set but one_way_collision is false', () => {
       const content = scene(
         rectShape,
         staticBody,
@@ -296,7 +368,7 @@ shape = SubResource("capsule_shape")
       );
       const marginWarning = expectDiagnostic(content, {
         ruleName: 'collisionshape2d-unused-one-way-margin',
-        severity: 'warning',
+        severity: 'info',
         nodeType: 'CollisionShape2D',
         contains: ['one_way_collision_margin', 'no effect'],
       });
@@ -333,6 +405,97 @@ shape = SubResource("capsule_shape")
       );
       // Should only have warnings/errors unrelated to unused margin
       expectNoDiagnostic(content, { ruleName: 'collisionshape2d-unused-one-way-margin' });
+    });
+  });
+
+  describe('One Way Collision ignored under Area2D (collisionshape2d-one-way-ignored-under-area2d)', () => {
+    it('warns when one_way_collision is true under an Area2D parent', () => {
+      const content = scene(
+        rectShape,
+        node('Area2D', {}, { name: 'Trigger' }),
+        node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+      );
+      const diagnostic = expectDiagnostic(content, {
+        ruleName: 'collisionshape2d-one-way-ignored-under-area2d',
+        severity: 'warning',
+        nodeType: 'CollisionShape2D',
+        contains: ['Trigger', 'ignored'],
+      });
+      expect(diagnostic.nodeName).toBe('Collision');
+    });
+
+    it('says nothing when one_way_collision is false under an Area2D', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          node('Area2D', {}, { name: 'Trigger' }),
+          node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-one-way-ignored-under-area2d' }
+      );
+    });
+
+    it('says nothing when one_way_collision is true under a StaticBody2D', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: true }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-one-way-ignored-under-area2d' }
+      );
+    });
+  });
+
+  describe('polygon shape limited editing (collisionshape2d-polygon-shape-limited-editing)', () => {
+    it('warns when shape resolves to a ConvexPolygonShape2D', () => {
+      expectDiagnostic(
+        scene(
+          sub('ConvexPolygonShape2D', 'convex'),
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("convex")' }, { name: 'Collision', parent: '.' })
+        ),
+        {
+          ruleName: 'collisionshape2d-polygon-shape-limited-editing',
+          severity: 'warning',
+          contains: ['ConvexPolygonShape2D', 'CollisionPolygon2D'],
+        }
+      );
+    });
+
+    it('warns when shape resolves to a ConcavePolygonShape2D', () => {
+      expectDiagnostic(
+        scene(
+          sub('ConcavePolygonShape2D', 'concave'),
+          staticBody,
+          node('CollisionShape2D', { shape: 'SubResource("concave")' }, { name: 'Collision', parent: '.' })
+        ),
+        { ruleName: 'collisionshape2d-polygon-shape-limited-editing', severity: 'warning' }
+      );
+    });
+
+    it('says nothing for a RectangleShape2D', () => {
+      expectNoDiagnostic(
+        scene(rectShape, staticBody, node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'Collision', parent: '.' })),
+        { ruleName: 'collisionshape2d-polygon-shape-limited-editing' }
+      );
+    });
+  });
+
+  describe('Semantic Validation (Transform Scale)', () => {
+    it('does not warn on a non-uniformly scaled node — collision_shape_2d.cpp has no such check', () => {
+      expectNoDiagnostic(
+        scene(
+          rectShape,
+          staticBody,
+          node(
+            'CollisionShape2D',
+            { shape: 'SubResource("shape_1")', scale: 'Vector2(2, 1)' },
+            { name: 'Collision', parent: '.' }
+          )
+        ),
+        { ruleName: 'collisionshape2d-non-uniform-scale' }
+      );
     });
   });
 
@@ -374,14 +537,15 @@ shape = SubResource("capsule_shape")
     });
 
     it('should handle all common 2D shape types', () => {
+      // Convex/ConcavePolygonShape2D are exercised separately below — Godot
+      // itself warns on them (collision_shape_2d.cpp:184-189), so they are not
+      // an "accept clean" case any more.
       const content = `[gd_scene format=3]
 
 [sub_resource type="RectangleShape2D" id="rectangle"]
 [sub_resource type="CircleShape2D" id="circle"]
 [sub_resource type="CapsuleShape2D" id="capsule"]
 [sub_resource type="SegmentShape2D" id="segment"]
-[sub_resource type="ConvexPolygonShape2D" id="convex"]
-[sub_resource type="ConcavePolygonShape2D" id="concave"]
 
 [node name="StaticBody" type="StaticBody2D"]
 
@@ -396,12 +560,6 @@ shape = SubResource("capsule")
 
 [node name="SegmentCollision" type="CollisionShape2D" parent="."]
 shape = SubResource("segment")
-
-[node name="ConvexCollision" type="CollisionShape2D" parent="."]
-shape = SubResource("convex")
-
-[node name="ConcaveCollision" type="CollisionShape2D" parent="."]
-shape = SubResource("concave")
 `;
       expectClean(content);
     });

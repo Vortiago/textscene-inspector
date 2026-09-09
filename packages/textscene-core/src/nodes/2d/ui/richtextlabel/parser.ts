@@ -3,6 +3,7 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import type { RichTextLabelProperties } from './types';
 import { parseControl } from '../control/parser';
+import { boolSlotValue } from '../../../../godot/index.js';
 
 export function parseRichTextLabel(
   heading: ParsedHeading,
@@ -10,7 +11,7 @@ export function parseRichTextLabel(
 ): RichTextLabelProperties {
   const result: RichTextLabelProperties = { ...parseControl(heading, properties) };
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
-  result.bbcodeEnabled = properties.bbcode_enabled === 'true';
-  result.fitContent = properties.fit_content === 'true';
+  result.bbcodeEnabled = boolSlotValue(properties.bbcode_enabled) === true;
+  result.fitContent = boolSlotValue(properties.fit_content) === true;
   return result;
 }

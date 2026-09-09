@@ -92,10 +92,15 @@ describe('getSeverityIcon', () => {
   it('maps each known severity to its icon', () => {
     expect(getSeverityIcon('error')).toBe('✖');
     expect(getSeverityIcon('warning')).toBe('⚠');
+    expect(getSeverityIcon('info')).toBe('ℹ');
   });
 
-  it('falls back to a bullet for unknown severities', () => {
-    expect(getSeverityIcon('bogus')).toBe('•');
+  it('floors an off-union severity to the info icon', () => {
+    // The same floor `--format json` and `--format github` apply, so one run
+    // does not name two tiers for one finding.
+    expect(getSeverityIcon('bogus')).toBe('ℹ');
+    // `'constructor'` reaches Object.prototype through a bare index.
+    expect(getSeverityIcon('constructor')).toBe('ℹ');
   });
 });
 
@@ -103,15 +108,21 @@ describe('formatSeverity', () => {
   it('returns plain text when color is off', () => {
     expect(formatSeverity('error', false)).toBe('error');
     expect(formatSeverity('warning', false)).toBe('warning');
+    expect(formatSeverity('info', false)).toBe('info');
   });
 
   it('wraps severities in ANSI color codes when color is on', () => {
     expect(formatSeverity('error', true)).toBe('\x1b[31merror\x1b[0m');
     expect(formatSeverity('warning', true)).toBe('\x1b[33mwarning\x1b[0m');
+    expect(formatSeverity('info', true)).toBe('\x1b[36minfo\x1b[0m');
   });
 
-  it('leaves unknown severities unstyled even when color is on', () => {
-    expect(formatSeverity('bogus', true)).toBe('bogus');
+  it('floors an off-union severity to the info tier, styled or not', () => {
+    // The stdout tier has to match the one `toJsonFindings` reports for the
+    // same diagnostic; printing the raw word left the two outputs of one run
+    // disagreeing about what the finding is.
+    expect(formatSeverity('bogus', true)).toBe('\x1b[36minfo\x1b[0m');
+    expect(formatSeverity('bogus', false)).toBe('info');
   });
 });
 
@@ -231,6 +242,31 @@ describe('formatGithubAnnotations', () => {
     };
 
     expect(formatGithubAnnotations([file])[0]).toMatch(/^::warning /);
+  });
+
+  it('falls back to ::notice for a severity outside the union, including a prototype key', () => {
+    // A bare index reaches Object.prototype, so `'constructor'` reads back a
+    // function and any other unknown value throws — which would cost the run
+    // every annotation, not just this finding's level.
+    const file: FileDiagnostics = {
+      filePath: 'odd.tscn',
+      diagnostics: [
+        makeDiagnostic({ severity: 'constructor' as unknown as Diagnostic['severity'] }),
+        makeDiagnostic({ severity: 'bogus' as unknown as Diagnostic['severity'] }),
+      ],
+    };
+
+    // Both lines, spelled out: `every` on an empty array is `true`, so a
+    // formatter that dropped the findings would pass this arm.
+    expect(formatGithubAnnotations([file])).toEqual([
+      expect.stringMatching(/^::notice /),
+      expect.stringMatching(/^::notice /),
+    ]);
+
+    // The JSON output is the contract a CI tool switches on, and its `severity`
+    // is declared as the closed union — so the floor has to reach it too, not
+    // only the annotation level above.
+    expect(toJsonFindings([file]).map((f) => f.severity)).toEqual(['info', 'info']);
   });
 
   it('omits line and col params when the diagnostic has no location', () => {

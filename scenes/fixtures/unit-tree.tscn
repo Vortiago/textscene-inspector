@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyTree" type="Tree" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 108.0
+offset_bottom = 40.0
+columns = 3
+column_titles_visible = true
+allow_reselect = true
+allow_rmb_select = true
+allow_search = false
+hide_folding = true
+enable_recursive_folding = false
+enable_drag_unfolding = false
+hide_root = true
+drop_mode_flags = 3
+select_mode = 2
+auto_tooltip = false
+scroll_horizontal_enabled = false
+scroll_vertical_enabled = false
+scroll_hint_mode = 1
+tile_scroll_hint = true

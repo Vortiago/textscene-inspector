@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_area3d_inactive"]
 
-; Area3D with both `monitoring` and `monitorable` false — it can neither
-; detect nor be detected. Warning-level (area3d-inactive); still mounts and
-; renders its collision shape normally.
+; Area3D with both `monitoring` and `monitorable` false, so it detects nothing
+; and nothing detects it. Warning-level (area3d-detects-nothing); its gravity
+; and damping overrides still apply, and it mounts and renders normally.
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(2, 2, 2)

@@ -26,22 +26,32 @@ const ERROR_TSCN = `[gd_scene format=3]
 transform = Transform3D(invalid, values, here)
 `;
 
-// Relative visibility_parent paths trigger a warning-severity diagnostic
-// (valid-node3d-visibility) and nothing of error severity.
+// A CollisionShape2D with no shape trips a warning-severity diagnostic
+// (collisionshape2d-requires-shape, a ported editor warning) and nothing of
+// error severity.
 const WARNING_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="Body"]
+`;
+
+// A CSGMesh3D with no mesh trips an info-severity diagnostic
+// (csgmesh3d-requires-mesh: Godot draws nothing and says nothing).
+const INFO_TSCN = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
-[node name="Child" type="Node3D" parent="."]
-visibility_parent = NodePath("../Other")
-
-[node name="Other" type="Node3D" parent="."]
+[node name="Shape" type="CSGMesh3D" parent="."]
 `;
 
 let tempDir: string;
 let cleanPath: string;
 let errorPath: string;
 let warningPath: string;
+let infoPath: string;
 let missingPath: string;
 
 beforeAll(() => {
@@ -49,10 +59,12 @@ beforeAll(() => {
   cleanPath = join(tempDir, 'clean.tscn');
   errorPath = join(tempDir, 'error.tscn');
   warningPath = join(tempDir, 'warning.tscn');
+  infoPath = join(tempDir, 'info.tscn');
   missingPath = join(tempDir, 'does-not-exist.tscn');
   writeFileSync(cleanPath, CLEAN_TSCN);
   writeFileSync(errorPath, ERROR_TSCN);
   writeFileSync(warningPath, WARNING_TSCN);
+  writeFileSync(infoPath, INFO_TSCN);
 });
 
 afterAll(() => {
@@ -84,7 +96,7 @@ describe('lintFile', () => {
 
     expect(result.hasErrors).toBe(false);
     expect(result.stdoutLines.join('\n')).toContain('warning');
-    expect(result.stdoutLines.join('\n')).toContain('valid-node3d-visibility');
+    expect(result.stdoutLines.join('\n')).toContain('collisionshape2d-requires-shape');
   });
 
   it('handles a missing file gracefully: stderr names the path, hasErrors set', () => {
@@ -169,7 +181,15 @@ describe('lintFileDiagnostics', () => {
     const result = lintFileDiagnostics(warningPath);
 
     expect(result.readError).toBeUndefined();
-    expect(result.diagnostics.some((d) => d.severity === 'warning' && d.ruleName === 'valid-node3d-visibility')).toBe(true);
+    expect(result.diagnostics.some((d) => d.severity === 'warning' && d.ruleName === 'collisionshape2d-requires-shape')).toBe(true);
+  });
+
+  it('returns raw info-severity diagnostics, which never count as errors', () => {
+    const result = lintFileDiagnostics(infoPath);
+
+    expect(result.readError).toBeUndefined();
+    expect(result.diagnostics.some((d) => d.severity === 'info' && d.ruleName === 'csgmesh3d-requires-mesh')).toBe(true);
+    expect(collectFileDiagnostics([infoPath]).exitCode).toBe(0);
   });
 
   it('sets readError (and an empty diagnostics array) for a missing file', () => {

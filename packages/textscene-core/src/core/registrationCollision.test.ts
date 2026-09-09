@@ -33,12 +33,18 @@ vi.mock('../logger.js', async (importOriginal) => {
 });
 
 // Side-effect imports: the SAME barrels the real apps import — parser/TscnParser.ts
-// registers every slice's parser+formatter into nodeRegistry; r3f/nodes/index.ts
-// registers every slice's render component into nodeComponentRegistry (3D) and
-// controlComponentRegistry (2D, via the Control slices' own index.r3f.ts).
+// registers every slice's parser+formatter into nodeRegistry, and
+// r3f/nodes/index.ts every slice's render component into nodeComponentRegistry.
+//
+// The 2D registry needs its OWN barrel: `r3f/nodes/index.ts` does not reach
+// `r3f/controls/index.ts` — the app loads that chunk through two `lazy()` sites
+// — so all 23 `controlComponentRegistry.register` calls were outside this
+// sweep, and it was structurally incapable of reporting a Control collision.
 import '../parser/TscnParser.js';
 import '../r3f/nodes/index.js';
+import '../r3f/controls/index.js';
 import { nodeComponentRegistry } from '../r3f/NodeComponentRegistry.js';
+import { controlComponentRegistry } from '../r3f/controls/ControlComponentRegistry.js';
 
 function duplicateRegistrationWarnings(): string[] {
   return warnCalls
@@ -49,6 +55,13 @@ function duplicateRegistrationWarnings(): string[] {
 describe('registration-collision guard (#217)', () => {
   it('production self-registration reports zero duplicate-typeName collisions', () => {
     expect(duplicateRegistrationWarnings()).toEqual([]);
+  });
+
+  it('has all three registries populated, so none can pass by being empty', () => {
+    // The 2D registry held nothing here for the whole run, so the sweep above
+    // was asking its question of two registries while claiming three.
+    expect(nodeComponentRegistry.getAllTypeNames().length).toBeGreaterThan(150);
+    expect(controlComponentRegistry.getAllTypeNames().length).toBeGreaterThan(15);
   });
 
   it('sanity: a DELIBERATE duplicate registration is captured by the spy', () => {

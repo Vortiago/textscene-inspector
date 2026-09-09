@@ -146,6 +146,33 @@ describe('Node2D Linter', () => {
       expectClean(scene(node('Node2D', { scale: 'Vector2(0.00001, 0.00001)' })));
     });
 
+    it('flags a component closer to zero than CMP_EPSILON, which Godot silently rewrites', () => {
+      // node_2d.cpp:194-198's is_zero_approx uses CMP_EPSILON (1e-5), not exact
+      // zero; a value strictly smaller gets substituted just like exact 0 does.
+      expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0.000001, 1)' })), {
+        ruleName: 'strict-parser',
+        severity: 'error',
+        contains: ['scale', 'non-zero'],
+      });
+    });
+
+    // node_2d.cpp:194-198's guard is `is_zero_approx`, i.e. `abs(v) <
+    // CMP_EPSILON`, which is false for an infinite component and false for a
+    // `nan` one, so Godot assigns both unaltered.
+    it('tolerates a non-finite scale component, which Godot stores as written', () => {
+      expectClean(scene(node('Node2D', { scale: 'Vector2(inf, inf_neg)' })));
+      expectClean(scene(node('Node2D', { scale: 'Vector2(nan, 1)' })));
+    });
+
+    it('names the non-finite component as a number when the OTHER one is zero', () => {
+      const diagnostic = expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(inf, 0)' })), {
+        ruleName: 'strict-parser',
+        severity: 'error',
+        contains: ['scale', 'non-zero'],
+      });
+      expect(diagnostic.message).toContain('Vector2(Infinity, 0)');
+    });
+
     it('should detect invalid scale format', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1)' })), {
         ruleName: 'strict-parser',
@@ -177,6 +204,30 @@ describe('Node2D Linter', () => {
         ruleName: 'strict-parser',
         severity: 'error',
         contains: ['skew', 'number'],
+      });
+    });
+
+    it('accepts the converted ends of the ±89.9 degree hint', () => {
+      // node_2d.cpp:503, PROPERTY_HINT_RANGE "-89.9,89.9,0.1,radians_as_degrees":
+      // the inspector shows degrees, the .tscn stores radians, so the extents
+      // are ±1.56905 rad. Bounding on ±89.9 RADIANS would reject nothing a
+      // scene can contain.
+      expectClean(scene(node('Node2D', { skew: 1.569 })));
+      expectClean(scene(node('Node2D', { skew: -1.569 })));
+    });
+
+    it('warns, not errors, past the skew hint', () => {
+      // set_skew (node_2d.cpp:178-185) is a bare assignment with no clamp,
+      // unlike set_scale below it, so the hint governs the inspector alone.
+      expectDiagnostic(scene(node('Node2D', { skew: 1.6 })), {
+        ruleName: 'strict-parser',
+        severity: 'warning',
+        contains: ['skew', '89.9 degrees'],
+      });
+      expectDiagnostic(scene(node('Node2D', { skew: -1.6 })), {
+        ruleName: 'strict-parser',
+        severity: 'warning',
+        contains: ['skew', '89.9 degrees'],
       });
     });
 
@@ -235,11 +286,11 @@ describe('Node2D Linter', () => {
       expectClean(scene(node('Node2D', { z_index: 0 })));
     });
 
-    it('should detect invalid z_index format - float', () => {
+    it('warns that a float z_index is truncated', () => {
       expectDiagnostic(scene(node('Node2D', { z_index: 10.5 })), {
         ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['z_index', 'integer'],
+        severity: 'warning',
+        contains: ['z_index', 'integer slot', 'stores 10'],
       });
     });
 
@@ -262,8 +313,8 @@ describe('Node2D Linter', () => {
     it('should detect invalid z_as_relative format', () => {
       expectDiagnostic(scene(node('Node2D', { z_as_relative: 1 })), {
         ruleName: 'strict-parser',
-        severity: 'error',
-        contains: ['z_as_relative', 'boolean'],
+        severity: 'warning',
+        contains: ['z_as_relative', 'converts'],
       });
     });
   });
@@ -350,12 +401,25 @@ describe('Node2D Linter', () => {
       });
     });
 
-    it('should handle large z_index values', () => {
-      expectClean(scene(node('Node2D', { z_index: 999999 })));
+    it('accepts z_index across the whole range Godot allows', () => {
+      // scene/main/canvas_item.cpp:668-669 — set_z_index ERR_FAIL_CONDs on both
+      // sides of CANVAS_ITEM_Z_MIN/MAX (±4096, rendering_server.h:103-104), so
+      // these are hard bounds and not an editor convenience.
+      expectClean(scene(node('Node2D', { z_index: 4096 })));
+      expectClean(scene(node('Node2D', { z_index: -4096 })));
     });
 
-    it('should handle very small negative z_index', () => {
-      expectClean(scene(node('Node2D', { z_index: -999999 })));
+    it('rejects a z_index Godot itself refuses', () => {
+      // The CanvasItem tier carries the real range; an unbounded `v.strictInt`
+      // here would pass 999999, a value the engine will not load.
+      expectDiagnostic(scene(node('Node2D', { z_index: 999999 })), {
+        prop: 'z_index',
+        severity: 'error',
+      });
+      expectDiagnostic(scene(node('Node2D', { z_index: -999999 })), {
+        prop: 'z_index',
+        severity: 'error',
+      });
     });
   });
 
@@ -379,22 +443,30 @@ describe('Node2D Linter', () => {
 });
 
 describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
+  // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
+  // PROPERTY_HINT_RANGE. set_light_mask (canvas_item.cpp:589-596) assigns
+  // unconditionally, no ERR_FAIL, no clamp, so ADR-0032's verdict is "none":
+  // no 0..2^32-1 `layerBitmask` bound, only the integer format.
   it('accepts the whole 32-bit range, including 0 and the sign bit', () => {
     for (const mask of ['0', '1', '512', '2147483648', '4294967295']) {
       expectClean(scene(node('Node2D', { light_mask: mask })));
     }
   });
 
-  it('rejects a negative mask', () => {
-    expectDiagnostic(scene(node('Node2D', { light_mask: '-1' })), {
-      ruleName: 'strict-parser',
-      severity: 'error',
-      contains: ['light_mask'],
-    });
+  it('accepts a negative mask, which is how Godot spells all layers on', () => {
+    // canvas_item.cpp:1477 hints PROPERTY_HINT_LAYERS_2D_RENDER; set_light_mask
+    // (:589-596) assigns unconditionally, and measured on 4.6.3 `light_mask =
+    // -1` stores -1 — a pattern the 32 checkboxes render exactly.
+    expectClean(scene(node('Node2D', { light_mask: '-1' })));
   });
 
-  it('rejects a mask past 32 bits', () => {
-    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), {
+  it('errors on a mask past 32 bits, where the engine drops the extra', () => {
+    // Measured: `light_mask = 4294967296` stores 0, so the file misstates it.
+    expectDiagnostic(scene(node('Node2D', { light_mask: '4294967296' })), { severity: 'error' });
+  });
+
+  it('still requires an integer format', () => {
+    expectDiagnostic(scene(node('Node2D', { light_mask: 'not-a-number' })), {
       ruleName: 'strict-parser',
       severity: 'error',
       contains: ['light_mask'],
@@ -404,17 +476,19 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   it('reaches a Node2D SUBCLASS through the base walk', () => {
     // The point of registering it here: every 2D slice inherits the validator
     // rather than each one re-declaring it.
-    expectDiagnostic(scene(node('Sprite2D', { light_mask: '-1' })), {
-      ruleName: 'strict-parser',
-      severity: 'error',
-      contains: ['light_mask'],
-    });
+    expectDiagnostic(scene(node('Sprite2D', { light_mask: '4294967296' })), { severity: 'error' });
   });
 });
 
-describe('Node2D Linter — lenient float grammar (#190 #7 follow-up)', () => {
-  it('accepts scale with leading-dot / trailing-dot / explicit-plus floats', () => {
-    expectClean(scene(node('Node2D', { scale: 'Vector2(.5, 2.)' })));
-    expectClean(scene(node('Node2D', { scale: 'Vector2(+1, 1)' })));
+describe('Node2D Linter — the tokenizer float grammar', () => {
+  it('accepts a trailing-dot scale component', () => {
+    expectClean(scene(node('Node2D', { scale: 'Vector2(0.5, 2.)' })));
+  });
+
+  it('refuses a leading-plus or leading-dot component, which Godot cannot read', () => {
+    // Measured on 4.6.3: both spellings fail the load outright, so a clean
+    // lint here would say nothing about a file that does not open.
+    expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(+1, 1)' })), { severity: 'error' });
+    expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(.5, 2)' })), { severity: 'error' });
   });
 });

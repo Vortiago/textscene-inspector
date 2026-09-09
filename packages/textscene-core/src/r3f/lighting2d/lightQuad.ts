@@ -64,6 +64,9 @@
  * three overlapping cookies of alpha 0.3 mask to 0.3, 0.6 and 0.9, not to the
  * 0.51/0.657 a screen combination would give).
  *
+ * The GLSL itself is in `lightQuadShaders.ts` and the filtered path's per-light
+ * inputs in `shadowSampling.ts`; this module is the material assembly.
+ *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -71,8 +74,23 @@
 
 import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
-import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
-import { GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
+import {
+  FRAGMENT,
+  SHADOW_FRAGMENT,
+  SHADOW_SAMPLE,
+  SHADOW_VERTEX,
+  SHADOWED_FRAGMENT,
+  SHADOWED_TINT_FRAGMENT,
+  VERTEX,
+} from './lightQuadShaders.js';
+import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
+
+export {
+  createShadowPolarTexture,
+  shadowPixelSize,
+  updateShadowPolarTexture,
+  type ShadowSampling,
+} from './shadowSampling.js';
 
 /** Godot `Light2D.BlendMode`. */
 export enum Light2DBlendMode {
@@ -85,48 +103,6 @@ export enum Light2DBlendMode {
 export const SHADOW_FILTER_NONE = 0;
 export const SHADOW_FILTER_PCF5 = 1;
 export const SHADOW_FILTER_PCF13 = 2;
-
-const VERTEX = /* glsl */ `
-varying vec2 vLightUv;
-void main() {
-  vLightUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-/**
- * The same quad, plus the fragment's world position — the shadow lookup needs
- * where the pixel IS, which the cookie's uv cannot say once `offset` has moved
- * the quad off the light's origin.
- */
-const SHADOW_VERTEX = /* glsl */ `
-varying vec2 vLightUv;
-varying vec2 vWorld;
-void main() {
-  vLightUv = uv;
-  vec4 world = modelMatrix * vec4(position, 1.0);
-  vWorld = world.xy;
-  gl_Position = projectionMatrix * viewMatrix * world;
-}
-`;
-
-/**
- * The cookie arrives decoded to linear (three tags loaded textures
- * `SRGBColorSpace`), so it is re-encoded to recover Godot's texel before the
- * light maths. Nothing is clamped: the accumulator is half-float, and Godot
- * clamps only after the light has been multiplied into an item's albedo.
- */
-const FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
-uniform vec3 uColor;
-uniform float uEnergy;
-varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
-void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a);
-}
-`;
 
 /**
  * One fixed-function blend per `Light2D.BlendMode`, against an accumulator whose
@@ -158,233 +134,6 @@ function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParam
  * `litQuadStencilProps` for a shadowed light, empty for one that casts nothing.
  */
 export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
-
-/**
- * The shadowed half of `light_shadow_compute`. The cookie is sampled for its
- * ALPHA alone — `mix` overwrites rgb outright, so the light's colour, its energy
- * and the cookie's own rgb all drop out, and the albedo multiply that the lit
- * branch applies never reaches this term either.
- */
-const SHADOW_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
-uniform vec4 uShadowColor;
-varying vec2 vLightUv;
-
-void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
-  gl_FragColor = vec4(uShadowColor.rgb, uShadowColor.a * cookie.a);
-}
-`;
-
-/**
- * `light_shadow_compute`'s tap loops and the quadrant block that feeds them,
- * ported from `canvas.glsl:458-503` and `canvas.glsl:819-848`. `SHADOW_FILTER`
- * selects the kernel exactly as Godot's `LIGHT_FLAGS_FILTER_MASK` branch does,
- * and the taps step along the map's ANGULAR axis — which is why the penumbra
- * widens with distance from the light instead of being a fixed screen-space band.
- */
-const SHADOW_SAMPLE = /* glsl */ `
-uniform sampler2D uShadowMap;
-uniform mat3 uWorldToLight;
-uniform float uShadowZFarInv;
-uniform float uShadowPixelSize;
-varying vec2 vWorld;
-
-#define SHADOW_TEST(m_u) shadow += step(texture2D(uShadowMap, vec2(m_u, 0.5)).r, dist);
-
-float shadowFraction() {
-  // Godot states the quadrant rule in its own Y-DOWN canvas space; the previewer
-  // renders the 2D subtree conjugated by diag(1, -1), so the light-local point
-  // is flipped back before the mapping rather than the mapping being re-derived.
-  vec2 local = (uWorldToLight * vec3(vWorld, 1.0)).xy;
-  vec2 shadow_pos = vec2(local.x, -local.y);
-
-  vec2 pos_norm = normalize(shadow_pos);
-  vec2 pos_abs = abs(pos_norm);
-  vec2 pos_box = pos_norm / max(pos_abs.x, pos_abs.y);
-  vec2 pos_rot = pos_norm * mat2(vec2(0.7071067811865476, -0.7071067811865476), vec2(0.7071067811865476, 0.7071067811865476));
-
-  float tex_ofs;
-  float dist;
-  if (pos_rot.y > 0.0) {
-    if (pos_rot.x > 0.0) {
-      tex_ofs = pos_box.y * 0.125 + 0.125;
-      dist = shadow_pos.x;
-    } else {
-      tex_ofs = pos_box.x * -0.125 + (0.25 + 0.125);
-      dist = shadow_pos.y;
-    }
-  } else {
-    if (pos_rot.x < 0.0) {
-      tex_ofs = pos_box.y * -0.125 + (0.5 + 0.125);
-      dist = -shadow_pos.x;
-    } else {
-      tex_ofs = pos_box.x * 0.125 + (0.75 + 0.125);
-      dist = -shadow_pos.y;
-    }
-  }
-  dist *= uShadowZFarInv;
-
-  float shadow = 0.0;
-#if SHADOW_FILTER == 2
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 6.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 5.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 4.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 3.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 2.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize);
-  SHADOW_TEST(tex_ofs);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 2.0);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 3.0);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 4.0);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 5.0);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 6.0);
-  shadow /= 13.0;
-#else
-  SHADOW_TEST(tex_ofs - uShadowPixelSize * 2.0);
-  SHADOW_TEST(tex_ofs - uShadowPixelSize);
-  SHADOW_TEST(tex_ofs);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize);
-  SHADOW_TEST(tex_ofs + uShadowPixelSize * 2.0);
-  shadow /= 5.0;
-#endif
-  return shadow;
-}
-`;
-
-/** The cookie quad's `light_color` after `mix`, split out of the sum above. */
-const SHADOWED_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
-uniform vec3 uColor;
-uniform float uEnergy;
-uniform vec4 uShadowColor;
-varying vec2 vLightUv;
-${GODOT_TO_SRGB_GLSL}
-void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
-  float s = shadowFraction();
-  float lit = 1.0 - s;
-  gl_FragColor = vec4(
-    godotToSrgb(cookie.rgb) * uColor * uEnergy * lit,
-    cookie.a * (lit + s * uShadowColor.a)
-  );
-}
-`;
-
-/** The `shadow_color` quad's share of the same sum — neat, never albedo-scaled. */
-const SHADOWED_TINT_FRAGMENT = /* glsl */ `
-uniform sampler2D uCookie;
-uniform vec4 uShadowColor;
-varying vec2 vLightUv;
-
-void main() {
-  vec4 cookie = texture2D(uCookie, vLightUv);
-  float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb, cookie.a * s * ((1.0 - s) + s * uShadowColor.a));
-}
-`;
-
-/**
- * `rasterizer_canvas_gles3.cpp:182`:
- * `shadow_pixel_size = (1.0 / state.shadow_texture_size) * (1.0 + l->shadow_smooth)`
- * — one tap's step along the atlas's u axis, i.e. an ANGULAR step around the light.
- */
-export function shadowPixelSize(smooth: number): number {
-  return (1 + smooth) / SHADOW_MAP_BINS;
-}
-
-/** Everything a quad needs to evaluate one light's filtered shadow per fragment. */
-export interface ShadowSampling {
-  /** The light's polar map, from `createShadowPolarTexture`. */
-  readonly map: THREE.Texture;
-  /** `Light2D.shadow_filter`. `SHADOW_FILTER_NONE` never reaches here. */
-  readonly filter: typeof SHADOW_FILTER_PCF5 | typeof SHADOW_FILTER_PCF13;
-  /** `Light2D.shadow_filter_smooth`, widening the kernel. */
-  readonly smooth: number;
-  /** Previewer world → light-local, Godot's `xform_cache.affine_inverse()`. */
-  readonly worldToLocal: THREE.Matrix3;
-  /** `1 / (radius_cache * 1.1)`, the divisor the map was normalised by. */
-  readonly zFarInv: number;
-  /**
-   * `Light2D.shadow_color`. It belongs to the sampling because only a FILTERED
-   * cookie quad reads one: the stencil mechanism partitions the two terms
-   * between two quads, so its cookie fragment has no `shadow_color` term at all.
-   * The tint quad carries the colour in its own right, filtered or not.
-   */
-  readonly shadowColor: Color;
-}
-
-/**
- * One light's polar map as a texture the quad can tap.
- *
- * `LinearFilter` and `RepeatWrapping` are Godot's own atlas state
- * (`rasterizer_canvas_gles3.cpp:1885-1888`), not a choice: the linear read is
- * what rounds each PCF step's corner, and the wrap is what lets a tap cross the
- * seam between the last bin and the first. Half-float because linear filtering
- * of half-float textures is core WebGL2 while the float32 equivalent is an
- * extension; the values are normalised to [0, 1] where the relative precision
- * costs well under a tenth of a pixel of occluder distance.
- */
-export function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    new Uint16Array(bins.length),
-    bins.length,
-    1,
-    THREE.RedFormat,
-    THREE.HalfFloatType
-  );
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.generateMipmaps = false;
-  fillShadowPolarTexture(texture, bins);
-  return texture;
-}
-
-function fillShadowPolarTexture(texture: THREE.DataTexture, bins: Float32Array): void {
-  const data = texture.image.data as Uint16Array;
-  for (let i = 0; i < bins.length; i += 1) data[i] = THREE.DataUtils.toHalfFloat(bins[i]!);
-  texture.needsUpdate = true;
-}
-
-/**
- * `existing` refilled from `bins` where it can be, a fresh texture otherwise.
- *
- * A light rebuilds its map whenever an occluder settles or moves, which during
- * load is several times per light. The texture is the only thing downstream of
- * the map that costs a GPU allocation, and its IDENTITY is what the quad's
- * material holds in `uShadowMap` — so replacing it would rebuild the material
- * (and the shadow-tint material) to change nothing the shader can observe.
- * Keeping it means a rebuild re-uploads 4 KB and stops there.
- */
-export function updateShadowPolarTexture(
-  existing: THREE.DataTexture | null,
-  bins: Float32Array
-): THREE.DataTexture {
-  const data = existing?.image.data as ArrayLike<number> | undefined;
-  if (!existing || data?.length !== bins.length) return createShadowPolarTexture(bins);
-  fillShadowPolarTexture(existing, bins);
-  return existing;
-}
-
-function shadowSamplingParameters(
-  shadow: ShadowSampling
-): Pick<THREE.ShaderMaterialParameters, 'defines'> & {
-  uniforms: Record<string, THREE.IUniform>;
-} {
-  return {
-    defines: { SHADOW_FILTER: shadow.filter },
-    uniforms: {
-      uShadowMap: { value: shadow.map },
-      uWorldToLight: { value: shadow.worldToLocal },
-      uShadowZFarInv: { value: shadow.zFarInv },
-      uShadowPixelSize: { value: shadowPixelSize(shadow.smooth) },
-    },
-  };
-}
 
 /**
  * Whether a `shadow_color` puts anything into the accumulator. Alpha is the

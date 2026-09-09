@@ -16,10 +16,11 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { decomposeTransform2D } from '../../base/node2d/parser';
 import type { Vector2 } from '../../base/node2d/types';
 import type { ParallaxBackgroundProperties } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
 /** `ParallaxBackground::ParallaxBackground()` — `set_layer(-100)`. */
 export const PARALLAX_BACKGROUND_LAYER = -100;
@@ -49,8 +50,8 @@ export function parseParallaxBackground(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined,
-    visible: properties.visible === undefined ? undefined : properties.visible !== 'false',
+    index: parseHeadingIndex(heading.attributes.index),
+    visible: properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false,
     layer: intOr(properties.layer, PARALLAX_BACKGROUND_LAYER, context),
     offset,
     rotation,

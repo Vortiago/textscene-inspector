@@ -1,5 +1,7 @@
 /**
- * Tests for RuleRegistry
+ * Tests for RuleRegistry: the store — registering, reading back, and clearing.
+ * Which rules a node type SELECTS is the sibling
+ * `RuleRegistry.nodeTypeMatching.test.ts`.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -84,136 +86,6 @@ describe('RuleRegistry', () => {
     });
   });
 
-  describe('getRulesForNodeType', () => {
-    it('should return universal rules (no applicableNodeTypes)', () => {
-      const universalRule = createMockRule('universal-rule', undefined);
-      const specificRule = createMockRule('specific-rule', ['MeshInstance3D']);
-
-      registry.register(universalRule);
-      registry.register(specificRule);
-
-      const rules = registry.getRulesForNodeType('Node3D');
-      expect(rules).toContain(universalRule);
-      expect(rules).not.toContain(specificRule);
-    });
-
-    it('should return universal rules (empty applicableNodeTypes)', () => {
-      const universalRule = createMockRule('universal-rule', []);
-      const specificRule = createMockRule('specific-rule', ['MeshInstance3D']);
-
-      registry.register(universalRule);
-      registry.register(specificRule);
-
-      const rules = registry.getRulesForNodeType('DirectionalLight3D');
-      expect(rules).toContain(universalRule);
-      expect(rules).not.toContain(specificRule);
-    });
-
-    it('should return rules for specific node type', () => {
-      const meshRule = createMockRule('mesh-rule', ['MeshInstance3D']);
-      const lightRule = createMockRule('light-rule', ['DirectionalLight3D']);
-
-      registry.register(meshRule);
-      registry.register(lightRule);
-
-      const meshRules = registry.getRulesForNodeType('MeshInstance3D');
-      expect(meshRules).toContain(meshRule);
-      expect(meshRules).not.toContain(lightRule);
-
-      const lightRules = registry.getRulesForNodeType('DirectionalLight3D');
-      expect(lightRules).toContain(lightRule);
-      expect(lightRules).not.toContain(meshRule);
-    });
-
-    it('should return rule applicable to multiple node types', () => {
-      const multiNodeRule = createMockRule('multi-node-rule', [
-        'MeshInstance3D',
-        'DirectionalLight3D',
-        'Camera3D',
-      ]);
-
-      registry.register(multiNodeRule);
-
-      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(multiNodeRule);
-      expect(registry.getRulesForNodeType('DirectionalLight3D')).toContain(multiNodeRule);
-      expect(registry.getRulesForNodeType('Camera3D')).toContain(multiNodeRule);
-      expect(registry.getRulesForNodeType('Node3D')).not.toContain(multiNodeRule);
-    });
-
-    it('should combine universal and specific rules', () => {
-      const universalRule = createMockRule('universal-rule', []);
-      const meshRule = createMockRule('mesh-rule', ['MeshInstance3D']);
-      const lightRule = createMockRule('light-rule', ['DirectionalLight3D']);
-
-      registry.register(universalRule);
-      registry.register(meshRule);
-      registry.register(lightRule);
-
-      const meshRules = registry.getRulesForNodeType('MeshInstance3D');
-      expect(meshRules).toHaveLength(2);
-      expect(meshRules).toContain(universalRule);
-      expect(meshRules).toContain(meshRule);
-
-      const lightRules = registry.getRulesForNodeType('DirectionalLight3D');
-      expect(lightRules).toHaveLength(2);
-      expect(lightRules).toContain(universalRule);
-      expect(lightRules).toContain(lightRule);
-
-      const node3dRules = registry.getRulesForNodeType('Node3D');
-      expect(node3dRules).toHaveLength(1);
-      expect(node3dRules).toContain(universalRule);
-    });
-
-    it('should return empty array for node type with no applicable rules', () => {
-      const meshRule = createMockRule('mesh-rule', ['MeshInstance3D']);
-      registry.register(meshRule);
-
-      expect(registry.getRulesForNodeType('DirectionalLight3D')).toEqual([]);
-    });
-  });
-
-  describe('getRulesForNodeType with applicableNodeTypeMatcher', () => {
-    const matcherRule = (name: string, matcher: (t: string) => boolean): LintRule => ({
-      meta: { name, description: `Test rule: ${name}`, category: 'validation', applicableNodeTypeMatcher: matcher },
-      check: () => [],
-    });
-
-    it('applies a matcher-based rule to every type the predicate accepts', () => {
-      const rule = matcherRule('spatial-rule', (t) => t === 'Node3D' || t.endsWith('3D'));
-      registry.register(rule);
-
-      expect(registry.getRulesForNodeType('Node3D')).toContain(rule);
-      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
-      expect(registry.getRulesForNodeType('Camera3D')).toContain(rule);
-      expect(registry.getRulesForNodeType('Sprite2D')).not.toContain(rule);
-      expect(registry.getRulesForNodeType('Label')).not.toContain(rule);
-    });
-
-    it('lets the matcher take precedence over applicableNodeTypes', () => {
-      const rule: LintRule = {
-        meta: {
-          name: 'matcher-wins',
-          description: 'x',
-          category: 'validation',
-          applicableNodeTypes: ['Node3D'],
-          applicableNodeTypeMatcher: (t) => t.endsWith('3D'),
-        },
-        check: () => [],
-      };
-      registry.register(rule);
-
-      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
-    });
-
-    it('leaves exact-match (matcher-less) rules unchanged', () => {
-      const rule = createMockRule('exact', ['MeshInstance3D']);
-      registry.register(rule);
-
-      expect(registry.getRulesForNodeType('MeshInstance3D')).toContain(rule);
-      expect(registry.getRulesForNodeType('Camera3D')).not.toContain(rule);
-    });
-  });
-
   describe('getRule', () => {
     it('should get rule by name', () => {
       const rule = createMockRule('test-rule');
@@ -255,68 +127,6 @@ describe('RuleRegistry', () => {
       expect(registry.getRules()).toHaveLength(1);
       expect(registry.getRule('rule-1')).toBeUndefined();
       expect(registry.getRule('rule-2')).toBe(rule2);
-    });
-  });
-
-  describe('rule execution', () => {
-    it('should execute rule check function', () => {
-      const mockCheck = vi.fn(() => [
-        {
-          severity: 'error' as const,
-          message: 'Test error',
-          nodeName: 'TestNode',
-          nodeType: 'MeshInstance3D',
-          ruleName: 'test-rule',
-        },
-      ]);
-
-      const rule: LintRule = {
-        meta: {
-          name: 'test-rule',
-          description: 'Test rule',
-          category: 'validation',
-          applicableNodeTypes: ['MeshInstance3D'],
-        },
-        check: mockCheck,
-      };
-
-      registry.register(rule);
-
-      const foundRule = registry.getRule('test-rule');
-      expect(foundRule).toBe(rule);
-
-      const context = {
-        scene: { nodes: [], externalResources: [], internalResources: [] },
-        node: { name: 'TestNode', type: 'MeshInstance3D', properties: {}, children: [] },
-        properties: {},
-      };
-
-      const diagnostics = foundRule!.check(context);
-      expect(mockCheck).toHaveBeenCalledWith(context);
-      expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.message).toBe('Test error');
-    });
-
-    it('should execute rule and return empty array for valid node', () => {
-      const rule: LintRule = {
-        meta: {
-          name: 'test-rule',
-          description: 'Test rule',
-          category: 'validation',
-        },
-        check: () => [], // No diagnostics
-      };
-
-      registry.register(rule);
-
-      const context = {
-        scene: { nodes: [], externalResources: [], internalResources: [] },
-        node: { name: 'ValidNode', type: 'Node3D', properties: {}, children: [] },
-        properties: {},
-      };
-
-      const diagnostics = rule.check(context);
-      expect(diagnostics).toEqual([]);
     });
   });
 });

@@ -4,6 +4,7 @@
  * `ImageData`. Kept free of R3F so the rules are asserted directly rather than
  * inferred from a mounted tree.
  */
+import { allocatableExtent } from './Component';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 
@@ -14,6 +15,7 @@ import {
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
+  readTargetPixels,
   selectViewportCamera,
   selectViewportCamera2D,
   targetPixelsToImageData,
@@ -525,5 +527,56 @@ describe('DEFAULT_CLEAR_COLOR', () => {
     expect(Math.round(out.r * 255)).toBe(77);
     expect(Math.round(out.g * 255)).toBe(77);
     expect(Math.round(out.b * 255)).toBe(77);
+  });
+});
+
+describe('allocatableExtent', () => {
+  it('floors at 2, where Godot floors', () => {
+    // `viewport.cpp:1120` — `p_size.maxi(2)`.
+    expect(allocatableExtent(0)).toBe(2);
+    expect(allocatableExtent(-1294967296)).toBe(2);
+  });
+
+  it('caps a size the engine accepts but no texture can hold', () => {
+    // Godot has no ceiling — the driver refuses. Here the number would reach
+    // `new Uint8Array(width * height * 4)` outside any try.
+    expect(allocatableExtent(2000000000)).toBe(16384);
+  });
+
+  it('leaves an ordinary size alone', () => {
+    expect(allocatableExtent(512)).toBe(512);
+    expect(allocatableExtent(1080.4)).toBe(1080);
+  });
+});
+
+/**
+ * `readPixels` promises `null` for "not ready", so nothing it does may throw at
+ * the caller. `size = Vector2i(16384, 16384)` is a file Godot opens
+ * (`viewport.cpp:1120` floors at 2 and imposes no ceiling), and it clears this
+ * previewer's per-AXIS cap while asking for a gigabyte of readback.
+ */
+describe('readTargetPixels', () => {
+  it('hands the reader a buffer for the stated rect and returns its pixels', () => {
+    const image = readTargetPixels((buffer) => buffer.fill(255), 1, 2);
+
+    expect(image?.width).toBe(1);
+    expect(image?.height).toBe(2);
+    expect(Array.from(image!.data.slice(0, 4))).toEqual([255, 255, 255, 255]);
+  });
+
+  it('returns null when the readback itself throws', () => {
+    expect(
+      readTargetPixels(() => {
+        throw new Error('no GL context');
+      }, 4, 4)
+    ).toBeNull();
+  });
+
+  it('returns null rather than throwing when the buffer cannot be allocated', () => {
+    // Past the maximum typed-array length, so the allocation fails without ever
+    // asking the host for the memory — the exit a 16384x16384 readback takes on
+    // a webview heap, made deterministic and free.
+    expect(() => readTargetPixels(() => undefined, 100_000, 100_000)).not.toThrow();
+    expect(readTargetPixels(() => undefined, 100_000, 100_000)).toBeNull();
   });
 });

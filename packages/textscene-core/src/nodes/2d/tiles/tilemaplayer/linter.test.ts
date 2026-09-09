@@ -1,9 +1,10 @@
 /**
  * Semantic lint rules for TileMapLayer: actionable diagnostics instead of
- * "unknown type" (PRD #74 story 16).
+ * "unknown type".
  */
 import { describe, it, expect } from 'vitest';
 import { lint, expectDiagnostic } from '../../../../linter/testing/testkit';
+import './linterParser';
 import './linter';
 
 const VALID_DATA = 'PackedByteArray("AAAJAAsAAgABAAAABQA=")';
@@ -25,10 +26,10 @@ tile_size = Vector2i(16, 16)
 `;
 
 describe('TileMapLayer lint rules', () => {
-  it('warns when tile data is present but no tile_set is assigned', () => {
+  it('reports when tile data is present but no tile_set is assigned', () => {
     const hit = expectDiagnostic(scene(`tile_map_data = ${VALID_DATA}`), {
       ruleName: 'tilemaplayer-requires-tileset',
-      severity: 'warning',
+      severity: 'info',
     });
     expect(hit.nodeName).toBe('L');
   });
@@ -43,17 +44,32 @@ describe('TileMapLayer lint rules', () => {
     );
   });
 
-  it('warns on a TileMapLayer with no tile data at all', () => {
-    expectDiagnostic(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES), {
-      ruleName: 'tilemaplayer-empty',
-      severity: 'warning',
-    });
+  it('reports a malformed base64 body once, not once per layer that reads it', () => {
+    // The literal cannot be PARSED (`CryptoCore::b64_decode` failing is an
+    // ERR_PARSE_ERROR for the whole file, variant_parser.cpp:618-622), so the
+    // semantic decode never gets a value to judge and must stay quiet.
+    const diagnostics = lint(
+      scene(
+        `tile_set = SubResource("TileSet_a")\ntile_map_data = PackedByteArray("not base64!!")`,
+        TILESET_RESOURCES
+      )
+    );
+    const onTileData = diagnostics.filter(
+      (d) => d.severity === 'error' && /tile_map_data/.test(d.message)
+    );
+    expect(onTileData).toHaveLength(1);
+    expect(onTileData[0]?.message).toContain('base64');
+  });
+
+  it('stays silent on a TileMapLayer with no tile data at all', () => {
+    const diagnostics = lint(scene(`tile_set = SubResource("TileSet_a")`, TILESET_RESOURCES));
+    expect(diagnostics.filter((d) => d.ruleName?.startsWith('tilemaplayer'))).toEqual([]);
   });
 
   it('errors when the tile_set reference cannot be resolved (dangling id)', () => {
     expectDiagnostic(
       scene(`tile_set = SubResource("TileSet_gone")\ntile_map_data = ${VALID_DATA}`),
-      { ruleName: 'valid-tilemaplayer-resources', severity: 'error' }
+      { ruleName: 'dangling-resource-reference', severity: 'error' }
     );
   });
 

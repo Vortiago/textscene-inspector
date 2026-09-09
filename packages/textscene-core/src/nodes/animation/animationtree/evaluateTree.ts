@@ -12,6 +12,7 @@
  */
 
 import { stripStringName, type AnimNode } from './treeResources';
+import { parseGodotFloat } from '../../../godot/number.js';
 
 export interface ClipWeight {
   clip: string;
@@ -108,8 +109,11 @@ function numberParam(
 ): number {
   const raw = params[key];
   if (raw === undefined) return fallback;
-  const n = parseFloat(raw);
-  return Number.isNaN(n) ? fallback : n;
+  // Non-finite as well as unreadable: `inf`/`nan` are legal float spellings, and
+  // a NaN blend weight fails every `> EPSILON` test downstream, so the tree
+  // renders nothing where the default would have rendered the base clip.
+  const parsed = parseGodotFloat(raw);
+  return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;
 }
 
 function stringParam(params: Record<string, string>, key: string): string | null {

@@ -1,0 +1,12 @@
+{
+  // The vitest suites beside the sources they cover. The mocha integration
+  // suite under `src/test/` is a different runner with a different module
+  // format and belongs to `tsconfig.test.json`; it is excluded here so each
+  // suite is typed by exactly one project.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "react", "vscode"]
+  },
+  "exclude": ["node_modules", "dist", "src/test/**"]
+}

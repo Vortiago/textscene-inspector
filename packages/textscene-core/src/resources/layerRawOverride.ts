@@ -13,6 +13,7 @@
  * "what does an override do to a node".
  */
 
+import { canonicalisePropertyBag } from '../godot/deprecated.js';
 import type { TscnNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
@@ -28,7 +29,13 @@ export function layerRawOverride(
 ): TscnNode {
   if (!overrideRaw) return existing;
 
-  const mergedRaw = { ...existing.rawProperties, ...overrideRaw };
+  // Canonicalised against the type the scanner did not have: an `instance=`
+  // heading has no `type=`, so a pre-4.0 alias in the override is still spelled
+  // as the file wrote it.
+  const mergedRaw = {
+    ...existing.rawProperties,
+    ...canonicalisePropertyBag(existing.type, overrideRaw),
+  };
   const registration = nodeRegistry.getRegistration(existing.type);
   if (!registration) return { ...existing, rawProperties: mergedRaw };
 

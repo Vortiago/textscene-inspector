@@ -5,7 +5,7 @@
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
-import { isRenderableNodeType } from '../../nodeSupport.js';
+import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
@@ -37,11 +37,17 @@ const TYPE_SHORTHAND: Record<string, string> = {
 };
 
 function getTypeBadgeClass(type: string): string {
-  return TYPE_BADGE_CLASS[type] ?? styles.typeUnknown!;
+  // hasOwn: `type` comes from the file, and a prototype member is not nullish,
+  // so `??` would let a function through as a className.
+  return (Object.hasOwn(TYPE_BADGE_CLASS, type) ? TYPE_BADGE_CLASS[type] : undefined) ??
+    styles.typeUnknown!;
 }
 
 function getTypeShorthand(type: string): string {
-  return TYPE_SHORTHAND[type] ?? type.substring(0, 4);
+  return (
+    (Object.hasOwn(TYPE_SHORTHAND, type) ? TYPE_SHORTHAND[type] : undefined) ??
+    type.substring(0, 4)
+  );
 }
 
 function hasTransform(node: TscnNode): boolean {
@@ -68,7 +74,7 @@ export interface TreeNodeProps {
    */
   matches: (path: string) => boolean;
   /**
-   * The host scene's externalResources, used to resolve
+   * The host scene's externalResources, which resolve
    * `node.instance = ExtResource("id")` references against the
    * `res://` path of the referenced PackedScene. Threaded down from
    * `SceneTreeViewer` so every TreeNode can attempt sub-scene
@@ -190,7 +196,9 @@ function TreeNodeImpl({
   const isSelected = selectedNodePath === nodePath;
   const isHidden = hiddenNodePaths.has(nodePath);
 
-  const isUnsupported = !isRenderableNodeType(effective.type);
+  // A parser registration alone is not evidence of a render, so ask what the
+  // viewport will actually do: only a type with no component at all is a gap.
+  const isUnsupported = rendersOwnVisual(effective.type) === 'not-implemented';
 
   // Roving tabIndex: this row is the tree's ONE tab stop when it's
   // selected, or when it's the designated fallback row (the first root row,

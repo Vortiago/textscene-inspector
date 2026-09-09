@@ -1,6 +1,6 @@
 /** Pure output formatting for the TSCN linter CLI (no I/O). */
 
-import type { Diagnostic, Severity } from '@textscene/core/linter';
+import { flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 import type { FileDiagnostics } from './lint';
 
 /**
@@ -77,7 +77,9 @@ export function toJsonFindings(files: FileDiagnostics[]): JsonFinding[] {
         file: file.filePath,
         line: diagnostic.location?.line ?? null,
         column: diagnostic.location?.column ?? null,
-        severity: diagnostic.severity,
+        // Floored: `severity` is declared as the closed union, and this is the
+        // one output a CI tool switches on rather than reads.
+        severity: flooredSeverity(diagnostic.severity),
         rule: diagnostic.ruleName,
         message: diagnostic.message,
         nodeType: diagnostic.nodeType,
@@ -98,14 +100,30 @@ export function formatJson(files: FileDiagnostics[]): string {
 }
 
 /**
- * GitHub Actions workflow-command annotation level per diagnostic severity.
- * Total over the closed `Severity` union, so adding a severity fails tsc here
- * instead of silently falling through.
+ * How each severity is presented: the text icon, the ANSI colour, and the
+ * GitHub Actions workflow-command level. One table, total over the closed
+ * `Severity` union, so adding a severity fails tsc here instead of falling
+ * silently through a `default`.
  */
-const GITHUB_COMMAND_BY_SEVERITY: Record<Severity, 'error' | 'warning'> = {
-  error: 'error',
-  warning: 'warning',
+const SEVERITY_DISPLAY: Record<
+  Severity,
+  { icon: string; color: string; github: 'error' | 'warning' | 'notice' }
+> = {
+  error: { icon: '✖', color: '31', github: 'error' },
+  warning: { icon: '⚠', color: '33', github: 'warning' },
+  info: { icon: 'ℹ', color: '36', github: 'notice' },
 };
+
+/**
+ * The row an off-union severity is presented by. Floored rather than absent, so
+ * every surface of one run — the icon, the colour, the severity word, the JSON
+ * `severity` and the workflow-command level — names the same tier for the same
+ * finding. `flooredSeverity` also keeps `'constructor'` out of the table, which
+ * a bare index reaches through Object.prototype.
+ */
+function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] {
+  return SEVERITY_DISPLAY[flooredSeverity(severity)];
+}
 
 /**
  * Escapes workflow-command *data* (the `::command ...::<data>` payload) per
@@ -125,7 +143,9 @@ function escapeGithubProperty(value: string): string {
 
 /** Formats a single finding as a GitHub Actions workflow-command annotation. */
 export function formatGithubAnnotation(finding: JsonFinding): string {
-  const command = GITHUB_COMMAND_BY_SEVERITY[finding.severity];
+  // An off-union severity costs this finding its level on the PR, never the
+  // whole run's annotations.
+  const command = displayFor(finding.severity).github;
   const params = [`file=${escapeGithubProperty(finding.file)}`];
   if (finding.line !== null) {
     params.push(`line=${finding.line}`);
@@ -147,28 +167,15 @@ export function formatGithubAnnotations(files: FileDiagnostics[]): string[] {
   return toJsonFindings(files).map(formatGithubAnnotation);
 }
 
-/**
- * Get icon for severity level
- */
+/** Icon for a severity, floored for anything outside the union. */
 export function getSeverityIcon(severity: string): string {
-  switch (severity) {
-    case 'error': return '✖';
-    case 'warning': return '⚠';
-    default: return '•';
-  }
+  return displayFor(severity).icon;
 }
 
-/**
- * Format severity with color
- */
+/** Severity name in its colour, floored for anything outside the union. */
 export function formatSeverity(severity: string, hasColor: boolean): string {
-  if (!hasColor) return severity;
-
-  switch (severity) {
-    case 'error': return `\x1b[31m${severity}\x1b[0m`; // Red
-    case 'warning': return `\x1b[33m${severity}\x1b[0m`; // Yellow
-    default: return severity;
-  }
+  const floored = flooredSeverity(severity);
+  return hasColor ? `\x1b[${SEVERITY_DISPLAY[floored].color}m${floored}\x1b[0m` : floored;
 }
 
 /**

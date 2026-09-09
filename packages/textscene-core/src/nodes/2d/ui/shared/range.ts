@@ -7,6 +7,7 @@
  */
 
 import { parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
+import { isEqualApprox } from '../../../../godot/index.js';
 
 export interface RangeProperties {
   /** Current value. Godot default 0. */
@@ -42,17 +43,6 @@ export function parseRange(properties: Record<string, string>): RangeProperties 
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
-
-/**
- * Godot `Math::is_equal_approx(double, double)` (core/math/math_funcs.h):
- * exact equality first (so infinities compare equal), then a relative tolerance
- * of `CMP_EPSILON * abs(a)` floored at `CMP_EPSILON` (1e-5).
- */
-function isEqualApprox(a: number, b: number): boolean {
-  if (a === b) return true;
-  const tolerance = Math.max(1e-5 * Math.abs(a), 1e-5);
-  return Math.abs(a - b) < tolerance;
-}
 
 /**
  * `Range::get_as_ratio()` (scene/gui/range.cpp) — the 0..1 position of `value`

@@ -1,5 +1,7 @@
 /**
- * Tests for AreaLight3D linter (strict parser + semantic rules)
+ * Tests for AreaLight3D linting. The slice declares no semantic rule: its one
+ * advisory was a `light_energy` range band, now the inherited Light3D
+ * validator's bound (light_3d.cpp:389).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,7 +14,6 @@ import {
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
-import './linter';
 
 describe('AreaLight3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
@@ -32,11 +33,13 @@ describe('AreaLight3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'AreaLight3D' }, [
       {
+        // light_3d.cpp:389 hints "0,16,0.001,or_greater" and Light3D::set_param:36
+        // guards the param index, not the value, so a negative energy warns.
         prop: 'light_energy',
-        valid: [2.5],
+        valid: [2.5, 0],
         invalid: [
-          { value: -1.0, contains: ['non-negative'] },
           { value: 'invalid', contains: ['must be a number'] },
+          { value: -1.0, contains: ['non-negative'], severity: 'warning' },
         ],
       },
       {
@@ -51,12 +54,10 @@ describe('AreaLight3D Linter', () => {
       },
       {
         prop: 'area_range',
-        valid: [2.0],
-        invalid: [
-          { value: 0, contains: ['greater than 0'] },
-          { value: -5.0, contains: ['greater than 0'] },
-          { value: 'invalid', contains: ['must be a number'] },
-        ],
+        // 0 and negatives are VALID: nothing in the pinned reference refuses
+        // them, so only the format check stands.
+        valid: [2.0, 0, -5.0],
+        invalid: [{ value: 'invalid', contains: ['must be a number'] }],
       },
       {
         prop: 'area_size',
@@ -75,24 +76,31 @@ describe('AreaLight3D Linter', () => {
     ]);
 
     it('should accept zero light_energy', () => {
-      expectNoErrors(scene(node('AreaLight3D', { light_energy: 0, area_range: 2.0 })));
+      expectClean(scene(node('AreaLight3D', { light_energy: 0, area_range: 2.0 })));
     });
   });
 
   describe('Semantic Validation', () => {
+    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater":
+    // `or_greater` opens the high end, so only a negative is out of band, and
+    // the inherited Light3D validator is what reports it.
     describe('light energy warnings', () => {
-      it('should warn on very low light_energy', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 0.005, area_range: 2.0 })));
-        expect(diagnostics.some(d => d.severity === 'warning' && d.message.includes('very low'))).toBe(true);
+      it('warns rather than errors on negative light_energy', () => {
+        const diagnostics = lint(
+          scene(node('AreaLight3D', { light_energy: -0.005, area_range: 2.0 }))
+        );
+        expect(
+          diagnostics.some(
+            d => d.severity === 'warning' && d.message.includes('light_energy')
+          )
+        ).toBe(true);
+        expect(diagnostics.some(d => d.severity === 'error')).toBe(false);
       });
 
-      it('should warn on very high light_energy', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 150, area_range: 2.0 })));
-        expect(diagnostics.some(d => d.severity === 'warning' && d.message.includes('very high'))).toBe(true);
-      });
-
-      it('should not warn on normal light_energy values', () => {
-        const diagnostics = lint(scene(node('AreaLight3D', { light_energy: 1.5, area_range: 2.0 })));
+      it.each([0, 0.005, 1.5, 150])('says nothing about light_energy %s', (energy) => {
+        const diagnostics = lint(
+          scene(node('AreaLight3D', { light_energy: energy, area_range: 2.0 }))
+        );
         expect(diagnostics.some(d => d.severity === 'warning')).toBe(false);
       });
     });

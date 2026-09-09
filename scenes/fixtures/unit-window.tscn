@@ -1,0 +1,61 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="Theme" id="Theme_1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.15, 0.15, 0.18, 1)
+
+[sub_resource type="SystemFont" id="SystemFont_1"]
+font_names = PackedStringArray("Arial")
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_1"]
+size = Vector2(16, 16)
+
+[node name="Root" type="Node"]
+
+[node name="MyWindow" type="Window" parent="."]
+mode = 0
+title = "Sample Window"
+initial_position = 1
+position = Vector2i(100, 100)
+size = Vector2i(640, 480)
+current_screen = 0
+nonclient_area = Rect2i(0, 0, 640, 32)
+mouse_passthrough_polygon = PackedVector2Array(0, 0, 640, 0, 640, 480, 0, 480)
+visible = true
+wrap_controls = false
+transient = false
+transient_to_focused = false
+exclusive = false
+unresizable = false
+borderless = false
+always_on_top = false
+transparent = false
+unfocusable = false
+popup_window = false
+extend_to_title = false
+mouse_passthrough = false
+sharp_corners = false
+exclude_from_capture = false
+popup_wm_hint = false
+minimize_disabled = false
+maximize_disabled = false
+force_native = false
+min_size = Vector2i(320, 240)
+max_size = Vector2i(1920, 1080)
+keep_title_visible = true
+content_scale_size = Vector2i(1280, 720)
+content_scale_mode = 1
+content_scale_aspect = 1
+content_scale_stretch = 0
+content_scale_factor = 1.0
+accessibility_name = "Main window"
+accessibility_description = "The application's main window"
+theme = SubResource("Theme_1")
+theme_type_variation = &"WindowTitle"
+theme_override_colors/title_color = Color(1, 1, 1, 1)
+theme_override_constants/title_height = 36
+theme_override_fonts/title_font = SubResource("SystemFont_1")
+theme_override_font_sizes/title_font_size = 20
+theme_override_icons/close = SubResource("PlaceholderTexture2D_1")
+theme_override_styles/embedded_border = SubResource("StyleBoxFlat_1")

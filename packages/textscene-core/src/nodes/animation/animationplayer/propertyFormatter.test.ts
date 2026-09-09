@@ -12,9 +12,9 @@ function makeProps(overrides: Partial<AnimationPlayerProperties> = {}): Animatio
     name: 'AnimationPlayer',
     speed_scale: 1.0,
     playback_default_blend_time: 0.0,
-    playback_process_mode: AnimationProcessMode.IDLE,
-    method_call_mode: MethodCallMode.DEFERRED,
-    playback_active: true,
+    callback_mode_process: AnimationProcessMode.IDLE,
+    callback_mode_method: MethodCallMode.DEFERRED,
+    active: true,
     autoplay: '',
     current_animation: '',
     current_animation_length: 0.0,
@@ -79,7 +79,7 @@ describe('formatAnimationPlayerProperties', () => {
 
   it('shows process mode as human-readable string', () => {
     const sections = formatAnimationPlayerProperties(
-      makeProps({ playback_process_mode: AnimationProcessMode.PHYSICS })
+      makeProps({ callback_mode_process: AnimationProcessMode.PHYSICS })
     );
     const playback = sections.find((s) => s.title === 'Playback');
     const modeItem = playback?.items.find((i) => i.label === 'Process Mode');
@@ -87,7 +87,7 @@ describe('formatAnimationPlayerProperties', () => {
   });
 
   it('shows active = false correctly', () => {
-    const sections = formatAnimationPlayerProperties(makeProps({ playback_active: false }));
+    const sections = formatAnimationPlayerProperties(makeProps({ active: false }));
     const playback = sections.find((s) => s.title === 'Playback');
     const activeItem = playback?.items.find((i) => i.label === 'Active');
     expect(activeItem?.value).toBe('false');

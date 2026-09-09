@@ -90,7 +90,17 @@ describe('TileMap render parity', () => {
     expect(layer1!.position.z).toBeGreaterThan(layer0!.position.z);
   });
 
-  it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {
+  // A layer draws at its own ordinal in `layers`, and `_set` grows that vector
+  // to reach the index a file writes (tile_map.cpp:701-710), so the two layers
+  // this file skips still sit under the third one.
+  it('draws a gap-filled layer at the ordinal the engine seats it at', async () => {
+    const r = await render(makeNode({ 'layer_2/tile_data': 'PackedInt32Array(0, 0, 0)' }));
+
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.position.z).toBeCloseTo(2 * TILE_LAYER_STEP, 8);
+  });
+
+  it('renders an empty group for a TileMap with a tile_set but no tile data', async () => {
     const r = await render(makeNode({}));
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(r.scene.findByProps({ name: 'Map' })).toBeDefined();

@@ -3,7 +3,7 @@
  * (./fixtures, generated) PLUS any on-demand, gitignored corpora — e.g. the
  * open-source games (./fixtures.games, written by `pnpm vendor:games`) and the
  * ld-58 project (./fixtures.ld58, `pnpm vendor:ld58` — repo-external but
- * part of the deployed site, see ADR-0010).
+ * part of the deployed site, see ADR-0033).
  *
  * Optional corpora are fetched on demand, not committed, so their manifests
  * may not exist. Every manifest exports the same conventional `corpusFixtures`

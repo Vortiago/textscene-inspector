@@ -1,16 +1,24 @@
 /**
  * Semantic linter rules for Skeleton3D
  *
- * Validates usage context and provides warnings for common issues.
+ * Validates property values and reports common issues.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { Skeleton3DProperties } from './types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
+import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
+import { boneNameFindings } from './boneNameOrder.js';
 
-const MOTION_SCALE_MIN_WARN = 0.1;
-const MOTION_SCALE_MAX_WARN = 10.0;
+/**
+ * `bones/<i>/pose` and `bones/<i>/bound_children`, the two 3.x arms
+ * (skeleton_3d.cpp:107). Slice 2 alone reaches the arm (:83), so a segment
+ * below the leaf still lands on it.
+ */
+const DEPRECATED_POSE_KEY = indexedKeyRegex(
+  '^bones/#/(?:pose|bound_children)(?:/.*)?$',
+  'to_int'
+);
 
 /**
  * Check if properties are valid Skeleton3D properties
@@ -20,67 +28,11 @@ function isSkeleton3DProperties(props: unknown): props is Skeleton3DProperties {
 }
 
 /**
- * Recursively find all nodes of a specific type in the scene tree
- */
-function findNodesByType(nodes: TscnNode[], nodeType: string): TscnNode[] {
-  const results: TscnNode[] = [];
-  for (const node of nodes) {
-    if (node.type === nodeType) {
-      results.push(node);
-    }
-    results.push(...findNodesByType(node.children, nodeType));
-  }
-  return results;
-}
-
-/**
- * Check if any MeshInstance3D node references this Skeleton3D
- */
-function isSkeletonUsedByMesh(
-  skeletonName: string,
-  meshNodes: TscnNode[]
-): boolean {
-  for (const meshNode of meshNodes) {
-    // Properties can be a typed object or a plain Record
-    const rawProps = meshNode.properties as Record<string, unknown>;
-
-    // Check if skeleton property exists (as string)
-    const skeletonProp = rawProps.skeleton;
-    if (typeof skeletonProp === 'string') {
-      // Extract skeleton path from NodePath("...")
-      const match = skeletonProp.match(/^NodePath\("([^"]*)"\)$/);
-      if (match && match[1] !== undefined) {
-        const skeletonPath = match[1];
-
-        // Empty path means no skeleton
-        if (skeletonPath === '') {
-          continue;
-        }
-
-        // Check if the path references this skeleton
-        // Path can be relative (e.g., "../Skeleton") or just the name
-        const pathParts = skeletonPath.split('/');
-        const referencedName = pathParts[pathParts.length - 1];
-        if (referencedName === skeletonName) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-/**
  * Validate Skeleton3D semantic rules
  */
 function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const { node, scene } = context;
-
-  // Only run for Skeleton3D nodes
-  if (node.type !== 'Skeleton3D') {
-    return diagnostics;
-  }
+  const { node } = context;
 
   // Type guard for properties
   if (!isSkeleton3DProperties(node.properties)) {
@@ -90,42 +42,12 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // WARNING: motion_scale = 0 (animations won't apply)
-  if (rawProps.motion_scale !== undefined) {
-    const motionScale = parseFloat(rawProps.motion_scale);
-    if (!isNaN(motionScale)) {
-      if (motionScale === 0) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `motion_scale is set to 0. Animations will not be applied. Set to 1.0 for normal animation speed.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-skeleton3d-motion-scale',
-        });
-      } else if (motionScale < MOTION_SCALE_MIN_WARN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `motion_scale is very small (${motionScale}). This may result in extremely slow animations. Consider using a value >= ${MOTION_SCALE_MIN_WARN}.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-skeleton3d-motion-scale',
-        });
-      } else if (motionScale > MOTION_SCALE_MAX_WARN) {
-        diagnostics.push({
-          severity: 'warning',
-          message: `motion_scale is very large (${motionScale}). This may result in extremely fast animations. Consider using a value <= ${MOTION_SCALE_MAX_WARN}.`,
-          nodeName: node.name,
-          nodeType: node.type,
-          ruleName: 'valid-skeleton3d-motion-scale',
-        });
-      }
-    }
-  }
+  // `motion_scale` is validated in linterParser.ts, both tiers of it.
 
-  // Warning: show_rest_only = true (debugging mode, animations disabled)
-  if (rawProps.show_rest_only === 'true') {
+  // show_rest_only = true: debugging mode, animations disabled.
+  if (boolSlotValue(rawProps.show_rest_only) === true) {
     diagnostics.push({
-      severity: 'warning',
+      severity: 'info',
       message: `show_rest_only is enabled. Skeleton is in debugging mode with bones forced to rest pose. Animations are disabled.`,
       nodeName: node.name,
       nodeType: node.type,
@@ -134,7 +56,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   }
 
   // Warning: animate_physical_bones = true (deprecated ragdoll feature)
-  if (rawProps.animate_physical_bones === 'true') {
+  if (boolSlotValue(rawProps.animate_physical_bones) === true) {
     diagnostics.push({
       severity: 'warning',
       message: `animate_physical_bones is enabled. This is a deprecated feature for ragdoll physics. Consider using the new SkeletonModifier3D system instead.`,
@@ -146,21 +68,38 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
 
   // modifier_callback_mode_process values are valid modes — no diagnostic
 
-  // WARNING: Skeleton3D without MeshInstance3D children using it (unused skeleton)
-  // Find all MeshInstance3D nodes in the scene
-  const meshNodes = findNodesByType(scene.nodes, 'MeshInstance3D');
-  const isUsed = isSkeletonUsedByMesh(node.name, meshNodes);
-
-  // Warn if skeleton is not referenced by any MeshInstance3D
-  // Note: We warn even if there are no MeshInstance3D nodes, as the skeleton might be unused
-  if (!isUsed && meshNodes.length > 0) {
+  // skeleton_3d.cpp:108-110 fires WARN_DEPRECATED_MSG before recomputing the
+  // pose. Once per node rather than once per key: the engine warns per write,
+  // and a converted skeleton carries one for every bone.
+  const deprecated = Object.keys(rawProps).filter((key) => DEPRECATED_POSE_KEY.test(key));
+  if (deprecated.length > 0) {
     diagnostics.push({
       severity: 'warning',
-      message: `Skeleton3D "${node.name}" is not referenced by any MeshInstance3D nodes. The skeleton may be unused. MeshInstance3D nodes should have a 'skeleton' property pointing to this skeleton.`,
+      message: `${deprecated.length === 1 ? `'${deprecated[0]}' uses` : `${deprecated.length} bone keys such as '${deprecated[0]}' use`} the old 3.x pose format, which is deprecated and loads slower. Re-import or re-save the scene.`,
       nodeName: node.name,
       nodeType: node.type,
-      ruleName: 'skeleton3d-unused',
+      ruleName: 'skeleton3d-deprecated-bone-pose',
     });
+  }
+
+  for (const finding of boneNameFindings(rawProps)) {
+    diagnostics.push(
+      finding.kind === 'order'
+        ? {
+            severity: 'error',
+            message: `'${finding.key}' names bone ${finding.index}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'skeleton3d-bone-name-order',
+          }
+        : {
+            severity: 'error',
+            message: `'${finding.key}' reuses the bone name "${finding.name}", already held by bone ${finding.heldBy}. Godot refuses a duplicate name and never adds this bone.`,
+            nodeName: node.name,
+            nodeType: node.type,
+            ruleName: 'skeleton3d-duplicate-bone-name',
+          }
+    );
   }
 
   return diagnostics;
@@ -172,14 +111,39 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
 const skeleton3DValidationRule: LintRule = {
   meta: {
     name: 'valid-skeleton3d-usage',
-    description: 'Validates Skeleton3D motion_scale values, debug modes, and usage patterns',
+    description: 'Validates Skeleton3D debug flags, deprecated features and bone-name writes',
     category: 'validation',
     applicableNodeTypes: ['Skeleton3D'],
     emits: [
-      { ruleName: 'valid-skeleton3d-motion-scale', severity: 'warning' },
-      { ruleName: 'skeleton3d-debug-mode', severity: 'warning' },
-      { ruleName: 'skeleton3d-deprecated-feature', severity: 'warning' },
-      { ruleName: 'skeleton3d-unused', severity: 'warning' },
+      {
+        ruleName: 'skeleton3d-debug-mode',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'skeleton_3d.cpp:551',
+          unused: 'show_rest_only disables every bone, so no authored pose is applied',
+        },
+      },
+      {
+        ruleName: 'skeleton3d-deprecated-feature',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:71' },
+      },
+      {
+        ruleName: 'skeleton3d-deprecated-bone-pose',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:108' },
+      },
+      {
+        ruleName: 'skeleton3d-bone-name-order',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:85' },
+      },
+      {
+        ruleName: 'skeleton3d-duplicate-bone-name',
+        severity: 'error',
+        grounding: { kind: 'engine', at: 'skeleton_3d.cpp:606' },
+      },
     ],
   },
   check: checkSkeleton3D,

@@ -69,22 +69,37 @@ function namedGroup(renderer: Awaited<ReturnType<typeof render>>): THREE.Object3
 }
 
 describe('<PathFollow2D>', () => {
-  it('places the group at the curve midpoint for progress_ratio = 0.5', async () => {
-    const renderer = await render(STRAIGHT, { progress_ratio: '0.5' });
+  it('places the group at the curve midpoint for progress = half the length', async () => {
+    const renderer = await render(STRAIGHT, { progress: '50' });
     const group = namedGroup(renderer);
     expect(group).toBeDefined();
     expect(group!.position.x).toBeCloseTo(50, 3);
     expect(group!.position.y).toBeCloseTo(0, 3);
   });
 
-  it('uses absolute progress when progress_ratio is unset', async () => {
+  it('ignores progress_ratio, which a scene file cannot deliver to the node', async () => {
+    // `set_progress_ratio` needs the Path2D parent bound, which happens on
+    // enter-tree, after the loader has applied properties (path_2d.cpp:472).
+    // A ratio of 1.0 on a 100 px curve would be the far end; Godot loads 0.
+    const renderer = await render(STRAIGHT, { progress_ratio: '1.0' });
+    expect(namedGroup(renderer)!.position.x).toBeCloseTo(0, 3);
+  });
+
+  it('clamps rather than wrapping a progress past the end, whatever loop says', async () => {
+    // The sampler clamps (curve.cpp:1079) and nothing wraps a scene-loaded
+    // progress, so 150 on a 100 px curve is the END, not 50 in from the start.
+    const renderer = await render(STRAIGHT, { progress: '150', loop: 'true' });
+    expect(namedGroup(renderer)!.position.x).toBeCloseTo(100, 3);
+  });
+
+  it('uses absolute progress', async () => {
     const renderer = await render(STRAIGHT, { progress: '25' });
     expect(namedGroup(renderer)!.position.x).toBeCloseTo(25, 3);
   });
 
   it('applies v_offset perpendicular to the curve (Y-negated to three space)', async () => {
     // Straight +X tangent → normal is +Y in Godot; v_offset=10 → Godot (x,10) → three y=-10.
-    const renderer = await render(STRAIGHT, { progress_ratio: '0.5', v_offset: '10' });
+    const renderer = await render(STRAIGHT, { progress: '50', v_offset: '10' });
     const group = namedGroup(renderer)!;
     expect(group.position.x).toBeCloseTo(50, 3);
     expect(group.position.y).toBeCloseTo(-10, 3);
@@ -99,9 +114,9 @@ describe('<PathFollow2D>', () => {
   });
 
   it('hides the follow dot unless selected', async () => {
-    const hidden = await render(STRAIGHT, { progress_ratio: '0.5' }, null);
+    const hidden = await render(STRAIGHT, { progress: '50' }, null);
     expect(hidden.scene.findAllByType('LineSegments')).toHaveLength(0);
-    const shown = await render(STRAIGHT, { progress_ratio: '0.5' }, 'MyFollow');
+    const shown = await render(STRAIGHT, { progress: '50' }, 'MyFollow');
     expect(shown.scene.findAllByType('LineSegments')).toHaveLength(1);
   });
 });

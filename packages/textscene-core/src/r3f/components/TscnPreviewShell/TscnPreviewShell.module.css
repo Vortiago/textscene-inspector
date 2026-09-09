@@ -8,7 +8,7 @@
  * Wave 0 froze the previously-hardcoded hex values verbatim under the
  * `--tsi-*` names recommended by `docs/UI-IMPROVEMENTS.md` §5.1.
  *
- * UI #5 — VS Code theme integration. Every token whose VS Code analog
+ * VS Code theme integration. Every token whose VS Code analog
  * carries semantic weight now reads `var(--vscode-X, <our-hex>)`. In a
  * VS Code webview the host variables resolve (light + dark + high-
  * contrast themes all honored). In the standalone web app the

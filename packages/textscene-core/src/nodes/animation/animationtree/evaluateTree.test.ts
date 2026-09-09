@@ -191,3 +191,21 @@ describe('evaluateTree — platformer blend tree (real fixture)', () => {
     expect(program).toEqual([{ clip: 'run', weight: 1, timeScale: 1.5 }]);
   });
 });
+
+describe('a blend parameter the tokenizer cannot read', () => {
+  it('falls back rather than reading a prefix of it', () => {
+    // `parseFloat` read `0.5abc` as 0.5, so a parameter Godot refuses to load
+    // produced a confident half-and-half blend.
+    const tree: AnimNode = {
+      kind: 'blend2',
+      name: 'mix',
+      filtered: false,
+      in0: leaf('idle'),
+      in1: leaf('walk'),
+    };
+
+    expect(evaluateTree(tree, { 'mix/blend_amount': '0.5abc' })).toEqual([
+      { clip: 'idle', weight: 1, timeScale: 1 },
+    ]);
+  });
+});

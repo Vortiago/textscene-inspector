@@ -10,19 +10,20 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
-import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
+import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
+import { boolSlotValue } from '../../../godot/index.js';
 
-const TRANSFORM2D_RE =
-  /^Transform2D\(\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*,\s*(-?[\d.eE+-]+)\s*\)$/;
+const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);
 
 export function parseNode2D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): Node2DProperties {
   const name = heading.attributes.name || '';
-  const visible = properties.visible === undefined ? undefined : properties.visible !== 'false';
+  const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
 
   // Defaults match Godot.
   let position: Vector2 = { x: 0, y: 0 };
@@ -50,26 +51,26 @@ export function parseNode2D(
     name,
     parent: heading.attributes.parent,
     instance: heading.attributes.instance,
-    index: heading.attributes.index ? parseInt(heading.attributes.index, 10) : undefined,
+    index: parseHeadingIndex(heading.attributes.index),
     visible,
     position,
     rotation,
     scale,
     skew,
     z_index: intOr(properties.z_index, 0),
-    z_as_relative: properties.z_as_relative === undefined ? true : properties.z_as_relative !== 'false',
-    show_behind_parent: properties.show_behind_parent === 'true',
+    z_as_relative: properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
+    show_behind_parent: boolSlotValue(properties.show_behind_parent) === true,
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)
       : { r: 1, g: 1, b: 1, a: 1 },
     light_mask: intOr(properties.light_mask, 1, `${name || 'Node2D'}.light_mask`),
-    y_sort_enabled: properties.y_sort_enabled === 'true',
+    y_sort_enabled: boolSlotValue(properties.y_sort_enabled) === true,
     y_sort_origin: properties.y_sort_origin !== undefined
       ? floatOr(properties.y_sort_origin, 0)
       : 0,
     ...(properties.material !== undefined ? { material: properties.material } : {}),
-    use_parent_material: properties.use_parent_material === 'true',
+    use_parent_material: boolSlotValue(properties.use_parent_material) === true,
   };
 }
 
@@ -83,12 +84,15 @@ export function decomposeTransform2D(
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid Transform2D "${value}"`);
     return null;
   }
-  const xx = parseFloat(m[1]!);
-  const xy = parseFloat(m[2]!);
-  const yx = parseFloat(m[3]!);
-  const yy = parseFloat(m[4]!);
-  const ox = parseFloat(m[5]!);
-  const oy = parseFloat(m[6]!);
+  const [xx, xy, yx, yy, ox, oy] = m.slice(1, 7).map((v) => matchedFloat(v)) as [
+    number, number, number, number, number, number,
+  ];
+  // An overflowing exponent is inside the finite grammar; the decomposition
+  // below turns it into a NaN skew and a canvas transform nothing draws under.
+  if (!allFinite([xx, xy, yx, yy, ox, oy])) {
+    warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: non-finite Transform2D "${value}"`);
+    return null;
+  }
 
   const rotation = Math.atan2(xy, xx);
   const det = xx * yy - xy * yx;

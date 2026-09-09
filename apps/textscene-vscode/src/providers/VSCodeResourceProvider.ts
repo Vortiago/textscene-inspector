@@ -14,6 +14,22 @@ function normalizeFsPath(fsPath: string): string {
   return fsPath.replace(/\\/g, '/').toLowerCase();
 }
 
+/**
+ * Whether a normalized path is the root or sits under it.
+ *
+ * A bare `startsWith` is not containment: it also accepts every SIBLING whose
+ * path merely begins with the root's spelling, so `res://../proj-secrets/key.pem`
+ * out of a `/home/u/proj` workspace normalizes to `/home/u/proj-secrets/key.pem`
+ * and passes the check labelled as stopping traversal. The separator is what
+ * makes it a boundary; a root that already ends in one (`/`, `c:/`) must not
+ * gain a second.
+ */
+function isWithinRoot(rootNormalized: string, candidateNormalized: string): boolean {
+  if (candidateNormalized === rootNormalized) return true;
+  const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
+  return candidateNormalized.startsWith(prefix);
+}
+
 export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;
 
@@ -61,7 +77,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
         // Validate within workspace bounds
         const fallbackPathNormalized = normalizeFsPath(fallbackPath.fsPath);
 
-        if (fallbackPathNormalized.startsWith(this.workspaceRootNormalized)) {
+        if (isWithinRoot(this.workspaceRootNormalized, fallbackPathNormalized)) {
           this.servedResources.set(normalizeFsPath(fallbackPath.fsPath), resourcePath);
           return await this.readContent(fallbackPath, resourcePath, type);
         }
@@ -154,7 +170,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     // Validate that resolved path is within workspace bounds
     const resolvedPathNormalized = normalizeFsPath(resolvedUri.fsPath);
 
-    if (!resolvedPathNormalized.startsWith(this.workspaceRootNormalized)) {
+    if (!isWithinRoot(this.workspaceRootNormalized, resolvedPathNormalized)) {
       throw new Error(
         `Path traversal detected: ${godotPath} resolves outside workspace bounds`
       );

@@ -1,0 +1,359 @@
+/**
+ * Fixed-shape numeric literals: vectors, rects, transforms, a basis, a
+ * quaternion, an AABB and a colour.
+ *
+ * All but `vector2i` and `boundedVector3` are pure format checks — the literal
+ * either has the arity Godot writes or it does not — which is why the two that
+ * carry a per-COMPONENT bound are the only ones here taking a `Grounding`.
+ */
+
+import type { PropertyValidator } from '../../ValidatorRegistry.js';
+import { propertyError } from '../propertyError.js';
+import { ruleInt, tupleComponent } from '../commonValidators.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { markIntSlot, truncatedComponent } from '../intSlot.js';
+import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
+import {
+  VECTOR3_REGEX,
+  createRect2Validator,
+  createTransform3DValidator,
+  createVector2Validator,
+  createVector2iValidator,
+  createVector3Validator,
+} from '../vectorValidators.js';
+import { compositeTypeName, isConvertedSpelling } from '../../../godot/variantConversion.js';
+import { formatCode, numericRange, valueCode } from './codes.js';
+import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
+
+// The component grammar Godot's parser takes, not `-?\d+`:
+// `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
+// token and converts it, so a float or exponent component loads and truncates.
+const RECT2I_RE = makeFloatTupleRegex('Rect2i', 4);
+
+/**
+ * Refuse a composite whose float spelling carries a non-finite component,
+ * for a setter that drops the whole write on one.
+ *
+ * The FLOAT spelling only: `slotComponents` already narrows the `i`-suffixed
+ * one, and an integer constructor's non-finite argument is the alteration
+ * `floatTupleValidator` reports, not a refusal this guard owns.
+ */
+/**
+ * A per-component predicate on the NARROWED components, for the setters whose
+ * refusal is not a range: a zero axis, a negative component clamped up, a whole
+ * vector the setter drops. Returns the refusal, or null when the value passes.
+ */
+export type ComponentRule = (
+  parts: number[],
+  written: string
+) => { message: string; severity?: 'error' | 'warning' } | null;
+
+/**
+ * Runs `rule` after the format validator, on the components as Godot stores
+ * them (`slotComponents`: the `i`-suffixed spelling is narrowed first). A
+ * format or alteration ERROR wins outright; the truncation WARNING the format
+ * validator draws for a converted spelling yields to a refusal and is otherwise
+ * kept, so an enforced bound is never masked by it.
+ */
+function componentRule(
+  validator: PropertyValidator,
+  name: string,
+  typeName: string,
+  arity: number,
+  rule: ComponentRule,
+  opts: Grounding
+): PropertyValidator {
+  const regex = makeFloatTupleRegex(typeName, arity);
+  const guarded: PropertyValidator = (key, value, line) => {
+    const first = validator(key, value, line);
+    if (first?.severity === 'error') return first;
+    const match = regex.exec(value);
+    if (!match) return first;
+    const parts = slotComponents(value, typeName, match.slice(1, arity + 1), tupleComponent);
+    const refusal = rule(parts, value);
+    if (refusal) return propertyError(key, line, refusal.message, valueCode(name), refusal.severity);
+    return first;
+  };
+  guarded.accepts = validator.accepts;
+  const cites = (end: Grounding['enforced']) =>
+    end === undefined ? [] : typeof end === 'string' ? [end] : [end.min, end.max].filter((c): c is string => !!c);
+  const enforced = cites(opts.enforced);
+  const hinted = cites(opts.hinted).filter((c) => !enforced.includes(c));
+  if (enforced.length > 0) guarded.grounding = { kind: 'enforced', cite: [...enforced, ...hinted].join(', ') };
+  else if (hinted.length > 0) guarded.grounding = { kind: 'hinted', cite: hinted.join(', ') };
+  return guarded;
+}
+
+function finiteComponents(
+  validator: PropertyValidator,
+  name: string,
+  typeName: string,
+  arity: number,
+  cite: string
+): PropertyValidator {
+  const regex = makeFloatTupleRegex(typeName, arity);
+  const guarded: PropertyValidator = (key, value, line) => {
+    const format = validator(key, value, line);
+    if (format) return format;
+    const match = regex.exec(value);
+    if (!match) return null;
+    if (isConvertedSpelling(typeName, compositeTypeName(value))) return null;
+    const components = match.slice(1, arity + 1).map((c) => tupleComponent(c));
+    if (components.some((c) => !Number.isFinite(c))) {
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must have finite components; Godot's setter returns ` +
+          `without storing "${value.trim()}"`,
+        valueCode(name)
+      );
+    }
+    return null;
+  };
+  guarded.accepts = validator.accepts;
+  guarded.grounding = { kind: 'enforced', cite };
+  return guarded;
+}
+
+export const vectorCombinators = {
+  /** `Rect2i(x, y, w, h)` integer format. */
+  rect2i(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return markIntSlot(shape((key, value, line) => {
+      const match = RECT2I_RE.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be Rect2i(x, y, w, h) with integer components, got: ${value}`,
+          code
+        );
+      }
+      const components = match.slice(1, 5);
+      // Same arm as `vector2i`: the component reads, no int32 holds it. A
+      // `Rect2(...)` in a Rect2i slot holds four doubles, so every component
+      // takes the `double -> int32` branch whatever the token looks like.
+      const converted = isConvertedSpelling('Rect2i', compositeTypeName(value));
+      if (components.some((component) => ruleInt(component, null, 'int32', converted) === null)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' has a component no integer can hold, got: ${value}`,
+          valueCode(name),
+          'error'
+        );
+      }
+      return truncatedComponent(name, key, line, components, valueCode(name));
+    }, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts'));
+  },
+
+  /**
+   * `Vector2(x, y)` format, optionally with a per-COMPONENT finiteness refusal.
+   *
+   * `finite` is not a format check and takes a citation like any other bound:
+   * `inf` and `nan` are spellings Godot writes into every real-typed composite,
+   * so refusing one is only correct where the setter itself does. It is spelled
+   * per component because `withFiniteGuard` reads the value as a SCALAR and a
+   * composite literal is not one.
+   */
+  vector2(
+    name: string,
+    opts: { finite?: string; components?: ComponentRule; accepts?: string } & Grounding = {}
+  ): PropertyValidator {
+    const format = shape(
+      createVector2Validator(name, formatCode(name)),
+      opts.accepts ?? 'Vector2(x, y), or the Vector2i spelling Godot converts'
+    );
+    const ruled = opts.components
+      ? componentRule(format, name, 'Vector2', 2, opts.components, opts)
+      : format;
+    return opts.finite ? finiteComponents(ruled, name, 'Vector2', 2, opts.finite) : ruled;
+  },
+
+  /**
+   * `Vector2i(x, y)` integer format, optionally with a per-COMPONENT minimum.
+   *
+   * `min` rejects a value Godot's parser reads perfectly well, so it is a bound
+   * like any other and takes its `Grounding`. A bare positional
+   * `requireNonNegative` boolean puts it outside `boundGrounding`'s sweep
+   * entirely, which is how `Window.size` and `SubViewport.size` came to refuse a
+   * negative component with nothing recorded about which setter, if any, agreed.
+   */
+  vector2i(name: string, opts: { min?: number } & Grounding = {}): PropertyValidator {
+    const { min } = opts;
+    return markIntSlot(ground(
+      accepts(
+        createVector2iValidator(name, min, formatCode(name), valueCode(name), endSeverity(opts, 'min')),
+        min === undefined
+          ? 'Vector2i(x, y), or the Vector2 spelling Godot converts'
+          : `Vector2i(x, y), both >= ${min}, or the Vector2 spelling Godot converts`
+      ),
+      opts,
+      { min }
+    ));
+  },
+
+  /**
+   * `Vector3(x, y, z)` format, optionally with a per-COMPONENT refusal that is
+   * not a range (see {@link ComponentRule}); a range is `boundedVector3`.
+   */
+  vector3(
+    name: string,
+    opts: { components?: ComponentRule; accepts?: string } & Grounding = {}
+  ): PropertyValidator {
+    const format = shape(
+      createVector3Validator(name, formatCode(name)),
+      opts.accepts ?? 'Vector3(x, y, z), or the Vector3i spelling Godot converts'
+    );
+    return opts.components
+      ? componentRule(format, name, 'Vector3', 3, opts.components, opts)
+      : format;
+  },
+
+  /**
+   * `Vector3(x, y, z)` with a per-COMPONENT numeric range.
+   *
+   * Godot writes a component bound as an ordinary PROPERTY_HINT_RANGE on a
+   * VECTOR3 property, e.g. gpu_particles_collision_3d.cpp:101 hints `size`
+   * "0.01,1024,0.01,or_greater" - meaning every component must be at least
+   * 0.01, with the upper end a soft editor bound. `v.vector3` only checks the
+   * literal's shape, so without this three slices hand-roll the same
+   * parse-and-compare loop.
+   *
+   * Bounds are inclusive, and either may be omitted. A predicate that is not a
+   * range (Camera2D's `zoom` must be non-zero, Node2D's `scale` likewise) is
+   * `vector3`'s `components` option, not this.
+   */
+  boundedVector3(
+    name: string,
+    opts: { min?: number; max?: number } & Grounding = {}
+  ): PropertyValidator {
+    const { min, max } = opts;
+    // Per END, not per bound. The three components share one RANGE, but the two
+    // ends of that range can have different authority: GPUParticlesCollision's
+    // `size` has an enforced floor and a merely hinted ceiling. Collapsing them
+    // reported an ERROR for a value only the inspector hint excludes.
+    const minSeverity = endSeverity(opts, 'min');
+    const maxSeverity = endSeverity(opts, 'max');
+    return ground(accepts((key, value, line) => {
+      const match = VECTOR3_REGEX.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be Vector3 with 3 numbers like Vector3(1, 1, 1), got: "${value}"`,
+          formatCode(name)
+        );
+      }
+      const captures = [match[1], match[2], match[3]];
+      // Ahead of the bounds, because they cannot express it: an altered
+      // component reads back as NaN, and `NaN < min` and `NaN > max` are both
+      // false, so the bound reported nothing at all about the one literal Godot
+      // does not store as written. Same claim and same tier as the `Vector2i`
+      // slot's own arm, arriving from the opposite direction. The message
+      // quotes the literal and never the stored number: `_to_int`'s float
+      // branch is undefined behaviour (variant.h:369-370) and the wrap of an
+      // out-of-band INT is a value nothing writes.
+      if (slotComponentsAltered(value, 'Vector3', captures)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". ` +
+            'The file loads, but the components are narrowed at parse time to a number the file does not state.',
+          valueCode(name),
+          'error'
+        );
+      }
+      // `slotComponents`, not bare `tupleComponent`: `VECTOR3_REGEX` admits the
+      // `Vector3i(...)` spelling `can_convert_strict` converts, and its arguments
+      // are narrowed through `_parse_construct<int32_t>` BEFORE the widening into
+      // this float slot. Read as plain floats, the bound was checked against a
+      // number Godot never stores, and the renderer — which does narrow —
+      // disagreed with the linter about the same literal.
+      const parts = slotComponents(value, 'Vector3', captures, tupleComponent);
+      const belowMin = min !== undefined && parts.some((c) => c < min);
+      const aboveMax = max !== undefined && parts.some((c) => c > max);
+      if (belowMin || aboveMax) {
+        const bound =
+          min !== undefined && max !== undefined
+            ? `between ${min} and ${max}`
+            : min !== undefined
+              ? `>= ${min}`
+              : `<= ${max}`;
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' components must be ${bound}, got: Vector3(${parts.join(', ')})`,
+          valueCode(name),
+          // A component under the floor is the stronger claim when the two ends
+          // disagree, so it wins.
+          belowMin ? minSeverity : maxSeverity
+        );
+      }
+      // After the bounds so an enforced bound is never masked: the converted
+      // spelling's fractional component is stored truncated
+      // (variant_parser.cpp:721-723), the warning `floatTupleValidator` draws.
+      if (isConvertedSpelling('Vector3', compositeTypeName(value))) {
+        return truncatedComponent(name, key, line, captures, valueCode(name));
+      }
+      return null;
+    }, `Vector3(x, y, z), each ${numericRange('float', min, max)}`), opts, { min, max });
+  },
+
+  /** `Rect2(x, y, w, h)` format. */
+  rect2(name: string): PropertyValidator {
+    return shape(
+      createRect2Validator(name, formatCode(name)),
+      'Rect2(x, y, w, h), or the Rect2i spelling Godot converts'
+    );
+  },
+
+  /** `Transform3D(...12 floats)` format. */
+  transform3d(name: string): PropertyValidator {
+    return shape(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
+  },
+
+  /**
+   * `Color(r, g, b, a)` format. Built inline because the existing
+   * factories don't expose a Color helper, but the regex matches
+   * directionallight3d/omnilight3d/spotlight3d's hand-rolled version.
+   */
+  color(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', formatCode(name)),
+      'Color(r, g, b, a)'
+    );
+  },
+
+  /** `AABB(x, y, z, w, h, d)` format. */
+  aabb(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'AABB', 6, 'AABB with 6 numbers like AABB(0, 0, 0, 1, 1, 1)', formatCode(name)),
+      'AABB(x, y, z, w, h, d)'
+    );
+  },
+
+  /** `Quaternion(x, y, z, w)` format. */
+  quaternion(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'Quaternion', 4, 'Quaternion with 4 numbers like Quaternion(0, 0, 0, 1)', formatCode(name)),
+      'Quaternion(x, y, z, w)'
+    );
+  },
+
+  /** `Transform2D(6 floats)` format. */
+  transform2d(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'Transform2D', 6, 'Transform2D with 6 numbers like Transform2D(1, 0, 0, 1, 0, 0)', formatCode(name)),
+      'Transform2D(6 floats)'
+    );
+  },
+
+  /** `Basis(9 floats)` format. */
+  basis(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(name, 'Basis', 9, 'Basis with 9 numbers like Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', formatCode(name)),
+      'Basis(9 floats)'
+    );
+  },
+};

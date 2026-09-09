@@ -6,6 +6,19 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
+
+/**
+ * `MeshInstance3D::_set` reads the index with a bare
+ * `get_slicec('/', 1).to_int()` and no validity gate
+ * (mesh_instance_3d.cpp:66), so the grammar is the whole path segment and
+ * {@link toIntIndex} decides the number: `+2` is surface 2, `abc` is surface 0.
+ *
+ * Unanchored, because `get_slicec` returns that one slice and ignores the rest
+ * (ustring.cpp:941-964): `surface_material_override/0/extra` names surface 0
+ * and the override lands on it.
+ */
+const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
 /** Assign only when the decoded value is present (the optional readers already drop absent/garbage). */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
@@ -21,11 +34,14 @@ export function parseMeshInstance3D(
   const surfaceMaterialOverrides = new Map<number, string>();
 
   for (const [key, value] of Object.entries(properties)) {
-    const indexedMatch = key.match(/^surface_material_override\/(\d+)$/);
-    if (indexedMatch && indexedMatch[1]) {
-      const surfaceIndex = parseInt(indexedMatch[1], 10);
-      surfaceMaterialOverrides.set(surfaceIndex, value);
-    }
+    const indexedMatch = SURFACE_OVERRIDE_KEY_RE.exec(key);
+    if (!indexedMatch) continue;
+    const surfaceIndex = toIntIndex(indexedMatch[1]!);
+    // `if (idx >= surface_override_materials.size() || idx < 0) return false`
+    // (mesh_instance_3d.cpp:68). Only the sign is knowable here — the surface
+    // count comes from the mesh resource, which the renderer resolves.
+    if (!(surfaceIndex >= 0)) continue;
+    surfaceMaterialOverrides.set(surfaceIndex, value);
   }
 
   const meshInstance3DProps: MeshInstance3DProperties = {
@@ -77,7 +93,7 @@ export function parseMeshInstance3D(
     'visibilityRangeFadeMode',
     parseOptionalInt(properties.visibility_range_fade_mode)
   );
-  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers));
+  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers, 'uint32'));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

@@ -1,6 +1,15 @@
-/** GPUParticles3D renders as a transform-only group — reuse the Node3D component (ADR-0008). */
+/**
+ * No particles are drawn yet, so the intent is `pending` and the badge reads
+ * "not implemented". The Node3D base still mounts: it carries `visible` and
+ * keeps the emitter's subtree in the 3D workspace, neither of which survives
+ * falling through to `GenericNodeFallback`.
+ */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 
-nodeComponentRegistry.register({ typeName: 'GPUParticles3D', Component: Node3D });
+nodeComponentRegistry.register({
+  typeName: 'GPUParticles3D',
+  Component: Node3D,
+  renderIntent: 'pending',
+});

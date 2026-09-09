@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="Shape_1"]
+
+; Exercises length, rest_length, stiffness and damping at valid, in-range values.
+
+[node name="Root" type="Node2D"]
+
+[node name="MyDampedSpringJoint2D" type="DampedSpringJoint2D" parent="."]
+node_a = NodePath("../BodyA")
+node_b = NodePath("../BodyB")
+position = Vector2(10, 20)
+length = 80.0
+rest_length = 40.0
+stiffness = 20.0
+damping = 1.0
+
+[node name="BodyA" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="BodyA"]
+shape = SubResource("Shape_1")
+
+[node name="BodyB" type="StaticBody2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="BodyB"]
+shape = SubResource("Shape_1")

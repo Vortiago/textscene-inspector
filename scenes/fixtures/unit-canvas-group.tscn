@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="MyCanvasGroup" type="CanvasGroup" parent="."]
+position = Vector2(10, 20)
+fit_margin = 16.0
+clear_margin = 16.0
+use_mipmaps = true
