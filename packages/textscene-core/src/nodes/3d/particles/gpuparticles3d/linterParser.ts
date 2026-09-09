@@ -25,6 +25,7 @@ const TRANSFORM_ALIGN = {
   1: 'Z_BILLBOARD',
   2: 'Y_TO_VELOCITY',
   3: 'Z_BILLBOARD_Y_TO_VELOCITY',
+  4: 'LOCAL_BILLBOARD',
 };
 
 validatorRegistry.registerAll('GPUParticles3D', {
@@ -121,10 +122,12 @@ validatorRegistry.registerAll('GPUParticles3D', {
   local_coords: v.boolean('local_coords'),
   // gpu_particles_3d.cpp:236-239, set_draw_order is a bare assignment.
   draw_order: v.enumInt('draw_order', 0, 3, DRAW_ORDER, { hinted: 'gpu_particles_3d.cpp:843' }),
-  // gpu_particles_3d.cpp:629-633, ERR_FAIL_INDEX(uint32_t(p_align), 4): the
-  // setter refuses, enforcing all 4 values.
-  transform_align: v.enumInt('transform_align', 0, 3, TRANSFORM_ALIGN, {
-    enforced: 'gpu_particles_3d.cpp:630',
+  // 4.7.2 assigns bare (gpu_particles_3d.cpp:652-656), dropping the
+  // `ERR_FAIL_INDEX(uint32_t(p_align), 4)` 4.6.3 opened with, so no supported
+  // release refuses a value and only the hint bounds this. 4.7.2: :894 lists
+  // five labels, LOCAL_BILLBOARD added.
+  transform_align: v.enumInt('transform_align', 0, 4, TRANSFORM_ALIGN, {
+    hinted: 'gpu_particles_3d.cpp:894',
   }),
   trail_enabled: v.boolean('trail_enabled'),
   // gpu_particles_3d.cpp:247-250, ERR_FAIL_COND(p_seconds < 0.01 -

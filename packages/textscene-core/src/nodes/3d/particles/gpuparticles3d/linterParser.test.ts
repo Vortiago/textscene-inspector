@@ -164,16 +164,17 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('transform_align', () => {
-    // gpu_particles_3d.cpp:844, ADD_PROPERTY hints PROPERTY_HINT_ENUM with 4
-    // labels. set_transform_align:629-630 opens with
-    // `ERR_FAIL_INDEX(uint32_t(p_align), 4);` — the setter itself refuses,
-    // so BOTH ends of 0-3 are enforced errors (ADR-0032), unlike every other
-    // enum in this file.
-    it('accepts every labelled value 0-3', () => {
+    // 4.7.2 dropped the setter's guard: gpu_particles_3d.cpp:652-656 assigns
+    // bare, where 4.6.3's :629-630 opened with
+    // `ERR_FAIL_INDEX(uint32_t(p_align), 4);`. No supported release refuses a
+    // value now, so the bound is the hint's alone — 4.7.2: :894 lists five
+    // labels, adding LOCAL_BILLBOARD.
+    it('accepts every labelled value 0-4, LOCAL_BILLBOARD included', () => {
       expect(check('transform_align', '0')).toBeNull();
       expect(check('transform_align', '1')).toBeNull();
       expect(check('transform_align', '2')).toBeNull();
       expect(check('transform_align', '3')).toBeNull();
+      expect(check('transform_align', '4')).toBeNull();
     });
 
     it('accepts the real value scenes/demos/3d/physics_interpolation/bullet.tscn:69 writes (`transform_align = 1`)', () => {
@@ -184,19 +185,16 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('transform_align', 'x')?.code).toBe('INVALID_TRANSFORM_ALIGN_FORMAT');
     });
 
-    it('errors just above 3, which ERR_FAIL_INDEX(uint32_t(p_align), 4) refuses', () => {
-      const error = check('transform_align', '4');
-      expect(error?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
-      expect(error?.severity).toBe('error');
+    it('warns just above 4, where the hint label list runs out but no setter refuses', () => {
+      const warning = check('transform_align', '5');
+      expect(warning?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
 
-    it('errors below 0, which the uint32_t cast in ERR_FAIL_INDEX(uint32_t(p_align), 4) also refuses', () => {
-      // A negative Variant int cast to uint32_t wraps to a huge unsigned
-      // value, so ERR_FAIL_INDEX still trips — the floor is enforced too,
-      // not merely the label list running out.
-      const error = check('transform_align', '-1');
-      expect(error?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
-      expect(error?.severity).toBe('error');
+    it('warns below 0, the same hint bound from the other end', () => {
+      const warning = check('transform_align', '-1');
+      expect(warning?.code).toBe('INVALID_TRANSFORM_ALIGN_VALUE');
+      expect(warning?.severity).toBe('warning');
     });
   });
 

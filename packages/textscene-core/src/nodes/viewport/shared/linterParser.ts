@@ -24,8 +24,8 @@ import { layerBitmask, v } from '../../../linter/validators/index.js';
 
 const MSAA = { 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' };
 
-/** viewport.h:196-201. DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX = 3. */
-const TEXTURE_REPEAT = { 0: 'DISABLED', 1: 'ENABLED', 2: 'MIRROR' };
+/** 4.7.2: viewport.h:200-206. DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX = 4. */
+const TEXTURE_REPEAT = { 0: 'DISABLED', 1: 'ENABLED', 2: 'MIRROR', 3: 'PARENT_NODE' };
 
 /** viewport.h:137-142. SCREEN_SPACE_AA_MAX = 3. */
 const SCREEN_SPACE_AA = { 0: 'DISABLED', 1: 'FXAA', 2: 'SMAA' };
@@ -112,6 +112,7 @@ const TEXTURE_FILTER = {
   1: 'LINEAR',
   2: 'LINEAR_WITH_MIPMAPS',
   3: 'NEAREST_WITH_MIPMAPS',
+  4: 'PARENT_NODE',
 };
 
 validatorRegistry.registerAll('Viewport', {
@@ -126,15 +127,15 @@ validatorRegistry.registerAll('Viewport', {
   // (viewport.cpp:3763): `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)` — genuinely
   // enforced, MSAA_MAX=4 (scene/main/viewport.h:119-125).
   msaa_3d: v.enumInt('msaa_3d', 0, 3, MSAA, { enforced: 'viewport.cpp:3763' }),
-  // viewport.cpp:5188 — PROPERTY_HINT_ENUM, 4 labels. set_default_canvas_item_texture_filter
-  // (viewport.cpp:3968): `ERR_FAIL_INDEX(p_filter, DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)` —
-  // genuinely enforced, MAX=4 (scene/main/viewport.h:188-194).
+  // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
+  // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
+  // 4.6.3 stopped one lower, before PARENT_NODE existed.
   canvas_item_default_texture_filter: v.enumInt(
     'canvas_item_default_texture_filter',
     0,
-    3,
+    4,
     TEXTURE_FILTER,
-    { enforced: 'viewport.cpp:3968' }
+    { enforced: 'viewport.cpp:4101' }
   ),
 
   // Top-level bools, viewport.cpp:5154-5163. Bare assigns, no format beyond
@@ -216,14 +217,14 @@ validatorRegistry.registerAll('Viewport', {
   // (viewport.cpp:4074-4081) bare-assigns; Godot omits the key when cleared.
   vrs_texture: v.resourceReference('vrs_texture'),
 
-  // "Canvas Items" group, viewport.cpp:5189.
-  // viewport.cpp:3999 — `ERR_FAIL_INDEX(p_repeat, DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`.
+  // 4.7.2: viewport.cpp:4184 `ERR_FAIL_INDEX(p_repeat,
+  // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
   canvas_item_default_texture_repeat: v.enumInt(
     'canvas_item_default_texture_repeat',
     0,
-    2,
+    3,
     TEXTURE_REPEAT,
-    { enforced: 'viewport.cpp:3999' }
+    { enforced: 'viewport.cpp:4184' }
   ),
 
   // "Audio Listener" group, viewport.cpp:5193. Bare bool assign, same shape as

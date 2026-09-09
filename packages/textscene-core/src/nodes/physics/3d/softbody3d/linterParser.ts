@@ -174,9 +174,16 @@ validatorRegistry.registerAll('SoftBody3D', {
     hinted: 'soft_body_3d.cpp:385',
   }),
   // soft_body_3d.cpp:386: PROPERTY_HINT_RANGE "0,1000,0.001,or_greater,exp,suffix:kg"
-  // (or_greater makes 1000 a soft editor extent). set_total_mass passes
-  // straight to the physics server with no guard, so out-of-range warns.
-  total_mass: v.float('total_mass', { min: 0, hinted: 'soft_body_3d.cpp:386' }),
+  // (or_greater makes 1000 a soft editor extent). The node setter (:643-645)
+  // forwards to the physics server without checking, and the guard is on the
+  // far side: godot_soft_body_3d.cpp:905 `ERR_FAIL_COND(p_val < 0.0)`, in the
+  // server `register_server_types.cpp:342` defaults to. Reading the node alone
+  // reads as unguarded, which is how this shipped as a warning.
+  total_mass: v.float('total_mass', {
+    min: 0,
+    enforcedMin: { at: 0 },
+    enforced: { min: 'godot_soft_body_3d.cpp:905' },
+  }),
 
   // soft_body_3d.cpp:176 (_get_property_list) / :150-161 (_get) / :186-219
   // (_set): see pinnedPointsValidator.

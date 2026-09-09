@@ -147,6 +147,24 @@ it is written here. A docblock on a registry method was not enough:
 `SpringBoneSimulator3D` and `ChainIK3D` reached opposite verdicts on same-looking
 keys while the rule sat there.
 
+### Which release decides
+
+An error means NO supported Godot 4.x release accepts the value. A `.tscn` records
+no engine version, so a bound that moved between releases follows the newer one:
+`Viewport.canvas_item_default_texture_filter` gained `PARENT_NODE` in 4.7 and the
+error ceiling rises with it, even though 4.6.3's `ERR_FAIL_INDEX` refuses that value.
+Otherwise the linter reports an error on a scene a supported editor wrote, which is
+the failure this ADR exists to prevent.
+
+The tier moves the same way. `GPUParticles3D.transform_align` was an enforced 0-3 in
+4.6.3 and is a bare assignment in 4.7.2, so no release refuses it and only the hint
+bounds it — a warning. A release REMOVING a guard lowers the tier; a release adding
+one does not raise it, because the older release still stores the value.
+
+Citations stay 4.6.3-relative unless the comment names the release, and
+`hintImplementationParity`'s `HINT_PREDATES_CAPTURE` holds every value accepted
+ahead of the ClassDB capture, emptying itself when the capture is retaken.
+
 ## How it is enforced
 
 A convention decays. The guards below hold. Each closes one way a diagnostic can

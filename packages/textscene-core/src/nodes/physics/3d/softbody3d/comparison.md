@@ -31,7 +31,7 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 | `ray_pickable` | true or false |  |
 | `shrinking_factor` | float |  |
 | `simulation_precision` | integer 1-100 | warning |
-| `total_mass` | float >= 0 | warning below |
+| `total_mass` | float >= 0 | error below 0 |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

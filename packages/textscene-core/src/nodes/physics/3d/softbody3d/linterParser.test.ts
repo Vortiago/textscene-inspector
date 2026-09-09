@@ -247,10 +247,13 @@ describe('SoftBody3D strict validators', () => {
       expect(check('total_mass', 'abc')?.code).toBe('INVALID_TOTAL_MASS_FORMAT');
     });
 
-    it('warns on a negative value rather than erroring (set_total_mass has no guard)', () => {
+    it('errors on a negative value: the guard is in the physics SERVER, not the node', () => {
+      // The node setter forwards without checking, so reading it alone reads as
+      // unguarded. `GodotSoftBody3D::set_total_mass` opens with
+      // `ERR_FAIL_COND(p_val < 0.0)` and the default server is that one.
       const error = check('total_mass', '-0.1');
       expect(error?.code).toBe('INVALID_TOTAL_MASS_VALUE');
-      expect(error?.severity).toBe('warning');
+      expect(error?.severity).toBe('error');
     });
 
     it('accepts a value far beyond the editor slider extent (or_greater)', () => {

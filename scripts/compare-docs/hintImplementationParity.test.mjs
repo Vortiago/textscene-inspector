@@ -83,6 +83,30 @@ const SETTER_OVERRIDES_HINT = new Map([
 ]);
 
 /**
+ * Enum values a LATER supported release added, which the capture cannot offer.
+ *
+ * The capture is 4.6.3 ClassDB; the linter accepts every value any supported
+ * 4.x release stores, because a `.tscn` does not say which one wrote it. Where
+ * those disagree the linter follows the newer release, and the difference lands
+ * here instead of silently widening the guard for every enum.
+ *
+ * Keyed by the values, not just the property, so a bound that runs past BOTH
+ * the capture and the new constant still fails. Each entry dies on its own when
+ * the pin moves: `the capture already offers` below fails an entry whose values
+ * the capture has caught up with.
+ */
+const HINT_PREDATES_CAPTURE = new Map([
+  // 4.7.2: viewport.h:197 DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_PARENT_NODE, and
+  // viewport.cpp:4101 ERR_FAIL_INDEX now admits it.
+  ['Viewport.canvas_item_default_texture_filter', { values: [4], cite: 'viewport.h:197' }],
+  // 4.7.2: viewport.h:205 DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_PARENT_NODE.
+  ['Viewport.canvas_item_default_texture_repeat', { values: [3], cite: 'viewport.h:205' }],
+  // 4.7.2: gpu_particles_3d.h:55 TRANSFORM_ALIGN_LOCAL_BILLBOARD, listed by the
+  // hint at gpu_particles_3d.cpp:894.
+  ['GPUParticles3D.transform_align', { values: [4], cite: 'gpu_particles_3d.h:55' }],
+]);
+
+/**
  * A `PROPERTY_HINT_RANGE` string as the engine states it: `"lo,hi"`,
  * `"lo,hi,step"`, then any of `or_greater` / `or_less` / `exp` / `radians_as_degrees`
  * / `degrees` / `suffix:x` / `hide_slider`.
@@ -232,13 +256,14 @@ function parseEnumHint(hintString) {
  * the inspector cannot produce. Five enums shipped that way, all of them
  * reasoning from what the SETTER takes, which is the error tier's question.
  */
-function enumMismatches(offered, bounds) {
+function enumMismatches(offered, bounds, addedLater = []) {
   const { min, max, values } = bounds ?? {};
   if (min === undefined && max === undefined) return [];
   const accepted = values ?? range(min ?? offered[0], max ?? offered[offered.length - 1]);
   const hint = new Set(offered);
   const ours = new Set(accepted);
-  const extra = accepted.filter((v) => !hint.has(v));
+  const laterRelease = new Set(addedLater);
+  const extra = accepted.filter((v) => !hint.has(v) && !laterRelease.has(v));
   const missing = offered.filter((v) => !ours.has(v));
   const out = [];
   if (extra.length > 0) out.push(`we accept ${extra.join('/')}, the hint does not offer ${extra.length > 1 ? 'them' : 'it'}`);
@@ -342,11 +367,35 @@ describe('the bound we implement against the bound Godot declared', () => {
     // wider than the hint they cited — every one of them reasoning from what
     // the setter accepts, which decides the ERROR tier and not this one.
     expect(enumRows.length).toBeGreaterThan(50);
-    // No exemption: an override names a range END, which an enum has none of.
+    // `SETTER_OVERRIDES_HINT` names a range END, which an enum has none of;
+    // the exemption an enum can carry is a value a later release added.
     const wrong = enumRows.flatMap((r) =>
-      enumMismatches(r.offered, r.bounds).map((d) => `${r.label}: ${d}`)
+      enumMismatches(r.offered, r.bounds, HINT_PREDATES_CAPTURE.get(r.label)?.values).map(
+        (d) => `${r.label}: ${d}`
+      )
     );
     expect(wrong.sort()).toEqual([]);
+  });
+
+  it('holds no HINT_PREDATES_CAPTURE entry the capture already offers', () => {
+    // The entries above are pin drift, not decisions. Re-capturing against the
+    // newer engine makes each one describe nothing, and an exemption that
+    // describes nothing is an exemption nobody can audit.
+    const byLabel = new Map(enumRows.map((r) => [r.label, r]));
+    const stale = [];
+    for (const [label, { values }] of HINT_PREDATES_CAPTURE) {
+      const row = byLabel.get(label);
+      if (!row) {
+        stale.push(`${label}: no enum hint reaches this validator any more`);
+        continue;
+      }
+      const offered = new Set(row.offered);
+      const caughtUp = values.filter((value) => offered.has(value));
+      if (caughtUp.length > 0) {
+        stale.push(`${label}: the capture already offers ${caughtUp.join('/')}`);
+      }
+    }
+    expect(stale.sort()).toEqual([]);
   });
 
   it('reaches the Resource hints, not only the Node ones', () => {

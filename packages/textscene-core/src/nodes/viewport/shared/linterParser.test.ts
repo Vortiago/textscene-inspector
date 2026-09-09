@@ -140,23 +140,29 @@ describe('Viewport shared validators', () => {
       expect(rejected!.severity).toBe('error');
     });
 
-    it('accepts canvas_item_default_texture_filter 3 (Nearest Mipmap); rejects 4 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX (viewport.cpp:3968)', () => {
-      // MAX = 4 (viewport.h:188-194), and ERR_FAIL_INDEX refuses < 0 as well.
+    it('accepts canvas_item_default_texture_filter 4 (PARENT_NODE, added in 4.7); rejects 5 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX', () => {
+      // 4.7.2: viewport.cpp:4101 ERR_FAIL_INDEX against MAX = 5
+      // (viewport.h:191-198). 4.6.3 stopped at 3, so an error here would fire on
+      // a scene the 4.7 editor writes.
       const validator = find('canvas_item_default_texture_filter');
-      for (const value of ['0', '1', '2', '3']) {
+      for (const value of ['0', '1', '2', '3', '4']) {
         expect(validator('canvas_item_default_texture_filter', value, 1)).toBeNull();
       }
-      const rejected = validator('canvas_item_default_texture_filter', '4', 1);
-      expect(rejected).not.toBeNull();
-      expect(rejected!.severity).toBe('error');
+      for (const value of ['5', '-1']) {
+        const rejected = validator('canvas_item_default_texture_filter', value, 1);
+        expect(rejected).not.toBeNull();
+        expect(rejected!.severity).toBe('error');
+      }
     });
 
-    it('accepts canvas_item_default_texture_repeat 2 (MIRROR); rejects 3, past DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX (viewport.cpp:3999)', () => {
+    it('accepts canvas_item_default_texture_repeat 3 (PARENT_NODE, added in 4.7); rejects 4, past DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX', () => {
+      // 4.7.2: viewport.cpp:4184 ERR_FAIL_INDEX against MAX = 4
+      // (viewport.h:200-206). 4.6.3 stopped at 2.
       const validator = find('canvas_item_default_texture_repeat');
-      for (const value of ['0', '1', '2']) {
+      for (const value of ['0', '1', '2', '3']) {
         expect(validator('canvas_item_default_texture_repeat', value, 1)).toBeNull();
       }
-      const rejected = validator('canvas_item_default_texture_repeat', '3', 1);
+      const rejected = validator('canvas_item_default_texture_repeat', '4', 1);
       expect(rejected).not.toBeNull();
       expect(rejected!.severity).toBe('error');
     });
