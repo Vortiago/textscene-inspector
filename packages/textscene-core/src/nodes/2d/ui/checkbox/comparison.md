@@ -1,7 +1,7 @@
 ---
 type: CheckBox
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-checkbox.tscn
 image: unit-checkbox
 renders_as: a theme icon followed by a text run
@@ -10,8 +10,7 @@ renders_as: a theme icon followed by a text run
 # CheckBox
 
 CheckBox is a toggle button with a check indicator to the left of its label. The
-previewer draws it in the Control overlay as an inline row: a small indicator followed
-by the text.
+previewer draws the theme's own indicator icon and the label beside it.
 
 ## Linting
 
@@ -35,5 +34,5 @@ string.
 
 ## Known limitations
 
-- **Approximated** The indicator is a drawn outline with a tick or dot, not Godot's
-  solid theme icon textures, so it reads thinner and lighter.
+- **Approximated** A scene-authored `theme_override_icons/…` is ignored, so the indicator
+  always comes from the default theme.

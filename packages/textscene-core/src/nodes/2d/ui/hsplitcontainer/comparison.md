@@ -1,7 +1,7 @@
 ---
 type: HSplitContainer
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-split-container.tscn
 image: unit-split-container
 renders_as: two children side by side, split at a computed offset
@@ -9,9 +9,8 @@ renders_as: two children side by side, split at a computed offset
 
 # HSplitContainer
 
-HSplitContainer places two children side by side at a computed split. The previewer
-solves Godot's `_compute_split_offset` in closed form and lays the two rects out as a
-CSS grid, with the separation as the gap.
+HSplitContainer places two children side by side, split where `split_offset` puts the
+boundary, with the dragger's band between them.
 
 ## Linting
 
@@ -37,7 +36,5 @@ A malformed value leaves the property `undefined` and Godot's default applies.
 
 ## Known limitations
 
-- **Approximated** The clamp to the children's minimum sizes is not applied. A child
-  whose minimum exceeds its rect is clipped here, where Godot pushes the boundary.
-- **Approximated** `theme_override_icons/grabber` does not change the separation floor,
-  which stays at the default grabber's 8 px.
+- **Approximated** A `theme_override_icons/grabber` does not widen the gap between the
+  children, which stays at the default grabber's width.

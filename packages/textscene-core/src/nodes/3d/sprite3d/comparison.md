@@ -1,7 +1,7 @@
 ---
 type: Sprite3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-sprite3d.tscn
 image: unit-sprite3d
 renders_as: a textured THREE.Mesh quad
@@ -41,3 +41,11 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 <!-- lint:end -->
 
 Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` and `axis` fall back to `0`, `0` and `1`, and `pixel_size` to `0.01`. `hframes` and `vframes` fall back to `1`, `frame` to `0` and `offset` to `(0, 0)`. `frame_coords` and `region_rect` warn on a malformed literal and stay unset. `modulate` falls back to opaque white silently, since `parseColor` never logs, and `texture` is assigned verbatim whenever present.
+
+## Known limitations
+
+- **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the
+  colour pass too, where Godot clips only depth, so the sprite's edge is harder.
+- **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
+  `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha sprite's dither grain
+  differs and its edges are not feathered.

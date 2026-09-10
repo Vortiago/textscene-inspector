@@ -1,7 +1,7 @@
 ---
 type: TextureRect
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-texture-rect.tscn
 image: unit-texture-rect
 renders_as: a textured quad in the control's rect
@@ -9,8 +9,7 @@ renders_as: a textured quad in the control's rect
 
 # TextureRect
 
-TextureRect displays a `Texture2D` inside its rect. The previewer loads the texture into
-an `<img>` filling the control's box, with `object-fit` and `object-position` set from
+TextureRect draws a `Texture2D` inside its rect, scaled and placed by `expand_mode` and
 `stretch_mode`.
 
 ## Linting
@@ -40,11 +39,3 @@ assign straight through. At render time each goes through the optional-int reade
 unparseable value becomes `undefined` and takes the switch default. `flip_h` and
 `flip_v` collapse to `false` for any value that does not read as `true`.
 
-## Native (WebGL canvas) painter
-
-- **Approximated** The `FIT_*` expand modes let CSS pick the unconstrained axis, where
-  Godot names one from the control's current size. They differ only when the layout
-  constrains both axes.
-- **Approximated** An absent `stretch_mode` maps to `object-fit: contain` rather than
-  Godot's STRETCH_SCALE default, so a texture fits rather than stretches. An explicit
-  `0` still fills.

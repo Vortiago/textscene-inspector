@@ -1,7 +1,7 @@
 ---
 type: MarginContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-margin-container.tscn
 image: unit-margin-container
 renders_as: a child inset by four margin constants
@@ -9,8 +9,8 @@ renders_as: a child inset by four margin constants
 
 # MarginContainer
 
-MarginContainer insets its single child by four margin constants. The previewer maps it
-to a CSS flex box whose padding is those margins and draws nothing itself.
+MarginContainer insets its single child by four margin constants and draws nothing
+itself.
 
 ## Linting
 

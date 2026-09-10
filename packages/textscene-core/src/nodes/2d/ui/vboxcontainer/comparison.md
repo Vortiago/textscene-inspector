@@ -1,7 +1,7 @@
 ---
 type: VBoxContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-vbox-container.tscn
 image: unit-vbox-container
 renders_as: children laid out down a column
@@ -9,9 +9,8 @@ renders_as: children laid out down a column
 
 # VBoxContainer
 
-VBoxContainer stacks its children in a vertical column. The previewer renders it as a
-CSS flex-column `<div>`: `separation` becomes the gap, `alignment` the
-`justify-content`, and each child's `size_flags` its grow and cross-axis fill.
+VBoxContainer stacks its children in a vertical column, spaced by `separation` and
+sized by each child's `size_flags`.
 
 ## Linting
 
@@ -35,8 +34,3 @@ Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 5
 `undefined` with no warning and maps to `flex-start`, Godot's BEGIN default. A missing
 `theme_override_constants/separation` takes the Component's default of `4` px, Godot's
 own.
-
-## Known limitations
-
-- **Approximated** Labels are set in the browser's system font stack, since the VS Code
-  webview blocks web fonts. The glyphs read thinner than Godot's theme font.

@@ -9,7 +9,7 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 
 # SubViewport
 
-A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0030). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree is rasterised from the DOM rather than by a WebGL pass.
+A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0030). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass.
 
 ## Linting
 
@@ -40,6 +40,5 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Approximated** `viewport_path` on a consumer inside an instanced sub-scene resolves against the outer scene root, not the sub-scene's.
 - **Not drawn** A `TextureRect` showing a `ViewportTexture` draws nothing for it. Only `albedo_texture` and `Sprite2D.texture` accept one.
-- **Approximated** Text in a Control-only target uses system fonts, so glyph shapes and advance widths differ from Godot's Open Sans.
-- **Approximated** Project settings such as `gui/theme/default_theme_scale` and `use_hdr_2d` are not read, so a themed or HDR canvas composites differently.
+- **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script frames from the origin.

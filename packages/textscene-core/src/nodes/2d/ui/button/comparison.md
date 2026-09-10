@@ -1,7 +1,7 @@
 ---
 type: Button
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-button.tscn
 image: unit-button
 renders_as: a StyleBox quad with a centred text run
@@ -9,9 +9,8 @@ renders_as: a StyleBox quad with a centred text run
 
 # Button
 
-Button is Godot's clickable text control. The previewer draws its NORMAL state as a
-positioned `<div>` with the `normal` StyleBox, or the default-theme chrome when none is
-set, and the label centred.
+Button is Godot's clickable text control. The previewer paints the StyleBox its state
+calls for and centres the label on it.
 
 ## Linting
 
@@ -49,8 +48,3 @@ Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignm
 `flat` and `expand_icon` become `false` for any value that does not read as `true`, with
 no warning. The three alignments go through `parseOptionalInt`, so a malformed value
 becomes `undefined` and the render default applies.
-
-## Known limitations
-
-- **Approximated** A disabled label is dimmed by opacity rather than the default theme's
-  disabled font colour, so it reads a little lighter than Godot's.

@@ -1,7 +1,7 @@
 ---
 type: OptionButton
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-optionbutton.tscn
 image: unit-optionbutton
 renders_as: a collapsed dropdown box
@@ -9,9 +9,8 @@ renders_as: a collapsed dropdown box
 
 # OptionButton
 
-OptionButton is a dropdown that collapses to its selected item. The previewer draws that
-item's text inside a positioned box on the Control overlay, not the open popup or the
-list.
+OptionButton is a dropdown that collapses to its selected item. The previewer draws
+that item's text and the theme's arrow inside the button's chrome.
 
 ## Linting
 
@@ -40,8 +39,3 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 An absent or unparseable `selected` becomes `undefined` and the control renders an empty
 label rather than item 0. An invalid `popup/item_N/id` falls back to the item's own
 index. `linter.ts` warns when `selected` names an index `item_count` never provides.
-
-## Known limitations
-
-- **Approximated** The right-side dropdown arrow is a compiled theme icon and is not
-  drawn, so the collapsed box ends at the label.

@@ -1,7 +1,7 @@
 ---
 type: HSlider
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-hslider.tscn
 image: unit-hslider
 renders_as: a horizontal track with a round grabber
@@ -9,9 +9,8 @@ renders_as: a horizontal track with a round grabber
 
 # HSlider
 
-HSlider is a horizontal slider over a Range. The previewer draws the same four parts
-Godot does: the track, the fill, the tick marks and the grabber. Each is placed with the
-expressions from Godot's own draw routine.
+HSlider is a horizontal slider over a Range. The previewer draws the four parts Godot
+does: the track, the fill, the tick marks and the grabber.
 
 ## Linting
 
@@ -34,8 +33,3 @@ Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inher
 the optional-float reader. An unparseable number becomes `undefined` and the slider
 takes Godot's defaults of 0, 0 and 100. A `value` outside the range is clamped silently,
 and a malformed `tick_count` draws no ticks.
-
-## Known limitations
-
-- **Approximated** The grabber is a CSS circle rather than Godot's rasterised SVG
-  texture, so its one-pixel rim differs. The tick icons become plain 2 px bars.

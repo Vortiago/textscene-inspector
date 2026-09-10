@@ -1,7 +1,7 @@
 ---
 type: Control
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-control-state.tscn
 image: unit-control-state
 renders_as: a full-rect layout region
@@ -9,8 +9,8 @@ renders_as: a full-rect layout region
 
 # Control
 
-Control is the base UI node. The previewer maps it to a positioned `<div>` that sets the
-containing block for its children and draws no pixels of its own.
+Control is the base UI node. It draws nothing of its own and gives its children the
+rect they anchor against.
 
 ## Linting
 
@@ -90,7 +90,9 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 
 ## Known limitations
 
-- **Approximated** Check, radio and dropdown indicators are drawn outlines and dots
-  rather than Godot's compiled theme icons.
-- **Approximated** Rows of controls sit tighter than Godot's, since the previewer's
-  control minimum sizes are smaller than the default theme's.
+- **Approximated** A Control under a `Node2D` is placed against the viewport, so a moved,
+  rotated or scaled `Node2D` ancestor does not carry it.
+- **Resource gap** A scene-authored `Theme` supplies fonts only. Its styleboxes, colours,
+  constants and icons are not read, so themed widgets keep the default theme's chrome.
+- **Approximated** A `theme_override_icons/…` on any Control is ignored; only the
+  default theme's icons are drawn.

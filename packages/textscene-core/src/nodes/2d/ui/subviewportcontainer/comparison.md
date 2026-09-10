@@ -1,7 +1,7 @@
 ---
 type: SubViewportContainer
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-sub-viewport-container.tscn
 image: unit-sub-viewport-container
 renders_as: a clipped surface showing its SubViewport children's targets
@@ -9,10 +9,8 @@ renders_as: a clipped surface showing its SubViewport children's targets
 
 # SubViewportContainer
 
-SubViewportContainer shows its SubViewport children's render targets, and the previewer
-draws it as a viewport surface (ADR-0030). Controls inside the sub-viewport render
-straight into it as DOM, and 2D or 3D content is snapshotted from the offscreen target
-into a canvas beneath them.
+SubViewportContainer shows its SubViewport children's render targets, drawn as a
+surface in the canvas (ADR-0030).
 
 ## Linting
 
@@ -43,11 +41,5 @@ node, whose root the linter cannot inspect.
 
 ## Known limitations
 
-- **Needs runtime** The surface samples the target on a bounded schedule and then stops,
-  so an animation inside a sub-viewport shows its settled frame.
-- **Approximated** Dark gradients inside a sub-viewport band slightly more, since the
-  target quantises to 8-bit linear before the sRGB curve expands the darks.
-- **Approximated** The container does not take Godot's minimum size from its largest
-  child viewport, so a layout container can size it differently.
-- **Needs runtime** A sub-viewport a script populates in `_ready()` shows only what the
-  `.tscn` holds. A split-screen view that shares a world at runtime differs from Godot.
+- **Needs runtime** A sub-viewport a script fills when the game starts shows only what the
+  scene file holds, so a shared-world split screen differs from Godot.

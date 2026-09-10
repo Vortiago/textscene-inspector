@@ -1,7 +1,7 @@
 ---
 type: PanelContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-panel-container.tscn
 image: unit-panel-container
 renders_as: a StyleBox panel around its child
@@ -10,8 +10,7 @@ renders_as: a StyleBox panel around its child
 # PanelContainer
 
 PanelContainer draws its `panel` StyleBox and fits its single child inside the content
-margins. The previewer maps it to a flex-column `<div>` carrying the fill, corners and
-padding, with the child stretched to the content box.
+margins.
 
 ## Linting
 

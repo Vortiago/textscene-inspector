@@ -21,21 +21,6 @@ Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherit
 
 The lenient parser never rejects a mesh property. An unreadable `subdivide_width` or `uv2_padding` falls back to Godot's default through the shared value decoders. A surface whose arrays are malformed is dropped with a warning, and the mesh's other surfaces still render.
 
-## Divergences
-
-The decoded mesh is at parity and the frame's residual is not the mesh.
-`pnpm ref:diff scenes/fixtures/unit-arraymesh.tscn` reports a mean channel error of
-3.259/255 over the 955x756 frame, and it concentrates in the fixture's two Label3D
-captions: 14.566/255 across the title band `y 85..138` and 11.592/255 across the
-description band `y 543..568`, against 2.035/255 over all the rows that hold the
-quad and the background. Both bands are the outline-dilation and `modulate`
-divergences measured on the Label3D sheet, not this resource's.
-
-The quad's own silhouette agrees to the row: at `x 478` the first and last inked
-rows are 307 and 598 on both sides. Its interior carries Godot's material-less
-default, `rgb(93, 99, 111)` in Godot against `rgb(93, 99, 110)`–`rgb(94, 100, 111)`
-here.
-
 ## Known limitations
 
 - **Not drawn** A POINTS, LINES or strip surface is skipped, since only triangle surfaces are decoded.

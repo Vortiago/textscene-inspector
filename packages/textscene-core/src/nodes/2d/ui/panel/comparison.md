@@ -1,7 +1,7 @@
 ---
 type: Panel
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-panel.tscn
 image: unit-panel
 renders_as: a StyleBox quad
@@ -10,8 +10,8 @@ renders_as: a StyleBox quad
 # Panel
 
 Panel is a bare rectangular Control that paints its `theme_override_styles/panel`
-StyleBox and holds free-anchored children. The previewer renders it as a positioned
-`<div>` styled from that StyleBox.
+StyleBox and holds free-anchored children. The previewer draws that StyleBox — fill,
+corner arcs and border ring — onto the canvas.
 
 ## Linting
 
@@ -29,8 +29,3 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 
 Panel adds no properties of its own and forwards straight to `parseControl`, so there is
 no Panel-specific lenient fallback beyond what Control covers.
-
-## Known limitations
-
-- **Approximated** `StyleBoxFlat.border_blend` is not applied, so a border stays a solid
-  edge instead of fading into the fill.

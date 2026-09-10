@@ -1,7 +1,7 @@
 ---
 type: RichTextLabel
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-rich-text-label.tscn
 image: unit-rich-text-label
 renders_as: a run of shaped text with per-span styling
@@ -9,9 +9,8 @@ renders_as: a run of shaped text with per-span styling
 
 # RichTextLabel
 
-RichTextLabel lays out a run of rich text. The previewer draws it as a positioned
-`<div>` and, with `bbcode_enabled`, renders a subset of BBCode as inline styling
-(ADR-0003).
+RichTextLabel lays out a run of rich text. With `bbcode_enabled` the previewer styles a
+subset of BBCode inline (ADR-0003).
 
 ## Linting
 
@@ -66,5 +65,7 @@ string against `true`, so an absent property or any other value silently resolve
 
 ## Known limitations
 
-- **Approximated** Only a subset of BBCode tags is styled, so a tag outside it renders
-  as plain text.
+- **Approximated** Only a subset of BBCode tags is styled; a tag outside it renders as
+  plain text.
+- **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
+  right edge instead of stretching to the box.

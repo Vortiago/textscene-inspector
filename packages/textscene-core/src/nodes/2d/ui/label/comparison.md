@@ -1,7 +1,7 @@
 ---
 type: Label
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-label-2d.tscn
 image: unit-label-2d
 renders_as: a shaped text run on the canvas
@@ -9,8 +9,8 @@ renders_as: a shaped text run on the canvas
 
 # Label
 
-Label is the 2D UI text node. The previewer draws it as a positioned `<div>` in the
-Control overlay, styled from its alignment, case and wrap settings.
+Label is the 2D UI text node. The previewer shapes the string in the theme's own font
+and draws the glyphs on the canvas, honouring its alignment, case and wrap settings.
 
 ## Linting
 
@@ -59,6 +59,5 @@ The lenient parser reads only `text`, `horizontal_alignment`, `vertical_alignmen
 
 ## Known limitations
 
-- **Approximated** Text is set in a system font stack, since the VS Code webview blocks
-  web fonts. A wrapped paragraph can break at a different word and sit tighter than
-  Godot's theme font.
+- **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
+  the wrap is what makes the scrollbar appear.

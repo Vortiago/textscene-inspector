@@ -1,7 +1,7 @@
 ---
 type: GridContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-grid-container.tscn
 image: unit-grid-container
 renders_as: children packed into a fixed column count
@@ -10,8 +10,7 @@ renders_as: children packed into a fixed column count
 # GridContainer
 
 GridContainer lays its children into a fixed number of columns, wrapping to a new row.
-The previewer maps it to a `display: grid` div, with `columns` as the column template
-and the separation constants as the gaps.
+Column widths and row heights come from the children's own minimum sizes.
 
 ## Linting
 

@@ -1,7 +1,7 @@
 ---
 type: ColorRect
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-color-rect.tscn
 image: unit-color-rect
 renders_as: a flat-filled quad
@@ -9,8 +9,7 @@ renders_as: a flat-filled quad
 
 # ColorRect
 
-ColorRect fills its rect with one flat `color`. The previewer draws a positioned `<div>`
-with that colour as its background, alpha included.
+ColorRect fills its rect with one flat `color`, alpha included.
 
 ## Linting
 

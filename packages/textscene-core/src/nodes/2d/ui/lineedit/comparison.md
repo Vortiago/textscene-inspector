@@ -1,7 +1,7 @@
 ---
 type: LineEdit
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-lineedit.tscn
 image: unit-lineedit
 renders_as: a single-line text box
@@ -10,8 +10,7 @@ renders_as: a single-line text box
 # LineEdit
 
 LineEdit is a single-line text field. The previewer draws its stylebox and one clipped
-run of text, the string Godot's `_shape()` would paint in the colour its state calls
-for. It draws no caret, selection or clear button.
+run of text — the string, or the placeholder — in the colour its state calls for.
 
 ## Linting
 
@@ -73,9 +72,5 @@ An empty `secret_character` falls back to the bullet, as Godot does.
 
 ## Known limitations
 
-- **Approximated** Glyphs are set in a system font rather than Godot's Open Sans
-  SemiBold, so letterforms, advances and the field's minimum width differ.
-- **Approximated** Field height follows the text's line box rather than Godot's font
-  height plus stylebox margins, so a field can sit a pixel or two off.
-- **Approximated** The minimum width substitutes `4em` for four times the font's `W`
-  advance, which runs a few percent wide on a field no container sizes.
+- **Not drawn** The clear button and `right_icon` are missing, so a field that has one in
+  Godot ends at its text.

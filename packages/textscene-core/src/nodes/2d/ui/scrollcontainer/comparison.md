@@ -1,7 +1,7 @@
 ---
 type: ScrollContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-scroll-container.tscn
 image: unit-scroll-container
 renders_as: a clipped content rect with themed scrollbars
@@ -9,8 +9,8 @@ renders_as: a clipped content rect with themed scrollbars
 
 # ScrollContainer
 
-ScrollContainer clips its single child and scrolls when the child overflows. The
-previewer renders it as an overlay `<div>` whose scroll modes map to CSS `overflow`.
+ScrollContainer clips its single child to its own rect and draws the theme's scrollbar
+on whichever axis overflows.
 
 ## Linting
 
@@ -44,8 +44,3 @@ Strict parsing format-checks these `ScrollContainer` properties, plus 53 inherit
 `horizontal_scroll_mode` and `vertical_scroll_mode` go through the optional-int reader,
 which accepts any integer. An out-of-range value such as `99` falls through the
 component's `switch` to `auto` overflow, the same as an absent value.
-
-## Known limitations
-
-- **Approximated** Godot's themed scrollbar is not painted, so an overflowing box shows
-  no track or grabber.

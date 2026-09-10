@@ -1,7 +1,7 @@
 ---
 type: VSplitContainer
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-split-container-vertical.tscn
 image: unit-split-container-vertical
 renders_as: two children stacked, split at a computed offset
@@ -9,7 +9,8 @@ renders_as: two children stacked, split at a computed offset
 
 # VSplitContainer
 
-The same class as `HSplitContainer` with `vertical = true`: two children stacked, split at the computed offset with the dragger's band between them. The previewer lays both children out in two grid rows sized as Godot's `_resort` sizes them.
+VSplitContainer stacks two children, split where `split_offset` puts the boundary, with
+the dragger's band between them.
 
 ## Linting
 
@@ -30,3 +31,8 @@ Strict parsing format-checks the inherited set (10 inherited from SplitContainer
 <!-- lint:end -->
 
 Identical to HSplitContainer's. The three properties SplitContainer adds are plain scalars Godot clamps or ignores at layout time, so a malformed `split_offset` leaves the property undefined and the Godot default of 0 applies.
+
+## Known limitations
+
+- **Approximated** A `theme_override_icons/grabber` does not widen the gap between the
+  children, which stays at the default grabber's width.
