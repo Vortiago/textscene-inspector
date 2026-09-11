@@ -44,6 +44,10 @@ import {
 const NO_STYLE_BOXES: SolveNode['styleBoxes'] = Object.freeze({});
 const NO_FONT_OVERRIDES: SolveNode['fontOverrides'] = Object.freeze({});
 const NO_THEME_CHAIN: SolveNode['themeChain'] = Object.freeze([]);
+const NO_RESOURCES: SolveNode['resources'] = Object.freeze({
+  externalResources: Object.freeze([]),
+  internalResources: Object.freeze([]),
+});
 
 /**
  * Every field but `path`/`node` — the two a real `SolveNode` always needs a
@@ -59,6 +63,7 @@ export function solveNode(): Pick<
   | 'fontOverrides'
   | 'themeChain'
   | 'projectTheme'
+  | 'resources'
   | 'paintRange'
   | 'paintSequence'
 > {
@@ -70,6 +75,7 @@ export function solveNode(): Pick<
     fontOverrides: NO_FONT_OVERRIDES,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,
+    resources: NO_RESOURCES,
     // The whole canvas, which is what a lone Control owns. A test asserting
     // draw order between several of them wants `withPaintRanges` instead —
     // these defaults deliberately TIE, rather than inventing an order a

@@ -30,7 +30,6 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
@@ -58,7 +57,9 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
   // nothing and keeps this painter correct mounted on its own.
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  const { externalResources, internalResources } = useSceneResources();
+  // The node's OWN scope, not the ambient provider's: a TextureRect that
+  // arrived through an instanced sub-scene names ids from that scene.
+  const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline
   // procedural texture, which has no path and rasterises out of the scene.
   const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);

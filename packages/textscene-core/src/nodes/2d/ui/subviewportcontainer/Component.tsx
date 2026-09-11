@@ -60,7 +60,6 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
 import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext.js';
 import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
@@ -187,8 +186,11 @@ function ViewportSurfaceNative({
       fontOverrides: {},
       themeChain: [],
       projectTheme: null,
+      // The scope this container itself was resolved in: the SubViewport is a
+      // child of this node, so its refs name the same pools.
+      resources: { externalResources, internalResources },
     }),
-    [path, viewport]
+    [path, viewport, externalResources, internalResources]
   );
 
   const scale = shrinking ? shrink : 1;
@@ -274,7 +276,9 @@ export function SubViewportContainer({
   const props = painterView<SubViewportContainerProperties>(solveNode);
   const stretch = props.stretch ?? false;
   const shrink = Math.max(1, props.stretch_shrink ?? 1);
-  const { externalResources, internalResources } = useSceneResources();
+  // The node's OWN scope, not the ambient provider's: a SubViewportContainer
+  // that arrived through an instanced sub-scene names ids from that scene.
+  const { externalResources, internalResources } = solveNode.resources;
 
   // Raw live children (unlike `solveNode.children`, the Control-only solve
   // forest — `buildSolveTree` skips a viewport boundary entirely), so a

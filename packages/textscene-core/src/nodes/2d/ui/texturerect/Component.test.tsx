@@ -39,8 +39,14 @@ function textureRectNode(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
+/** The scene scope a painter resolves its own refs in — id `1` is the sheet. */
+const SCOPE = {
+  externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
+  internalResources: [],
+};
+
 function solveNode(node: TscnNode): SolveNode {
-  return { ...emptySolveNode(), path: node.name, node };
+  return { ...emptySolveNode(), path: node.name, node, resources: SCOPE };
 }
 
 /** A 320x160 texture — the same non-square size `nativeSolver.test.ts` uses. */
@@ -74,6 +80,39 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
   );
   return ReactThreeTestRenderer.create(tree);
 }
+
+describe('<TextureRect> resolves its texture in its OWN scene scope', () => {
+  /**
+   * A node that arrived through an instanced sub-scene carries that scene's
+   * resource pools, not the host's — `buildSolveTree` already resolves each
+   * node's own scope, and the ambient `SceneResourcesProvider` holds the TOP
+   * scene's. Reading the ambient one resolves `ExtResource("1")` against the
+   * wrong pool, so the instance's texture silently never draws.
+   */
+  it('draws a texture the ambient provider does not carry', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeTexture());
+    const node = textureRectNode();
+    const own = { ...solveNode(node), resources: {
+      externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
+      internalResources: [],
+    } };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+          <TextureRect
+            {...painterEnv()}
+            solveNode={own}
+            rect={{ x: 0, y: 0, w: 64, h: 32 }}
+            renderOrder={0}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+});
 
 describe('<TextureRect> (isolated painter contract)', () => {
   it('draws nothing when no texture is referenced', async () => {
@@ -268,7 +307,7 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
       return { ...emptySolveNode(), path, node: tscnNode, children };
     }
     function leafSolveNode(path: string): SolveNode {
-      return { ...emptySolveNode(), path, node: leaf, children: [] };
+      return { ...emptySolveNode(), path, node: leaf, children: [], resources: SCOPE };
     }
     const fullRect = { anchorLeft: 0, anchorTop: 0, anchorRight: 1, anchorBottom: 1 };
 

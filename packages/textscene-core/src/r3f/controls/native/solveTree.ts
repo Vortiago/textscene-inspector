@@ -7,7 +7,7 @@
  * Pure data, no React, no THREE.
  */
 
-import type { TscnNode } from '../../../parser/types';
+import type { SceneScope, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -88,6 +88,21 @@ export interface SolveNode {
    * unset/unresolved/failed. Required — see `fontOverrides`'s own doc for why.
    */
   projectTheme: ThemeResource | null;
+  /**
+   * The resource pools this node's OWN property references resolve against.
+   *
+   * A node that arrived through an instanced sub-scene names ids from THAT
+   * scene, while the ambient `SceneResourcesProvider` carries the top-level
+   * scene's — so a painter reading the context resolves against the wrong pool
+   * and silently draws nothing. `styleBoxes` and `fontOverrides` above are
+   * already resolved in this scope for the same reason; this is the scope
+   * itself, for the references a painter must resolve for itself (a texture
+   * has to stay a live `useTexture2D` subscription, not a pre-resolved value,
+   * because it loads asynchronously).
+   *
+   * Required — see `fontOverrides`'s own doc for why.
+   */
+  resources: SceneScope;
 }
 
 /**

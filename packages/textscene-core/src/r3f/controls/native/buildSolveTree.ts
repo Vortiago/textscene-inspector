@@ -373,6 +373,7 @@ function buildForest(
             ownScope.internalResources
           ),
           fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
+          resources: ownScope,
           themeChain: nodeThemeChain,
           projectTheme,
         });

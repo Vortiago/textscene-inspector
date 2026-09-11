@@ -66,8 +66,16 @@ function solveNode(
     children: [],
     properties: { name: 'MyButton', ...properties } as ButtonProperties,
   };
-  return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes };
+  return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes, resources: SCOPE };
 }
+
+const ICON_PATH = 'res://icon.png';
+
+/** The scene scope a painter resolves its own refs in — id `1` is the icon. */
+const SCOPE = {
+  externalResources: [{ id: '1', type: 'Texture2D', path: ICON_PATH }],
+  internalResources: [],
+};
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */
 function findChromeMesh(scene: Rendered['scene']) {
@@ -213,7 +221,6 @@ describe('<Button> (isolated painter contract)', () => {
 });
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
-  const ICON_PATH = 'res://icon.png';
 
   function fakeTexture(w: number, h: number): THREE.Texture {
     const tex = new THREE.Texture();

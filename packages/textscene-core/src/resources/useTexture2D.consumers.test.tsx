@@ -119,7 +119,14 @@ function node(type: string, properties: TscnNode['properties']): TscnNode {
 }
 
 function solveNodeFor(n: TscnNode): SolveNode {
-  return { ...emptySolveNode(), path: n.name, node: n };
+  // The same pools `provide` puts in the ambient context: a Control painter
+  // resolves its own refs in its OWN scope, and here the two are one scene.
+  return {
+    ...emptySolveNode(),
+    path: n.name,
+    node: n,
+    resources: { internalResources: GRADIENT_RESOURCES, externalResources: [] },
+  };
 }
 
 const heading = (type: string) => ({ type: 'node', attributes: { type, name: 'N' } });

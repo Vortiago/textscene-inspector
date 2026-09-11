@@ -40,7 +40,6 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -100,7 +99,9 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
   }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
 
   // --- Icon: resolve + load the referenced texture -------------------------
-  const { externalResources, internalResources } = useSceneResources();
+  // The node's OWN scope, not the ambient provider's: a Button that arrived
+  // through an instanced sub-scene names ids from that scene.
+  const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: an icon may be an inline
   // procedural texture, which has no path to load from.
   const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
