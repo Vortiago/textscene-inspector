@@ -57,6 +57,16 @@ describe('resolveFixture', () => {
     expect(target.label).toBe('unit-plane-mesh');
   });
 
+  /**
+   * The label names the PNGs a run writes. Two projects in one sweep both
+   * holding a `settings_menu.tscn` wrote over each other's images under a bare
+   * basename, so the second scene's diff sat under the first scene's name.
+   */
+  it('keeps a demo scene’s path in its label, so two sweeps cannot collide', () => {
+    const target = resolveFixture('scenes/demos/gui/control_gallery/control_gallery.tscn');
+    expect(target.label).toBe('demos-gui-control_gallery-control_gallery');
+  });
+
   it('rejects a file that is not a .tscn', () => {
     expect(() => resolveFixture('unit-plane-mesh.tres')).toThrow(/not a \.tscn/);
   });

@@ -110,7 +110,21 @@ export function resolveFixture(input) {
   if (!name.endsWith('.tscn')) throw new Error(`not a .tscn: ${input}`);
   const scenePath = input.includes('/') ? resolve(REPO_ROOT, input) : join(FIXTURE_DIR, name);
   if (!existsSync(scenePath)) throw new Error(`no such scene: ${scenePath}`);
-  return { scenePath, fixtureName: catalogName(scenePath), label: basename(name, '.tscn') };
+  const fixtureName = catalogName(scenePath);
+  return { scenePath, fixtureName, label: labelFor(fixtureName) };
+}
+
+/**
+ * What the PNGs a run writes are named after.
+ *
+ * The catalog name rather than the basename, because two projects in one sweep
+ * can both hold a `settings_menu.tscn` — and under a bare basename the second
+ * scene's images silently overwrote the first's, leaving one scene's diff
+ * filed under the other's name. `scenes/fixtures/` is flat, so its scenes keep
+ * the bare name they always had.
+ */
+function labelFor(fixtureName) {
+  return fixtureName.replace(/\.tscn$/, '').split('/').join('-');
 }
 
 /** The `?fixture=` value the web catalog lists for a scene on disk. */
