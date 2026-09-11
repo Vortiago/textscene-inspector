@@ -151,6 +151,208 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
   },
 
+  // -------------------------------------------------------------------------
+  // The editing, list and graph tiers
+  //
+  // Three shapes recur here. An indexed family (`tab_#/*`, `slot/#/*`) is read
+  // through a computed key the guard's scrape of fixed strings cannot match —
+  // the OptionButton entry above is the precedent. Carets, selection,
+  // clipboards, context menus and virtual keyboards have no frozen-frame
+  // surface. Everything else that would change the picture is a render gap.
+  // -------------------------------------------------------------------------
+
+  TextEdit: {
+    linterOnly: [
+      // Carets: a still, unfocused frame draws none of them.
+      'caret_blink', 'caret_blink_interval', 'caret_mid_grapheme', 'caret_multiple',
+      'caret_type', 'caret_move_on_right_click',
+      // Selection, clipboard, context menu and drag: all interactions.
+      'context_menu_enabled', 'deselect_on_focus_loss_enabled',
+      'drag_and_drop_selection_enabled', 'emoji_menu_enabled',
+      'empty_selection_clipboard_enabled', 'middle_mouse_paste_enabled',
+      'selecting_enabled', 'shortcut_keys_enabled', 'tab_input_mode',
+      'backspace_deletes_composite_character_enabled',
+      // Word-boundary sets, which only a double-click selection consults.
+      'custom_word_separators', 'use_custom_word_separators', 'use_default_word_separators',
+      // Highlights every occurrence OF THE SELECTION, and a static frame has none.
+      'highlight_all_occurrences',
+      // Virtual keyboard: a mobile affordance with no rendered surface.
+      'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus',
+      // Scroll smoothing and speed describe how the view MOVES, never where it rests.
+      'scroll_smooth', 'scroll_v_scroll_speed',
+      // `adjust_viewport_to_caret` (text_edit.cpp:904-909) snaps the view back to
+      // line 0 on first draw, and no scene property can move caret 0 — so an
+      // authored scroll offset is genuinely inert rather than unimplemented.
+      'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
+    ],
+    renderGap: [
+      // Draws a caret even unfocused, which is the one caret property a static
+      // frame does show.
+      'caret_draw_when_editable_disabled',
+      // Each changes which glyphs land where: control characters drawn as
+      // glyphs, the indent of a wrapped row, and a highlighter's colours.
+      'draw_control_chars', 'indent_wrapped_lines', 'syntax_highlighter',
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
+    ],
+    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; the unfocused caret, control-character glyphs, wrapped-row indent, highlighter colours and BiDi all change the frame and are not implemented yet.',
+  },
+
+  CodeEdit: {
+    linterOnly: [
+      // Completion and brace-matching are typing affordances.
+      'auto_brace_completion_enabled', 'auto_brace_completion_highlight_matching',
+      'auto_brace_completion_pairs', 'code_completion_enabled', 'code_completion_prefixes',
+      // Auto-indent applies as you type; the stored text is already indented.
+      'indent_automatic', 'indent_automatic_prefixes', 'indent_use_spaces',
+      // Symbol lookup needs a pointer.
+      'symbol_lookup_on_click', 'symbol_tooltip_on_hover',
+    ],
+    renderGap: [
+      // Delimiter tables drive the comment/string colouring a highlighter paints.
+      'delimiter_comments', 'delimiter_strings',
+      // Vertical rules drawn at fixed columns.
+      'line_length_guidelines',
+    ],
+    reason: 'Completion, auto-indent and symbol lookup are all typing or pointer affordances; the delimiter tables and the column guidelines change the frame and are not implemented yet. Every key it shares with TextEdit is recorded there.',
+  },
+
+  Tree: {
+    linterOnly: [
+      // A `.tscn` Tree has no rows at all — TreeItems exist only once a script
+      // creates them — so every key below describes rows that are never there.
+      'allow_reselect', 'allow_rmb_select', 'allow_search', 'auto_tooltip',
+      'drop_mode_flags', 'enable_drag_unfolding', 'enable_recursive_folding',
+      'hide_folding', 'hide_root', 'select_mode',
+      // A scroll hint needs content to scroll past.
+      'scroll_hint_mode', 'scroll_horizontal_enabled', 'scroll_vertical_enabled',
+      'tile_scroll_hint',
+    ],
+    reason: 'A Tree in a scene file declares no rows, so folding, selection, search, drag and scrolling all describe content that does not exist; the panel and its column headers are the whole of what such a scene draws.',
+  },
+
+  ItemList: {
+    linterOnly: [
+      // Read through a computed key, `properties[`item_${i}/text`]`, which the
+      // guard's scrape of fixed key strings cannot match.
+      'item_#/*',
+    ],
+    reason: 'The row family is read through a computed key the scrape cannot match.',
+  },
+
+  TabBar: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton's item family is.
+      'tab_#/*',
+    ],
+    reason: 'The tab family is read through a computed key the scrape cannot match.',
+  },
+
+  TabContainer: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton's item family is. Sparse
+      // here rather than dense: the array length is the live child count.
+      'tab_#/*',
+    ],
+    reason: 'The tab family is read through a computed key the scrape cannot match.',
+  },
+
+  GraphNode: {
+    linterOnly: [
+      // Read through a computed key, `slot/<index>/<leaf>`, which the guard's
+      // scrape of fixed key strings cannot match.
+      'slot/*',
+    ],
+    reason: 'The slot family is read through a computed key the scrape cannot match.',
+  },
+
+  GraphEdit: {
+    linterOnly: [
+      // Panning, snapping and the zoom bounds are all interactions; a scene
+      // holds the resulting scroll_offset and zoom, which the parser does read.
+      'panning_scheme', 'right_disconnects', 'snapping_enabled',
+      'zoom_max', 'zoom_min', 'zoom_step',
+      // Connection type names populate a tooltip.
+      'type_names',
+    ],
+    renderGap: [
+      // `connections` really is serialised and `set_connections` runs at load,
+      // but each endpoint sits on a referenced GraphNode's own slot row — two
+      // levels below what a sibling's painter can see.
+      'connections',
+      // The styling of those same lines.
+      'connection_lines_antialiased', 'connection_lines_curvature',
+      'connection_lines_thickness',
+      // The minimap and the toolbar buttons are real chrome, positioned by
+      // runtime code rather than by the scene.
+      'minimap_enabled', 'minimap_opacity', 'minimap_size', 'show_arrange_button',
+      'show_grid_buttons', 'show_menu', 'show_minimap_button', 'show_zoom_buttons',
+      'show_zoom_label',
+    ],
+    reason: 'Panning, snapping and zoom bounds are interactions; the connections, their styling, the minimap and the toolbar are all drawn by Godot and not by us yet.',
+  },
+
+  MenuBar: {
+    linterOnly: [
+      // Opening a menu is an interaction, and the native global menu replaces
+      // the bar with the desktop\'s own — neither reaches a frozen frame.
+      'switch_on_hover', 'prefer_global_menu', 'start_index',
+    ],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'text_direction',
+    ],
+    reason: 'Hover switching, the global menu and the start index are all about opening menus a still frame never shows; BiDi is unread by a left-to-right shaper.',
+  },
+
+  MenuButton: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton\'s identical family is.
+      'popup/item_#/*',
+      // The popup is a Window, so its item count changes nothing on the canvas.
+      'item_count', 'switch_on_hover',
+    ],
+    reason: 'The popup is a Window and never reaches the Control canvas; its item family is read through a computed key the scrape cannot match.',
+  },
+
+  FoldableContainer: {
+    linterOnly: [
+      // A FoldableGroup coordinates which sibling is open; the scene already
+      // holds each container\'s own resulting `folded`.
+      'foldable_group',
+    ],
+    renderGap: [
+      // BiDi and locale for the title: our shaper runs left-to-right only.
+      'language', 'title_text_direction',
+    ],
+    reason: 'The group only decides which sibling ends up folded, which each container already records; BiDi is unread by a left-to-right shaper.',
+  },
+
+  ColorPicker: {
+    linterOnly: [
+      // Deferred mode changes WHEN the colour signal fires, never the picture.
+      'deferred_mode',
+    ],
+    renderGap: [
+      // Each adds or removes a whole row of the widget, and only the shape and
+      // the sample row are drawn today.
+      'color_mode', 'color_modes_visible', 'hex_visible', 'presets_visible',
+      'sampler_visible', 'sliders_visible', 'can_add_swatches',
+      // Both decide whether the alpha and intensity sliders exist.
+      'edit_alpha', 'edit_intensity',
+    ],
+    reason: 'Only the picker shape and the sample row are drawn; every row-visibility key changes the widget and is not implemented yet. Deferred mode is signal timing alone.',
+  },
+
+  ColorPickerButton: {
+    linterOnly: [
+      // Both only affect the popup picker, which is a Window and never drawn here.
+      'edit_alpha', 'edit_intensity',
+    ],
+    reason: 'Both configure the popup picker, which is a Window and never reaches the Control canvas.',
+  },
+
   Button: {
     linterOnly: [],
     renderGap: [

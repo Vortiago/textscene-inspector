@@ -1,5 +1,17 @@
 [gd_scene format=3]
 
+; Three pages, one disabled, current_tab pointing at the SECOND page (not 0)
+; — the one variable a regression here is invisible without: current_tab=0
+; would still show a strip and a page even if the current-tab INDEXING were
+; broken (e.g. always showing page 0). "General" carries a tab_0/title
+; override so its strip label differs from its own node name; "Locked" and
+; "Journal" fall back to their own child node names, exercising both title
+; sources the brief calls out. Every non-current page is authored
+; visible = false, exactly as the Godot editor itself saves a TabContainer
+; scene (TabContainer::add_child_notify hides every page but the current one
+; on add) — the previewer's own container layout relies on that authored
+; flag rather than any runtime "only show the current tab" mechanism.
+
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -9,10 +21,10 @@ anchor_bottom = 1.0
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 108.0
-offset_bottom = 40.0
+offset_right = 200.0
+offset_bottom = 72.0
 tab_alignment = 1
-current_tab = 0
+current_tab = 1
 tabs_position = 0
 clip_tabs = true
 tabs_visible = true
@@ -23,9 +35,20 @@ tabs_rearrange_group = 0
 use_hidden_tabs_for_min_size = false
 tab_focus_mode = 2
 deselect_enabled = false
+tab_0/title = "Settings"
+tab_2/disabled = true
 
 [node name="General" type="Control" parent="MyTabContainer"]
+visible = false
 layout_mode = 2
 
 [node name="Advanced" type="Control" parent="MyTabContainer"]
 layout_mode = 2
+
+[node name="Locked" type="Control" parent="MyTabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="MyTabContainer/Advanced"]
+layout_mode = 2
+text = "Current page content"

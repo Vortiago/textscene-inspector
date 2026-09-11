@@ -12,7 +12,10 @@ export function parseProgressBar(
 ): ProgressBarProperties {
   return {
     ...parseControl(heading, properties),
-    ...parseRange(properties),
+    // ProgressBar keeps Range's own documented `step = 0.01` — measured from the engine
+    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is NOT "no snap".
+    ...parseRange(properties, { step: 0.01 }),
     fillMode: parseOptionalInt(properties.fill_mode),
     showPercentage: parseOptionalBool(properties.show_percentage),
     indeterminate: parseOptionalBool(properties.indeterminate),

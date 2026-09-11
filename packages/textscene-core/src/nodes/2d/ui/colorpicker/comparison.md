@@ -1,17 +1,21 @@
 ---
 type: ColorPicker
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-color-picker.tscn
 # image: unit-color-picker
-renders_as: invisible transform-only fallback, not drawn yet
+renders_as: a colour sample and, at the default picker_shape, an SV square + hue slider
 ---
 
 # ColorPicker
 
 ColorPicker is the widget for choosing a colour through sliders, a wheel, hex input and
-presets. The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+presets. It builds its whole widget as internal children in its C++ constructor, none of
+which a `.tscn` ever serialises, so this previewer's painter draws the composite
+directly from `color`/`picker_shape` rather than a subtree it could walk. It draws the
+colour sample (checkerboard + swatch) and, at the default `picker_shape` (the HSV
+rectangle), the SV square and hue slider with their cursor/indicator. Everything else is
+a documented gap — see "Known limitations".
 
 ## Linting
 
@@ -43,10 +47,26 @@ Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited fr
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`index.ts` reuses `parseVBoxContainer` unchanged, which reads none of ColorPicker's own
-keys. A `picker_shape` of `7` or a malformed `color` loads and renders the same as a
+`index.ts` reads `color` and `picker_shape` alongside VBoxContainer's own properties;
+`color_mode`, `can_add_swatches`, `sampler_visible`, `color_modes_visible`,
+`sliders_visible`, `hex_visible`, `presets_visible`, `deferred_mode`, `edit_alpha` and
+`edit_intensity` all stay unread — each toggles a row this previewer does not draw
+(below). A `picker_shape` of `7` or a malformed `color` loads and renders the same as a
 well-formed value.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the whole picker. The previewer draws nothing for this node.
+- **Shader missing** `picker_shape` values other than `0` (HSV Rectangle) select a
+  shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle) this previewer does
+  not reproduce; only the sample row draws. `SHAPE_NONE` (4) draws nothing in Godot too,
+  so it is not a gap.
+- **Not drawn** The pick/shape buttons beside the sample, the RGB/HSV/Raw/OKHSL mode
+  row, the channel slider grid, the hex field and the swatches row are not drawn, and
+  none of their height is counted toward this node's minimum size — a real child placed
+  after them in the scene (a rare pattern for this type) is positioned higher than
+  Godot's own layout.
+- **Approximated** The sample row's height stands in for the (undrawn) pick/shape
+  buttons' own natural height, from their 16x16 icons plus the button content margin,
+  not their real minimum size.
+- **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`) — a static previewer
+  has no focus.

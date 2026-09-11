@@ -1,5 +1,13 @@
 [gd_scene load_steps=2 format=3]
 
+; folded is the one variable: FoldedContainer (folded = true) hides its child and sizes
+; to its title bar alone, while UnfoldedContainer (folded = false) shows its child, fit
+; below the title bar via NOTIFICATION_SORT_CHILDREN's fit_child_in_rect. Both carry a
+; Label child of the same shape, so a layout regression in either state is visible
+; against the other. FoldedContainer keeps FoldableContainer's other own properties at
+; valid non-default values (title_alignment, title_position, title_text_overrun_behavior,
+; foldable_group); UnfoldedContainer stays at their defaults.
+
 [sub_resource type="FoldableGroup" id="FoldableGroup_1"]
 
 [node name="Root" type="Control"]
@@ -7,7 +15,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MyFoldableContainer" type="FoldableContainer" parent="."]
+[node name="FoldedContainer" type="FoldableContainer" parent="."]
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0
@@ -21,3 +29,20 @@ title_text_overrun_behavior = 3
 foldable_group = SubResource("FoldableGroup_1")
 title_text_direction = 2
 language = "en"
+
+[node name="Contents" type="Label" parent="FoldedContainer"]
+layout_mode = 2
+text = "Sword"
+
+[node name="UnfoldedContainer" type="FoldableContainer" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 48.0
+offset_right = 108.0
+offset_bottom = 96.0
+folded = false
+title = "Settings"
+
+[node name="Contents" type="Label" parent="UnfoldedContainer"]
+layout_mode = 2
+text = "Volume"

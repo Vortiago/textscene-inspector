@@ -1,19 +1,15 @@
-/**
- * GraphNode registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
- */
+/** GraphNode registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseGraphNode } from './parser';
 
 const graphNodeRegistration: NodeTypeRegistration = {
   typeName: 'GraphNode',
-  parser: parseControl,
+  parser: parseGraphNode,
 };
 
 nodeRegistry.register(graphNodeRegistration);
 
 export { graphNodeRegistration };
+export * from './parser';
+export * from './types';

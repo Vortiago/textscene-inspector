@@ -56,10 +56,3 @@ A `fill_mode` outside 0-8 draws as `FILL_LEFT_TO_RIGHT`: `set_fill_mode`'s
 `ERR_FAIL_INDEX` refuses the out-of-range write, so the node keeps its class-default
 mode. `radial_fill_degrees` outside [0, 360] clamps to that range. `radial_initial_angle`
 wraps into it, or falls back to `0` when non-finite. Both mirror their own setters.
-
-## Known limitations
-
-- **Approximated** Without `nine_patch_stretch`, the minimum size is the largest of the
-  three textures' own sizes. A texture loaded from an image file has no size available at
-  solve time, so only an inline texture (an `AtlasTexture` cell, a `GradientTexture2D`)
-  contributes; a scene whose three slots are all plain image files floors to `(1, 1)`.

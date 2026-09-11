@@ -1,17 +1,18 @@
 ---
 type: MenuButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-menu-button.tscn
 # image: unit-menu-button
-renders_as: invisible transform-only fallback
+renders_as: a StyleBox quad with a centred text run and optional icon
 ---
 
 # MenuButton
 
-MenuButton is a Button that opens an internal PopupMenu when pressed. The previewer
-parses and validates it but does not draw it, so it renders as a transform-only fallback
-and its children still show.
+MenuButton is a Button that opens an internal PopupMenu when pressed. `menu_button.cpp`
+draws no chrome of its own, so the previewer paints exactly what its `Button` base does;
+the internal PopupMenu never opens, since it is a Window and this previewer draws no
+Windows.
 
 ## Linting
 
@@ -35,12 +36,13 @@ Strict parsing format-checks these `MenuButton` properties, plus 13 inherited fr
 | `valid-menubutton-properties` (type-family match) | `menubutton-item-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseButton` unchanged, which reads Button's and Control's
-keys and nothing else. `switch_on_hover`, `item_count` and every
-`popup/item_<idx>/<leaf>` key are never read, so a bad value there is neither
-substituted nor warned on.
+The lenient parser reuses `parseButton`, plus one default MenuButton's own constructor
+overrides: `flat` defaults to `true` here (`MenuButton::MenuButton()` calls
+`set_flat(true)`), not Button's own `false`, since a `.tscn` only ever writes `flat`
+when it differs from that default. `switch_on_hover`, `item_count` and every
+`popup/item_<idx>/<leaf>` key are never read, since none of them affects MenuButton's own
+drawing — they govern only the internal PopupMenu's contents and behaviour.
 
-## Known limitations
-
-- **Not drawn** Godot draws the button and its label. The previewer draws nothing for
-  this node.
+MenuButton's own default theme registers `font_disabled_color` as `Color(1, 1, 1, 0.3)`,
+not Button's `control_font_disabled_color` (`Color(0.875, 0.875, 0.875, 0.5)`) — the one
+default this slice does not simply inherit from Button's own.

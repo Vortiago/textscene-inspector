@@ -214,11 +214,11 @@ reproduced:
 - [CharacterBody2D](../../packages/textscene-core/src/nodes/physics/2d/characterbody2d/comparison.md) — a transform-only group
 - [CheckBox](../../packages/textscene-core/src/nodes/2d/ui/checkbox/comparison.md) — a theme icon followed by a text run
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md) — a toggle-switch icon followed by a text run
-- [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — invisible transform-only fallback
+- [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — a TextEdit with a line-number gutter
 - [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md) — nothing (a transform-only group)
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
-- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — invisible transform-only fallback, not drawn yet
-- [ColorPickerButton](../../packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/comparison.md) — invisible transform-only fallback, not drawn yet
+- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — a colour sample and, at the default picker_shape, an SV square + hue slider
+- [ColorPickerButton](../../packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/comparison.md) — a Button with a checkerboard + colour swatch over its face
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a flat-filled quad
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing of its own; children stay at their own free/anchored rects
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md) — a full-rect layout region
@@ -228,10 +228,10 @@ reproduced:
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md) — children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md) — a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md) — nothing yet, Godot draws a particle cloud, the previewer does not
-- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md) — invisible transform-only fallback
-- [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md) — invisible transform-only fallback
-- [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md) — nothing yet, not implemented
-- [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — invisible transform-only fallback
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md) — a background panel and grid, with GraphElement children placed by position_offset
+- [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md) — an invisible container that fits its children into its own rect
+- [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md) — a titled frame around its own content rect
+- [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md) — a titled panel with slot rows and left/right port icons
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md) — children packed into a fixed column count
 - [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md) — nothing (a transform-only group, the groove is an editor gizmo)
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md) — children laid out along a row
@@ -240,7 +240,7 @@ reproduced:
 - [HSeparator](../../packages/textscene-core/src/nodes/2d/ui/hseparator/comparison.md) — a thin horizontal quad
 - [HSlider](../../packages/textscene-core/src/nodes/2d/ui/hslider/comparison.md) — a horizontal track with a round grabber
 - [HSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/hsplitcontainer/comparison.md) — two children side by side, split at a computed offset
-- [ItemList](../../packages/textscene-core/src/nodes/2d/ui/itemlist/comparison.md) — invisible transform-only fallback
+- [ItemList](../../packages/textscene-core/src/nodes/2d/ui/itemlist/comparison.md) — a panel StyleBox plus a packed grid of icon/label rows
 - [Label](../../packages/textscene-core/src/nodes/2d/ui/label/comparison.md) — a shaped text run on the canvas
 - [LightOccluder2D](../../packages/textscene-core/src/nodes/2d/lightoccluder2d/comparison.md) — a selection-gated outline of its occluder polygon, it occludes 2D light
 - [Line2D](../../packages/textscene-core/src/nodes/2d/line2d/comparison.md) — a stroked mesh polyline
@@ -248,8 +248,8 @@ reproduced:
 - [LinkButton](../../packages/textscene-core/src/nodes/2d/ui/linkbutton/comparison.md) — a text run with an optional underline stroke
 - [MarginContainer](../../packages/textscene-core/src/nodes/2d/ui/margincontainer/comparison.md) — a child inset by four margin constants
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md) — a selection-gated cross gizmo
-- [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md) — invisible transform-only fallback
-- [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md) — invisible transform-only fallback
+- [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md) — one StyleBox + text run per PopupMenu-child title
+- [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md) — a StyleBox quad with a centred text run and optional icon
 - [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md) — nothing yet, Godot draws a textured mesh, the previewer does not
 - [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md) — nothing yet, Godot draws a batch of textured mesh instances, the previewer does not
 - [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md) — nothing (a transform-only group)
@@ -282,24 +282,24 @@ reproduced:
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md) — a clipped content rect with themed scrollbars
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md) — nothing (a transform-only group)
 - [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md) — nothing of its own, a transform-only group whose Bone2D children keep their space
-- [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md) — invisible transform-only fallback
+- [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md) — a LineEdit-style field plus two arrow stepper icons
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md) — two children split at a computed offset, along the `vertical`-chosen axis
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md) — an unlit textured quad
 - [StaticBody2D](../../packages/textscene-core/src/nodes/physics/2d/staticbody2d/comparison.md) — a transform-only group
 - [SubViewportContainer](../../packages/textscene-core/src/nodes/2d/ui/subviewportcontainer/comparison.md) — a clipped surface showing its SubViewport children's targets
-- [TabBar](../../packages/textscene-core/src/nodes/2d/ui/tabbar/comparison.md) — invisible transform-only fallback
-- [TabContainer](../../packages/textscene-core/src/nodes/2d/ui/tabcontainer/comparison.md) — invisible transform-only fallback
-- [TextEdit](../../packages/textscene-core/src/nodes/2d/ui/textedit/comparison.md) — invisible transform-only fallback
+- [TabBar](../../packages/textscene-core/src/nodes/2d/ui/tabbar/comparison.md) — a row of per-tab StyleBox quads with icon/title/close-icon content
+- [TabContainer](../../packages/textscene-core/src/nodes/2d/ui/tabcontainer/comparison.md) — a panel StyleBox behind the current page, topped by an internal TabBar strip
+- [TextEdit](../../packages/textscene-core/src/nodes/2d/ui/textedit/comparison.md) — a multi-line text box
 - [TextureButton](../../packages/textscene-core/src/nodes/2d/ui/texturebutton/comparison.md) — a textured quad, per stretch_mode
 - [TextureProgressBar](../../packages/textscene-core/src/nodes/2d/ui/textureprogressbar/comparison.md) — three composited texture layers, the middle one ratio-windowed
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md) — a textured quad in the control's rect
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md) — batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md) — batched textured tile quads
 - [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md) — invisible transform-only fallback
-- [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md) — invisible transform-only fallback
+- [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md) — an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md) — children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md) — children flowed down a column, wrapping to a new column
-- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md) — nothing yet, an invisible Control-sized rect
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md) — nothing (no decoded frame ever reaches it)
 - [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md) — nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md) — nothing (a transform-only group)
 - [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md) — a vertical track with a rectangular grabber

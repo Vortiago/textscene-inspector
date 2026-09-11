@@ -52,6 +52,18 @@ export interface SolveNode {
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vec2 | null;
   /**
+   * Every Texture2D-valued slot THIS node's own type declares
+   * (`controlSolverRegistry.registerTextureSlots`), keyed by that
+   * registration's own key — `null` per key until that slot's texture has
+   * loaded, and empty for a type that registers none. Resolved through the
+   * SAME per-ref function `textureSize` is (`buildSolveTree.ts`'s
+   * `resolveTextureSize`): one mechanism, not two that could disagree — a
+   * type opting into more than one slot (`TextureProgressBar`'s three
+   * layers, `TextureButton`'s draw-state textures, `RichTextLabel`'s
+   * embedded `[img]`s) reads this instead of `textureSize`.
+   */
+  textureSlots: Readonly<Record<string, Vec2 | null>>;
+  /**
    * The scene-tree eye toggle for this path (`SelectionContext.hiddenNodePaths`).
    *
    * Carried on the node rather than consulted at paint time because it stands in

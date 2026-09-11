@@ -52,5 +52,3 @@ severity for that key.
 
 - **Not drawn** `texture_focused` — a static, pointer-less/keyboard-less preview never
   holds focus, so this slot can never contribute a pixel.
-- **Approximated** The control's own minimum size is always (0, 0), even with
-  `texture_normal` set — texture-size resolution does not yet reach this node type.

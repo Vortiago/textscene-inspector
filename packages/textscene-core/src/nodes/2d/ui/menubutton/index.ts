@@ -1,17 +1,19 @@
 /**
  * MenuButton registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * `parseMenuButton` reuses Button's parse plus the one default MenuButton's
+ * constructor overrides (`flat`); property knowledge for `switch_on_hover`,
+ * `item_count` and the `popup/item_<idx>/<leaf>` family lives in
+ * linterParser.ts/linter.ts — none of them affects rendering (see
+ * `types.ts`'s own doc).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseButton } from '../button/parser';
+import { parseMenuButton } from './parser';
 
 const menuButtonRegistration: NodeTypeRegistration = {
   typeName: 'MenuButton',
-  parser: parseButton,
+  parser: parseMenuButton,
 };
 
 nodeRegistry.register(menuButtonRegistration);

@@ -1,17 +1,18 @@
 /**
  * FoldableContainer registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * `parseFoldableContainer` reads the five own properties that change what
+ * draws (`folded`, `title`, `title_alignment`, `title_position`,
+ * `title_text_overrun_behavior`); `foldable_group`/`title_text_direction`/
+ * `language` are behaviour-only for a static render and stay linter-only.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseFoldableContainer } from './parser';
 
 const foldableContainerRegistration: NodeTypeRegistration = {
   typeName: 'FoldableContainer',
-  parser: parseControl,
+  parser: parseFoldableContainer,
 };
 
 nodeRegistry.register(foldableContainerRegistration);

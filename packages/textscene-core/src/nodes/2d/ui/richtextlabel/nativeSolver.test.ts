@@ -45,6 +45,7 @@ import {
   imageSizePx,
   imageBaselineOffsetPx,
   imageObjectFontMetrics,
+  richTextLabelTextureSlots,
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
@@ -248,6 +249,29 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     // image-only line (textAscent=textDescent=0) splits the 40px height
     // evenly (imageBaselineOffsetPx's own doc/tests).
     expect(result).toEqual({ x: 10, y: 40 });
+  });
+
+  it('the SAME box, for an UNAUTHORED [img] whose 10x40 comes from SolveNode.textureSlots instead of the value form', () => {
+    const result = size(
+      richTextLabelMinimumSize(
+        node(
+          { fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img]a.png[/img]' },
+          { textureSlots: { 'a.png': { x: 10, y: 40 } } }
+        ),
+        ctx()
+      )
+    );
+    expect(result).toEqual({ x: 10, y: 40 });
+  });
+
+  it('floors to (0, 0) for an unauthored [img] whose textureSlots has not resolved yet', () => {
+    const result = size(
+      richTextLabelMinimumSize(
+        node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img]a.png[/img]' }),
+        ctx()
+      )
+    );
+    expect(result).toEqual({ x: 0, y: 0 });
   });
 });
 
@@ -565,9 +589,19 @@ describe('styledTextRuns', () => {
   });
 
   describe('[img]', () => {
-    it('drops the run when imageSizePx cannot resolve it — no width/height/region authored, same outcome a failed ResourceLoader::load gives real Godot', () => {
+    it('drops the run when imageSizePx cannot resolve it — no width/height/region authored, textureSlots not (yet) resolved, same outcome a failed ResourceLoader::load gives real Godot', () => {
       const runs = styledTextRuns(node({}), { text: '[img]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
       expect(runs).toEqual([]);
+    });
+
+    it('resolves to the texture\'s own natural size once buildSolveTree.ts\'s walk carries it on SolveNode.textureSlots', () => {
+      const n = node({}, { textureSlots: { 'a.png': { x: 64, y: 32 } } });
+      const runs = styledTextRuns(n, { text: '[img]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]!.image).toEqual({
+        spec: expect.objectContaining({ path: 'a.png', width: 0, height: 0 }),
+        sizePx: { x: 64, y: 32 },
+      });
     });
 
     it('resolves width×height authored on the value form, carrying it as the run — width repurposes fontSizePx (imageObjectFontMetrics doc)', () => {
@@ -612,7 +646,7 @@ describe('styledTextRuns', () => {
   });
 });
 
-describe('imageSizePx (rich_text_label.cpp:4120-4155 _get_image_size, the three branches reachable without the texture\'s own natural size)', () => {
+describe('imageSizePx (rich_text_label.cpp:4120-4155 _get_image_size, all six branches)', () => {
   it('both dimensions given: returned verbatim', () => {
     expect(imageSizePx(40, 20, undefined)).toEqual({ x: 40, y: 20 });
   });
@@ -634,16 +668,72 @@ describe('imageSizePx (rich_text_label.cpp:4120-4155 _get_image_size, the three 
     expect(imageSizePx(40, 0, { x: 0, y: 0, w: 0, h: 40 })).toBeNull();
   });
 
-  it('null when the size depends on the texture\'s own natural pixel size — neither dimension nor a usable region (:4150-4154, out of this port\'s reach)', () => {
+  it('null when the size depends on the texture\'s own natural pixel size and naturalSize is not (yet) known — neither dimension nor a usable region (:4150-4154)', () => {
     expect(imageSizePx(0, 0, undefined)).toBeNull();
   });
 
-  it('null for a lone width with no region — the OTHER dimension needs the texture\'s natural size (:4126-4128)', () => {
+  it('null for a lone width with no region and no naturalSize — the OTHER dimension needs the texture\'s natural size (:4126-4128)', () => {
     expect(imageSizePx(40, 0, undefined)).toBeNull();
   });
 
-  it('null for a lone height with no region (:4133-4135)', () => {
+  it('null for a lone height with no region and no naturalSize (:4133-4135)', () => {
     expect(imageSizePx(0, 40, undefined)).toBeNull();
+  });
+
+  it('width + naturalSize, no region: height keeps the TEXTURE\'s own aspect (:4126-4128)', () => {
+    expect(imageSizePx(40, 0, undefined, { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
+  });
+
+  it('height + naturalSize, no region: width keeps the texture\'s own aspect (:4133-4135)', () => {
+    expect(imageSizePx(0, 20, undefined, { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
+  });
+
+  it('neither dimension nor a region, naturalSize known: the texture\'s own size verbatim (:4150-4154, p_image->get_size())', () => {
+    expect(imageSizePx(0, 0, undefined, { x: 64, y: 32 })).toEqual({ x: 64, y: 32 });
+  });
+
+  it('a region always wins over naturalSize, even when both are present (region reads BEFORE naturalSize is ever consulted)', () => {
+    expect(imageSizePx(0, 0, { x: 0, y: 0, w: 80, h: 40 }, { x: 999, y: 999 })).toEqual({ x: 80, y: 40 });
+  });
+
+  it('both dimensions given: naturalSize is never consulted, even when the ref never resolved', () => {
+    expect(imageSizePx(40, 20, undefined, null)).toEqual({ x: 40, y: 20 });
+  });
+});
+
+describe('richTextLabelTextureSlots (rich_text_label.cpp:4120-4155 _get_image_size)', () => {
+  it('requests an [img] with no width/height/region — every _get_image_size branch touching naturalSize', () => {
+    const n = node({ text: '[img]a.png[/img]', bbcodeEnabled: true });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([{ key: 'a.png', ref: 'a.png' }]);
+  });
+
+  it('does not request an [img] with both width and height authored — naturalSize is never touched (:4121-4123)', () => {
+    const n = node({ text: '[img=40x20]a.png[/img]', bbcodeEnabled: true });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([]);
+  });
+
+  it('does not request an [img] with a region — the region substitutes for naturalSize on every branch', () => {
+    const n = node({ text: '[img region=0,0,80,40]a.png[/img]', bbcodeEnabled: true });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([]);
+  });
+
+  it('requests a lone width with no region — the height branch still needs naturalSize (:4126-4128)', () => {
+    const n = node({ text: '[img=40]a.png[/img]', bbcodeEnabled: true });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([{ key: 'a.png', ref: 'a.png' }]);
+  });
+
+  it('dedupes repeated refs to one request', () => {
+    const n = node({ text: '[img]a.png[/img] and again [img]a.png[/img]', bbcodeEnabled: true });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([{ key: 'a.png', ref: 'a.png' }]);
+  });
+
+  it('requests nothing when bbcode is disabled, even with [img]-shaped text', () => {
+    const n = node({ text: '[img]a.png[/img]', bbcodeEnabled: false });
+    expect(richTextLabelTextureSlots(n.node)).toEqual([]);
+  });
+
+  it('requests nothing for empty/absent text', () => {
+    expect(richTextLabelTextureSlots(node({ bbcodeEnabled: true }).node)).toEqual([]);
   });
 });
 

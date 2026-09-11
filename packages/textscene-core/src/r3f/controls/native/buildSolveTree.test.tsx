@@ -20,6 +20,7 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types';
+import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
 import { FileEventBus } from '../../../resources/FileEventBus';
 import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -1061,4 +1062,112 @@ describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
 
     expect(requested).not.toContain(LAYER_PATH);
   });
+});
+
+describe('useBuildSolveTree — per-type texture slots (registerTextureSlots)', () => {
+  it("populates a TextureProgressBar's textureSlots from texture_under/texture_progress, keyed by their own Godot property names", () => {
+    const loader = createFakeResourceLoader();
+    const underPath = 'res://under.png';
+    const progressPath = 'res://progress.png';
+    loader.textures.seed(underPath, { image: { width: 40, height: 12 } } as unknown as THREE.Texture);
+    loader.textures.seed(progressPath, { image: { width: 20, height: 30 } } as unknown as THREE.Texture);
+
+    const nodes = [
+      node('Bar', 'TextureProgressBar', {
+        properties: {
+          name: 'Bar',
+          textureUnder: 'ExtResource("1")',
+          textureProgress: 'ExtResource("2")',
+        },
+      }),
+    ];
+    const externalResources = [
+      { id: '1', path: underPath, type: 'Texture2D' },
+      { id: '2', path: progressPath, type: 'Texture2D' },
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSlots).toEqual({
+      texture_under: { x: 40, y: 12 },
+      texture_progress: { x: 20, y: 30 },
+    });
+  });
+
+  it("populates a TextureButton's textureSlots from texture_normal only, when that is the sole authored slot", () => {
+    const loader = createFakeResourceLoader();
+    const normalPath = 'res://normal.png';
+    loader.textures.seed(normalPath, { image: { width: 64, height: 24 } } as unknown as THREE.Texture);
+
+    const nodes = [
+      node('Btn', 'TextureButton', { properties: { name: 'Btn', textureNormal: 'ExtResource("1")' } }),
+    ];
+    const externalResources = [{ id: '1', path: normalPath, type: 'Texture2D' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSlots).toEqual({ texture_normal: { x: 64, y: 24 } });
+  });
+
+  it("resolves a RichTextLabel's [img] natural size onto textureSlots, keyed by the ref itself", () => {
+    const loader = createFakeResourceLoader();
+    const imgPath = 'res://logo.png';
+    loader.textures.seed(imgPath, { image: { width: 48, height: 24 } } as unknown as THREE.Texture);
+
+    const nodes = [
+      node('Label', 'RichTextLabel', {
+        properties: { name: 'Label', text: `[img]${imgPath}[/img]`, bbcodeEnabled: true },
+      }),
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.textureSlots).toEqual({ [imgPath]: { x: 48, y: 24 } });
+  });
+
+  it(
+    "resolves an ExtResource(AtlasTexture) '.tres' slot's own region size through the RESOURCE bus — " +
+      'the generic single-slot fallback (TextureRect\'s `texture`) shares the same per-ref resolution registered types do',
+    async () => {
+      const loader = createFakeResourceLoader();
+      const tresPath = 'res://icons/keyboard_arrow_left.tres';
+      // A real Kenney-shaped file, run through the actual `.tres` parser —
+      // mirrors `useTexture2D.test.tsx`'s own `.tres AtlasTexture` fixture.
+      const atlasTres: ParsedResource = parseTresFile(`[gd_resource type="AtlasTexture" format=3]
+
+[ext_resource type="Texture2D" path="res://sheet.png" id="1_tk63f"]
+
+[resource]
+atlas = ExtResource("1_tk63f")
+region = Rect2(32, 32, 64, 64)
+`);
+
+      const nodes = [
+        node('Portrait', 'TextureRect', { properties: { name: 'Portrait', texture: 'ExtResource("1_atlas")' } }),
+      ];
+      const externalResources = [{ id: '1_atlas', path: tresPath, type: 'AtlasTexture' }];
+
+      const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+        wrapper: wrapperFor(loader.loader),
+      });
+
+      expect(result.current.tree[0]?.textureSize).toBeNull();
+      const initialGeneration = result.current.generation;
+
+      await act(async () => {
+        loader.resources._resolve(tresPath, atlasTres);
+      });
+
+      // The RESOURCE bus, never the texture one — the `.tres` is text (a
+      // region declaration), not pixels.
+      expect(result.current.generation).toBeGreaterThan(initialGeneration);
+      expect(result.current.tree[0]?.textureSize).toEqual({ x: 64, y: 64 });
+    }
+  );
 });

@@ -42,6 +42,7 @@ import {
  * mutation site instead.
  */
 const NO_STYLE_BOXES: SolveNode['styleBoxes'] = Object.freeze({});
+const NO_TEXTURE_SLOTS: SolveNode['textureSlots'] = Object.freeze({});
 const NO_FONT_OVERRIDES: SolveNode['fontOverrides'] = Object.freeze({});
 const NO_THEME_CHAIN: SolveNode['themeChain'] = Object.freeze([]);
 const NO_RESOURCES: SolveNode['resources'] = Object.freeze({
@@ -59,6 +60,7 @@ export function solveNode(): Pick<
   | 'children'
   | 'styleBoxes'
   | 'textureSize'
+  | 'textureSlots'
   | 'hidden'
   | 'fontOverrides'
   | 'themeChain'
@@ -71,6 +73,7 @@ export function solveNode(): Pick<
     children: [],
     styleBoxes: NO_STYLE_BOXES,
     textureSize: null,
+    textureSlots: NO_TEXTURE_SLOTS,
     hidden: false,
     fontOverrides: NO_FONT_OVERRIDES,
     themeChain: NO_THEME_CHAIN,

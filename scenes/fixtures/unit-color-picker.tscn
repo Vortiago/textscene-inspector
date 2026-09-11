@@ -1,5 +1,14 @@
 [gd_scene format=3]
 
+; `picker_shape = 0` (SHAPE_HSV_RECTANGLE, also Godot's own default) is the ONE
+; variable that selects a drawn picture at all: every other value picks a
+; shader-backed shape this previewer does not reproduce, so a regression in the
+; SV-square/hue-slider port is invisible at any other picker_shape. `color`'s
+; alpha (0.8) exercises the sample row's checkerboard. The rect is sized to fit
+; the shape row's own floor (290x256 at scale 1) without clipping. Every other
+; property stays non-default only for the strict parser's grammar coverage —
+; none of them reaches a drawn pixel (comparison.md's own "Known limitations").
+
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -9,14 +18,14 @@ anchor_bottom = 1.0
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 108.0
-offset_bottom = 40.0
+offset_right = 308.0
+offset_bottom = 308.0
 color = Color(0.2, 0.4, 0.6, 0.8)
 edit_alpha = false
 edit_intensity = false
 color_mode = 1
 deferred_mode = true
-picker_shape = 1
+picker_shape = 0
 can_add_swatches = false
 sampler_visible = false
 color_modes_visible = false

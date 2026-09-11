@@ -1,17 +1,16 @@
 /**
  * ColorPickerButton registration: parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Parses Button's own properties plus `color`; property knowledge otherwise
+ * lives in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseButton } from '../button/parser';
+import { parseColorPickerButton } from './parser';
 
 const colorPickerButtonRegistration: NodeTypeRegistration = {
   typeName: 'ColorPickerButton',
-  parser: parseButton,
+  parser: parseColorPickerButton,
 };
 
 nodeRegistry.register(colorPickerButtonRegistration);

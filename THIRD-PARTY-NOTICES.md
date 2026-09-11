@@ -53,6 +53,17 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`, `BoxContainer::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts` | `scene/gui/split_container.cpp` (`SplitContainer::_update_default_dragger_positions`, `_update_dragger_positions`, `_get_valid_range`, `_get_separation`, `_resort`, `get_minimum_size`, `SplitContainerDragger::_notification`'s `NOTIFICATION_DRAW` icon-draw condition) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/gridcontainer/nativeSolver.ts` | `scene/gui/grid_container.cpp` (`GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` handler, `GridContainer::get_minimum_size`), `scene/gui/container.cpp` (`Container::fit_child_in_rect`, `Container::as_sortable_control`) and `scene/gui/control.cpp` (`Control::set_rect`/`Control::_size_changed`'s minimum-size floor, which every `fit_child_in_rect` call re-triggers) |
+| `packages/textscene-core/src/nodes/2d/ui/graphelement/parser.ts` | `scene/gui/graph_element.cpp` (`GraphElement::set_selectable`'s forced `set_selected(false)`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphelement/nativeSolver.ts` | `scene/gui/graph_element.cpp` (`GraphElement::_resort`, `GraphElement::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`, `Container::as_sortable_control`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphelement/graphTitlebar.ts` | `scene/gui/graph_node.cpp` (`GraphNode`'s internal `titlebar_hbox`/`title_label` construction, `_resort`'s titlebar geometry) and `scene/gui/graph_frame.cpp` (the same shape) — `Label::_shape`'s OFF-autowrap minimum size and `Label::_get_line_rect`'s line placement |
+| `packages/textscene-core/src/nodes/2d/ui/graphnode/parser.ts` | `scene/gui/graph_node.cpp` (`GraphNode::_set`/`_get`/`_get_property_list`'s `slot/<index>/<leaf>` family, `GraphNode::set_slot`'s erase condition) |
+| `packages/textscene-core/src/nodes/2d/ui/graphnode/nativeSolver.ts` | `scene/gui/graph_node.cpp` (`GraphNode::_resort`, `GraphNode::get_minimum_size`, `NOTIFICATION_DRAW`'s port/slot-stylebox row geometry) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphnode/Component.tsx` | `scene/gui/graph_node.cpp` (`GraphNode::_notification`'s `NOTIFICATION_DRAW`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphframe/nativeSolver.ts` | `scene/gui/graph_frame.cpp` (`GraphFrame::_resort`, `GraphFrame::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphframe/Component.tsx` | `scene/gui/graph_frame.cpp` (`GraphFrame::_notification`'s `NOTIFICATION_DRAW`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphedit/nativeSolver.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::_update_scroll_offset`, position half) and `scene/gui/control.cpp` (`Control::_size_changed`'s anchor formula) |
+| `packages/textscene-core/src/nodes/2d/ui/graphedit/grid.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::_draw_grid`) |
+| `packages/textscene-core/src/nodes/2d/ui/graphedit/Component.tsx` | `scene/gui/graph_edit.cpp` (`GraphEdit::_notification`'s `NOTIFICATION_DRAW`) |
 | `packages/textscene-core/src/nodes/2d/ui/panelcontainer/nativeSolver.ts` | `scene/gui/panel_container.cpp` (`PanelContainer::get_minimum_size`, `PanelContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` content-rect inset) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/subviewportcontainer/nativeSolver.ts` | `scene/gui/subviewport_container.cpp` (`SubViewportContainer::get_minimum_size` and its `stretch` early return) and `scene/main/viewport.h` (`Viewport`'s `Size2i size = Size2i(512, 512)` default) |
 | `packages/textscene-core/src/nodes/2d/ui/scrollcontainer/nativeSolver.ts` | `scene/gui/scroll_container.cpp` (`ScrollContainer::get_minimum_size`, `_update_scrollbars`, `_update_scrollbar_position`, `_reposition_children`), `scene/gui/scroll_bar.cpp` (`ScrollBar::get_minimum_size`, `get_grabber_size`, `get_area_size`, `get_grabber_offset`, `NOTIFICATION_DRAW`'s grabber-rect math) and `scene/gui/range.cpp` (`Range::get_as_ratio`, `Range::set_page`'s own CLAMP) |
@@ -60,10 +71,20 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/label/nativeSolver.ts` | `scene/gui/label.cpp` (`Label::get_minimum_size` and its `autowrap_mode` branch, backed by `_update_visible`'s per-line height sum and `get_line_height`'s empty-text fallback; `Label::_shape`'s `int width` line-break width and the wrapped `minsize` it leaves behind, plus its trailing `update_minimum_size()`; `Label::_notification`'s `NOTIFICATION_RESIZED` paragraph invalidation; `Label::get_layout_data`'s `vbegin`/`vsep` vertical-alignment math and `_get_line_rect`'s `int(...)` per-line horizontal offsets) and `scene/theme/default_theme.cpp` (Label's `StyleBoxEmpty` `normal_style`, `line_spacing` 3 and opaque-white `font_color`) |
 | `packages/textscene-core/src/nodes/2d/ui/richtextlabel/nativeSolver.ts` | `scene/gui/rich_text_label.cpp` (`RichTextLabel::get_minimum_size`, backed by `get_content_height`/`get_content_width`) and `scene/theme/default_theme.cpp` (RichTextLabel's `default_color`/`line_separation`/`paragraph_separation` theme defaults; the bold/italic `FontVariation`'s `set_variation_embolden(1.2)`/`set_variation_transform`'s `0.2` shear) |
 | `packages/textscene-core/src/nodes/2d/ui/button/nativeSolver.ts` | `scene/gui/button.cpp` (`Button::get_minimum_size_for_text_and_icon`) and `scene/theme/default_theme.cpp` (Button's `font_color`/`font_disabled_color`/`icon_normal_color`/`icon_disabled_color` theme defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/menubar/nativeSolver.ts` | `scene/gui/menu_bar.cpp` (`MenuBar::get_minimum_size`, `MenuBar::shape`, `MenuBar::_get_menu_item_rect`, `MenuBar::_draw_menu_item`'s normal-state StyleBox/font-colour selection and `MenuBar::_refresh_menu_names`'s title-vs-name fallback) and `scene/theme/default_theme.cpp` (MenuBar's `button_normal`/`h_separation`/`font_color` theme defaults, shared with Button's own) |
+| `packages/textscene-core/src/nodes/2d/ui/menubutton/nativeSolver.ts` | `scene/gui/button.cpp` (`Button::get_minimum_size_for_text_and_icon`, reused unchanged since `menu_button.cpp` overrides neither) and `scene/theme/default_theme.cpp` (MenuButton's own `font_disabled_color` theme default) |
+| `packages/textscene-core/src/nodes/2d/ui/foldablecontainer/nativeSolver.ts` | `scene/gui/foldable_container.cpp` (`FoldableContainer::get_minimum_size`, `_update_title_min_size`, `_get_title_style`/`_get_title_icon`/`_get_actual_alignment`, `_notification`'s `NOTIFICATION_SORT_CHILDREN` content-fitting branch) and `scene/theme/default_theme.cpp` (FoldableContainer's `title_panel`/`title_collapsed_panel`/`panel` styleboxes, its own `font_color`/`collapsed_font_color` defaults, `h_separation` and arrow icon registrations) |
 | `packages/textscene-core/src/r3f/controls/native/buttonBase.ts` | `scene/gui/button.cpp` (`Button::_notification`'s `NOTIFICATION_DRAW` icon/text content-layout math and `Button::_fit_icon_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/checkbox/nativeSolver.ts` | `scene/gui/check_box.cpp` (`CheckBox::get_minimum_size`, `get_icon_size`, `_notification`'s `NOTIFICATION_DRAW` icon placement, `is_radio`) and `scene/gui/base_button.cpp` (`BaseButton::get_draw_mode`) |
 | `packages/textscene-core/src/nodes/2d/ui/optionbutton/nativeSolver.ts` | `scene/gui/option_button.cpp` (`OptionButton::get_minimum_size`, `_refresh_size_cache`, `_notification`'s `NOTIFICATION_DRAW` arrow placement) |
+| `packages/textscene-core/src/nodes/2d/ui/tabbar/nativeSolver.ts` | `scene/gui/tab_bar.cpp` (`TabBar::get_minimum_size`, `TabBar::get_tab_width`, `TabBar::_update_cache`, `TabBar::_draw_tab`) and `scene/theme/default_theme.cpp` (TabBar's `tab_selected`/`tab_unselected`/`tab_disabled`/`tab_hovered` styleboxes and its `font_selected_color`/`font_unselected_color`/`font_disabled_color`/icon-colour theme defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/tabcontainer/nativeSolver.ts` | `scene/gui/tab_container.cpp` (`TabContainer::get_minimum_size`, `TabContainer::_repaint`, `TabContainer::_update_margins`, `TabContainer::_get_tab_height`/`_get_tab_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/lineedit/nativeSolver.ts` | `scene/gui/line_edit.cpp` (`LineEdit::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` content-rect/alignment/colour selection) and `scene/theme/default_theme.cpp` (LineEdit's `normal`/`read_only` styleboxes and `font_color`/`font_placeholder_color`/`font_uneditable_color` theme defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/textedit/nativeSolver.ts` | `scene/gui/text_edit.cpp` (`TextEdit::get_minimum_size`, `_update_scrollbars`'s `content_size_cache`, `_update_wrap_at_column`, `get_line_height`, `TextEdit::Text::get_line_height`, `adjust_viewport_to_caret`/`_adjust_viewport_to_caret_horizontally`'s own always-(0,0) trace, `_notification`'s `NOTIFICATION_DRAW` `left_margin`/`xmargin_beg`/`xmargin_end` row band) and `scene/theme/default_theme.cpp` (TextEdit's reuse of LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_readonly_color`/`current_line_color`, the scaled `line_spacing` constant and the bare `wrap_offset`/content-size-pad literals) |
+| `packages/textscene-core/src/nodes/2d/ui/codeedit/nativeSolver.ts` | `scene/gui/code_edit.cpp` (`CodeEdit::CodeEdit()`'s fixed gutter construction order and each gutter's own width setter, `_update_draw_main_gutter`, `_text_changed`'s line-number digit count, `_line_number_draw_callback`, `_update_line_number_gutter_width`, `set_line_numbers_zero_padded`) and `scene/theme/default_theme.cpp` (CodeEdit's reuse of TextEdit's/LineEdit's styleboxes and its own `line_number_color`) |
+| `packages/textscene-core/src/nodes/2d/ui/tree/nativeSolver.ts` | `scene/gui/tree.cpp` (`Tree::_get_content_rect`, `Tree::_get_title_button_height`, `Tree::get_column_width`, `Tree::get_column_minimum_width`, restricted to the always-empty-of-items case a `.tscn` Tree is) and `scene/theme/default_theme.cpp` (Tree's `panel` and `title_button_normal` styleboxes) |
+| `packages/textscene-core/src/nodes/2d/ui/spinbox/nativeSolver.ts` | `scene/gui/spin_box.cpp` (`SpinBox::get_minimum_size`, `_compute_sizes`, `_get_widest_button_icon_width`, `_update_text`, `_update_buttons_state_for_current_value`), `scene/gui/range.h` (`Range`'s own `step` default), `core/math/math_funcs.cpp` (`Math::step_decimals`, `Math::range_step_decimals`), `core/string/ustring.cpp` (`String::num`'s trailing-zero trim) and `scene/theme/default_theme.cpp` (SpinBox's `buttons_width`/`field_and_buttons_separation` constants and `up`/`down` icon-modulate defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/itemlist/nativeSolver.ts` | `scene/gui/item_list.cpp` (`ItemList::force_update_list_size`, `ItemList::get_minimum_size`, the per-item minsize inline in `force_update_list_size`, `_adjust_to_max_size`, and `NOTIFICATION_DRAW`'s per-row icon/text placement) and `scene/theme/default_theme.cpp` (ItemList's `panel`/`h_separation`/`v_separation`/`icon_margin`/`line_separation`/`font_color` theme defaults) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/sliderSolver.ts` | `scene/gui/slider.cpp` (`Slider::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` track/`grabber_area`/grabber/tick rect math, including its per-axis `int` truncation vs `Math::round` asymmetry) and `scene/theme/default_theme.cpp` (HSlider/VSlider's `slider`/`grabber_area` styleboxes and grabber/tick icon registration) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`, including the anti-aliasing rings, `skew`, and the drop-shadow stage) |
 | `packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
@@ -93,6 +114,13 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/affine2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::basis_xform`, `Transform2D::operator*`, `Transform2D::affine_inverse`) |
 | `scripts/godot-ref/bootstrap.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`) |
 | `scripts/godot-ref/refConstants.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditorViewport::Cursor()`) |
+| `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/AlphaCheckerboardQuad.tsx` | `scene/gui/color_picker.cpp` (`draw_texture_rect(theme_cache.background_icon, r, true)`'s tile semantics, ported the same way `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE` branch already does) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/colorPickerIcons.ts` | `scene/gui/color_picker.cpp` (`is_color_overbright`) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/nativeSolver.ts` | `scene/gui/color_picker.cpp` (`ColorPicker::_set_pick_color`'s HSV derivation: `_copy_color_to_normalized_and_intensity`, `_copy_normalized_to_hsv_okhsl`) and `core/math/color.cpp`/`.h` (`Color::get_h`/`get_s`/`get_v`, `Color::from_hsv`/`set_hsv`, `Color::inverted`, `Color::srgb_to_linear`/`linear_to_srgb`), `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s cursor placement, `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line, `ColorPickerShapeRectangle::update_theme`) and `scene/theme/default_theme.cpp` (ColorPicker's `sv_width`/`sv_height`/`h_width`/`margin` constants and the `color_hue` `GradientTexture2D`'s 7-stop hue gradient) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/svGradient.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s two `draw_polygon` layers) and `scene/theme/default_theme.cpp` (the `color_hue` `GradientTexture2D`'s 7-stop hue gradient) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_sample_draw`) and `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_cursor`) |
 
 ### Reproduced values
 
@@ -123,6 +151,55 @@ Godot 4.6.3's `scene/theme/icons/`:
 | `scene/theme/icons/option_button_arrow.svg` | `OptionButton` / `"arrow"` |
 | `scene/theme/icons/hsplitter.svg` | `HSplitContainer` / `"grabber"`, `SplitContainer` / `"h_grabber"` |
 | `scene/theme/icons/vsplitter.svg` | `VSplitContainer` / `"grabber"`, `SplitContainer` / `"v_grabber"` |
+
+`packages/textscene-core/src/nodes/2d/ui/spinbox/icons.ts` embeds SpinBox's own pair the
+same way, kept in its own slice rather than `themeIcons.ts` since that module is
+orchestrator-owned:
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/value_up.svg` | `SpinBox` / `"up"` (also `"up_disabled"` — the same asset) |
+| `scene/theme/icons/value_down.svg` | `SpinBox` / `"down"` (also `"down_disabled"` — the same asset) |
+
+`packages/textscene-core/src/nodes/2d/ui/foldablecontainer/icons.ts` embeds FoldableContainer's own fold-state arrow pair the same way, kept in its own slice for the same reason:
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/arrow_down.svg` | `FoldableContainer` / `"expanded_arrow"` |
+| `scene/theme/icons/arrow_up.svg` | `FoldableContainer` / `"expanded_arrow_mirrored"` |
+| `scene/theme/icons/arrow_right.svg` | `FoldableContainer` / `"folded_arrow"` |
+| `scene/theme/icons/arrow_left.svg` | `FoldableContainer` / `"folded_arrow_mirrored"` |
+
+`packages/textscene-core/src/nodes/2d/ui/textedit/glyphIcons.ts` embeds TextEdit's/CodeEdit's `draw_tabs`/`draw_spaces` visual-whitespace pair the same way, kept in its own slice for the same reason (`CodeEdit::Component.tsx` imports it rather than duplicating it):
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/text_edit_tab.svg` | `TextEdit` / `"tab"`, `CodeEdit` / `"tab"` |
+| `scene/theme/icons/text_edit_space.svg` | `TextEdit` / `"space"`, `CodeEdit` / `"space"` |
+
+`packages/textscene-core/src/nodes/2d/ui/graphelement/graphIcons.ts` embeds GraphNode's/GraphFrame's `resizer`/`port` icon pair the same way, kept in its own slice for the same reason:
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/resizer_se.svg` | `GraphElement`/`GraphNode`/`GraphFrame` / `"resizer"` |
+| `scene/theme/icons/graph_port.svg` | `GraphNode` / `"port"` |
+
+`packages/textscene-core/src/nodes/2d/ui/shared/colorPickerIcons.ts` embeds ColorPicker's/ColorPickerButton's own checkerboard/overbright/cursor icon set the same way, kept in its own slice for the same reason:
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/mini_checkerboard.svg` | `ColorPickerButton` / `"bg"`, `ColorPicker` / `"sample_bg"` |
+| `scene/theme/icons/color_picker_overbright.svg` | `ColorPickerButton`/`ColorPicker` / `"overbright_indicator"` |
+| `scene/theme/icons/color_picker_cursor.svg` | `ColorPicker` / `"picker_cursor"` |
+| `scene/theme/icons/color_picker_cursor_bg.svg` | `ColorPicker` / `"picker_cursor_bg"` |
+
+`packages/textscene-core/src/nodes/2d/ui/tabbar/tabBarIcons.ts` embeds TabBar's own close/scroll-arrow icon set the same way, kept in its own slice for the same reason (`TabContainer`'s painter reuses `TabBar`'s own component rather than a second copy):
+
+| File | Godot theme key (`scene/theme/default_theme.cpp`) |
+|---|---|
+| `scene/theme/icons/close.svg` | `TabBar` / `"close"` |
+| `scene/theme/icons/scroll_button_right.svg` | `TabBar` / `"increment"` |
+| `scene/theme/icons/scroll_button_left.svg` | `TabBar` / `"decrement"` |
 
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.

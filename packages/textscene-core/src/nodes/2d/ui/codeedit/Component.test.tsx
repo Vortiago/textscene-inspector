@@ -1,0 +1,146 @@
+/**
+ * `<CodeEdit>` render contract — `<TextEditBody>` reused for chrome/text,
+ * plus this slice's own line-number gutter. Structure assertions only;
+ * pixels are `pnpm ref:godot`'s job.
+ */
+import { describe, expect, it } from 'vitest';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import type { TscnNode } from '../../../../parser/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { CodeEdit } from './Component';
+import type { CodeEditProperties } from './types';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
+
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
+  const node: TscnNode = {
+    name: 'MyCodeEdit',
+    type: 'CodeEdit',
+    children: [],
+    properties: { name: 'MyCodeEdit', ...properties } as CodeEditProperties,
+  };
+  return { ...emptySolveNode(), path: 'MyCodeEdit', node };
+}
+
+/** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute — the chrome `<TextEditBody>` itself draws. */
+function findChromeMesh(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
+}
+
+/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms) — text AND line numbers alike. */
+function findTextMeshes(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
+}
+
+describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
+  it('draws the shared chrome StyleBox', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
+    );
+    expect(findChromeMesh(renderer.scene)).toBeDefined();
+  });
+
+  it('draws one TextRun mesh per buffer line, exactly like TextEdit', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb' })} rect={RECT} renderOrder={0} />
+    );
+    // 2 buffer-line TextRuns; the gutter is off by default, so no line-number meshes.
+    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+  });
+});
+
+describe('<CodeEdit> — line-number gutter', () => {
+  it('draws no line-number meshes when gutters_draw_line_numbers is unset', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb\nc' })} rect={RECT} renderOrder={0} />
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(3);
+  });
+
+  it('draws one extra TextRun mesh per buffer line once gutters_draw_line_numbers is set', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'a\nb\nc', gutterDrawLineNumbers: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // 3 body TextRuns + 3 line-number TextRuns.
+    expect(findTextMeshes(renderer.scene)).toHaveLength(6);
+  });
+
+  it('shifts the body text right by the gutter band width once any gutter draws', async () => {
+    // The main gutter's own width (`get_line_height()`) does not depend on
+    // `measureText`, unlike the line-number gutter's char-width term — this
+    // isolates the shift from that dependency.
+    const withoutGutter = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a' })} rect={RECT} renderOrder={0} />
+    );
+    const withGutter = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'a', gutterDrawBookmarks: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // The body text's own group sits at the LARGEST x among every text-bearing
+    // group: the line-number gutter (when present) always starts to its left.
+    const bodyGroupX = (scene: Rendered['scene']) =>
+      Math.max(
+        ...scene
+          .findAllByType('Group')
+          .map((g) => g.instance)
+          .filter((g) =>
+            g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
+          )
+          .map((g) => g.position.x)
+      );
+    expect(bodyGroupX(withGutter.scene)).toBeGreaterThan(bodyGroupX(withoutGutter.scene));
+  });
+
+  it('shapes its own line numbers at the SAME wrap width TextEditBody uses, so a wrapped first line pushes the second line-number down by more than one row', async () => {
+    const longLine = 'a repeated word wrap word wrap word wrap word wrap word wrap word wrap';
+    const unwrapped = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: `${longLine}\nb`, gutterDrawLineNumbers: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const wrapped = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: `${longLine}\nb`, gutterDrawLineNumbers: true, wrapMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // The line-number gutter's own groups sit at the SMALLEST x among every
+    // text-bearing group (the body text, shifted right by the gutter band,
+    // never does) — the deepest one (most negative y) is buffer line 2's.
+    const deepestLineNumberY = (scene: Rendered['scene']) => {
+      const textGroups = scene
+        .findAllByType('Group')
+        .map((g) => g.instance)
+        .filter((g) => g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor));
+      const minX = Math.min(...textGroups.map((g) => g.position.x));
+      return Math.min(...textGroups.filter((g) => g.position.x === minX).map((g) => g.position.y));
+    };
+    expect(deepestLineNumberY(wrapped.scene)).toBeLessThan(deepestLineNumberY(unwrapped.scene));
+  });
+});

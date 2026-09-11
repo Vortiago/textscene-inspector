@@ -1,17 +1,18 @@
 ---
 type: GraphElement
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-graph-element.tscn
 # image: unit-graph-element
-renders_as: invisible transform-only fallback
+renders_as: an invisible container that fits its children into its own rect
 ---
 
 # GraphElement
 
 GraphElement is the abstract base for a Control placed inside a GraphEdit, behind
-GraphNode and GraphFrame. The previewer parses and validates it but does not draw it, so
-it renders as a transform-only fallback and its children still show.
+GraphNode and GraphFrame. It draws no chrome of its own — `graph_element.cpp` has no
+`NOTIFICATION_DRAW` case — but it IS a Container: it fits every visible child into its
+own full rect.
 
 ## Linting
 
@@ -38,6 +39,8 @@ Strict parsing format-checks these `GraphElement` properties, plus 53 inherited 
 <!-- lint:end -->
 
 All six of GraphElement's own members format-check as a plain `Vector2` or bool. The
-lenient parser reuses `parseControl` and reads none of them. `linter.ts` warns on
-`selected = true` beside `selectable = false`, since `set_selectable(false)` always
-deselects the element.
+lenient parser reads all six: `position_offset`/`resizable`/`draggable`/
+`selectable`/`scaling_menus` pass through as parsed, and `selected` is forced to
+`false` whenever `selectable = false` — `GraphElement::set_selectable`'s own
+unconditional `set_selected(false)`, matching the render behaviour, not just the
+linter's `graph-element-selected-not-selectable` warning above.

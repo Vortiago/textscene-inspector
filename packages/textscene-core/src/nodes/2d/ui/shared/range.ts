@@ -51,13 +51,31 @@ export const RANGE_DEFAULT_MAX = 100;
 /** `range.h:43`. */
 export const RANGE_DEFAULT_PAGE = 0;
 
+/**
+ * Per-subclass Range defaults the caller must supply, because `Range` itself
+ * records none.
+ *
+ * `step` is the one that bites: `_calc_value` snaps `value` to it, and each
+ * subclass sets its own in its constructor — measured from the engine
+ * (`ClassDB.class_get_property_default_value`, 4.6.3): HSlider, VSlider,
+ * SpinBox and TextureProgressBar 1.0, ProgressBar 0.01, the scrollbars 0.0
+ * (which disables the snap). Reading an absent `step` as "no snap" draws a
+ * slider at a value Godot never holds.
+ */
+export interface RangeDefaults {
+  step?: number;
+}
+
 /** Parse the `Range` properties out of a node's raw property map. */
-export function parseRange(properties: Record<string, string>): RangeProperties {
+export function parseRange(
+  properties: Record<string, string>,
+  defaults: RangeDefaults = {}
+): RangeProperties {
   return {
     value: parseOptionalFloat(properties.value),
     minValue: parseOptionalFloat(properties.min_value),
     maxValue: parseOptionalFloat(properties.max_value),
-    step: parseOptionalFloat(properties.step),
+    step: parseOptionalFloat(properties.step) ?? defaults.step,
     page: parseOptionalFloat(properties.page),
     expEdit: parseOptionalBool(properties.exp_edit),
     rounded: parseOptionalBool(properties.rounded),

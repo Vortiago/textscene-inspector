@@ -1,17 +1,19 @@
 ---
 type: Tree
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-tree.tscn
 # image: unit-tree
-renders_as: invisible transform-only fallback
+renders_as: an empty panel, with a blank header row when column_titles_visible
 ---
 
 # Tree
 
 Tree is the hierarchical multi-column list Control, built from TreeItem objects at
-runtime. The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+runtime. A `.tscn` Tree never carries any `TreeItem` — they, and every column's title
+text, exist only when a script creates them — so the previewer draws exactly the `panel`
+StyleBox plus, when `column_titles_visible`, one blank-titled header cell per column.
+That empty panel IS the whole truth of such a scene, not a limitation short of one.
 
 ## Linting
 
@@ -46,9 +48,12 @@ Strict parsing format-checks these `Tree` properties, plus 53 inherited from Con
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 16 of Tree's own members. There is no `parser.ts`,
-and `parseControl` reads none of these keys, so strict and lenient agree on every
-property. Rows and cells are created by script and never reach the `.tscn`.
+`linterParser.ts` format-checks all 16 of Tree's own members. The registered lenient
+parser reads 2 — `columns` and `column_titles_visible`, the only two this previewer's
+picture depends on. A malformed `columns` reads as unset (1); every other property is
+format-checked by the strict linter but never read here, since none of them changes what
+an item-less Tree draws. Rows and cells are created by script and never reach the
+`.tscn`.
 
 ## Known limitations
 

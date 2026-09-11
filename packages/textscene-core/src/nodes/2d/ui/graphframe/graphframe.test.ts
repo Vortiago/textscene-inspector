@@ -1,25 +1,14 @@
-/**
- * GraphFrame registration — parsed and validated, not yet rendered.
- *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
- */
+/** GraphFrame registration — parser wiring. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseControl } from '../control/parser';
+import { parseGraphFrame } from './parser';
 import './index';
 
 describe('GraphFrame registration', () => {
-  it('registers the Control base parser', () => {
+  it('registers its own parser', () => {
     const registration = nodeRegistry.getRegistration('GraphFrame');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseControl);
-  });
-
-  it('registers no render component, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.get('GraphFrame')).toBeUndefined();
+    expect(registration!.parser).toBe(parseGraphFrame);
   });
 });

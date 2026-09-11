@@ -18,8 +18,8 @@
  * (`has2DUIContent.ts`) is the existing mirror of "which types are genuinely
  * Control-ish"; this module reads it rather than keeping a second list.
  *
- * `generation` bumps whenever ANY scene/texture/theme/font-resource
- * load/failure lands on the bus, OR a runtime font's metrics settle — a
+ * `generation` bumps whenever ANY scene/texture/generic-resource/theme/font-
+ * resource load/failure lands on the bus, OR a runtime font's metrics settle — a
  * scene-authored one, or the bundled font's own `FontFace` registration
  * (`text/sceneFontLoader.ts`'s `onSceneFontMetricsSettled` — the SAME
  * mechanism, a second listener source rather than a second one: that module's
@@ -40,12 +40,15 @@ import { joinPath } from '../../../utils/nodePath';
 import {
   findSubResource,
   parseResourceReference,
+  resolveExtAtlasTexturePath,
   resolveInstancePath,
   resolveTexture2DPath,
+  unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
-import { inlineTexture2DSize } from '../../../resources/useTexture2D';
+import { extResourceAtlasTextureSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
@@ -56,6 +59,7 @@ import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
+import { controlSolverRegistry } from './solverRegistry';
 import type { SolveNode } from './solveTree';
 import {
   allocatePaintRange,
@@ -75,6 +79,7 @@ export interface UseBuildSolveTreeResult {
 
 const EMPTY_SCENE_CACHE: CachedSceneSource = { getCached: () => undefined };
 const NO_TEXTURE_CACHE = { getCached: (): THREE.Texture | null | undefined => undefined };
+const NO_RESOURCE_CACHE = { getCached: (): ParsedResource | null | undefined => undefined };
 const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => undefined };
 const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
@@ -110,6 +115,7 @@ interface ForestResult {
   tree: SolveNode[];
   pendingScenes: PendingScene[];
   pendingTextures: string[];
+  pendingResourceFiles: string[];
   pendingThemes: string[];
   pendingFonts: string[];
 }
@@ -133,6 +139,7 @@ function buildForest(
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
+  const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
 
@@ -140,6 +147,7 @@ function buildForest(
     ? { getCached: (p: string) => loader.scenes.getCached(p) }
     : EMPTY_SCENE_CACHE;
   const textureCache = loader ? { getCached: (p: string) => loader.textures.getCached(p) } : NO_TEXTURE_CACHE;
+  const resourceCache = loader ? { getCached: (p: string) => loader.resources.getCached(p) } : NO_RESOURCE_CACHE;
   const themeCache = loader ? { getCached: (p: string) => loader.themes.getCached(p) } : NO_THEME_CACHE;
   const fontCache: FontCacheReader = loader ? { getCached: (p: string) => loader.fonts.getCached(p) } : NO_FONT_CACHE;
 
@@ -215,20 +223,18 @@ function buildForest(
     return cached;
   })();
 
-  function resolveTextureSize(
-    node: TscnNode,
+  /**
+   * One Texture2D-valued ref -> its pixel size, or null until it is known.
+   * The ONE resolution both `resolveTextureSize`'s answers below run
+   * through — the generic single-slot `textureSize` and every entry of a
+   * registered type's `textureSlots` — so the two can never independently
+   * disagree about the same ref.
+   */
+  function resolveTextureRefSize(
+    ref: string,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[]
   ): Vec2 | null {
-    // Whichever single Texture2D-valued property this node's own type
-    // carries — TextureRect's `texture`, Button's (and its `Button`-family
-    // subclasses') `icon`. The two never coexist on one node type, so
-    // checking both generically here needs no per-type branch and leaves
-    // TextureRect's own resolution untouched.
-    const props = node.properties as Record<string, unknown>;
-    const ref = props.texture ?? props.icon;
-    if (typeof ref !== 'string' || ref === '') return null;
-
     // A texture whose size is written in the scene — an inline procedural one,
     // or a sheet cell whose region says how big it is — is known here and now:
     // no path, no cache, no pending load. This walk cannot call `useTexture2D`
@@ -236,6 +242,25 @@ function buildForest(
     // React-free answer of its own.
     const inline = inlineTexture2DSize(ref, int);
     if (inline) return inline;
+
+    // An AtlasTexture saved as its OWN `.tres` (every Kenney input-prompt
+    // icon ships this way) needs a load `inlineTexture2DSize` cannot make —
+    // routed through the RESOURCE bus, never the texture one, since the file
+    // is text (a cell's region), not pixels.
+    const unwrapped = unwrapCanvasTextureRef(ref, int);
+    const atlasTresPath = resolveExtAtlasTexturePath(unwrapped, ext);
+    if (atlasTresPath) {
+      const cachedTres = resourceCache.getCached(atlasTresPath);
+      if (cachedTres === undefined) {
+        pendingResourceFiles.add(atlasTresPath);
+        return null;
+      }
+      if (cachedTres === null) return null;
+      // The sheet's own size only matters for a region axis that rounds to
+      // zero (`atlasTextureLayout`'s own doc) — `inlineTexture2DSize` never
+      // fetches it for the inline form either, so this stays consistent.
+      return extResourceAtlasTextureSize(cachedTres, null);
+    }
 
     // `resolveTexture2DPath`, not `resolveExtResourcePath`: the painters resolve
     // the same property through it (`texturerect/Component.tsx`), so it
@@ -253,6 +278,45 @@ function buildForest(
     if (cached === null) return null;
     const image = cached.image as { width?: number; height?: number } | undefined;
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
+  }
+
+  /** `resolveTextureSize`'s answer for a node whose type never registers a `TextureSlotsFn`. */
+  const EMPTY_TEXTURE_SLOTS: Readonly<Record<string, Vec2 | null>> = {};
+
+  /**
+   * This node's `textureSize` (the single generic slot every unregistered
+   * type keeps — TextureRect's `texture`, Button's `icon`, never both on one
+   * type) and `textureSlots` (every slot a registered type's own
+   * `TextureSlotsFn` names — `TextureProgressBar`'s three layers,
+   * `TextureButton`'s draw-state textures, `RichTextLabel`'s embedded
+   * `[img]`s) — both built from `resolveTextureRefSize` above, never a
+   * second, independently-computed answer.
+   */
+  function resolveTextureSize(
+    node: TscnNode,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): { size: Vec2 | null; slots: Readonly<Record<string, Vec2 | null>> } {
+    const slotsFn = controlSolverRegistry.textureSlots(node.type);
+    if (slotsFn) {
+      const requests = slotsFn(node);
+      const slots: Record<string, Vec2 | null> = {};
+      for (const { key, ref } of requests) {
+        slots[key] = ref ? resolveTextureRefSize(ref, ext, int) : null;
+      }
+      // The FIRST registered request stands in for `textureSize` — matches
+      // Godot's own first-priority slot for every registering type today
+      // (`TextureButton`'s `texture_normal`), never re-derived independently.
+      const primaryKey = requests[0]?.key;
+      return { size: primaryKey !== undefined ? (slots[primaryKey] ?? null) : null, slots };
+    }
+
+    // No per-type registration: the single generic slot every other 2D-UI
+    // type carries at most one of.
+    const props = node.properties as Record<string, unknown>;
+    const ref = props.texture ?? props.icon;
+    const size = typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int) : null;
+    return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 
   /** A `y_sort_enabled` parent re-orders its children, so the behind/ahead split does not apply. */
@@ -359,6 +423,7 @@ function buildForest(
       }
 
       if (isControl) {
+        const texture = resolveTextureSize(collapsed, ownScope.externalResources, ownScope.internalResources);
         out.push({
           path,
           node: collapsed,
@@ -367,11 +432,8 @@ function buildForest(
           paintSequence: allocated.self,
           hidden: hiddenNodePaths.has(path),
           styleBoxes: resolveStyleBoxes(collapsed, ownScope.internalResources),
-          textureSize: resolveTextureSize(
-            collapsed,
-            ownScope.externalResources,
-            ownScope.internalResources
-          ),
+          textureSize: texture.size,
+          textureSlots: texture.slots,
           fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
           resources: ownScope,
           themeChain: nodeThemeChain,
@@ -397,6 +459,7 @@ function buildForest(
     tree,
     pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
+    pendingResourceFiles: [...pendingResourceFiles],
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
   };
@@ -428,6 +491,12 @@ export function useBuildSolveTree(
     loader.eventBus.on('scene', 'failed', bump);
     loader.eventBus.on('texture', 'loaded', bump);
     loader.eventBus.on('texture', 'failed', bump);
+    // An `ExtResource(AtlasTexture)` `.tres` completes on the RESOURCE bus,
+    // never the texture one — `resolveTextureRefSize`'s own doc — so a sibling
+    // subscription is required, or the first solve after such a load never
+    // re-runs.
+    loader.eventBus.on('resource', 'loaded', bump);
+    loader.eventBus.on('resource', 'failed', bump);
     loader.eventBus.on('theme', 'loaded', bump);
     loader.eventBus.on('theme', 'failed', bump);
     loader.eventBus.on('font', 'loaded', bump);
@@ -438,6 +507,8 @@ export function useBuildSolveTree(
       loader.eventBus.off('scene', 'failed', bump);
       loader.eventBus.off('texture', 'loaded', bump);
       loader.eventBus.off('texture', 'failed', bump);
+      loader.eventBus.off('resource', 'loaded', bump);
+      loader.eventBus.off('resource', 'failed', bump);
       loader.eventBus.off('theme', 'loaded', bump);
       loader.eventBus.off('theme', 'failed', bump);
       loader.eventBus.off('font', 'loaded', bump);
@@ -445,7 +516,7 @@ export function useBuildSolveTree(
     };
   }, [loader]);
 
-  const { tree, pendingScenes, pendingTextures, pendingThemes, pendingFonts } = useMemo(
+  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = useMemo(
     () =>
       buildForest(
         nodes,
@@ -456,10 +527,10 @@ export function useBuildSolveTree(
         hiddenNodePaths
       ),
     // `generation` is an intentional cache-buster: it increments each time a
-    // scene/texture/theme/font load or failure lands so the walk re-derives
-    // against the loader's now-different cache snapshot. Its value is not
-    // read inside the callback — mirrors `useLiveSceneTree.ts`'s identical
-    // `version` pattern.
+    // scene/texture/resource-file/theme/font load or failure lands so the
+    // walk re-derives against the loader's now-different cache snapshot. Its
+    // value is not read inside the callback — mirrors `useLiveSceneTree.ts`'s
+    // identical `version` pattern.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nodes, externalResources, internalResources, loader, projectThemeRef, hiddenNodePaths, generation]
   );
@@ -473,9 +544,10 @@ export function useBuildSolveTree(
       loader.scenes.request(pending.path);
     }
     for (const path of pendingTextures) loader.textures.request(path);
+    for (const path of pendingResourceFiles) loader.resources.request(path);
     for (const path of pendingThemes) loader.themes.request(path);
     for (const path of pendingFonts) loader.fonts.request(path);
-  }, [loader, pendingScenes, pendingTextures, pendingThemes, pendingFonts]);
+  }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts]);
 
   return { tree, generation };
 }

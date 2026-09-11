@@ -5,16 +5,23 @@
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { textureProgressBarMinimumSize, normalizeTextureProgressBarFillMode } from './nativeSolver';
+import {
+  textureProgressBarMinimumSize,
+  textureProgressBarTextureSlots,
+  normalizeTextureProgressBarFillMode,
+  TEXTURE_UNDER_KEY,
+  TEXTURE_PROGRESS_KEY,
+  TEXTURE_OVER_KEY,
+} from './nativeSolver';
 import type { TextureProgressBarProperties } from './types';
 
-function node(props: Partial<TextureProgressBarProperties>, internalResources: SolveNode['resources']['internalResources'] = []): SolveNode {
+function node(props: Partial<TextureProgressBarProperties>, textureSlots: SolveNode['textureSlots'] = {}): SolveNode {
   const base = emptySolveNode();
   return {
     ...base,
     path: 'T',
     node: { name: 'T', type: 'TextureProgressBar', children: [], properties: { name: 'T', ...props } as TextureProgressBarProperties },
-    resources: { ...base.resources, internalResources },
+    textureSlots,
   };
 }
 
@@ -34,17 +41,41 @@ describe('textureProgressBarMinimumSize (texture_progress_bar.cpp:81-97)', () =>
     ).toEqual({ x: 1, y: 1 });
   });
 
-  it('maxes the three texture slots\' own sizes when inline-resolvable (a GradientTexture2D SubResource)', () => {
-    const internalResources: SolveNode['resources']['internalResources'] = [
-      { id: '1', type: 'GradientTexture2D', data: { width: '40', height: '12' } },
-      { id: '2', type: 'GradientTexture2D', data: { width: '20', height: '30' } },
-    ];
+  it('maxes the three resolved texture slots\' own sizes (:86-96)', () => {
+    const n = node(
+      { textureUnder: 'SubResource("1")', textureOver: 'SubResource("2")' },
+      { [TEXTURE_UNDER_KEY]: { x: 40, y: 12 }, [TEXTURE_OVER_KEY]: { x: 20, y: 30 } }
+    );
     expect(
-      textureProgressBarMinimumSize(
-        node({ textureUnder: 'SubResource("1")', textureOver: 'SubResource("2")' }, internalResources),
-        { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null }
-      )
+      textureProgressBarMinimumSize(n, { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null })
     ).toEqual({ x: 40, y: 30 });
+  });
+
+  it('a slot authored but not yet resolved (null) does not contribute, and still floors to (1, 1)', () => {
+    const n = node({ textureProgress: 'ExtResource("1")' }, { [TEXTURE_PROGRESS_KEY]: null });
+    expect(
+      textureProgressBarMinimumSize(n, { theme: undefined as never, combinedMinimumSize: () => ({ x: 0, y: 0 }), measureText: null })
+    ).toEqual({ x: 1, y: 1 });
+  });
+});
+
+describe('textureProgressBarTextureSlots (texture_progress_bar.h:38-40)', () => {
+  it('requests every authored slot, keyed by its own Godot property name', () => {
+    const n = node({
+      textureUnder: 'ExtResource("1")',
+      textureProgress: 'ExtResource("2")',
+      textureOver: 'ExtResource("3")',
+    });
+    expect(textureProgressBarTextureSlots(n.node)).toEqual([
+      { key: TEXTURE_UNDER_KEY, ref: 'ExtResource("1")' },
+      { key: TEXTURE_PROGRESS_KEY, ref: 'ExtResource("2")' },
+      { key: TEXTURE_OVER_KEY, ref: 'ExtResource("3")' },
+    ]);
+  });
+
+  it('requests nothing for a node with no texture slots authored', () => {
+    const n = node({});
+    expect(textureProgressBarTextureSlots(n.node)).toEqual([]);
   });
 });
 

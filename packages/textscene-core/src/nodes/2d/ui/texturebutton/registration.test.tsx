@@ -12,7 +12,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { parseTextureButton } from './parser';
 import { TextureButton } from './Component';
-import { textureButtonMinimumSize } from './nativeSolver';
+import { textureButtonMinimumSize, textureButtonTextureSlots } from './nativeSolver';
 
 describe('TextureButton registration', () => {
   it('registers the parser under its type name', () => {
@@ -24,5 +24,6 @@ describe('TextureButton registration', () => {
   it('registers the native (WebGL) painter and rect solver', () => {
     expect(controlComponentRegistry.get('TextureButton')).toBe(TextureButton);
     expect(controlSolverRegistry.minimumSize('TextureButton')).toBe(textureButtonMinimumSize);
+    expect(controlSolverRegistry.textureSlots('TextureButton')).toBe(textureButtonTextureSlots);
   });
 });

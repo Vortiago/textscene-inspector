@@ -27,10 +27,10 @@ import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/tes
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
-function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
+function solveNode(path: string, properties: Record<string, unknown>, overrides: Partial<SolveNode> = {}): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'RichTextLabel', children: [], properties: { name, ...properties } };
-  return { ...emptySolveNode(), path, node: tscnNode };
+  return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
@@ -325,7 +325,12 @@ describe('<RichTextLabel> — [img]', () => {
     return tex;
   }
 
-  async function renderImage(text: string, textureSize: [number, number], rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 }) {
+  async function renderImage(
+    text: string,
+    textureSize: [number, number],
+    rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 },
+    overrides: Partial<SolveNode> = {}
+  ) {
     const fake = createFakeResourceLoader();
     fake.textures.seed(IMG, fakeTexture(...textureSize));
     const tree = (
@@ -333,7 +338,7 @@ describe('<RichTextLabel> — [img]', () => {
         <SceneResourcesProvider internalResources={[]} externalResources={[]}>
           <RichTextLabel
             {...painterEnv()}
-            solveNode={solveNode('RTL', { text, bbcodeEnabled: true })}
+            solveNode={solveNode('RTL', { text, bbcodeEnabled: true }, overrides)}
             rect={rect}
             renderOrder={5}
           />
@@ -357,9 +362,19 @@ describe('<RichTextLabel> — [img]', () => {
     return mesh!.instance as THREE.Mesh;
   }
 
-  it('draws no quad for an unauthored (natural-size) [img] — its size depends on the loaded texture, unavailable at solve time', async () => {
+  it('draws no quad for an unauthored (natural-size) [img] when the SOLVE has not carried its size onto textureSlots yet', async () => {
     const renderer = await renderImage(`[img]${IMG}[/img]`, [64, 64]);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws an unauthored (natural-size) [img] at the texture\'s own size, once buildSolveTree.ts carries it on textureSlots', async () => {
+    const renderer = await renderImage(`[img]${IMG}[/img]`, [64, 64], undefined, {
+      textureSlots: { [IMG]: { x: 64, y: 64 } },
+    });
+    const mesh = imageMeshOf(renderer);
+    const geometry = mesh.geometry as THREE.PlaneGeometry;
+    expect(geometry.parameters.width).toBe(64);
+    expect(geometry.parameters.height).toBe(64);
   });
 
   it('draws a quad sized to the authored width×height, regardless of the texture\'s own natural size', async () => {

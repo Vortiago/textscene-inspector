@@ -1,3 +1,10 @@
+; Three real buffer lines (one blank), a tab character, and highlight_current_line —
+; the render properties a plain TextEdit's own NOTIFICATION_DRAW carries that no
+; other Control fixture exercises. A missing row for the blank middle line is
+; invisible in a single-line fixture, and draw_tabs's icon overlay is invisible
+; without a literal tab in the text. syntax_highlighter is a real CodeHighlighter
+; SubResource, which the previewer parses but does not apply (it always paints at
+; font_color) — see comparison.md.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
@@ -11,9 +18,9 @@ anchor_bottom = 1.0
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 108.0
-offset_bottom = 40.0
-text = "Hello, World!"
+offset_right = 208.0
+offset_bottom = 110.0
+text = "Hello, World!\n\tTabbed line\n"
 placeholder_text = "Type here…"
 editable = true
 context_menu_enabled = true

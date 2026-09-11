@@ -1,17 +1,18 @@
 ---
 type: TextEdit
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-text-edit.tscn
 # image: unit-text-edit
-renders_as: invisible transform-only fallback
+renders_as: a multi-line text box
 ---
 
 # TextEdit
 
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
-parses and validates it but does not draw it, so it renders as a transform-only fallback
-and its children still show.
+draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
+`wrap_mode`/`autowrap_mode`, `highlight_current_line`'s row band, and the `draw_tabs`/
+`draw_spaces` control-character glyphs — a still frame with no caret, selection or IME.
 
 ## Linting
 
@@ -77,11 +78,29 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered base
-parser reuses `parseControl` unchanged and reads none of them, so strict and lenient
-agree on every key.
+`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered lenient
+parser reads 12 of them — `text`, `placeholder_text`, `editable`, `wrap_mode`,
+`autowrap_mode`, `draw_tabs`, `draw_spaces`, `highlight_current_line`,
+`scroll_fit_content_width`, `scroll_fit_content_height`, `minimap_draw`,
+`minimap_width` — the subset a static frame's picture depends on. A malformed
+`wrap_mode`/`autowrap_mode`/`minimap_width` reads as unset (NONE/WORD_SMART/80);
+a malformed boolean reads as `false`. `scroll_horizontal`/`scroll_vertical` are
+parsed by the strict linter but never read here: both are forced back to `(0, 0)`
+on the very first draw, since caret 0 always sits at (line 0, column 0) and
+nothing in a `.tscn` can move it (`nativeSolver.ts`'s own doc has the full trace).
 
 ## Known limitations
 
-- **Not drawn** Godot draws the editor and its text. The previewer draws nothing for
-  this node.
+- **Not drawn** No caret, selection, IME composition, brace-match underline,
+  word-highlight box, search-result box, minimap or scrollbars — every one needs
+  interaction state a static `.tscn` cannot carry, or (scrollbars) a Control type
+  that cannot itself appear in a `.tscn`.
+- **Not drawn** `syntax_highlighter` is parsed and its `CodeHighlighter` resource's
+  colour maps are real, but applying them means tokenizing `text` against those
+  rules — a lexer this previewer does not implement. Text always paints at the
+  plain `font_color`.
+- **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
+  at an unscaled size and a row-centred vertical offset, not Godot's own
+  ascent-relative one (`Component.tsx`'s own doc). A tab character's horizontal
+  advance is the shared text engine's average-glyph-width fallback, not Godot's
+  real tab-stop grid — the shared text engine has no notion of one.

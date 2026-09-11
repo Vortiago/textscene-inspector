@@ -61,6 +61,11 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // keys through.
   BoxContainer: '2d/ui/boxcontainer/parser.ts',
   SplitContainer: '2d/ui/splitcontainer/parser.ts',
+  // CodeEdit inherits the whole TextEdit surface, and GraphNode/GraphFrame the
+  // whole GraphElement one; without these hops every inherited read looks
+  // linter-only on the subclass.
+  TextEdit: '2d/ui/textedit/parser.ts',
+  GraphElement: '2d/ui/graphelement/parser.ts',
 };
 
 /**

@@ -33,7 +33,10 @@ export function parseScrollBar(
 ): ScrollBarProperties {
   return {
     ...parseControl(heading, properties),
-    ...parseRange(properties),
+    // HScrollBar and VScrollBar both set `step = 0.0`, which disables the snap — measured from the engine
+    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is NOT "no snap".
+    ...parseRange(properties, { step: 0 }),
     customStep: parseOptionalFloat(properties.custom_step),
   };
 }

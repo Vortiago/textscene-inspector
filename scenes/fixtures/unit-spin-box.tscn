@@ -5,13 +5,20 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-; Exercises SpinBox's own alignment/editable/prefix/suffix/custom_arrow_step/custom_arrow_round/select_all_on_focus/update_on_text_changed.
+; Exercises SpinBox's own alignment/editable/prefix/suffix/custom_arrow_step/custom_arrow_round/select_all_on_focus/update_on_text_changed,
+; plus a value off its own step grid: value=5.4 snaps to 5.5 under step=0.25
+; (Range::_calc_value), so the drawn text must read the SNAPPED value, never the
+; authored one.
 [node name="MySpinBox" type="SpinBox" parent="."]
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 108.0
 offset_bottom = 40.0
+min_value = 0.0
+max_value = 20.0
+step = 0.25
+value = 5.4
 alignment = 2
 editable = true
 prefix = "$"

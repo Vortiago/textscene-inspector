@@ -13,7 +13,10 @@ export function parseTextureProgressBar(
 ): TextureProgressBarProperties {
   return {
     ...parseControl(heading, properties),
-    ...parseRange(properties),
+    // TextureProgressBar sets `step = 1.0` in its constructor — measured from the engine
+    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is NOT "no snap".
+    ...parseRange(properties, { step: 1 }),
     fillMode: parseOptionalInt(properties.fill_mode),
     ninePatchStretch: parseOptionalBool(properties.nine_patch_stretch),
     radialCenterOffset: parseOptionalVector2(properties.radial_center_offset),

@@ -19,7 +19,7 @@
  * `has2DUIContent.driftguard.test.ts` exists for exactly that and owns it.
  */
 import { describe, expect, it } from 'vitest';
-// Side-effect import: registers all 43 Control slices' native painters, and
+// Side-effect import: registers all 60 Control slices' native painters, and
 // every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
 import { controlComponentRegistry } from '../index';
 import { parseBareNode } from '../testing/probeScene';
@@ -60,6 +60,17 @@ const CONTAINER_TYPES = new Set([
   'FlowContainer',
   'HFlowContainer',
   'VFlowContainer',
+  // `Container` itself is NOT here: `container.cpp` has no
+  // `NOTIFICATION_SORT_CHILDREN` arm, so a bare Container lays nothing out.
+  'TabContainer',
+  'FoldableContainer',
+  'GraphElement',
+  'GraphNode',
+  'GraphFrame',
+  // Places its children at their own `position_offset` through `scroll_offset`
+  // and `zoom` rather than fitting them, but it is still the parent that
+  // decides where they land.
+  'GraphEdit',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -72,12 +83,21 @@ function bareSolveNode(type: string): SolveNode {
 
 /**
  * Every Control type Godot's 2D UI needs, and the only ones this renderer
- * claims. Deliberately an absolute number rather than something derived: every
- * other check here compares the registry against a list that moves WITH it, so
- * a slice deleted from both sides would leave all of them green. Adding or
+ * claims: the 59 Control types `ClassDB.can_instantiate` accepts, plus
+ * `CanvasLayer`, which is a `Node` rather than a Control but roots a 2D UI
+ * subtree and so registers here alongside them.
+ *
+ * The six Control types NOT here cannot appear in a scene at all —
+ * `ScrollBar`, `Separator`, `Slider` and the three `OpenXR*Editor*` classes are
+ * registered abstract, and a GDScript cannot inherit from one either, so no
+ * scripted node serialises under their names.
+ *
+ * Deliberately an absolute number rather than something derived: every other
+ * check here compares the registry against a list that moves WITH it, so a
+ * slice deleted from both sides would leave all of them green. Adding or
  * removing a slice is always a deliberate act, so updating this is too.
  */
-const REGISTERED_CONTROL_TYPES = 43;
+const REGISTERED_CONTROL_TYPES = 60;
 
 describe('Native Control registry coverage', () => {
   it('registers every Control type the 2D UI needs', () => {

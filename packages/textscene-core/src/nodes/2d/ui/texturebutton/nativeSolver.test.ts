@@ -13,6 +13,10 @@ import {
   resolveTextureButtonSlot,
   textureButtonMinimumSize,
   textureButtonDraw,
+  textureButtonTextureSlots,
+  TEXTURE_NORMAL_KEY,
+  TEXTURE_PRESSED_KEY,
+  TEXTURE_HOVER_KEY,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -20,11 +24,14 @@ function ctx(): SolveContext {
   return { theme: nativeTheme(1), measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 }
 
-function node(props: Partial<TextureButtonProperties>, textureSize: { x: number; y: number } | null = null): SolveNode {
+function node(
+  props: Partial<TextureButtonProperties>,
+  textureSlots: SolveNode['textureSlots'] = {}
+): SolveNode {
   return {
     ...solveNode(),
     path: 'TB',
-    textureSize,
+    textureSlots,
     node: {
       name: 'TB',
       type: 'TextureButton',
@@ -80,19 +87,57 @@ describe('resolveTextureButtonSlot (texture_button.cpp:120-159)', () => {
 });
 
 describe('textureButtonMinimumSize (texture_button.cpp:31-52)', () => {
-  it('is (0, 0) when ignore_texture_size is true, even with a resolved texture size', () => {
-    const n = node({ ignoreTextureSize: true }, { x: 64, y: 24 });
+  it('is (0, 0) when ignore_texture_size is true, even with a resolved texture_normal size', () => {
+    const n = node({ ignoreTextureSize: true }, { [TEXTURE_NORMAL_KEY]: { x: 64, y: 24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
 
-  it('is (0, 0) when no texture size has resolved yet', () => {
-    const n = node({}, null);
+  it('is (0, 0) when no texture slot has resolved yet', () => {
+    const n = node({});
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
 
-  it('is the resolved texture size when present and not ignored', () => {
-    const n = node({}, { x: 64, y: 24 });
+  it('is texture_normal\'s own size when present (:35-36)', () => {
+    const n = node({}, { [TEXTURE_NORMAL_KEY]: { x: 64, y: 24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 64, y: 24 });
+  });
+
+  it('falls back to texture_pressed when texture_normal is unresolved (:37-45, is_null())', () => {
+    const n = node({}, { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: { x: 48, y: 18 } });
+    expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 48, y: 18 });
+  });
+
+  it('falls back to texture_hover when neither texture_normal nor texture_pressed has resolved (:38-42)', () => {
+    const n = node({}, { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: null, [TEXTURE_HOVER_KEY]: { x: 30, y: 12 } });
+    expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 30, y: 12 });
+  });
+
+  it('abs()es a negative resolved size (`rscale.abs()`, :51)', () => {
+    const n = node({}, { [TEXTURE_NORMAL_KEY]: { x: -64, y: -24 } });
+    expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 64, y: 24 });
+  });
+});
+
+describe('textureButtonTextureSlots (texture_button.cpp:38-55)', () => {
+  it('requests only the AUTHORED slots, in normal/pressed/hover cascade order', () => {
+    const n = node({ texturePressed: 'ExtResource("2")', textureHover: 'ExtResource("3")' });
+    expect(textureButtonTextureSlots(n.node)).toEqual([
+      { key: TEXTURE_PRESSED_KEY, ref: 'ExtResource("2")' },
+      { key: TEXTURE_HOVER_KEY, ref: 'ExtResource("3")' },
+    ]);
+  });
+
+  it('requests nothing for a node with none of the three set', () => {
+    const n = node({});
+    expect(textureButtonTextureSlots(n.node)).toEqual([]);
+  });
+
+  it('never requests texture_disabled/texture_focused/texture_click_mask — none affects get_minimum_size', () => {
+    const n = node({
+      textureDisabled: 'ExtResource("4")',
+      textureFocused: 'ExtResource("5")',
+    } as Partial<TextureButtonProperties>);
+    expect(textureButtonTextureSlots(n.node)).toEqual([]);
   });
 });
 

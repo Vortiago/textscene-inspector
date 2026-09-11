@@ -10,6 +10,7 @@
  */
 
 import { createTypeRegistry } from '../../../core/createTypeRegistry';
+import type { TscnNode } from '../../../parser/types';
 import type { Rect2, Vec2 } from './rect';
 import type { SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
@@ -158,11 +159,48 @@ export type ContainerLayoutFn = (
   ctx: SolveContext
 ) => ReadonlyMap<string, Rect2> | ContainerLayoutResult;
 
+/**
+ * One Texture2D-valued property a node's own type wants sized —
+ * `buildSolveTree.ts` resolves `ref` the SAME way for every request (inline,
+ * `.tres` AtlasTexture, or a loaded file), so a type opting into more than
+ * one slot can never see a different answer for the same ref than a type
+ * with only one.
+ */
+export interface TextureSlotRequest {
+  /**
+   * The key this request's resolved size answers under, in
+   * `SolveNode.textureSlots` — the registering slice's own choice: a Godot
+   * property name for a fixed slot (`TextureProgressBar`'s
+   * `texture_under`/`texture_progress`/`texture_over`), or the raw ref
+   * string itself for a request synthesized from parsed content
+   * (`RichTextLabel`'s embedded `[img]`s, one request per distinct ref).
+   */
+  key: string;
+  /** The raw Texture2D-valued property text — an `ExtResource(...)`/`SubResource(...)`/`res://` ref. */
+  ref: string;
+}
+
+/**
+ * Which Texture2D-valued slots a node's own type carries, given the LIVE
+ * (collapsed) node — a fixed list for most registering types, or content-
+ * derived (`RichTextLabel`'s `[img]` refs). "Which properties are
+ * Texture2D-valued" is a per-type fact, so this lives on the type's own
+ * slice, not as a central list `buildSolveTree.ts` would otherwise have to
+ * keep in sync with every Control type it walks.
+ *
+ * A type that never registers one keeps `buildSolveTree.ts`'s generic
+ * single-slot fallback (`texture` or `icon`, whichever it carries) — the
+ * SAME resolution, just against one implicit request instead of a
+ * registered list.
+ */
+export type TextureSlotsFn = (node: TscnNode) => readonly TextureSlotRequest[];
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
     'controlSolverRegistry.containerLayout'
   );
+  private readonly textureSlotFns = createTypeRegistry<TextureSlotsFn>('controlSolverRegistry.textureSlots');
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Set<string>();
 
@@ -211,6 +249,15 @@ class ControlSolverRegistry {
     this.containerLayoutFns.register(typeName, fn);
   }
 
+  registerTextureSlots(typeName: string, fn: TextureSlotsFn): void {
+    this.textureSlotFns.register(typeName, fn);
+  }
+
+  /** This type's own `TextureSlotsFn`, or `undefined` for a type that keeps the generic single-slot fallback (see `TextureSlotsFn`'s own doc). */
+  textureSlots(typeName: string): TextureSlotsFn | undefined {
+    return this.textureSlotFns.get(typeName);
+  }
+
   minimumSize(typeName: string): MinimumSizeFn | undefined {
     return this.minimumSizeFns.get(typeName);
   }
@@ -223,6 +270,7 @@ class ControlSolverRegistry {
   clear(): void {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
+    this.textureSlotFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

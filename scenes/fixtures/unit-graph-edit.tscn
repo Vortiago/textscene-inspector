@@ -10,6 +10,22 @@ anchor_bottom = 1.0
 ; minimap, and all six toolbar-menu toggles. `type_names` and `connections` are
 ; written on ONE line each on purpose: the strict parser skips multi-line values,
 ; so the wrapped form Godot saves would never reach their validators.
+;
+; Also exercises GraphEdit's OWN child placement — the one variable a
+; GraphNode-only fixture (unit-graph-node.tscn) cannot move: Source and Sink
+; sit at DIFFERENT position_offset values (not `offset_left`/`offset_top`,
+; which only size a GraphElement child once GraphEdit positions it), so a
+; regression that positions every child at the same spot, or that reads
+; offset_left/top as position again, is invisible in any single-node fixture
+; and only shows up once two children must land apart. Frame is a THIRD
+; sibling — never a parent of Source/Sink, per GraphFrame's own `_resort`,
+; which lays scene children into its OWN content rect and would collapse
+; position_offset entirely if Source/Sink were nested under it — whose
+; authored rect visually encloses both without GraphEdit's runtime-only
+; autoshrink ever running. Source/Sink each carry one `slot/0` (a right port
+; and a left port) over one child Label, so a regression in the port-icon
+; placement math (row y-center, `port_h_offset`) is visible here even though
+; unit-graph-node.tscn's own two slots already cover the slot geometry itself.
 
 [node name="MyGraphEdit" type="GraphEdit" parent="."]
 layout_mode = 1
@@ -43,11 +59,32 @@ show_grid_buttons = false
 show_minimap_button = false
 show_arrange_button = false
 
+[node name="Frame" type="GraphFrame" parent="MyGraphEdit"]
+offset_right = 360.0
+offset_bottom = 140.0
+position_offset = Vector2(20, 20)
+title = "Group"
+
 [node name="Source" type="GraphNode" parent="MyGraphEdit"]
 offset_right = 120.0
 offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+slot/0/right_enabled = true
+slot/0/right_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Value" type="Label" parent="MyGraphEdit/Source"]
+layout_mode = 2
+text = "Value"
 
 [node name="Sink" type="GraphNode" parent="MyGraphEdit"]
-offset_left = 200.0
-offset_right = 320.0
+offset_right = 120.0
 offset_bottom = 64.0
+position_offset = Vector2(220, 56)
+title = "Print"
+slot/0/left_enabled = true
+slot/0/left_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Result" type="Label" parent="MyGraphEdit/Sink"]
+layout_mode = 2
+text = "Result"

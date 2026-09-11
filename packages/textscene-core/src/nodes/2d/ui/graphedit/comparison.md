@@ -1,18 +1,19 @@
 ---
 type: GraphEdit
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-graph-edit.tscn
 # image: unit-graph-edit
-renders_as: invisible transform-only fallback
+renders_as: a background panel and grid, with GraphElement children placed by position_offset
 ---
 
 # GraphEdit
 
 GraphEdit is the scrollable, zoomable canvas for wiring GraphNodes together, with a
-grid, connection lines, a toolbar and a minimap. The previewer parses and validates it
-but does not draw it, so it renders as a transform-only fallback and its children still
-show.
+grid, connection lines, a toolbar and a minimap. The previewer draws the background
+panel and the grid (lines or dots, per `grid_pattern`/`snapping_distance`), and places
+every GraphElement child (`GraphNode`/`GraphFrame`) at
+`position_offset * zoom - scroll_offset`, matching `GraphEdit::_update_scroll_offset`.
 
 ## Linting
 
@@ -57,11 +58,22 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `valid-graphedit-zoom-limits` | `graphedit-zoom-min-above-max` | error |
 <!-- lint:end -->
 
-The lenient parser is `parseControl`, which has no field for any of the twenty-five
-GraphEdit members. A `snapping_distance = 500` that strict reports as an error reaches
-the lenient tree as nothing at all.
+The lenient parser reads the five members drawing needs — `scroll_offset`, `zoom`,
+`show_grid`, `grid_pattern`, `snapping_distance` — the same way the strict one does.
+The other twenty GraphEdit members (`type_names`, `connections`, the zoom/minimap/
+toolbar family) have no picture to draw (below), so the lenient tree carries none of
+them; a malformed one reaches the tree as nothing at all, same as before.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the grid, connections, toolbar and minimap. The previewer
-  draws nothing for this node.
+- **Not drawn** The toolbar (zoom controls, minimap, arrange button) is built from
+  internal children at a hardcoded runtime position with no scene-authored geometry
+  or content — only its six `show_*` visibility bools are real properties.
+- **Not drawn** Connection lines are not drawn. `connections` genuinely serialises
+  (`set_connections` runs at load time, not only interactively), but each endpoint's
+  pixel position comes from the referenced GraphNode's own slot rows — two levels of
+  children below what this painter can read from a sibling's solved geometry.
+- **Approximated** A GraphElement child's `position` scales correctly with `zoom`,
+  but its own drawn pixels do not — the previewer has no way to apply a
+  container-imposed scale to a child's chrome. Exact at `zoom = 1`; a child renders
+  at its unscaled size at any other zoom.

@@ -27,10 +27,34 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import type { TscnNode } from '../../../../parser/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import type { MinimumSizeFn, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
+
+// --- Which Texture2D slots this type carries (`buildSolveTree.ts`'s texture-size resolution) ---
+
+/** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
+export const TEXTURE_NORMAL_KEY = 'texture_normal';
+export const TEXTURE_PRESSED_KEY = 'texture_pressed';
+export const TEXTURE_HOVER_KEY = 'texture_hover';
+
+/**
+ * `TextureButton::get_minimum_size`'s own three Texture2D reads
+ * (`texture_button.cpp:38-55`) — `texture_click_mask` is a `BitMap`, not a
+ * Texture2D (`texture_button.h:55`), so it is out of this mechanism's reach
+ * entirely; `texture_disabled`/`texture_focused` never affect minimum size at
+ * all (Component.tsx resolves them directly, for painting only).
+ */
+export const textureButtonTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+  const props = node.properties as TextureButtonProperties;
+  const requests: TextureSlotRequest[] = [];
+  if (props.textureNormal) requests.push({ key: TEXTURE_NORMAL_KEY, ref: props.textureNormal });
+  if (props.texturePressed) requests.push({ key: TEXTURE_PRESSED_KEY, ref: props.texturePressed });
+  if (props.textureHover) requests.push({ key: TEXTURE_HOVER_KEY, ref: props.textureHover });
+  return requests;
+};
 
 // --- Draw state + texture selection --------------------------------------------
 
@@ -84,21 +108,21 @@ export function resolveTextureButtonSlot(
  * `TextureButton::get_minimum_size` (`texture_button.cpp:31-52`):
  * `texture_normal` -> `texture_pressed` -> `texture_hover` ->
  * `texture_click_mask` -> `(0, 0)`, or unconditionally `(0, 0)` when
- * `ignore_texture_size` is set. `n.textureSize` tracks only ONE texture
- * property per node (`buildSolveTree.ts`'s `resolveTextureSize`, which reads
- * `props.texture ?? props.icon`) — TextureButton has FIVE, and none is named
- * either of those keys, so `n.textureSize` is `null` for every TextureButton
- * node until `buildSolveTree.ts` (orchestrator-owned, outside this slice) is
- * extended to also check `textureNormal`. This function assumes it WILL be,
- * i.e. that `n.textureSize` carries `texture_normal`'s own size (Godot's own
- * first-priority slot) — the `texture_pressed`/`texture_hover`/
- * `texture_click_mask` fallback rungs are not modelled.
+ * `ignore_texture_size` is set. The three Texture2D rungs read
+ * `n.textureSlots` (`textureButtonTextureSlots`'s own registration); a
+ * `null` entry (authored but not yet loaded) falls through to the NEXT rung
+ * exactly as `Ref<Texture2D>::is_null()` would if the load had already
+ * failed — the previewer's own async load settling later bumps `generation`
+ * and re-solves, converging on the true cascade once it lands. The
+ * `texture_click_mask` rung is not modelled: `Ref<BitMap>`, not a
+ * Texture2D-valued slot this mechanism resolves at all.
  */
 export const textureButtonMinimumSize: MinimumSizeFn = (n, _ctx) => {
   const props = n.node.properties as TextureButtonProperties;
   if (props.ignoreTextureSize) return { x: 0, y: 0 };
-  if (!n.textureSize) return { x: 0, y: 0 };
-  return { x: Math.abs(n.textureSize.x), y: Math.abs(n.textureSize.y) };
+  const size = n.textureSlots[TEXTURE_NORMAL_KEY] ?? n.textureSlots[TEXTURE_PRESSED_KEY] ?? n.textureSlots[TEXTURE_HOVER_KEY];
+  if (!size) return { x: 0, y: 0 };
+  return { x: Math.abs(size.x), y: Math.abs(size.y) };
 };
 
 // --- stretch_mode: draw rect --------------------------------------------------

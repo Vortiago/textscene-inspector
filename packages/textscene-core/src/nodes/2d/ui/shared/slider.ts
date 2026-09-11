@@ -37,7 +37,10 @@ export function parseSlider(
 ): SliderProperties {
   return {
     ...parseControl(heading, properties),
-    ...parseRange(properties),
+    // HSlider and VSlider both set `step = 1.0` in their constructors — measured from the engine
+    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is NOT "no snap".
+    ...parseRange(properties, { step: 1 }),
     tickCount: parseOptionalInt(properties.tick_count),
     ticksOnBorders: parseOptionalBool(properties.ticks_on_borders),
     editable: parseOptionalBool(properties.editable),

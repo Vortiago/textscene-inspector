@@ -1,19 +1,15 @@
-/**
- * ItemList registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
- */
+/** ItemList registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseItemList } from './parser';
 
 const itemListRegistration: NodeTypeRegistration = {
   typeName: 'ItemList',
-  parser: parseControl,
+  parser: parseItemList,
 };
 
 nodeRegistry.register(itemListRegistration);
 
 export { itemListRegistration };
+export * from './parser';
+export * from './types';

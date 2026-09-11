@@ -179,6 +179,7 @@ function ViewportSurfaceNative({
       hidden: false,
       styleBoxes: {},
       textureSize: null,
+      textureSlots: {},
       // This synthetic root stands in for the SubViewport itself (never a
       // real Control `buildSolveTree.ts` walked), so it carries no theme of
       // its own to inherit — matching what that walker would produce for a

@@ -43,6 +43,38 @@ describe('parseRange', () => {
   });
 });
 
+describe('the step default is the SUBCLASS\'s, not Range\'s', () => {
+  /**
+   * `Range` itself records no default at all; each subclass sets its own in its
+   * constructor, and `_calc_value` snaps to whatever that is. Measured from the
+   * engine (`ClassDB.class_get_property_default_value`, Godot 4.6.3): HSlider,
+   * VSlider, SpinBox and TextureProgressBar are 1.0, ProgressBar is 0.01, and
+   * the scrollbars are 0.0 — which disables the snap entirely.
+   *
+   * So a scene that omits `step` does NOT skip snapping, and reading the key as
+   * "absent means no snap" draws an HSlider at a value Godot never holds.
+   */
+  it('takes the caller\'s default when the scene omits step', () => {
+    expect(parseRange({}, { step: 1 }).step).toBe(1);
+    expect(parseRange({}, { step: 0.01 }).step).toBe(0.01);
+    expect(parseRange({}, { step: 0 }).step).toBe(0);
+  });
+
+  it('lets an authored step win over the default', () => {
+    expect(parseRange({ step: '5' }, { step: 1 }).step).toBe(5);
+  });
+
+  it('leaves step unset when the caller names no default', () => {
+    expect(parseRange({}).step).toBeUndefined();
+  });
+
+  // A slider authoring no step still snaps, because its own default is 1.0.
+  it('snaps an unauthored slider value to the subclass default', () => {
+    const props = parseRange({ value: '23.7' }, { step: 1 });
+    expect(resolveRangeValue(props, undefined)).toBe(24);
+  });
+});
+
 describe('Range::_calc_value gates (range.cpp:182-200)', () => {
   // `if (!shared->allow_lesser && p_val < shared->min)` (`:197-199`) — the
   // clamp is CONDITIONAL, so an authored value below min survives.

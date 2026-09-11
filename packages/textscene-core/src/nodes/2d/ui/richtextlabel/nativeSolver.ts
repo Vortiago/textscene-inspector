@@ -13,7 +13,13 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { TscnNode } from '../../../../parser/types';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
@@ -78,33 +84,77 @@ export function richTextLabelTextTheme(
 // --- [img]: size, and threading its own width through the shared shaper ---
 
 /**
- * `RichTextLabel::_get_image_size` (`rich_text_label.cpp:4120-4155`), the
- * THREE branches that need no more than `widthPx`/`heightPx`/`region` — every
- * branch reading `p_image->get_width()`/`get_height()` (the texture's own
- * natural pixel size, to preserve aspect with only ONE dimension authored and
- * no region) is out of reach here: `SolveContext` has no texture cache (see
- * `richtextlabel/comparison.md`'s own limitations entry), unlike
- * `TextureRect`'s single-slot `SolveNode.textureSize`, which has nowhere to
- * carry a PER-IMAGE size for the arbitrarily many `[img]`s one paragraph's
- * text can name. `null` there, same as `null` for width/height both unset
- * with no region (`p_image->get_size()`'s own branch) — a caller treats
- * either as "this image cannot be sized here" and drops the run rather than
- * reserving a wrong box.
+ * `RichTextLabel::_get_image_size` (`rich_text_label.cpp:4120-4155`), all six
+ * branches. The three reading `p_image->get_width()`/`get_height()` (the
+ * texture's own natural pixel size, to preserve aspect with only ONE
+ * dimension authored, or when neither is and there is no region) take it as
+ * `naturalSize` — `SolveNode.textureSlots[run.image.path]`
+ * (`richTextLabelTextureSlots`'s own registration), keyed by the SAME raw ref
+ * `styledTextRuns` reads back off the SAME parsed run. `null`/`undefined`
+ * there (not yet resolved, or a slot this node's own `TextureSlotsFn` never
+ * requested because a region/both-dimensions made it unneeded) gives the same
+ * "cannot be sized here" outcome as before: the caller drops the run rather
+ * than reserving a wrong box.
  */
-export function imageSizePx(widthPx: number, heightPx: number, region: ParsedImageRegion | undefined): Vec2 | null {
+export function imageSizePx(
+  widthPx: number,
+  heightPx: number,
+  region: ParsedImageRegion | undefined,
+  naturalSize?: Vec2 | null
+): Vec2 | null {
   const hasRegion = region !== undefined && region.w > 0 && region.h > 0; // Rect2::has_area().
   if (widthPx > 0) {
     if (heightPx > 0) return { x: widthPx, y: heightPx };
     if (hasRegion) return { x: widthPx, y: (region!.h * widthPx) / region!.w };
+    if (naturalSize && naturalSize.x > 0) return { x: widthPx, y: (naturalSize.y * widthPx) / naturalSize.x };
     return null;
   }
   if (heightPx > 0) {
     if (hasRegion) return { x: (region!.w * heightPx) / region!.h, y: heightPx };
+    if (naturalSize && naturalSize.y > 0) return { x: (naturalSize.x * heightPx) / naturalSize.y, y: heightPx };
     return null;
   }
   if (hasRegion) return { x: region!.w, y: region!.h };
+  if (naturalSize) return { x: naturalSize.x, y: naturalSize.y };
   return null;
 }
+
+/**
+ * Whether `_get_image_size` would ever touch `p_image->get_width()`/
+ * `get_height()` for this tag — `imageSizePx`'s own branches: never once a
+ * `region=` is authored (every branch with a region reads IT, not the
+ * texture), and never with both dimensions authored (the first branch
+ * returns before either is touched). Percent-vs-pixel is irrelevant here: a
+ * `width_in_percent` amount still counts as "authored" for this question,
+ * even though its RESOLVED pixel value depends on a box width this walk does
+ * not have.
+ */
+function imageNeedsNaturalSize(tag: ParsedImgTag): boolean {
+  const hasRegion = tag.region !== undefined && tag.region.w > 0 && tag.region.h > 0;
+  if (hasRegion) return false;
+  return !(tag.width > 0 && tag.height > 0);
+}
+
+/**
+ * The `[img]` refs THIS node's own parsed BBCode needs the natural pixel size
+ * of (`imageNeedsNaturalSize`) — keyed by the raw ref itself, so
+ * `styledTextRuns` reads the SAME key back off `SolveNode.textureSlots` for
+ * the SAME run. `bbcode_enabled = false` or an empty `text` parses no `[img]`
+ * tags at all, so both return no requests.
+ */
+export const richTextLabelTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+  const props = node.properties as RichTextLabelProperties;
+  if (!props.bbcodeEnabled || !props.text) return [];
+  const seen = new Set<string>();
+  const requests: TextureSlotRequest[] = [];
+  for (const run of parseBBCodeRuns(props.text)) {
+    const tag = run.image;
+    if (!tag || !tag.path || seen.has(tag.path) || !imageNeedsNaturalSize(tag)) continue;
+    seen.add(tag.path);
+    requests.push({ key: tag.path, ref: tag.path });
+  }
+  return requests;
+};
 
 /**
  * `img->width_in_percent`/`height_in_percent` (`rich_text_label.cpp:503-506`)
@@ -510,7 +560,7 @@ export function styledTextRuns(
     if (run.image) {
       const widthPx = resolveImageDimension(run.image.width, run.image.widthInPercent, boxWidthPx);
       const heightPx = resolveImageDimension(run.image.height, run.image.heightInPercent, boxWidthPx);
-      const sizePx = imageSizePx(widthPx, heightPx, run.image.region);
+      const sizePx = imageSizePx(widthPx, heightPx, run.image.region, n.textureSlots[run.image.path]);
       if (!sizePx) continue; // Unresolvable here — see this function's own doc.
       styled.push({
         text: run.text,
