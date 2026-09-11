@@ -59,8 +59,8 @@ import {
   COLOR_PICKER_CURSOR_ICON,
   COLOR_PICKER_CURSOR_SIZE,
   COLOR_PICKER_OVERBRIGHT_ICON,
-  isColorOverbright,
-} from '../shared/colorPickerIcons';
+} from '../../../../r3f/controls/native/themeIcons';
+import { isColorOverbright } from '../shared/colorOverbright';
 import {
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
   colorPickerRows,

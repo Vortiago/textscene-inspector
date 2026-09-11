@@ -16,16 +16,11 @@
  * `.tscn` either and is not modelled, matching `MenuBar`'s own per-item
  * `menu_cache` gap.
  *
- * TWO GENUINE SCALE-1-ONLY LITERALS. `nativeTheme.ts` (orchestrator-owned)
- * exposes only PRE-ROUNDED per-metric numbers (`ScaledGodotTheme`'s own doc:
- * "Rounding therefore happens per metric, never once on the scale"), never
- * the raw `gui/theme/default_theme_scale` value itself, and carries no
- * `"FoldableContainer"` entry of its own to add one to (that file is outside
- * this slice). `FOLDABLE_CONTAINER_H_SEPARATION` (`Math::round(2 * scale)`,
- * `default_theme.cpp:1336`) and `FOLDABLE_CONTAINER_ARROW_SIZE` (the arrow
- * icons' own 16x16 authored size, rasterised through `generate_icon(...,
- * scale)`) are therefore the scale=1 values only — exact at the project
- * default, wrong by a rounding step at any other `default_theme_scale`.
+ * `foldableContainerHSeparation`/`foldableContainerArrowSize` below compute
+ * `Math::round(2 * scale)` (`default_theme.cpp:1336`) and the arrow icons' own
+ * 16x16 authored size scaled the same way `generate_icon(..., scale)`
+ * rasterises them, off `ScaledGodotTheme.scale` — the raw, unrounded project
+ * `gui/theme/default_theme_scale`.
  *
  * `_draw_flippable_stylebox`'s vertical-flip transform for `POSITION_BOTTOM`
  * (`:523-532`) is not reproduced as a transform: its NET EFFECT is simply
@@ -62,11 +57,16 @@ import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 /** `SceneStringName(font)`/`"font_size"` — FoldableContainer's own theme font keys (`foldable_container.cpp:568-569`). */
 export const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
 
-/** `Math::round(2 * scale)` at scale 1 (`default_theme.cpp:1336`) — see module doc's scale-1-only note. */
-export const FOLDABLE_CONTAINER_H_SEPARATION = 2;
+/** `Math::round(2 * scale)` (`default_theme.cpp:1336`). */
+export function foldableContainerHSeparation(theme: NativeTheme): number {
+  return Math.round(2 * theme.scale);
+}
 
-/** The arrow icons' own authored size, scale 1 (`scene/theme/icons/arrow_*.svg`) — see module doc's scale-1-only note. */
-export const FOLDABLE_CONTAINER_ARROW_SIZE: Vec2 = { x: 16, y: 16 };
+/** The arrow icons' own 16x16 authored size (`scene/theme/icons/arrow_*.svg`), scaled the way `generate_icon(..., scale)` rasterises it — same shape as `ScaledGodotTheme.sliderGrabberSize`. */
+export function foldableContainerArrowSize(theme: NativeTheme): Vec2 {
+  const size = Math.round(16 * theme.scale);
+  return { x: size, y: size };
+}
 
 /** `control_font_color` (`default_theme.cpp:101`) — FoldableContainer's own `font_color` default (`:1324`). */
 const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
@@ -229,21 +229,22 @@ export function foldableContainerTitleMetrics(
       ? shapeText(title, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
       : null;
 
+  const arrowSize = foldableContainerArrowSize(ctx.theme);
   const titleMargin = contentMarginSize(titleStyle);
-  let width = titleMargin.x + FOLDABLE_CONTAINER_ARROW_SIZE.x;
+  let width = titleMargin.x + arrowSize.x;
   let height = titleMargin.y;
 
   if (hasTitle) {
-    width += FOLDABLE_CONTAINER_H_SEPARATION;
+    width += foldableContainerHSeparation(ctx.theme);
     const textHeight = layout ? layout.heightPx : 0;
-    height += Math.max(textHeight, FOLDABLE_CONTAINER_ARROW_SIZE.y);
+    height += Math.max(textHeight, arrowSize.y);
     // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING (0) adds the text's
     // own width — any trimming mode leaves the title bar sized to the arrow alone.
     if (overrunBehavior === 0 && layout) {
       width += shapedTextSizeWidthPx(layout.widthPx);
     }
   } else {
-    height += FOLDABLE_CONTAINER_ARROW_SIZE.y;
+    height += arrowSize.y;
   }
 
   return { folded, titlePosition, titleStyle, panelStyle, arrow, fontSizePx, color, layout, size: { x: width, y: height } };

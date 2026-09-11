@@ -28,9 +28,3 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 <!-- lint:end -->
 
 VSeparator declares no property of its own, and `index.ts` reuses `parseControl` unchanged. The two theme overrides are Control's generic `theme_override_*` wildcards, so strict and lenient parsing agree on every key here.
-
-## Known limitations
-
-- **Approximated** The separator line's thickness is pinned at 1px
-  (`set_thickness(Math::round(scale))`); a project with a non-default
-  `gui/theme/default_theme_scale` draws it too thin.

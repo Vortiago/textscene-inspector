@@ -10,7 +10,10 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
 import { sRGBChannelToLinear } from '../../../utils/colorSpace';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -212,6 +215,144 @@ describe('<StyleBoxQuad>', () => {
       const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
       expect(color.getW(0)).toBeCloseTo(0.4, 5);
+    });
+  });
+
+  describe('line StyleBox kind', () => {
+    function lineBox(overrides: Partial<StyleBoxLineBox['line']> = {}): StyleBoxLineBox {
+      return {
+        ...box({}),
+        styleBoxKind: 'line',
+        line: {
+          color: { r: 0, g: 1, b: 0, a: 1 },
+          thickness: 4,
+          vertical: false,
+          growBegin: 0,
+          growEnd: 0,
+          margin: { left: 0, top: 0, right: 0, bottom: 0 },
+          ...overrides,
+        },
+      };
+    }
+
+    it("draws a solid rect at StyleBoxLine::draw's own grow/thicken rect, coloured by the line's own colour", async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad styleBox={lineBox()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+      );
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      geom.computeBoundingBox();
+      const bb = geom.boundingBox!;
+      expect(bb.min.x).toBeCloseTo(0);
+      expect(bb.max.x).toBeCloseTo(100);
+      expect(bb.min.y).toBeCloseTo(0);
+      expect(bb.max.y).toBeCloseTo(4);
+
+      const color = geom.attributes.color as THREE.BufferAttribute;
+      expect(color.getX(0)).toBeCloseTo(0, 5);
+      expect(color.getY(0)).toBeCloseTo(1, 5);
+      expect(color.getZ(0)).toBeCloseTo(0, 5);
+    });
+
+    it('grows the rect by grow_begin/grow_end, independent of the rect it is handed', async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad
+          styleBox={lineBox({ growBegin: 2, growEnd: 3 })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          renderOrder={0}
+        />
+      );
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      geom.computeBoundingBox();
+      const bb = geom.boundingBox!;
+      // x -= growBegin (2); w += growBegin + growEnd (2 + 3 = 5) → 100 - 2 + 5 = 103.
+      expect(bb.min.x).toBeCloseTo(-2);
+      expect(bb.max.x).toBeCloseTo(103);
+    });
+
+    it('composes the CanvasItem tint into the line colour, in raw sRGB', async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <StyleBoxQuad
+          styleBox={lineBox({ color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })}
+          rect={{ x: 0, y: 0, w: 100, h: 50 }}
+          color={{ r: 0.5, g: 0.5, b: 0.5, a: 1 }}
+          renderOrder={0}
+        />
+      );
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      const color = geom.attributes.color as THREE.BufferAttribute;
+      expect(color.getX(0)).toBeCloseTo(0.25, 5);
+    });
+  });
+
+  describe('texture StyleBox kind', () => {
+    const TEX = 'res://stylebox-quad-test.png';
+    const SCOPE = { externalResources: [{ id: '1', type: 'Texture2D', path: TEX }], internalResources: [] };
+
+    function textureBox(overrides: Partial<StyleBoxTextureBox['texture']> = {}): StyleBoxTextureBox {
+      return {
+        ...box({}),
+        styleBoxKind: 'texture',
+        texture: {
+          texture: 'ExtResource("1")',
+          resources: SCOPE,
+          margin: { left: 0, top: 0, right: 0, bottom: 0 },
+          contentMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+          expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+          regionRect: undefined,
+          axisStretchHorizontal: 0,
+          axisStretchVertical: 0,
+          drawCenter: true,
+          modulateColor: { r: 1, g: 1, b: 1, a: 1 },
+          ...overrides,
+        },
+      };
+    }
+
+    function fakeTexture(): THREE.Texture {
+      const tex = new THREE.Texture();
+      (tex as unknown as { image: { width: number; height: number } }).image = { width: 20, height: 20 };
+      return tex;
+    }
+
+    it("draws a textured nine-patch mesh once the box's texture resolves", async () => {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(TEX, fakeTexture());
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <StyleBoxQuad styleBox={textureBox()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+        </ResourceLoaderProvider>
+      );
+      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+      const mat = mesh.material as THREE.MeshBasicMaterial;
+      expect(mat.map).toBeTruthy();
+      expect(mesh.geometry.attributes.uv).toBeTruthy();
+    });
+
+    it('grows the drawn rect by expand_margin (StyleBoxTexture::draw)', async () => {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(TEX, fakeTexture());
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <StyleBoxQuad
+            styleBox={textureBox({ expandMargin: { left: 5, top: 0, right: 0, bottom: 0 } })}
+            rect={{ x: 0, y: 0, w: 100, h: 50 }}
+            renderOrder={0}
+          />
+        </ResourceLoaderProvider>
+      );
+      const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+      geom.computeBoundingBox();
+      expect(geom.boundingBox!.min.x).toBeCloseTo(-5);
+    });
+
+    it('renders nothing while the texture has not resolved yet', async () => {
+      const fake = createFakeResourceLoader();
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <StyleBoxQuad styleBox={textureBox()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
+        </ResourceLoaderProvider>
+      );
+      expect(() => renderer.scene.findByType('Mesh')).toThrow();
     });
   });
 });

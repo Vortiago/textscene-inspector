@@ -2,9 +2,9 @@
  * `TextureProgressBar::draw_nine_patch_stretched` (`texture_progress_bar.cpp:
  * 257-425`) — the source/dest rects and margins a partial nine-patch draw
  * needs, stopping short of the actual `RS::canvas_item_add_nine_patch` call
- * (`ninePatchGeometry`, `../ninepatchrect/ninePatchGeometry.ts`, turns these
- * into quads — see that module's own doc: it is written to take exactly this
- * shape of input, not a NinePatchRect-specific one).
+ * (`ninePatchGeometry`, `r3f/controls/native/ninePatchGeometry.ts`, turns
+ * these into quads — see that module's own doc: it is written to take
+ * exactly this shape of input, not a NinePatchRect-specific one).
  *
  * `Texture2D::get_rect_region` (`:424`) is not modelled: it is an identity
  * pass-through for every texture but `AtlasTexture` (`scene/resources/

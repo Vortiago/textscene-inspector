@@ -50,13 +50,13 @@ import {
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
-  FOLDABLE_CONTAINER_ARROW_SIZE,
-  FOLDABLE_CONTAINER_H_SEPARATION,
+  foldableContainerArrowSize,
+  foldableContainerHSeparation,
   foldableContainerTitleMetrics,
   type FoldableContainerArrow,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
-import { FOLDABLE_CONTAINER_ICONS } from './icons';
+import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
 
 function isFoldableContainerTitleMetrics(meta: unknown): meta is FoldableContainerTitleMetrics {
@@ -84,6 +84,8 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
   const clippingPlanes = useControlClipPlanes();
   const iconTexture = useIconTexture(ARROW_ICON_URL[title.arrow]);
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
+  const arrowSize = foldableContainerArrowSize(theme);
+  const hSeparation = foldableContainerHSeparation(theme);
 
   const titleMargin = title.titleStyle.contentMargin;
   const titleMarginSize = contentMarginSize(title.titleStyle);
@@ -102,10 +104,10 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
 
   const textHeight = title.layout ? title.layout.heightPx : 0;
   const textTopExtra = Math.max((title.size.y - titleMarginSize.y - textHeight) * 0.5, 0);
-  const iconTopExtra = Math.max((title.size.y - titleMarginSize.y - FOLDABLE_CONTAINER_ARROW_SIZE.y) * 0.5, 0);
+  const iconTopExtra = Math.max((title.size.y - titleMarginSize.y - arrowSize.y) * 0.5, 0);
 
   const iconPos = { x: titleMargin.left, y: iconTopExtra + titleStyleOfs };
-  const titleTextWidth = rect.w - titleMarginSize.x - FOLDABLE_CONTAINER_ARROW_SIZE.x - FOLDABLE_CONTAINER_H_SEPARATION;
+  const titleTextWidth = rect.w - titleMarginSize.x - arrowSize.x - hSeparation;
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`);
@@ -121,7 +123,7 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
         : 0;
 
   const textPos = {
-    x: titleMargin.left + FOLDABLE_CONTAINER_ARROW_SIZE.x + FOLDABLE_CONTAINER_H_SEPARATION + alignmentShift,
+    x: titleMargin.left + arrowSize.x + hSeparation + alignmentShift,
     y: titleStyleOfs + textTopExtra,
   };
 
@@ -138,8 +140,8 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
       <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={FOLDABLE_CONTAINER_ARROW_SIZE.x}
-          height={FOLDABLE_CONTAINER_ARROW_SIZE.y}
+          width={arrowSize.x}
+          height={arrowSize.y}
           color={tint.color}
           opacity={tint.opacity}
           map={iconTexture}

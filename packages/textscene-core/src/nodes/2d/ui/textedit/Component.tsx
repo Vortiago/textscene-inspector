@@ -28,8 +28,8 @@
  * `text_edit.cpp:1711-1718`'s own `yofs`/`xofs` are relative to a per-row
  * `line_ascent` this codebase's row model does not carry separately from the
  * row's own pitch, and the icon's own on-screen size does not scale with the
- * project theme scale (`glyphIcons.ts`'s own doc — no raw scale reaches this
- * slice). Each icon is centred vertically within its row band instead, and a
+ * project theme scale (`GLYPH_ICON_SIZE_PX`'s own doc below — no raw scale
+ * reaches this slice). Each icon is centred vertically within its row band instead, and a
  * SPACE icon centred on its own glyph advance (matching Godot's own `xofs`
  * intent exactly); a TAB icon is placed flush at its glyph's pen x (also
  * matching Godot, which applies no horizontal offset to it either).
@@ -76,7 +76,7 @@ import {
   layoutTextEditDrawBand,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
-import { TEXT_EDIT_GLYPH_ICONS } from './glyphIcons';
+import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
 
 /** `text_edit_tab.svg`/`text_edit_space.svg`'s own authored size — unscaled (this slice has no raw project-theme-scale value to rasterise against, unlike Godot's `generate_icon`). */

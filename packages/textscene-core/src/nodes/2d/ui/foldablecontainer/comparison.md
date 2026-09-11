@@ -53,6 +53,3 @@ default (LEFT / TOP / no trimming) applies.
   not modelled: only its NO_TRIMMING-ness changes the title bar's own minimum width. The
   title text itself always draws at its full shaped width, matching Label's own
   `text_overrun_behavior` gap.
-- **Approximated** The arrow icons' 16x16 size and `h_separation` (2px) are pinned at
-  the default `gui/theme/default_theme_scale`; a project with a non-default scale draws
-  both too small or too large.

@@ -50,9 +50,6 @@ with no substitution.
 - **Not drawn** `text_overrun_behavior`'s character trimming/ellipsis — the label
   always draws its full text; only its effect on the minimum size (zero width unless
   `NO_TRIMMING`) is modelled.
-- **Approximated** The `underline_spacing` theme constant (`round(2*scale)`) is
-  approximated from the theme's shared `round(4*scale)` margin; the two agree at the
-  project's default scale and can differ by a pixel at another one.
 - **Approximated** A `theme_override_fonts/font` scene font's underline position and
   thickness still come from the vendored Open Sans metrics — no scene font carries its
   own baked underline data.

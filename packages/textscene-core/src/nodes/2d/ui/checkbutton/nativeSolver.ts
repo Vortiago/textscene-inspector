@@ -18,17 +18,10 @@
  * registers cb_empty under directly — Button's entry is never reached).
  * `Component.tsx` draws no chrome mesh either, matching `StyleBoxEmpty`.
  *
- * `CB_EMPTY_MARGIN_X` (6 scale-units) is NOT exposed by `NativeTheme` — only
- * `theme.contentMargin` (`round(4*scale)`, Button's OWN margin, and
- * coincidentally `cb_empty`'s Y margin too) is. `nativeTheme.ts` cannot be
- * edited from this slice; `Math.round(theme.contentMargin * 1.5)`
- * approximates the true `round(6*scale)` and is exact at every scale this
- * repo's fixtures use (`gui/theme/default_theme_scale` unset, i.e. 1), but
- * diverges by a pixel at some fractional scales (`round(4*0.625)=3` vs the
- * true `round(6*0.625)=4`, where `round(3*1.5)=5`). The exact fix is a
- * `checkButtonMarginX` field on `NativeTheme`, built the same way
- * `nativeTheme()` already derives `scrollBarCornerRadius` from its own local
- * `scale` parameter.
+ * `cb_empty`'s X margin is `round(6*scale)`, computed here directly off
+ * `theme.scale` (`ScaledGodotTheme.scale`) rather than off `theme.contentMargin`
+ * (`round(4*scale)`, a different literal that only coincides with `cb_empty`'s
+ * Y margin).
  *
  * CheckButton reserves space for its check icon via Button's OWN
  * `_internal_margin` mechanism (`Button::_set_internal_margin`,
@@ -54,8 +47,8 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import type { CheckButtonIcons } from './checkButtonIcons';
-import { CHECK_BUTTON_ICON_NATURAL_SIZE } from './checkButtonIcons';
+import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
+import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
@@ -148,13 +141,9 @@ export function checkButtonMarginY(ctx: Pick<SolveContext, 'theme'>): number {
   return ctx.theme.contentMargin;
 }
 
-/**
- * `cb_empty`'s X content margin, `round(6*scale)` (`default_theme.cpp:317`) —
- * NOT exposed by `NativeTheme`; approximated from `theme.contentMargin` (see
- * this module's own header for the exact-at-scale-1 caveat).
- */
+/** `cb_empty`'s X content margin, `round(6*scale)` (`default_theme.cpp:317`). */
 export function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
-  return Math.round(ctx.theme.contentMargin * 1.5);
+  return Math.round(6 * ctx.theme.scale);
 }
 
 /** `icon_max_width` — CheckButton never registers its own; Button's default (`0`, unclamped) applies via the shared `theme_override_constants` key (`check_button.cpp` binds no `icon_max_width` of its own; Button's `_bind_methods` does). */

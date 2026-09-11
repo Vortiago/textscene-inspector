@@ -30,7 +30,6 @@ import {
   CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
   CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
-import { CHECK_BUTTON_ICON_NATURAL_SIZE } from './checkButtonIcons';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
@@ -155,8 +154,12 @@ describe('checkButtonMarginX / checkButtonMarginY (default_theme.cpp:317)', () =
     expect(checkButtonMarginY(ctx())).toBe(4);
   });
 
-  it('marginX approximates round(6*scale); exact at scale 1', () => {
+  it('marginX is round(6*scale)', () => {
     expect(checkButtonMarginX(ctx())).toBe(6);
+  });
+
+  it('marginX moves with a non-1 theme scale (default_theme.cpp:317: round(6*scale))', () => {
+    expect(checkButtonMarginX({ theme: nativeTheme(1.5) })).toBe(9);
   });
 });
 
@@ -193,12 +196,6 @@ describe('checkButtonMinimumSize — with text', () => {
     // fitIconSize(32x16, 8) = (8, 4).
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 8);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 4 < 23, text still floors height
-  });
-});
-
-describe('CHECK_BUTTON_ICON_NATURAL_SIZE', () => {
-  it('is 32x16 — every vendored CheckButton icon shares this authored size', () => {
-    expect(CHECK_BUTTON_ICON_NATURAL_SIZE).toEqual({ x: 32, y: 16 });
   });
 });
 

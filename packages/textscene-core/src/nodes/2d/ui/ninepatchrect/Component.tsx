@@ -37,7 +37,7 @@ import {
   NINE_PATCH_STRETCH,
   type NinePatchAxisMode,
   type NinePatchGeometryBuffers,
-} from './ninePatchGeometry';
+} from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveNinePatchFilter } from './nativeSolver';
 import type { NinePatchRectProperties } from './types';
 

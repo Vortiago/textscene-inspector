@@ -92,6 +92,7 @@ describe('scaledGodotTheme', () => {
     // The un-scaled path must stay byte-identical to the constants every
     // `.ts`-only consumer still imports.
     expect(scaledGodotTheme(1)).toEqual({
+      scale: 1,
       fontSize: DEFAULT_FONT_SIZE,
       cornerRadius: DEFAULT_CORNER_RADIUS,
       contentMargin: DEFAULT_CONTENT_MARGIN,
@@ -110,6 +111,7 @@ describe('scaledGodotTheme', () => {
   it('scales every metric at the demo project’s 2.0', () => {
     // scenes/demos/viewport/gui_in_3d/project.godot sets 2.0.
     expect(scaledGodotTheme(2)).toEqual({
+      scale: 2,
       fontSize: 32,
       cornerRadius: 6,
       contentMargin: 8,
@@ -148,6 +150,7 @@ describe('scaledGodotTheme', () => {
   it('shrinks at a scale below 1', () => {
     // Godot's minimum is 0.5: round(16·0.5) = 8, round(3·0.5) = 2 (half up).
     expect(scaledGodotTheme(0.5)).toEqual({
+      scale: 0.5,
       fontSize: 8,
       cornerRadius: 2,
       contentMargin: 2,

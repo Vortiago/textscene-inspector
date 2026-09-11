@@ -39,7 +39,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
-import { TAB_BAR_ICONS, TAB_BAR_ICON_SIZE } from './tabBarIcons';
+import { TAB_BAR_ICONS, TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import {
   TAB_ALIGNMENT_LEFT,
   TAB_BAR_THEME_FONT_KEY,

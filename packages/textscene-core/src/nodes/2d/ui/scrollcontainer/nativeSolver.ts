@@ -2,10 +2,13 @@
  * ScrollContainer's native (WebGL canvas) container solve — a port of
  * `ScrollContainer::get_minimum_size`/`_update_scrollbars`/
  * `_update_scrollbar_position`/`_reposition_children` (`scene/gui/
- * scroll_container.cpp`) plus the geometry `ScrollBar::get_minimum_size`/
- * `get_grabber_size`/`get_area_size`/`get_grabber_offset` compute
- * (`scene/gui/scroll_bar.cpp`) and `Range::get_as_ratio`/`set_page`'s own
- * CLAMP (`scene/gui/range.cpp`).
+ * scroll_container.cpp`), on top of `ScrollBar::get_minimum_size`/
+ * `get_grabber_size`/`get_area_size`/`get_grabber_offset`
+ * (`scene/gui/scroll_bar.cpp`) — `shared/scrollBarSolver.ts`'s
+ * `scrollBarMinimumSize`/`scrollBarGrabberGeometry`, the SAME geometry a
+ * standalone HScrollBar/VScrollBar registers under, called here with `min`
+ * fixed at 0 (ScrollContainer's embedded bars never author `min_value`) —
+ * plus `Range::get_as_ratio`/`set_page`'s own CLAMP (`scene/gui/range.cpp`).
  *
  * `scrollContainerScrollBars` is the ONE function both `scrollContainerLayout`
  * (this module, registered as this type's `ContainerLayoutFn`) and
@@ -61,6 +64,7 @@ import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
+import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 
 // ScrollContainer::ScrollMode (scroll_container.h:44-50).
@@ -77,11 +81,19 @@ function props(n: SolveNode): ScrollContainerProperties {
   return n.node.properties as ScrollContainerProperties;
 }
 
-/** A scrollbar's own minimum cross-axis thickness — `ScrollBar::get_minimum_size` with this codebase's
- * default-theme inputs (empty increment/decrement icons, zero padding; see nativeSolver.test.ts's own
- * header): the track's minimum plus the grabber's own minimum, both `2 * contentMargin`. */
-function scrollbarThickness(ctx: SolveContext): number {
-  return 2 * ctx.theme.contentMargin;
+/**
+ * HScrollBar's own minimum HEIGHT / VScrollBar's own minimum WIDTH — the
+ * cross-axis thickness `_update_scrollbar_position` reserves for each embedded
+ * bar (`h_scroll->get_combined_minimum_size().height` /
+ * `v_scroll->get_combined_minimum_size().width`, `scroll_container.cpp:291-292`)
+ * — `scrollBarMinimumSize` (`shared/scrollBarSolver.ts`, the same geometry a
+ * standalone HScrollBar/VScrollBar registers under).
+ */
+function hScrollThickness(ctx: SolveContext): number {
+  return scrollBarMinimumSize(false, ctx.theme).y;
+}
+function vScrollThickness(ctx: SolveContext): number {
+  return scrollBarMinimumSize(true, ctx.theme).x;
 }
 
 /** `ScrollContainer::get_minimum_size`'s own child loop (`scroll_container.cpp:44-52`):
@@ -109,7 +121,6 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const hMode = p.horizontalScrollMode ?? SCROLL_MODE_AUTO;
   const vMode = p.verticalScrollMode ?? SCROLL_MODE_AUTO;
   const largest = largestChildMinSize(n, ctx);
-  const thickness = scrollbarThickness(ctx);
 
   let x = 0;
   let y = 0;
@@ -117,13 +128,13 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (hMode === SCROLL_MODE_DISABLED) {
     x = largest.x;
     if (vMode === SCROLL_MODE_SHOW_ALWAYS || vMode === SCROLL_MODE_RESERVE) {
-      x += thickness + SCROLLBAR_SEPARATION;
+      x += vScrollThickness(ctx) + SCROLLBAR_SEPARATION;
     }
   }
   if (vMode === SCROLL_MODE_DISABLED) {
     y = largest.y;
     if (hMode === SCROLL_MODE_SHOW_ALWAYS || hMode === SCROLL_MODE_RESERVE) {
-      y += thickness + SCROLLBAR_SEPARATION;
+      y += hScrollThickness(ctx) + SCROLLBAR_SEPARATION;
     }
   }
 
@@ -183,27 +194,14 @@ function settledScrollValue(raw: number, range: number, rawPage: number): number
 }
 
 /**
- * One axis' grabber geometry — `ScrollBar::get_grabber_size`/`get_area_size`/
- * `get_grabber_offset` (`scroll_bar.cpp:473-517`) and `Range::get_as_ratio`
- * (`range.cpp:308-324`), with this codebase's default-theme inputs (empty
- * increment/decrement icons and zero padding, so `get_area_size` reduces to
- * `barLength - thickness`) already folded in.
+ * `Range::get_as_ratio()`'s own CLAMP (`range.cpp:308-324`) with `min` fixed
+ * at 0 — ScrollContainer's embedded bars never author `min_value`, so this is
+ * the ratio `scrollBarGrabberGeometry` (`shared/scrollBarSolver.ts`) takes
+ * rather than a `RangeProperties`-driven `rangeRatio`, which this axis has no
+ * scene properties to feed.
  */
-function grabberExtent(
-  barLength: number,
-  thickness: number,
-  range: number,
-  rawPage: number,
-  rawValue: number
-): { size: number; offset: number } {
-  const page = clampPage(rawPage, range);
-  // scroll_bar.cpp:479-489 — "if (range <= 0) return 0", a literal zero, not
-  // the thickness floor `get_minimum_size` would otherwise contribute.
-  if (range <= 0) return { size: 0, offset: 0 };
-  const areaSize = barLength - thickness;
-  const size = (page > 0 ? page : 0) / range * areaSize + thickness;
-  const ratio = Math.max(0, Math.min(1, rawValue / range));
-  return { size, offset: areaSize * ratio };
+function scrollRatio(value: number, range: number): number {
+  return Math.max(0, Math.min(1, value / range));
 }
 
 /**
@@ -220,7 +218,8 @@ export function scrollContainerScrollBars(
   const hMode = p.horizontalScrollMode ?? SCROLL_MODE_AUTO;
   const vMode = p.verticalScrollMode ?? SCROLL_MODE_AUTO;
   const largest = largestChildMinSize(n, ctx);
-  const thickness = scrollbarThickness(ctx);
+  const hThickness = hScrollThickness(ctx);
+  const vThickness = vScrollThickness(ctx);
 
   // _update_scrollbars (scroll_container.cpp:592-593): both checks read the
   // SAME un-reserved own size — Godot does not iterate to a fixed point when
@@ -235,8 +234,8 @@ export function scrollContainerScrollBars(
   const vReserved = vVisible || vMode === SCROLL_MODE_RESERVE;
 
   const contentSize: Vec2 = {
-    x: rect.w - (vReserved ? thickness + SCROLLBAR_SEPARATION : 0),
-    y: rect.h - (hReserved ? thickness + SCROLLBAR_SEPARATION : 0),
+    x: rect.w - (vReserved ? vThickness + SCROLLBAR_SEPARATION : 0),
+    y: rect.h - (hReserved ? hThickness + SCROLLBAR_SEPARATION : 0),
   };
 
   // _update_scrollbar_position (scroll_container.cpp:284-308): each bar
@@ -246,15 +245,15 @@ export function scrollContainerScrollBars(
   // bar's own rect around, even though it still reserves content space.
   const hRect: Rect2 = {
     x: 0,
-    y: rect.h - thickness,
-    w: rect.w - (vVisible ? thickness : 0),
-    h: thickness,
+    y: rect.h - hThickness,
+    w: rect.w - (vVisible ? vThickness : 0),
+    h: hThickness,
   };
   const vRect: Rect2 = {
-    x: rect.w - thickness,
+    x: rect.w - vThickness,
     y: 0,
-    w: thickness,
-    h: rect.h - (hVisible ? thickness : 0),
+    w: vThickness,
+    h: rect.h - (hVisible ? hThickness : 0),
   };
 
   const scroll: Vec2 = {
@@ -262,8 +261,26 @@ export function scrollContainerScrollBars(
     y: settledScrollValue(p.scrollVertical ?? 0, largest.y, vRect.h),
   };
 
-  const hGrabber = grabberExtent(hRect.w, thickness, largest.x, hRect.w, scroll.x);
-  const vGrabber = grabberExtent(vRect.h, thickness, largest.y, vRect.h, scroll.y);
+  // scrollBarGrabberGeometry's `min` fixed at 0: ScrollContainer's embedded
+  // bars never author `min_value`, so `range` (largest.x/.y) IS `max`.
+  const hGrabber = scrollBarGrabberGeometry(
+    false,
+    hRect.w,
+    ctx.theme,
+    0,
+    largest.x,
+    hRect.w,
+    scrollRatio(scroll.x, largest.x)
+  );
+  const vGrabber = scrollBarGrabberGeometry(
+    true,
+    vRect.h,
+    ctx.theme,
+    0,
+    largest.y,
+    vRect.h,
+    scrollRatio(scroll.y, largest.y)
+  );
 
   return {
     contentSize,

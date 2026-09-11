@@ -4,7 +4,7 @@
  * unlike CheckBox's LEFT-anchored check glyph) followed by the label text —
  * NO StyleBox chrome mesh at all, CheckButton's own StyleBoxes all being the
  * SAME `StyleBoxEmpty` (`nativeSolver.ts`'s own doc). Draws the vendored
- * theme icons (`checkButtonIcons.ts`'s `CHECK_BUTTON_ICONS`).
+ * theme icons (`themeIcons.ts`'s `CHECK_BUTTON_ICONS`).
  *
  * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
  * inherited `modulate`. The icon's own theme colour
@@ -32,7 +32,7 @@ import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { CHECK_BUTTON_ICONS, CHECK_BUTTON_ICON_NATURAL_SIZE } from './checkButtonIcons';
+import { CHECK_BUTTON_ICONS, CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,

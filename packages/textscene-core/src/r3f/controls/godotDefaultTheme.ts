@@ -189,6 +189,12 @@ export const SLIDER_TICK_THICKNESS = 2;
  * these instead.
  */
 export interface ScaledGodotTheme {
+  /**
+   * The raw project `gui/theme/default_theme_scale`, unrounded — for a slice
+   * whose own `default_theme.cpp` call site needs a `Math.round(x * scale)`
+   * term this struct does not already expose pre-rounded.
+   */
+  scale: number;
   /** `default_font_size` after scaling — the theme's default font size in px. */
   fontSize: number;
   /** Every default flat stylebox's corner radius, in px. */
@@ -247,6 +253,7 @@ export interface ScaledGodotTheme {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   const contentMargin = Math.round(DEFAULT_CONTENT_MARGIN * scale);
   return {
+    scale,
     fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
     cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
     contentMargin,

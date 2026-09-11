@@ -96,7 +96,12 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/linkbutton/nativeSolver.ts` | `scene/gui/link_button.cpp` (`LinkButton::get_minimum_size` and `_notification`'s `NOTIFICATION_DRAW` underline position/thickness and per-state font colour), `scene/theme/default_theme.cpp` (LinkButton's `font_color`/`underline_spacing`) and `scene/theme/theme_db.cpp` (the fallback chain that leaves `font_disabled_color` unregistered) |
 | `packages/textscene-core/src/nodes/2d/ui/ninepatchrect/nativeSolver.ts` | `scene/gui/nine_patch_rect.cpp` (`NinePatchRect::get_minimum_size`), `scene/main/canvas_item.h` and `scene/main/viewport.h` (the texture filter/repeat defaults a nine-patch samples under) |
 | `packages/textscene-core/src/nodes/2d/ui/progressbar/nativeSolver.ts` | `scene/gui/progress_bar.cpp` (`ProgressBar::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` background/fill windowing per `fill_mode` and the centred percentage label) and `scene/theme/default_theme.cpp` (ProgressBar's `background`/`fill` styleboxes and `font_color`/`font_outline_color`) |
-| `packages/textscene-core/src/nodes/2d/ui/separator/styleBoxLine.ts` | `scene/resources/style_box.cpp` (`StyleBoxLine::draw` and `get_minimum_size`) and `scene/theme/default_theme.cpp` (the `separator` StyleBoxLine's colour, thickness and the `separation` constant) |
+| `packages/textscene-core/src/nodes/2d/ui/separator/styleBoxLine.ts` | `scene/theme/default_theme.cpp` (the default `separator` StyleBoxLine's colour, thickness and content margin, and `Separator`'s own `separation` constant) |
+| `packages/textscene-core/src/nodes/2d/ui/separator/separatorPlacement.ts` | `scene/gui/separator.cpp` (`Separator::_notification`'s `NOTIFICATION_DRAW` placement rect) and `scene/resources/style_box.cpp` (`StyleBox::get_minimum_size`) |
+| `packages/textscene-core/src/r3f/controls/native/styleBoxLine.ts` | `scene/resources/style_box_line.h`/`.cpp` (`StyleBoxLine`'s fields and `get_style_margin`) and `scene/resources/style_box.cpp` (`StyleBox::get_margin`) |
+| `packages/textscene-core/src/r3f/controls/native/styleBoxLineGeometry.ts` | `scene/resources/style_box_line.cpp` (`StyleBoxLine::draw`) |
+| `packages/textscene-core/src/r3f/controls/native/styleBoxTexture.ts` | `scene/resources/style_box_texture.h`/`.cpp` (`StyleBoxTexture`'s fields, `get_style_margin`, and the rect/region/margin computation in `draw`) and `scene/resources/style_box.cpp` (`StyleBox::get_margin`) |
+| `packages/textscene-core/src/r3f/controls/native/StyleBoxQuad.tsx` | `scene/resources/style_box_line.cpp` (`StyleBoxLine::draw`) and `scene/resources/style_box_texture.cpp` (`StyleBoxTexture::draw`'s `expand_margin` grow and `modulate_color` composition) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/scrollBarSolver.ts` | `scene/gui/scroll_bar.cpp` (`ScrollBar::get_minimum_size`, `get_area_size`, `get_grabber_size`, `get_grabber_offset` and `_notification`'s `NOTIFICATION_DRAW` track/grabber rects) |
 | `packages/textscene-core/src/nodes/2d/ui/texturebutton/nativeSolver.ts` | `scene/gui/texture_button.cpp` (`TextureButton::get_minimum_size` and `_notification`'s `NOTIFICATION_DRAW` per-state texture selection and `stretch_mode` rect math, including its float arithmetic where TextureRect truncates) |
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/nativeSolver.ts` | `scene/gui/texture_progress_bar.cpp` (`TextureProgressBar::get_minimum_size` and the `fill_mode`/`radial_*` setters' clamping) |
@@ -117,7 +122,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/AlphaCheckerboardQuad.tsx` | `scene/gui/color_picker.cpp` (`draw_texture_rect(theme_cache.background_icon, r, true)`'s tile semantics, ported the same way `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE` branch already does) |
-| `packages/textscene-core/src/nodes/2d/ui/shared/colorPickerIcons.ts` | `scene/gui/color_picker.cpp` (`is_color_overbright`) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/colorOverbright.ts` | `scene/gui/color_picker.cpp` (`is_color_overbright`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/nativeSolver.ts` | `scene/gui/color_picker.cpp` (`ColorPicker::_set_pick_color`'s HSV derivation: `_copy_color_to_normalized_and_intensity`, `_copy_normalized_to_hsv_okhsl`) and `core/math/color.cpp`/`.h` (`Color::get_h`/`get_s`/`get_v`, `Color::from_hsv`/`set_hsv`, `Color::inverted`, `Color::srgb_to_linear`/`linear_to_srgb`), `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s cursor placement, `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line, `ColorPickerShapeRectangle::update_theme`) and `scene/theme/default_theme.cpp` (ColorPicker's `sv_width`/`sv_height`/`h_width`/`margin` constants and the `color_hue` `GradientTexture2D`'s 7-stop hue gradient) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/svGradient.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s two `draw_polygon` layers) and `scene/theme/default_theme.cpp` (the `color_hue` `GradientTexture2D`'s 7-stop hue gradient) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_sample_draw`) and `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_cursor`) |
@@ -132,9 +137,10 @@ the point of use, for example `nodes/physics/shared/debugColor.ts`,
 
 ### Vendored theme icons
 
-The native (WebGL) Control renderer's CheckBox, OptionButton and SplitContainer-family
-painters need the same indicator glyphs Godot's editor bakes into its built-in dark
-theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
+The native (WebGL) Control renderer's CheckBox, OptionButton, SplitContainer-family,
+CheckButton, FoldableContainer, TextEdit/CodeEdit, TabBar and ColorPicker/
+ColorPickerButton painters need the same indicator glyphs Godot's editor bakes into its
+built-in dark theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
 embeds unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from
 Godot 4.6.3's `scene/theme/icons/`:
 
@@ -151,6 +157,23 @@ Godot 4.6.3's `scene/theme/icons/`:
 | `scene/theme/icons/option_button_arrow.svg` | `OptionButton` / `"arrow"` |
 | `scene/theme/icons/hsplitter.svg` | `HSplitContainer` / `"grabber"`, `SplitContainer` / `"h_grabber"` |
 | `scene/theme/icons/vsplitter.svg` | `VSplitContainer` / `"grabber"`, `SplitContainer` / `"v_grabber"` |
+| `scene/theme/icons/toggle_on.svg` | `CheckButton` / `"checked"` |
+| `scene/theme/icons/toggle_on_disabled.svg` | `CheckButton` / `"checked_disabled"` |
+| `scene/theme/icons/toggle_off.svg` | `CheckButton` / `"unchecked"` |
+| `scene/theme/icons/toggle_off_disabled.svg` | `CheckButton` / `"unchecked_disabled"` |
+| `scene/theme/icons/arrow_down.svg` | `FoldableContainer` / `"expanded_arrow"` |
+| `scene/theme/icons/arrow_up.svg` | `FoldableContainer` / `"expanded_arrow_mirrored"` |
+| `scene/theme/icons/arrow_right.svg` | `FoldableContainer` / `"folded_arrow"` |
+| `scene/theme/icons/arrow_left.svg` | `FoldableContainer` / `"folded_arrow_mirrored"` |
+| `scene/theme/icons/text_edit_tab.svg` | `TextEdit` / `"tab"`, `CodeEdit` / `"tab"` |
+| `scene/theme/icons/text_edit_space.svg` | `TextEdit` / `"space"`, `CodeEdit` / `"space"` |
+| `scene/theme/icons/close.svg` | `TabBar` / `"close"` |
+| `scene/theme/icons/scroll_button_right.svg` | `TabBar` / `"increment"` |
+| `scene/theme/icons/scroll_button_left.svg` | `TabBar` / `"decrement"` |
+| `scene/theme/icons/mini_checkerboard.svg` | `ColorPickerButton` / `"bg"`, `ColorPicker` / `"sample_bg"` |
+| `scene/theme/icons/color_picker_overbright.svg` | `ColorPickerButton`/`ColorPicker` / `"overbright_indicator"` |
+| `scene/theme/icons/color_picker_cursor.svg` | `ColorPicker` / `"picker_cursor"` |
+| `scene/theme/icons/color_picker_cursor_bg.svg` | `ColorPicker` / `"picker_cursor_bg"` |
 
 `packages/textscene-core/src/nodes/2d/ui/spinbox/icons.ts` embeds SpinBox's own pair the
 same way, kept in its own slice rather than `themeIcons.ts` since that module is
@@ -161,45 +184,12 @@ orchestrator-owned:
 | `scene/theme/icons/value_up.svg` | `SpinBox` / `"up"` (also `"up_disabled"` — the same asset) |
 | `scene/theme/icons/value_down.svg` | `SpinBox` / `"down"` (also `"down_disabled"` — the same asset) |
 
-`packages/textscene-core/src/nodes/2d/ui/foldablecontainer/icons.ts` embeds FoldableContainer's own fold-state arrow pair the same way, kept in its own slice for the same reason:
-
-| File | Godot theme key (`scene/theme/default_theme.cpp`) |
-|---|---|
-| `scene/theme/icons/arrow_down.svg` | `FoldableContainer` / `"expanded_arrow"` |
-| `scene/theme/icons/arrow_up.svg` | `FoldableContainer` / `"expanded_arrow_mirrored"` |
-| `scene/theme/icons/arrow_right.svg` | `FoldableContainer` / `"folded_arrow"` |
-| `scene/theme/icons/arrow_left.svg` | `FoldableContainer` / `"folded_arrow_mirrored"` |
-
-`packages/textscene-core/src/nodes/2d/ui/textedit/glyphIcons.ts` embeds TextEdit's/CodeEdit's `draw_tabs`/`draw_spaces` visual-whitespace pair the same way, kept in its own slice for the same reason (`CodeEdit::Component.tsx` imports it rather than duplicating it):
-
-| File | Godot theme key (`scene/theme/default_theme.cpp`) |
-|---|---|
-| `scene/theme/icons/text_edit_tab.svg` | `TextEdit` / `"tab"`, `CodeEdit` / `"tab"` |
-| `scene/theme/icons/text_edit_space.svg` | `TextEdit` / `"space"`, `CodeEdit` / `"space"` |
-
 `packages/textscene-core/src/nodes/2d/ui/graphelement/graphIcons.ts` embeds GraphNode's/GraphFrame's `resizer`/`port` icon pair the same way, kept in its own slice for the same reason:
 
 | File | Godot theme key (`scene/theme/default_theme.cpp`) |
 |---|---|
 | `scene/theme/icons/resizer_se.svg` | `GraphElement`/`GraphNode`/`GraphFrame` / `"resizer"` |
 | `scene/theme/icons/graph_port.svg` | `GraphNode` / `"port"` |
-
-`packages/textscene-core/src/nodes/2d/ui/shared/colorPickerIcons.ts` embeds ColorPicker's/ColorPickerButton's own checkerboard/overbright/cursor icon set the same way, kept in its own slice for the same reason:
-
-| File | Godot theme key (`scene/theme/default_theme.cpp`) |
-|---|---|
-| `scene/theme/icons/mini_checkerboard.svg` | `ColorPickerButton` / `"bg"`, `ColorPicker` / `"sample_bg"` |
-| `scene/theme/icons/color_picker_overbright.svg` | `ColorPickerButton`/`ColorPicker` / `"overbright_indicator"` |
-| `scene/theme/icons/color_picker_cursor.svg` | `ColorPicker` / `"picker_cursor"` |
-| `scene/theme/icons/color_picker_cursor_bg.svg` | `ColorPicker` / `"picker_cursor_bg"` |
-
-`packages/textscene-core/src/nodes/2d/ui/tabbar/tabBarIcons.ts` embeds TabBar's own close/scroll-arrow icon set the same way, kept in its own slice for the same reason (`TabContainer`'s painter reuses `TabBar`'s own component rather than a second copy):
-
-| File | Godot theme key (`scene/theme/default_theme.cpp`) |
-|---|---|
-| `scene/theme/icons/close.svg` | `TabBar` / `"close"` |
-| `scene/theme/icons/scroll_button_right.svg` | `TabBar` / `"increment"` |
-| `scene/theme/icons/scroll_button_left.svg` | `TabBar` / `"decrement"` |
 
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.

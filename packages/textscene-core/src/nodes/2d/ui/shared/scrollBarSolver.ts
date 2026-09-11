@@ -7,14 +7,11 @@
  * VScrollBar register this ONCE here, and each slice's own `nativeSolver.ts`/
  * `Component.tsx` supplies only its own `vertical` flag).
  *
- * A near-identical grabber formula already exists, inlined, in
- * `scrollcontainer/nativeSolver.ts`'s `grabberExtent`/`scrollbarThickness`
- * for `ScrollContainer`'s OWN embedded `h_scroll`/`v_scroll` — that version
- * is the `min = 0` special case of `scrollBarGrabberGeometry` below (its
- * `thickness` is this module's along-axis `grabberMin`). It was not reused
- * here because it is not exported; a standalone `ScrollBar` is driven by its
- * OWN `min_value` (which `ScrollContainer`'s bars never author), so this
- * module takes `min`/`max` rather than a bare `range`.
+ * `scrollcontainer/nativeSolver.ts` calls `scrollBarMinimumSize`/
+ * `scrollBarGrabberGeometry` below for `ScrollContainer`'s OWN embedded
+ * `h_scroll`/`v_scroll`, with `min` fixed at 0 — a standalone `ScrollBar` is
+ * driven by its OWN `min_value` (which `ScrollContainer`'s bars never
+ * author), so this module takes `min`/`max` rather than a bare `range`.
  *
  * NOT modelled — an explicit restriction, matching this codebase's existing
  * theme scope everywhere else:

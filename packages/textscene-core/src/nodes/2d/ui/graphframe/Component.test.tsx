@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { styleBoxTextureBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
@@ -52,6 +53,49 @@ function textMeshes(scene: Rendered['scene']) {
     .map((m) => m.instance as THREE.Mesh)
     .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
+
+/** A `panel` slot holding a StyleBoxTexture, as a themed project would author. */
+function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode {
+  const n = graphFrame(properties);
+  return {
+    ...n,
+    styleBoxes: {
+      panel: styleBoxTextureBox({
+        texture: 'res://frame.png',
+        resources: { externalResources: [], internalResources: [] },
+        margin: { left: 4, top: 4, right: 4, bottom: 4 },
+        contentMargin: { left: 4, top: 4, right: 4, bottom: 4 },
+        expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+        regionRect: undefined,
+        axisStretchHorizontal: 0,
+        axisStretchVertical: 0,
+        drawCenter: true,
+        modulateColor: { r: 1, g: 1, b: 1, a: 1 },
+      }),
+    },
+  };
+}
+
+describe('<GraphFrame> — the two tint arms (graph_frame.cpp:113-126)', () => {
+  /**
+   * `:126` — the untinted arm draws `sb_panel_flat` alone, so a `panel` slot
+   * holding a StyleBoxTexture is not drawn at all. That is the engine's own
+   * behaviour rather than a gap here: the titlebar still draws, so the frame
+   * does not vanish.
+   *
+   * With tinting ON the other arm (`:120-124`) draws it, MODULATED by
+   * `tint_color` — a multiply, where the flat arm substitutes `bg_color`. That
+   * arm is not asserted here: it needs a resolved texture, so it belongs to
+   * `StyleBoxQuad`'s own loader-backed tests rather than to this painter's.
+   */
+  it('draws no body panel for a texture slot when tinting is off', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphFrame {...painterEnv()} solveNode={texturePanel()} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+});
 
 describe('<GraphFrame> (isolated painter contract)', () => {
   it('draws exactly two chrome meshes (panel + titlebar) with no title', async () => {

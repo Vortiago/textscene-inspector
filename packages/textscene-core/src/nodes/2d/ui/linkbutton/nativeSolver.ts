@@ -113,23 +113,11 @@ export function shouldUnderline(state: LinkButtonDrawState, underlineMode: numbe
   return mode === UNDERLINE_MODE_ALWAYS;
 }
 
-/**
- * `underline_spacing` theme constant, `round(2*scale)`
- * (`default_theme.cpp:210`) — NOT exposed by `NativeTheme` (only
- * `theme.contentMargin`, `round(4*scale)`, is). `nativeTheme.ts` cannot be
- * edited from this slice; `Math.round(theme.contentMargin / 2)` approximates
- * the true value and is exact at scale 1 (this repo's fixtures), but can
- * diverge by a pixel at a fractional `gui/theme/default_theme_scale` (the
- * same caveat `checkbutton/nativeSolver.ts`'s `checkButtonMarginX` documents
- * for its own non-exposed scaled literal). The exact fix is an
- * `underlineSpacing` field on `NativeTheme`, built the same way
- * `nativeTheme()` already derives `scrollBarCornerRadius` from its own local
- * `scale` parameter.
- */
+/** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */
 export function linkButtonUnderlineSpacing(props: LinkButtonProperties, ctx: Pick<SolveContext, 'theme'>): number {
   const override = props.themeOverrideConstants?.underline_spacing;
   if (override !== undefined) return override;
-  return Math.round(ctx.theme.contentMargin / 2);
+  return Math.round(2 * ctx.theme.scale);
 }
 
 export interface UnderlineGeometry {

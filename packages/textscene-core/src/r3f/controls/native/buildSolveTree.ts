@@ -66,8 +66,7 @@ import {
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../canvasPaintOrder';
-import type { StyleBoxFlatData } from './styleBoxFlat';
-import { parseStyleBox } from './parseStyleBox';
+import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 import type { Vec2 } from './rect';
 
 export interface UseBuildSolveTreeResult {
@@ -85,21 +84,26 @@ const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | un
 
 /**
  * Resolve every `theme_override_styles/*` ref on a node, IN ITS OWN SCOPE —
- * `internalResources` is already the collapsed node's own scope by the time
- * `walk` calls this (a sub-scene's SubResource pool for a merged/subscene
- * node, the outer pool otherwise). `parseStyleBox` degrades to `null` for an
- * absent/malformed/non-StyleBoxFlat ref, which this simply omits from the
- * result rather than fabricating a fallback stylebox.
+ * `scope` is already the collapsed node's own scope by the time `walk` calls
+ * this (a sub-scene's SubResource pool for a merged/subscene node, the outer
+ * pool otherwise). `parseStyleBox` degrades to `null` for an
+ * absent/malformed/unresolvable ref, which this simply omits from the result
+ * rather than fabricating a fallback stylebox. Covers all four concrete
+ * StyleBox kinds (`native/parseStyleBox.ts`'s `ResolvedStyleBox`) — a
+ * `StyleBoxLine`/`StyleBoxTexture` override is kept here exactly like a
+ * `StyleBoxFlat` one, not dropped: each wraps a neutral `StyleBoxFlatData`
+ * core carrying its own kind-correct `contentMargin`, so `SolveNode.styleBoxes`
+ * (typed `Record<string, StyleBoxFlatData>`) stays satisfied without widening.
  */
-function resolveStyleBoxes(
+export function resolveStyleBoxes(
   node: TscnNode,
-  internalResources: readonly TscnInternalResource[]
-): Readonly<Record<string, StyleBoxFlatData>> {
+  scope: SceneScope
+): Readonly<Record<string, ResolvedStyleBox>> {
   const overrides = (node.properties as ControlProperties).themeOverrideStyles;
   if (!overrides) return {};
-  const out: Record<string, StyleBoxFlatData> = {};
+  const out: Record<string, ResolvedStyleBox> = {};
   for (const [key, ref] of Object.entries(overrides)) {
-    const resolved = parseStyleBox(ref, internalResources);
+    const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
     if (resolved) out[key] = resolved;
   }
   return out;
@@ -431,7 +435,7 @@ function buildForest(
           paintRange,
           paintSequence: allocated.self,
           hidden: hiddenNodePaths.has(path),
-          styleBoxes: resolveStyleBoxes(collapsed, ownScope.internalResources),
+          styleBoxes: resolveStyleBoxes(collapsed, ownScope),
           textureSize: texture.size,
           textureSlots: texture.slots,
           fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),

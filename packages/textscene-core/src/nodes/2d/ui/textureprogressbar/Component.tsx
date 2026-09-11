@@ -9,8 +9,8 @@
  *  - a cropped quad (`draw_texture_rect_region`, the six non-radial fill
  *    modes without `nine_patch_stretch`, `linearFill.ts`);
  *  - a hand-built textured mesh — a 3x3 nine-patch grid
- *    (`ninePatchGeometry.ts`, reused from `../ninepatchrect/` — see that
- *    module's own doc: it takes no NinePatchRect-shaped input) or a radial
+ *    (`ninePatchGeometry.ts`, `r3f/controls/native/` — see that module's own
+ *    doc: it takes no NinePatchRect-shaped input) or a radial
  *    triangle fan (`radialFill.ts`) — both via `<TexturedFillMesh>`.
  *
  * Tint: `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into
@@ -33,7 +33,7 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { pinNoColorSpace, useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { rangeRatio } from '../shared/range';
 import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../ninepatchrect/ninePatchGeometry';
+import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveTextureRectFilter } from '../texturerect/nativeSolver';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';

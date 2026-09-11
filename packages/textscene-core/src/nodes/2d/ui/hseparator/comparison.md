@@ -30,9 +30,3 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 HSeparator binds no property of its own, only theme items, so `linterParser.ts` declares
 nothing for it. The strict and lenient parsers agree on every key, since `index.ts`
 reuses `parseControl` unchanged.
-
-## Known limitations
-
-- **Approximated** The separator line's thickness is pinned at 1px
-  (`set_thickness(Math::round(scale))`); a project with a non-default
-  `gui/theme/default_theme_scale` draws it too thin.

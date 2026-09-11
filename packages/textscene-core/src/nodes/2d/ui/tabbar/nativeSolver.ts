@@ -45,7 +45,7 @@ import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
 import type { ControlColor } from '../control/types';
 import type { TabBarProperties, TabBarTabProperties } from './types';
-import { TAB_BAR_ICON_SIZE } from './tabBarIcons';
+import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 
 // --- Draw state ---------------------------------------------------------------
 

@@ -116,13 +116,17 @@ describe('shouldUnderline (link_button.cpp:249-278)', () => {
 });
 
 describe('linkButtonUnderlineSpacing (default_theme.cpp:210)', () => {
-  it('approximates round(2*scale) from theme.contentMargin; exact at scale 1', () => {
+  it('is round(2*scale)', () => {
     expect(linkButtonUnderlineSpacing({} as LinkButtonProperties, ctx())).toBe(2);
   });
 
   it('a theme_override_constants/underline_spacing override wins over the theme default', () => {
     const props: LinkButtonProperties = { name: 'L', themeOverrideConstants: { underline_spacing: 9 } };
     expect(linkButtonUnderlineSpacing(props, ctx())).toBe(9);
+  });
+
+  it('moves with a non-1 theme scale (default_theme.cpp:210: round(2*scale))', () => {
+    expect(linkButtonUnderlineSpacing({} as LinkButtonProperties, { theme: nativeTheme(2.5) })).toBe(5);
   });
 });
 

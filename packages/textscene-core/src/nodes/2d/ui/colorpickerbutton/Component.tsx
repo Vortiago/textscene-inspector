@@ -33,7 +33,8 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { parseColor } from '../../../../utils/colorParser';
 import { Button } from '../button/Component';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
-import { COLOR_PICKER_OVERBRIGHT_ICON, isColorOverbright } from '../shared/colorPickerIcons';
+import { COLOR_PICKER_OVERBRIGHT_ICON } from '../../../../r3f/controls/native/themeIcons';
+import { isColorOverbright } from '../shared/colorOverbright';
 import type { ColorPickerButtonProperties } from './types';
 
 export function ColorPickerButton(props: NativeControlComponentProps) {

@@ -14,7 +14,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
-import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from './colorPickerIcons';
+import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from '../../../../r3f/controls/native/themeIcons';
 
 export interface AlphaCheckerboardQuadProps {
   width: number;

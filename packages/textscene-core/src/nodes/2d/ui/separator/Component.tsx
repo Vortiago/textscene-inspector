@@ -9,37 +9,31 @@
  * mirroring `PanelChrome`'s shared-chrome shape.
  *
  * A `theme_override_styles/separator` StyleBox slot accepts any StyleBox
- * subtype. `buildSolveTree.ts`'s `styleBoxes` map only ever resolves
- * `StyleBoxFlat`/`StyleBoxEmpty` (`native/parseStyleBox.ts`), so:
- *  - a `StyleBoxFlat`/`StyleBoxEmpty` override reaches `solveNode.styleBoxes.
- *    separator` and wins, drawn as a plain `<StyleBoxQuad>` across the node's
- *    whole rect (an `Empty` one already draws nothing there — no vertices).
- *  - a `StyleBoxLine` override — the type the default theme itself uses — is
- *    absent from that map, so it is resolved HERE instead, from
- *    `solveNode.resources` (never `useSceneResources()`: a node reached
- *    through an instanced sub-scene names ids from THAT scene's pool).
- *  - neither resolves: the default theme's own `separator` StyleBoxLine
- *    (`styleBoxLine.ts`'s `defaultSeparatorStyleBoxLine`).
+ * subtype, and `buildSolveTree.ts`'s `resolveStyleBoxes` now resolves all
+ * four (`native/parseStyleBox.ts`'s `ResolvedStyleBox`) into
+ * `solveNode.styleBoxes.separator` — so this painter reads that ONE slot for
+ * every kind, never resolving a StyleBoxLine override itself. Absent an
+ * override, `separator`'s own default theme StyleBoxLine
+ * (`styleBoxLine.ts`'s `defaultSeparatorStyleBoxLine`) is wrapped into the
+ * same shape (`styleBoxLineBox`) so both paths feed `<StyleBoxQuad>`
+ * identically.
  *
- * Tint: the walker's `tint` prop, multiplied into the StyleBoxLine's `color`
- * in sRGB before the single sRGB→linear conversion — the one-colour shortcut
- * `ColorRect` uses, valid here because a StyleBoxLine (unlike a StyleBoxFlat)
- * carries only one base colour.
+ * `separatorPlacementRect` (`separator.cpp:47-56`) is what Separator hands
+ * `style->draw()` — a sub-rect centred on the CROSS axis by the resolved
+ * box's own margin, whatever kind it is — and `<StyleBoxQuad>` then applies
+ * whichever kind's OWN further draw transform on top (a StyleBoxLine's own
+ * grow/thicken, `native/styleBoxLineGeometry.ts`'s `styleBoxLineDrawRect`).
+ *
+ * Tint: the walker's `tint` prop, handed straight to `<StyleBoxQuad>`'s
+ * `color` prop — that component composes it into whichever kind's own base
+ * colour(s), in sRGB, before its single sRGB→linear conversion.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
-import type { ControlProperties } from '../control/types';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import {
-  parseStyleBoxLine,
-  defaultSeparatorStyleBoxLine,
-  type SeparatorOrientation,
-} from './styleBoxLine';
-import { separatorLineDrawRect } from './styleBoxLineGeometry';
+import { styleBoxLineBox, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { defaultSeparatorStyleBoxLine, type SeparatorOrientation } from './styleBoxLine';
+import { separatorPlacementRect } from './separatorPlacement';
 
 export interface SeparatorChromeProps extends NativeControlComponentProps {
   orientation: SeparatorOrientation;
@@ -53,29 +47,30 @@ export function SeparatorChrome({
   theme,
   renderOrder,
 }: SeparatorChromeProps) {
-  const flatOverride = solveNode.styleBoxes.separator;
-  const lineRef = painterView<ControlProperties>(solveNode).themeOverrideStyles?.separator;
-
-  const lineBox = useMemo(
-    () =>
-      parseStyleBoxLine(lineRef, solveNode.resources.internalResources) ??
-      defaultSeparatorStyleBoxLine(orientation, theme),
-    [lineRef, solveNode.resources, orientation, theme]
+  const override = solveNode.styleBoxes.separator;
+  const box: ResolvedStyleBox = useMemo(
+    () => override ?? styleBoxLineBox(defaultSeparatorStyleBoxLine(orientation, theme)),
+    [override, orientation, theme]
   );
-  const filled = useMemo(() => multiplyModulate(tint.own, lineBox.color), [tint.own, lineBox]);
-  const color = useGodotLinearColor(filled);
-  const draw = useMemo(
-    () => separatorLineDrawRect(orientation, rect, lineBox),
-    [orientation, rect, lineBox]
-  );
+  const placed = useMemo(() => separatorPlacementRect(orientation, rect, box), [orientation, rect, box]);
 
-  if (flatOverride) {
-    return <StyleBoxQuad styleBox={flatOverride} color={tint.own} rect={rect} renderOrder={renderOrder} />;
-  }
-
+  // `<StyleBoxQuad>` reads only its `rect` prop's SIZE, never its x/y (every
+  // other caller draws at its own local (0,0)) — so `placed`'s own offset is
+  // applied here, the same way this painter's DEFAULT-theme path always has,
+  // and `<StyleBoxQuad>` gets a zero-origin box the same size as `placed`.
+  // `renderOrder` is set here too, matching `<StyleBoxQuad>`'s own inner
+  // group — three reads a drawn mesh's place in the canvas from its NEAREST
+  // enclosing group's `renderOrder` (`canvasPaintOrder.ts`), which is that
+  // inner one, not this one; kept in step anyway so this group is never the
+  // stray ancestor a future refactor trusts by mistake.
   return (
-    <group position={[draw.x, -draw.y, 0]} renderOrder={renderOrder}>
-      <ControlQuad width={draw.w} height={draw.h} color={color} opacity={filled.a} renderOrder={renderOrder} />
+    <group position={[placed.x, -placed.y, 0]} renderOrder={renderOrder}>
+      <StyleBoxQuad
+        styleBox={box}
+        color={tint.own}
+        rect={{ x: 0, y: 0, w: placed.w, h: placed.h }}
+        renderOrder={renderOrder}
+      />
     </group>
   );
 }

@@ -1,6 +1,6 @@
 /**
- * Godot default-theme SVG icons that the native (WebGL) CheckBox and
- * OptionButton Control painters need, vendored as inline `data:` URLs.
+ * Godot default-theme SVG icons the native (WebGL) Control painters need,
+ * vendored as inline `data:` URLs.
  *
  * Godot bakes `scene/theme/icons/*.svg` into the default theme at build
  * time — see `scene/theme/icons/default_theme_icons_builders.py`
@@ -38,6 +38,46 @@
  *    static previewer (same restriction as Button's hover/pressed states), so
  *    it is not vended here; only the `normal`/`disabled` pair a static render
  *    ever needs.
+ *  - CheckButton (`default_theme.cpp:327-330`), the toggle-switch pair:
+ *      set_icon("checked",            "CheckButton", icons["toggle_on"])
+ *      set_icon("checked_disabled",   "CheckButton", icons["toggle_on_disabled"])
+ *      set_icon("unchecked",          "CheckButton", icons["toggle_off"])
+ *      set_icon("unchecked_disabled", "CheckButton", icons["toggle_off_disabled"])
+ *    The four `_mirrored` variants (`:332-335`, RTL) are not vended, matching
+ *    every other painter here.
+ *  - FoldableContainer (`default_theme.cpp:1329-1332`), the fold-state arrows:
+ *      set_icon("expanded_arrow",          "FoldableContainer", icons["arrow_down"])
+ *      set_icon("expanded_arrow_mirrored", "FoldableContainer", icons["arrow_up"])
+ *      set_icon("folded_arrow",            "FoldableContainer", icons["arrow_right"])
+ *      set_icon("folded_arrow_mirrored",   "FoldableContainer", icons["arrow_left"])
+ *    `FoldableContainer::_get_title_icon` (`foldable_container.cpp:428-435`)
+ *    never picks the RTL-only `folded_arrow_mirrored` in this codebase, but
+ *    `expanded_arrow_mirrored` IS reachable through `title_position` alone,
+ *    so the pair is vended together.
+ *  - TextEdit / CodeEdit (`default_theme.cpp:457-458,491-492`), the
+ *    `draw_tabs`/`draw_spaces` visual-whitespace glyphs — both classes bind
+ *    the identical two keys to the identical two icons:
+ *      set_icon("tab",   "TextEdit", icons["text_edit_tab"])
+ *      set_icon("space", "TextEdit", icons["text_edit_space"])
+ *      set_icon("tab",   "CodeEdit", icons["text_edit_tab"])
+ *      set_icon("space", "CodeEdit", icons["text_edit_space"])
+ *  - TabBar (`default_theme.cpp:1034,1036,1039`), the tab-strip icons —
+ *    `TabContainer` reuses TabBar's own painter rather than a second copy:
+ *      set_icon("increment", "TabBar", icons["scroll_button_right"])
+ *      set_icon("decrement", "TabBar", icons["scroll_button_left"])
+ *      set_icon("close",     "TabBar", icons["close"])
+ *    The `_highlight` (hover) variants (`:1035,1037`) are not vended, same
+ *    restriction as Slider's `grabber_highlight` above.
+ *  - ColorPicker / ColorPickerButton (`default_theme.cpp:1096,1098,1100-
+ *    1101,1133`), the swatch/cursor icons — `ColorPickerButton`'s own
+ *    `overbright_indicator` is `BIND_THEME_ITEM_EXT`'d straight to
+ *    ColorPicker's key (`color_picker.cpp:2546`), so it is the SAME icon
+ *    under one key, not a second copy:
+ *      set_icon("sample_bg",           "ColorPicker",       icons["mini_checkerboard"])
+ *      set_icon("bg",                  "ColorPickerButton",  icons["mini_checkerboard"])
+ *      set_icon("overbright_indicator","ColorPicker",       icons["color_picker_overbright"])
+ *      set_icon("picker_cursor",       "ColorPicker",       icons["color_picker_cursor"])
+ *      set_icon("picker_cursor_bg",    "ColorPicker",       icons["color_picker_cursor_bg"])
  *
  * The bytes embedded below are unmodified copies of those SVG files from
  * Godot 4.6.3's `scene/theme/icons/`. Licence: Godot Engine, MIT — see
@@ -175,3 +215,143 @@ export const SLIDER_TICK_ICONS: SliderTickIcons = {
   hslider: svgDataUrl(HSLIDER_TICK_B64),
   vslider: svgDataUrl(VSLIDER_TICK_B64),
 };
+
+/** `scene/theme/icons/toggle_on.svg` (32x16) — CheckButton's `checked`. */
+const TOGGLE_ON_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii43NSIgcng9IjciLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjgiIHI9IjUiIGZpbGw9IiMxYTFhMWEiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/toggle_off.svg` (32x16) — CheckButton's `unchecked`. */
+const TOGGLE_OFF_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PGcgZmlsbC1vcGFjaXR5PSIuNSI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjMWExYTFhIiByeD0iNyIvPjxjaXJjbGUgY3g9IjgiIGN5PSI4IiByPSI1IiBmaWxsPSIjZmZmIi8+PC9nPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/toggle_on_disabled.svg` (32x16) — CheckButton's `checked_disabled`. */
+const TOGGLE_ON_DISABLED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4zNyIgcng9IjciLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjgiIHI9IjUiIGZpbGw9IiMxYTFhMWEiIGZpbGwtb3BhY2l0eT0iLjUiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/toggle_off_disabled.svg` (32x16) — CheckButton's `unchecked_disabled`. */
+const TOGGLE_OFF_DISABLED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PGcgZmlsbC1vcGFjaXR5PSIuMjUiPjxyZWN0IHdpZHRoPSIzMCIgaGVpZ2h0PSIxNCIgeD0iMSIgeT0iMSIgZmlsbD0iIzFhMWExYSIgcng9IjciLz48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNSIgZmlsbD0iI2ZmZiIvPjwvZz48L3N2Zz4K';
+
+/** CheckButton's four non-mirrored icon draw states — `default_theme.cpp:327-330`. */
+export interface CheckButtonIcons {
+  checked: string;
+  checkedDisabled: string;
+  unchecked: string;
+  uncheckedDisabled: string;
+}
+
+export const CHECK_BUTTON_ICONS: CheckButtonIcons = {
+  checked: svgDataUrl(TOGGLE_ON_B64),
+  checkedDisabled: svgDataUrl(TOGGLE_ON_DISABLED_B64),
+  unchecked: svgDataUrl(TOGGLE_OFF_B64),
+  uncheckedDisabled: svgDataUrl(TOGGLE_OFF_DISABLED_B64),
+};
+
+/** Every vendored CheckButton icon shares this authored size (`toggle_on.svg` et al, 32x16). */
+export const CHECK_BUTTON_ICON_NATURAL_SIZE = { x: 32, y: 16 };
+
+/** `scene/theme/icons/arrow_down.svg` (16x16) — FoldableContainer's `expanded_arrow`. */
+const ARROW_DOWN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTUgNyAzIDMgMy0zIi8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/arrow_up.svg` (16x16) — FoldableContainer's `expanded_arrow_mirrored` (used at `title_position = Bottom`, not for RTL). */
+const ARROW_UP_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTExLjAxMTA2MyA5Ljk3NzYyNDYtMy4wMjIyMDk0LTIuOTc3NjI0Ni0yLjk3NzYyNDcgMy4wMjIyMSIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/arrow_right.svg` (16x16) — FoldableContainer's `folded_arrow`. */
+const ARROW_RIGHT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTYgMTEgMy0zLTMtMyIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/arrow_left.svg` (16x16) — FoldableContainer's `folded_arrow_mirrored` (RTL only, never selected here). */
+const ARROW_LEFT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgMTEtMy0zIDMtMyIvPjwvc3ZnPgo=';
+
+/** FoldableContainer's four fold-state arrow icons — `default_theme.cpp:1329-1332`. */
+export interface FoldableContainerIcons {
+  expandedArrow: string;
+  expandedArrowMirrored: string;
+  foldedArrow: string;
+  foldedArrowMirrored: string;
+}
+
+export const FOLDABLE_CONTAINER_ICONS: FoldableContainerIcons = {
+  expandedArrow: svgDataUrl(ARROW_DOWN_B64),
+  expandedArrowMirrored: svgDataUrl(ARROW_UP_B64),
+  foldedArrow: svgDataUrl(ARROW_RIGHT_B64),
+  foldedArrowMirrored: svgDataUrl(ARROW_LEFT_B64),
+};
+
+/** `scene/theme/icons/text_edit_tab.svg` (8x8) — TextEdit/CodeEdit's `tab`. */
+const TEXT_EDIT_TAB_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxwYXRoIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNNiAwdjhoMlYwek0xIDBhMSAxIDAgMCAwLS42OTMgMS43MDVMMi42IDMuOTk4LjMwNyA2LjI5MUExIDEgMCAwIDAgMS43MiA3LjcwNWwzLTNhMSAxIDAgMCAwIDAtMS40MTRsLTMtM0ExIDEgMCAwIDAgMSAweiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/text_edit_space.svg` (8x8) — TextEdit/CodeEdit's `space`. */
+const TEXT_EDIT_SPACE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxjaXJjbGUgY3g9IjQiIGN5PSI0IiByPSIxLjUiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjI1Ii8+PC9zdmc+Cg==';
+
+/** TextEdit's/CodeEdit's shared `tab`/`space` glyphs — `default_theme.cpp:457-458,491-492`. */
+export interface TextEditGlyphIcons {
+  tab: string;
+  space: string;
+}
+
+export const TEXT_EDIT_GLYPH_ICONS: TextEditGlyphIcons = {
+  tab: svgDataUrl(TEXT_EDIT_TAB_B64),
+  space: svgDataUrl(TEXT_EDIT_SPACE_B64),
+};
+
+/** `scene/theme/icons/close.svg` (16x16) — TabBar's `close`. */
+const TAB_BAR_CLOSE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuNzUiIGQ9Im0xIDMgMi0yIDUgNSA1LTUgMiAyLTUgNSA1IDUtMiAyLTUtNS01IDUtMi0yIDUtNXoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/scroll_button_right.svg` (16x16) — TabBar's `increment`. */
+const TAB_BAR_SCROLL_RIGHT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZWZmZmUiIGZpbGwtb3BhY2l0eT0iLjc1Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWExYTFhIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTcgNSAzIDMtMyAzIi8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/scroll_button_left.svg` (16x16) — TabBar's `decrement`. */
+const TAB_BAR_SCROLL_LEFT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZWZmZmUiIGZpbGwtb3BhY2l0eT0iLjc1Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWExYTFhIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgNS0zIDMgMyAzIi8+PC9zdmc+Cg==';
+
+/** TabBar's close and scroll-arrow icons — `default_theme.cpp:1034,1036,1039`. */
+export interface TabBarIcons {
+  close: string;
+  incrementScroll: string;
+  decrementScroll: string;
+}
+
+export const TAB_BAR_ICONS: TabBarIcons = {
+  close: svgDataUrl(TAB_BAR_CLOSE_B64),
+  incrementScroll: svgDataUrl(TAB_BAR_SCROLL_RIGHT_B64),
+  decrementScroll: svgDataUrl(TAB_BAR_SCROLL_LEFT_B64),
+};
+
+/** Every vendored TabBar icon shares this authored size (16x16) — never rescaled by the project theme scale, same limitation as `SPIN_BOX_ARROW_ICON_SIZE`. */
+export const TAB_BAR_ICON_SIZE = 16;
+
+/** `scene/theme/icons/mini_checkerboard.svg` (16x16) — the alpha-preview tile, `ColorPicker`'s `sample_bg` and `ColorPickerButton`'s `bg`. */
+const MINI_CHECKERBOARD_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iZ3JheSIgZD0iTTAgMHY4aDhWMHptOCA4djhoOFY4eiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik04IDB2OGg4VjB6bTAgOEgwdjhoOHoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/color_picker_overbright.svg` (16x16) — `ColorPicker`'s `overbright_indicator`, reused by `ColorPickerButton` under the same key (`color_picker.cpp:2546`). */
+const COLOR_PICKER_OVERBRIGHT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwMDAzIiBkPSJtLjUuNXYxMGwxMC0xMHoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/color_picker_cursor.svg` (12x12) — the SV-square cursor ring, `ColorPicker`'s `picker_cursor`. */
+const COLOR_PICKER_CURSOR_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiI+PGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIvPjxjaXJjbGUgY3g9IjYiIGN5PSI2IiByPSI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDAiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/color_picker_cursor_bg.svg` (12x12) — the cursor's own-colour fill, `ColorPicker`'s `picker_cursor_bg`. */
+const COLOR_PICKER_CURSOR_BG_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiI+PGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjQiIGZpbGw9IiNmZmYiLz48L3N2Zz4K';
+
+/** ColorPicker's/ColorPickerButton's checkerboard, overbright and cursor icons — `default_theme.cpp:1096,1098,1100-1101,1133`. */
+export const MINI_CHECKERBOARD_ICON = svgDataUrl(MINI_CHECKERBOARD_B64);
+export const COLOR_PICKER_OVERBRIGHT_ICON = svgDataUrl(COLOR_PICKER_OVERBRIGHT_B64);
+export const COLOR_PICKER_CURSOR_ICON = svgDataUrl(COLOR_PICKER_CURSOR_B64);
+export const COLOR_PICKER_CURSOR_BG_ICON = svgDataUrl(COLOR_PICKER_CURSOR_BG_B64);
+
+/** The checkerboard tile's own natural size — 16x16. */
+export const MINI_CHECKERBOARD_SIZE = 16;
+
+/** The cursor icons' own natural size — both 12x12. */
+export const COLOR_PICKER_CURSOR_SIZE = 12;

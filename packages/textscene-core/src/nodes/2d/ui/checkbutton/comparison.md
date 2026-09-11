@@ -35,8 +35,5 @@ switch's own on/off state.
 
 ## Known limitations
 
-- **Approximated** CheckButton's own left/right content margin (`round(6*scale)`) is
-  approximated from the theme's shared `round(4*scale)` margin; the two agree at the
-  project's default scale and can differ by a pixel at another one.
 - **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
   parsed but never drawn.

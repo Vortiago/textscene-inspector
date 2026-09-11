@@ -8,9 +8,12 @@
  * REPLACES `bg_color` with `tint_color` outright and sets `border_color` to
  * `selected ? <the untinted default's own border colour> :
  * tint_color.lightened(0.3)` (`:113-124`), building a fresh StyleBox rather
- * than multiplying. `StyleBoxTexture` is not modelled (this previewer's
- * StyleBox pipeline decodes `StyleBoxFlat` only), so only the `StyleBoxFlat`
- * branch (`:114-119`) ever applies here.
+ * than multiplying. A `StyleBoxTexture` panel takes the OTHER branch
+ * (`:120-124`), which does multiply: `set_modulate(tint_color)`.
+ *
+ * With `tint_color_enabled` false the else arm draws `sb_panel_flat` alone
+ * (`:126`), so a texture panel is not drawn at all — that is the engine's own
+ * behaviour, not a gap here.
  *
  * The resize handle draws only when `resizable && !autoshrink_enabled`
  * (`:133`, mirrored in `get_cursor_shape`, `:84`) — `autoshrink_enabled`
@@ -34,13 +37,13 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlColor } from '../control/types';
 import {
   resolveTitleFontTheme,
@@ -65,10 +68,21 @@ function lightened(c: ControlColor, amount: number): ControlColor {
 }
 
 /**
- * `graph_frame.cpp:113-124`: substitutes `bg_color` with `tint_color`
- * outright and derives `border_color` from it — not a multiply.
+ * `graph_frame.cpp:113-124` — the two tint arms, which do different things.
+ *
+ * A flat panel has its `bg_color` SUBSTITUTED by `tint_color` and its
+ * `border_color` derived from it (`:114-119`); a texture panel is MODULATED by
+ * it instead (`:120-124`). Neither is the other, and the engine picks by which
+ * kind the theme slot holds.
  */
-function tintedPanel(base: StyleBoxFlatData, tintColor: ControlColor, selected: boolean): StyleBoxFlatData {
+function tintedPanel(
+  base: ResolvedStyleBox,
+  tintColor: ControlColor,
+  selected: boolean
+): ResolvedStyleBox {
+  if (isStyleBoxTexture(base)) {
+    return { ...base, texture: { ...base.texture, modulateColor: tintColor } };
+  }
   return {
     ...base,
     bgColor: tintColor,
@@ -81,8 +95,13 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
   const selected = props.selected === true;
   const styles = graphFrameStyles(solveNode, theme);
   const basePanel = selected ? styles.panelSelected : styles.panel;
-  const panelStyle =
-    props.tintColorEnabled === true ? tintedPanel(basePanel, props.tintColor ?? { r: 0.3, g: 0.3, b: 0.3, a: 0.75 }, selected) : basePanel;
+  // `:126` — the untinted arm draws the FLAT box alone, so a texture panel
+  // with tinting off draws nothing, exactly as the engine does.
+  const tinted = props.tintColorEnabled === true;
+  const panelStyle = tinted
+    ? tintedPanel(basePanel, props.tintColor ?? { r: 0.3, g: 0.3, b: 0.3, a: 0.75 }, selected)
+    : basePanel;
+  const drawsPanel = tinted || !isStyleBoxTexture(panelStyle);
   const titlebarStyle = styles.titlebar;
 
   const textMin = graphFrameTitleTextMin(solveNode, theme);
@@ -131,7 +150,9 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   return (
     <>
-      <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+      {drawsPanel && (
+        <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+      )}
       <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebarBand.rect} renderOrder={renderOrder} />
 
       {titleLayout &&

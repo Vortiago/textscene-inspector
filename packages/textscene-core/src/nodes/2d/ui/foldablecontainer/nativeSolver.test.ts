@@ -23,6 +23,8 @@ import type { FoldableContainerProperties } from './types';
 import {
   foldableContainerMinimumSize,
   foldableContainerLayout,
+  foldableContainerHSeparation,
+  foldableContainerArrowSize,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -156,5 +158,17 @@ describe('foldableContainerLayout', () => {
     );
     const rect = rects.get('Child')!;
     expect(rect.y).toBe(4);
+  });
+});
+
+describe('foldableContainerHSeparation / foldableContainerArrowSize (default_theme.cpp:1336, scene/theme/icons/arrow_*.svg)', () => {
+  it('h_separation is round(2*scale); the arrow icons are round(16*scale) square', () => {
+    expect(foldableContainerHSeparation(nativeTheme(1))).toBe(2);
+    expect(foldableContainerArrowSize(nativeTheme(1))).toEqual({ x: 16, y: 16 });
+  });
+
+  it('both move with a non-1 theme scale', () => {
+    expect(foldableContainerHSeparation(nativeTheme(1.5))).toBe(3);
+    expect(foldableContainerArrowSize(nativeTheme(1.5))).toEqual({ x: 24, y: 24 });
   });
 });
