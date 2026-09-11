@@ -556,6 +556,13 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     /^window\/size\/viewport_height\s*=/,
     /^run\/main_scene\s*=/,
     /^config_version\s*=/,
+    // Redraws only when something changes, so a settled scene stops producing
+    // frames and the bootstrap's `frame_post_draw` await never resumes: the
+    // render walks off the end of `--quit-after` having written nothing, and
+    // reports "produced no image (exit 0)" with an empty stderr. Godot
+    // recommends it for non-game UI projects, which is where this harness is
+    // pointed whenever a Control scene is the subject.
+    /^run\/low_processor_mode\s*=/,
   ];
 
   // Only when the capture IS the window. A window sized by an override — or by
@@ -1445,9 +1452,9 @@ async function renderInto(
   // is reused across runs — so a picture the harness will not vouch for would
   // outlive the message saying so, which is the same stale-answer trap the
   // pre-render delete above exists to close.
-  const refuse = async (message) => {
+  const refuse = async (message, marks = {}) => {
     await rm(resolve(out), { force: true });
-    throw new Error(message);
+    throw Object.assign(new Error(message), marks);
   };
 
   if (rootWindow) {
@@ -1468,7 +1475,10 @@ async function renderInto(
   const drift = existsSync(driftOut)
     ? rootOnlyDriftMessage(JSON.parse(await readFile(driftOut, 'utf8')))
     : null;
-  if (drift) await refuse(drift);
+  // Marked, not just worded: the message names `--mode 2d-root` as the arm that
+  // CAN answer, and a caller that follows that instruction should not have to
+  // match on the prose to know this is the refusal that says so.
+  if (drift) await refuse(drift, { rootOnlyDrift: true });
 
   return { workDir: work, out: resolve(out), mode: rendered };
 }

@@ -57,6 +57,29 @@ export const CANVAS_2D_CAPTURE = {
   viewport: { width: 1600, height: 900 },
 };
 
+/** What the shell's dock and top bar take out of the window before the stage. */
+export const CANVAS_2D_CHROME = { width: 325, height: 44 };
+
+/**
+ * The browser window a 2D capture of a frame this size needs.
+ *
+ * The frame is the project's `display/window/size/viewport_*` rect and the
+ * stage lays it out at 1:1, so a project larger than the default window hangs
+ * past the stage edge and the capture is rejected outright — 1280x720, the
+ * commonest rect there is, misses by five pixels.
+ *
+ * Never SHRINKS below the default: the committed 2D goldens were captured
+ * through that window, and a narrower one would relayout the stage under them.
+ */
+export function canvas2DViewportFor(frame) {
+  const { width, height } = CANVAS_2D_CAPTURE.viewport;
+  if (!frame) return { width, height };
+  return {
+    width: Math.max(width, Math.ceil(frame.width) + CANVAS_2D_CHROME.width),
+    height: Math.max(height, Math.ceil(frame.height) + CANVAS_2D_CHROME.height),
+  };
+}
+
 /** The 2D stage's chrome, painted out for a capture (see `createCaptureContext`). */
 export const CANVAS_2D_TESTIDS = {
   stage: 'canvas-2d-stage',

@@ -7,6 +7,7 @@
 /* global document, window */ // the addInitScript callbacks run in the browser.
 
 import {
+  canvas2DViewportFor,
   CANVAS_2D_CAPTURE,
   CANVAS_2D_TESTIDS,
   FIT_ON_OPEN_2D_STORAGE_KEY,
@@ -31,10 +32,16 @@ import {
  * the same integer pixels every run. It is OPT-IN because the golden gate
  * captures 2D scenes WITH that chrome; turning any of it on unconditionally
  * would move those baselines.
+ *
+ * `canvas2DFrame` is the project-viewport rect the stage will lay out at 1:1,
+ * and only widens the window when that rect does not fit the default one.
  */
-export async function createCaptureContext(browser, { frameOnOpen, canvas2D = false }) {
+export async function createCaptureContext(
+  browser,
+  { frameOnOpen, canvas2D = false, canvas2DFrame = null }
+) {
   const context = await browser.newContext({
-    viewport: canvas2D ? CANVAS_2D_CAPTURE.viewport : VIEWPORT,
+    viewport: canvas2D ? canvas2DViewportFor(canvas2DFrame) : VIEWPORT,
     deviceScaleFactor: 1,
   });
   await context.addInitScript(

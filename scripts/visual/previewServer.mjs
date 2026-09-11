@@ -27,7 +27,9 @@ export {
   waitForServer,
 } from './preview/server.mjs';
 export {
+  canvas2DViewportFor,
   CANVAS_2D_CAPTURE,
+  CANVAS_2D_CHROME,
   CANVAS_2D_TESTIDS,
   CANVAS_CAPTURE,
   FIT_ON_OPEN_2D_STORAGE_KEY,

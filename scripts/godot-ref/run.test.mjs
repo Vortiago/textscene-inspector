@@ -237,6 +237,21 @@ describe('projectConfig', () => {
     expect(ini).toMatch(/window\/size\/viewport_height=480/);
   });
 
+  /**
+   * `low_processor_mode` redraws only when something changes, so a settled
+   * scene stops producing frames — and the bootstrap's `frame_post_draw` await
+   * then never resumes. The render walks off the end of `--quit-after` having
+   * written nothing, which surfaces as "produced no image (exit 0)" with an
+   * empty stderr. Godot recommends the setting for non-game UI projects, so
+   * the corpus this harness is pointed at is exactly where it turns up.
+   */
+  it('drops low_processor_mode, which stops the frame the capture awaits', () => {
+    const source = '[application]\nconfig/name="Tool"\nrun/low_processor_mode=true';
+    const ini = projectConfig(source, { width: 400, height: 300 });
+    expect(ini).not.toMatch(/low_processor_mode/);
+    expect(ini).toMatch(/config\/name="Tool"/);
+  });
+
   it('overrides a source viewport size rather than emitting the key twice', () => {
     const source = '[display]\nwindow/size/viewport_width=1152\nwindow/size/viewport_height=648';
     const ini = projectConfig(source, { width: 400, height: 300 });

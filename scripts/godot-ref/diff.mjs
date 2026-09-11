@@ -141,23 +141,97 @@ export function comparePngs(godotBuffer, oursBuffer) {
   return result;
 }
 
-async function diffOne({ scenePath, fixtureName, label }, { frame, keep }) {
-  const godotOut = join(OUT_DIR, `${label}.godot.png`);
-  await renderReference({ scene: scenePath, out: godotOut, frame });
+/**
+ * One scene through both renderers.
+ *
+ * WHICH FRAME a scene is belongs to the engine, not to a flag: `run.mjs` picks
+ * 2D or 3D from the scene root and reports the mode it rendered in. Our side
+ * captures whatever that says, so the two rectangles agree by construction. It
+ * used to always capture the 3D canvas, so every Control scene came back as a
+ * SIZE MISMATCH and produced no number at all.
+ *
+ * The renderer and the capture are injected so the pairing above is assertable
+ * without a Godot and a browser.
+ */
+export async function diffOne(
+  { scenePath, fixtureName, label },
+  { frame, keep },
+  { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
+) {
+  const renderAs = async (renderMode) =>
+    render({ scene: scenePath, out: join(outDir, `${label}.godot.png`), frame, mode: renderMode });
+  // A project setting one of the root-window-only viewport settings cannot be
+  // answered from the nested capture, and `run.mjs` refuses rather than return
+  // the class default — naming the arm that can. Following that instruction is
+  // the whole remedy, so a scene carrying one stays in the batch.
+  const { out: godotOut, mode } = await renderAs('auto').catch((error) => {
+    if (!error?.rootOnlyDrift) throw error;
+    return renderAs('2d-root');
+  });
   const godotBuffer = await readFile(godotOut);
 
-  const oursBuffer = await captureOurs({ fixture: fixtureName, frame });
-  if (keep) await writeFile(join(OUT_DIR, `${label}.ours.png`), oursBuffer);
+  // The reference IS the project-viewport rect, which is also the rect our 2D
+  // stage must lay out at 1:1 — so the picture the engine just produced is
+  // what sizes the capture window, with nothing re-derived from the project
+  // file on this side.
+  const canvas2D = mode === '2d';
+  const reference = PNG.sync.read(godotBuffer);
+  const oursBuffer = await capture({
+    fixture: fixtureName,
+    frame,
+    canvas2D,
+    canvas2DFrame: canvas2D ? { width: reference.width, height: reference.height } : null,
+  });
+  if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
 
   const result = comparePngs(godotBuffer, oursBuffer);
   if (result.sizeMismatch) return { label, ...result };
 
   if (result.changedPixels > 0) {
-    const diffPath = join(OUT_DIR, `${label}.diff.png`);
+    const diffPath = join(outDir, `${label}.diff.png`);
     await writeFile(diffPath, PNG.sync.write(result.diff));
     result.diffPath = diffPath;
   }
   return { label, ...result };
+}
+
+/**
+ * Every scene in the sweep, reported as it lands.
+ *
+ * A scene the harness cannot render is recorded as a `failed` row rather than
+ * thrown: the tool is documented as `ref:diff unit-csg-*.tscn`, and aborting on
+ * one scene measures nothing about the ones behind it.
+ */
+export async function diffAll(targets, args, deps = {}) {
+  const results = [];
+  for (const target of targets) {
+    let result;
+    try {
+      result = await diffOne(target, args, deps);
+    } catch (error) {
+      result = { label: target.label, failed: error.message.split('\n')[0] };
+    }
+    results.push(result);
+    // captureOurs() rebuilds the web app on every call. The first render is the only one
+    // that can see uncommitted source, so subsequent scenes in the same run reuse it.
+    process.env.VISUAL_SKIP_BUILD = '1';
+    console.log(formatResult(result));
+  }
+  return results;
+}
+
+function formatResult(result) {
+  const label = result.label.padEnd(28);
+  if (result.failed) return `${label} FAILED         ${result.failed}`;
+  if (result.sizeMismatch) return `${label} SIZE MISMATCH  ${result.sizeMismatch}`;
+  const changed = `${result.changedPct.toFixed(3)}%`;
+  return (
+    `${label} changed ${changed.padStart(8)}  ` +
+    `(${result.changedPixels} px of ${result.width}x${result.height})  ` +
+    `max ${String(result.maxChannelDelta).padStart(3)}/255  ` +
+    `mean ${result.meanChannelError.toFixed(3)}/255` +
+    (result.diffPath ? `  ${result.diffPath}` : '')
+  );
 }
 
 async function main() {
@@ -168,38 +242,18 @@ async function main() {
   }
   await mkdir(OUT_DIR, { recursive: true });
 
-  const targets = args.fixtures.map(resolveFixture);
-  const results = [];
-  for (const target of targets) {
-    const result = await diffOne(target, args);
-    results.push(result);
-    // captureOurs() rebuilds the web app on every call. The first render is the only one
-    // that can see uncommitted source, so subsequent scenes in the same run reuse it.
-    process.env.VISUAL_SKIP_BUILD = '1';
+  const results = await diffAll(args.fixtures.map(resolveFixture), args);
 
-    if (result.sizeMismatch) {
-      console.log(`${result.label.padEnd(28)} SIZE MISMATCH  ${result.sizeMismatch}`);
-    } else {
-      const changed = `${result.changedPct.toFixed(3)}%`;
-      console.log(
-        `${result.label.padEnd(28)} changed ${changed.padStart(8)}  ` +
-          `(${result.changedPixels} px of ${result.width}x${result.height})  ` +
-          `max ${String(result.maxChannelDelta).padStart(3)}/255  ` +
-          `mean ${result.meanChannelError.toFixed(3)}/255` +
-          (result.diffPath ? `  ${result.diffPath}` : '')
-      );
-    }
-  }
-
-  if (args.maxMean === null) return;
-  const over = results.filter((r) => r.sizeMismatch || r.meanChannelError > args.maxMean);
-  if (over.length > 0) {
-    console.error(
-      `\n${over.length} scene(s) over --max-mean ${args.maxMean}/255: ` +
-        over.map((r) => r.label).join(', ')
-    );
-    process.exit(1);
-  }
+  // A scene that never rendered is over ANY bound: it produced no number, which
+  // is a worse answer than a large one.
+  const over = results.filter(
+    (r) => r.failed || r.sizeMismatch || (args.maxMean !== null && r.meanChannelError > args.maxMean)
+  );
+  if (over.length === 0) return;
+  if (args.maxMean === null && !over.some((r) => r.failed)) return;
+  const bound = args.maxMean === null ? '' : ` or over --max-mean ${args.maxMean}/255`;
+  console.error(`\n${over.length} scene(s) unmeasured${bound}: ` + over.map((r) => r.label).join(', '));
+  process.exit(1);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {

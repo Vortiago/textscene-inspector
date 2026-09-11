@@ -15,7 +15,15 @@ import { existsSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
-import { isUniformImage, settleCanvas, writeCaptureImage, SETTLE_SIM_SECONDS } from './previewServer.mjs';
+import {
+  CANVAS_2D_CAPTURE,
+  CANVAS_2D_CHROME,
+  canvas2DViewportFor,
+  isUniformImage,
+  settleCanvas,
+  writeCaptureImage,
+  SETTLE_SIM_SECONDS,
+} from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
 /** A PNG whose every pixel is the same colour — what a dead GL context reads back as. */
@@ -272,5 +280,30 @@ describe('a dead GL context cannot be written as a capture', () => {
       [png.data[i], png.data[i + 1], png.data[i + 2], png.data[i + 3]] = [30, 60, 90, 255];
     }
     expect(isUniformImage(PNG.sync.write(png))).toBe(true);
+  });
+});
+
+describe('canvas2DViewportFor', () => {
+  /**
+   * The 2D capture used a fixed browser viewport sized for this repo's own
+   * corpus, and a project whose `display/window/size/viewport_*` is larger
+   * simply overflowed the stage — the frame is laid out at 1:1, so it hangs
+   * past the edge and `findCanvas2DFrame` rejects the whole capture. 1280x720
+   * is the commonest project rect there is and misses by five pixels.
+   */
+  it('grows the window so a frame larger than the default still fits the stage', () => {
+    const viewport = canvas2DViewportFor({ width: 1280, height: 720 });
+    expect(viewport.width - CANVAS_2D_CHROME.width).toBeGreaterThanOrEqual(1280);
+    expect(viewport.height - CANVAS_2D_CHROME.height).toBeGreaterThanOrEqual(720);
+  });
+
+  /**
+   * Existing 2D goldens were captured through the default window. Widening it
+   * for every scene would relayout the stage under them, so a frame that
+   * already fits must keep the exact window they were shot in.
+   */
+  it('keeps the default window for a frame that already fits', () => {
+    expect(canvas2DViewportFor(CANVAS_2D_CAPTURE)).toEqual(CANVAS_2D_CAPTURE.viewport);
+    expect(canvas2DViewportFor(null)).toEqual(CANVAS_2D_CAPTURE.viewport);
   });
 });
