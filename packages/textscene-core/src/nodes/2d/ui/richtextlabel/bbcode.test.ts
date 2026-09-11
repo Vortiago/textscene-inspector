@@ -144,6 +144,30 @@ describe('parseBBCodeRuns', () => {
       ]);
     });
   });
+
+  /**
+   * `[img]`'s payload is the image's resource path, and `:6026-6031,6145` read
+   * it as one and resume at the `[` that ends it — so it never becomes text.
+   * Drawing it as text is worse than drawing nothing: a credits screen full of
+   * `[img]` prints a column of `res://` paths where the logos belong.
+   */
+  describe('[img]', () => {
+    it('reads its payload as the image path, not as text', () => {
+      expect(parseBBCodeRuns('a[img=80]res://logo.png[/img]b')).toEqual([
+        { text: 'ab', tags: [] },
+      ]);
+    });
+
+    it('runs the path to the end when no bracket closes it (`:6027-6029`)', () => {
+      expect(parseBBCodeRuns('a[img]res://logo.png')).toEqual([{ text: 'a', tags: [] }]);
+    });
+
+    it('keeps text after the close tag outside the image', () => {
+      expect(parseBBCodeRuns('[b][img]a.png[/img]x[/b]')).toEqual([
+        { text: 'x', tags: [{ name: 'b', value: undefined }] },
+      ]);
+    });
+  });
 });
 
 describe('hasOpenTag', () => {

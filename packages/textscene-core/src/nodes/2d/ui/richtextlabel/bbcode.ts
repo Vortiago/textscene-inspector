@@ -139,16 +139,31 @@ function selfClosingText(name: string, value: string | undefined): string | null
  * bracket never fragments the text around it into separate runs (and separate
  * meshes) for a difference no painter can see.
  */
+function sameTags(a: readonly OpenBBCodeTag[], b: readonly OpenBBCodeTag[]): boolean {
+  return a.length === b.length && a.every((t, i) => t.name === b[i]!.name && t.value === b[i]!.value);
+}
+
+/** The next `[` at or after `from`, or the end of the string — `:6026-6029`. */
+function nextBracket(text: string, from: number): number {
+  const at = text.indexOf('[', from);
+  return at < 0 ? text.length : at;
+}
+
 export function parseBBCodeRuns(text: string): BBCodeRun[] {
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';
 
   function flush(): void {
-    if (pending) {
-      runs.push({ text: pending, tags: [...stack] });
-      pending = '';
-    }
+    if (!pending) return;
+    // Merged rather than appended when the stack is unchanged: a tag that
+    // opens and closes around no text of its own — `[img]`, whose payload is a
+    // path — would otherwise split the text either side of it into separate
+    // runs, and separate meshes, for a difference no painter can see.
+    const previous = runs[runs.length - 1];
+    if (previous && sameTags(previous.tags, stack)) previous.text += pending;
+    else runs.push({ text: pending, tags: [...stack] });
+    pending = '';
   }
 
   let pos = 0;
@@ -189,7 +204,11 @@ export function parseBBCodeRuns(text: string): BBCodeRun[] {
       }
       flush();
       stack.push({ name, value: open[2] });
-      pos = brkEnd + 1;
+      // `[img]`'s payload is the image's resource path, not text: Godot reads it
+      // as far as the next `[` (the whole remainder when none follows) and
+      // resumes there (`rich_text_label.cpp:6026-6031,6145`). Emitting it would
+      // print a `res://` path where the image belongs.
+      pos = name === 'img' ? nextBracket(text, brkEnd + 1) : brkEnd + 1;
       continue;
     }
 
