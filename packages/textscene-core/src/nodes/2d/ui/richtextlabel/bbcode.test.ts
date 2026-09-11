@@ -1,12 +1,33 @@
 /**
- * `parseBBCodeRuns`/`hasOpenTag`/`lastTagValue`/`resolveBBColor` — the
- * framework-free half of the BBCode subset (ADR-0003's [b]/[i]/[u]/[s]/
- * [color]/[center]/[code]), extracted so both the DOM `<RichTextLabel>`
+ * `parseBBCodeRuns`/`hasOpenTag`/`lastTagValue`/`resolveBBColor`/`parseImgTag`
+ * — the framework-free half of the BBCode subset (ADR-0003's [b]/[i]/[u]/[s]/
+ * [color]/[center]/[code]/[img]), extracted so both the DOM `<RichTextLabel>`
  * (`bbcode.tsx`) and the native painter can tokenize the SAME tag stack
  * without either depending on React.
  */
 import { describe, expect, it } from 'vitest';
-import { hasOpenTag, lastTagValue, parseBBCodeRuns, resolveBBColor } from './bbcode';
+import { IMAGE_OBJECT_CHAR, hasOpenTag, lastTagValue, parseBBCodeRuns, parseImgTag, resolveBBColor } from './bbcode';
+
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
+
+/** A `ParsedImgTag` with every field at its Godot default but `path`/whichever fields the test overrides. */
+function img(path: string, overrides: Partial<ReturnType<typeof parseImgTag>> = {}) {
+  return {
+    path,
+    width: 0,
+    height: 0,
+    widthInPercent: false,
+    heightInPercent: false,
+    color: WHITE,
+    region: undefined,
+    pad: false,
+    tooltip: '',
+    altText: '',
+    alignment: CENTER_CENTER,
+    ...overrides,
+  };
+}
 
 describe('parseBBCodeRuns', () => {
   it('returns a single untagged run for plain text', () => {
@@ -149,23 +170,119 @@ describe('parseBBCodeRuns', () => {
    * `[img]`'s payload is the image's resource path, and `:6026-6031,6145` read
    * it as one and resume at the `[` that ends it — so it never becomes text.
    * Drawing it as text is worse than drawing nothing: a credits screen full of
-   * `[img]` prints a column of `res://` paths where the logos belong.
+   * `[img]` prints a column of `res://` paths where the logos belong. It also
+   * never becomes an ORDINARY run: it stands in for `ItemImage`, one
+   * `IMAGE_OBJECT_CHAR` run carrying the parsed tag, same as real Godot's own
+   * `String::chr(0xfffc)` placeholder glyph.
    */
   describe('[img]', () => {
-    it('reads its payload as the image path, not as text', () => {
+    it('reads its payload as the image path, captured on the run rather than printed as text', () => {
       expect(parseBBCodeRuns('a[img=80]res://logo.png[/img]b')).toEqual([
-        { text: 'ab', tags: [] },
+        { text: 'a', tags: [] },
+        { text: IMAGE_OBJECT_CHAR, tags: [], image: img('res://logo.png', { width: 80 }) },
+        { text: 'b', tags: [] },
       ]);
     });
 
     it('runs the path to the end when no bracket closes it (`:6027-6029`)', () => {
-      expect(parseBBCodeRuns('a[img]res://logo.png')).toEqual([{ text: 'a', tags: [] }]);
+      expect(parseBBCodeRuns('a[img]res://logo.png')).toEqual([
+        { text: 'a', tags: [] },
+        { text: IMAGE_OBJECT_CHAR, tags: [], image: img('res://logo.png') },
+      ]);
     });
 
-    it('keeps text after the close tag outside the image', () => {
+    it('keeps text after the close tag outside the image, and outside its OWN (unconditionally pushed) tag context', () => {
       expect(parseBBCodeRuns('[b][img]a.png[/img]x[/b]')).toEqual([
+        { text: IMAGE_OBJECT_CHAR, tags: [{ name: 'b', value: undefined }], image: img('a.png') },
         { text: 'x', tags: [{ name: 'b', value: undefined }] },
       ]);
+    });
+
+    it('emits no run at all for an empty path — the same "texture failed to load" outcome real Godot reaches (`:6034`)', () => {
+      expect(parseBBCodeRuns('a[img][/img]b')).toEqual([{ text: 'ab', tags: [] }]);
+    });
+  });
+});
+
+describe('parseImgTag', () => {
+  it('parses "WxH" from the value form (`:6062-6071`)', () => {
+    expect(parseImgTag('img=100x50', 'a.png')).toEqual(img('a.png', { width: 100, height: 50 }));
+  });
+
+  it('parses a bare width, no "x", as width-only — height stays 0 (natural aspect)', () => {
+    expect(parseImgTag('img=64', 'a.png')).toEqual(img('a.png', { width: 64 }));
+  });
+
+  it('reads a "%" suffix on either half of "WxH" independently', () => {
+    expect(parseImgTag('img=50%x25', 'a.png')).toEqual(
+      img('a.png', { width: 50, widthInPercent: true, height: 25 })
+    );
+  });
+
+  it('reads width/height from bbcode_options ONLY when the value form is absent (`:6072-6141`)', () => {
+    expect(parseImgTag('img width=40 height=30', 'a.png')).toEqual(img('a.png', { width: 40, height: 30 }));
+  });
+
+  it('the value form and the width=/height= options are mutually exclusive — a present value form leaves the options unread even when both are written', () => {
+    // `"top".to_int()` is 0 (`String::to_int` skips non-digits) — real Godot
+    // leaves width/height at 0 here rather than falling through to `width=`.
+    expect(parseImgTag('img=top width=999', 'a.png')).toEqual(img('a.png', { alignment: { imagePoint: 'top', textPoint: 'top' } }));
+  });
+
+  it('reads tooltip=/pad= only from the options form', () => {
+    expect(parseImgTag('img tooltip="a caption" pad=true', 'a.png')).toEqual(
+      img('a.png', { tooltip: 'a caption', pad: true })
+    );
+  });
+
+  it('reads color=/region=/alt= unconditionally, alongside EITHER form', () => {
+    expect(parseImgTag('img=32x32 color=#ff0000 region=1,2,3,4 alt="a logo"', 'a.png')).toEqual(
+      img('a.png', {
+        width: 32,
+        height: 32,
+        color: { r: 1, g: 0, b: 0, a: 1 },
+        region: { x: 1, y: 2, w: 3, h: 4 },
+        altText: 'a logo',
+      })
+    );
+  });
+
+  it('color falls back to opaque white, not the paragraph default_color (`:6034-6038`)', () => {
+    expect(parseImgTag('img', 'a.png').color).toEqual(WHITE);
+  });
+
+  it('a malformed region (not exactly 4 comma-separated values) is dropped', () => {
+    expect(parseImgTag('img region=1,2,3', 'a.png').region).toBeUndefined();
+  });
+
+  it('an unterminated quote still yields its tail piece (`_split_unquoted`, `:5290-5296`) — unquote is a no-op on an unmatched pair', () => {
+    expect(parseImgTag('img alt="unclosed', 'a.png').altText).toBe('"unclosed');
+  });
+
+  describe('alignment', () => {
+    it('a single subtag sets a full preset — image point and text point together (`:6001-6010`)', () => {
+      expect(parseImgTag('img=top', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
+      expect(parseImgTag('img=bottom', 'a.png').alignment).toEqual({ imagePoint: 'bottom', textPoint: 'bottom' });
+    });
+
+    it('a two-piece subtag sets each axis independently', () => {
+      expect(parseImgTag('img=top,bottom', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'bottom' });
+    });
+
+    it('a matched image-point piece resets text-point to top unless the second piece also matches — Godot assigns (not ORs) the image bits, zeroing the text bits as a side effect', () => {
+      expect(parseImgTag('img=top,xyz', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
+    });
+
+    it("an unmatched image-point piece leaves text-point BOTTOM for 'baseline' — the default CENTER text field (0b01) OR'd with BASELINE's own field (0b10) is 0b11, Godot's own BOTTOM value, a real engine quirk this ports bit-for-bit", () => {
+      expect(parseImgTag('img=xyz,baseline', 'a.png').alignment).toEqual({ imagePoint: 'center', textPoint: 'bottom' });
+    });
+
+    it('reads align= from the options form, using the same subtag grammar', () => {
+      expect(parseImgTag('img align=bottom,center', 'a.png').alignment).toEqual({ imagePoint: 'bottom', textPoint: 'center' });
+    });
+
+    it('align= is unread once the value form is present, same mutual exclusivity as width/height', () => {
+      expect(parseImgTag('img=32 align=bottom', 'a.png').alignment).toEqual(CENTER_CENTER);
     });
   });
 });

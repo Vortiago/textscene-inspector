@@ -1,6 +1,14 @@
 /**
- * Resolve a Texture2D-valued property that references an inline `AtlasTexture`
- * sub-resource — a sprite-sheet cell — into the cell as a texture of its own.
+ * Resolve a Texture2D-valued property that references an `AtlasTexture` — a
+ * sprite-sheet cell — into the cell as a texture of its own.
+ *
+ * Godot saves an AtlasTexture two ways, and both reach this module: inline as
+ * a `[sub_resource]` in the file that uses it (`resolveAtlasTextureRef`), or
+ * as its OWN standalone `.tres` — every Kenney input-prompt icon ships the
+ * second way, one cell per file (`SubResourceResolver.resolveExtAtlasTexturePath`
+ * finds the file; `decodeExtAtlasTextureRef` below decodes it once loaded).
+ * Either decodes to the same `AtlasTextureReference` shape, so everything
+ * below this point (the crop, the cache) is form-agnostic.
  *
  * Unlike a `GradientTexture2D`, an AtlasTexture is only HALF describable inside
  * the scene: the region is authored, the pixels come from the sheet the `atlas`
@@ -17,14 +25,15 @@
 
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
+import type { ParsedResource } from '../../../parser/parsedResource';
 import { parseResourceReference, findSubResource } from '../../SubResourceResolver';
 import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
 import { imageSize } from '../../../r3f/controls/withImageCanvas';
 import { atlasTextureLayout, decodeAtlasTexture } from './decode';
 import { rasterizeAtlasTexture } from './build';
-import type { AtlasTextureData } from './types';
+import { ATLAS_TEXTURE_TYPE, type AtlasTextureData } from './types';
 
-/** An inline AtlasTexture reference: the sub-resource id it names, plus its decoded properties. */
+/** An AtlasTexture reference, inline or `.tres`: the id it resolves through (a sub-resource id or the file's own path), plus its decoded properties. */
 export interface AtlasTextureReference {
   id: string;
   texture: AtlasTextureData;
@@ -44,6 +53,20 @@ export function resolveAtlasTextureRef(
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'AtlasTexture') return null;
   return { id: parsed.id, texture: decodeAtlasTexture(resource.data as Record<string, unknown>) };
+}
+
+/**
+ * The AtlasTexture reference a loaded `.tres` at `path` names, decoded into
+ * the same shape `resolveAtlasTextureRef` produces for the inline form — or
+ * null when the file's own header names something else (a hand-edited file
+ * whose declared ext-resource `type=` no longer matches its content).
+ */
+export function decodeExtAtlasTextureRef(
+  path: string,
+  tres: ParsedResource
+): AtlasTextureReference | null {
+  if (tres.resourceType !== ATLAS_TEXTURE_TYPE) return null;
+  return { id: path, texture: decodeAtlasTexture(tres.properties) };
 }
 
 /** A cropped cell and the procedural-cache key that keeps it resident. */

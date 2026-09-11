@@ -69,4 +69,5 @@ string against `true`, so an absent property or any other value silently resolve
   plain text.
 - **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
   right edge instead of stretching to the box.
-- **Not drawn** An `[img]` leaves a gap where Godot draws the inline image.
+- **Not drawn** An `[img]` with no `width=`/`height=`/`WxH` and no `region=` draws
+  nothing.

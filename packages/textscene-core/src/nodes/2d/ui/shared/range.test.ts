@@ -43,6 +43,42 @@ describe('parseRange', () => {
   });
 });
 
+describe('Range::_calc_value gates (range.cpp:182-200)', () => {
+  // `if (!shared->allow_lesser && p_val < shared->min)` (`:197-199`) — the
+  // clamp is CONDITIONAL, so an authored value below min survives.
+  it('keeps a value below min when allow_lesser is set', () => {
+    expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100, allowLesser: true }, undefined)).toBe(-50);
+    expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100 }, undefined)).toBe(0);
+  });
+
+  // `if (!shared->allow_greater && p_val > shared->max - shared->page)` (`:193-195`).
+  it('keeps a value above max when allow_greater is set', () => {
+    expect(resolveRangeValue({ value: 250, minValue: 0, maxValue: 100, allowGreater: true }, undefined)).toBe(250);
+    expect(resolveRangeValue({ value: 250, minValue: 0, maxValue: 100 }, undefined)).toBe(100);
+  });
+
+  // `if (_rounded_values) { p_val = Math::round(p_val); }` (`:188-190`).
+  it('rounds the value when rounded is set', () => {
+    expect(resolveRangeValue({ value: 12.6, minValue: 0, maxValue: 100, rounded: true }, undefined)).toBe(13);
+    expect(resolveRangeValue({ value: 12.6, minValue: 0, maxValue: 100 }, undefined)).toBe(12.6);
+  });
+
+  // `p_val = _snapped_r128(p_val - shared->min, p_step) + shared->min` (`:184-186`),
+  // live only for `p_step > 0`, and measured from `min` rather than from zero.
+  it('snaps the value to step, measured from min', () => {
+    expect(resolveRangeValue({ value: 23, minValue: 0, maxValue: 100, step: 10 }, undefined)).toBe(20);
+    expect(resolveRangeValue({ value: 23, minValue: 3, maxValue: 100, step: 10 }, undefined)).toBe(23);
+    expect(resolveRangeValue({ value: 23, minValue: 0, maxValue: 100, step: 0 }, undefined)).toBe(23);
+  });
+
+  it('parses the three gates off the raw property map', () => {
+    const parsed = parseRange({ allow_greater: 'true', allow_lesser: 'true', rounded: 'true' });
+    expect(parsed.allowGreater).toBe(true);
+    expect(parsed.allowLesser).toBe(true);
+    expect(parsed.rounded).toBe(true);
+  });
+});
+
 describe('rangeRatio', () => {
   it('is 0 for an all-default Range — value 0 sits on min_value', () => {
     expect(rangeRatio({})).toBe(0);

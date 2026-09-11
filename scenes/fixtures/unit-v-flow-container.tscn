@@ -1,6 +1,15 @@
 [gd_scene format=3]
 
-; Exercises FlowContainer's inherited alignment/wrap/fill properties; never carries `vertical`, which VFlowContainer removes.
+; Never carries `vertical`, which VFlowContainer removes. These three
+; fixed-size ColorRect children are the ONE variable, replacing the original
+; two Labels: a Label's height depends on font metrics, which cannot
+; reliably pin whether a wrap happens at all. First(20) fits alone;
+; Second(20) cannot join it (20+4+20 > 32) and wraps to column 1; Third(14)
+; cannot join Second either (20+4+14 > 32) and wraps to column 2, which does
+; NOT read as "filled" (the wrap check re-adds Third's own height:
+; 14+14=28 <= 32) — the one condition that lets last_wrap_alignment move a
+; column at all. A regression in the wrap threshold, the per-column
+; alignment, last_wrap_alignment, or reverse_fill is invisible without this.
 
 [node name="Root" type="Control"]
 anchors_preset = 15
@@ -17,10 +26,17 @@ alignment = 1
 last_wrap_alignment = 3
 reverse_fill = true
 
-[node name="First" type="Label" parent="MyVFlowContainer"]
+[node name="First" type="ColorRect" parent="MyVFlowContainer"]
 layout_mode = 2
-text = "First"
+custom_minimum_size = Vector2(20, 20)
+color = Color(0.85, 0.2, 0.2, 1)
 
-[node name="Second" type="Label" parent="MyVFlowContainer"]
+[node name="Second" type="ColorRect" parent="MyVFlowContainer"]
 layout_mode = 2
-text = "Second"
+custom_minimum_size = Vector2(20, 20)
+color = Color(0.2, 0.75, 0.2, 1)
+
+[node name="Third" type="ColorRect" parent="MyVFlowContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(20, 14)
+color = Color(0.2, 0.4, 0.85, 1)

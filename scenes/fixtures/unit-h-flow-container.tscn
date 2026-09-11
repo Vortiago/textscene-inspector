@@ -1,5 +1,15 @@
 [gd_scene format=3]
 
+; These three fixed-size ColorRect children are the ONE variable, replacing
+; the original two Labels: a Label's width depends on font metrics, which
+; cannot reliably pin whether a wrap happens at all. First(70) fits alone;
+; Second(70) cannot join it (70+4+70 > 100) and wraps to row 1; Third(45)
+; cannot join Second either (70+4+45 > 100) and wraps to row 2, which does
+; NOT read as "filled" (the wrap check re-adds Third's own width:
+; 45+45=90 <= 100) — the one condition that lets last_wrap_alignment move a
+; row at all. A regression in the wrap threshold, the per-row alignment,
+; last_wrap_alignment, or reverse_fill is invisible without this.
+
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -15,10 +25,17 @@ alignment = 1
 last_wrap_alignment = 3
 reverse_fill = true
 
-[node name="Left" type="Label" parent="MyHFlowContainer"]
+[node name="First" type="ColorRect" parent="MyHFlowContainer"]
 layout_mode = 2
-text = "Left"
+custom_minimum_size = Vector2(70, 20)
+color = Color(0.85, 0.2, 0.2, 1)
 
-[node name="Right" type="Label" parent="MyHFlowContainer"]
+[node name="Second" type="ColorRect" parent="MyHFlowContainer"]
 layout_mode = 2
-text = "Right"
+custom_minimum_size = Vector2(70, 20)
+color = Color(0.2, 0.75, 0.2, 1)
+
+[node name="Third" type="ColorRect" parent="MyHFlowContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(45, 20)
+color = Color(0.2, 0.4, 0.85, 1)

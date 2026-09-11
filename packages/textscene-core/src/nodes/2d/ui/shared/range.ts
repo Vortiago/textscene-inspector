@@ -18,8 +18,9 @@ export interface RangeProperties {
   maxValue?: number;
   /**
    * Quantisation of `value`. Godot's `Range` default is 0.01; `Slider`
-   * overrides it to 1.0. Purely an input concern — a static preview draws the
-   * authored `value` whether or not it is a multiple of `step`.
+   * overrides it to 1.0. `_calc_value` snaps to it whenever it is above zero,
+   * measured from `min` (`range.cpp:184-186`), so an authored value off the
+   * grid is not the value the engine holds.
    */
   step?: number;
   /**
@@ -35,6 +36,12 @@ export interface RangeProperties {
   page?: number;
   /** `exp_edit`: distribute `value` logarithmically across the range. */
   expEdit?: boolean;
+  /** `rounded`: `_calc_value` rounds to the nearest integer (`range.cpp:188-190`). Godot default false. */
+  rounded?: boolean;
+  /** `allow_greater`: lifts `_calc_value`'s `max - page` ceiling (`range.cpp:193-195`). Godot default false. */
+  allowGreater?: boolean;
+  /** `allow_lesser`: lifts `_calc_value`'s `min` floor (`range.cpp:197-199`). Godot default false. */
+  allowLesser?: boolean;
 }
 
 /** Godot `Range` property defaults (doc/classes/Range.xml). */
@@ -53,6 +60,9 @@ export function parseRange(properties: Record<string, string>): RangeProperties 
     step: parseOptionalFloat(properties.step),
     page: parseOptionalFloat(properties.page),
     expEdit: parseOptionalBool(properties.exp_edit),
+    rounded: parseOptionalBool(properties.rounded),
+    allowGreater: parseOptionalBool(properties.allow_greater),
+    allowLesser: parseOptionalBool(properties.allow_lesser),
   };
 }
 
@@ -111,26 +121,51 @@ interface RangeSimState {
   max: number;
   page: number;
   val: number;
+  /** Constant through the replay: none of the four gates has a setter that re-clamps. */
+  gates: RangeValueGates;
 }
 
 /**
- * `Range::_calc_value` (`range.cpp:182-200`), with `allow_greater`/
- * `allow_lesser` at their struct defaults — both `false` (`range.h:45-46`).
- * Neither `RangeProperties` nor any `.tscn` reader in this codebase parses
- * `allow_greater`/`allow_lesser`, so there is no authored value to read even
- * if this modelled the gate.
+ * `Range::_calc_value` (`range.cpp:182-200`) — the four terms `value`'s own
+ * setter applies, in the engine's order: snap to `step` measured FROM `min`,
+ * round, then the two CONDITIONAL clamps.
  *
- * The `p_step > 0` snap term (`range.cpp:184-186`) is DELIBERATELY not
- * modelled: `rangeRatio` has never snapped `value` to `step` (this function
- * predates ADR-0035), so adding it here would be a rendering-fidelity change
- * unrelated to file order, not an order-sensitivity fix. `RangeProperties`
- * does not even carry `step` into this function for that reason.
+ * Both clamps are gated: `allow_greater` lifts the `max - page` ceiling and
+ * `allow_lesser` lifts the `min` floor, so a scene authoring either really does
+ * hold a value outside its own bounds and Godot draws it there.
  */
-function calcValue(val: number, min: number, max: number, page: number): number {
+function calcValue(val: number, min: number, max: number, page: number, gates: RangeValueGates = {}): number {
   let v = val;
-  if (v > max - page) v = max - page;
-  if (v < min) v = min;
+  // Measured from `min`, so a range starting at 0.1 with step 0.2 snaps to
+  // 0.1/0.3/0.5 rather than to multiples of 0.2 (`range.cpp:184-186`).
+  if (gates.step !== undefined && gates.step > 0) v = snapped(v - min, gates.step) + min;
+  if (gates.rounded) v = Math.round(v);
+  if (!gates.allowGreater && v > max - page) v = max - page;
+  if (!gates.allowLesser && v < min) v = min;
   return v;
+}
+
+/** The `_calc_value` terms that are properties rather than bounds. */
+interface RangeValueGates {
+  step?: number;
+  rounded?: boolean;
+  allowGreater?: boolean;
+  allowLesser?: boolean;
+}
+
+/** `Math::snapped` (`core/math/math_funcs.h`) — `_snapped_r128`'s own fallback, and its answer wherever a double holds the result exactly. */
+function snapped(value: number, step: number): number {
+  return Math.floor(value / step + 0.5) * step;
+}
+
+/** Every `_calc_value` gate a node authored, read once per call site. */
+function gatesOf(props: RangeProperties): RangeValueGates {
+  return {
+    step: props.step,
+    rounded: props.rounded,
+    allowGreater: props.allowGreater,
+    allowLesser: props.allowLesser,
+  };
 }
 
 /** `Range::set_min` (`range.cpp:211-226`) — the early return (`:212-214`) is load-bearing: a redundant `min_value` line does nothing at all, not even re-clamp `value`. */
@@ -139,7 +174,7 @@ function applyMinValue(state: RangeSimState, min: number): void {
   state.min = min;
   state.max = Math.max(state.max, state.min); // :217
   state.page = clamp(state.page, 0, state.max - state.min); // :218
-  state.val = calcValue(state.val, state.min, state.max, state.page); // :219, set_value(shared->val)
+  state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :219, set_value(shared->val)
 }
 
 /** `Range::set_max` (`range.cpp:228-241`) — validates against `min` BEFORE the early-return check (`:229-232`). */
@@ -148,7 +183,7 @@ function applyMaxValue(state: RangeSimState, max: number): void {
   if (state.max === validated) return; // :230-232
   state.max = validated;
   state.page = clamp(state.page, 0, state.max - state.min); // :235
-  state.val = calcValue(state.val, state.min, state.max, state.page); // :236
+  state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :236
 }
 
 /** `Range::set_page` (`range.cpp:254-266`) — same early-return shape as `set_min`/`set_max`. */
@@ -156,12 +191,12 @@ function applyPage(state: RangeSimState, page: number): void {
   const validated = clamp(page, 0, state.max - state.min); // :255
   if (state.page === validated) return; // :256-258
   state.page = validated;
-  state.val = calcValue(state.val, state.min, state.max, state.page); // :261
+  state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :261
 }
 
 /** `Range::set_value` → `_set_value_no_signal` → `_calc_value` (`range.cpp:168-180,182-200`). No early return — `value`'s own setter always recomputes. */
 function applyValue(state: RangeSimState, value: number): void {
-  state.val = calcValue(value, state.min, state.max, state.page);
+  state.val = calcValue(value, state.min, state.max, state.page, state.gates);
 }
 
 /**
@@ -195,7 +230,7 @@ export function resolveRangeValue(props: RangeProperties, orderedKeys: RangeValu
     const min = props.minValue ?? RANGE_DEFAULT_MIN;
     const max = props.maxValue ?? RANGE_DEFAULT_MAX;
     const page = props.page ?? RANGE_DEFAULT_PAGE;
-    return calcValue(props.value ?? RANGE_DEFAULT_VALUE, min, max, page);
+    return calcValue(props.value ?? RANGE_DEFAULT_VALUE, min, max, page, gatesOf(props));
   }
 
   const state: RangeSimState = {
@@ -203,6 +238,7 @@ export function resolveRangeValue(props: RangeProperties, orderedKeys: RangeValu
     max: RANGE_DEFAULT_MAX,
     page: RANGE_DEFAULT_PAGE,
     val: RANGE_DEFAULT_VALUE,
+    gates: gatesOf(props),
   };
 
   for (const key of orderedKeys) {

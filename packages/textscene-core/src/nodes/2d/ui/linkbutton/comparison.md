@@ -1,17 +1,17 @@
 ---
 type: LinkButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-link-button.tscn
 # image: unit-link-button
-renders_as: invisible transform-only fallback
+renders_as: a text run with an optional underline stroke
 ---
 
 # LinkButton
 
-LinkButton is a hyperlink-style button that opens `uri` when pressed. The previewer
-parses and validates it but does not draw it, so it renders as a transform-only fallback
-and its children still show.
+LinkButton is a hyperlink-style button that opens `uri` when pressed (never navigated by
+this previewer). The previewer draws the label text with no StyleBox chrome, plus a
+solid underline stroke when `underline` calls for it at the node's draw state.
 
 ## Linting
 
@@ -40,11 +40,19 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all nine of LinkButton's own members. `parser.ts` reuses
-`parseControl` unchanged and reads none of them, so a bad `text`, `uri` or `underline`
-passes into the untyped property bag with no substitution.
+`linterParser.ts` format-checks all nine of LinkButton's own members. `parser.ts` reads
+`text`, `uri`, `underline` and `text_overrun_behavior`; `ellipsis_char`, `language`,
+`text_direction` and the structured-text-bidi pair pass into the untyped property bag
+with no substitution.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the underlined link text. The previewer draws nothing for
-  this node.
+- **Not drawn** `text_overrun_behavior`'s character trimming/ellipsis — the label
+  always draws its full text; only its effect on the minimum size (zero width unless
+  `NO_TRIMMING`) is modelled.
+- **Approximated** The `underline_spacing` theme constant (`round(2*scale)`) is
+  approximated from the theme's shared `round(4*scale)` margin; the two agree at the
+  project's default scale and can differ by a pixel at another one.
+- **Approximated** A `theme_override_fonts/font` scene font's underline position and
+  thickness still come from the vendored Open Sans metrics — no scene font carries its
+  own baked underline data.

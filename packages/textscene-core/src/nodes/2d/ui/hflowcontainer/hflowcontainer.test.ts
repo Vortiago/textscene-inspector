@@ -1,25 +1,14 @@
-/**
- * HFlowContainer registration — parsed and validated, not yet rendered.
- *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
- */
+/** HFlowContainer registration — parser. Render registration: `index.r3f.test.ts`. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseControl } from '../control/parser';
+import { parseFlowContainer } from '../flowcontainer/parser';
 import './index';
 
 describe('HFlowContainer registration', () => {
-  it('registers the Control base parser', () => {
+  it('reuses the FlowContainer parser', () => {
     const registration = nodeRegistry.getRegistration('HFlowContainer');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseControl);
-  });
-
-  it('registers no render component, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.get('HFlowContainer')).toBeUndefined();
+    expect(registration!.parser).toBe(parseFlowContainer);
   });
 });

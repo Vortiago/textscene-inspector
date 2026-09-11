@@ -11,6 +11,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resourceRef } from '../godot/index.js';
+import { ATLAS_TEXTURE_TYPE } from './textures/atlastexture/types.js';
 
 export function parseResourceReference(
   ref: string
@@ -109,6 +110,26 @@ export function unwrapCanvasTextureRef(
 }
 
 /**
+ * The `.tres` path an `ExtResource` reference names, when the OUTER file's own
+ * declared `type=` for that id is `AtlasTexture` — Godot always writes it to
+ * match the target's class, so this answers without loading anything. Null
+ * for every other reference form.
+ *
+ * Lives here, not in the atlastexture slice, so `resolveTexture2DPath` can
+ * consult it without a circular import (the atlastexture slice already
+ * imports `parseResourceReference` from this module).
+ */
+export function resolveExtAtlasTexturePath(
+  ref: string | null | undefined,
+  externalResources: readonly TscnExternalResource[]
+): string | null {
+  const parsed = parseResourceReference(ref ?? '');
+  if (!parsed || parsed.type !== 'ExtResource') return null;
+  const resource = externalResources.find((r) => r.id === parsed.id);
+  return resource?.type === ATLAS_TEXTURE_TYPE ? resource.path : null;
+}
+
+/**
  * Resolve a **Texture2D-valued** property to the `res://` path of a FILE to
  * load. Covers the forms of such a slot that name one:
  *
@@ -126,19 +147,23 @@ export function unwrapCanvasTextureRef(
  * a texture instead; this is the path-only half it delegates to, useful on its
  * own only where the caller genuinely wants a file path.
  *
- * An `AtlasTexture` deliberately resolves to NULL rather than to its sheet.
- * The sheet's path is a fine thing to load, but this resolver's answer is also
- * read as "how big is this slot" (a Control's minimum size, via the loader
- * cache), and an AtlasTexture is the size of its REGION, never of the sheet.
- * `useTexture2D` unwraps it explicitly and windows the sheet it loads;
- * `inlineTexture2DSize` answers the size half from the region alone.
+ * An `AtlasTexture` deliberately resolves to NULL rather than to its sheet —
+ * inline (`SubResource`) OR standalone (`ExtResource` naming a `.tres`, one
+ * cell per file). The sheet's path is a fine thing to load, but this
+ * resolver's answer is also read as "how big is this slot" (a Control's
+ * minimum size, via the loader cache), and an AtlasTexture is the size of its
+ * REGION, never of the sheet. `useTexture2D` resolves either form explicitly
+ * and windows the sheet it loads; `inlineTexture2DSize` /
+ * `extResourceAtlasTextureSize` answer the size half, one per form.
  */
 export function resolveTexture2DPath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): string | null {
-  return resolveExtResourcePath(unwrapCanvasTextureRef(ref, internalResources), externalResources);
+  const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
+  if (resolveExtAtlasTexturePath(unwrapped, externalResources)) return null;
+  return resolveExtResourcePath(unwrapped, externalResources);
 }
 
 /**

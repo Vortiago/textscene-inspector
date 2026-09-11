@@ -1,10 +1,10 @@
 /**
  * `<RichTextLabel>` — the native (WebGL canvas) painter for
- * RichTextLabel: the bbcode subset `[b]`/`[i]`/`[u]`/`[color]` (anything
- * beyond that is an explicit non-goal) drawn as one `<TextRun>` mesh per
- * (line, contiguous style-run) pair through the shared MSDF text engine
- * (`native/text/textLayout.ts` + `TextRun.tsx`), the same engine `<Label>`
- * draws through.
+ * RichTextLabel: the bbcode subset `[b]`/`[i]`/`[u]`/`[color]`/`[img]`
+ * (anything else is an explicit non-goal) drawn as one `<TextRun>` mesh per
+ * (line, contiguous style-run) pair — or one `<RichTextImage>` quad per
+ * `[img]` — through the shared MSDF text engine (`native/text/textLayout.ts`
+ * + `TextRun.tsx`), the same engine `<Label>` draws through.
  *
  * Bold/italic are SYNTHESIZED, not separate fonts — Godot's own default
  * theme has one base font and builds bold/italic `FontVariation`s over it
@@ -54,15 +54,28 @@
  * in sRGB) by its own resolved colour, then hands the sRGB result to
  * `<TextRun>`, which converts to linear internally — one conversion, same as
  * every other native text painter.
+ *
+ * `[img]` — a `RichTextImagePlacement` sibling of the text placements
+ * (`nativeSolver.ts`'s `layoutRichTextRuns`/`imageObjectFontMetrics` own the
+ * sizing/wrapping math). `<RichTextImage>` mirrors `texturerect/Component.tsx`'s
+ * own texture painter: `useTexture2D` against `solveNode.resources` (this
+ * node's OWN scope — a `[img]` path inside an instanced sub-scene names that
+ * scene's ids), `pinNoColorSpace` before the quad decodes it, `region=`
+ * windowed as a UV crop once the real texture size is known. `pad=` degrades
+ * to no padding while the texture has not loaded yet, same as every other
+ * texture-size-dependent read in this slice.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
+import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -73,13 +86,90 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   RICH_TEXT_LABEL_THEME_FONT_KEY,
   fontSizePxAtFromRuns,
+  imageObjectFontMetrics,
   layoutRichTextRuns,
   richTextLabelTextTheme,
   richTextUnderlineMetrics,
   styledTextRuns,
   underlineRectPx,
+  type RichTextImagePlacement,
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
+
+interface ImageLike {
+  width?: number;
+  height?: number;
+}
+
+/** One `[img]`'s own quad — `<TextureRect>`'s decode/region convention, sized by the SOLVED box (`placement.widthPx`/`heightPx`), never the texture's own natural size. */
+function RichTextImage({
+  placement,
+  tint,
+  resources,
+  renderOrder,
+}: {
+  placement: RichTextImagePlacement;
+  tint: RGBA;
+  resources: SolveNode['resources'];
+  renderOrder: number;
+}) {
+  const { spec, widthPx, heightPx } = placement;
+  const { externalResources, internalResources } = resources;
+  const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
+
+  const preparedTexture = useMemo(() => {
+    if (!rawTexture) return null;
+    const cloned = rawTexture.clone();
+    // NoColorSpace, pinned: same reason `texturerect/Component.tsx` pins it —
+    // `ControlQuad`'s own decode expects an undecoded sRGB sample.
+    pinNoColorSpace(cloned);
+    if (spec.region) {
+      const image = rawTexture.image as ImageLike | undefined;
+      const textureW = image?.width ?? 0;
+      const textureH = image?.height ?? 0;
+      if (textureW > 0 && textureH > 0) {
+        cloned.repeat.set(spec.region.w / textureW, spec.region.h / textureH);
+        cloned.offset.set(spec.region.x / textureW, 1 - (spec.region.y + spec.region.h) / textureH);
+      }
+    }
+    cloned.needsUpdate = true;
+    return cloned;
+  }, [rawTexture, spec.region]);
+
+  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+
+  if (!rawTexture || !preparedTexture) return null;
+
+  // `pad`: centres `min(reservedSize, naturalSize)` inside the box
+  // (`rich_text_label.cpp:1091-1096`'s `pad_size`/`pad_off`) — only once the
+  // texture's own natural size is known; degrades to no-pad otherwise.
+  const image = rawTexture.image as ImageLike | undefined;
+  let drawWidthPx = widthPx;
+  let drawHeightPx = heightPx;
+  let offsetXPx = 0;
+  let offsetYPx = 0;
+  if (spec.pad && image?.width && image?.height) {
+    drawWidthPx = Math.min(widthPx, image.width);
+    drawHeightPx = Math.min(heightPx, image.height);
+    offsetXPx = (widthPx - drawWidthPx) / 2;
+    offsetYPx = (heightPx - drawHeightPx) / 2;
+  }
+
+  const imageTint = multiplyModulate(tint, spec.color);
+
+  return (
+    <CanvasItemGroup position={[offsetXPx, -offsetYPx, 0]}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={drawWidthPx}
+        height={drawHeightPx}
+        color={godotColorToLinear(imageTint)}
+        opacity={imageTint.a}
+        map={preparedTexture}
+      />
+    </CanvasItemGroup>
+  );
+}
 
 export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
@@ -88,8 +178,8 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
   const clippingPlanes = useControlClipPlanes();
 
   const runs = useMemo(
-    () => styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize),
-    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
+    () => styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, rect.w]
   );
   const plainText = useMemo(() => runs.map((r) => r.text).join(''), [runs]);
   const fontSizePxAt = useMemo(() => fontSizePxAtFromRuns(runs), [runs]);
@@ -107,7 +197,9 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         autowrapMode,
         lineSpacingPx: 0, // default_theme.cpp:1217 — RichTextLabel's own line_separation default, NOT Label's 3.
         fontSizePxAt, // a [b]/[i]/[b][i] run shapes at its OWN theme font-size key, not normal_font_size — nativeSolver.ts's resolveRunFontSizePx.
-        fontMetrics,
+        // Decorated so an [img] run's placeholder character shapes at its own
+        // resolved width — nativeSolver.ts's imageObjectFontMetrics.
+        fontMetrics: imageObjectFontMetrics(fontMetrics),
       }),
     [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics]
   );
@@ -127,8 +219,15 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
   return (
     <>
       {placements.map((placement, index) => {
-        const runTint = multiplyModulate(tint.own, placement.color);
         const y = placement.lineTopPx;
+        if (placement.image) {
+          return (
+            <CanvasItemGroup key={index} position={[placement.lineOffsetXPx + placement.image.xPx, -(y + placement.image.yPx), 0]}>
+              <RichTextImage placement={placement.image} tint={tint.own} resources={solveNode.resources} renderOrder={renderOrder} />
+            </CanvasItemGroup>
+          );
+        }
+        const runTint = multiplyModulate(tint.own, placement.color);
         const underline = placement.underline
           ? underlineRectPx(placement.layout.lines[0]!.glyphs, placement.layout.baselineOffsetPx, underlineMetrics)
           : null;

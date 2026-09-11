@@ -1,17 +1,17 @@
 ---
 type: AspectRatioContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-aspect-ratio-container.tscn
 # image: unit-aspect-ratio-container
-renders_as: invisible transform-only fallback
+renders_as: each child scaled and aligned to a fixed ratio
 ---
 
 # AspectRatioContainer
 
-AspectRatioContainer resizes its children to keep a fixed width-to-height ratio, fitting
-or cropping them by `stretch_mode`. The previewer parses and validates it but does not
-draw it, so it renders as a transform-only fallback and its children still show.
+AspectRatioContainer scales and aligns every child to a fixed width-to-height ratio,
+fitting, covering, or driving one axis from the other per `stretch_mode`. It draws
+nothing itself.
 
 ## Linting
 
@@ -35,12 +35,10 @@ Strict parsing format-checks these `AspectRatioContainer` properties, plus 53 in
 | `valid-aspectratiocontainer-children` | `aspectratiocontainer-unsupported-texturerect-expand-mode` | info |
 <!-- lint:end -->
 
-`index.ts` reuses `parseControl` unchanged, which reads none of `ratio`, `stretch_mode`,
-`alignment_horizontal` or `alignment_vertical`. A bad value on any of them is never
-read, so no fallback applies. `linter.ts` adds one rule for a direct TextureRect child
-whose `expand_mode` is proportional, which Godot's sort pass skips.
-
-## Known limitations
-
-- **Not drawn** Godot scales and aligns the children to the ratio. The previewer applies
-  no layout, so they stay at their authored offsets.
+`parser.ts` now reads all four members straight through, unclamped — the same values
+`linterParser.ts` only warns about. The solver applies `aspect_ratio_container.h`'s own
+defaults (`ratio` 1.0, `stretch_mode` FIT, both alignments CENTER) and, for an
+out-of-range `stretch_mode`, falls through to no scaling at all, matching the engine's
+own unmatched-`switch` behaviour. `linter.ts`'s rule for a direct TextureRect child with
+a proportional `expand_mode` names a child the solver also skips from sorting, matching
+Godot's own sort pass.

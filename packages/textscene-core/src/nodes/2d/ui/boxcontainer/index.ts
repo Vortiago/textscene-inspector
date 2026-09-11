@@ -1,19 +1,21 @@
 /**
  * BoxContainer registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Parses `alignment` and `vertical` (this base's own, unlike its fixed-axis
+ * subclasses — `types.ts`'s doc), so the native (WebGL canvas) container
+ * layout registered in `nativeSolver.ts` can read them.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../../../2d/ui/control/parser';
+import { parseBoxContainer } from './parser';
 
 const boxContainerRegistration: NodeTypeRegistration = {
   typeName: 'BoxContainer',
-  parser: parseControl,
+  parser: parseBoxContainer,
 };
 
 nodeRegistry.register(boxContainerRegistration);
 
 export { boxContainerRegistration };
+export * from './parser';
+export * from './types';

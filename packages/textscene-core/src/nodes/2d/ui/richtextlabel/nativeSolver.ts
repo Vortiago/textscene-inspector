@@ -15,6 +15,7 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   AutowrapMode,
   clampAutowrapMode,
@@ -30,7 +31,16 @@ import { getFontAscentPx, getFontLinePitchPx, type FontMetrics } from '../../../
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
-import { hasOpenTag, lastTagValue, parseBBCodeRuns, resolveBBColor } from './bbcode';
+import {
+  IMAGE_OBJECT_CHAR,
+  hasOpenTag,
+  lastTagValue,
+  parseBBCodeRuns,
+  resolveBBColor,
+  type ParsedImageAlignment,
+  type ParsedImageRegion,
+  type ParsedImgTag,
+} from './bbcode';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color` — different override key NAMES from Label's `font_size`/`font_color`, same mechanism (`textTheme.ts`). */
 export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'normal_font_size', colorKey: 'default_color' };
@@ -63,6 +73,157 @@ export function richTextLabelTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR };
   return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
+}
+
+// --- [img]: size, and threading its own width through the shared shaper ---
+
+/**
+ * `RichTextLabel::_get_image_size` (`rich_text_label.cpp:4120-4155`), the
+ * THREE branches that need no more than `widthPx`/`heightPx`/`region` — every
+ * branch reading `p_image->get_width()`/`get_height()` (the texture's own
+ * natural pixel size, to preserve aspect with only ONE dimension authored and
+ * no region) is out of reach here: `SolveContext` has no texture cache (see
+ * `richtextlabel/comparison.md`'s own limitations entry), unlike
+ * `TextureRect`'s single-slot `SolveNode.textureSize`, which has nowhere to
+ * carry a PER-IMAGE size for the arbitrarily many `[img]`s one paragraph's
+ * text can name. `null` there, same as `null` for width/height both unset
+ * with no region (`p_image->get_size()`'s own branch) — a caller treats
+ * either as "this image cannot be sized here" and drops the run rather than
+ * reserving a wrong box.
+ */
+export function imageSizePx(widthPx: number, heightPx: number, region: ParsedImageRegion | undefined): Vec2 | null {
+  const hasRegion = region !== undefined && region.w > 0 && region.h > 0; // Rect2::has_area().
+  if (widthPx > 0) {
+    if (heightPx > 0) return { x: widthPx, y: heightPx };
+    if (hasRegion) return { x: widthPx, y: (region!.h * widthPx) / region!.w };
+    return null;
+  }
+  if (heightPx > 0) {
+    if (hasRegion) return { x: (region!.w * heightPx) / region!.h, y: heightPx };
+    return null;
+  }
+  if (hasRegion) return { x: region!.w, y: region!.h };
+  return null;
+}
+
+/**
+ * `img->width_in_percent`/`height_in_percent` (`rich_text_label.cpp:503-506`)
+ * BOTH scale against `p_width` — the paragraph's own available WIDTH, never
+ * its height, even for `height_in_percent` — because the only geometric
+ * reference an inline flow has is its own line axis. `boxWidthPx` is
+ * `undefined` on a solve tree's first pass (`SolveContext.tentativeRect`
+ * unresolved yet), in which case a percent dimension resolves to 0 — same
+ * "cannot be sized here yet" outcome `imageSizePx` gives an unauthored one.
+ */
+function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: number | undefined): number {
+  if (!inPercent) return amount;
+  if (boxWidthPx === undefined) return 0;
+  return (boxWidthPx * amount) / 100;
+}
+
+/**
+ * `core/math/math_defs.h:94-113`'s `InlineAlignment`, folded onto the LINE's
+ * own text-only ascent/descent — `TextServerAdvanced::_realign`
+ * (`modules/text_server_adv/text_server_adv.cpp:5189-5254`, horizontal-
+ * orientation arm). Every object on a line is measured against the SAME
+ * `textAscentPx`/`textDescentPx` (never each other, and never the running
+ * fold) — `_realign`'s own `p_sd->ascent`/`descent` reads, untouched inside
+ * its loop; only the `full_ascent`/`full_descent` accumulator (the caller's
+ * job, `lineMetricsOf`) compounds across multiple objects on one line.
+ *
+ * Returns the image's own top edge, in the SAME pen-space `TextRun`'s glyph Y
+ * uses (down-positive, LINE-BASELINE-relative — negative is above it).
+ */
+export function imageBaselineOffsetPx(
+  textAscentPx: number,
+  textDescentPx: number,
+  imageHeightPx: number,
+  alignment: ParsedImageAlignment
+): number {
+  let y: number;
+  switch (alignment.textPoint) {
+    case 'top':
+      y = -textAscentPx;
+      break;
+    case 'center':
+      y = (-textAscentPx + textDescentPx) / 2;
+      break;
+    case 'baseline':
+      y = 0;
+      break;
+    case 'bottom':
+    default:
+      y = textDescentPx;
+      break;
+  }
+  switch (alignment.imagePoint) {
+    case 'bottom':
+      y -= imageHeightPx;
+      break;
+    case 'center':
+      y -= imageHeightPx / 2;
+      break;
+    case 'top':
+    default:
+      break; // NOP — `INLINE_ALIGNMENT_TOP_TO` is 0.
+  }
+  return y;
+}
+
+/**
+ * An `[img]`'s own resolved draw box — `styledTextRuns`' per-run counterpart
+ * to `StyledTextRun`'s text fields. `sizePx` is never `null` on a run that
+ * made it into `styledTextRuns`' output: an image `imageSizePx` cannot size
+ * is dropped there instead (this module's own doc), the same outcome Godot
+ * reaches when `ResourceLoader::load` fails.
+ */
+export interface ResolvedImageRun {
+  spec: ParsedImgTag;
+  sizePx: Vec2;
+}
+
+/**
+ * Wraps a `FontMetrics` so `shapeText`'s per-character advance machinery
+ * reproduces an embedded object's width EXACTLY, for the one caller
+ * (`fontSizePxAtFromRuns`, fed an image run's `fontSizePx` repurposed to
+ * carry `sizePx.x`) that shapes `IMAGE_OBJECT_CHAR` at that width as its
+ * per-character "font size".
+ *
+ * Real Godot never quantizes an embedded object's advance at all —
+ * `_shaped_text_shape`'s object branch sets `gl.advance = rect.size.x`
+ * directly (`text_server_adv.cpp:7370-7383`), bypassing `_shape_run`'s
+ * FreeType/HarfBuzz chain entirely, unlike a real glyph. `getFontGlyphAdvancePx`
+ * (`fontMetrics.ts`) has no such bypass — it always runs that chain — so this
+ * picks `getGlyphAdvanceUnits(IMAGE_OBJECT_CHAR) = metrics.unitsPerEm` for the
+ * one property of that chain worth exploiting: at `units === unitsPerEm`, the
+ * chain reduces to `floor(trunc(fontSizePx*64)+0.5)/64`, i.e. the REQUESTED
+ * size rounded to the nearest 1/64px — exact for any width `shapeText`
+ * realistically shapes at (a whole or half pixel), and off by at most 1/128px
+ * otherwise. Verified against `getFontGlyphAdvancePx` itself in
+ * `nativeSolver.test.ts` (24, 100, 33.5, 21 all round-trip exactly).
+ *
+ * Two more divergences this closes for free rather than by design: a
+ * FRACTIONAL width (a `%`-form image) makes `fontUsesSubpixelPositioning`
+ * true for that one character, so `textLayout.ts`'s whole-pixel advance round
+ * SKIPS it — matching the unrounded object advance above. And the width
+ * discontinuity at an image's own boundary (jumping from the paragraph's
+ * `normalFontSizePx` to `sizePx.x` and back) resets the rounding remainder
+ * and suppresses kerning on both sides (`toBreakGlyphs`'s own same-size
+ * guards) — exactly as if the object were its own shaped run, which in real
+ * Godot it is.
+ */
+export function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
+  return {
+    ...base,
+    getGlyphAdvanceUnits(ch: string): number | null {
+      if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
+      return base.getGlyphAdvanceUnits(ch);
+    },
+    getKerningAdjustmentUnits(a: string, b: string): number {
+      if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
+      return base.getKerningAdjustmentUnits(a, b);
+    },
+  };
 }
 
 /**
@@ -117,8 +278,14 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
   }
 
+  // `SolveContext.tentativeRect` unconditionally (not gated on `wraps`): a
+  // `[img]`'s `%`-form width/height resolves against the paragraph's own
+  // available width regardless of autowrap (`resolveImageDimension`'s own
+  // doc) — `undefined` on a tree's first pass, same "not yet known" outcome
+  // as the wrapped-height measurement below.
+  const availableWidthPx = ctx.tentativeRect?.(n)?.w;
   const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
-  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize);
+  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize, availableWidthPx);
   const text = runs.map((r) => r.text).join('');
 
   if (text.length === 0) {
@@ -142,7 +309,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // unwrapped shape stands in exactly as Godot's pre-resize state does. The
   // default `normal` StyleBox is `make_empty_stylebox(0, 0, 0, 0)`
   // (`default_theme.cpp:1186`), so the text rect IS the control rect.
-  const wrapWidthPx = wraps ? ctx.tentativeRect?.(n)?.w : undefined;
+  const wrapWidthPx = wraps ? availableWidthPx : undefined;
   // `line_separation` is 0 for RichTextLabel (`default_theme.cpp:1217`) —
   // NOT Label's 3, which is why `lineSpacingPx` is stated rather than defaulted.
   const layout = shapeText(text, {
@@ -151,7 +318,11 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(runs),
-    fontMetrics,
+    // Decorated so an `[img]` run's placeholder character shapes at its own
+    // resolved width (`imageObjectFontMetrics`'s own doc) — required here
+    // exactly like `Component.tsx`'s matching `shapeText` call, or an image
+    // wraps differently at measure time than at paint time.
+    fontMetrics: imageObjectFontMetrics(fontMetrics),
   });
   // `get_content_height` sums each PARAGRAPH's `text_buf->get_size().y`, itself
   // the sum of its own lines' ascent+descent — never a count times one pitch,
@@ -193,6 +364,14 @@ export interface StyledTextRun {
    * later, once lines are known.
    */
   alignment: number;
+  /**
+   * Present only on the one-character `[img]` placeholder run
+   * (`ResolvedImageRun`'s own doc). `fontSizePx` above is REPURPOSED on such
+   * a run to carry `sizePx.x` — see `imageObjectFontMetrics`'s doc for why —
+   * so a reader that means the run's actual TEXT SIZE must check this field
+   * is absent first.
+   */
+  image?: ResolvedImageRun;
 }
 
 /**
@@ -288,14 +467,22 @@ function resolveRunFontSizePx(
  * AND its own resolved font size (`resolveRunFontSizePx`) — every other
  * recognised-but-out-of-scope tag ([s]/[code]/[center]) still tokenizes (so
  * nesting stays correct) but contributes no native styling here, same as an
- * unrecognised tag.
+ * unrecognised tag. An `[img]` run whose `imageSizePx` cannot be resolved
+ * (this module's own doc) is dropped entirely, the same outcome a failed
+ * `ResourceLoader::load` gives real Godot — no placeholder character, no
+ * reserved space.
+ *
+ * `boxWidthPx` threads through to a `%`-form `[img]` dimension
+ * (`resolveImageDimension`) — `undefined` on a solve tree's first pass, and
+ * the CONTROL's own final rect width at paint time (`Component.tsx`'s call).
  */
 export function styledTextRuns(
   n: SolveNode,
   props: RichTextLabelProperties,
   defaultColor: ControlColor,
   normalFontSizePx: number,
-  builtInDefaultPx: number
+  builtInDefaultPx: number,
+  boxWidthPx?: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
   if (!props.bbcodeEnabled) {
@@ -318,22 +505,41 @@ export function styledTextRuns(
   // Theme walk at 3 (one per possible style key) regardless of how many
   // styled spans this paragraph declares.
   const runFontSizeCache = new Map<string, number>();
-  return parseBBCodeRuns(raw)
-    .filter((run) => run.text.length > 0)
-    .map((run) => {
-      const colorValue = lastTagValue(run.tags, 'color');
-      const bold = hasOpenTag(run.tags, 'b');
-      const italic = hasOpenTag(run.tags, 'i');
-      return {
+  const styled: StyledTextRun[] = [];
+  for (const run of parseBBCodeRuns(raw)) {
+    if (run.image) {
+      const widthPx = resolveImageDimension(run.image.width, run.image.widthInPercent, boxWidthPx);
+      const heightPx = resolveImageDimension(run.image.height, run.image.heightInPercent, boxWidthPx);
+      const sizePx = imageSizePx(widthPx, heightPx, run.image.region);
+      if (!sizePx) continue; // Unresolvable here — see this function's own doc.
+      styled.push({
         text: run.text,
-        bold,
-        italic,
-        underline: hasOpenTag(run.tags, 'u'),
-        color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
-        fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache),
+        bold: false,
+        italic: false,
+        underline: false,
+        color: run.image.color,
+        // Repurposed to carry the image's own width — `imageObjectFontMetrics`'s doc.
+        fontSizePx: sizePx.x,
         alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
-      };
+        image: { spec: run.image, sizePx },
+      });
+      continue;
+    }
+    if (run.text.length === 0) continue;
+    const colorValue = lastTagValue(run.tags, 'color');
+    const bold = hasOpenTag(run.tags, 'b');
+    const italic = hasOpenTag(run.tags, 'i');
+    styled.push({
+      text: run.text,
+      bold,
+      italic,
+      underline: hasOpenTag(run.tags, 'u'),
+      color: colorValue !== undefined ? resolveBBColor(colorValue, defaultColor) : defaultColor,
+      fontSizePx: resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache),
+      alignment: resolveParagraphAlignment(run.tags, props.horizontalAlignment),
     });
+  }
+  return styled;
 }
 
 /**
@@ -422,7 +628,21 @@ export const ITALIC_SKEW = 0.2;
  */
 export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
 
-/** One (line, contiguous-style-run) pair, ready for its own `<TextRun>`. */
+/**
+ * An `[img]`'s own draw geometry within its line, ready for a `<ControlQuad>`
+ * — `_draw_line`'s `ITEM_IMAGE` arm (`rich_text_label.cpp:1090-1102`).
+ */
+export interface RichTextImagePlacement {
+  spec: ParsedImgTag;
+  /** Left edge, LINE-relative pen-space px — the placeholder glyph's own `x` (`shapeText`'s decorated advance IS the image's real width, so this is already `sd->objects[key].rect.position.x`, no rebasing needed). */
+  xPx: number;
+  /** Top edge, LINE-TOP-relative px — `lineAscentPx + imageBaselineOffsetPx(...)` (`rich_text_label.cpp:1055`'s `off.y += l_ascent`, then `_realign`'s own `rect.position.y`). */
+  yPx: number;
+  widthPx: number;
+  heightPx: number;
+}
+
+/** One (line, contiguous-style-run) pair, ready for its own `<TextRun>` — OR, when `image` is set, an `[img]` occupying that same slot instead (`RichTextImagePlacement`'s own doc; every OTHER field then goes unused). */
 export interface RichTextRunPlacement {
   lineIndex: number;
   /** This line's own box top, px, from the CONTROL's top — `RichTextLineMetrics.topPx` plus `vertical_alignment`'s own shift (`richTextVerticalOffsets`), NOT `lineIndex * layout.linePitchPx`: lines carrying different font sizes are different heights. */
@@ -437,6 +657,7 @@ export interface RichTextRunPlacement {
   fontSizePx: number;
   /** A single-line `TextLayoutResult` wrapper holding ONLY this run's glyphs from that line — `glyph.x` values are untouched (already this LINE's own pen-relative x), so this needs no rebasing, only the line's own wrapping `<group>` position. */
   layout: TextLayoutResult;
+  image?: RichTextImagePlacement;
 }
 
 /**
@@ -485,10 +706,14 @@ function fontDescentPx(metrics: FontMetrics, fontSizePx: number): number {
 export interface RichTextLineMetrics {
   /** This line's box top, px, from the paragraph's top — the running sum of every earlier line's own `ascentPx + descentPx`. */
   topPx: number;
-  /** Baseline offset from `topPx` — MAX `getFontAscentPx` over the fonts on THIS line. */
+  /** Baseline offset from `topPx` — MAX `getFontAscentPx` over the fonts on THIS line, folding in every `[img]`'s own contribution (`imageBaselineOffsetPx`). */
   ascentPx: number;
-  /** MAX descent over the fonts on THIS line. */
+  /** MAX descent over the fonts on THIS line, images folded in the same way. */
   descentPx: number;
+  /** `ascentPx` BEFORE any image is folded in — an image's own `_realign` math measures against this, never the folded value (`imageBaselineOffsetPx`'s own doc). */
+  textAscentPx: number;
+  /** `descentPx` before folding — see `textAscentPx`. */
+  textDescentPx: number;
 }
 
 /**
@@ -531,18 +756,35 @@ function lineMetricsOf(
 
   let topPx = 0;
   return perLine.map((segments) => {
+    // Text-only pass first — `_realign` (`imageBaselineOffsetPx`'s own doc)
+    // measures every image on the line against THESE values, never a running
+    // fold across images, and an image contributes nothing to them (a line
+    // whose only segment is one `[img]` starts this pass at 0/0, exactly
+    // `TextServerAdvanced`'s own pre-`_realign` `sd->ascent`/`descent`).
     let ascentPx = 0;
     let descentPx = 0;
     for (const segment of segments) {
-      const { fontSizePx } = styledRuns[segment.runIndex]!;
-      ascentPx = Math.max(ascentPx, getFontAscentPx(layout.fontMetrics, fontSizePx));
-      descentPx = Math.max(descentPx, fontDescentPx(layout.fontMetrics, fontSizePx));
+      const run = styledRuns[segment.runIndex]!;
+      if (run.image) continue;
+      ascentPx = Math.max(ascentPx, getFontAscentPx(layout.fontMetrics, run.fontSizePx));
+      descentPx = Math.max(descentPx, fontDescentPx(layout.fontMetrics, run.fontSizePx));
     }
     if (segments.length === 0) {
       ascentPx = paragraphAscentPx;
       descentPx = paragraphDescentPx;
     }
-    const metrics = { topPx, ascentPx, descentPx };
+    const textAscentPx = ascentPx;
+    const textDescentPx = descentPx;
+
+    for (const segment of segments) {
+      const run = styledRuns[segment.runIndex]!;
+      if (!run.image) continue;
+      const yOffset = imageBaselineOffsetPx(textAscentPx, textDescentPx, run.image.sizePx.y, run.image.spec.alignment);
+      ascentPx = Math.max(ascentPx, -yOffset);
+      descentPx = Math.max(descentPx, yOffset + run.image.sizePx.y);
+    }
+
+    const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
     topPx += ascentPx + descentPx;
     return metrics;
   });
@@ -859,7 +1101,7 @@ export function layoutRichTextRuns(
 
   const placements: RichTextRunPlacement[] = [];
   perLine.forEach((segments, lineIndex) => {
-    const { topPx, ascentPx } = lineMetrics[lineIndex]!;
+    const { topPx, ascentPx, textAscentPx, textDescentPx } = lineMetrics[lineIndex]!;
     // Every line on the same tag stack shares one alignment; the FIRST
     // segment's stack is that line's, since a paragraph tag cannot open
     // mid-line without starting a new paragraph.
@@ -873,15 +1115,16 @@ export function layoutRichTextRuns(
     );
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
+      // Floored, because Godot's own floor lands one step later on the
+      // assembled glyph position (`text_server_adv.cpp:4083`'s `cpos.y =
+      // Math::floor(cpos.y)`) and `vbegin`/`vsep` are floats that reach it
+      // fractional. Engine-checked: a 23px line centred in a 150px box puts
+      // `vbegin` at 63.5 and Godot's own ink on row 69, which is where
+      // flooring the line top — not the glyph — also puts it.
+      const lineTopPx = Math.floor(topPx + vbeginPx + lineIndex * vsepPx);
       placements.push({
         lineIndex,
-        // Floored, because Godot's own floor lands one step later on the
-        // assembled glyph position (`text_server_adv.cpp:4083`'s `cpos.y =
-        // Math::floor(cpos.y)`) and `vbegin`/`vsep` are floats that reach it
-        // fractional. Engine-checked: a 23px line centred in a 150px box puts
-        // `vbegin` at 63.5 and Godot's own ink on row 69, which is where
-        // flooring the line top — not the glyph — also puts it.
-        lineTopPx: Math.floor(topPx + vbeginPx + lineIndex * vsepPx),
+        lineTopPx,
         lineOffsetXPx,
         bold: run.bold,
         italic: run.italic,
@@ -889,6 +1132,15 @@ export function layoutRichTextRuns(
         color: run.color,
         fontSizePx: run.fontSizePx,
         layout: soloRunLayout(segment.text, segment.glyphs, layout, ascentPx),
+        image: run.image
+          ? {
+              spec: run.image.spec,
+              xPx: segment.glyphs[0]?.x ?? 0,
+              yPx: ascentPx + imageBaselineOffsetPx(textAscentPx, textDescentPx, run.image.sizePx.y, run.image.spec.alignment),
+              widthPx: run.image.sizePx.x,
+              heightPx: run.image.sizePx.y,
+            }
+          : undefined,
       });
     }
   });

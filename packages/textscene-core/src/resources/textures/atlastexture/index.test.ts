@@ -1,7 +1,8 @@
 /**
  * The slice's routing claim: importing the entry point must register
- * `AtlasTexture`. It claims the `resource` slot rather than `texture` because an
- * AtlasTexture is never a file — only the atlas it names is.
+ * `AtlasTexture`. It claims the `resource` slot, not `texture`: whether inline
+ * or its own `.tres`, an AtlasTexture's own bytes (when it has any) are
+ * Godot-text, never image bytes — only the atlas it names is an image.
  */
 import { describe, it, expect } from 'vitest';
 import './index';

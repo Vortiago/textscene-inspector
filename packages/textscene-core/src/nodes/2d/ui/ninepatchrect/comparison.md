@@ -1,18 +1,18 @@
 ---
 type: NinePatchRect
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-nine-patch-rect.tscn
-# image: unit-nine-patch-rect
-renders_as: nothing yet - not implemented
+image: unit-nine-patch-rect
+renders_as: a 9-sliced textured quad in the control's rect
 ---
 
 # NinePatchRect
 
-NinePatchRect displays a texture as a 9-slice, keeping its corners intact while
-stretching or tiling the edges and centre. The previewer parses and validates it but
-does not draw it, so it renders as a transform-only fallback and its children still
-show.
+NinePatchRect splits its `texture` into nine cells by the four `patch_margin_*`
+values, drawing the four corners at native size while the edges and centre stretch or
+tile per `axis_stretch_horizontal`/`axis_stretch_vertical`. `region_rect` windows the
+source texture, and `draw_center` omits the centre cell entirely.
 
 ## Linting
 
@@ -40,11 +40,7 @@ Strict parsing format-checks these `NinePatchRect` properties, plus 53 inherited
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which has no field for `patch_margin_*`,
-`axis_stretch_*`, `draw_center`, `region_rect` or `texture`. A bad value on any of them
-is never read, so no fallback applies.
-
-## Known limitations
-
-- **Not drawn** Godot draws the sliced texture. The previewer draws nothing for this
-  node.
+`patch_margin_*` and `axis_stretch_*` go through the optional-int reader: an
+unparseable value becomes `undefined` and falls back to 0 (margins) or `STRETCH` (axis
+mode) at render time. A malformed `region_rect` becomes `undefined`, drawing the whole
+texture instead of a crop.

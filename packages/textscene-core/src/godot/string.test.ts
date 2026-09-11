@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex } from './string.js';
+import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat} from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -96,6 +96,36 @@ describe('splitTopLevel', () => {
 
   it('keeps an empty trailing element, since a trailing comma is one', () => {
     expect(splitTopLevel('1,')).toEqual(['1', '']);
+  });
+});
+
+describe('stringToFloat', () => {
+  it('reads an ordinary decimal', () => {
+    expect(stringToFloat('12.5')).toBe(12.5);
+    expect(stringToFloat('-3')).toBe(-3);
+  });
+
+  // `if (is_empty()) return 0` (`ustring.cpp:2681-2683`).
+  it('reads an empty string as zero', () => {
+    expect(stringToFloat('')).toBe(0);
+  });
+
+  // `built_in_strtod` takes the longest numeric prefix and stops; unlike the
+  // TSCN literal reader, trailing text is ignored rather than refused.
+  it('stops at the first character it cannot use', () => {
+    expect(stringToFloat('75abc')).toBe(75);
+    expect(stringToFloat('10%')).toBe(10);
+  });
+
+  it('reads text with no numeric prefix as zero', () => {
+    expect(stringToFloat('top')).toBe(0);
+    expect(stringToFloat('   ')).toBe(0);
+  });
+
+  // Godot's tokenizer has no `Infinity` spelling, so neither does this.
+  it('refuses JavaScript’s own infinity spellings', () => {
+    expect(stringToFloat('Infinity')).toBe(0);
+    expect(stringToFloat('-Infinity')).toBe(0);
   });
 });
 

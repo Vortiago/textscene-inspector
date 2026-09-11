@@ -17,6 +17,9 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { BOLD_DISTANCE_BIAS, ITALIC_SKEW, RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -304,5 +307,139 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
     const mesh = canvasMeshes(renderer)[0]!;
     // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
+  });
+});
+
+/**
+ * `[img]` — a `res://` path resolves DIRECTLY (`useTexture2D`'s own
+ * `resolveExtResourcePath`: `ref.startsWith('res://')` short-circuits before
+ * any `ExtResource` lookup), so these need no `externalResources` entry, only
+ * the loader seeded at the same path string the bbcode names.
+ */
+describe('<RichTextLabel> — [img]', () => {
+  const IMG = 'res://logo.png';
+
+  function fakeTexture(width: number, height: number): THREE.Texture {
+    const tex = new THREE.Texture();
+    (tex as unknown as { image: { width: number; height: number } }).image = { width, height };
+    return tex;
+  }
+
+  async function renderImage(text: string, textureSize: [number, number], rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 }) {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(IMG, fakeTexture(...textureSize));
+    const tree = (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+          <RichTextLabel
+            {...painterEnv()}
+            solveNode={solveNode('RTL', { text, bbcodeEnabled: true })}
+            rect={rect}
+            renderOrder={5}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    return ReactThreeTestRenderer.create(tree);
+  }
+
+  // `.type` string, not `instanceof` — `@react-three/fiber`'s JSX intrinsics
+  // construct through its OWN resolved `three` module copy, which is not
+  // always object-identical to this file's `import * as THREE from 'three'`
+  // (the "Multiple instances of Three.js being imported" warning), so an
+  // `instanceof THREE.MeshBasicMaterial` check silently never matches.
+  function materialOf(mesh: THREE.Mesh): THREE.Material {
+    return mesh.material as THREE.Material;
+  }
+
+  function imageMeshOf(renderer: Awaited<ReturnType<typeof renderImage>>): THREE.Mesh {
+    const mesh = renderer.scene.findAllByType('Mesh').find((m) => materialOf(m.instance as THREE.Mesh).type === 'MeshBasicMaterial');
+    return mesh!.instance as THREE.Mesh;
+  }
+
+  it('draws no quad for an unauthored (natural-size) [img] — its size depends on the loaded texture, unavailable at solve time', async () => {
+    const renderer = await renderImage(`[img]${IMG}[/img]`, [64, 64]);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws a quad sized to the authored width×height, regardless of the texture\'s own natural size', async () => {
+    const renderer = await renderImage(`[img=40x20]${IMG}[/img]`, [64, 64]);
+    const mesh = imageMeshOf(renderer);
+    const geometry = mesh.geometry as THREE.PlaneGeometry;
+    expect(geometry.parameters.width).toBe(40);
+    expect(geometry.parameters.height).toBe(20);
+  });
+
+  it("draws it at its natural size when the value form is a lone width and only a REGION is also present (aspect from the region, not the texture)", async () => {
+    const renderer = await renderImage(`[img=40 region=0,0,80,40]${IMG}[/img]`, [64, 64]);
+    const mesh = imageMeshOf(renderer);
+    const geometry = mesh.geometry as THREE.PlaneGeometry;
+    // region 80x40 (2:1) at width 40 -> height 20 (rich_text_label.cpp:4130-4134, float arithmetic).
+    expect(geometry.parameters.width).toBe(40);
+    expect(geometry.parameters.height).toBe(20);
+  });
+
+  it('draws nothing (never throws) for a sized [img] whose texture has not resolved yet', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+          <RichTextLabel
+            {...painterEnv()}
+            solveNode={solveNode('RTL', { text: `[img=10x10]${IMG}[/img]`, bbcodeEnabled: true })}
+            rect={{ x: 0, y: 0, w: 300, h: 200 }}
+            renderOrder={5}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('modulates by color= times the walker tint once the texture has loaded', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(IMG, fakeTexture(10, 10));
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+          <RichTextLabel
+            {...painterEnv()}
+            tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+            solveNode={solveNode('RTL', { text: `[img=10x10 color=#e0a030]${IMG}[/img]`, bbcodeEnabled: true })}
+            rect={{ x: 0, y: 0, w: 300, h: 200 }}
+            renderOrder={5}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const mat = imageMeshOf(renderer).material as THREE.MeshBasicMaterial;
+    const expected = expectedLinear(0.5 * (0xe0 / 255), 0.5 * (0xa0 / 255), 0.5 * (0x30 / 255));
+    expect(mat.color.r).toBeCloseTo(expected.r, 5);
+    expect(mat.color.g).toBeCloseTo(expected.g, 5);
+    expect(mat.color.b).toBeCloseTo(expected.b, 5);
+  });
+
+  it('windows region= as a UV crop, normalised against the LOADED texture\'s own pixel size', async () => {
+    const renderer = await renderImage(`[img=20x10 region=8,4,16,8]${IMG}[/img]`, [64, 32]);
+    const map = imageMeshOf(renderer).material as THREE.MeshBasicMaterial;
+    const texture = map.map!;
+    // repeat = region size / texture size; offset.y flipped (three's V is bottom-up, Godot's region.y is top-down) — texturerect/Component.tsx's own convention.
+    expect(texture.repeat.x).toBeCloseTo(16 / 64, 6);
+    expect(texture.repeat.y).toBeCloseTo(8 / 32, 6);
+    expect(texture.offset.x).toBeCloseTo(8 / 64, 6);
+    expect(texture.offset.y).toBeCloseTo(1 - (4 + 8) / 32, 6);
+  });
+
+  it('draws no ATLAS text mesh for an [img]-only paragraph — the placeholder character never reaches TextRun', async () => {
+    const renderer = await renderImage(`[img=10x10]${IMG}[/img]`, [64, 64]);
+    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    expect(meshes.every((m) => !(m.material as THREE.ShaderMaterial).uniforms)).toBe(true);
+  });
+
+  it('draws both a preceding text run and the image on the same line', async () => {
+    const renderer = await renderImage(`hi[img=10x10]${IMG}[/img]`, [64, 64]);
+    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    expect(meshes.length).toBeGreaterThan(1);
+    expect(meshes.some((m) => materialOf(m).type === 'MeshBasicMaterial')).toBe(true);
+    expect(meshes.some((m) => materialOf(m).type !== 'MeshBasicMaterial')).toBe(true);
   });
 });

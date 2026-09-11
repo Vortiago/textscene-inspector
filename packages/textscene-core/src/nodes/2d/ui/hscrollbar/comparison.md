@@ -1,17 +1,19 @@
 ---
 type: HScrollBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-h-scroll-bar.tscn
-# image: unit-h-scroll-bar
-renders_as: invisible transform-only fallback
+image: unit-h-scroll-bar
+renders_as: a horizontal track with a rectangular grabber
 ---
 
 # HScrollBar
 
 HScrollBar is a horizontal track with a draggable grabber and step buttons. The
-previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+previewer draws the track and the grabber, sized and positioned from this bar's own
+`value`, `min_value`, `max_value` and `page`. Godot's own default theme sets every
+increment and decrement icon to an empty texture, so neither Godot nor the previewer
+draws step buttons.
 
 ## Linting
 
@@ -29,11 +31,8 @@ Strict parsing format-checks the inherited set (1 inherited from ScrollBar, 9 in
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-The lenient parser is `parseControl`, which has no field for `custom_step`, `page`,
-`value` or any other Range or ScrollBar member. A malformed `custom_step` is dropped
-exactly like a well-formed one.
-
-## Known limitations
-
-- **Not drawn** Godot draws the track and grabber. The previewer draws nothing for this
-  node.
+The lenient parser is `parseHScrollBar`, which reuses the shared `Range` reader for
+`value`, `min_value`, `max_value` and `page`, plus its own `custom_step`. A malformed
+number becomes `undefined` and the bar falls back to Godot's own Range defaults: min
+0, max 100, value 0, page 0. `custom_step` never reaches a draw formula, so a malformed
+one stays harmless here too.

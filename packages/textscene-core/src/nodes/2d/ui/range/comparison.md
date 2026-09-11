@@ -1,18 +1,19 @@
 ---
 type: Range
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-range.tscn
 # image: unit-range
-renders_as: invisible transform-only fallback
+renders_as: nothing of its own
 ---
 
 # Range
 
-Range is the abstract base that carries a bounded number, with `step` and `page`, behind
-sliders, scroll bars, spin boxes and progress bars. The previewer parses and validates
-it but does not draw it, so it renders as a transform-only fallback and its children
-still show.
+Range is the base that carries a bounded number, with `step` and `page`, behind
+sliders, scroll bars, spin boxes and progress bars. It draws nothing itself — Godot's
+own `Range::_notification` handles only accessibility, never `NOTIFICATION_DRAW` — and
+overrides no minimum size or container layout either, so the previewer's native
+painter is registered but empty, and its children still show.
 
 ## Linting
 

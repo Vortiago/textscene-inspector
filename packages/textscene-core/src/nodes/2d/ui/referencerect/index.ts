@@ -1,19 +1,21 @@
 /**
  * ReferenceRect registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * `border_color`/`border_width`/`editor_only` now have typed properties
+ * (`types.ts`) and a dedicated parser. The native (WebGL canvas) painter
+ * registers separately, from `index.r3f.ts` (ADR-0001).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseReferenceRect } from './parser';
 
 const referenceRectRegistration: NodeTypeRegistration = {
   typeName: 'ReferenceRect',
-  parser: parseControl,
+  parser: parseReferenceRect,
 };
 
 nodeRegistry.register(referenceRectRegistration);
 
 export { referenceRectRegistration };
+export * from './parser';
+export * from './types';

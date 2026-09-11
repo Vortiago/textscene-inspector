@@ -1,17 +1,17 @@
 ---
 type: ProgressBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-progress-bar.tscn
 # image: unit-progress-bar
-renders_as: invisible transform-only fallback
+renders_as: a background and ratio-filled StyleBox pair, with a percentage label
 ---
 
 # ProgressBar
 
-ProgressBar shows a percentage fill, or an indeterminate animation, inside a bar. The
-previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+ProgressBar draws its `background` StyleBox across the whole control, its `fill`
+StyleBox windowed to the current value's ratio in the direction `fill_mode` names, and,
+unless `indeterminate`, a centred percentage label with an optional outline.
 
 ## Linting
 
@@ -36,11 +36,15 @@ Strict parsing format-checks these `ProgressBar` properties, plus 9 inherited fr
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl` directly and never reads `fill_mode`,
-`show_percentage`, `indeterminate` or `editor_preview_indeterminate`. A `fill_mode = 99`
-survives only in the raw property bag, which nothing draws from.
+The lenient parser reads `fill_mode`, `show_percentage`, `indeterminate` and
+`editor_preview_indeterminate` alongside its Control and Range bases. A `fill_mode`
+outside 0-3 draws as `FILL_BEGIN_TO_END`: `set_fill_mode`'s `ERR_FAIL_INDEX` refuses
+the out-of-range write, so the node keeps its class-default mode.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the bar and its fill. The previewer draws nothing for this
-  node.
+- **Approximated** `indeterminate` never animates. The previewer always draws the one
+  frame Godot itself treats as static (the bar centred in the control), regardless of
+  `editor_preview_indeterminate`.
+- **Not drawn** `font_outline_color`/`outline_size` only render for a scene font raster;
+  the default MSDF-atlas font has no glyph contour to stroke.

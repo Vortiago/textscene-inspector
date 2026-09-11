@@ -1,18 +1,17 @@
 ---
 type: HSeparator
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-h-separator.tscn
 # image: unit-h-separator
-renders_as: invisible transform-only fallback
+renders_as: a thin horizontal quad
 ---
 
 # HSeparator
 
-HSeparator is a horizontal line between vertically stacked controls, drawn from a
-`StyleBoxLine` sized by the `separation` constant. The previewer parses and validates it
-but does not draw it, so it renders as a transform-only fallback and its children still
-show.
+HSeparator draws the default theme's `separator` StyleBoxLine (or a resolved
+`theme_override_styles/separator` override) as a thin horizontal band, centred on the
+cross axis and sized by the `separation` theme constant.
 
 ## Linting
 
@@ -34,5 +33,6 @@ reuses `parseControl` unchanged.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the separator line. The previewer draws nothing for this
-  node.
+- **Approximated** The separator line's thickness is pinned at 1px
+  (`set_thickness(Math::round(scale))`); a project with a non-default
+  `gui/theme/default_theme_scale` draws it too thin.

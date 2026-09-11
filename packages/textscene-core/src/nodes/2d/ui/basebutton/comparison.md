@@ -1,17 +1,20 @@
 ---
 type: BaseButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-base-button.tscn
 # image: unit-base-button
-renders_as: nothing yet, not implemented
+renders_as: nothing of its own
 ---
 
 # BaseButton
 
-BaseButton is the abstract base of every clickable Control and draws nothing of its own.
-The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+BaseButton is the base of every clickable Control and draws nothing of its own — Godot's
+own `BaseButton::_notification` handles only accessibility/mouse/focus, never
+`NOTIFICATION_DRAW`; a concrete descendant like `Button` is what draws. Its
+`disabled`/`toggle_mode`/`button_pressed`/… interaction state is real, but has no chrome
+of BaseButton's own to affect, so the previewer's native painter is registered but
+empty, and its children still show.
 
 ## Linting
 

@@ -1,19 +1,22 @@
 /**
  * SplitContainer registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Parses `split_offset`/`collapsed`/`dragger_visibility` and `vertical`
+ * (this base's own, unlike its fixed-axis subclasses — `types.ts`'s doc), so
+ * the native (WebGL canvas) container layout registered in `nativeSolver.ts`
+ * can read them.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../../../2d/ui/control/parser';
+import { parseSplitContainer } from './parser';
 
 const splitContainerRegistration: NodeTypeRegistration = {
   typeName: 'SplitContainer',
-  parser: parseControl,
+  parser: parseSplitContainer,
 };
 
 nodeRegistry.register(splitContainerRegistration);
 
 export { splitContainerRegistration };
+export * from './parser';
+export * from './types';

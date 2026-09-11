@@ -1,17 +1,18 @@
 ---
 type: TextureButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-texture-button.tscn
 # image: unit-texture-button
-renders_as: invisible transform-only fallback
+renders_as: a textured quad, per stretch_mode
 ---
 
 # TextureButton
 
 TextureButton is a sprite-based button with five texture slots, a click mask and a
-stretch mode. The previewer parses and validates it but does not draw it, so it renders
-as a transform-only fallback and its children still show.
+stretch mode. The previewer draws whichever texture the node's draw state selects
+(`texture_normal`/`texture_pressed`/`texture_hover`/`texture_disabled`), sized and
+positioned per `stretch_mode`, with `flip_h`/`flip_v` applied.
 
 ## Linting
 
@@ -41,11 +42,15 @@ Strict parsing format-checks these `TextureButton` properties, plus 10 inherited
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which has no field for any of TextureButton's
-ten members. A `stretch_mode = 12` or a plain string on `texture_normal` is dropped
-silently, and only strict sees the raw key.
+The lenient parser reads nine of TextureButton's ten own members; `texture_click_mask`
+stays in the untyped property bag (hit-testing only, never pixels — this previewer has
+no pointer input to hit-test against). A `stretch_mode = 12` still draws (the switch's
+own `default` branch resolves it as `STRETCH_KEEP`), matching strict's warning-not-error
+severity for that key.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the button's texture. The previewer draws nothing for this
-  node.
+- **Not drawn** `texture_focused` — a static, pointer-less/keyboard-less preview never
+  holds focus, so this slot can never contribute a pixel.
+- **Approximated** The control's own minimum size is always (0, 0), even with
+  `texture_normal` set — texture-size resolution does not yet reach this node type.

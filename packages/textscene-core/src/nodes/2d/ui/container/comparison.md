@@ -1,17 +1,17 @@
 ---
 type: Container
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-container.tscn
 # image: unit-container
-renders_as: nothing yet, not implemented
+renders_as: nothing of its own; children stay at their own free/anchored rects
 ---
 
 # Container
 
-Container is the abstract base every layout container extends and draws nothing of its
-own. The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+Container is the base every layout container extends. It draws no chrome, and a bare
+Container — Godot's own `_notification` has no `NOTIFICATION_SORT_CHILDREN` arm for it —
+imposes no layout either, so its children lay out exactly as free Controls would.
 
 ## Linting
 

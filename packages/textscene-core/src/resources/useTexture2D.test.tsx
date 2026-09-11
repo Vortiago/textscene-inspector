@@ -13,8 +13,9 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { inlineTexture2DSize, useTexture2D } from './useTexture2D';
+import { extResourceAtlasTextureSize, inlineTexture2DSize, useTexture2D } from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
+import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
 import { CanvasWorkspaceProvider } from '../r3f/contexts/CanvasWorkspaceContext';
@@ -624,5 +625,220 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
     expect(unknown.result.current.missing).toBe(true);
     expect(orphan.result.current.missing).toBe(true);
+  });
+});
+
+/**
+ * The same cell, saved as its OWN `.tres` instead of an inline sub-resource —
+ * how Kenney's input-prompt packs ship every icon. The outer ExtResource's
+ * declared `type=` routes the fetch through the `resource` bus; the image
+ * pipeline can't decode the file at all (it isn't an image).
+ */
+describe('useTexture2D — .tres AtlasTexture', () => {
+  const externalResources: TscnExternalResource[] = [
+    { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
+  ];
+
+  // A real Kenney-shaped file, run through the actual `.tres` parser rather
+  // than a hand-built `ParsedResource` — the region matches the fake sheet
+  // below instead of the task's own (much larger) example coordinates.
+  const atlasTres: ParsedResource = parseTresFile(`[gd_resource type="AtlasTexture" format=3]
+
+[ext_resource type="Texture2D" path="res://sheet.png" id="1_tk63f"]
+
+[resource]
+atlas = ExtResource("1_tk63f")
+region = Rect2(32, 32, 64, 64)
+`);
+
+  function sheet(): THREE.Texture {
+    const texture = new THREE.Texture();
+    (texture as unknown as { image: { width: number; height: number } }).image = {
+      width: 128,
+      height: 128,
+    };
+    return texture;
+  }
+
+  /** Same fake as the inline block's — records the crop the canvas 2D path draws. */
+  function stubCanvas() {
+    const calls: number[][] = [];
+    const cut = { canvas: null as HTMLCanvasElement | null };
+    const ctx = {
+      imageSmoothingEnabled: true,
+      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
+    };
+    const proto = globalThis.HTMLCanvasElement.prototype;
+    const original = proto.getContext;
+    vi.spyOn(proto, 'getContext').mockImplementation(function (
+      this: HTMLCanvasElement,
+      type: string,
+      ...rest: unknown[]
+    ) {
+      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
+      cut.canvas = this;
+      return ctx as unknown as CanvasRenderingContext2D;
+    } as typeof proto.getContext);
+    return { calls, cut };
+  }
+
+  function withLoader() {
+    const fake = createFakeResourceLoader();
+    return { fake, Wrapper: function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
+    } };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('crops the sheet to the region, at the region size', () => {
+    const { calls, cut } = stubCanvas();
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed('res://icons/keyboard_arrow_left.tres', atlasTres);
+    fake.textures.seed('res://sheet.png', sheet());
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_atlas")', externalResources, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
+    expect(result.current.texture!.image).toBe(cut.canvas);
+    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
+    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('shows nothing — not missing — while the .tres itself is still loading', () => {
+    stubCanvas();
+    // Nothing seeded: the resource-bus request stays pending.
+    const { Wrapper } = withLoader();
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_atlas")', externalResources, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('reports a missing .tres file as missing', () => {
+    stubCanvas();
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed('res://icons/keyboard_arrow_left.tres', null);
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_atlas")', externalResources, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(true);
+  });
+
+  it('reports a .tres whose own header names a different resource type as missing', () => {
+    stubCanvas();
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed('res://icons/keyboard_arrow_left.tres', {
+      resourceType: 'StyleBoxFlat',
+      properties: {},
+      extResources: [],
+      subResources: [],
+    });
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_atlas")', externalResources, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(true);
+  });
+
+  it('leaves an ExtResource declared some OTHER type to the ordinary image pipeline', () => {
+    // The outer reference never even reads as an atlas .tres — it falls
+    // through to the normal path resolution, which fails the same way any
+    // unloadable Texture2D path does.
+    stubCanvas();
+    const { Wrapper } = withLoader();
+    const otherType: TscnExternalResource[] = [
+      { id: '1_box', type: 'StyleBoxFlat', path: 'res://box.tres' },
+    ];
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_box")', otherType, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeNull();
+  });
+
+  it('reports a .tres AtlasTexture that names no atlas as missing, not a crash', () => {
+    stubCanvas();
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed(
+      'res://icons/keyboard_arrow_left.tres',
+      parseTresFile(`[gd_resource type="AtlasTexture" format=3]
+
+[resource]
+region = Rect2(0, 0, 8, 8)
+`)
+    );
+
+    const { result } = renderHook(
+      () => useTexture2D('ExtResource("1_atlas")', externalResources, []),
+      { wrapper: Wrapper }
+    );
+
+    expect(result.current.texture).toBeNull();
+    expect(result.current.missing).toBe(true);
+  });
+});
+
+describe('extResourceAtlasTextureSize', () => {
+  it("reports an ExtResource .tres AtlasTexture's region size", () => {
+    const tres: ParsedResource = {
+      resourceType: 'AtlasTexture',
+      properties: { atlas: 'ExtResource("1")', region: 'Rect2(0, 0, 48, 24)' },
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceAtlasTextureSize(tres, null)).toEqual({ x: 48, y: 24 });
+  });
+
+  it('falls back to the sheet size on a zero-size region axis', () => {
+    const tres: ParsedResource = {
+      resourceType: 'AtlasTexture',
+      properties: {},
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceAtlasTextureSize(tres, { width: 200, height: 100 })).toEqual({
+      x: 200,
+      y: 100,
+    });
+  });
+
+  it('declines without the sheet size on a zero-size region axis', () => {
+    const tres: ParsedResource = {
+      resourceType: 'AtlasTexture',
+      properties: {},
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
+  });
+
+  it('declines a .tres whose own header names a different resource type', () => {
+    const tres: ParsedResource = {
+      resourceType: 'GradientTexture2D',
+      properties: { width: '64', height: '64' },
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
   });
 });

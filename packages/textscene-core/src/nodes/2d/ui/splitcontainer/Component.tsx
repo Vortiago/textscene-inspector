@@ -1,0 +1,84 @@
+/**
+ * `<SplitContainer>` — the native (WebGL canvas) painter for the base
+ * `SplitContainer` type. Identical reasoning to `hsplitcontainer/Component.tsx`
+ * (read its module doc first, including the `meta`/fallback split), except
+ * `vertical` is read from THIS node's own properties at runtime
+ * (`types.ts`'s doc) rather than being fixed by type the way
+ * HSplitContainer/VSplitContainer's own painters are.
+ *
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`.
+ */
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { isSortableControl } from '../shared/fitChildInRect';
+import {
+  axisChildFromCustomMinimumSize,
+  computeSplitDraggerPosition,
+  isSplitContainerLayoutMeta,
+  isSplitGrabberVisible,
+  resolveSplitSeparation,
+  splitGrabberIconRect,
+} from '../shared/splitContainerSolver';
+import type { SplitContainerProperties } from './types';
+
+/** `hsplitter.svg`/`vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it, transposed per orientation. */
+const HORIZONTAL_ICON_SIZE = { x: 8, y: 48 };
+const VERTICAL_ICON_SIZE = { x: 48, y: 8 };
+
+/** `SplitContainer::vertical` (`split_container.h:96`). Godot default `false`. */
+function verticalOf(props: SplitContainerProperties): boolean {
+  return props.vertical ?? false;
+}
+
+export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+  const props = painterView<SplitContainerProperties>(solveNode);
+  const vertical = verticalOf(props);
+
+  // `_resort` hides every dragger outright below two valid children
+  // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`
+  // are ever consulted — mirrored here rather than only in the layout, since
+  // this painter has no rect to draw an icon between otherwise.
+  const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
+  const drawsGrabber =
+    sortable.length === 2 && isSplitGrabberVisible(props, theme.widgets.splitContainer);
+  const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
+  const texture = useOptionalIconTexture(drawsGrabber ? icon : null);
+
+  if (!drawsGrabber || !texture) {
+    return null;
+  }
+
+  const separation = resolveSplitSeparation(props, theme.widgets.splitContainer);
+  const [first, second] = sortable as [SolveNode, SolveNode];
+  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const draggerPos =
+    cachedDraggerPos ??
+    computeSplitDraggerPosition(
+      vertical ? rect.h : rect.w,
+      separation,
+      axisChildFromCustomMinimumSize(first, vertical),
+      axisChildFromCustomMinimumSize(second, vertical),
+      props.splitOffset ?? 0,
+      props.collapsed === true
+    );
+  const iconSize = vertical ? VERTICAL_ICON_SIZE : HORIZONTAL_ICON_SIZE;
+  const iconRect = splitGrabberIconRect(vertical, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
+
+  return (
+    <CanvasItemGroup position={[iconRect.x, -iconRect.y, 0]}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={iconRect.w}
+        height={iconRect.h}
+        color={tint.color}
+        opacity={tint.opacity}
+        map={texture}
+      />
+    </CanvasItemGroup>
+  );
+}

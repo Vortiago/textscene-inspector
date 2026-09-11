@@ -13,23 +13,22 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
   // Text-bearing Control leaves
   //
-  // These four share a shape: the overlay renders the text and lets the browser
-  // shape it, so wrapping, BiDi and locale are delegated rather than missing,
-  // while everything about carets, selection, context menus and virtual
-  // keyboards has no frozen-frame surface at all. What is left over after those
-  // two groups is the real render gap, and it is listed as such.
+  // These share a shape: carets, selection, context menus and virtual keyboards
+  // have no frozen-frame surface at all, while BiDi and locale DO change which
+  // glyphs land where — this renderer shapes text itself and shapes it
+  // left-to-right, so those keys are a render gap rather than a delegation.
   // -------------------------------------------------------------------------
 
   Label: {
-    linterOnly: [
-      // Shaping delegated to the browser, exactly as the Button entry above.
+    linterOnly: [],
+    renderGap: [
+      // Trimming, justification and tab stops each move glyphs our own shaper
+      // places without them.
       'autowrap_trim_flags', 'clip_text', 'ellipsis_char', 'justification_flags',
       'tab_stops', 'text_overrun_behavior',
-      // BiDi and locale.
+      // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
-    ],
-    renderGap: [
       // A LabelSettings resource carries font, size, colour and outline, none of
       // which the overlay's CSS defaults reproduce.
       'label_settings',
@@ -41,7 +40,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'visible_characters', 'visible_characters_behavior', 'visible_ratio',
     ],
     reason:
-      'The overlay renders the label as DOM text, so shaping, BiDi and locale are delegated; label_settings, the line window and the visible-character reveal all change the frozen frame and are not implemented yet.',
+      'Every key here changes the frozen frame and is not implemented yet: trimming and justification move glyphs, BiDi and locale are unread by a left-to-right shaper, and label_settings, the line window and the visible-character reveal each change what is on screen.',
   },
 
   LineEdit: {
@@ -56,11 +55,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'backspace_deletes_composite_character_enabled',
       // Virtual keyboard: a mobile input affordance with no rendered surface.
       'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus', 'virtual_keyboard_type',
-      // BiDi and locale, delegated as above.
-      'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
-      'text_direction',
     ],
     renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
+      'text_direction',
       // Draws a caret even unfocused, which is the one caret property a static
       // frame does show.
       'caret_force_displayed',
@@ -73,15 +72,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // so an over-long `text` renders shortened in Godot and in full here.
       'max_length',
     ],
-    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface, and shaping is delegated to the browser; the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi, the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
   },
 
   RichTextLabel: {
     linterOnly: [
-      // Shaping and BiDi delegated to the browser.
-      'autowrap_trim_flags', 'justification_flags', 'tab_size',
-      'tab_stops', 'language', 'structured_text_bidi_override',
-      'structured_text_bidi_override_options', 'text_direction',
       // Selection and context-menu interaction.
       'context_menu_enabled', 'deselect_on_focus_loss_enabled',
       'drag_and_drop_selection_enabled', 'selection_enabled', 'shortcut_keys_enabled',
@@ -90,7 +85,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'threaded', 'progress_bar_delay',
     ],
     renderGap: [
-      // Alignment of the whole document within the control.
+      // Trimming, justification and tab stops move glyphs our own shaper places
+      // without them; BiDi and locale go unread by a left-to-right shaper.
+      'autowrap_trim_flags', 'justification_flags', 'tab_size',
+      'tab_stops', 'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
       // Underlines actually drawn under [url] and [hint] spans.
       'hint_underlined', 'meta_underlined',
       // Custom BBCode effect resources, which change how their spans draw.
@@ -122,22 +121,20 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Deadzone, wheel step and follow-focus need an interaction to matter; the scroll offsets, the scroll hints and the focus border are all drawn by Godot in a static frame and are not implemented yet.',
   },
 
-  // The container bases have no parser.ts of their own, so one entry each
-  // covers their H/V leaves. The leaves read what they RENDER through the
-  // shared boxContainer/splitContainer helpers; the rest is editor-side drag
-  // tuning a DOM overlay has no use for.
-  BoxContainer: {
-    linterOnly: ['vertical'],
-    reason: 'Layout base with no parser of its own; `vertical` is fixed by the leaf class so nothing reads it there.',
-  },
-
+  // Both bases are scene types in their own right and carry a parser, which
+  // their H/V leaves inherit `vertical` through. What is left is the
+  // interactive splitter's own tuning, which a static frame never shows.
   SplitContainer: {
     linterOnly: [
-      'dragging_enabled', 'touch_dragger_enabled', 'split_offsets', 'vertical',
+      'dragging_enabled', 'touch_dragger_enabled',
       'drag_area_margin_begin', 'drag_area_margin_end', 'drag_area_offset',
       'drag_area_highlight_in_editor',
     ],
-    reason: 'Layout base with no parser of its own; the drag-area and dragger keys tune an interactive splitter the static DOM overlay does not implement, and `vertical` is fixed by the leaf class.',
+    renderGap: [
+      // A multi-child split really does place its children differently.
+      'split_offsets',
+    ],
+    reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows; `split_offsets` moves the children and is not implemented yet.',
   },
 
   // Like the container bases, BaseButton has no parser.ts, so one entry covers
@@ -155,12 +152,35 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Button: {
-    linterOnly: [
-      // Text shaping and localisation left to the browser: the DOM overlay
-      // renders the label as text and lets CSS wrap and trim it.
+    linterOnly: [],
+    renderGap: [
+      // Wrapping, trimming and BiDi each move the label's glyphs, and our own
+      // shaper applies none of them.
       'text_overrun_behavior', 'autowrap_mode', 'autowrap_trim_flags', 'clip_text',
       'text_direction', 'language',
     ],
-    reason: "The overlay renders the label as DOM text, so wrapping, trimming and bidi are the browser's job rather than properties the parser reads.",
+    reason:
+      "Wrapping, trimming and BiDi all change where the label's glyphs land; this renderer shapes the text itself and reads none of them yet.",
+  },
+
+  LinkButton: {
+    linterOnly: [],
+    renderGap: [
+      // Trimming and its glyph, and BiDi and locale, all change where the
+      // label's glyphs land; our own shaper reads none of them.
+      'ellipsis_char', 'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
+    ],
+    reason:
+      'Trimming and BiDi change where the underlined label\'s glyphs land, and the left-to-right shaper reads neither yet.',
+  },
+
+  TextureButton: {
+    linterOnly: [
+      // A per-pixel hit mask: it decides which clicks land, never which pixels
+      // are drawn, and a static preview dispatches no clicks.
+      'texture_click_mask',
+    ],
+    reason: 'The click mask is hit-testing only; it cannot change a frozen frame.',
   },
 };

@@ -1,15 +1,17 @@
 ---
 type: VFlowContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-v-flow-container.tscn
 # image: unit-v-flow-container
-renders_as: an invisible transform-only fallback
+renders_as: children flowed down a column, wrapping to a new column
 ---
 
 # VFlowContainer
 
-A container that lays its children out in vertical columns and wraps to a new column when it runs out of height. The previewer does not draw the layout yet, so the node is an invisible transform-only fallback and its children still show.
+VFlowContainer is a FlowContainer fixed to the vertical axis: children flow top to
+bottom and wrap to a new column when the current one runs out of height. It draws
+nothing itself.
 
 ## Linting
 
@@ -29,8 +31,12 @@ Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which never reads `vertical`. A scene carrying that key parses silently, with no error and no stored value.
+`index.ts` reuses FlowContainer's parser directly, which never reads `vertical`. A scene
+carrying that key parses silently, with no error and no stored value — the solver reads
+this node's own TYPE, not the property, to fix its orientation vertical.
 
 ## Known limitations
 
-- **Not drawn** Godot flows the children into columns. Here they sit at their own offsets.
+- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
+  flow is sized like any other child; Godot instead keeps its previous frame's size,
+  which a static render has no analogue for.

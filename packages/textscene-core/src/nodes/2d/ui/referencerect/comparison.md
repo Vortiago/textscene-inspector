@@ -1,17 +1,18 @@
 ---
 type: ReferenceRect
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-reference-rect.tscn
 # image: unit-reference-rect
-renders_as: invisible transform-only fallback
+renders_as: a coloured border outline
 ---
 
 # ReferenceRect
 
-ReferenceRect draws a plain coloured border around its rect as a design-time aid. The
-previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+ReferenceRect draws a plain coloured border around its rect as a design-time aid.
+`editor_only = false` draws it unconditionally, matching a real running game; the
+default (`true`) draws only while the node is selected, since Godot's own editor shows
+it always.
 
 ## Linting
 
@@ -34,10 +35,12 @@ Strict parsing format-checks these `ReferenceRect` properties, plus 53 inherited
 <!-- lint:end -->
 
 `border_color` and `editor_only` carry no bound, so any format-valid literal passes both
-parsers. `border_width` is the one divergence: Godot clamps a negative width to `0`,
-while the lenient parser stores the literal unclamped.
+parsers. `border_width` is clamped to `0` by both: the strict parser flags a negative
+literal as an error, and the render-facing parser stores Godot's own floor
+(`MAX(0, width)`), matching the setter.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the border at runtime when `editor_only` is off. The
-  previewer draws nothing for this node.
+- **Editor only** Godot's own editor draws every ReferenceRect in the open scene at
+  once. Here `editor_only = true` (the default) is selection-gated instead, to avoid
+  the same clutter ADR-0018 already avoids for Marker2D/Path2D.

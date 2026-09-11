@@ -1,15 +1,19 @@
 ---
 type: VScrollBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-v-scroll-bar.tscn
-# image: unit-v-scroll-bar
-renders_as: invisible transform-only fallback
+image: unit-v-scroll-bar
+renders_as: a vertical track with a rectangular grabber
 ---
 
 # VScrollBar
 
-A vertical scroll bar: a track with increment and decrement buttons and a draggable grabber, minimum at the top and maximum at the bottom. The previewer does not draw it yet, so the node is an invisible transform-only fallback and its children still show.
+A vertical scroll bar: a track with a draggable grabber, minimum at the top and
+maximum at the bottom. The previewer draws the track and the grabber, sized and
+positioned from this bar's own `value`, `min_value`, `max_value` and `page`. Godot's
+own default theme sets every increment and decrement icon to an empty texture, so
+neither Godot nor the previewer draws step buttons.
 
 ## Linting
 
@@ -27,8 +31,8 @@ Strict parsing format-checks the inherited set (1 inherited from ScrollBar, 9 in
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-The lenient parser is `parseControl`, which has no field for `custom_step`, `page` or `value`. A malformed `value = "nope"` is dropped exactly like a well-formed one, since the reader never looks at the key.
-
-## Known limitations
-
-- **Not drawn** Godot draws the track, the buttons and the grabber. Here the rect stays empty.
+The lenient parser is `parseVScrollBar`, which reuses the shared `Range` reader for
+`value`, `min_value`, `max_value` and `page`, plus its own `custom_step`. A malformed
+number becomes `undefined` and the bar falls back to Godot's own Range defaults: min
+0, max 100, value 0, page 0. `custom_step` never reaches a draw formula, so a malformed
+one stays harmless here too.

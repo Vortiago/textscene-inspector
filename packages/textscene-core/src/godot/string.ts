@@ -198,3 +198,26 @@ export function stringToInt(text: string): number {
 export function toIntIndex(text: string): number {
   return IS_VALID_INT_RE.test(text) ? Number(text) : stringToInt(text);
 }
+
+/**
+ * `String::to_float()` (`core/string/ustring.cpp:2680-2685`) — an empty string
+ * is 0, and everything else goes through `built_in_strtod`, which consumes the
+ * longest numeric prefix and yields 0 when there is none.
+ *
+ * NOT {@link parseGodotFloat}. That reads a TSCN float LITERAL, which is
+ * anchored and refuses trailing text, because a value the tokenizer cannot read
+ * corrupts the assignment after it. `to_float` is the lenient runtime scan a
+ * class applies to text it already holds — a BBCode tag option, a split
+ * component — where trailing text is simply ignored and there is no next
+ * assignment to corrupt. Substituting either for the other changes what a
+ * malformed value reads as.
+ */
+export function stringToFloat(text: string): number {
+  // `built_in_strtod` skips leading whitespace, then takes the longest prefix
+  // it can read; `parseFloat` has the same prefix rule and the same 0-length
+  // miss, differing only in accepting JavaScript's `Infinity` spelling, which
+  // the digit guard below refuses.
+  const trimmed = text.trimStart();
+  const parsed = Number.parseFloat(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+}

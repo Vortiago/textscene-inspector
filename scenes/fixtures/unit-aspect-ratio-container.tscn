@@ -1,5 +1,11 @@
 [gd_scene format=3]
 
+; The Content ColorRect is the ONE variable: the container previously carried
+; zero children, so its own sort loop never assigned a rect and ratio/
+; stretch_mode/both alignments were parsed and linted but never exercised by a
+; render. A regression in the ratio/stretch/alignment math is invisible
+; against an empty container.
+
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -15,3 +21,8 @@ ratio = 1.5
 stretch_mode = 3
 alignment_horizontal = 0
 alignment_vertical = 2
+
+[node name="Content" type="ColorRect" parent="MyAspectRatioContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(10, 10)
+color = Color(0.2, 0.6, 0.9, 1)

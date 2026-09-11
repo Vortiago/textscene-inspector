@@ -19,7 +19,7 @@
  * `has2DUIContent.driftguard.test.ts` exists for exactly that and owns it.
  */
 import { describe, expect, it } from 'vitest';
-// Side-effect import: registers all 23 Control slices' native painters, and
+// Side-effect import: registers all 43 Control slices' native painters, and
 // every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
 import { controlComponentRegistry } from '../index';
 import { parseBareNode } from '../testing/probeScene';
@@ -47,13 +47,19 @@ import { solveNode } from './testing/solveNode';
 const CONTAINER_TYPES = new Set([
   'VBoxContainer',
   'HBoxContainer',
+  'BoxContainer',
   'HSplitContainer',
   'VSplitContainer',
+  'SplitContainer',
   'GridContainer',
   'CenterContainer',
   'MarginContainer',
   'ScrollContainer',
   'PanelContainer',
+  'AspectRatioContainer',
+  'FlowContainer',
+  'HFlowContainer',
+  'VFlowContainer',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -71,7 +77,7 @@ function bareSolveNode(type: string): SolveNode {
  * a slice deleted from both sides would leave all of them green. Adding or
  * removing a slice is always a deliberate act, so updating this is too.
  */
-const REGISTERED_CONTROL_TYPES = 23;
+const REGISTERED_CONTROL_TYPES = 43;
 
 describe('Native Control registry coverage', () => {
   it('registers every Control type the 2D UI needs', () => {

@@ -42,10 +42,15 @@ import {
   richTextLineMetrics,
   richTextUnderlineMetrics,
   underlineRectPx,
+  imageSizePx,
+  imageBaselineOffsetPx,
+  imageObjectFontMetrics,
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
 } from './nativeSolver';
+import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { IMAGE_OBJECT_CHAR } from './bbcode';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
@@ -229,6 +234,20 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     // `ThemeDB.fallback_font.get_string_size("AA", HORIZONTAL_ALIGNMENT_LEFT,
     // -1, 32).x` is 42.
     expect(result.x).toBe(42);
+  });
+
+  it('an [img]-only paragraph floors get_minimum_size to the image\'s OWN box — width the (ceiled) advance, height its own centred ascent+descent', () => {
+    const result = size(
+      richTextLabelMinimumSize(
+        node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img=10x40]a.png[/img]' }),
+        ctx()
+      )
+    );
+    // A solo image's own decorated advance is exact (10, shapedTextSizeWidthPx
+    // ceils a whole number to itself); centre/centre alignment on an
+    // image-only line (textAscent=textDescent=0) splits the 40px height
+    // evenly (imageBaselineOffsetPx's own doc/tests).
+    expect(result).toEqual({ x: 10, y: 40 });
   });
 });
 
@@ -544,6 +563,136 @@ describe('styledTextRuns', () => {
       expect(keys).toEqual(['bold_font_size', 'bold_italics_font_size', 'italics_font_size']);
     });
   });
+
+  describe('[img]', () => {
+    it('drops the run when imageSizePx cannot resolve it — no width/height/region authored, same outcome a failed ResourceLoader::load gives real Godot', () => {
+      const runs = styledTextRuns(node({}), { text: '[img]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(runs).toEqual([]);
+    });
+
+    it('resolves width×height authored on the value form, carrying it as the run — width repurposes fontSizePx (imageObjectFontMetrics doc)', () => {
+      const runs = styledTextRuns(node({}), { text: '[img=40x20]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]!.text).toBe(IMAGE_OBJECT_CHAR);
+      expect(runs[0]!.fontSizePx).toBe(40);
+      expect(runs[0]!.image).toEqual({
+        spec: expect.objectContaining({ path: 'a.png', width: 40, height: 20 }),
+        sizePx: { x: 40, y: 20 },
+      });
+    });
+
+    it("resolves a %-form width/height against boxWidthPx — RichTextLabel's own p_width, never a height", () => {
+      const runs = styledTextRuns(node({}), { text: '[img=50%x25%]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK, 200);
+      expect(runs[0]!.image!.sizePx).toEqual({ x: 100, y: 50 });
+    });
+
+    it('a %-form dimension resolves to 0 (unresolvable) when boxWidthPx is not yet known (a solve tree\'s first pass)', () => {
+      const runs = styledTextRuns(node({}), { text: '[img=50%]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(runs).toEqual([]); // width resolves to 0, no height, no region — unresolvable.
+    });
+
+    it('an image run never carries bold/italic/underline, and its top-level color mirrors the parsed [img] color=', () => {
+      const runs = styledTextRuns(
+        node({}),
+        { text: '[img=10x10 color=#ff0000]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties,
+        WHITE,
+        NORMAL,
+        FALLBACK
+      );
+      expect(runs[0]).toMatchObject({ bold: false, italic: false, underline: false, color: { r: 1, g: 0, b: 0, a: 1 } });
+    });
+
+    it('an image run alongside plain text keeps both, in source order', () => {
+      const runs = styledTextRuns(node({}), { text: 'hi[img=10x10]a.png[/img]bye', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
+      expect(runs.map((r) => r.text)).toEqual(['hi', IMAGE_OBJECT_CHAR, 'bye']);
+      expect(runs[1]!.image).toBeDefined();
+      expect(runs[0]!.image).toBeUndefined();
+      expect(runs[2]!.image).toBeUndefined();
+    });
+  });
+});
+
+describe('imageSizePx (rich_text_label.cpp:4120-4155 _get_image_size, the three branches reachable without the texture\'s own natural size)', () => {
+  it('both dimensions given: returned verbatim', () => {
+    expect(imageSizePx(40, 20, undefined)).toEqual({ x: 40, y: 20 });
+  });
+
+  it('width + a region: height keeps the REGION\'s own aspect (:4130-4134, float arithmetic)', () => {
+    expect(imageSizePx(40, 0, { x: 0, y: 0, w: 80, h: 40 })).toEqual({ x: 40, y: 20 });
+  });
+
+  it('height + a region: width keeps the region\'s own aspect (:4137-4141)', () => {
+    expect(imageSizePx(0, 20, { x: 0, y: 0, w: 80, h: 40 })).toEqual({ x: 40, y: 20 });
+  });
+
+  it('region only, no dimension: the region\'s own size verbatim (:4147-4149)', () => {
+    expect(imageSizePx(0, 0, { x: 1, y: 2, w: 80, h: 40 })).toEqual({ x: 80, y: 40 });
+  });
+
+  it('a region with zero area (Rect2::has_area() false) is treated as no region at all', () => {
+    expect(imageSizePx(0, 0, { x: 0, y: 0, w: 0, h: 40 })).toBeNull();
+    expect(imageSizePx(40, 0, { x: 0, y: 0, w: 0, h: 40 })).toBeNull();
+  });
+
+  it('null when the size depends on the texture\'s own natural pixel size — neither dimension nor a usable region (:4150-4154, out of this port\'s reach)', () => {
+    expect(imageSizePx(0, 0, undefined)).toBeNull();
+  });
+
+  it('null for a lone width with no region — the OTHER dimension needs the texture\'s natural size (:4126-4128)', () => {
+    expect(imageSizePx(40, 0, undefined)).toBeNull();
+  });
+
+  it('null for a lone height with no region (:4133-4135)', () => {
+    expect(imageSizePx(0, 40, undefined)).toBeNull();
+  });
+});
+
+describe('imageObjectFontMetrics — exact-advance round-trip through the SHARED fontMetrics.ts chain (getFontGlyphAdvancePx)', () => {
+  const decorated = imageObjectFontMetrics(OPEN_SANS_FONT_METRICS);
+
+  it.each([24, 100, 33.5, 21, 0, 1])(
+    'shapes IMAGE_OBJECT_CHAR at "size" %dpx to an advance of exactly %dpx — getGlyphAdvanceUnits(IMAGE_OBJECT_CHAR) === unitsPerEm makes the FreeType/HarfBuzz chain (fontMetrics.ts:228-234) reduce to the requested size, rounded to the nearest 1/64px',
+    (width) => {
+      expect(getFontGlyphAdvancePx(decorated, IMAGE_OBJECT_CHAR, width)).toBe(width);
+    }
+  );
+
+  it('never touches a real character\'s own advance — delegates to the base metrics unchanged', () => {
+    expect(decorated.getGlyphAdvanceUnits('A')).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits('A'));
+  });
+
+  it('suppresses kerning on EITHER side of IMAGE_OBJECT_CHAR, even where the base metrics would have a real pair', () => {
+    expect(decorated.getKerningAdjustmentUnits(IMAGE_OBJECT_CHAR, 'A')).toBe(0);
+    expect(decorated.getKerningAdjustmentUnits('A', IMAGE_OBJECT_CHAR)).toBe(0);
+  });
+});
+
+describe('imageBaselineOffsetPx (TextServerAdvanced::_realign, text_server_adv.cpp:5189-5254, horizontal-orientation arm)', () => {
+  const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
+
+  it('default alignment (center/center): the image\'s own vertical centre sits on the text box\'s own vertical centre', () => {
+    // y = (-ascent+descent)/2, then -= size.y/2 (CENTER_TO).
+    expect(imageBaselineOffsetPx(18, 5, 10, CENTER_CENTER)).toBe((-18 + 5) / 2 - 5);
+  });
+
+  it('top/top: the image\'s own top sits at the text\'s own ascent line (TOP_TO is a NOP, y = -ascent)', () => {
+    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'top', textPoint: 'top' })).toBe(-18);
+  });
+
+  it('bottom/bottom: the image\'s own bottom sits at the text\'s own descent line (y = descent, then -= size.y)', () => {
+    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'bottom', textPoint: 'bottom' })).toBe(5 - 10);
+  });
+
+  it('top/baseline: the image\'s own top sits ON the baseline (y = 0, TOP_TO NOP)', () => {
+    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'top', textPoint: 'baseline' })).toBe(0);
+  });
+
+  it('an image-only line (no text glyphs): textAscentPx/textDescentPx are both 0, so a center/center image straddles the baseline exactly h/2 either side', () => {
+    const y = imageBaselineOffsetPx(0, 0, 10, CENTER_CENTER);
+    expect(y).toBe(-5);
+    expect(-y).toBe(10 - 10 / 2); // ascent contribution
+    expect(y + 10).toBe(5); // descent contribution
+  });
 });
 
 describe('fontSizePxAtFromRuns', () => {
@@ -737,14 +886,100 @@ describe('layoutRichTextRuns', () => {
 
     // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
     expect(richTextLineMetrics(runs, layout)).toEqual([
-      { topPx: 0, ascentPx: 20, descentPx: 6 },
-      { topPx: 26, ascentPx: 18, descentPx: 5 },
+      { topPx: 0, ascentPx: 20, descentPx: 6, textAscentPx: 20, textDescentPx: 6 },
+      { topPx: 26, ascentPx: 18, descentPx: 5, textAscentPx: 18, textDescentPx: 5 },
     ]);
 
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements.map((p) => p.lineTopPx)).toEqual([0, 26]);
     expect(placements[0]!.layout.baselineOffsetPx).toBe(20);
     expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
+  });
+
+  describe('[img]', () => {
+    const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
+
+    function imageRun(widthPx: number, heightPx: number, path = 'a.png') {
+      return {
+        text: IMAGE_OBJECT_CHAR,
+        bold: false,
+        italic: false,
+        underline: false,
+        color: WHITE,
+        fontSizePx: widthPx, // repurposed — imageObjectFontMetrics's own doc.
+        alignment: 0,
+        image: { spec: { path, width: widthPx, height: heightPx, widthInPercent: false, heightInPercent: false, color: WHITE, region: undefined, pad: false, tooltip: '', altText: '', alignment: CENTER_CENTER }, sizePx: { x: widthPx, y: heightPx } },
+      };
+    }
+
+    /** `shape`, decorated so an image run's placeholder shapes at its OWN width — the real Component.tsx/nativeSolver.ts pipeline. */
+    function shapeWithImages(text: string, runs: Parameters<typeof fontSizePxAtFromRuns>[0], boxWidthPx = 0, autowrapMode = AutowrapMode.OFF): TextLayoutResult {
+      return shapeText(text, {
+        fontSizePx: FONT_SIZE,
+        boxWidthPx,
+        autowrapMode,
+        lineSpacingPx: 0,
+        fontSizePxAt: fontSizePxAtFromRuns(runs),
+        fontMetrics: imageObjectFontMetrics(OPEN_SANS_FONT_METRICS),
+      });
+    }
+
+    it('an image-only line places the quad at the line\'s own top-left, sized exactly to sizePx', () => {
+      const runs = [imageRun(10, 10)];
+      const layout = shapeWithImages(IMAGE_OBJECT_CHAR, runs);
+      const placements = layoutRichTextRuns(runs, layout);
+      expect(placements).toHaveLength(1);
+      expect(placements[0]!.image).toEqual({ spec: runs[0]!.image!.spec, xPx: 0, yPx: 0, widthPx: 10, heightPx: 10 });
+    });
+
+    it("a small (10px) centered image on a line with 16px text does not grow the line — it fits entirely within the text's own ascent/descent", () => {
+      const runs = [
+        { text: 'hi', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE, alignment: 0 },
+        imageRun(10, 10),
+      ];
+      const text = `hi${IMAGE_OBJECT_CHAR}`;
+      const layout = shapeWithImages(text, runs);
+      // ascentPx=18, descentPx=5 at 16px (getFontAscentPx(OPEN_SANS,16), fontMetrics.ts's own formula).
+      expect(richTextLineMetrics(runs, layout)).toEqual([{ topPx: 0, ascentPx: 18, descentPx: 5, textAscentPx: 18, textDescentPx: 5 }]);
+    });
+
+    it('a large (40px) centered image on a 16px text line GROWS the line beyond the text\'s own ascent/descent', () => {
+      const runs = [
+        { text: 'hi', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE, alignment: 0 },
+        imageRun(40, 40),
+      ];
+      const layout = shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs);
+      const metrics = richTextLineMetrics(runs, layout);
+      // yOffset = (-18+5)/2 - 20 = -26.5; ascent = max(18, 26.5) = 26.5; descent = max(5, -26.5+40) = 13.5.
+      expect(metrics).toEqual([{ topPx: 0, ascentPx: 26.5, descentPx: 13.5, textAscentPx: 18, textDescentPx: 5 }]);
+      const placements = layoutRichTextRuns(runs, layout);
+      const imagePlacement = placements.find((p) => p.image)!;
+      expect(imagePlacement.image!.yPx).toBe(26.5 - 26.5); // ascentPx + yOffset
+    });
+
+    it(
+      'a 100px image forces its OWN line once it no longer fits beside its neighbours — at boxWidthPx 130 "Hi ' +
+        IMAGE_OBJECT_CHAR +
+        '" (Hi + the image) still shares one line with "Bye" wrapping to a second; at 110 the SAME image needs a line of its own, ' +
+        'a THIRD line — the transition is driven entirely by the DECORATED width (an unresolved run would use the average-glyph fallback, ~9px, and never force it)',
+      () => {
+        const runs = [
+          { text: 'Hi ', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE, alignment: 0 },
+          imageRun(100, 10),
+          { text: ' Bye', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE, alignment: 0 },
+        ];
+        const text = `Hi ${IMAGE_OBJECT_CHAR} Bye`;
+        const fitsBeside = shapeWithImages(text, runs, 130, AutowrapMode.WORD);
+        expect(fitsBeside.lines.map((l) => l.text)).toEqual([`Hi ${IMAGE_OBJECT_CHAR}`, 'Bye']);
+
+        const ownLine = shapeWithImages(text, runs, 110, AutowrapMode.WORD);
+        expect(ownLine.lines.map((l) => l.text)).toEqual(['Hi', IMAGE_OBJECT_CHAR, 'Bye']);
+
+        const placements = layoutRichTextRuns(runs, ownLine);
+        expect(placements.map((p) => p.lineIndex)).toEqual([0, 1, 2]);
+        expect(placements[1]!.image).toBeDefined();
+      }
+    );
   });
 });
 

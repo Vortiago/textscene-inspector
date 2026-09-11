@@ -56,6 +56,11 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // as linter-only on HSlider and VSlider.
   Range: '2d/ui/shared/range.ts',
   Slider: '2d/ui/shared/slider.ts',
+  // Both bases are real scene types with a parser of their own, and each is
+  // also the hop their H/V subclasses inherit `vertical` and the family's own
+  // keys through.
+  BoxContainer: '2d/ui/boxcontainer/parser.ts',
+  SplitContainer: '2d/ui/splitcontainer/parser.ts',
 };
 
 /**

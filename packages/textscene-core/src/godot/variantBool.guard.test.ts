@@ -41,6 +41,8 @@ const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/controls/native/controlPixelSnap.ts':
     'a project.godot ConfigFile field, which Godot writes unquoted and reads through GLOBAL_GET',
   'r3f/controls/native/text/sceneFontLoader.ts': 'the VITEST environment variable',
+  'nodes/2d/ui/richtextlabel/bbcode.ts':
+    'a BBCode tag option, which Godot itself compares against the literal text (rich_text_label.cpp:6138)',
 };
 
 function sourceFiles(dir: string = src, prefix = ''): string[] {

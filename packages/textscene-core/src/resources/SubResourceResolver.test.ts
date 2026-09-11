@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseResourceReference,
+  resolveExtAtlasTexturePath,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
@@ -164,10 +165,35 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
+describe('resolveExtAtlasTexturePath', () => {
+  const externals: readonly TscnExternalResource[] = [
+    { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
+    { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
+  ];
+
+  it('gives the path of an ExtResource declared AtlasTexture', () => {
+    expect(resolveExtAtlasTexturePath('ExtResource("1_atlas")', externals)).toBe(
+      'res://icons/keyboard_arrow_left.tres'
+    );
+  });
+
+  it('declines an ExtResource declared a different type', () => {
+    expect(resolveExtAtlasTexturePath('ExtResource("2_sheet")', externals)).toBeNull();
+  });
+
+  it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
+    expect(resolveExtAtlasTexturePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath('not a reference', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath(undefined, externals)).toBeNull();
+  });
+});
+
 describe('resolveTexture2DPath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '5', path: 'res://godot.png', type: 'Texture2D' },
     { id: '6', path: 'res://godot_normal.png', type: 'Texture2D' },
+    { id: '7', path: 'res://icons/keyboard_arrow_left.tres', type: 'AtlasTexture' },
   ];
   const internals: readonly TscnInternalResource[] = [
     {
@@ -180,6 +206,11 @@ describe('resolveTexture2DPath', () => {
       },
     },
     { id: 'Plain_1', type: 'PlaceholderTexture2D', data: {} },
+    {
+      id: 'CanvasTexture_atlas',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'ExtResource("7")' },
+    },
   ];
 
   it('passes a raw res:// path through', () => {
@@ -204,5 +235,10 @@ describe('resolveTexture2DPath', () => {
     expect(resolveTexture2DPath('SubResource("nope")', externals, internals)).toBeNull();
     expect(resolveTexture2DPath('not a reference', externals, internals)).toBeNull();
     expect(resolveTexture2DPath(undefined, externals, internals)).toBeNull();
+  });
+
+  it('declines an ExtResource AtlasTexture .tres, directly or through a CanvasTexture — its size is the region, never the sheet', () => {
+    expect(resolveTexture2DPath('ExtResource("7")', externals, internals)).toBeNull();
+    expect(resolveTexture2DPath('SubResource("CanvasTexture_atlas")', externals, internals)).toBeNull();
   });
 });

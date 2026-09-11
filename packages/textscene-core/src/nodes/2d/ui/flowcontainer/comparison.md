@@ -1,17 +1,17 @@
 ---
 type: FlowContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-flow-container.tscn
 # image: unit-flow-container
-renders_as: an invisible transform-only fallback
+renders_as: children flowed along one axis and wrapped into lines
 ---
 
 # FlowContainer
 
-FlowContainer lays children out in a line and wraps them when the line is full. The
-previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+FlowContainer lays its children out along one axis, wraps to a new line when the
+current one runs out of room, and aligns each line per `alignment`. It draws nothing
+itself.
 
 ## Linting
 
@@ -34,12 +34,13 @@ Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all four of FlowContainer's own members. The lenient
-parser reuses `parseControl` unchanged and reads none of them. `vertical` stays
-validated here, since a plain FlowContainer serialises it where its fixed-axis
-subclasses hide it.
+`parser.ts` now reads all four members straight through, unclamped. `vertical` stays
+validated (and parsed) here, since a plain FlowContainer serialises it where its
+fixed-axis subclasses hide it — the solver resolves `HFlowContainer`/`VFlowContainer`'s
+own orientation from the node's type instead of this property.
 
 ## Known limitations
 
-- **Not drawn** Godot flows and wraps the children. The previewer applies no layout, so
-  they stay at their authored offsets.
+- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
+  flow is sized like any other child; Godot instead keeps its previous frame's size,
+  which a static render has no analogue for.

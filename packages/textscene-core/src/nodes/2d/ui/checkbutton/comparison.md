@@ -1,17 +1,17 @@
 ---
 type: CheckButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-check-button.tscn
 # image: unit-check-button
-renders_as: invisible transform-only fallback
+renders_as: a toggle-switch icon followed by a text run
 ---
 
 # CheckButton
 
-CheckButton is a labelled on-off switch with a themed check icon. The previewer parses
-and validates it but does not draw it, so it renders as a transform-only fallback and
-its children still show.
+CheckButton is a labelled on-off switch. The previewer draws the theme's own
+toggle-switch icon flush against the right edge and the label to its left, with no
+StyleBox chrome (CheckButton's own StyleBoxes are all a `StyleBoxEmpty`).
 
 ## Linting
 
@@ -28,11 +28,15 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-CheckButton binds no property of its own, only theme items, so the strict and lenient
-parsers agree on every key. Whatever the registered base parser reads it reads without
-substitution.
+CheckButton binds no NEW property of its own beyond Button's, only theme items, so the
+strict and lenient parsers agree on every key Button's own parser already reads. The
+lenient parser additionally reads `button_pressed` (a BaseButton property) for the
+switch's own on/off state.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the switch and its label. The previewer draws nothing for
-  this node.
+- **Approximated** CheckButton's own left/right content margin (`round(6*scale)`) is
+  approximated from the theme's shared `round(4*scale)` margin; the two agree at the
+  project's default scale and can differ by a pixel at another one.
+- **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
+  parsed but never drawn.
