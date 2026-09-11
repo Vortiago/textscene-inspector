@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat} from './string.js';
+import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat, simplifyResPath} from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -96,6 +96,42 @@ describe('splitTopLevel', () => {
 
   it('keeps an empty trailing element, since a trailing comma is one', () => {
     expect(splitTopLevel('1,')).toEqual(['1', '']);
+  });
+});
+
+describe('simplifyResPath', () => {
+  /**
+   * Godot splits a `scheme://` drive off the front and rebuilds the remainder
+   * from its non-empty slash-separated parts, so every run of slashes after
+   * the scheme collapses to one (`core/string/ustring.cpp:4152-4210`).
+   * Measured against the engine: `res:///a/b.png`, `res:////a/b.png` and
+   * `res://a//b.png` all simplify to `res://a/b.png`.
+   *
+   * A real scene writes them — Maaack's menus template stores every `[img]`
+   * source as `res:///addons/...` — and a path we do not collapse resolves to
+   * nothing at all.
+   */
+  it('collapses a run of slashes after the scheme', () => {
+    expect(simplifyResPath('res:///a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res:////a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res://a//b.png')).toBe('res://a/b.png');
+  });
+
+  it('leaves an already-simple path exactly as it is', () => {
+    expect(simplifyResPath('res://a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res://')).toBe('res://');
+  });
+
+  it('passes through text carrying no scheme', () => {
+    expect(simplifyResPath('a/b.png')).toBe('a/b.png');
+    expect(simplifyResPath('')).toBe('');
+  });
+
+  // `p > 0` and the all-alphanumeric check (`:4159-4167`): `://foo` has no
+  // drive, so nothing is split off it.
+  it('needs a non-empty alphanumeric scheme before the separator', () => {
+    expect(simplifyResPath('://a//b')).toBe('://a//b');
+    expect(simplifyResPath('re-s://a//b')).toBe('re-s://a//b');
   });
 });
 

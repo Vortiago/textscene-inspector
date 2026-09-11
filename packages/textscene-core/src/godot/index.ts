@@ -53,7 +53,9 @@ export {
   IS_VALID_INT_RE,
   literalText,
   dropTrailingComma,
+  simplifyResPath,
   splitTopLevel,
+  stringToFloat,
   stringToInt,
   toIntIndex,
 } from './string.js';

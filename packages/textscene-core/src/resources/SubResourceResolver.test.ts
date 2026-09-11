@@ -165,6 +165,28 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
+describe('resolveExtAtlasTexturePath — the declared type is the SLOT\'s', () => {
+  /**
+   * Godot writes an `[ext_resource]`'s `type=` from the property SLOT, not from
+   * the target's own class: an AtlasTexture in a `texture` slot is written
+   * `type="Texture2D"`. Measured across a real corpus — of every `.tres`
+   * ext_resource there, the declared types were Texture2D, StyleBox,
+   * SpriteFrames, Theme and TileSet, and `AtlasTexture` appeared exactly zero
+   * times, while the files' own `[gd_resource type=]` headers said otherwise.
+   *
+   * So the declared type cannot gate this, and the file has to be read.
+   */
+  it('matches a .tres the scene declares as the slot type Texture2D', () => {
+    const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
+    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+  });
+
+  it('declines a plain image, which the texture bus decodes directly', () => {
+    const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
+    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBeNull();
+  });
+});
+
 describe('resolveExtAtlasTexturePath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },

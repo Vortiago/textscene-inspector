@@ -10,8 +10,7 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resourceRef } from '../godot/index.js';
-import { ATLAS_TEXTURE_TYPE } from './textures/atlastexture/types.js';
+import { resourceRef, simplifyResPath } from '../godot/index.js';
 
 export function parseResourceReference(
   ref: string
@@ -32,10 +31,14 @@ export function resolveExtResourcePath(
   externalResources: readonly TscnExternalResource[]
 ): string | null {
   if (!ref) return null;
-  if (ref.startsWith('res://')) return ref;
+  // Simplified on the way out, both arms: Godot runs every resource address
+  // through `String::simplify_path`, and a real scene writes the redundant
+  // slashes it collapses (`res:///addons/...`).
+  if (ref.startsWith('res://')) return simplifyResPath(ref);
   const parsed = parseResourceReference(ref);
   if (!parsed || parsed.type !== 'ExtResource') return null;
-  return externalResources.find((r) => r.id === parsed.id)?.path ?? null;
+  const path = externalResources.find((r) => r.id === parsed.id)?.path;
+  return path === undefined ? null : simplifyResPath(path);
 }
 
 /**
@@ -110,10 +113,23 @@ export function unwrapCanvasTextureRef(
 }
 
 /**
- * The `.tres` path an `ExtResource` reference names, when the OUTER file's own
- * declared `type=` for that id is `AtlasTexture` — Godot always writes it to
- * match the target's class, so this answers without loading anything. Null
- * for every other reference form.
+ * The TEXT-RESOURCE path an `ExtResource` reference names — a `.tres`/`.res`
+ * file rather than an image — which the caller must fetch and parse before it
+ * knows what the file actually holds. Null for every other reference form.
+ *
+ * The `[ext_resource]`'s own `type=` CANNOT gate this: Godot writes it from the
+ * property SLOT, not from the target's class, so an AtlasTexture sitting in a
+ * `texture` slot is recorded `type="Texture2D"`. Measured across a real corpus,
+ * `type="AtlasTexture"` appeared zero times while the referenced files' own
+ * `[gd_resource type=]` headers said AtlasTexture throughout — which is why
+ * gating on the declared type silently matched nothing and every such icon
+ * went undrawn.
+ *
+ * Returning the path for ANY text resource, not only an atlas, is correct for
+ * this resolver's callers: a `.tres` is never an image the texture bus can
+ * decode, so it must leave the image path regardless of what it turns out to
+ * hold. `decodeExtAtlasTextureRef` reads the parsed file's own header and
+ * declines the ones that are not atlases.
  *
  * Lives here, not in the atlastexture slice, so `resolveTexture2DPath` can
  * consult it without a circular import (the atlastexture slice already
@@ -126,7 +142,13 @@ export function resolveExtAtlasTexturePath(
   const parsed = parseResourceReference(ref ?? '');
   if (!parsed || parsed.type !== 'ExtResource') return null;
   const resource = externalResources.find((r) => r.id === parsed.id);
-  return resource?.type === ATLAS_TEXTURE_TYPE ? resource.path : null;
+  if (!resource) return null;
+  return isTextResourcePath(resource.path) ? resource.path : null;
+}
+
+/** A Godot text-resource file, which carries its own `[gd_resource type=]` header. */
+function isTextResourcePath(path: string): boolean {
+  return /\.(tres|res)$/i.test(path);
 }
 
 /**
