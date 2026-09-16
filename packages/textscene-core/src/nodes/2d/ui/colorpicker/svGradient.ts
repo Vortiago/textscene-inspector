@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlColor } from '../control/types';
 import { hsvToRgb } from './nativeSolver';
 
@@ -79,6 +80,19 @@ export function horizontalStripGeometry(w: number, h: number, stops: readonly Co
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }
   return { positions, indices, colors };
+}
+
+/**
+ * `Color::srgb_to_linear` per stop (`core/math/color.h:192-198`) —
+ * `GRADIENT_COLOR_SPACE_LINEAR_SRGB` interpolates ALREADY-linear stops
+ * (`color_mode.cpp:311`, `ColorModeLinear::slider_draw`), unlike the RGB
+ * mode's own `_SRGB` space (`:113`). Converting each stop once here, so the
+ * caller's GPU lerp runs directly on linear values with no further
+ * per-fragment decode, reproduces that — `Component.tsx`'s own doc for why
+ * the Linear-mode band skips the usual sRGB-decode shader injection.
+ */
+export function linearizeStops(stops: readonly ControlColor[]): ControlColor[] {
+  return stops.map((c) => ({ r: sRGBChannelToLinear(c.r), g: sRGBChannelToLinear(c.g), b: sRGBChannelToLinear(c.b), a: c.a }));
 }
 
 /**

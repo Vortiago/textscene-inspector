@@ -40,7 +40,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -112,10 +113,27 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
   const iconPos = { x: titleMargin.left, y: iconTopExtra + titleStyleOfs };
   const titleTextWidth = rect.w - titleMarginSize.x - arrowSize.x - hSeparation;
 
+  // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`)
+  // primes the SAME trim `TextParagraph::draw` then applies — the untrimmed
+  // shape `foldableContainerTitleMetrics` returns never reaches the screen
+  // once `title_text_overrun_behavior` trims.
+  const overrunFlags = useMemo(
+    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    [props.titleTextOverrunBehavior]
+  );
+  const trimmedLayout = useMemo(() => {
+    if (!title.layout || !overrunFlags.trim) return title.layout;
+    const trimmedLine = trimLineToWidth(title.layout.lines[0]!, Math.max(1, titleTextWidth), overrunFlags, {
+      fontMetrics: title.layout.fontMetrics,
+      fontSizePx: title.fontSizePx,
+    });
+    return soloLineLayout(trimmedLine, title.layout);
+  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
+
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`);
   // `_get_actual_alignment`'s RTL LEFT/RIGHT swap is not modelled (module doc).
-  const shapedWidth = title.layout ? shapedTextSizeWidthPx(title.layout.widthPx) : 0;
+  const shapedWidth = trimmedLayout ? shapedTextSizeWidthPx(trimmedLayout.widthPx) : 0;
   const extraSpace = Math.max(titleTextWidth - shapedWidth, 0);
   const alignment = props.titleAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
   const alignmentShift =
@@ -150,10 +168,10 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
           map={iconTexture}
         />
       </CanvasItemGroup>
-      {title.layout && titleTextWidth > 0 && (
+      {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
           <TextRun
-            layout={title.layout}
+            layout={trimmedLayout}
             fontSizePx={title.fontSizePx}
             tint={tintedFontColor}
             clippingPlanes={clippingPlanes}

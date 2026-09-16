@@ -46,5 +46,3 @@ the out-of-range write, so the node keeps its class-default mode.
 - **Approximated** `indeterminate` never animates. The previewer always draws the one
   frame Godot itself treats as static (the bar centred in the control), regardless of
   `editor_preview_indeterminate`.
-- **Not drawn** `font_outline_color`/`outline_size` only render for a scene font raster;
-  the default MSDF-atlas font has no glyph contour to stroke.

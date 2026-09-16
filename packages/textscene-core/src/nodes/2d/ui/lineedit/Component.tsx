@@ -121,9 +121,16 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const layout: TextLayoutResult | null = useMemo(
     () =>
       hasText
-        ? shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
+        ? shapeText(text, {
+            fontSizePx,
+            boxWidthPx: 0,
+            autowrapMode: AutowrapMode.OFF,
+            lineSpacingPx: 0,
+            fontMetrics,
+            preserveControl: props.drawControlChars,
+          })
         : null,
-    [hasText, text, fontSizePx, fontMetrics]
+    [hasText, text, fontSizePx, fontMetrics, props.drawControlChars]
   );
 
   // --- Icon: which one draws, its resolved size --------------------------

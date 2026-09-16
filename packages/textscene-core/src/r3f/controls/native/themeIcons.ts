@@ -68,16 +68,30 @@
  *      set_icon("close",     "TabBar", icons["close"])
  *    The `_highlight` (hover) variants (`:1035,1037`) are not vended, same
  *    restriction as Slider's `grabber_highlight` above.
- *  - ColorPicker / ColorPickerButton (`default_theme.cpp:1096,1098,1100-
- *    1101,1133`), the swatch/cursor icons — `ColorPickerButton`'s own
+ *  - ColorPicker / ColorPickerButton (`default_theme.cpp:1088-1101,1133`),
+ *    the swatch/cursor/button icons — `ColorPickerButton`'s own
  *    `overbright_indicator` is `BIND_THEME_ITEM_EXT`'d straight to
  *    ColorPicker's key (`color_picker.cpp:2546`), so it is the SAME icon
  *    under one key, not a second copy:
+ *      set_icon("menu_option",         "ColorPicker",       icons["tabs_menu_hl"])
+ *      set_icon("screen_picker",       "ColorPicker",       icons["color_picker_pipette"])
+ *      set_icon("shape_rect",          "ColorPicker",       icons["picker_shape_rectangle"])
  *      set_icon("sample_bg",           "ColorPicker",       icons["mini_checkerboard"])
  *      set_icon("bg",                  "ColorPickerButton",  icons["mini_checkerboard"])
  *      set_icon("overbright_indicator","ColorPicker",       icons["color_picker_overbright"])
+ *      set_icon("bar_arrow",           "ColorPicker",       icons["color_picker_bar_arrow"])
  *      set_icon("picker_cursor",       "ColorPicker",       icons["color_picker_cursor"])
  *      set_icon("picker_cursor_bg",    "ColorPicker",       icons["color_picker_cursor_bg"])
+ *    `menu_option` reaches TWO buttons (`btn_mode`/`menu_btn`,
+ *    `color_picker.cpp:119-120`), so it is vended once and shared, matching
+ *    `overbright_indicator`'s own precedent above. `bar_arrow` overrides
+ *    `sliders[0..2]`/`alpha_slider`'s own `grabber`/`grabber_highlight`
+ *    (`color_picker.cpp:636-637,646-647`) — `intensity_slider` alone keeps
+ *    HSlider's own default `grabber` (`SLIDER_GRABBER_ICONS`, already
+ *    vendored above), so it is not revended here. `shape_rect` is vended
+ *    for `btn_shape` at the one `picker_shape` this previewer draws
+ *    (`SHAPE_HSV_RECTANGLE`) — `shape_circle`/`shape_rect_wheel` are not,
+ *    matching the shader-backed shapes' own "out of scope" (`comparison.md`).
  *
  * The bytes embedded below are unmodified copies of those SVG files from
  * Godot 4.6.3's `scene/theme/icons/`. Licence: Godot Engine, MIT — see
@@ -352,6 +366,30 @@ export const COLOR_PICKER_CURSOR_BG_ICON = svgDataUrl(COLOR_PICKER_CURSOR_BG_B64
 
 /** The checkerboard tile's own natural size — 16x16. */
 export const MINI_CHECKERBOARD_SIZE = 16;
+
+/** `scene/theme/icons/tabs_menu_hl.svg` (16x16) — `ColorPicker`'s `menu_option`, shared by `btn_mode` and `menu_btn` (`default_theme.cpp:1088`, `color_picker.cpp:119-120`). */
+const COLOR_PICKER_MENU_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZmlsbC1vcGFjaXR5PSIuNjUiIGQ9Ik04IDBhMiAyIDAgMCAwIDAgNCAyIDIgMCAwIDAgMC00em0wIDZhMiAyIDAgMCAwIDAgNCAyIDIgMCAwIDAgMC00em0wIDZhMiAyIDAgMCAwIDAgNCAyIDIgMCAwIDAgMC00eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/color_picker_pipette.svg` (16x16) — `ColorPicker`'s `screen_picker`, `btn_pick`'s own icon (`default_theme.cpp:1091`, `color_picker.cpp:114`). */
+const COLOR_PICKER_PIPETTE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTEwIDNhMSAxIDAgMCAwLTQgMHYySDV2MmgxdjVjMCAuNzEyLjM2IDEuMzcyIDEgMS43M1YxNWgydi0xLjI3Yy42MTgtLjM2IDEtMSAxLTEuNzNWN2gxVjVoLTFWM3pNNyA3aDJ2NWExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/picker_shape_rectangle.svg` (16x16) — `ColorPicker`'s `shape_rect`, `btn_shape`'s own icon at `picker_shape = SHAPE_HSV_RECTANGLE` (`default_theme.cpp:1093`). */
+const COLOR_PICKER_SHAPE_RECT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTS41IDIuNWgxMXYxMUguNXptMTIgMGgydjExaC0yeiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/color_picker_bar_arrow.svg` (16x16, `viewBox="0 0 16 20"`) — `ColorPicker`'s `bar_arrow`, the channel/alpha slider grabber override (`default_theme.cpp:1099`). */
+const COLOR_PICKER_BAR_ARROW_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDIwIj48cGF0aCBmaWxsPSIjYjJiMmIyIiBzdHJva2U9IiNiMmIyYjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Im0zLjU2NCAxNS4yMThoOC44NzJsLTQuNDM2LTQuNDM2eiIvPjwvc3ZnPgo=';
+
+export const COLOR_PICKER_MENU_ICON = svgDataUrl(COLOR_PICKER_MENU_B64);
+export const COLOR_PICKER_PIPETTE_ICON = svgDataUrl(COLOR_PICKER_PIPETTE_B64);
+export const COLOR_PICKER_SHAPE_RECT_ICON = svgDataUrl(COLOR_PICKER_SHAPE_RECT_B64);
+export const COLOR_PICKER_BAR_ARROW_ICON = svgDataUrl(COLOR_PICKER_BAR_ARROW_B64);
+
+/** Every one of the four icons just above shares this authored size — 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size — both 12x12. */
 export const COLOR_PICKER_CURSOR_SIZE = 12;

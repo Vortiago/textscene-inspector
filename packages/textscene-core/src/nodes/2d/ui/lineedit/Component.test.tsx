@@ -234,6 +234,16 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.6, 5);
   });
 
+  it('draw_control_chars draws a hex-code box for an unshapeable control character instead of dropping it silently', async () => {
+    const dropped = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'AB' })} rect={RECT} renderOrder={0} />
+    );
+    const boxed = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'AB', drawControlChars: true })} rect={RECT} renderOrder={0} />
+    );
+    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(dropped.scene.findAllByType('Mesh').length);
+  });
+
   it('secret=true substitutes an ASCII secret_character repeated to the text length (glyph count survives the atlas)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit

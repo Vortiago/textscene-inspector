@@ -39,6 +39,35 @@ describe('<ProgressBar>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3); // background + fill + "50%"
   });
 
+  it('composites font_outline_color/outline_size into the percent text\'s SAME mesh (the bundled font is MSDF, no contour to stroke)', async () => {
+    const n = {
+      ...solveNode({ value: 50 }),
+      colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } },
+      constants: { outline_size: 2 },
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <ProgressBar {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(3); // background + fill + "50%" (no extra outline mesh)
+    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    const textMat = meshes
+      .map((m) => m.material as THREE.ShaderMaterial)
+      .find((m) => m.uniforms?.uOutlineWidthPx !== undefined)!;
+    expect(textMat.uniforms.uOutlineWidthPx!.value).toBeGreaterThan(0);
+  });
+
+  it('draws no outline with the default outline_size of 0, even for an explicit font_outline_color', async () => {
+    const n = { ...solveNode({ value: 50 }), colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <ProgressBar {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
+    );
+    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+    const textMat = meshes
+      .map((m) => m.material as THREE.ShaderMaterial)
+      .find((m) => m.uniforms?.uOutlineWidthPx !== undefined)!;
+    expect(textMat.uniforms.uOutlineWidthPx!.value).toBe(0);
+  });
+
   it('positions the fill CanvasItemGroup at progressBarFillRect\'s own (x, y) — FILL_BEGIN_TO_END grows from the left', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ProgressBar {...painterEnv()} solveNode={solveNode({ value: 50 })} rect={RECT} renderOrder={0} />

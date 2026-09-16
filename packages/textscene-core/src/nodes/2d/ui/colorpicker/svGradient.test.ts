@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { svSquareBaseLayer, svSquareHueLayer, hueStripGeometry, horizontalStripGeometry } from './svGradient';
+import { svSquareBaseLayer, svSquareHueLayer, hueStripGeometry, horizontalStripGeometry, linearizeStops } from './svGradient';
+
+describe('linearizeStops', () => {
+  // core/math/color.h:192-198, Color::srgb_to_linear: c < 0.04045 ? c/12.92 : pow((c+0.055)/1.055, 2.4).
+  it('converts each stop channel sRGB to linear, keeping alpha untouched', () => {
+    const [stop] = linearizeStops([{ r: 1, g: 0, b: 0.5, a: 0.25 }]);
+    expect(stop!.r).toBeCloseTo(1, 6);
+    expect(stop!.g).toBeCloseTo(0, 6);
+    expect(stop!.b).toBeCloseTo(0.21404, 5);
+    expect(stop!.a).toBe(0.25);
+  });
+
+  it('is 0 at 0 and preserves stop order/count', () => {
+    const stops = linearizeStops([{ r: 0, g: 0, b: 0, a: 1 }, { r: 1, g: 1, b: 1, a: 1 }]);
+    expect(stops).toHaveLength(2);
+    expect(stops[0]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+});
 
 describe('svSquareBaseLayer', () => {
   it('is white at the top corners and black at the bottom — color_picker_shape.cpp:243-249', () => {

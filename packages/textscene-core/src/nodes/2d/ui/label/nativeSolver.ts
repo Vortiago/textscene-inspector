@@ -13,6 +13,7 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { AutowrapMode, clampAutowrapMode, isWhitespace, shapeText, shapedTextSizeWidthPx, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
@@ -118,6 +119,55 @@ export function labelEffectiveTextTheme(
     fontSizePx: settings.fontSize,
     color: settings.fontColor,
     lineSpacingPx: Math.trunc(settings.lineSpacing),
+  };
+}
+
+/** `default_theme.cpp:386` — Label's `font_outline_color` default, opaque black (a DIFFERENT literal from `font_shadow_color`'s transparent one below). */
+const LABEL_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+/** `default_theme.cpp:385` — Label's `font_shadow_color` default is TRANSPARENT, so a Label draws no shadow until a scene sets this. */
+const LABEL_DEFAULT_SHADOW_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0 };
+/**
+ * `default_theme.cpp:388-391` — `shadow_offset_x`/`shadow_offset_y`/
+ * `shadow_outline_size` are each `Math::round(1 * scale)`; this previewer's
+ * Label constants are UNSCALED literals already (`LABEL_LINE_SPACING_PX`'s
+ * own `round(3*scale)` source is likewise the flat `3` here), so `1` follows
+ * that same established precedent rather than introducing scale-threading
+ * this file alone.
+ */
+const LABEL_DEFAULT_SHADOW_OUTLINE_SIZE = 1;
+const LABEL_DEFAULT_SHADOW_OFFSET = 1;
+
+export interface LabelOutlineTheme {
+  size: number;
+  color: ControlColor;
+}
+
+/** `label.cpp:765-766` — `has_settings ? settings->get_outline_X() : theme_cache.font_outline_X`, same OUTRIGHT precedence `labelEffectiveTextTheme` documents. */
+export function labelOutlineTheme(n: SolveNode, settings: ReturnType<typeof resolveNodeLabelSettings>): LabelOutlineTheme {
+  if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
+  return {
+    size: n.constants['outline_size'] ?? 0,
+    color: n.colors['font_outline_color'] ?? LABEL_DEFAULT_OUTLINE_COLOR,
+  };
+}
+
+export interface LabelShadowTheme {
+  /** The shadow's OWN outline-expand width — `LabelSettings.shadow_size` / the theme's `shadow_outline_size` constant, NOT merely a plain offset copy. */
+  size: number;
+  color: ControlColor;
+  offset: Vec2;
+}
+
+/** `label.cpp:762-767` — `has_settings ? settings->get_shadow_X() : theme_cache.font_shadow_X`, same OUTRIGHT precedence `labelEffectiveTextTheme` documents. */
+export function labelShadowTheme(n: SolveNode, settings: ReturnType<typeof resolveNodeLabelSettings>): LabelShadowTheme {
+  if (settings) return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
+  return {
+    size: n.constants['shadow_outline_size'] ?? LABEL_DEFAULT_SHADOW_OUTLINE_SIZE,
+    color: n.colors['font_shadow_color'] ?? LABEL_DEFAULT_SHADOW_COLOR,
+    offset: {
+      x: n.constants['shadow_offset_x'] ?? LABEL_DEFAULT_SHADOW_OFFSET,
+      y: n.constants['shadow_offset_y'] ?? LABEL_DEFAULT_SHADOW_OFFSET,
+    },
   };
 }
 

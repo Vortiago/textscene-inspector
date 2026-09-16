@@ -9,11 +9,13 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { colorOr, type Color } from '../../../utils/colorParser';
-import { floatOr, intOr } from '../../../parser/valueParsers';
+import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { LabelSettingsResource } from './types';
 
 /** `label_settings.h:59,62` — both colour fields' shared default. */
 const DEFAULT_WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
+/** `label_settings.h:65` — transparent, so a Label draws no shadow until this is set. */
+const DEFAULT_TRANSPARENT: Color = { r: 0, g: 0, b: 0, a: 0 };
 /** `Font::DEFAULT_FONT_SIZE` (`core/io/resource.h`'s font default, mirrored at `label_settings.h:58`). */
 const DEFAULT_FONT_SIZE = 16;
 const CONTEXT = 'LabelSettings';
@@ -27,6 +29,9 @@ export function decodeLabelSettings(data: Record<string, string>): LabelSettings
     fontColor: colorOr(data.font_color, DEFAULT_WHITE),
     outlineSize: intOr(data.outline_size, 0, CONTEXT),
     outlineColor: colorOr(data.outline_color, DEFAULT_WHITE),
+    shadowSize: intOr(data.shadow_size, 1, CONTEXT),
+    shadowColor: colorOr(data.shadow_color, DEFAULT_TRANSPARENT),
+    shadowOffset: vec2Or(data.shadow_offset, { x: 1, y: 1 }, CONTEXT),
   };
 }
 

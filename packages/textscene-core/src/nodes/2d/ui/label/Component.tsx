@@ -63,7 +63,9 @@ import {
   VC_CHARS_BEFORE_SHAPING,
   applyVisibleCharsReveal,
   labelEffectiveTextTheme,
+  labelOutlineTheme,
   labelPreShapeText,
+  labelShadowTheme,
   labelShapingWidthPx,
   labelTextTheme,
   labelVisibleLineRange,
@@ -99,6 +101,17 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
   const textTheme = useMemo(() => labelEffectiveTextTheme(themeResolved, labelSettings), [themeResolved, labelSettings]);
 
   const tintColor = multiplyModulate(tint.own, textTheme.color);
+
+  // label.cpp:762-767,876-878 — outline draws OVER the fill at the SAME pen
+  // position (composited by `<TextRun>`'s own `outlineColor`/`outlineWidthPx`,
+  // this file's own doc has why one pass suffices); shadow draws BEHIND, at
+  // its own offset, in its own colour, with its own outline-expand.
+  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode, labelSettings), [solveNode, labelSettings]);
+  const shadowTheme = useMemo(() => labelShadowTheme(solveNode, labelSettings), [solveNode, labelSettings]);
+  const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
+  const shadowColor = multiplyModulate(tint.own, shadowTheme.color);
+  const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;
+  const hasShadow = shadowColor.a > 0;
   const inheritedClippingPlanes = useControlClipPlanes();
   // `clip_text` scissors this Label's OWN drawn ink to its rect
   // (`label.cpp:733-734`'s `canvas_item_set_clip`) — always called (hooks run
@@ -221,12 +234,31 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
 
   return (
     <CanvasItemGroup ref={anchorRef}>
+      {hasShadow &&
+        revealedPlacements.map((placement, index) => (
+          <CanvasItemGroup
+            key={`shadow-${index}`}
+            position={[placement.x + shadowTheme.offset.x, -(placement.y + shadowTheme.offset.y), 0]}
+          >
+            <TextRun
+              layout={lineLayouts[index]!}
+              fontSizePx={textTheme.fontSizePx}
+              tint={shadowColor}
+              outlineColor={shadowColor}
+              outlineWidthPx={shadowTheme.size}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+            />
+          </CanvasItemGroup>
+        ))}
       {revealedPlacements.map((placement, index) => (
         <CanvasItemGroup key={index} position={[placement.x, -placement.y, 0]}>
           <TextRun
             layout={lineLayouts[index]!}
             fontSizePx={textTheme.fontSizePx}
             tint={tintColor}
+            outlineColor={hasOutline ? outlineColor : undefined}
+            outlineWidthPx={hasOutline ? outlineTheme.size : 0}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

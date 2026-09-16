@@ -36,6 +36,7 @@ describe('parseLineEdit', () => {
       icon_expand_mode: '2',
       right_icon_scale: '0.5',
       caret_force_displayed: 'true',
+      draw_control_chars: 'true',
     });
     expect(result.maxLength).toBe(10);
     expect(result.expandToTextLength).toBe(true);
@@ -44,6 +45,7 @@ describe('parseLineEdit', () => {
     expect(result.iconExpandMode).toBe(2);
     expect(result.rightIconScale).toBe(0.5);
     expect(result.caretForceDisplayed).toBe(true);
+    expect(result.drawControlChars).toBe(true);
   });
 
   it('leaves the icon/clear-button/max-length/caret properties undefined when absent (edge case)', () => {
@@ -55,6 +57,7 @@ describe('parseLineEdit', () => {
     expect(result.iconExpandMode).toBeUndefined();
     expect(result.rightIconScale).toBeUndefined();
     expect(result.caretForceDisplayed).toBeUndefined();
+    expect(result.drawControlChars).toBeUndefined();
   });
 
   it('distinguishes an explicitly empty string from an absent one (error path)', () => {

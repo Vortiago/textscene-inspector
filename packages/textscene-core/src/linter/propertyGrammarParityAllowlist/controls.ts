@@ -48,11 +48,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
-      // glyphs, and the field sizing itself to its content.
-      'draw_control_chars', // set_max_length re-runs set_text (line_edit.cpp:2523), which truncates,
-      
     ],
-    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi, the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi and locale change the frame and are not implemented yet.',
   },
 
   RichTextLabel: {
@@ -170,14 +167,16 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
     ],
     renderGap: [
-      // frame does show.
+      // An unfocused caret draws nothing, but the `editable = false` variant a
+      // static frame does show.
       'caret_draw_when_editable_disabled',
-      // glyphs, the indent of a wrapped row, and a highlighter's colours.
-      'draw_control_chars', 'indent_wrapped_lines', // BiDi and locale: our shaper runs left-to-right only.
+      // The extra indent a wrapped row takes from the row it continues.
+      'indent_wrapped_lines',
+      // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'text_direction',
     ],
-    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; the unfocused caret, control-character glyphs, wrapped-row indent, highlighter colours and BiDi all change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; the unfocused caret, the wrapped-row indent and BiDi all change the frame and are not implemented yet.',
   },
 
   CodeEdit: {

@@ -495,6 +495,204 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 });
 
+/** A Node2D-shaped node — every discrete transform field stated explicitly. */
+function node2D(
+  name: string,
+  transform: { position?: { x: number; y: number }; rotation?: number; scale?: { x: number; y: number }; skew?: number },
+  extra: Partial<TscnNode> = {}
+): TscnNode {
+  const { properties: extraProperties, ...rest } = extra;
+  return node(name, 'Node2D', {
+    properties: {
+      name,
+      position: transform.position ?? { x: 0, y: 0 },
+      rotation: transform.rotation ?? 0,
+      scale: transform.scale ?? { x: 1, y: 1 },
+      skew: transform.skew ?? 0,
+      ...extraProperties,
+    } as Record<string, unknown>,
+    ...rest,
+  });
+}
+
+describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2D ancestors’ transform, visibility and modulate', () => {
+  it('translation only', async () => {
+    // core/math/transform_2d.h:249-254, rotation=0 scale=(1,1): a=1,b=0,c=0,d=1.
+    const nodes = [node2D('N', { position: { x: 100, y: 50 } }, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 100, ty: 50 });
+  });
+
+  it('rotation only', async () => {
+    // core/math/transform_2d.h:249-254 at rot=PI/2, scale=(1,1), skew=0:
+    // a=cos(PI/2)=0, b=sin(PI/2)=1, c=-sin(PI/2)=-1, d=cos(PI/2)=0.
+    const nodes = [node2D('N', { rotation: Math.PI / 2 }, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    expect(t.a).toBeCloseTo(0, 10);
+    expect(t.b).toBeCloseTo(1, 10);
+    expect(t.c).toBeCloseTo(-1, 10);
+    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.tx).toBe(0);
+    expect(t.ty).toBe(0);
+  });
+
+  it('scale only, non-uniform', async () => {
+    // core/math/transform_2d.h:249-254 at rot=0, skew=0: a=scale.x, d=scale.y.
+    const nodes = [node2D('N', { scale: { x: 2, y: 3 } }, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({ a: 2, b: 0, c: 0, d: 3, tx: 0, ty: 0 });
+  });
+
+  it('translation + rotation + scale together', async () => {
+    // core/math/transform_2d.h:249-254 at rot=PI/2, scale=(2,3), skew=0:
+    // a=cos(PI/2)*2=0, b=sin(PI/2)*2=2, c=-sin(PI/2)*3=-3, d=cos(PI/2)*3=0.
+    const nodes = [
+      node2D('N', { position: { x: 10, y: 20 }, rotation: Math.PI / 2, scale: { x: 2, y: 3 } }, { children: [label('L')] }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    expect(t.a).toBeCloseTo(0, 10);
+    expect(t.b).toBeCloseTo(2, 10);
+    expect(t.c).toBeCloseTo(-3, 10);
+    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.tx).toBe(10);
+    expect(t.ty).toBe(20);
+  });
+
+  it('composes two chained Node2D ancestors, outer first — Transform2D::operator*, core/math/transform_2d.cpp:198-217', async () => {
+    // Outer translates only; inner rotates only at its own local origin. The
+    // composed origin is the outer's translation alone (the inner contributes
+    // none of its own), and the composed basis is the inner's rotation alone
+    // (the outer contributes none of its own) — this is what proves the two
+    // ancestors actually multiplied rather than one masking the other.
+    const outer = node2D('Outer', { position: { x: 100, y: 50 } }, {
+      children: [node2D('Inner', { rotation: Math.PI / 2 }, { children: [label('L')] })],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    expect(t.a).toBeCloseTo(0, 10);
+    expect(t.b).toBeCloseTo(1, 10);
+    expect(t.c).toBeCloseTo(-1, 10);
+    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.tx).toBe(100);
+    expect(t.ty).toBe(50);
+  });
+
+  it('resets to null at a non-CanvasItem break, rather than carrying the Node2D above it', async () => {
+    // `CanvasItem::get_parent_item()` casts only the DIRECT parent
+    // (scene/main/canvas_item.cpp:565-571); a plain `Node` parent fails that
+    // cast, so the RenderingServer parents past it at the canvas root, never
+    // at the Node2D further up (`_enter_canvas`, canvas_item.cpp:234-278).
+    const nodes = [
+      node2D('N', { rotation: Math.PI / 2 }, {
+        children: [node('Group', 'Node', { children: [label('L')] })],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+  });
+
+  it('a CanvasLayer under a rotated Node2D gets no ancestor transform, and neither do ITS children', async () => {
+    // CanvasLayer is not a CanvasItem (it derives from Node), so it never
+    // enters the chain `get_parent_item()` climbs at all — its own canvas is
+    // entirely independent of scene-tree ancestry (canvas_item.cpp:246-266
+    // parents a CanvasLayer's children at `canvas_layer->get_canvas()`).
+    const nodes = [
+      node2D('N', { rotation: Math.PI / 2 }, {
+        children: [node('Layer', 'CanvasLayer', { children: [label('L')] })],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const layer = result.current.tree[0]!;
+    expect(layer.node.type).toBe('CanvasLayer');
+    expect(layer.skippedAncestors).toBeNull();
+    expect(layer.children[0]!.skippedAncestors).toBeNull();
+  });
+
+  it("carries only the Node2D ancestor's transform, never folding in the Control's OWN `rotation` — that is ControlCanvasWalker's job", async () => {
+    const nodes = [
+      node2D('N', { position: { x: 100, y: 0 }, rotation: Math.PI / 2 }, {
+        children: [control('C', { rotation: Math.PI / 2 })],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    expect(t.a).toBeCloseTo(0, 10);
+    expect(t.b).toBeCloseTo(1, 10);
+    expect(t.c).toBeCloseTo(-1, 10);
+    expect(t.d).toBeCloseTo(0, 10);
+    expect(t.tx).toBe(100);
+    expect(t.ty).toBe(0);
+  });
+
+  it("ANDs a skipped Node2D ancestor's own `visible` into what it promotes — `is_visible_in_tree`, canvas_item.cpp:62-64", async () => {
+    const nodes = [node2D('N', {}, { children: [label('L')], properties: { visible: false } })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(false);
+  });
+
+  it('ANDs two chained Node2D ancestors — a hidden OUTER hides through a visible inner', async () => {
+    const outer = node2D('Outer', {}, {
+      properties: { visible: false },
+      children: [node2D('Inner', {}, { children: [label('L')] })],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(false);
+  });
+
+  it('a visible Node2D ancestor promotes `visible: true` rather than leaving the facet unset', async () => {
+    const nodes = [node2D('N', { position: { x: 5, y: 5 } }, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(true);
+  });
+
+  it('a HIDDEN Node2D broken from the Control by a plain `Node` promotes nothing — the Control draws', async () => {
+    // `parent_visible_in_tree` is read off the DIRECT parent only
+    // (canvas_item.cpp:313-350); a plain `Node` fails the `CanvasItem` cast, so
+    // the fallback climbs to the enclosing window (canvas_item.cpp:340-348) and
+    // the Node2D's `visible = false` never reaches the Control below it.
+    const nodes = [
+      node2D('N', {}, {
+        properties: { visible: false },
+        children: [node('Group', 'Node', { children: [label('L')] })],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+  });
+
+  it("multiplies a skipped Node2D ancestor's `modulate` componentwise — `_cull_canvas_item`, renderer_canvas_cull.cpp", async () => {
+    const outer = node2D('Outer', {}, {
+      properties: { modulate: { r: 0.5, g: 1, b: 1, a: 0.5 } },
+      children: [
+        node2D('Inner', {}, {
+          properties: { modulate: { r: 0.5, g: 0.25, b: 1, a: 1 } },
+          children: [label('L')],
+        }),
+      ],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 0.25, g: 0.25, b: 1, a: 0.5 });
+  });
+
+  it("never propagates a skipped ancestor's `self_modulate` — own pixels only, and the Node2D paints none", async () => {
+    const nodes = [
+      node2D('N', {}, {
+        properties: { self_modulate: { r: 0, g: 0, b: 0, a: 0 } },
+        children: [label('L')],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+  });
+
+  it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
+    const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
+    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+  });
+});
+
 const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
 
 /** An empty `ThemeResource`, overridden per test. */
@@ -1105,6 +1303,39 @@ custom_minimum_size = Vector2(0, 40)
     );
     const column = result.current.tree[0]!.children[0]!;
     expect(column.children.map((c) => c.hidden)).toEqual([false, true, false]);
+  });
+
+  it('hides a promoted Control when the SKIPPED node the eye toggle names is its ancestor', () => {
+    // A Node2D leaves no SolveNode to carry `visible`, and its Control
+    // descendants promote past it — so an own-path-only stamp would let them
+    // escape a toggle that `NodeDispatcher` applies to a whole subtree
+    // (one `<group visible>` around the node AND its children).
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+
+[node name="Holder" type="Node2D" parent="."]
+
+[node name="Promoted" type="ColorRect" parent="Holder"]
+`);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      {
+        wrapper: ({ children }) => (
+          <ResourceLoaderProvider loader={loader.loader}>
+            <SelectionProvider>
+              <HiddenPathSeeder paths={['Root/Holder']} />
+              {children}
+            </SelectionProvider>
+          </ResourceLoaderProvider>
+        ),
+      }
+    );
+    const promoted = result.current.tree[0]!.children[0]!;
+    expect(promoted.path).toBe('Root/Holder/Promoted');
+    expect(promoted.hidden).toBe(true);
   });
 
   it('closes the gap a hidden child leaves, rather than laying out an empty slot', () => {

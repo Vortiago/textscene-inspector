@@ -1,7 +1,7 @@
 ---
 type: LineEdit
 category: 2D
-status: limitation
+status: done
 fixture: unit-lineedit.tscn
 image: unit-lineedit
 renders_as: a single-line text box
@@ -71,8 +71,3 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 through the optional-int reader, so a malformed or out-of-range value left-aligns
 silently. `secret` and `flat` become `false` for any value that does not read as `true`.
 An empty `secret_character` falls back to the bullet, as Godot does.
-
-## Known limitations
-
-- **Not drawn** `draw_control_chars` never renders control characters as visible glyphs.
-  The text shaper has no preserve-control or hex-code-box path.

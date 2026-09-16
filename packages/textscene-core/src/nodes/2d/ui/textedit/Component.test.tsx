@@ -130,6 +130,16 @@ describe('<TextEdit> — per-line text', () => {
     expect(blankRows[2]).toBeLessThan(denseRows[1]!);
   });
 
+  it('draw_control_chars draws a hex-code box for an unshapeable control character instead of dropping it silently', async () => {
+    const dropped = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'AB' })} rect={RECT} renderOrder={0} />
+    );
+    const boxed = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'AB', drawControlChars: true })} rect={RECT} renderOrder={0} />
+    );
+    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(dropped.scene.findAllByType('Mesh').length);
+  });
+
   it('wraps one long line into multiple rows once wrap_mode is BOUNDARY(1)', async () => {
     const longText = 'a repeated word wrap word wrap word wrap word wrap word wrap';
     const off = await ReactThreeTestRenderer.create(

@@ -136,6 +136,29 @@ describe('<ControlCanvasWalker>', () => {
     expect(namedGroup(renderer.scene, 'TestType:Shown')!.visible).toBe(true);
   });
 
+  it("honours a HIDDEN skipped Node2D ancestor — the Control's own `visible` is only half of `is_visible_in_tree`", async () => {
+    // `visible && parent_visible_in_tree` (canvas_item.cpp:62-64). A skipped
+    // Node2D contributes no group of its own, so without the solve's
+    // `skippedAncestors.visible` a Control under a hidden Node2D would draw.
+    const identity = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+    const white = { r: 1, g: 1, b: 1, a: 1 };
+    const promoted: SolveNode = {
+      ...solveNode('Promoted', 'TestType', { anchorsPreset: 15 }),
+      skippedAncestors: { transform: identity, visible: false, modulate: white },
+    };
+    const shown: SolveNode = {
+      ...solveNode('Shown', 'TestType', { anchorsPreset: 15 }),
+      skippedAncestors: { transform: identity, visible: true, modulate: white },
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[promoted, shown]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    expect(namedGroup(renderer.scene, 'TestType:Promoted')!.visible).toBe(false);
+    expect(namedGroup(renderer.scene, 'TestType:Shown')!.visible).toBe(true);
+  });
+
   it('skips a node the tree marks hidden', async () => {
     // The eye toggle reaches this walk as `SolveNode.hidden`, stamped by
     // `buildSolveTree` so the SOLVE sees the same value — a second read of
@@ -188,6 +211,62 @@ describe('<ControlCanvasWalker>', () => {
     // Godot's rotation is conjugated (negated) the same way Node2D's is
     // (node2dTransform.ts) — clockwise-positive in Y-down space.
     expect(groups.some((g) => Math.abs(g.rotation.z - -(Math.PI / 2)) < 1e-9)).toBe(true);
+  });
+
+  it('composes a promoted Control’s OWN rotation with its `skippedAncestors` transform — never double-applying, never disagreeing on direction/origin', async () => {
+    // Node2D ancestor: rotation=PI/2 at (100,0) — core/math/transform_2d.h:
+    // 249-254 (rot=PI/2, scale=(1,1), skew=0): a=0,b=1,c=-1,d=0.
+    const ancestorTransform = {
+      a: Math.cos(Math.PI / 2),
+      b: Math.sin(Math.PI / 2),
+      c: -Math.sin(Math.PI / 2),
+      d: Math.cos(Math.PI / 2),
+      tx: 100,
+      ty: 0,
+    };
+    // rect (10,0,20,20): anchors 0, offsets (10,0,30,20). The Control's own
+    // rotation=PI/2 turns about its pivot (default (0,0), i.e. its own
+    // top-left) BEFORE the ancestor's transform is applied outside it.
+    const root: SolveNode = {
+      ...solveNode('Root', 'TestType', {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 10,
+        offsetTop: 0,
+        offsetRight: 30,
+        offsetBottom: 20,
+        rotation: Math.PI / 2,
+      }),
+      skippedAncestors: { transform: ancestorTransform, visible: true, modulate: { r: 1, g: 1, b: 1, a: 1 } },
+    };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    // `ControlFallback` draws its outline at the rect's own CENTER, local
+    // (rect.w/2, -rect.h/2, 0) = (10, -10, 0) — a fixed, known point this
+    // test can hand-trace through both transforms:
+    //   1. own rotation (three rotation.z = -PI/2) about (0,0):
+    //      (10,-10) -> (-10,-10)
+    //   2. own group's rect-origin translation (10, 0):
+    //      (-10,-10) -> (0,-10)
+    //   3. ancestor's conjugated matrix (a=0,b=1,c=-1,d=0,tx=100,ty=0),
+    //      `ancestorGroupMatrix`: x' = a*x - c*y + tx = 0*0 - (-1)*(-10) + 100 = 90
+    //                             y' = -b*x + d*y - ty = -1*0 + 0*(-10) - 0 = 0
+    //      (0,-10) -> (90, 0)
+    // A rotation applied the wrong DIRECTION or about the wrong ORIGIN lands
+    // somewhere else entirely, not merely off by a rounding error.
+    // `updateMatrixWorld` (not `updateWorldMatrix`, which does not climb to
+    // parents here) recomputes top-down from the scene, cascading into every
+    // descendant — including the ancestor wrapper this test exists to check.
+    (renderer.scene as unknown as { instance: THREE.Object3D }).instance.updateMatrixWorld(true);
+    const outline = renderer.scene.findAllByType('LineSegments')[0]!.instance as THREE.Object3D;
+    const p = new THREE.Vector3().setFromMatrixPosition(outline.matrixWorld);
+    expect(p.x).toBeCloseTo(90, 9);
+    expect(p.y).toBeCloseTo(0, 9);
   });
 
   it("a container's child ignores its own rotation/scale (Container::fit_child_in_rect resets it)", async () => {

@@ -36,6 +36,7 @@ export function parseTextEdit(
     autowrapMode: parseOptionalInt(properties.autowrap_mode),
     drawTabs: parseOptionalBool(properties.draw_tabs),
     drawSpaces: parseOptionalBool(properties.draw_spaces),
+    drawControlChars: parseOptionalBool(properties.draw_control_chars),
     highlightCurrentLine: parseOptionalBool(properties.highlight_current_line),
     fitContentWidth: parseOptionalBool(properties.scroll_fit_content_width),
     fitContentHeight: parseOptionalBool(properties.scroll_fit_content_height),

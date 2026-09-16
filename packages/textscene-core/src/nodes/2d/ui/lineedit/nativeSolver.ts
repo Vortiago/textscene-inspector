@@ -134,12 +134,12 @@ const DEFAULT_CARET_WIDTH = 1;
  * `LineEdit::_get_right_icon_size` (`line_edit.cpp:373-406`) — shared by
  * `right_icon` and the clear-button icon alike, since Godot calls it with
  * whichever texture is active. `controlSize` is this control's own resolved
- * rect size, needed only for FIT_TO_LINE_EDIT; `null` (the rect solver's
- * FIRST pass, before any rect exists yet) substitutes the natural size,
- * matching ORIGINAL_SIZE — the one non-circular datum on hand, the same
- * reasoning `texturerect/nativeSolver.ts`'s own FIT_WIDTH/FIT_HEIGHT split
- * documents. `right_icon_scale` applies ONLY in the FIT_TO_LINE_EDIT branch
- * (`:403`), never to ORIGINAL_SIZE or FIT_TO_TEXT.
+ * rect size, needed only for FIT_TO_LINE_EDIT; `null` is `get_size()` still
+ * reading `Size2()` (this function's own FIT_TO_LINE_EDIT branch has why),
+ * which degenerates to `(0, 0)`, NOT the natural size — this is the value
+ * `get_minimum_size()` always sees, never merely a first-pass placeholder.
+ * `right_icon_scale` applies ONLY in the FIT_TO_LINE_EDIT branch (`:403`),
+ * never to ORIGINAL_SIZE or FIT_TO_TEXT.
  */
 export function lineEditRightIconSize(
   naturalSize: Vec2,
@@ -152,7 +152,14 @@ export function lineEditRightIconSize(
     case EXPAND_MODE_FIT_TO_TEXT:
       return { x: fontHeightPx, y: fontHeightPx };
     case EXPAND_MODE_FIT_TO_LINE_EDIT: {
-      if (!controlSize) return naturalSize; // solver's first pass: no non-circular control size yet.
+      // `get_size()` reads `size_cache`, still `Size2()` (control.h:218) the
+      // one time `get_minimum_size()` ever runs — a resize never re-triggers
+      // it (no `update_minimum_size()` in `NOTIFICATION_RESIZED`,
+      // line_edit.cpp:1327-1330) or invalidates the cached result
+      // (control.cpp:1744-1757). So this is not a first-pass stand-in: it is
+      // always `(0, 0)` here, for every LineEdit; only the DRAW-time call
+      // (`Component.tsx`, real resolved rect) ever sees a real `controlSize`.
+      if (!controlSize) return { x: 0, y: 0 };
       if (naturalSize.x <= 0 || naturalSize.y <= 0) return { x: 0, y: 0 }; // never divide by a degenerate natural size.
       let iconWidth = (naturalSize.x * controlSize.y) / naturalSize.y;
       let iconHeight = controlSize.y;
@@ -255,7 +262,14 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     const { text: displayed } = lineEditDisplayText(props);
     const fullWidthPx = displayed.length
       ? shapedTextSizeWidthPx(
-          shapeText(displayed, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics }).widthPx
+          shapeText(displayed, {
+            fontSizePx,
+            boxWidthPx: 0,
+            autowrapMode: AutowrapMode.OFF,
+            lineSpacingPx: 0,
+            fontMetrics,
+            preserveControl: props.drawControlChars,
+          }).widthPx
         )
       : 0;
     const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;

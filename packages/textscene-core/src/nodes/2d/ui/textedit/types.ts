@@ -17,6 +17,8 @@ export interface TextEditProperties extends ControlProperties {
   drawTabs?: boolean;
   /** Draws the `space` theme icon over each space grapheme. Godot default false. */
   drawSpaces?: boolean;
+  /** Draws an unshapeable control character as a hex-code box instead of dropping it (`Text::set_draw_control_chars`). Godot default false. */
+  drawControlChars?: boolean;
   /** Paints the caret's own line in `current_line_color`. Godot default false. */
   highlightCurrentLine?: boolean;
   /** Grows this Control's OWN minimum width to fit its widest (wrapped) row. Godot default false. */

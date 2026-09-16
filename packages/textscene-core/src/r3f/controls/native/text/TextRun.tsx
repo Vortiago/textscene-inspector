@@ -64,6 +64,9 @@ import {
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
+import { hexCodeBoxRects } from './hexCodeBox';
+import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
+import { ControlQuad } from '../controlQuad';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 
@@ -186,6 +189,37 @@ export function buildGlyphQuadArrays(
   return { positions, uvs, indices };
 }
 
+/** One absolute-position rectangle of a hex-code box, LOCAL Godot px (+Y down, same space `buildGlyphQuadArrays`' own `topPx`/`bottomPx` use before that function negates Y per vertex). */
+export interface HexCodeBoxAbsoluteRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Every `hexCodeBoxRects` rectangle for every `controlCodepoint` placement in
+ * `layout`, translated from that glyph's own pen-relative space
+ * (`hexCodeBox.ts`'s own doc) to this line's absolute box-top space — the
+ * SAME `lineTopPx`/`baselinePx` `buildGlyphQuadArrays` anchors an atlas quad
+ * at, since a hex box replaces the ink a `controlCodepoint` glyph would
+ * otherwise have drawn at that exact pen position.
+ */
+function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): HexCodeBoxAbsoluteRect[] {
+  const rects: HexCodeBoxAbsoluteRect[] = [];
+  layout.lines.forEach((line, lineIndex) => {
+    const lineTopPx = lineIndex * layout.linePitchPx;
+    const baselinePx = lineTopPx + layout.baselineOffsetPx;
+    for (const gp of line.glyphs) {
+      if (gp.controlCodepoint === undefined) continue;
+      for (const r of hexCodeBoxRects(fontSizePx, gp.controlCodepoint)) {
+        rects.push({ x: gp.x + r.x, y: baselinePx + r.y, w: r.w, h: r.h });
+      }
+    }
+  });
+  return rects;
+}
+
 let cachedAtlasTexture: THREE.Texture | null = null;
 
 /**
@@ -219,6 +253,16 @@ export interface TextRunProps {
   skew?: number;
   /** Synthesized-bold embolden, forwarded to the material. 0 (default) is the baked stroke weight. */
   distanceBias?: number;
+  /**
+   * Godot colour, sRGB, for the outline pass (`createMsdfMaterial`'s own
+   * `outline` option) — `.a` is the outline's own opacity, independent of
+   * `tint.a`. Omitted (default) draws no outline. Atlas-font runs only, same
+   * as `distanceBias` — a canvas-rasterised run has no distance field to
+   * threshold a second time.
+   */
+  outlineColor?: Color;
+  /** Screen px the outline's fill threshold expands by past the normal glyph edge. 0 (default), or an absent `outlineColor`, draws no outline. */
+  outlineWidthPx?: number;
   /**
    * Paint order for this run's mesh. A first-class prop rather than something a
    * caller arranges around it: consumers previously reached for either a
@@ -295,7 +339,9 @@ function buildTextRun(
   side: THREE.Side | undefined,
   strokeWidthPx: number,
   textureFilter: 'nearest' | 'linear',
-  transparency: CanvasTextTransparency | undefined
+  transparency: CanvasTextTransparency | undefined,
+  outlineColor: Color | undefined,
+  outlineWidthPx: number
 ): BuiltTextRun {
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -383,6 +429,11 @@ function buildTextRun(
   geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
+  let outline: { color: { r: number; g: number; b: number }; opacity: number; widthPx: number } | undefined;
+  if (outlineColor && outlineWidthPx > 0) {
+    const [or, og, ob] = sRGBToLinearRGB(outlineColor.r, outlineColor.g, outlineColor.b);
+    outline = { color: { r: or, g: og, b: ob }, opacity: outlineColor.a, widthPx: outlineWidthPx };
+  }
   const material = createMsdfMaterial({
     map: getAtlasTexture(),
     color: { r, g, b },
@@ -392,6 +443,7 @@ function buildTextRun(
     clippingPlanes,
     depthTest,
     side,
+    outline,
   });
   return { geometry: geo, material };
 }
@@ -410,11 +462,51 @@ export function TextRun({
   textureFilter = 'linear',
   transparency,
   frameExcluded,
+  outlineColor,
+  outlineWidthPx = 0,
 }: TextRunProps) {
   const { geometry, material, ownedTexture } = useMemo(
-    () => buildTextRun(layout, fontSizePx, tint, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter, transparency),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint` is compared by its own r/g/b/a fields, not object identity (a caller re-creating an equal-valued tint object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself, and `transparency` for the same reason.
-    [layout, fontSizePx, tint.r, tint.g, tint.b, tint.a, skew, distanceBias, clippingPlanes, depthTest, side, strokeWidthPx, textureFilter, transparency?.transparent, transparency?.depthWrite, transparency?.alphaTest, transparency?.alphaHash]
+    () =>
+      buildTextRun(
+        layout,
+        fontSizePx,
+        tint,
+        skew,
+        distanceBias,
+        clippingPlanes,
+        depthTest,
+        side,
+        strokeWidthPx,
+        textureFilter,
+        transparency,
+        outlineColor,
+        outlineWidthPx
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint`/`outlineColor` are compared by their own r/g/b/a fields, not object identity (a caller re-creating an equal-valued object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself, and `transparency` for the same reason.
+    [
+      layout,
+      fontSizePx,
+      tint.r,
+      tint.g,
+      tint.b,
+      tint.a,
+      skew,
+      distanceBias,
+      clippingPlanes,
+      depthTest,
+      side,
+      strokeWidthPx,
+      textureFilter,
+      transparency?.transparent,
+      transparency?.depthWrite,
+      transparency?.alphaTest,
+      transparency?.alphaHash,
+      outlineColor?.r,
+      outlineColor?.g,
+      outlineColor?.b,
+      outlineColor?.a,
+      outlineWidthPx,
+    ]
   );
 
   // R3F does not dispose a geometry/material passed as a PROP (only ones it
@@ -429,12 +521,30 @@ export function TextRun({
   // THIS run and must be disposed the same way geometry/material are.
   useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
 
+  // `draw_hex_code_box` (`text_server.cpp:771-812`, `hexCodeBox.ts`'s own
+  // doc) draws in the SAME colour as whatever pass called it — this run's
+  // own `tint`, converted to linear once like `ControlQuad`'s every other
+  // caller (`StyleBoxQuad.tsx`'s own doc). Empty for the overwhelming
+  // majority of layouts (no `controlCodepoint` glyph at all).
+  const hexBoxRects = useMemo(() => collectHexCodeBoxRects(layout, fontSizePx), [layout, fontSizePx]);
+  const hexBoxColor = useMemo(() => {
+    const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
+    return new THREE.Color(r, g, b);
+  }, [tint.r, tint.g, tint.b]);
+
   return (
-    <mesh
-      geometry={geometry}
-      material={material}
-      renderOrder={renderOrder}
-      userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
-    />
+    <>
+      <mesh
+        geometry={geometry}
+        material={material}
+        renderOrder={renderOrder}
+        userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
+      />
+      {hexBoxRects.map((r, i) => (
+        <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
+          <ControlQuad width={r.w} height={r.h} color={hexBoxColor} opacity={tint.a} renderOrder={renderOrder} />
+        </CanvasItemGroup>
+      ))}
+    </>
   );
 }

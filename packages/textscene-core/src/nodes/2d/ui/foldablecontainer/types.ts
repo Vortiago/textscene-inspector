@@ -14,11 +14,10 @@ export interface FoldableContainerProperties extends ControlProperties {
   /** `TitlePosition` 0=top/1=bottom. Godot default 0 (TOP). */
   titlePosition?: number;
   /**
-   * `TextServer.OverrunBehavior`. Only its NO_TRIMMING-ness (0) reaches this
-   * previewer: `get_minimum_size` adds the title's own text width only under
-   * `OVERRUN_NO_TRIMMING` (`foldable_container.cpp:455`); the actual character/
-   * word/ellipsis trimming at draw time is not modelled, matching Label's own
-   * `text_overrun_behavior` gap.
+   * `TextServer.OverrunBehavior`. `get_minimum_size` adds the title's own
+   * text width only under `OVERRUN_NO_TRIMMING` (`foldable_container.cpp:455`);
+   * any other value floors the title bar to the arrow alone, and the painter
+   * trims the drawn text to that same space (`foldable_container.cpp:307-313`).
    */
   titleTextOverrunBehavior?: number;
 }

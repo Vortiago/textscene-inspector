@@ -150,7 +150,8 @@ export function shapeTextEditLines(
   autowrapMode: number | undefined,
   wrapWidthPx: number,
   fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'],
-  tabStopsPx: number[] = []
+  tabStopsPx: number[] = [],
+  preserveControl = false
 ): TextEditLineLayout[] {
   const mode =
     wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
@@ -163,6 +164,7 @@ export function shapeTextEditLines(
       lineSpacingPx: 0,
       fontMetrics,
       tabStopsPx,
+      preserveControl,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -320,7 +322,8 @@ export function textEditMinimumSizeWith(
     props.autowrapMode,
     wrapWidthPx,
     fontMetrics,
-    textEditTabStopsPx(tabSize, fontMetrics, fontSizePx)
+    textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
+    props.drawControlChars
   );
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(

@@ -81,14 +81,15 @@ first) but a hand-edited file that writes `text` AFTER either is not.
   trimming `text_overrun_behavior` all at once does not re-justify the trimmed remainder
   back out to the box edge (`JUSTIFICATION_CONSTRAIN_ELLIPSIS`) — the ellipsis lands
   right after the last kept glyph instead.
-- **Not drawn** `label_settings`'s own `font`, `outline_size`/`outline_color`,
-  `shadow_size`/`shadow_color`/`shadow_offset`, `paragraph_spacing` and the
+- **Not drawn** `label_settings`'s own `font`, `paragraph_spacing` and the
   stacked-outline/stacked-shadow arrays. `font` needs a by-reference font-metrics
   resolution this previewer's text engine has no path for (only a node's own theme
   chain, `resolveNodeFontMetrics`); every Label still shapes in its OWN theme font
-  regardless of `label_settings.font`. The outline/shadow fields decode (for a future
-  consumer) but draw nowhere — this previewer draws no font outline or shadow for ANY
-  text control, not a Label-specific gap.
+  regardless of `label_settings.font`. `outline_size`/`outline_color` and
+  `shadow_size`/`shadow_color`/`shadow_offset` (and the theme's own
+  `font_outline_color`/`outline_size`/`font_shadow_color`/`shadow_offset_x`/
+  `shadow_offset_y`/`shadow_outline_size`) draw; only the STACKED variants of both do
+  not.
 - **Approximated** `visible_characters_behavior` values other than the default
   (`VC_CHARS_AFTER_SHAPING`, `VC_GLYPHS_AUTO/LTR/RTL`) count GLYPHS as a proxy for
   Godot's own per-glyph character/glyph indices. The two coincide in this engine's

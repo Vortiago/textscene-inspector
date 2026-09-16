@@ -40,6 +40,8 @@ import {
   labelPreShapeText,
   applyVisibleCharsReveal,
   labelEffectiveTextTheme,
+  labelOutlineTheme,
+  labelShadowTheme,
   VC_CHARS_BEFORE_SHAPING,
   VC_CHARS_AFTER_SHAPING,
   VC_GLYPHS_AUTO,
@@ -921,7 +923,7 @@ describe('labelEffectiveTextTheme', () => {
   });
 
   it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {
-    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 } };
+    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
     expect(labelEffectiveTextTheme(themeResolved, settings)).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
@@ -930,8 +932,47 @@ describe('labelEffectiveTextTheme', () => {
   });
 
   it('truncates a fractional line_spacing toward zero — a real_t assigned into a C++ int (label.cpp:346)', () => {
-    const settings = { lineSpacing: 3.7, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 } };
+    const settings = { lineSpacing: 3.7, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
     expect(labelEffectiveTextTheme(themeResolved, settings).lineSpacingPx).toBe(3);
+  });
+});
+
+// --- Outline/shadow theme resolution (label.cpp:765-767, default_theme.cpp:385-391) ---
+
+describe('labelOutlineTheme', () => {
+  it('defaults to Label\'s own theme (outline_size=0, font_outline_color opaque black) absent everything (happy path)', () => {
+    expect(labelOutlineTheme(node({}), null)).toEqual({ size: 0, color: { r: 0, g: 0, b: 0, a: 1 } });
+  });
+
+  it('reads a node-local theme_override_constants/colors override (error path)', () => {
+    const n = node({}, { constants: { outline_size: 3 }, colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } } });
+    expect(labelOutlineTheme(n, null)).toEqual({ size: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
+  });
+
+  it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
+    const n = node({}, { constants: { outline_size: 3 } });
+    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 5, outlineColor: { r: 0, g: 1, b: 0, a: 1 }, shadowSize: 1, shadowColor: { r: 0, g: 0, b: 0, a: 0 }, shadowOffset: { x: 1, y: 1 } };
+    expect(labelOutlineTheme(n, settings)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
+  });
+});
+
+describe('labelShadowTheme', () => {
+  it('defaults to Label\'s own theme (shadow_outline_size=1, transparent font_shadow_color, offset (1,1)) absent everything (happy path)', () => {
+    expect(labelShadowTheme(node({}), null)).toEqual({ size: 1, color: { r: 0, g: 0, b: 0, a: 0 }, offset: { x: 1, y: 1 } });
+  });
+
+  it('reads node-local theme_override_constants/colors overrides (error path)', () => {
+    const n = node(
+      {},
+      { constants: { shadow_outline_size: 2, shadow_offset_x: 4, shadow_offset_y: 5 }, colors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.6 } } }
+    );
+    expect(labelShadowTheme(n, null)).toEqual({ size: 2, color: { r: 0, g: 0, b: 0, a: 0.6 }, offset: { x: 4, y: 5 } });
+  });
+
+  it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
+    const n = node({}, { constants: { shadow_outline_size: 2 } });
+    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 }, shadowSize: 7, shadowColor: { r: 0, g: 0, b: 0, a: 0.9 }, shadowOffset: { x: 3, y: 3 } };
+    expect(labelShadowTheme(n, settings)).toEqual({ size: 7, color: { r: 0, g: 0, b: 0, a: 0.9 }, offset: { x: 3, y: 3 } });
   });
 });
 

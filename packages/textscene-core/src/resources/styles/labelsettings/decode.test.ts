@@ -13,6 +13,9 @@ describe('decodeLabelSettings', () => {
       font_color: 'Color(1, 0, 0, 1)',
       outline_size: '2',
       outline_color: 'Color(0, 0, 0, 1)',
+      shadow_size: '3',
+      shadow_color: 'Color(0, 0, 0, 0.8)',
+      shadow_offset: 'Vector2(2, 4)',
     });
     expect(result).toEqual({
       lineSpacing: 5.5,
@@ -21,11 +24,14 @@ describe('decodeLabelSettings', () => {
       fontColor: { r: 1, g: 0, b: 0, a: 1 },
       outlineSize: 2,
       outlineColor: { r: 0, g: 0, b: 0, a: 1 },
+      shadowSize: 3,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0.8 },
+      shadowOffset: { x: 2, y: 4 },
     });
   });
 
   it('falls back to the class defaults absent every field (edge case)', () => {
-    // label_settings.h:54,58-59,61-62.
+    // label_settings.h:54,58-59,61-62,64-66.
     const result = decodeLabelSettings({});
     expect(result).toEqual({
       lineSpacing: 3,
@@ -34,6 +40,9 @@ describe('decodeLabelSettings', () => {
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
       outlineSize: 0,
       outlineColor: { r: 1, g: 1, b: 1, a: 1 },
+      shadowSize: 1,
+      shadowColor: { r: 0, g: 0, b: 0, a: 0 },
+      shadowOffset: { x: 1, y: 1 },
     });
   });
 

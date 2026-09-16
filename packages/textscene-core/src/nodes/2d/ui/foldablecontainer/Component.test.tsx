@@ -137,4 +137,21 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     // style_pressed_color.a (0.6) * tint.a (0.5) = 0.3, raw sRGB.
     expect(color.getW(0)).toBeCloseTo(0.6 * 0.5, 4);
   });
+
+  it('title_text_overrun_behavior trims the title to the space left of the icon (foldable_container.cpp:307-313)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 40, h: 28 };
+    const untrimmed = await ReactThreeTestRenderer.create(
+      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: true, title: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+    );
+    const trimmed = await ReactThreeTestRenderer.create(
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'AAAAAAAAAAAA', titleTextOverrunBehavior: 1 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    const quadCount = (r: Rendered) => findTextMeshes(r.scene)[0]!.geometry.attributes.position!.count / 4;
+    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+  });
 });

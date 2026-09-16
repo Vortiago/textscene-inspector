@@ -19,6 +19,7 @@ describe('parseTextEdit', () => {
       scroll_fit_content_height: 'true',
       minimap_draw: 'true',
       minimap_width: '120',
+      draw_control_chars: 'true',
     });
     expect(result.name).toBe('Editor');
     expect(result.text).toBe('line one\nline two');
@@ -33,6 +34,7 @@ describe('parseTextEdit', () => {
     expect(result.fitContentHeight).toBe(true);
     expect(result.minimapDraw).toBe(true);
     expect(result.minimapWidth).toBe(120);
+    expect(result.drawControlChars).toBe(true);
   });
 
   it('leaves a malformed boolean as false rather than throwing (error path)', () => {

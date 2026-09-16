@@ -58,11 +58,21 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
+  COLOR_PICKER_BAR_ARROW_ICON,
+  COLOR_PICKER_BUTTON_ICON_SIZE,
   COLOR_PICKER_CURSOR_BG_ICON,
   COLOR_PICKER_CURSOR_ICON,
   COLOR_PICKER_CURSOR_SIZE,
+  COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_PICKER_PIPETTE_ICON,
+  COLOR_PICKER_SHAPE_RECT_ICON,
+  FOLDABLE_CONTAINER_ICONS,
+  SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
+import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../shared/sliderSolver';
+import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -74,9 +84,17 @@ import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
   COLOR_PICKER_THEME_FONT_KEY,
+  colorPickerChannelGrabberRect,
+  colorPickerIntensityRatio,
+  colorPickerLabelColumnWidth,
+  colorPickerModeButtonStyleBox,
   colorPickerRows,
   colorPickerScale,
+  colorPickerSliderBoxRect,
   colorPickerSliderRowCount,
+  colorPickerValueColumnWidth,
+  COLOR_PICKER_SLIDER_GRABBER_OFFSET,
+  SHAPE_HSV_RECTANGLE,
   extractHsv,
   hexRowColumns,
   hsvToRgb,
@@ -90,7 +108,7 @@ import {
   swatchesRowRects,
   type TextWidthMeasurer,
 } from './nativeSolver';
-import { hueStripGeometry, horizontalStripGeometry, svSquareBaseLayer, svSquareHueLayer, type QuadGeometry } from './svGradient';
+import { hueStripGeometry, horizontalStripGeometry, linearizeStops, svSquareBaseLayer, svSquareHueLayer, type QuadGeometry } from './svGradient';
 import {
   MODE_HSV,
   MODE_LINEAR,
@@ -115,8 +133,11 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 
-/** `default_theme.cpp`'s `control_font_color` — the shared default text colour for Label/Button (`:100`). None of `mode_btns`/`btn_preset`/`btn_recent_preset`/`text_type`/`hex_label` override it. */
+/** `default_theme.cpp`'s `control_font_color` — the shared default text colour for Label/Button (`:100`). None of `btn_preset`/`btn_recent_preset`/`text_type`/`hex_label` override it; `mode_btns`' own PRESSED state does (`MODE_BUTTON_PRESSED_FONT_COLOR` below). */
 const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+
+/** `control_font_pressed_color` = `Color(1, 1, 1)` (`default_theme.cpp:105,156`) — `Button`'s own `font_pressed_color`, which the CURRENT `mode_btns[i]` (toggled on) reads instead of the plain `font_color` above. */
+const MODE_BUTTON_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
 function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -157,10 +178,12 @@ interface GradientMeshProps {
   geometry: THREE.BufferGeometry;
   renderOrder: number;
   clippingPlanes: THREE.Plane[];
+  /** `true` when `geometry`'s own vertex colours are ALREADY linear (`svGradient.ts`'s `linearizeStops`) — skips the usual sRGB-decode injection so the GPU's own linear lerp is the final value, reproducing `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`Component.tsx`'s module doc). */
+  linear?: boolean;
 }
 
-/** One vertex-coloured, sRGB-decoded, single-pass quad — the SV square's two layers, the hue strip and every channel-slider band all share this recipe. */
-function GradientMesh({ geometry, renderOrder, clippingPlanes }: GradientMeshProps) {
+/** One vertex-coloured, single-pass quad — the SV square's two layers, the hue strip and every channel-slider band all share this recipe. sRGB-decoded by default; `linear` skips that for a caller whose own vertex colours are already linear. */
+function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: GradientMeshProps) {
   useEffect(() => () => geometry.dispose(), [geometry]);
   const program = materialProgramInputs({
     props: {
@@ -168,7 +191,7 @@ function GradientMesh({ geometry, renderOrder, clippingPlanes }: GradientMeshPro
       transparent: true,
       depthWrite: false,
       clippingPlanes,
-      injection: SV_GRADIENT_INJECTION,
+      injection: linear ? undefined : SV_GRADIENT_INJECTION,
     },
     merge: [canvasItemFacing()],
   });
@@ -198,21 +221,43 @@ interface LabelledTextProps {
   tint: ControlColor;
   clippingPlanes: THREE.Plane[];
   renderOrder: number;
-  /** Right-aligns within `rect` (the SpinBox's own `LineEdit`, `line_edit.cpp`'s default alignment for a numeric value) instead of the left (every plain `Label`/`Button`). */
+  /** Right-aligns within `rect` (the SpinBox's own `LineEdit`, `line_edit.cpp`'s default alignment for a numeric value) instead of the left (every plain `Label`). */
   alignRight?: boolean;
+  /** Centres within `rect` — `Button`'s own default `alignment` (`button.h:54`), which `mode_btns`/`text_type` never override (contrast `btn_preset`/`btn_recent_preset`'s explicit LEFT, `color_picker.cpp:2248,2283`). Takes precedence over `alignRight`. */
+  center?: boolean;
   /** `LineEdit::_notification(NOTIFICATION_DRAW)`'s own `x_ofs` floor: text sits `contentMargin` in from whichever edge it's aligned to, never flush against the box — 0 for a plain Label/Button (no box under the text at all). */
   inset?: number;
 }
 
 /** One row of shaped text, vertically centred in `rect` — every label/value/hex run below shares this placement. */
-function LabelledText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrder, alignRight, inset = 0 }: LabelledTextProps) {
+function LabelledText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrder, alignRight, center, inset = 0 }: LabelledTextProps) {
   if (!layout) return null;
   const width = shapedTextSizeWidthPx(layout.widthPx);
-  const x = alignRight ? Math.max(inset, rect.w - width - inset) : inset;
+  const x = center ? Math.max(0, (rect.w - width) / 2) : alignRight ? Math.max(inset, rect.w - width - inset) : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
     <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
       <TextRun layout={layout} fontSizePx={fontSizePx} tint={tint} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
+    </CanvasItemGroup>
+  );
+}
+
+interface CenteredIconProps {
+  rect: Rect2;
+  size: number;
+  texture: THREE.Texture | null;
+  tint: NativeControlComponentProps['tint'];
+  renderOrder: number;
+}
+
+/** One icon, centred inside `rect` — every button icon below (`btn_pick`/`btn_shape`/`btn_mode`/`menu_btn`) shares this placement. */
+function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconProps) {
+  if (!texture) return null;
+  const x = (rect.w - size) / 2;
+  const y = (rect.h - size) / 2;
+  return (
+    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
+      <ControlQuad width={size} height={size} color={tint.color} opacity={tint.opacity} map={texture} renderOrder={renderOrder} />
     </CanvasItemGroup>
   );
 }
@@ -250,6 +295,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   );
 
   const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
+  const pressedFontColor = useMemo(() => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR), [tint.own]);
   // `LineEdit::_notification(NOTIFICATION_DRAW)`'s own `x_ofs` floor — the
   // SAME box every value/hex `LineEdit` uses, so one constant covers both.
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
@@ -262,6 +308,17 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const sampleCols = rows.sample ? sampleRowColumns(rows.sample, theme, props.pickerShape) : null;
   const sampleQuadRect = sampleCols ? { w: sampleCols.sample.w, h: sampleCols.sample.h * COLOR_PICKER_SAMPLE_HEIGHT_FRACTION } : null;
   const pickButtonBox = theme.widgets.button.normal;
+  const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
+  // `shape_rect` is only correct at `SHAPE_HSV_RECTANGLE` — every other shape stays undrawn (out of scope, `comparison.md`).
+  const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
+  const shapeIconTexture = useNodeIcon(solveNode.icons.shape_rect, isHsvRectangle ? COLOR_PICKER_SHAPE_RECT_ICON : null);
+  const menuIconTexture = useNodeIcon(solveNode.icons.menu_option, COLOR_PICKER_MENU_ICON);
+  const barArrowTexture = useNodeIcon(solveNode.icons.bar_arrow, COLOR_PICKER_BAR_ARROW_ICON);
+  const defaultGrabberTexture = useNodeIcon(solveNode.icons.grabber, SLIDER_GRABBER_ICONS.grabber);
+  const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
+  const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
+  // `up_icon_modulate`/`down_icon_modulate` default `control_font_color` (`default_theme.cpp:634,638`) — the SAME grey `CONTROL_FONT_COLOR` every label/value text already reads.
+  const spinArrowColor = useMemo(() => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)), [tint.own]);
 
   // --- Shape row (SHAPE_HSV_RECTANGLE only) ------------------------------
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme) : null;
@@ -309,19 +366,25 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const editAlpha = props.editAlpha ?? true;
   const editIntensity = props.editIntensity ?? true;
   const sliderRowCount = rows.sliders ? colorPickerSliderRowCount(props) : 0;
-  const sliderCols = useMemo(
-    () => (rows.sliders ? sliderGridRowRects(rows.sliders, sliderRowCount, theme) : []),
-    [rows.sliders, sliderRowCount, theme]
-  );
   const channels = useMemo(() => colorModeChannels(colorMode, fill), [colorMode, fill]);
   const alphaChannel = useMemo(() => colorModeAlphaChannel(colorMode, fill), [colorMode, fill]);
   const intensityChannel = useMemo(() => colorModeIntensityChannel(fill), [fill]);
+  const sliderLabelWidth = colorPickerLabelColumnWidth(theme, measure, colorPickerSliderLabels(colorMode, editAlpha, editIntensity));
+  const sliderValueWidth = colorPickerValueColumnWidth(theme, measure);
+  const sliderCols = useMemo(
+    () => (rows.sliders ? sliderGridRowRects(rows.sliders, sliderRowCount, theme, sliderLabelWidth, sliderValueWidth) : []),
+    [rows.sliders, sliderRowCount, theme, sliderLabelWidth, sliderValueWidth]
+  );
 
   interface SliderRowContent {
     label: string;
     valueText: string;
     stops: ControlColor[];
     overlay?: { base: ControlColor; alpha: number };
+    /** `value/max` (every channel's own `min` is 0 but intensity's, handled separately) — the grabber's own position, both the overridden `bar_arrow` and the stock chrome's default circle read this. */
+    ratio: number;
+    /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`) — only `MODE_LINEAR`'s own R/G/B rows (`svGradient.ts`'s `linearizeStops` own doc). */
+    linearSpace?: boolean;
   }
 
   // The single tested source of truth for row ORDER (`colorModes.test.ts`'s
@@ -332,9 +395,11 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   const sliderRows: SliderRowContent[] = useMemo(() => {
     const out: SliderRowContent[] = [];
+    // `SpinBox::_update_text` (`spin_box.cpp:97-99`): `value = prefix + " " + value`
+    // — a SPACE joins the prefix and the number, never a bare concatenation.
     const formatValue = (c: ColorModeChannel, prefixPlus?: boolean) => {
       const text = formatSliderValue(c.value, c.decimals);
-      return prefixPlus && c.value >= 0 ? `+${text}` : text;
+      return prefixPlus && c.value >= 0 ? `+ ${text}` : text;
     };
     for (let i = 0; i < 3; i++) {
       const c = channels[i]!;
@@ -353,16 +418,29 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         else if (i === 1) stops = okhslSaturationGradientStops(normalized);
         else stops = okhslLightnessGradientStops(normalized);
       }
-      out.push({ label: sliderLabels[out.length] ?? c.label, valueText: formatSliderValue(c.value, c.decimals), stops, overlay });
+      out.push({
+        label: sliderLabels[out.length] ?? c.label,
+        valueText: formatSliderValue(c.value, c.decimals),
+        stops,
+        overlay,
+        ratio: c.max !== 0 ? c.value / c.max : 0,
+        linearSpace: colorMode === MODE_LINEAR,
+      });
     }
     if (editIntensity) {
-      out.push({ label: sliderLabels[out.length] ?? intensityChannel.label, valueText: formatValue(intensityChannel, true), stops: [] });
+      out.push({
+        label: sliderLabels[out.length] ?? intensityChannel.label,
+        valueText: formatValue(intensityChannel, true),
+        stops: [],
+        ratio: colorPickerIntensityRatio(intensityChannel.value),
+      });
     }
     if (editAlpha) {
       out.push({
         label: sliderLabels[out.length] ?? alphaChannel.label,
         valueText: formatSliderValue(alphaChannel.value, alphaChannel.decimals),
         stops: alphaChannelGradientStops(normalized),
+        ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
       });
     }
     return out;
@@ -374,7 +452,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         if (row.stops.length < 2) return null;
         const col = sliderCols[i];
         if (!col) return null;
-        const g = horizontalStripGeometry(col.slider.w, Math.min(col.slider.h, 16 * scale), row.stops);
+        const stops = row.linearSpace ? linearizeStops(row.stops) : row.stops;
+        const g = horizontalStripGeometry(col.slider.w, Math.min(col.slider.h, 16 * scale), stops);
         return buildGeometry({ ...g, colors: tintVertexColors(g.colors, baseTint) });
       }),
     [sliderRows, sliderCols, baseTint, scale]
@@ -386,6 +465,15 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   // --- Swatches row -----------------------------------------------------
   const swatchesCols = rows.swatches ? swatchesRowRects(rows.swatches, theme) : null;
+  // `btn_preset`/`btn_recent_preset` start unpressed (never toggled — no
+  // `.tscn` property reaches either, `swatchesRowRects`' own doc for why the
+  // grid stays collapsed), so `_update_drop_down_arrow` always picks
+  // `folded_arrow` (`color_picker.cpp:1024-1030`), never `expanded_arrow`.
+  const dropdownArrowTexture = useNodeIcon(solveNode.icons.folded_arrow, FOLDABLE_CONTAINER_ICONS.foldedArrow);
+  // `h_separation`, "Button" (`default_theme.cpp:171`) — numerically the SAME
+  // `round(4 * scale)` as `theme.separation` (BoxContainer's own), a
+  // different theme key that coincides in value, not identity.
+  const buttonIconTextSeparation = theme.separation;
 
   return (
     <CanvasItemGroup position={[theme.contentMargin, -theme.contentMargin, 0]}>
@@ -395,6 +483,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           <CanvasItemGroup position={[sampleCols.pick.x, -sampleCols.pick.y, 0]}>
             <StyleBoxQuad styleBox={pickButtonBox} rect={{ x: 0, y: 0, w: sampleCols.pick.w, h: sampleCols.pick.h }} color={tint.own} renderOrder={renderOrder} />
           </CanvasItemGroup>
+          <CenteredIcon rect={sampleCols.pick} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={pickIconTexture} tint={tint} renderOrder={renderOrder} />
+          {sampleCols.shape && <CenteredIcon rect={sampleCols.shape} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={shapeIconTexture} tint={tint} renderOrder={renderOrder} />}
           <CanvasItemGroup position={[sampleCols.sample.x, -sampleCols.sample.y, 0]}>
             {sampleFill.a < 1 && (
               <AlphaCheckerboardQuad
@@ -440,16 +530,28 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {rows.mode && modeCols && (
         <>
           {modeCols.buttons.map((r, i) => (
+            <CanvasItemGroup key={`${COLOR_MODE_NAMES[i]}-box`} position={[r.x, -r.y, 0]}>
+              <StyleBoxQuad
+                styleBox={colorPickerModeButtonStyleBox(theme, colorMode === i)}
+                rect={{ x: 0, y: 0, w: r.w, h: r.h }}
+                color={tint.own}
+                renderOrder={renderOrder}
+              />
+            </CanvasItemGroup>
+          ))}
+          {modeCols.buttons.map((r, i) => (
             <LabelledText
               key={COLOR_MODE_NAMES[i]}
               rect={r}
               layout={shape(COLOR_MODE_NAMES[i]!)}
               fontSizePx={fontSizePx}
-              tint={fontColor}
+              tint={colorMode === i ? pressedFontColor : fontColor}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
+              center
             />
           ))}
+          <CenteredIcon rect={modeCols.dropdown} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={menuIconTexture} tint={tint} renderOrder={renderOrder} />
         </>
       )}
 
@@ -459,29 +561,84 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           const col = sliderCols[i];
           if (!col) return null;
           const geometry = sliderGeometries[i];
+          // `_reset_sliders_theme` (`color_picker.cpp:628-651`): every row but
+          // intensity overrides the grabber to `bar_arrow` (this module's own
+          // doc) — `row.overlay`/`row.stops` both only ever populate for a
+          // colorized row, so their presence doubles as that same test.
+          const isColorized = row.stops.length >= 2 || !!row.overlay;
+          const grabberIconSize = isColorized ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE } : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
+          const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
+          const sliderBoxSize = { x: sliderBox.w, y: sliderBox.h };
           return (
             <CanvasItemGroup key={`${row.label}-${i}`} position={[0, 0, 0]}>
               <LabelledText rect={col.label} layout={shape(row.label)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
-              {row.overlay && (
-                <CanvasItemGroup position={[col.slider.x, -col.slider.y, 0]}>
+              <CanvasItemGroup position={[sliderBox.x, -sliderBox.y, 0]}>
+                {!isColorized &&
+                  (() => {
+                    const trackRect = sliderTrackRect(false, sliderBoxSize, theme);
+                    const fillRect = sliderGrabberAreaRect(false, sliderBoxSize, row.ratio, theme, grabberIconSize);
+                    const gr = sliderGrabberRect(false, sliderBoxSize, row.ratio, grabberIconSize);
+                    return (
+                      <>
+                        <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
+                          <StyleBoxQuad styleBox={theme.widgets.slider.track} rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }} color={tint.own} renderOrder={renderOrder} />
+                        </CanvasItemGroup>
+                        <CanvasItemGroup position={[fillRect.x, -fillRect.y, 0]}>
+                          <StyleBoxQuad styleBox={theme.widgets.slider.fill} rect={{ x: 0, y: 0, w: fillRect.w, h: fillRect.h }} color={tint.own} renderOrder={renderOrder} />
+                        </CanvasItemGroup>
+                        <CanvasItemGroup position={[gr.x, -gr.y, 0]}>
+                          <ControlQuad width={gr.w} height={gr.h} color={tint.color} opacity={tint.opacity} map={defaultGrabberTexture} renderOrder={renderOrder} />
+                        </CanvasItemGroup>
+                      </>
+                    );
+                  })()}
+                {row.overlay && (
                   <ControlQuad
-                    width={col.slider.w}
-                    height={Math.min(col.slider.h, 16 * scale)}
+                    width={sliderBox.w}
+                    height={sliderBox.h}
                     color={srgbToLinearColor(multiplyModulate(tint.own, row.overlay.base))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
-                </CanvasItemGroup>
-              )}
-              {geometry && (
-                <CanvasItemGroup position={[col.slider.x, -col.slider.y, 0]}>
-                  <GradientMesh geometry={geometry} renderOrder={renderOrder} clippingPlanes={clippingPlanes} />
-                </CanvasItemGroup>
-              )}
-              <CanvasItemGroup position={[col.value.x, -col.value.y, 0]}>
-                <StyleBoxQuad styleBox={theme.widgets.lineEdit.normal} rect={{ x: 0, y: 0, w: col.value.w, h: col.value.h }} color={tint.own} renderOrder={renderOrder} />
+                )}
+                {geometry && <GradientMesh geometry={geometry} renderOrder={renderOrder} clippingPlanes={clippingPlanes} linear={row.linearSpace} />}
+                {isColorized &&
+                  (() => {
+                    const offsetPx = Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale);
+                    const gr = colorPickerChannelGrabberRect(sliderBoxSize, row.ratio, grabberIconSize, offsetPx);
+                    return (
+                      <CanvasItemGroup position={[gr.x, -gr.y, 0]}>
+                        <ControlQuad width={gr.w} height={gr.h} color={tint.color} opacity={tint.opacity} map={barArrowTexture} renderOrder={renderOrder} />
+                      </CanvasItemGroup>
+                    );
+                  })()}
               </CanvasItemGroup>
-              <LabelledText rect={col.value} layout={shape(row.valueText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} alignRight inset={lineEditInsetX} />
+              {(() => {
+                // `SpinBox::_compute_sizes` (`spin_box.cpp:392-397`): the
+                // `LineEdit` box and the up/down buttons block share the
+                // column — the box (and the right-aligned text inside it)
+                // covers only `fieldRect`, never the buttons block beside it.
+                const spinLayout = spinBoxLayout({ x: col.value.w, y: col.value.h }, SPIN_BOX_ARROW_ICON_SIZE.x);
+                const fieldRect = { x: col.value.x + spinLayout.fieldRect.x, y: col.value.y + spinLayout.fieldRect.y, w: spinLayout.fieldRect.w, h: spinLayout.fieldRect.h };
+                const upRect = { x: col.value.x + spinLayout.upRect.x, y: col.value.y + spinLayout.upRect.y, w: spinLayout.upRect.w, h: spinLayout.upRect.h };
+                const downRect = { x: col.value.x + spinLayout.downRect.x, y: col.value.y + spinLayout.downRect.y, w: spinLayout.downRect.w, h: spinLayout.downRect.h };
+                const upIconPos = { x: upRect.x + (upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2, y: upRect.y + (upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2 };
+                const downIconPos = { x: downRect.x + (downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2, y: downRect.y + (downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2 };
+                return (
+                  <>
+                    <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
+                      <StyleBoxQuad styleBox={theme.widgets.lineEdit.normal} rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }} color={tint.own} renderOrder={renderOrder} />
+                    </CanvasItemGroup>
+                    <LabelledText rect={fieldRect} layout={shape(row.valueText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} alignRight inset={lineEditInsetX} />
+                    <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
+                      <ControlQuad width={SPIN_BOX_ARROW_ICON_SIZE.x} height={SPIN_BOX_ARROW_ICON_SIZE.y} color={spinArrowColor} opacity={tint.opacity} map={spinUpTexture} renderOrder={renderOrder} />
+                    </CanvasItemGroup>
+                    <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
+                      <ControlQuad width={SPIN_BOX_ARROW_ICON_SIZE.x} height={SPIN_BOX_ARROW_ICON_SIZE.y} color={spinArrowColor} opacity={tint.opacity} map={spinDownTexture} renderOrder={renderOrder} />
+                    </CanvasItemGroup>
+                  </>
+                );
+              })()}
             </CanvasItemGroup>
           );
         })}
@@ -491,7 +648,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
         <>
           <LabelledText rect={hexCols.label} layout={shape(hexContent.label)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
           {hexContent.typeText && (
-            <LabelledText rect={hexCols.textType} layout={shape(hexContent.typeText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
+            <LabelledText rect={hexCols.textType} layout={shape(hexContent.typeText)} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} center />
           )}
           <CanvasItemGroup position={[hexCols.field.x, -hexCols.field.y, 0]}>
             <StyleBoxQuad styleBox={theme.widgets.lineEdit.normal} rect={{ x: 0, y: 0, w: hexCols.field.w, h: hexCols.field.h }} color={tint.own} renderOrder={renderOrder} />
@@ -503,9 +660,31 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       {/* Swatches row */}
       {rows.swatches && swatchesCols && (
         <>
-          <LabelledText rect={swatchesCols.swatchesButton} layout={shape('Swatches')} fontSizePx={fontSizePx} tint={fontColor} clippingPlanes={clippingPlanes} renderOrder={renderOrder} />
+          <CanvasItemGroup
+            position={[swatchesCols.swatchesButton.x, -(swatchesCols.swatchesButton.y + (swatchesCols.swatchesButton.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2), 0]}
+          >
+            <ControlQuad width={COLOR_PICKER_BUTTON_ICON_SIZE} height={COLOR_PICKER_BUTTON_ICON_SIZE} color={tint.color} opacity={tint.opacity} map={dropdownArrowTexture} renderOrder={renderOrder} />
+          </CanvasItemGroup>
           <LabelledText
-            rect={swatchesCols.recentColorsButton}
+            rect={{ ...swatchesCols.swatchesButton, x: swatchesCols.swatchesButton.x + COLOR_PICKER_BUTTON_ICON_SIZE + buttonIconTextSeparation }}
+            layout={shape('Swatches')}
+            fontSizePx={fontSizePx}
+            tint={fontColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+          />
+          <CenteredIcon rect={swatchesCols.menuButton} size={COLOR_PICKER_BUTTON_ICON_SIZE} texture={menuIconTexture} tint={tint} renderOrder={renderOrder} />
+          <CanvasItemGroup
+            position={[
+              swatchesCols.recentColorsButton.x,
+              -(swatchesCols.recentColorsButton.y + (swatchesCols.recentColorsButton.h - COLOR_PICKER_BUTTON_ICON_SIZE) / 2),
+              0,
+            ]}
+          >
+            <ControlQuad width={COLOR_PICKER_BUTTON_ICON_SIZE} height={COLOR_PICKER_BUTTON_ICON_SIZE} color={tint.color} opacity={tint.opacity} map={dropdownArrowTexture} renderOrder={renderOrder} />
+          </CanvasItemGroup>
+          <LabelledText
+            rect={{ ...swatchesCols.recentColorsButton, x: swatchesCols.recentColorsButton.x + COLOR_PICKER_BUTTON_ICON_SIZE + buttonIconTextSeparation }}
             layout={shape('Recent Colors')}
             fontSizePx={fontSizePx}
             tint={fontColor}

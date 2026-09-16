@@ -24,10 +24,12 @@ const THEME = nativeTheme(1);
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
-  // A local theme_override_colors/* reaches `resolveTextTheme` through
-  // `n.colors` (the walker folds it in unconditionally), not properties.
+  // A local theme_override_colors/theme_override_constants reaches the
+  // painter through `n.colors`/`n.constants` (the walker folds both in
+  // unconditionally), not properties.
   const colors = (properties as { themeOverrideColors?: SolveNode['colors'] }).themeOverrideColors ?? {};
-  return { ...emptySolveNode(), path, node: tscnNode, colors };
+  const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+  return { ...emptySolveNode(), path, node: tscnNode, colors, constants };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
@@ -210,6 +212,64 @@ describe('<Label> (isolated painter contract)', () => {
     // x after the tab, plus the glyph's own small atlas left-bearing offset.
     expect(xs[12]).toBeGreaterThan(39);
     expect(xs[12]).toBeLessThan(42);
+  });
+
+  it('draws a font_outline_color/outline_size outline COMPOSITED into the SAME mesh as the fill (label.cpp:876-878)', async () => {
+    const plain = await render({ text: 'AB' });
+    const outlined = await render({
+      text: 'AB',
+      themeOverrideColors: { font_outline_color: { r: 0, g: 0, b: 0, a: 1 } },
+      themeOverrideConstants: { outline_size: 2 },
+    });
+    // Still one mesh -- the outline is a second distance threshold in the
+    // SAME shader pass, not a second draw.
+    expect(outlined.scene.findAllByType('Mesh')).toHaveLength(1);
+    expect(plain.scene.findAllByType('Mesh')).toHaveLength(1);
+    const outlinedMat = (outlined.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    const plainMat = (plain.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(outlinedMat.uniforms.uOutlineWidthPx!.value).toBe(2);
+    expect(plainMat.uniforms.uOutlineWidthPx!.value).toBe(0);
+  });
+
+  it('an outline_size of 0 draws no outline, even with an opaque font_outline_color (label.cpp:877)', async () => {
+    const renderer = await render({
+      text: 'AB',
+      themeOverrideColors: { font_outline_color: { r: 0, g: 0, b: 0, a: 1 } },
+    });
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(0);
+  });
+
+  it('draws an EXTRA mesh, offset by shadow_offset_x/y, when font_shadow_color is set (label.cpp:762-767,828-835)', async () => {
+    const renderer = await render({
+      text: 'A',
+      themeOverrideColors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.5 } },
+      themeOverrideConstants: { shadow_offset_x: 3, shadow_offset_y: 4, shadow_outline_size: 0 },
+    });
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes).toHaveLength(2);
+    const shadowMesh = meshes[0]!;
+    const shadowGroup = shadowMesh.parent as unknown as { instance: { position: THREE.Vector3 } };
+    expect(shadowGroup.instance.position.x).toBe(3);
+    expect(shadowGroup.instance.position.y).toBe(-4);
+    const shadowMat = (shadowMesh.instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(shadowMat.uniforms.uOutlineWidthPx!.value).toBe(0);
+  });
+
+  it('draws no shadow mesh with the default transparent font_shadow_color', async () => {
+    const renderer = await render({ text: 'A' });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+
+  it("shadow_outline_size expands the shadow's own composited mesh", async () => {
+    const renderer = await render({
+      text: 'A',
+      themeOverrideColors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.5 } },
+      themeOverrideConstants: { shadow_outline_size: 3 },
+    });
+    const meshes = renderer.scene.findAllByType('Mesh');
+    const shadowMat = (meshes[0]!.instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(shadowMat.uniforms.uOutlineWidthPx!.value).toBe(3);
   });
 });
 

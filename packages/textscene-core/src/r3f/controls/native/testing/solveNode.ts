@@ -74,6 +74,7 @@ export function solveNode(): Pick<
   | 'resources'
   | 'paintRange'
   | 'paintSequence'
+  | 'skippedAncestors'
 > {
   return {
     children: [],
@@ -94,6 +95,8 @@ export function solveNode(): Pick<
     // hand-built tree never stated.
     paintRange: WHOLE_CANVAS_RANGE,
     paintSequence: WHOLE_CANVAS_RANGE.base,
+    // No skipped Node2D ancestor — the common case a hand-built tree states.
+    skippedAncestors: null,
   };
 }
 

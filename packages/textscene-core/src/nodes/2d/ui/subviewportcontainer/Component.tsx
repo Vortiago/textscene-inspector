@@ -171,6 +171,9 @@ function ViewportSurfaceNative({
       path,
       node: viewport,
       children: [],
+      // A SubViewport draws into its own render target — no ancestor canvas
+      // item reaches into it.
+      skippedAncestors: null,
       // A SubViewport draws into its own target, so this root orders nothing
       // against the enclosing canvas — it starts a fresh range of its own.
       paintRange: WHOLE_CANVAS_RANGE,

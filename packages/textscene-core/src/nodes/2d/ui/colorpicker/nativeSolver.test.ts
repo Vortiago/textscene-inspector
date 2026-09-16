@@ -19,6 +19,14 @@ import {
   modeRowButtonRects,
   swatchesRowRects,
   sliderGridRowRects,
+  colorPickerValueColumnWidth,
+  colorPickerHexFieldMinWidth,
+  colorPickerMenuButtonSize,
+  colorPickerLabelColumnWidth,
+  colorPickerModeButtonStyleBox,
+  colorPickerSliderBoxRect,
+  colorPickerChannelGrabberRect,
+  colorPickerIntensityRatio,
 } from './nativeSolver';
 
 const THEME = nativeTheme(1);
@@ -137,16 +145,17 @@ describe('colorPickerRows', () => {
 
   it('sizes every row when all are visible, with a deterministic 10px/char measurer', () => {
     const rows = colorPickerRows(400, THEME, { pickerShape: 0 }, measure);
-    // mode: 3 buttons ("RGB"=30,"HSV"=30,"Linear"=60) + dropdown(28) + 3*sep(4) = 160, height max(16,20)=20.
-    expect(rows.mode).toEqual({ x: 0, y: 288, w: 400, h: 20 });
+    // mode: 3 buttons ("RGB"=30,"HSV"=30,"Linear"=60) + dropdown(28) + 3*sep(4) = 160.
+    // height: max(tab stylebox margin(8), btn_mode nat(16+8=24), text(20)+tab margin(8)=28) = 28.
+    expect(rows.mode).toEqual({ x: 0, y: 288, w: 400, h: 28 });
     // sliders: 5 rows (3 channels + alpha + intensity, both default true) * (20+8) + 4*sep(4) = 140+16=156.
-    expect(rows.sliders).toEqual({ x: 0, y: 312, w: 400, h: 156 });
+    expect(rows.sliders).toEqual({ x: 0, y: 320, w: 400, h: 156 });
     expect(rows.sliderRowCount).toBe(5);
     // hex: 20 + 8 (LineEdit content margin) = 28.
-    expect(rows.hex).toEqual({ x: 0, y: 472, w: 400, h: 28 });
-    // swatches: "Swatches"=80 + sep(4) + "Recent Colors"=130 = 44 tall.
-    expect(rows.swatches).toEqual({ x: 0, y: 504, w: 400, h: 44 });
-    expect(rows.totalHeight).toBe(548);
+    expect(rows.hex).toEqual({ x: 0, y: 480, w: 400, h: 28 });
+    // swatches: row1 max("Swatches"=20, menu_btn nat(16+8)=24)=24, + sep(4) + "Recent Colors"=20 = 48 tall.
+    expect(rows.swatches).toEqual({ x: 0, y: 512, w: 400, h: 48 });
+    expect(rows.totalHeight).toBe(560);
   });
 
   it('edit_alpha=false drops one slider row and its own trailing space', () => {
@@ -165,14 +174,14 @@ describe('colorPickerRows', () => {
     // icon still sits in that row when `measure` cannot size the text beside
     // it; `btn_recent_preset`'s own row still follows, separation and all.
     const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true }, null);
-    expect(rows.swatches!.h).toBe(20); // 16 (row1, icon floor) + 4 (separation) + 0 (row2, text contributes nothing)
+    expect(rows.swatches!.h).toBe(28); // 24 (row1, menu_btn nat: icon(16)+button.normal margin(8)) + 4 (separation) + 0 (row2, text contributes nothing)
   });
 });
 
 describe('colorPickerMinimumSize', () => {
   it('sums every visible row plus internal_margin\'s own content_margin on every side — color_picker.cpp:161-166', () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
-    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 556 });
+    expect(colorPickerMinimumSize(node({}), ctx)).toEqual({ x: 298, y: 568 });
   });
 
   it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
@@ -254,15 +263,117 @@ describe('modeRowButtonRects', () => {
 describe('swatchesRowRects', () => {
   it('splits palette_box (Swatches + menu_btn) then btn_recent_preset — color_picker.cpp:2239-2287', () => {
     const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME);
-    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 380, h: 20 }); // 400 - sep(4) - menuBtn(16)
-    expect(cols.menuButton).toEqual({ x: 384, y: 0, w: 16, h: 20 });
+    // menu_btn's own natural width: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
+    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 20 }); // 400 - sep(4) - menuBtn(24)
+    expect(cols.menuButton).toEqual({ x: 376, y: 0, w: 24, h: 20 });
     expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 }); // 20 + sep(4)
+  });
+});
+
+describe('colorPickerValueColumnWidth', () => {
+  // spin_box.cpp:82-86: line_edit->get_combined_minimum_size() + buttons_block_width.
+  it('is the LineEdit style margin(8) + 4*em("W")(10) + the SpinBox buttons block(18)', () => {
+    expect(colorPickerValueColumnWidth(THEME, measure)).toBe(66); // 8 + 40 + 18
+  });
+
+  it('floors to the style margin + buttons block alone with no measurer', () => {
+    expect(colorPickerValueColumnWidth(THEME, null)).toBe(26); // 8 + 0 + 18
+  });
+});
+
+describe('colorPickerHexFieldMinWidth', () => {
+  // line_edit.cpp:2443-2477, a plain LineEdit — no SpinBox buttons block.
+  it('is the LineEdit style margin(8) + 4*em("W")(10), no buttons block', () => {
+    expect(colorPickerHexFieldMinWidth(THEME, measure)).toBe(48); // 8 + 40
+  });
+});
+
+describe('colorPickerMenuButtonSize', () => {
+  // button.cpp:481-523: icon(16) + flat_button_normal's margin (button_normal's own, 4+4 per axis).
+  it('is the 16px menu_option icon plus button.normal\'s own content margin', () => {
+    expect(colorPickerMenuButtonSize(THEME)).toEqual({ x: 24, y: 24 });
+  });
+});
+
+describe('colorPickerLabelColumnWidth', () => {
+  it('floors to label_width(10) when no letter is wider', () => {
+    expect(colorPickerLabelColumnWidth(THEME, measure, ['R', 'G', 'B'])).toBe(10);
+  });
+
+  it('widens to the widest label\'s own shaped text past the 10px floor', () => {
+    const wide = (text: string) => ({ x: text.length * 15, y: 20 });
+    expect(colorPickerLabelColumnWidth(THEME, wide, ['R', 'G', 'B'])).toBe(15);
+  });
+
+  it('floors to label_width with no measurer', () => {
+    expect(colorPickerLabelColumnWidth(THEME, null, ['R', 'G', 'B'])).toBe(10);
+  });
+});
+
+describe('colorPickerModeButtonStyleBox', () => {
+  // color_picker.cpp:2060-2061: BIND_THEME_ITEM_EXT to TabContainer's tab_unselected/tab_selected.
+  it('picks tab_unselected (black 60%) when not pressed', () => {
+    expect(colorPickerModeButtonStyleBox(THEME, false).bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
+  });
+
+  it('picks tab_selected (dark grey 60%, top border) when pressed', () => {
+    const box = colorPickerModeButtonStyleBox(THEME, true);
+    expect(box.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+    expect(box.borderWidth.top).toBe(2);
+  });
+
+  it('both states share the same content margin (10,4,10,4)', () => {
+    expect(colorPickerModeButtonStyleBox(THEME, false).contentMargin).toEqual(colorPickerModeButtonStyleBox(THEME, true).contentMargin);
+  });
+});
+
+describe('colorPickerSliderBoxRect', () => {
+  // slider.cpp:35-44 (Slider::get_minimum_size), SIZE_SHRINK_CENTER within the taller grid cell.
+  it('centres the slider at its own natural height inside a taller cell', () => {
+    expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 28 }, THEME, { x: 16, y: 16 })).toEqual({ x: 0, y: 6, w: 400, h: 16 }); // (28-16)/2
+  });
+
+  // control.h fit_child_in_rect: Math::floor, not a bare /2 — an odd
+  // remainder floors DOWN, it does not round to the nearest pixel.
+  it('floors an odd remainder — control.h fit_child_in_rect', () => {
+    expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 29 }, THEME, { x: 16, y: 16 }).y).toBe(6); // floor(13/2)=6, not 7
+  });
+});
+
+describe('colorPickerIntensityRatio', () => {
+  // color_picker.cpp:2183-2185: intensity_slider min=-10, max=10.
+  it('is 0.5 at value=0 (the range midpoint)', () => {
+    expect(colorPickerIntensityRatio(0)).toBe(0.5);
+  });
+
+  it('is 0 at min and 1 at max', () => {
+    expect(colorPickerIntensityRatio(-10)).toBe(0);
+    expect(colorPickerIntensityRatio(10)).toBe(1);
+  });
+});
+
+describe('colorPickerChannelGrabberRect', () => {
+  // slider.cpp:322-334,363, center_grabber=true branch: areasize is the FULL
+  // width, grabber_shift = -grabber_width/2 centres the icon ON the ratio point.
+  it('centres the 16px grabber on the ratio point, offset down by grabber_offset', () => {
+    const r = colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, { x: 16, y: 16 }, 8);
+    expect(r).toEqual({ x: 192, y: 8, w: 16, h: 16 }); // 0.5*400-8=192; 16/2-16/2+8=8
+  });
+
+  it('extends half off the left edge at ratio=0', () => {
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8).x).toBe(-8);
+  });
+
+  it('extends half off the right edge at ratio=1', () => {
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, { x: 16, y: 16 }, 8).x).toBe(392);
   });
 });
 
 describe('sliderGridRowRects', () => {
   it('splits label(10)/slider(fill)/value(48) per row, stacked with the grid\'s own v_separation — color_picker.cpp:2172-2180', () => {
-    const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME);
+    // labelWidth/valueWidth are the caller's own (colorPickerLabelColumnWidth/
+    // colorPickerValueColumnWidth) — this test exercises the column SPLIT only.
+    const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48);
     expect(rows).toHaveLength(5);
     expect(rows[0]).toEqual({
       label: { x: 0, y: 0, w: 10, h: 28 },

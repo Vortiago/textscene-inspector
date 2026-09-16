@@ -34,4 +34,6 @@ export interface LineEditProperties extends ControlProperties {
   rightIconScale?: number;
   /** Draws the caret even when unfocused/not editing. Godot default false. */
   caretForceDisplayed?: boolean;
+  /** Draws an unshapeable control character as a hex-code box instead of dropping it (`shaped_text_set_preserve_control`). Godot default false. */
+  drawControlChars?: boolean;
 }

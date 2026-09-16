@@ -18,6 +18,14 @@
  * (`has2DUIContent.ts`) is the existing mirror of "which types are genuinely
  * Control-ish"; this module reads it rather than keeping a second list.
  *
+ * Transparent to LAYOUT is not transparent to DRAWING: Godot still composes a
+ * skipped Node2D-descended ancestor's own `CanvasItem` transform, visibility
+ * and `modulate` into whatever it promotes (`SolveNode.skippedAncestors`,
+ * accumulated by `nextSkippedAncestors` as the walk descends and applied by
+ * `ControlCanvasWalker`). A `Node3D`/raw-`Node`/`CanvasLayer` skip carries
+ * none of the three — see `nextSkippedAncestors`'s own doc for why that is a
+ * reset, not merely "no extra contribution".
+ *
  * `generation` bumps whenever ANY scene/texture/generic-resource/theme/font-
  * resource load/failure lands on the bus, OR a runtime font's metrics settle — a
  * scene-authored one, or the bundled font's own `FontFace` registration
@@ -30,12 +38,19 @@
  * `[nodes, externalResources, internalResources]` cannot see either kind of
  * arrival — both are mutable caches outside React's dependency graph — so
  * `generation` is the seam that makes a later arrival force a re-walk.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { Node2DProperties } from '../../../nodes/base/node2d/types';
+import { descendsFrom } from '../../../godot/nodeBaseTypes';
 import { joinPath } from '../../../utils/nodePath';
 import {
   findSubResource,
@@ -61,7 +76,8 @@ import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry } from './solverRegistry';
-import type { SolveNode, ThemedIconRef } from './solveTree';
+import type { Affine2D, SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
   WHOLE_CANVAS_RANGE,
@@ -244,6 +260,90 @@ interface ForestResult {
   pendingResourceFiles: string[];
   pendingThemes: string[];
   pendingFonts: string[];
+}
+
+// --- Skipped-ancestor CanvasItem transform ------------------------------------
+
+/**
+ * Composes `local`'s space into `parent`'s — `Transform2D::operator*`
+ * (`core/math/transform_2d.cpp:198-217`): apply `local` first, then `parent`.
+ * `null` stands for the identity transform, so the FIRST skipped ancestor in
+ * a chain composes against nothing rather than a caller having to invent an
+ * identity literal.
+ */
+export function composeAncestorAffine(parent: Affine2D | null, local: Affine2D): Affine2D {
+  if (!parent) return local;
+  return {
+    a: parent.a * local.a + parent.c * local.b,
+    b: parent.b * local.a + parent.d * local.b,
+    c: parent.a * local.c + parent.c * local.d,
+    d: parent.b * local.c + parent.d * local.d,
+    tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
+    ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
+  };
+}
+
+/**
+ * A Node2D-shaped node's own LOCAL `Transform2D`, from its discrete
+ * properties — `Transform2D(rot, scale, skew, pos)`
+ * (`core/math/transform_2d.h:249-254`, `set_rotation_scale_and_skew`). Every
+ * Node2D-descended type's properties carry these four fields, defaulted
+ * exactly as Node2D's own parser defaults them (`nodes/base/node2d/parser.ts`)
+ * — repeated here (rather than trusted to already be set) since a hand-built
+ * `SolveNode`'s properties bag is not guaranteed to have gone through that
+ * parser at all.
+ */
+export function node2DAncestorAffine(props: Node2DProperties): Affine2D {
+  const position = props.position ?? { x: 0, y: 0 };
+  const rotation = props.rotation ?? 0;
+  const scale = props.scale ?? { x: 1, y: 1 };
+  const skew = props.skew ?? 0;
+  return {
+    a: Math.cos(rotation) * scale.x,
+    b: Math.sin(rotation) * scale.x,
+    // `0 - v`, not `-v`: a zero rotation/skew must stay +0, never -0.
+    c: 0 - Math.sin(rotation + skew) * scale.y,
+    d: Math.cos(rotation + skew) * scale.y,
+    tx: position.x,
+    ty: position.y,
+  };
+}
+
+/**
+ * What a promoted Control's DESCENDANTS inherit through this
+ * (already-known-non-Control) `collapsed` node.
+ *
+ * `CanvasItem::get_parent_item()` casts only the DIRECT parent
+ * (`scene/main/canvas_item.cpp:565-571`) — `Object::cast_to<CanvasItem>
+ * (get_parent())` — and `NOTIFICATION_ENTER_TREE` reads
+ * `parent_visible_in_tree` off that same direct parent
+ * (`canvas_item.cpp:313-350`). So a chain of Node2D-descended ancestors
+ * composes, but the moment a non-`CanvasItem` link appears (a plain `Node`, a
+ * `Node3D`, a `CanvasLayer`) the walk that builds the RenderingServer's own
+ * canvas-item parent chain gives up on climbing it and reparents at the
+ * nearest `CanvasLayer`/`Viewport` instead (`canvas_item.cpp:234-278`), while
+ * `parent_visible_in_tree` falls back to the enclosing window's own visibility
+ * (`canvas_item.cpp:340-348`) — so a Control under a HIDDEN Node2D that is
+ * itself under a plain `Node` draws. Everything above the break, Node2D or
+ * not, stops contributing: reset to `null` rather than left unchanged, so a
+ * broken link cannot leak an ancestor's transform, hiding or tint from ABOVE
+ * it into a promoted Control below it.
+ */
+export function nextSkippedAncestors(
+  collapsed: TscnNode,
+  previous: SkippedAncestors | null
+): SkippedAncestors | null {
+  if (!descendsFrom(collapsed.type, 'Node2D')) return null;
+  const props = collapsed.properties as Node2DProperties;
+  return {
+    transform: composeAncestorAffine(previous?.transform ?? null, node2DAncestorAffine(props)),
+    // `is_visible_in_tree()` is `visible && parent_visible_in_tree`
+    // (`canvas_item.cpp:62-64`), so the chain is one conjunction.
+    visible: (previous?.visible ?? true) && props.visible !== false,
+    // `_cull_canvas_item` folds each item's `modulate` into what its children
+    // inherit (`renderer_canvas_cull.cpp`); `self_modulate` stays own-pixel.
+    modulate: multiplyModulate(previous?.modulate ?? WHITE_MODULATE, props.modulate ?? WHITE_MODULATE),
+  };
 }
 
 /**
@@ -458,7 +558,17 @@ function buildForest(
     parentPath: string,
     scope: SceneScope,
     themeChain: readonly ThemeResource[],
-    ranges: readonly PaintRange[]
+    ranges: readonly PaintRange[],
+    /** What every skipped Node2D-descended ancestor since the last real Control/root contributes — see `nextSkippedAncestors`. */
+    skippedAncestors: SkippedAncestors | null,
+    /**
+     * A skipped ancestor carries the eye toggle down itself, since it leaves no
+     * node of its own to hide — `NodeDispatcher` hides a whole subtree with one
+     * `<group visible>`, and the promoted Controls must not escape that. Unlike
+     * `skippedAncestors.visible` this does NOT reset at a broken CanvasItem
+     * link: the toggle is the outliner's subtree, not Godot's canvas parenting.
+     */
+    ancestorHidden: boolean
   ): SolveNode[] {
     const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
@@ -537,6 +647,16 @@ function buildForest(
         groups.filter((g) => injected(g.origin)).flatMap((g) => g.children)
       ).children;
 
+      // A real Control gets its own canvas item and composes independently
+      // from here (`ControlCanvasWalker`'s own group), so its descendants
+      // start a fresh accumulation; a skipped node folds its own CanvasItem
+      // transform (if any) into what its descendants inherit instead.
+      const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
+      const hidden = ancestorHidden || hiddenNodePaths.has(path);
+      // A real Control's own group already hides its descendants; only a
+      // skipped node has to hand the toggle on.
+      const childAncestorHidden = isControl ? false : hidden;
+
       // Each group walks with the slice of ranges belonging to ITS children.
       // Both allocations are over flattened lists, so the slices are handed
       // back out in the order they were taken.
@@ -548,7 +668,7 @@ function buildForest(
         const groupRanges = injected(group.origin)
           ? injectedRanges.slice(takenInjected, (takenInjected += count))
           : allocated.children.slice(takenInline, (takenInline += count));
-        children.push(...walk(group.children, path, group.scope, nodeThemeChain, groupRanges));
+        children.push(...walk(group.children, path, group.scope, nodeThemeChain, groupRanges, childSkippedAncestors, childAncestorHidden));
       }
 
       if (isControl) {
@@ -571,7 +691,15 @@ function buildForest(
           children,
           paintRange,
           paintSequence: allocated.self,
-          hidden: hiddenNodePaths.has(path),
+          // `CanvasLayer` is `isControl` (it needs the whole-viewport solve —
+          // `controlRectSolver.ts`'s canvas-boundary rect) but is not a
+          // `CanvasItem` at all: it renders on its OWN canvas, entirely
+          // independent of any ancestor's transform (`canvas_item.cpp:246-266`
+          // parents a CanvasLayer's children at `canvas_layer->get_canvas()`,
+          // never at a climbed CanvasItem ancestor). Forced `null` here so an
+          // ancestor Node2D never rotates a CanvasLayer's whole canvas.
+          skippedAncestors: collapsed.type === 'CanvasLayer' ? null : skippedAncestors,
+          hidden,
           styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
           textureSize: texture.size,
           textureSlots: texture.slots,
@@ -597,7 +725,9 @@ function buildForest(
     '',
     { externalResources, internalResources },
     [],
-    allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children
+    allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children,
+    null,
+    false
   );
   return {
     tree,

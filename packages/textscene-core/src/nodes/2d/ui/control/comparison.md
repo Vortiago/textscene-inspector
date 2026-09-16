@@ -1,7 +1,7 @@
 ---
 type: Control
 category: 2D
-status: limitation
+status: done
 fixture: unit-control-state.tscn
 image: unit-control-state
 renders_as: a full-rect layout region
@@ -87,8 +87,3 @@ malformed `anchor_left`, `offset_top`, `rotation`, `scale`, `pivot_offset`,
 `custom_minimum_size` or `size_flags_*` becomes `undefined` with no warning, and the
 renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 `visible` is `true` for anything other than a value that reads as `false`.
-
-## Known limitations
-
-- **Approximated** A Control under a `Node2D` is placed against the viewport, so a moved,
-  rotated or scaled `Node2D` ancestor does not carry it.

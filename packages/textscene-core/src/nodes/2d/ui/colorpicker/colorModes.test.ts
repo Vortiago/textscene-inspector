@@ -97,9 +97,16 @@ describe('colorModeIntensityChannel', () => {
 });
 
 describe('formatSliderValue', () => {
-  it('formats with the given decimal count — String::num, ustring.cpp:1405', () => {
+  it('formats an integer with no decimal point — String::num, ustring.cpp:1405,1467-1481', () => {
     expect(formatSliderValue(255, 0)).toBe('255');
-    expect(formatSliderValue(0.5, 3)).toBe('0.500');
+  });
+
+  // ustring.cpp:1467-1481 "Destroy trailing zeroes, except one after period" —
+  // 0.500 trims to 0.5, not the naively padded 0.500 a plain toFixed(3) gives.
+  it('trims trailing zeroes past the decimal point, keeping at least one digit', () => {
+    expect(formatSliderValue(0.5, 3)).toBe('0.5');
+    expect(formatSliderValue(0, 3)).toBe('0.0');
+    expect(formatSliderValue(2, 3)).toBe('2.0');
   });
 });
 
@@ -206,10 +213,11 @@ describe('hexFieldText', () => {
   });
 
   it('spells an overbright colour as Color(r, g, b) — is_color_valid_hex fails, color_picker.cpp:60-62', () => {
+    // color_to_string's own String::num(v, 3) trims trailing zeroes (ustring.cpp:1467-1481).
     expect(hexFieldText({ r: 2, g: 0, b: 0, a: 1 }, true)).toEqual({
       label: 'Expr',
       typeText: '',
-      text: 'Color(2.000, 0.000, 0.000)',
+      text: 'Color(2.0, 0.0, 0.0)',
     });
   });
 
@@ -217,7 +225,7 @@ describe('hexFieldText', () => {
     expect(hexFieldText({ r: -0.1, g: 0, b: 0, a: 1 }, true)).toEqual({
       label: 'Expr',
       typeText: '',
-      text: 'Color(-0.100, 0.000, 0.000)',
+      text: 'Color(-0.1, 0.0, 0.0)',
     });
   });
 });

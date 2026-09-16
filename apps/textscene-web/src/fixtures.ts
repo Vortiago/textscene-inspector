@@ -633,6 +633,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Outline",
+    "file": "unit-label-outline.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Visible Characters",
     "file": "unit-label-visible-characters.tscn",
     "category": "Other"
@@ -740,6 +745,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Lineedit Clear Button",
     "file": "unit-lineedit-clear-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Control Chars",
+    "file": "unit-lineedit-control-chars.tscn",
     "category": "Other"
   },
   {
@@ -2030,6 +2040,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Nested Children",
     "file": "unit-control-nested-children.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Hidden",
+    "file": "unit-control-node2d-ancestor-hidden.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Modulate",
+    "file": "unit-control-node2d-ancestor-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Transform",
+    "file": "unit-control-node2d-ancestor-transform.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

@@ -147,8 +147,18 @@ export function TextEditBody({
   const lines = useMemo(() => (props.text ?? '').split('\n'), [props.text]);
   const tabStopsPx = useMemo(() => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx), [tabSize, fontMetrics, fontSizePx]);
   const lineLayouts = useMemo(
-    () => shapeTextEditLines(lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx),
-    [lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx]
+    () =>
+      shapeTextEditLines(
+        lines,
+        fontSizePx,
+        props.wrapMode,
+        props.autowrapMode,
+        wrapWidthPx,
+        fontMetrics,
+        tabStopsPx,
+        props.drawControlChars
+      ),
+    [lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx, props.drawControlChars]
   );
 
   // `syntax_highlighter` resolves in THIS node's own scope, never

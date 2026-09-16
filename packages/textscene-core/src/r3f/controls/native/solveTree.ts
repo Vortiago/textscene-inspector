@@ -34,9 +34,39 @@ export interface ThemedIconRef {
 }
 
 /**
+ * A general 2D affine transform, Godot's own `Transform2D` layout: two basis
+ * columns plus an origin (`core/math/transform_2d.h`), +Y down, unconjugated
+ * — `x' = a*x + c*y + tx`, `y' = b*x + d*y + ty`. Never decomposed back into
+ * rotation/scale/skew: composing several ancestors' transforms can shear even
+ * when none of them individually did, and that shear has no rotation+scale
+ * representation to decompose into.
+ */
+export interface Affine2D {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  tx: number;
+  ty: number;
+}
+
+/**
  * One Control (or 2D-UI node) in the live, already-collapsed scene tree —
  * instance roots merged, sub-scene scope resolved — ready for the solver.
  */
+/**
+ * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
+ * Control was walked past, as one value because one break resets all of it.
+ */
+export interface SkippedAncestors {
+  /** Composed `Transform2D`, outermost first (`transform_2d.cpp:198-217`). */
+  transform: Affine2D;
+  /** `is_visible_in_tree()` for the chain: every skipped ancestor's own `visible`, ANDed (`canvas_item.cpp:62-64`). */
+  visible: boolean;
+  /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
+  modulate: ControlColor;
+}
+
 export interface SolveNode {
   /** Dispatcher-absolute path, from the live scene tree. */
   path: string;
@@ -61,6 +91,20 @@ export interface SolveNode {
    * Godot's walk, after any `show_behind_parent` children and before the rest.
    */
   paintSequence: number;
+  /**
+   * What every non-Control `CanvasItem` ancestor this node promoted past
+   * (`buildSolveTree.ts`'s module doc) contributes to it — `null` when there
+   * is none, the common case.
+   *
+   * The three facets travel together because ONE engine fact decides all
+   * three at once: `CanvasItem::get_parent_item()` casts only the DIRECT
+   * parent (`scene/main/canvas_item.cpp:565-571`), and `parent_visible_in_tree`
+   * is read from that same direct parent (`canvas_item.cpp:313-350`). A
+   * non-`CanvasItem` link (a plain `Node`, a `Node3D`, a `CanvasLayer`) BREAKS
+   * the chain rather than being skipped over, so `null` past one of those too,
+   * never the identity of everything below it.
+   */
+  skippedAncestors: SkippedAncestors | null;
   /**
    * This node's resolved StyleBoxes, keyed by the SAME names Godot's own
    * `get_theme_stylebox(name, type)` uses (`normal`/`hover`/`panel`/…):

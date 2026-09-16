@@ -4,7 +4,10 @@
  * (`openSansAtlas.ts`), screen-space antialiased via `fwidth`, plus a
  * `distanceBias` uniform a synthesized-bold pass can push positive to
  * embolden strokes (widening the shape by shifting the zero-crossing before
- * thresholding) without re-baking the atlas.
+ * thresholding) without re-baking the atlas, plus an optional `outline` pass
+ * (a second, wider fill composited behind — see `MsdfMaterialOptions.outline`'s
+ * own doc for the Godot citation and why it is two thresholds of one field
+ * rather than a port of Godot's own MTSDF ring shader).
  *
  * This shader serves the 2D Control text path only. Godot's default project
  * font is NOT MSDF (`servers/text/text_server.cpp:2386`, read by
@@ -101,6 +104,9 @@ uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uDistanceBias;
 uniform float uPxRange;
+uniform vec3 uOutlineColor;
+uniform float uOutlineOpacity;
+uniform float uOutlineWidthPx;
 varying vec2 vUv;
 #include <clipping_planes_pars_fragment>
 
@@ -118,10 +124,23 @@ void main() {
   vec3 msd = texture2D(uMap, vUv).rgb;
   float m = median(msd.r, msd.g, msd.b);
   float spr = screenPxRange();
-  float alpha = clamp(spr * (m - 0.5 + uDistanceBias) + 0.5, 0.0, 1.0) * uOpacity;
+  // \`spr * signedDistance\` is already a SCREEN-px measure (the fill
+  // threshold below is exactly that, offset by half a pixel), so widening the
+  // filled region by \`uOutlineWidthPx\` screen px is a plain add here --
+  // done per-fragment so it tracks the actual on-screen scale, not a
+  // px-range/bake-size ratio computed once in JS.
+  float signedDistancePx = spr * (m - 0.5 + uDistanceBias);
+  float fillCoverage = clamp(signedDistancePx + 0.5, 0.0, 1.0);
+  vec3 rgb = uColor;
+  float alpha = fillCoverage * uOpacity;
+  if (uOutlineWidthPx > 0.0) {
+    float outlineCoverage = clamp(signedDistancePx + uOutlineWidthPx + 0.5, 0.0, 1.0);
+    rgb = mix(uOutlineColor, uColor, fillCoverage);
+    alpha = mix(outlineCoverage * uOutlineOpacity, uOpacity, fillCoverage);
+  }
   // \`clipping_planes_fragment\` reads \`diffuseColor.a\` under ALPHA_TO_COVERAGE
   // and discards outright otherwise, so the value has to exist either way.
-  vec4 diffuseColor = vec4(uColor, alpha);
+  vec4 diffuseColor = vec4(rgb, alpha);
   #include <clipping_planes_fragment>
   gl_FragColor = diffuseColor;
   // The tone curve, then the encode — the pair, and the order, every built-in
@@ -163,6 +182,29 @@ export interface MsdfMaterialOptions {
    * either way the run is drawn in ONE pass, for the reason that module gives.
    */
   side?: THREE.Side;
+  /**
+   * A second fill pass at a distance threshold shifted OUTWARD by
+   * `widthPx` screen px, composited BEHIND the normal fill — the MSDF analog
+   * of Godot's `TextServer::draw_hex_code_box`-adjacent `draw_outline` (a
+   * SEPARATE, larger, solid-filled glyph drawn first, `label.cpp:876-878`).
+   * Godot's own MSDF outline shader
+   * (`servers/rendering/renderer_rd/shaders/canvas.glsl:606-623`) instead
+   * clamps against a true-signed-distance ALPHA channel (`msdf_sample.a`) to
+   * draw a hollow ring — this atlas bakes plain 3-channel MSDF (`fieldType:
+   * "msdf"`, not `"mtsdf"`, `openSansAtlas.ts`), which carries no such
+   * channel, so this composites two MEDIAN thresholds of the SAME RGB field
+   * instead (msdfgen's own documented technique for a combined fill+border
+   * effect from a plain MSDF) — a filled second shape under the first, which
+   * is visually identical to Godot's two separate draws for an opaque
+   * outline colour. Omitted (default) draws exactly the un-outlined shader.
+   */
+  outline?: {
+    /** LINEAR rgb, same convention as `color`. */
+    color: { r: number; g: number; b: number };
+    opacity: number;
+    /** Screen px the fill threshold expands by. `0` is equivalent to omitting `outline` entirely. */
+    widthPx: number;
+  };
 }
 
 export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMaterial {
@@ -175,6 +217,7 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     clippingPlanes = [],
     depthTest = false,
     side,
+    outline,
   } = options;
   return new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -185,6 +228,9 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
       uOpacity: { value: opacity },
       uDistanceBias: { value: distanceBias },
       uPxRange: { value: pxRange },
+      uOutlineColor: { value: new THREE.Vector3(outline?.color.r ?? 0, outline?.color.g ?? 0, outline?.color.b ?? 0) },
+      uOutlineOpacity: { value: outline?.opacity ?? 0 },
+      uOutlineWidthPx: { value: outline?.widthPx ?? 0 },
     },
     transparent: true,
     depthWrite: false,

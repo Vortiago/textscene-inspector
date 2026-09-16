@@ -91,6 +91,12 @@ describe('shapeTextEditLines', () => {
     expect(result[0]!.layout.lines).toHaveLength(1);
     expect(result[1]!.startRow).toBe(1);
   });
+  it('preserveControl threads through to each line\'s own shapeText call (Text::set_draw_control_chars, text_edit.cpp:292)', () => {
+    const dropped = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
+    const boxed = shapeTextEditLines(['AB'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS, [], true);
+    expect(dropped[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBeUndefined();
+    expect(boxed[0]!.layout.lines[0]!.glyphs[1]!.controlCodepoint).toBe(0x0001);
+  });
   it('still occupies one row for an empty buffer line (a blank line is not zero rows)', () => {
     const result = shapeTextEditLines(['a', '', 'b'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
     expect(result.map((l) => l.startRow)).toEqual([0, 1, 2]);

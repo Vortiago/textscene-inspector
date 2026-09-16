@@ -33,16 +33,26 @@ function ambient(value: { r: number; g: number; b: number; a: number }) {
 
 describe('useInheritedModulate', () => {
   it('defaults to opaque white when modulate is unset', () => {
-    const { result } = renderHook(() => useInheritedModulate(undefined));
+    const { result } = renderHook(() => useInheritedModulate(undefined, undefined));
     expect(result.current).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it("multiplies the ancestor's inherited value by this node's own modulate", () => {
-    const { result } = renderHook(() => useInheritedModulate({ r: 1, g: 1, b: 1, a: 0.5 }), {
+    const { result } = renderHook(() => useInheritedModulate({ r: 1, g: 1, b: 1, a: 0.5 }, undefined), {
       wrapper: ambient({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }),
     });
     expect(result.current.r).toBeCloseTo(0.5, 5);
     expect(result.current.a).toBeCloseTo(0.25, 5);
+  });
+
+  it("folds the skipped Node2D ancestors' modulate BETWEEN the ambient and this node's own", () => {
+    // Three distinct halves, so a fold that drops one or squares another
+    // cannot land on the same number: 0.5 × 0.5 × 0.5.
+    const { result } = renderHook(
+      () => useInheritedModulate({ r: 0.5, g: 1, b: 1, a: 1 }, { r: 0.5, g: 1, b: 1, a: 1 }),
+      { wrapper: ambient({ r: 0.5, g: 1, b: 1, a: 1 }) }
+    );
+    expect(result.current.r).toBeCloseTo(0.125, 5);
   });
 });
 

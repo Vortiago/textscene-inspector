@@ -11,6 +11,7 @@
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlColor } from '../control/types';
 import { isColorOverbright } from '../shared/colorOverbright';
+import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { extractHsv, hsvToRgb } from './nativeSolver';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 
@@ -154,13 +155,18 @@ export function colorModeIntensityChannel(color: ControlColor): ColorModeChannel
 }
 
 /**
- * `String::num(value, decimals)` (`core/string/ustring.cpp:1405-...`) —
- * fixed-decimal formatting, `decimals=0` producing no trailing point.
- * `intensity_value->set_prefix(intensity < 0 ? "" : "+")`
- * (`color_picker.cpp:729`) is the caller's job, not this function's.
+ * `String::num(value, decimals)` (`core/string/ustring.cpp:1405-1481`) —
+ * every value `SpinBox` in this widget, and `color_to_string`'s own
+ * `Color(...)` expression text (`color_picker.cpp:64-73`), format through
+ * this exact call. `formatGodotNumber` (`spinbox/nativeSolver.ts`) already
+ * reproduces its trailing-zero trim (`decimals=0` produces no trailing
+ * point; `decimals=3` keeps exactly one digit past it, never three padded
+ * zeros), reused rather than re-derived. `intensity_value->set_prefix(
+ * intensity < 0 ? "" : "+")` (`color_picker.cpp:729`) is the caller's job,
+ * not this function's.
  */
 export function formatSliderValue(value: number, decimals: number): string {
-  return value.toFixed(decimals);
+  return formatGodotNumber(value, decimals);
 }
 
 /**

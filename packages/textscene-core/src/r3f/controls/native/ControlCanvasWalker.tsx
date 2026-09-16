@@ -2,9 +2,16 @@
  * `<ControlCanvasWalker>` — solves `tree` (from `buildSolveTree`) against
  * `viewport`/`theme` and emits one named `<group>` per Control at its solved
  * rect, in Godot pixels with +Y down converted to three's `-y` (`rect.ts`'s
- * convention: negate Y at the point of positioning, no whole-subtree
- * conjugation the way Node2D needs — see `node2dTransform.ts` — because
- * nothing here shears).
+ * convention: negate Y at the point of positioning — a plain per-axis negate,
+ * not the whole-subtree conjugation Node2D needs (`node2dTransform.ts`),
+ * because nothing about a Control's OWN rect solve shears).
+ *
+ * A node that promoted past a skipped Node2D-descended ancestor
+ * (`buildSolveTree.ts`'s `SolveNode.skippedAncestors`) DOES need that
+ * conjugation, for that ancestor's transform alone: `ancestorGroupMatrix`
+ * bakes it into an extra outer `<group>`, wrapping this node's own — never
+ * decomposed back to rotation/scale, since several composed ancestors can
+ * shear even when none individually did.
  *
  * That emitted origin is SNAPPED to whole pixels (`controlPixelSnap.ts`, the
  * port of `Control::_update_canvas_item_transform`) while the solved rect it
@@ -37,8 +44,9 @@
  * `canvaslayer/Component.tsx`'s reset to 0), never the other way around.
  */
 import { useMemo } from 'react';
+import * as THREE from 'three';
 import type { Rect2 } from './rect';
-import { controlProps, type SolveNode } from './solveTree';
+import { controlProps, type Affine2D, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
@@ -76,6 +84,25 @@ export interface ControlCanvasWalkerProps {
 }
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+
+/**
+ * `t`, conjugated by `F = diag(1, -1, 1)` (`node2dTransform.ts`'s own
+ * convention) into a three.js `Matrix4`. `t` is a general affine — possibly
+ * the PRODUCT of several ancestors' transforms, which can shear even when
+ * none individually did — so this never decomposes back into rotation/scale
+ * the way a single Node2D's own group does; it bakes the whole 2x3 straight
+ * in, matching `node2dGroupProps`'s own skew branch when `t` is exactly one
+ * transform (F·M·F expands to `[a, -c, tx; -b, d, -ty]` for Godot's
+ * `columns[0]=(a,b)`, `columns[1]=(c,d)`, `columns[2]=(tx,ty)`).
+ */
+export function ancestorGroupMatrix(t: Affine2D): THREE.Matrix4 {
+  return new THREE.Matrix4().set(
+    t.a, -t.c, 0, t.tx,
+    -t.b, t.d, 0, -t.ty,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  );
+}
 
 export function ControlCanvasWalker({
   tree,
@@ -146,7 +173,7 @@ function ControlNodeGroup({
   snapToPixels,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
-  const inheritedModulate = useInheritedModulate(props.modulate);
+  const inheritedModulate = useInheritedModulate(props.modulate, solveNode.skippedAncestors?.modulate);
   // The painter's own pixels continue the SAME chain one `self_modulate`
   // further. Resolved here, not in the painter: the fold above is the walker's,
   // and a painter reading it back from the provider is sixteen re-entries into
@@ -160,7 +187,11 @@ function ControlNodeGroup({
   // `solveNode.hidden` rather than a second read of `hiddenNodePaths`: the
   // SOLVE already consulted it (`buildSolveTree.ts`), and two reads of one
   // toggle could disagree about which node the container laid out.
-  const isVisible = !solveNode.hidden && props.visible !== false;
+  // `CanvasItem::is_visible_in_tree()` is `visible && parent_visible_in_tree`
+  // (`canvas_item.cpp:62-64`); a skipped Node2D ancestor contributes no group
+  // of its own, so its half of that conjunction arrives through the solve.
+  const isVisible =
+    !solveNode.hidden && props.visible !== false && (solveNode.skippedAncestors?.visible ?? true);
 
   // Structurally guaranteed present (the solve walks this exact tree); the
   // fallback only guards a mismatched tree/solved pair from ever crashing.
@@ -308,7 +339,7 @@ function ControlNodeGroup({
     </>
   );
 
-  return (
+  const ownGroup = (
     // Every group this node emits carries the key, not just the outermost:
     // three takes `groupOrder` from the NEAREST enclosing group, so a bare
     // transform group in between would reset the item's place in the canvas to
@@ -336,6 +367,18 @@ function ControlNodeGroup({
           </TextureSampler2DContext.Provider>
         </Modulate2DContext.Provider>
       </CanvasItemKeyProvider>
+    </group>
+  );
+
+  if (!solveNode.skippedAncestors) return ownGroup;
+
+  // paint-order-safe: OUTSIDE this node's own keyed group (`ownGroup`
+  // already carries `renderOrder`, and is its own nearest enclosing group),
+  // never between it and a mesh — the ancestor Node2D chain this node
+  // promoted past (`buildSolveTree.ts`'s `SolveNode.skippedAncestors`).
+  return (
+    <group matrix={ancestorGroupMatrix(solveNode.skippedAncestors.transform)} matrixAutoUpdate={false}>
+      {ownGroup}
     </group>
   );
 }

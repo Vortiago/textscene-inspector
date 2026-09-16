@@ -217,14 +217,19 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
   });
 
-  it('FIT_TO_LINE_EDIT on the tree\'s FIRST pass (no tentativeRect yet) substitutes the natural size', () => {
-    const n = {
-      ...node({ iconExpandMode: 2 }),
-      textureSlots: { right_icon: { x: 32, y: 16 } },
-    };
-    const result = size(lineEditMinimumSize(n, ctx()));
-    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 32, 6);
-  });
+  it(
+    'FIT_TO_LINE_EDIT contributes NOTHING when no tentativeRect exists — LineEdit never ' +
+      'registers as size-dependent, so this is every real solve, not merely a first pass',
+    () => {
+      const n = {
+        ...node({ iconExpandMode: 2 }),
+        textureSlots: { right_icon: { x: 32, y: 16 } },
+      };
+      const result = size(lineEditMinimumSize(n, ctx()));
+      expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
+      expect(result.y).toBe(8 + FONT_HEIGHT);
+    }
+  );
 
   it('FIT_TO_LINE_EDIT on the SECOND pass sizes the icon against the tentative resolved rect', () => {
     const n = {
@@ -274,12 +279,20 @@ describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cp
     ).toEqual({ x: 30, y: 15 });
   });
 
-  it('FIT_TO_LINE_EDIT with no control size yet (the solver\'s first pass) substitutes the natural size', () => {
-    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, null, 1)).toEqual({
-      x: 32,
-      y: 16,
-    });
-  });
+  it(
+    'FIT_TO_LINE_EDIT with no control size contributes (0, 0) — Control::get_size() reads ' +
+      'Size2() (control.h:218) until _size_changed() runs, and get_minimum_size() never runs ' +
+      'after a resize (no update_minimum_size() call in LineEdit::_notification\'s ' +
+      'NOTIFICATION_RESIZED, line_edit.cpp:1327-1330) nor is the cached result invalidated by ' +
+      'one (Control::_update_minimum_size_cache/minimum_size_valid, control.cpp:1744-1757) — so ' +
+      'this icon never actually drives LineEdit\'s own minimum height, only the font does',
+    () => {
+      expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, null, 1)).toEqual({
+        x: 0,
+        y: 0,
+      });
+    }
+  );
 
   it('a degenerate (zero-height) natural size never divides by zero', () => {
     expect(

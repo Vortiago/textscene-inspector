@@ -169,6 +169,51 @@ describe('shapeText — a character outside the baked charset', () => {
   );
 });
 
+describe('shapeText — preserveControl / control characters (text_server_adv.cpp:6844-6907, char_utils.h:117-118 is_control)', () => {
+  // U+0001 START OF HEADING -- unambiguously `is_control` (<=0x001F), and not
+  // tab/linebreak, so it takes neither of those two's OWN special-casing.
+  const CONTROL = '';
+
+  it('without preserveControl (the default), a control character contributes ZERO width and no ink -- Godot drops it entirely (no Glyph pushed absent preserve_invalid/preserve_control, :6844)', () => {
+    const layout = shapeText(`A${CONTROL}B`, { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    const [a, control, b] = layout.lines[0]!.glyphs;
+    expect(control!.advance).toBe(0);
+    expect(control!.glyph).toBeNull();
+    expect(control!.controlCodepoint).toBeUndefined();
+    expect(b!.x).toBeCloseTo(a!.advance, 10);
+  });
+
+  it('with preserveControl, a control character advances by the hex-code-box width and carries its own codepoint, drawing no atlas ink', () => {
+    const layout = shapeText(`A${CONTROL}B`, {
+      fontSizePx: 15,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+      preserveControl: true,
+    });
+    const [a, control, b] = layout.lines[0]!.glyphs;
+    // hexCodeBoxAdvanceSize(15, 1).x = (4+3*1+0+1)*1 = 8 (hexCodeBox.test.ts's own worked example).
+    expect(control!.advance).toBe(8);
+    expect(control!.glyph).toBeNull();
+    expect(control!.controlCodepoint).toBe(0x0001);
+    expect(b!.x).toBeCloseTo(a!.advance + 8, 10);
+  });
+
+  it('preserveControl leaves tab and hard-break characters alone -- both are already handled before is_control is ever consulted', () => {
+    const layout = shapeText('A\tB\nC', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 3,
+      preserveControl: true,
+    });
+    const tab = layout.lines[0]!.glyphs[1]!;
+    expect(tab.controlCodepoint).toBeUndefined();
+    // The hard break starts a new line and is never emitted as a glyph at all.
+    expect(layout.lines).toHaveLength(2);
+  });
+});
+
 describe('shapeText — kerning plumbing', () => {
   // OpenSans_SemiBold carries only mark/mkmk GPOS features -- zero ASCII kern
   // pairs -- but the table must still be wired in generically (per the

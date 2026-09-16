@@ -169,6 +169,21 @@ describe('<TextRun>', () => {
     expect(mat.uniforms.uDistanceBias!.value).toBe(0.1);
   });
 
+  it('forwards outlineColor/outlineWidthPx to the material, sRGB-converted like tint', async () => {
+    const outlineColor = { r: 0, g: 0, b: 0, a: 1 };
+    const renderer = await renderTextRun({ outlineColor, outlineWidthPx: 2 });
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(2);
+    expect(mat.uniforms.uOutlineOpacity!.value).toBe(1);
+    expect((mat.uniforms.uOutlineColor!.value as THREE.Vector3).toArray()).toEqual([0, 0, 0]);
+  });
+
+  it('leaves the outline width at zero when no outlineColor is given, even with a nonzero outlineWidthPx', async () => {
+    const renderer = await renderTextRun({ outlineWidthPx: 2 });
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.uniforms.uOutlineWidthPx!.value).toBe(0);
+  });
+
   it('forwards clipping planes to the material (per-material state)', async () => {
     const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0)];
     const renderer = await renderTextRun({ clippingPlanes: planes });
@@ -180,6 +195,22 @@ describe('<TextRun>', () => {
     const renderer = await renderTextRun({ layout: layoutFor('A B') });
     const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(2 * 4);
+  });
+
+  it('draws a hex-code box (draw_hex_code_box, text_server.cpp:771-812) for a preserveControl glyph, as EXTRA solid-colour meshes beside the atlas geometry', async () => {
+    const layout = shapeText('A', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3, preserveControl: true });
+    const renderer = await renderTextRun({ layout });
+    // One merged atlas-glyph mesh ('A' only -- the control char has no atlas
+    // ink) plus 4 frame rects + the "01" digit pair's own segments.
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes.length).toBeGreaterThan(1);
+    const atlasGeometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    expect(atlasGeometry.getAttribute('position').count).toBe(1 * 4); // only 'A'
+  });
+
+  it('draws no extra meshes for a layout with no control-codepoint glyphs (the common case, unaffected)', async () => {
+    const renderer = await renderTextRun({ layout: layoutFor('AB') });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 });
 

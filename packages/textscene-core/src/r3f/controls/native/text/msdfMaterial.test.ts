@@ -49,6 +49,28 @@ describe('createMsdfMaterial', () => {
     expect(mat.fragmentShader).toContain('uDistanceBias');
   });
 
+  it('defaults the outline width to zero and reflects an explicit outline', () => {
+    const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
+    expect(plain.uniforms.uOutlineWidthPx!.value).toBe(0);
+
+    const outlined = createMsdfMaterial({
+      map: new THREE.Texture(),
+      color: RED,
+      opacity: 1,
+      pxRange: 4,
+      outline: { color: { r: 0, g: 0, b: 0 }, opacity: 1, widthPx: 2 },
+    });
+    expect(outlined.uniforms.uOutlineWidthPx!.value).toBe(2);
+    expect((outlined.uniforms.uOutlineColor!.value as THREE.Vector3).toArray()).toEqual([0, 0, 0]);
+    expect(outlined.uniforms.uOutlineOpacity!.value).toBe(1);
+  });
+
+  it('composites the outline at a second, shifted distance threshold in the fragment shader', () => {
+    const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
+    expect(mat.fragmentShader).toContain('uOutlineWidthPx');
+    expect(mat.fragmentShader).toContain('uOutlineColor');
+  });
+
   it('spreads supplied clipping planes onto the material (per-material state)', () => {
     const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0), new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
     const mat = createMsdfMaterial({

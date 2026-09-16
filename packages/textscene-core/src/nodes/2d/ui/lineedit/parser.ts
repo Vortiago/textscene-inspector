@@ -29,6 +29,7 @@ export function parseLineEdit(
     iconExpandMode: parseOptionalInt(properties.icon_expand_mode),
     rightIconScale: parseOptionalFloat(properties.right_icon_scale),
     caretForceDisplayed: parseOptionalBool(properties.caret_force_displayed),
+    drawControlChars: parseOptionalBool(properties.draw_control_chars),
   };
   // `right_icon` stays a raw resource ref — the painter resolves it via the
   // node's own scope (do not unquote).

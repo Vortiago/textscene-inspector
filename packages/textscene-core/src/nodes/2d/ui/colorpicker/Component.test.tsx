@@ -48,8 +48,9 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
-    // btn_pick box + swatch + (sv base, sv hue, cursor bg, cursor ring, hue strip, hue line)
-    expect(meshes).toHaveLength(8);
+    // btn_pick box + btn_pick icon + btn_shape icon + swatch + (sv base, sv
+    // hue, cursor bg, cursor ring, hue strip, hue line)
+    expect(meshes).toHaveLength(10);
   });
 
   it('draws the checkerboard only when the colour is translucent — color_picker.cpp:1400', async () => {
@@ -59,17 +60,18 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   });
 
   it('draws an overbright indicator when a channel exceeds 1 — color_picker.cpp:1411-1413', async () => {
-    expect(await meshCount({ color: 'Color(1.5, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })).toBe(9);
+    expect(await meshCount({ color: 'Color(1.5, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })).toBe(11);
   });
 
-  it('draws only the pick/shape buttons\' box and the sample swatch for any picker_shape but SHAPE_HSV_RECTANGLE (0)', async () => {
-    // picker_shape=1 keeps btn_shape visible (only SHAPE_NONE=4 hides it), but
-    // draws no icon (themeIcons.ts is out of scope) — so still just the box + swatch.
-    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 1, ...ONLY_SHAPE_AND_SAMPLE })).toBe(2);
+  it('draws only the pick button box + icon and the sample swatch for any picker_shape but SHAPE_HSV_RECTANGLE (0)', async () => {
+    // picker_shape=1 keeps btn_shape visible (only SHAPE_NONE=4 hides it) and
+    // draws its box, but `shape_rect` is only correct at SHAPE_HSV_RECTANGLE
+    // (other shapes are out of scope, `comparison.md`) so its icon stays undrawn.
+    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 1, ...ONLY_SHAPE_AND_SAMPLE })).toBe(3);
   });
 
-  it('draws only the pick button box and the sample swatch at SHAPE_NONE (4), matching Godot exactly', async () => {
-    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 4, ...ONLY_SHAPE_AND_SAMPLE })).toBe(2);
+  it('draws only the pick button box + icon and the sample swatch at SHAPE_NONE (4), matching Godot exactly', async () => {
+    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 4, ...ONLY_SHAPE_AND_SAMPLE })).toBe(3);
   });
 
   it('colours the SV square gradient at hue=0 (pure red) unmodulated by an opaque-white tint', async () => {
@@ -77,8 +79,8 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       <ColorPicker {...painterEnv()} theme={THEME} solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })} rect={{ x: 0, y: 0, w: 400, h: 400 }} renderOrder={0} />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
-    // 0: pick button box, 1: swatch, 2: sv base, 3: sv hue layer (base=0, hue=1).
-    const hueMesh = meshes[3]!.instance as THREE.Mesh;
+    // 0: pick box, 1: pick icon, 2: shape icon, 3: swatch, 4: sv base, 5: sv hue layer.
+    const hueMesh = meshes[5]!.instance as THREE.Mesh;
     const color = hueMesh.geometry.getAttribute('color') as THREE.BufferAttribute;
     // top-right vertex (index 1): full red, alpha 1.
     expect(color.getX(1)).toBeCloseTo(1);
@@ -99,7 +101,8 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
-    const baseMesh = meshes[2]!.instance as THREE.Mesh;
+    // 0: pick box, 1: pick icon, 2: shape icon, 3: swatch, 4: sv base.
+    const baseMesh = meshes[4]!.instance as THREE.Mesh;
     const color = baseMesh.geometry.getAttribute('color') as THREE.BufferAttribute;
     // top-left vertex is white(1,1,1,1) in the untinted layer; tinted by 0.5.
     expect(color.getX(0)).toBeCloseTo(0.5);
@@ -112,8 +115,8 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       <ColorPicker {...painterEnv()} theme={THEME} solveNode={node({ color: 'Color(1, 1, 1, 1)', ...ONLY_SHAPE_AND_SAMPLE })} rect={{ x: 0, y: 0, w: 400, h: 400 }} renderOrder={0} />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
-    // Cursor bg is mesh index 4 (pick box, swatch, base, hue, cursorBg, cursorRing, hueStrip, hueLine).
-    const cursorBgMesh = meshes[4]!.instance as THREE.Mesh;
+    // Cursor bg is mesh index 6 (pick box, pick icon, shape icon, swatch, base, hue, cursorBg, …).
+    const cursorBgMesh = meshes[6]!.instance as THREE.Mesh;
     const groupPosition = cursorBgMesh.parent!.position;
     // s=0 -> cursor.x = svSquare.x = 0; v=1 -> cursor.y = svSquare.y = 0.
     // The group offsets by -size/2 in local x and +size/2 (negated) in y.
@@ -149,11 +152,21 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       />
     );
     // 5 rows (R,G,B,I,A — edit_alpha/edit_intensity both default true), each
-    // with a label TextRun, a StyleBoxQuad value box and a value TextRun;
-    // R/G/B/A additionally draw a gradient band (intensity has no gradient —
-    // `colorModes.ts` gives it an empty stops list).
+    // with a label TextRun, a StyleBoxQuad value FIELD box, a value TextRun
+    // and its own up/down SpinBox arrow icons (2 meshes); R/G/B/A are
+    // colorized (`_reset_sliders_theme`): a gradient band + the overridden
+    // `bar_arrow` grabber. Intensity alone keeps the stock HSlider chrome:
+    // track + grabber_area(fill) + the default circle grabber.
     const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes.length).toBe(5 /* labels */ + 5 /* value boxes */ + 5 /* value text */ + 4 /* R,G,B,A gradient bands */);
+    expect(meshes.length).toBe(
+      5 /* labels */ +
+        5 /* value field boxes */ +
+        5 /* value text */ +
+        10 /* 5 rows * (up+down arrows) */ +
+        4 /* R,G,B,A gradient bands */ +
+        4 /* R,G,B,A bar_arrow grabbers */ +
+        3 /* intensity: track+fill+grabber */
+    );
   });
 
   it('hex row draws a field box and its text — hex_visible default true', async () => {

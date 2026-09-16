@@ -10,8 +10,9 @@
  * the chain — this module does not re-derive that curve, only feeds it.
  *
  * BOTH hooks are `ControlCanvasWalker`'s, and the split is the whole point:
- * `useInheritedModulate` folds `modulate` (hierarchical, published as the
- * ambient every descendant reads), `useControlOwnTint` folds `self_modulate`
+ * `useInheritedModulate` folds the promoted-past ancestors' `modulate` and
+ * then this node's own (hierarchical, published as the ambient every
+ * descendant reads), `useControlOwnTint` folds `self_modulate`
  * onto that result (own pixels only, handed to the painter as
  * `NativeControlComponentProps.tint`). A painter resolves neither, the way
  * `CanvasItem2D` already resolves the Node2D family's tint for its `body`.
@@ -39,10 +40,19 @@ function toRGBA(c: ControlColor | undefined): RGBA {
  * colour and only then draws the item at that × `ci->self_modulate`
  * (`servers/rendering/renderer_canvas_cull.cpp`).
  */
-export function useInheritedModulate(modulate: ControlColor | undefined): RGBA {
+export function useInheritedModulate(
+  modulate: ControlColor | undefined,
+  skippedAncestors: ControlColor | undefined
+): RGBA {
   const parent = useParentModulate();
   const own = toRGBA(modulate);
-  return useMemo(() => multiplyModulate(parent, own), [parent, own]);
+  // The skipped Node2D ancestors sit BETWEEN the context value and this node,
+  // so they fold in that order — see `SolveNode.skippedAncestors`.
+  const skipped = toRGBA(skippedAncestors);
+  return useMemo(
+    () => multiplyModulate(multiplyModulate(parent, skipped), own),
+    [parent, skipped, own]
+  );
 }
 
 /**

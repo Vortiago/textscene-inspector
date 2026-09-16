@@ -30,8 +30,11 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 // The FreeType glyph-outline embolden radius — the SAME TextServer mechanism
 // `font_outline_size`/`draw_outline` goes through for a 2D Control as for
 // Label3D, so Label3D's own derivation applies unchanged (`glyphLayout.ts`'s
-// own doc).
-import { outlineStrokeWidthPx } from '../../../3d/label3d/glyphLayout';
+// own doc). `outlineRadiusPx` is the OUTWARD-only expansion (`<TextRun>`'s
+// `outlineWidthPx`, a solid-filled bigger shape); `outlineStrokeWidthPx` is
+// the full CENTRED canvas stroke width (radius on both sides) the canvas-font
+// branch below still uses.
+import { outlineRadiusPx, outlineStrokeWidthPx } from '../../../3d/label3d/glyphLayout';
 import { rangeRatio } from '../shared/range';
 import {
   progressBarDefaultBackground,
@@ -100,11 +103,12 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const tintedOutlineColor = useMemo(() => multiplyModulate(outlineColorSrgb, tint.own), [outlineColorSrgb, tint.own]);
 
   // `progress_bar.cpp:180`: `font_outline_size > 0 && font_outline_color.a > 0`.
+  const hasOutline = outlineSize > 0 && outlineColorSrgb.a > 0 && layout !== null;
   // The MSDF atlas (this previewer's default font) has no contour to stroke
-  // (`TextRun.tsx`'s own doc); the outline is only reachable through a
-  // canvas-rasterised scene font.
-  const drawOutline =
-    outlineSize > 0 && outlineColorSrgb.a > 0 && layout !== null && isCanvasFontMetrics(layout.fontMetrics);
+  // (`TextRun.tsx`'s own doc's `outline` option): it composites a second,
+  // wider fill threshold in the SAME mesh instead of a separate stroked one.
+  const drawCanvasOutline = hasOutline && isCanvasFontMetrics(layout.fontMetrics);
+  const drawMsdfOutline = hasOutline && !isCanvasFontMetrics(layout.fontMetrics);
 
   return (
     <>
@@ -121,7 +125,7 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
       )}
       {layout && textPos && (
         <CanvasItemGroup position={[textPos.x, -textPos.y, 0]}>
-          {drawOutline && (
+          {drawCanvasOutline && (
             <TextRun
               layout={layout}
               fontSizePx={fontSizePx}
@@ -135,6 +139,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
             layout={layout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
+            outlineColor={drawMsdfOutline ? tintedOutlineColor : undefined}
+            outlineWidthPx={drawMsdfOutline ? outlineRadiusPx(outlineSize) : 0}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
           />

@@ -74,6 +74,7 @@
  */
 
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
+import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
@@ -194,6 +195,16 @@ export interface ShapeTextOptions {
    * trims on (`label.h:45`), matching every caller before this option existed.
    */
   autowrapTrimFlags?: number;
+  /**
+   * `TextServer::shaped_text_set_preserve_control` — keeps a control
+   * character (`isControlChar`) alive as a `draw_hex_code_box` fallback
+   * glyph (`text/hexCodeBox.ts`) instead of dropping it with zero width
+   * (`toBreakGlyphs`'s own doc). Undefined/`false` (default) matches every
+   * caller before this option existed. `LineEdit`/`TextEdit`'s own
+   * `draw_control_chars` property is the ONLY thing that sets this true
+   * today; Label/Button/RichTextLabel never do (no such property).
+   */
+  preserveControl?: boolean;
 }
 
 /** `TextServer::LineBreakFlag` subset this module reads (`servers/text/text_server.h:113-120`). */
@@ -216,6 +227,8 @@ export interface GlyphPlacement {
   advance: number;
   /** Atlas bitmap metadata for this glyph, or `null` if the atlas has none (outside the vendored ASCII set) OR the line was shaped against a non-`'atlas'` `FontMetrics` (this module's own doc has why). */
   glyph: OpenSansGlyph | null;
+  /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`, `text/hexCodeBox.ts`) instead of atlas ink — set only when `preserveControl` kept it alive. Absent for every ordinary glyph. */
+  controlCodepoint?: number;
 }
 
 export interface TextLineLayout {
@@ -402,12 +415,19 @@ export function isTabChar(ch: string): boolean {
   return ch === '\t' || ch === '';
 }
 
+/** `core/string/char_utils.h::is_control` — C0 controls and DEL through the C1 range. Tab and every linebreak fall inside this range too, but both are consulted (and handled) before this predicate ever runs — see `toBreakGlyphs`'s own doc. */
+export function isControlChar(cp: number): boolean {
+  return cp <= 0x001f || (cp >= 0x007f && cp <= 0x009f);
+}
+
 interface BreakGlyph {
   start: number;
   end: number;
   advance: number;
   isSpace: boolean;
   isHardBreak: boolean;
+  /** The codepoint this glyph draws as a hex-code box instead of shaping normally — only set when `preserveControl` kept a control character alive (`toBreakGlyphs`'s own doc). */
+  controlCodepoint?: number;
 }
 
 /**
@@ -456,7 +476,7 @@ function isSpaceSeparator(cp: number): boolean {
 }
 
 /** `Math::round` (`core/math/math_funcs.h`) — half away from zero, unlike JS's `Math.round`, which breaks ties toward positive infinity. */
-function godotRound(value: number): number {
+export function godotRound(value: number): number {
   return Math.sign(value) * Math.round(Math.abs(value));
 }
 
@@ -479,7 +499,8 @@ function toBreakGlyphs(
   text: string,
   fontSizePx: number,
   metrics: FontMetrics,
-  fontSizePxAt?: (charIndex: number) => number
+  fontSizePxAt?: (charIndex: number) => number,
+  preserveControl = false
 ): BreakGlyph[] {
   const sizeAt = (i: number): number => fontSizePxAt?.(i) ?? fontSizePx;
   const glyphs: BreakGlyph[] = [];
@@ -487,15 +508,41 @@ function toBreakGlyphs(
     const ch = text[i]!;
     const cp = ch.codePointAt(0)!;
     const hardBreak = isLinebreak(cp);
+    // `is_control` also covers tab and every linebreak codepoint, but both
+    // already take their OWN special-casing above/below (a hard break never
+    // reaches `_shape_run`'s font search at all; a tab is `GRAPHEME_IS_TAB`,
+    // aligned by `tabAlignAdvances`) — excluding them here keeps this branch
+    // to the "no font anywhere has a glyph for this" case those two never are
+    // (`text_server_adv.cpp:6842-6907`, this module's own doc).
+    const isControl = !hardBreak && !isTabChar(ch) && isControlChar(cp);
+    let advance: number;
+    let controlCodepoint: number | undefined;
+    if (hardBreak || cp === 0x200b) {
+      // A break grapheme and U+200B carry no advance in Godot; the baked
+      // charset has no entry for either, so the metrics fallback would give
+      // them an average-width one that the overflow test then spends on a
+      // spurious wrap.
+      advance = 0;
+    } else if (isControl) {
+      if (preserveControl) {
+        advance = hexCodeBoxAdvanceSize(sizeAt(i), cp).x;
+        controlCodepoint = cp;
+      } else {
+        // `text_server_adv.cpp:6844`: absent `preserve_invalid`/
+        // `preserve_control`, no `Glyph` is pushed for this character at
+        // all — zero width, exactly as if it were not in the string.
+        advance = 0;
+      }
+    } else {
+      advance = glyphAdvancePx(ch, sizeAt(i), metrics);
+    }
     glyphs.push({
       start: i,
       end: i + 1,
-      // A break grapheme and U+200B carry no advance in Godot; the baked charset
-      // has no entry for either, so the metrics fallback would give them an
-      // average-width one that the overflow test then spends on a spurious wrap.
-      advance: hardBreak || cp === 0x200b ? 0 : glyphAdvancePx(ch, sizeAt(i), metrics),
+      advance,
       isSpace: isWhitespace(cp),
       isHardBreak: hardBreak,
+      controlCodepoint,
     });
   }
   // Kerning narrows/widens the gap BETWEEN a pair; folding it into the
@@ -720,6 +767,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     tabStopsPx,
     autowrapTrimFlags,
+    preserveControl = false,
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   const transformed = uppercase ? text.toUpperCase() : text;
@@ -754,7 +802,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       ? (i: number): number => fontSizePxAt(para.offset + Math.max(0, Math.min(i, para.text.length - 1)))
       : undefined;
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
-    const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt);
+    const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt, preserveControl);
     // Paragraph-level tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc,
     // first pass) -- a tab's REAL advance, not its unaligned placeholder,
     // must be in place before line-breaking measures against it.
@@ -787,6 +835,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           x: penX,
           advance,
           glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+          controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
         });
         penX += advance;
       }

@@ -46,10 +46,3 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 unread. A malformed `folded` becomes `false`; a malformed `title_alignment`/
 `title_position`/`title_text_overrun_behavior` becomes `undefined` and the render
 default (LEFT / TOP / no trimming) applies.
-
-## Known limitations
-
-- **Approximated** `title_text_overrun_behavior`'s character/word/ellipsis trimming is
-  not modelled: only its NO_TRIMMING-ness changes the title bar's own minimum width. The
-  title text itself always draws at its full shaped width, matching Label's own
-  `text_overrun_behavior` gap.
