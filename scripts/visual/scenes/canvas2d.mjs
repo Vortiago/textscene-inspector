@@ -353,4 +353,43 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-canvas-layer-modulate-scope.tscn',
     mode: '2d',
   },
+  // The ONE variable: a Control promoted past a non-Control ancestor, one
+  // facet per scene. All three are here because the walk resets the whole
+  // chain at a broken CanvasItem link, so a fix to one facet can silently
+  // move another. Measured against Godot 4.6.3 at `--mode 2d` before their
+  // baselines were written: mean 0.001, 0.006 and 0.000 of 255 respectively,
+  // the first two being the visible sibling alone at the rasterizer's own
+  // 1/255 blend-rounding floor.
+  {
+    name: 'control-node2d-ancestor-transform',
+    file: 'unit-control-node2d-ancestor-transform.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-node2d-ancestor-hidden',
+    file: 'unit-control-node2d-ancestor-hidden.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-node2d-ancestor-modulate',
+    file: 'unit-control-node2d-ancestor-modulate.tscn',
+    mode: '2d',
+  },
+  // The ONE variable: a second coverage threshold on the glyph field, drawn
+  // both as an outline around the fill and as an offset pass behind it. Every
+  // other text scene draws the fill alone, so a threshold that lands on the
+  // wrong side of the median is invisible in all of them. Measured against
+  // Godot 4.6.3 at `--mode 2d` before its baseline was written: mean 0.372 of
+  // 255, MSDF stem antialiasing along the outline edge.
+  { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
+  // The ONE variable: a control character reaching the shaper. Everywhere else
+  // one advances zero and leaves no mark, so only a field that opts into the
+  // hex box shows whether its geometry and its advance agree. Measured against
+  // Godot 4.6.3 at `--mode 2d` before its baseline was written: mean 0.037 of
+  // 255.
+  {
+    name: 'lineedit-control-chars',
+    file: 'unit-lineedit-control-chars.tscn',
+    mode: '2d',
+  },
 ];
