@@ -599,11 +599,14 @@ export function projectConfig(
   }
 
   // An autoload is a script too, and it runs BEFORE the scene exists — so
-  // stripping the scene's own scripts leaves it untouched. A real project
-  // relies on exactly that: protongraph's ThemeManager._ready assigns
-  // `get_tree().get_root().theme`, so every widget is themed by a singleton
-  // while the scene file says nothing about a theme. Dropping the section
-  // whole is what makes the reference show what the scene describes.
+  // stripping the scene's own scripts leaves it untouched. The engine gates
+  // them on being a game at all (`main/main.cpp:4397`), which is why the
+  // editor this harness mirrors never runs one.
+  //
+  // It matters because a project can put its whole look there: an autoload
+  // whose `_ready` assigns `get_tree().get_root().theme` themes every widget
+  // while the scene file says nothing about a theme, and no renderer reading
+  // the file could ever reproduce it.
   const kept = (runScripts ? sourceIni ?? '' : dropSection(sourceIni ?? '', 'autoload'))
     .split('\n')
     .filter((line) => !drop.some((re) => re.test(line.trim())))
@@ -1441,7 +1444,10 @@ async function renderInto(
     join(work, 'project.godot'),
     projectConfig(sourceIni, {
       ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
-      // Same axis as the scene's own scripts: the editor runs neither.
+      // Same axis as the scene's own scripts, and stricter: an autoload is
+      // instantiated only for a GAME (`main/main.cpp:4397`'s
+      // `if (!project_manager && !editor)`), so unlike a node script there is
+      // no `@tool` exception to keep.
       runScripts: !previews,
     })
   );
