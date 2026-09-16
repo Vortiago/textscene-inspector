@@ -137,6 +137,33 @@ describe('editor-camera constants mirror the previewer', () => {
   });
 });
 
+describe('bootstrapScript — a non-tool script never runs under previews', () => {
+  /**
+   * The editor does not run a plain script's `_ready`, and this harness's
+   * default IS the editor. Everything else on that axis is already handled —
+   * the tree is paused before the scene exists, AnimationPlayers are stopped,
+   * physics never steps — but `_ready` still fired, so a script could hide a
+   * node, populate a menu or overwrite a value and the reference would show a
+   * scene the `.tscn` does not describe.
+   *
+   * `@tool` scripts are the exception the editor itself makes: it runs those,
+   * so the reference must too.
+   */
+  it('strips a non-tool script before the scene enters the tree', () => {
+    const gd = bootstrap({ previews: true });
+    expect(gd).toMatch(/_strip_runtime_scripts\(target\)/);
+    // Before add_child, or `_ready` has already fired by the time it runs.
+    expect(gd.indexOf('_strip_runtime_scripts(target)')).toBeLessThan(gd.indexOf('func _render_3d'));
+    expect(gd).toMatch(/is_tool\(\)/);
+  });
+
+  it('leaves scripts alone under --no-previews, which asks for runtime semantics', () => {
+    const gd = bootstrap({ previews: false });
+    expect(gd).toMatch(/if PREVIEWS:\n\t\t_strip_runtime_scripts\(target\)/);
+    expect(gd).toMatch(/const PREVIEWS := false/);
+  });
+});
+
 describe('parseArgs', () => {
   it('takes the scene as the sole positional argument', () => {
     expect(parseArgs(['scenes/fixtures/unit-plane-mesh.tscn']).scene).toBe(

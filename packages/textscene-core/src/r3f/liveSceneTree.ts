@@ -96,15 +96,65 @@ export function collapseLiveNode(
   scope: SceneScope,
   sceneCache: CachedSceneSource
 ): TscnNode {
-  if (!node.instance) return node;
-  const authored = authoredScope(node, scope);
-  const scenePath = resolveInstancePath(node.instance, authored.externalResources);
-  if (!scenePath) return node;
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return node;
-  // The WHOLE scope, because what the merge does with it is stamp it onto the
-  // host children it grafts — and those name ids of both kinds.
-  return mergeInstanceRoot(node, cached, authored) ?? node;
+  return collapseToFixedPoint(node, scope, sceneCache, (n, cached, authored) =>
+    // The WHOLE scope, because what the merge does with it is stamp it onto the
+    // host children it grafts — and those name ids of both kinds.
+    mergeInstanceRoot(n, cached, authored)
+  );
+}
+
+/**
+ * Collapse an instance chain to FIXED POINT, not one level.
+ *
+ * A sub-scene whose own root is an instance leaves the merged node carrying
+ * that root's `instance` ref, and one pass therefore answers with a node that
+ * is still half-collapsed. That matters beyond tidiness: such a root heading
+ * carries no `type=`, so `mergeInstanceRoot` has no registered parser to
+ * re-parse the merged raw bag with and falls back to spreading already-parsed
+ * properties — where a host override like `visible = false` was never parsed
+ * in the first place, because the host heading has no `type=` either. The
+ * override survives in `rawProperties` and lands the moment a level with a
+ * real type re-parses it, which only happens if the collapse continues.
+ *
+ * Found against a real project: a settings menu hiding an instanced language
+ * dialog drew it full-screen over everything.
+ *
+ * Bounded by a seen-set on the scene path rather than a depth count: a scene
+ * that instances itself would otherwise spin here.
+ */
+function collapseToFixedPoint(
+  node: TscnNode,
+  scope: SceneScope,
+  sceneCache: CachedSceneSource,
+  merge: (
+    n: TscnNode,
+    cached: Partial<SceneScope> & { nodes: readonly TscnNode[] },
+    authored: SceneScope
+  ) => TscnNode | null
+): TscnNode {
+  let current = node;
+  // Advances with the chain: after a merge the surviving `instance` ref is the
+  // SUB-SCENE root's own, so it names an id in that file's pool and not in the
+  // host's. Resolving it against the host's scope finds nothing and stops the
+  // collapse one level early, which is the whole defect.
+  let currentScope = scope;
+  let seen: Set<string> | undefined;
+  while (current.instance) {
+    const authored = authoredScope(current, currentScope);
+    const scenePath = resolveInstancePath(current.instance, authored.externalResources);
+    if (!scenePath || seen?.has(scenePath)) return current;
+    const cached = sceneCache.getCached(scenePath);
+    if (!cached) return current;
+    const merged = merge(current, cached, authored);
+    if (!merged) return current;
+    (seen ??= new Set()).add(scenePath);
+    current = merged;
+    currentScope = {
+      externalResources: cached.externalResources ?? [],
+      internalResources: cached.internalResources ?? [],
+    };
+  }
+  return current;
 }
 
 /**
@@ -227,9 +277,15 @@ export function liveChildGroups(
   // Collapsed single-root instance (ADR-0013): one merged group under sub-scene
   // scope. The merged node rides along on the group so a caller needing the
   // collapsed identity (the tree row) reuses this merge instead of re-running it.
+  // To fixed point: a sub-scene whose own root is an instance would otherwise
+  // hand the walker a half-collapsed node, which loses a host override the
+  // merge can only apply once a level with a real `type=` re-parses it.
   const merged = mergeInstanceRoot(node, cached, scope);
   if (merged) {
-    return [{ origin: 'merged', children: merged.children, scope: subScope, mergedNode: merged }];
+    const collapsed = collapseToFixedPoint(merged, subScope, sceneCache, (n, inner, authored) =>
+      mergeInstanceRoot(n, inner, authored)
+    );
+    return [{ origin: 'merged', children: collapsed.children, scope: subScope, mergedNode: collapsed }];
   }
 
   // Fallback (multi-root / GLB instance): inline children stay in OUTER scope;

@@ -754,6 +754,9 @@ func _ready() -> void:
 	if PREVIEWS:
 		get_tree().paused = true
 	var target: Node = load(SCENE_PATH).instantiate()
+	# Before ANY add_child: entering the tree is what fires _ready.
+	if PREVIEWS:
+		_strip_runtime_scripts(target)
 	var two_d := MODE == "2d" or MODE == "${ROOT_WINDOW_MODE}" or (MODE == "auto" and _is_canvas_scene(target))
 	# Written before the render, so a run that dies mid-frame still says which
 	# path it took — the caller pairs our image with the previewer's on it. Both
@@ -926,6 +929,32 @@ func _disable_2d_cameras(node: Node) -> void:
 # "editor" and "runtime" stay two whole answers rather than a mixture. Stopping
 # an AnimationPlayer in a render that is meant to show the running game is the
 # same mistake as pausing its physics.
+# The editor does not run a plain script, so neither does the reference.
+#
+# The pause below already stops every driver that RUNS over time — physics,
+# AnimationPlayer, AnimationTree — but _ready fires on entering the tree
+# whatever the pause says, and that one call is enough for a script to hide a
+# node, fill a menu from a data file, overwrite an authored value, or replace
+# a label's whole text. The reference then shows a scene the .tscn does not
+# describe, and every one of those differences reads as a renderer gap.
+#
+# @tool is the exception the editor itself makes: EditorNode runs a tool
+# script's _ready, so a reference that mirrors the editor has to as well.
+# Script::is_tool() is the same flag the editor tests.
+#
+# set_script(null) leaves the node as its NATIVE class, which is exactly what a
+# scene stores for a scripted node (type="Range" plus script = ...) and
+# exactly what this previewer draws for one.
+#
+# Gated on PREVIEWS with the rest of the editor-vs-runtime axis: --no-previews
+# asks for a running game, and a game runs its scripts.
+func _strip_runtime_scripts(node: Node) -> void:
+	var script: Script = node.get_script()
+	if script != null and not script.is_tool():
+		node.set_script(null)
+	for child in node.get_children():
+		_strip_runtime_scripts(child)
+
 func _freeze_game_logic(node: Node) -> void:
 	if node is AnimationPlayer:
 		(node as AnimationPlayer).stop()
