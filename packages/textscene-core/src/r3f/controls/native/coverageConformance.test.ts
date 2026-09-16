@@ -19,6 +19,8 @@
  * `has2DUIContent.driftguard.test.ts` exists for exactly that and owns it.
  */
 import { describe, expect, it } from 'vitest';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 // Side-effect import: registers all 60 Control slices' native painters, and
 // every slice's solver functions (`nativeSolver.ts`/`index.r3f.ts`).
 import { controlComponentRegistry } from '../index';
@@ -98,6 +100,36 @@ function bareSolveNode(type: string): SolveNode {
  * removing a slice is always a deliberate act, so updating this is too.
  */
 const REGISTERED_CONTROL_TYPES = 60;
+
+/**
+ * A slice that writes a `TextureSlotsFn` and never registers it.
+ *
+ * Its own unit tests still pass — they call the function directly — while the
+ * walker never asks for it, so `SolveNode.textureSlots` stays empty and the
+ * widget neither sizes to its texture nor draws it. LineEdit shipped exactly
+ * that: `right_icon` was parsed, measured, tested, and invisible.
+ *
+ * Read from the FILES rather than the registry, because the registry cannot
+ * report a function nobody handed it.
+ */
+describe('every TextureSlotsFn a slice writes is registered', () => {
+  it('leaves none of them unreachable from the walker', () => {
+    const uiRoot = resolve(import.meta.dirname, '../../../nodes/2d/ui');
+    const unregistered = readdirSync(uiRoot, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .filter((e) => {
+        const solver = join(uiRoot, e.name, 'nativeSolver.ts');
+        if (!existsSync(solver)) return false;
+        if (!readFileSync(solver, 'utf8').includes('TextureSlotsFn')) return false;
+        return !readdirSync(join(uiRoot, e.name))
+          .filter((f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f))
+          .some((f) => readFileSync(join(uiRoot, e.name, f), 'utf8').includes('registerTextureSlots'));
+      })
+      .map((e) => e.name);
+
+    expect(unregistered).toEqual([]);
+  });
+});
 
 describe('Native Control registry coverage', () => {
   it('registers every Control type the 2D UI needs', () => {

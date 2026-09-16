@@ -3,9 +3,10 @@
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { LineEdit } from './Component';
-import { lineEditMinimumSize } from './nativeSolver';
+import { lineEditMinimumSize, lineEditTextureSlots } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'LineEdit', Component: LineEdit });
 controlSolverRegistry.registerMinimumSize('LineEdit', lineEditMinimumSize);
+controlSolverRegistry.registerTextureSlots('LineEdit', lineEditTextureSlots);
 
 export { LineEdit };
