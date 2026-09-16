@@ -1,0 +1,37 @@
+; GraphEdit with its minimap turned OFF. `_minimap_draw` returns immediately
+; when the minimap is disabled (graph_edit.cpp:1808-1810), and the panel is
+; hidden outright (:2884-2890). The default is ON — the constructor presses
+; the toggle from the MEMBER `show_grid`, before any property is applied
+; (:3311) — so every other GraphEdit fixture draws the minimap and none of
+; them can catch a renderer that ignores the property.
+; Every fixture in this family shares one GraphEdit rect and one GraphNode,
+; and `scroll_offset` is deliberately ABSENT from all of them: GraphEdit's own
+; `set_scroll_offset` clamps against min/max bounds that are still (0, 0) while
+; a scene's properties are applied (graph_edit.cpp:407), so an authored offset
+; moves the grid, the nodes AND the minimap camera at once and would mask the
+; one variable each file exists to move.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedminoff"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+minimap_enabled = false
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"

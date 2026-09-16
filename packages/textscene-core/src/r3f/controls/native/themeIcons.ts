@@ -393,3 +393,62 @@ export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size — both 12x12. */
 export const COLOR_PICKER_CURSOR_SIZE = 12;
+
+/** `scene/theme/icons/zoom_less.svg` (16x16) — GraphEdit's `zoom_out`, `zoom_minus_button`'s icon (`default_theme.cpp:1279`). */
+const GRAPH_EDIT_ZOOM_OUT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjgiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1Ii8+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZWZmZmUiLz48cGF0aCBmaWxsPSIjMDEwMDAxIiBkPSJNNCA3aDh2Mkg0eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/zoom_more.svg` (16x16) — GraphEdit's `zoom_in` (`default_theme.cpp:1280`). */
+const GRAPH_EDIT_ZOOM_IN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjgiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1Ii8+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZWZmZmUiLz48cGF0aCBmaWxsPSIjMDEwMDAxIiBkPSJNNyA0aDJ2M2gzdjJIOXYzSDdWOUg0VjdoM3oiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/zoom_reset.svg` (16x16) — GraphEdit's `zoom_reset` (`default_theme.cpp:1281`). */
+const GRAPH_EDIT_ZOOM_RESET_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjgiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1Ii8+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjciIGZpbGw9IiNmZWZmZmUiLz48cGF0aCBmaWxsPSIjMDEwMDAxIiBkPSJNOCA0LjE2NkExIDEgMCAwIDEgOS41MjYgNXY3aC0yVjYuODdsLTEuNDQ1Ljk2Mi0xLTEuNnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/grid_toggle.svg` (16x16) — GraphEdit's `grid_toggle` (`default_theme.cpp:1282`). */
+const GRAPH_EDIT_GRID_TOGGLE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZmlsbC1vcGFjaXR5PSIuNjUiIGQ9Ik0zIDB2M0gwdjJoM3Y0SDB2MmgzdjNoMlY1aDlWM2gtM1YwSDl2M0g1VjB6Ii8+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTExIDYuNjJjLTEuNzQ3IDAtMy45NTcgMS4zNDQtNC43NTIgMy45MzZhLjY4My42OSAwIDAwLS4wMDQuMzk0QzcuMDEyIDEzLjY2NSA5LjI5MiAxNC45IDExIDE0LjljMS43MDggMCAzLjk4OC0xLjIzNSA0Ljc1Ni0zLjk1YS42ODMuNjkgMCAwMDAtLjM4MkMxNS4wMDQgNy45NTUgMTIuNzQ2IDYuNjIgMTEgNi42MnpNMTEgOGEyLjczMyAyLjc2IDAgMDEyLjczMyAyLjc2QTIuNzMzIDIuNzYgMCAwMTExIDEzLjUyYTIuNzMzIDIuNzYgMCAwMS0yLjczMy0yLjc2QTIuNzMzIDIuNzYgMCAwMTExIDh6bTAgMS4zOGExLjM2NyAxLjM4IDAgMDAtMS4zNjcgMS4zOEExLjM2NyAxLjM4IDAgMDAxMSAxMi4xNGExLjM2NyAxLjM4IDAgMDAxLjM2Ny0xLjM4QTEuMzY3IDEuMzggMCAwMDExIDkuMzh6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/grid_minimap.svg` (16x16) — GraphEdit's `minimap_toggle` (`default_theme.cpp:1283`). */
+const GRAPH_EDIT_MINIMAP_TOGGLE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLW1pdGVybGltaXQ9IjIiPjxwYXRoIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1IiBkPSJNMTQgMi4xOTl2Mi42MTVsLTIuNjI1IDEuMzEzVjMuNTEyek0yIDYuMjY0bDIuNjI1IDEuMzEydjIuNTUxTDIgOC44MTR6bTEyIDB2Mi41NWwtMi42MjUgMS4zMTNWNy41NzZ6TTYgNy43MTloNHYyLjY0SDZ6bS00IDIuNTYgMi42MjUgMS4zMTN2Mi41MjFMMiAxMi44MDF6bTEyIDB2Mi41MjJsLTIuNjI1IDEuMzEydi0yLjUyMXptLTggMS40NTVoNHYyLjY0MUg2em00LTguMTA5djIuNzM0SDUuODQ0cy0uNzQ5LjY0Ny0uODc1LjY0MWMtLjEzMS0uMDA3LTEuNTEtMS40NTYtMS41MS0xLjQ1NkwyIDQuODE0VjIuMTk5bC4xMTcuMDZzLS4wNjQtLjc3NS40MjQtMS4yMTZMMS4yNzkuNDQxQS42MjYuNjI2IDAgMCAwIC4zNzUgMXYxMmMwIC4yMzcuMTM0LjQ1My4zNDYuNTU5bDQgMmEuNjI2LjYyNiAwIDAgMCAuMjc5LjA2Nmg2YS42MjYuNjI2IDAgMCAwIC4yNzktLjA2Nmw0LTJhLjYyNS42MjUgMCAwIDAgLjM0Ni0uNTU5VjFhLjYyNS42MjUgMCAwIDAtLjkwNC0uNTU5bC0zLjg2OSAxLjkzNEg3Ljg4OHMuMDg0LjYyNC0uMjE4IDEuMjV6Ii8+PHBhdGggZmlsbD0iI2ZlZmZmZSIgZD0iTTUgNi4yNWMtNC0zLjUtMi02IDAtNnM0IDIuNSAwIDZ6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/grid_snap.svg` (16x16) — GraphEdit's `snapping_toggle` (`default_theme.cpp:1284`). */
+const GRAPH_EDIT_SNAPPING_TOGGLE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZmlsbC1vcGFjaXR5PSIuNjUiIGQ9Ik0zIDB2M0gwdjJoM3Y0SDB2MmgzdjNoMlY1aDlWM2gtM1YwSDl2M0g1VjB6bTQgMTN2Mmgydi0yem02IDB2Mmgydi0yeiIvPjxwYXRoIGZpbGw9IiNmZWZmZmUiIGQ9Ik03IDExdjJoMnYtMmEyIDIgMCAwIDEgNCAwdjJoMnYtMmE0IDQgMCAwIDAtOCAweiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/grid_layout.svg` (16x16) — GraphEdit's `layout`, `arrange_button`'s icon (`default_theme.cpp:1285`). */
+const GRAPH_EDIT_LAYOUT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGcgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxLjMiPjxwYXRoIHN0cm9rZT0iI2ZlZmZmZSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTEuODcgNi41NDFoMi45MTd2Mi45MTdIMS44N3ptNC42NjYgMGgyLjkxN3YyLjkxN0g2LjUzNnptNC42NjYgMGgyLjkxN3YyLjkxN2gtMi45MTd6Ii8+PHBhdGggc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIGQ9Im01LjQzMiAxLjExMi0xLjk1IDEuOTUgMS45NSAxLjk1bS0xLjk1LTEuOTVoOS4zODZtLTIuMTM3IDguMDUgMS45NSAxLjk1LTEuOTUgMS45NW0tNy40MzctMS45NWg5LjM4NyIvPjwvZz48L3N2Zz4K';
+
+/** `scene/theme/icons/resizer_nw.svg` (16x16) — GraphEditMinimap's `resizer` (`default_theme.cpp:1349`). */
+const GRAPH_EDIT_MINIMAP_RESIZER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmVmZmZlIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTFWNGg3Ii8+PGNpcmNsZSBjeD0iNy41IiBjeT0iNy41IiByPSIxLjUiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1Ii8+PC9zdmc+Cg==';
+
+/** GraphEdit's seven toolbar icons, keyed by its own theme keys — `default_theme.cpp:1279-1285`. */
+export interface GraphEditIcons {
+  zoomOut: string;
+  zoomIn: string;
+  zoomReset: string;
+  gridToggle: string;
+  minimapToggle: string;
+  snappingToggle: string;
+  layout: string;
+}
+
+export const GRAPH_EDIT_ICONS: GraphEditIcons = {
+  zoomOut: svgDataUrl(GRAPH_EDIT_ZOOM_OUT_B64),
+  zoomIn: svgDataUrl(GRAPH_EDIT_ZOOM_IN_B64),
+  zoomReset: svgDataUrl(GRAPH_EDIT_ZOOM_RESET_B64),
+  gridToggle: svgDataUrl(GRAPH_EDIT_GRID_TOGGLE_B64),
+  minimapToggle: svgDataUrl(GRAPH_EDIT_MINIMAP_TOGGLE_B64),
+  snappingToggle: svgDataUrl(GRAPH_EDIT_SNAPPING_TOGGLE_B64),
+  layout: svgDataUrl(GRAPH_EDIT_LAYOUT_B64),
+};
+
+/** GraphEditMinimap's own single icon — `default_theme.cpp:1349`. */
+export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = svgDataUrl(GRAPH_EDIT_MINIMAP_RESIZER_B64);
+
+/** Every GraphEdit/GraphEditMinimap icon above shares this authored size — 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+export const GRAPH_EDIT_ICON_SIZE = 16;

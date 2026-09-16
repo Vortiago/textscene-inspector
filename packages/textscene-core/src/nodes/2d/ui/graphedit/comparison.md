@@ -4,7 +4,7 @@ category: 2D
 status: unreviewed
 fixture: unit-graph-edit.tscn
 # image: unit-graph-edit
-renders_as: a background panel and grid, with GraphElement children placed by position_offset
+renders_as: a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset
 ---
 
 # GraphEdit
@@ -17,6 +17,26 @@ resolvable `connections` entry as a curved, tinted ribbon (`connection_lines_cur
 `get_output_port_position`/`get_input_port_position`), and places every GraphElement
 child (`GraphNode`/`GraphFrame`) at `position_offset * zoom - scroll_offset`, matching
 `GraphEdit::_update_scroll_offset`.
+
+It also draws the three pieces of chrome GraphEdit's own C++ CONSTRUCTOR builds, which
+are therefore present in every GraphEdit whatever the scene file says:
+
+- The **toolbar** at `(10, 10)` — a `PanelContainer` sized to its own minimum around an
+  `HBoxContainer` of up to nine widgets: the zoom label (`round(zoom * 100)%`), three
+  zoom buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the
+  minimap toggle and the arrange button. `show_menu` hides the panel itself;
+  `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`, `show_minimap_button` and
+  `show_arrange_button` hide widgets inside it, which re-flows the row and re-sizes the
+  panel. `show_grid`, `snapping_enabled` and `minimap_enabled` each press their own
+  toggle, and `snapping_distance` is the SpinBox's displayed value.
+- The two **scrollbars**, anchored to the bottom and right edges. `_update_scrollbars`
+  grows the scroll range past the page in every GraphEdit with a non-zero rect, so both
+  are always visible; each grabber's size and offset come from that range and
+  `scroll_offset`.
+- The **minimap**, anchored bottom-right and inset 12px, at `minimap_size` (floored at
+  50 per axis) and `minimap_opacity`, drawn only while `minimap_enabled`. Inside it: the
+  panel, one rect per visible GraphFrame then GraphNode in its own panel colour, and the
+  camera viewport rect, all letterboxed into the graph's own bounding box.
 
 ## Linting
 
@@ -61,19 +81,33 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `valid-graphedit-zoom-limits` | `graphedit-zoom-min-above-max` | error |
 <!-- lint:end -->
 
-The lenient parser reads the eight members drawing needs — `scroll_offset`, `zoom`,
-`show_grid`, `grid_pattern`, `snapping_distance`, `connection_lines_curvature`,
-`connection_lines_thickness`, `connections` — the same way the strict one does. The
-other seventeen GraphEdit members (`type_names`, `connection_lines_antialiased`, the
-zoom-bound/minimap/toolbar family) have no picture to draw (below), so the lenient
-tree carries none of them; a malformed one reaches the tree as nothing at all, same
-as before.
+The lenient parser reads the eighteen members drawing needs — `scroll_offset`, `zoom`,
+`show_grid`, `grid_pattern`, `snapping_distance`, `snapping_enabled`,
+`connection_lines_curvature`, `connection_lines_thickness`, `connections`, the three
+`minimap_*` members and the six `show_*` flags — the same way the strict one does. The
+remaining seven (`type_names`, `connection_lines_antialiased`, `panning_scheme`,
+`right_disconnects`, `zoom_min`, `zoom_max`, `zoom_step`) have no picture to draw
+(below), so the lenient tree carries none of them; a malformed one reaches the tree as
+nothing at all.
 
 ## Known limitations
 
-- **Not drawn** The toolbar (zoom controls, minimap, arrange button) is built from
-  internal children at a hardcoded runtime position with no scene-authored geometry
-  or content — only its six `show_*` visibility bools are real properties.
+- **Not drawn** The minimap's connection polylines (`graph_edit.cpp:1869-1881`). They
+  are `draw_polyline_colors` at width 0.5 with a per-point colour lerp, whose own
+  antialiasing variant `connection_lines_antialiased` selects — the property's only
+  reader anywhere in the engine. Every other part of the minimap is drawn.
+- **Not drawn** The zoom buttons' `disabled` state (`graph_edit.cpp:2445-2446`). It
+  compares `zoom` against `zoom_min`/`zoom_max` AFTER `set_zoom`'s own CLAMP, and that
+  clamp sees whichever bound the file had applied by the time `zoom` was set — a
+  property ORDER this previewer's property bag does not carry. Visible only in a scene
+  that parks `zoom` exactly on a bound; both buttons always draw enabled here.
+- **Diverges** `scroll_offset` on load. `set_scroll_offset` clamps against
+  `min_scroll_offset`/`max_scroll_offset` (`graph_edit.cpp:407`), which are both still
+  `(0, 0)` while a scene's properties are applied, so `CLAMP(x, 0, -size)` sends any
+  non-negative authored offset to `-size` — moving the grid, every child and the
+  minimap camera. Reproducing it needs the file's own property order, since the clamp
+  reads the size the earlier `offset_*` keys produced. This previewer applies the
+  authored value unclamped.
 - **Approximated** A GraphElement child's `position` scales correctly with `zoom`,
   but its own drawn pixels do not — the previewer has no way to apply a
   container-imposed scale to a child's chrome. Exact at `zoom = 1`; a child renders
@@ -85,4 +119,8 @@ as before.
   and below every GraphFrame/GraphNode (`graph_edit.cpp:717`), so a connection paints
   over the grid but under every node/frame. This painter draws its connections at its
   own `renderOrder`, same as the grid, so they sit behind every GraphElement child —
-  invisible unless a node overlaps a line.
+  invisible unless a node overlaps a line. The toolbar, scrollbars and minimap do paint
+  above the whole subtree, matching `top_layer`'s own `INTERNAL_MODE_BACK`.
+- **Approximated** Every toolbar button draws its icon, its pressed box and (for the
+  SpinBox) its field and arrows, but no hover, focus or disabled state — the same
+  static-frame restriction every other Control painter here carries.

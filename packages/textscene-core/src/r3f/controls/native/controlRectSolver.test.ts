@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseControl } from '../../../nodes/2d/ui/control/parser';
 import type { Rect2 } from './rect';
-import type { SolveNode } from './solveTree';
+import type { SkippedAncestors, SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
@@ -366,6 +366,110 @@ describe('solveControlTree — nested free Controls resolve against their parent
   });
 });
 
+describe('solveControlTree — a promoted Control anchors against its DIRECT parent CanvasItem', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+
+  // `Control::get_parent_anchorable_rect` (control.cpp:685-711) reads
+  // `data.parent_canvas_item`, and `CanvasItem::get_parent_item()` casts only
+  // the DIRECT parent (canvas_item.cpp:565-571). `Control` alone overrides
+  // `get_anchorable_rect` (control.cpp:1563-1566); `CanvasItem`'s own answer is
+  // `Rect2(0, 0, 0, 0)` (canvas_item.h:414). So a Control whose direct parent is
+  // a Node2D — the `skippedAncestors` case — anchors against nothing at all.
+  const NODE2D_PARENT: SkippedAncestors = {
+    transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+    visible: true,
+    modulate: { r: 1, g: 1, b: 1, a: 1 },
+  };
+
+  function promoted(path: string, properties: Props, children: SolveNode[] = []): SolveNode {
+    return { ...node(path, 'Control', properties, children), skippedAncestors: NODE2D_PARENT };
+  }
+
+  it('anchors against a ZERO rect rather than the Control it was promoted to', () => {
+    const anchored = promoted('Root/Panel/Holder/Anchored', {
+      anchorLeft: 0.5,
+      anchorTop: 0.5,
+      anchorRight: 0.5,
+      anchorBottom: 0.5,
+      offsetLeft: 0,
+      offsetTop: 0,
+      offsetRight: 160,
+      offsetBottom: 80,
+    });
+    const panel = node(
+      'Root/Panel',
+      'Control',
+      { offsetLeft: 200, offsetTop: 100, offsetRight: 600, offsetBottom: 400 },
+      [anchored]
+    );
+    const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [panel]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root/Panel')?.rect).toEqual({ x: 200, y: 100, w: 400, h: 300 });
+    // Every edge is `offset + anchor * 0` (control.cpp:1760-1771 against a zero
+    // area), so the box lands at the Node2D's own origin at its offset size.
+    expect(solved.get('Root/Panel/Holder/Anchored')?.rect).toEqual({ x: 0, y: 0, w: 160, h: 80 });
+  });
+
+  it("leaves a promoted Control's OWN children anchoring against ITS rect — the zero applies one level only", () => {
+    // The grandchild's direct parent IS a Control, so `get_anchorable_rect`
+    // answers `Rect2(Point2(), get_size())` (control.cpp:1563-1566) again.
+    const grandchild = node('Root/Holder/Promoted/Child', 'Control', {
+      anchorLeft: 1,
+      anchorTop: 1,
+      anchorRight: 1,
+      anchorBottom: 1,
+      offsetLeft: -40,
+      offsetTop: -20,
+      offsetRight: 0,
+      offsetBottom: 0,
+    });
+    const promotedNode = promoted(
+      'Root/Holder/Promoted',
+      { offsetLeft: 0, offsetTop: 0, offsetRight: 160, offsetBottom: 80 },
+      [grandchild]
+    );
+    const root = node('Root', 'Control', { layoutMode: 3, anchorsPreset: 15 }, [promotedNode]);
+
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Root/Holder/Promoted')?.rect).toEqual({ x: 0, y: 0, w: 160, h: 80 });
+    expect(solved.get('Root/Holder/Promoted/Child')?.rect).toEqual({ x: 120, y: 60, w: 40, h: 20 });
+  });
+
+  it('hides it from the registered MinimumSizeFn and ContainerLayoutFn of the Control above it', () => {
+    // Every container's floor and arrangement pass walks `get_child(i)`
+    // (`box_container.cpp:58`, `tab_container.cpp:469-481`), so neither fn may
+    // see a node the walker promoted into `children` from a level below.
+    const TYPE = 'TestSolverPromotionAwareContainer';
+    const seenByMinimumSize: string[][] = [];
+    const seenByLayout: string[][] = [];
+    controlSolverRegistry.registerMinimumSize(TYPE, (n) => {
+      seenByMinimumSize.push(n.children.map((c) => c.path));
+      return { x: 0, y: 0 };
+    });
+    controlSolverRegistry.registerContainerLayout(TYPE, (n, entries) => {
+      seenByLayout.push(n.children.map((c) => c.path));
+      const out = new Map<string, Rect2>();
+      for (const e of entries) out.set(e.node.path, { x: 0, y: 0, w: 10, h: 10 });
+      return out;
+    });
+
+    const box = node('Box', TYPE, { layoutMode: 3, anchorsPreset: 15 }, [
+      node('Box/Direct', 'Control', {}),
+      promoted('Box/Holder/Promoted', {}),
+    ]);
+
+    solveControlTree([box], VIEWPORT, ctx());
+    expect(seenByMinimumSize.every((seen) => seen.every((p) => p !== 'Box/Holder/Promoted'))).toBe(true);
+    expect(seenByLayout.every((seen) => seen.every((p) => p !== 'Box/Holder/Promoted'))).toBe(true);
+    expect(seenByMinimumSize[0]).toEqual(['Box/Direct']);
+    expect(seenByLayout[0]).toEqual(['Box/Direct']);
+  });
+});
+
 describe('solveControlTree — unregistered types are leaves with minimum size (0, 0)', () => {
   it('combinedMinimumSize is (0,0) for a type with no registration and no custom_minimum_size', () => {
     const n = node('Leaf', 'ThisTypeIsNotRegistered', {});
@@ -512,7 +616,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
   });
 
   it('takes the VIEWPORT rect, not its parent Control\'s, and sits at the viewport origin', () => {
-    // `Control::get_parent_anchorable_rect` (`control.cpp:685-699`) falls back
+    // `Control::get_parent_anchorable_rect` (`control.cpp:685-711`) falls back
     // to `get_viewport()->get_visible_rect()` when `data.parent_canvas_item` is
     // null, and a CanvasLayer — a `Node`, not a `CanvasItem` — is exactly that
     // null. So a full-screen HUD under an offset 200x100 Panel covers the

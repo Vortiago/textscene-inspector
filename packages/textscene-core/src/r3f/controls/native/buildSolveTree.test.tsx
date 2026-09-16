@@ -583,7 +583,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // `CanvasItem::get_parent_item()` casts only the DIRECT parent
     // (scene/main/canvas_item.cpp:565-571); a plain `Node` parent fails that
     // cast, so the RenderingServer parents past it at the canvas root, never
-    // at the Node2D further up (`_enter_canvas`, canvas_item.cpp:234-278).
+    // at the Node2D further up (`_enter_canvas`, canvas_item.cpp:234-285).
     const nodes = [
       node2D('N', { rotation: Math.PI / 2 }, {
         children: [node('Group', 'Node', { children: [label('L')] })],
@@ -596,7 +596,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   it('a CanvasLayer under a rotated Node2D gets no ancestor transform, and neither do ITS children', async () => {
     // CanvasLayer is not a CanvasItem (it derives from Node), so it never
     // enters the chain `get_parent_item()` climbs at all — its own canvas is
-    // entirely independent of scene-tree ancestry (canvas_item.cpp:246-266
+    // entirely independent of scene-tree ancestry (canvas_item.cpp:263-267
     // parents a CanvasLayer's children at `canvas_layer->get_canvas()`).
     const nodes = [
       node2D('N', { rotation: Math.PI / 2 }, {
@@ -690,6 +690,94 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
     const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+  });
+});
+
+describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becomes a canvas root', () => {
+  // `NOTIFICATION_ENTER_CANVAS` climbs CanvasItem parents looking for a Control
+  // (control.cpp:3874-3890); a non-CanvasItem link ends the climb with
+  // `has_parent_control == false` and the Control registers as a viewport ROOT
+  // control. `_enter_canvas` (canvas_item.cpp:234-285) parents its canvas item
+  // at the enclosing CanvasLayer's canvas, or the viewport's own, rather than at
+  // any ancestor item — so no ancestor transform, modulate or z reaches it, and
+  // it anchors against the viewport. Being a root of THIS forest is that state.
+
+  it('surfaces a Control separated from its ancestor Control by a plain `Node` as a second root', () => {
+    const nodes = [
+      control('Root', { anchors_preset: 15 }),
+    ];
+    (nodes[0] as TscnNode).children = [node('Holder', 'Node', { children: [label('Promoted')] })];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Holder/Promoted']);
+    expect(result.current.tree[0]!.children).toHaveLength(0);
+  });
+
+  it('stops the hoist at the enclosing CanvasLayer, whose canvas the item actually parents to', () => {
+    // `_enter_canvas` climbs plain `Node` parents for a CanvasLayer before
+    // falling back to the viewport's World2D canvas (canvas_item.cpp:251-267).
+    const promoted = node('Holder', 'Node', { children: [label('Promoted')] });
+    const panel = control('Panel');
+    (panel as TscnNode).children = [promoted];
+    const layer = node('Layer', 'CanvasLayer', { children: [panel] });
+    const root = control('Root', { anchors_preset: 15 });
+    (root as TscnNode).children = [layer];
+
+    const { result } = renderHook(() => useBuildSolveTree([root], [], []));
+    expect(result.current.tree.map((n) => n.path)).toEqual(['Root']);
+    const solvedLayer = result.current.tree[0]!.children[0]!;
+    expect(solvedLayer.node.type).toBe('CanvasLayer');
+    expect(solvedLayer.children.map((n) => n.path)).toEqual([
+      'Root/Layer/Panel',
+      'Root/Layer/Panel/Holder/Promoted',
+    ]);
+    expect(solvedLayer.children[0]!.children).toHaveLength(0);
+  });
+
+  it('keeps the Node2D chain BELOW the break, which is a canvas root of its own', () => {
+    const anchor = node2D('Anchor', { position: { x: 30, y: 40 } }, { children: [label('Promoted')] });
+    const root = control('Root', { anchors_preset: 15 });
+    (root as TscnNode).children = [node('Holder', 'Node', { children: [anchor] })];
+
+    const { result } = renderHook(() => useBuildSolveTree([root], [], []));
+    expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Holder/Anchor/Promoted']);
+    expect(result.current.tree[1]!.skippedAncestors!.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 30, ty: 40 });
+  });
+
+  it('still carries the eye toggle of every ancestor it was hoisted past', () => {
+    // The toggle is the OUTLINER's subtree, not Godot's canvas parenting: a
+    // hoisted node leaves the ancestor's emitted group, so the flag has to
+    // travel on the node instead. (The ancestor's own `visible = false` does
+    // NOT — `_handle_visibility_change` casts direct children only,
+    // canvas_item.cpp:92-111 — which is exactly what the hoist expresses.)
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+
+[node name="Panel" type="Control" parent="."]
+
+[node name="Holder" type="Node" parent="Panel"]
+
+[node name="Promoted" type="ColorRect" parent="Panel/Holder"]
+`);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      {
+        wrapper: ({ children }) => (
+          <ResourceLoaderProvider loader={loader.loader}>
+            <SelectionProvider>
+              <HiddenPathSeeder paths={['Root/Panel']} />
+              {children}
+            </SelectionProvider>
+          </ResourceLoaderProvider>
+        ),
+      }
+    );
+    const hoisted = result.current.tree[1]!;
+    expect(hoisted.path).toBe('Root/Panel/Holder/Promoted');
+    expect(hoisted.hidden).toBe(true);
   });
 });
 
@@ -795,11 +883,10 @@ describe('useBuildSolveTree — theme resolution', () => {
       wrapper: wrapperFor(loader.loader),
     });
 
-    // 'Bridge' (Node3D) contributes no SolveNode — its Control descendant
-    // promotes straight to 'Root's children — but the theme chain resets to
-    // empty at that point rather than being inherited through it.
-    const root = result.current.tree.find((n) => n.path === 'Root')!;
-    const leaf = root.children.find((c) => c.path === 'Root/Bridge/Leaf')!;
+    // 'Bridge' (Node3D) contributes no SolveNode, and it is not a CanvasItem
+    // either, so its Control descendant surfaces as a canvas root of its own —
+    // with the theme chain reset to empty rather than inherited through it.
+    const leaf = result.current.tree.find((n) => n.path === 'Root/Bridge/Leaf')!;
     expect(leaf.themeChain).toEqual([]);
   });
 

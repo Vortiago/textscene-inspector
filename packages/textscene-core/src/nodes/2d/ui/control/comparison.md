@@ -9,8 +9,9 @@ renders_as: a full-rect layout region
 
 # Control
 
-Control is the base UI node. It draws nothing of its own and gives its children the
-rect they anchor against.
+Control is the base UI node. It draws nothing of its own. A Control directly under it
+anchors against its rect. One separated from it by another node anchors against that
+node instead, or against the viewport where the node is not a canvas item.
 
 ## Linting
 

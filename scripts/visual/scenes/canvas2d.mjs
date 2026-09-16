@@ -375,6 +375,24 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-control-node2d-ancestor-modulate.tscn',
     mode: '2d',
   },
+  // The ONE variable: which rect a promoted Control anchors against, one scene
+  // per branch of `Control::get_parent_anchorable_rect`. Both are here because
+  // the two branches are chosen by the same threading and a fix aimed at one
+  // moves the other. The enclosing Panel is deliberately NOT full-rect, so
+  // anchoring against it rather than the branch's own answer lands the box
+  // somewhere else entirely. Measured against Godot 4.6.3 at `--mode 2d` before
+  // their baselines were written: mean 0.006 of 255 each, the box alone at the
+  // rasterizer's own 1/255 blend-rounding floor.
+  {
+    name: 'control-anchor-parent-node2d',
+    file: 'unit-control-anchor-parent-node2d.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-anchor-parent-plain-node',
+    file: 'unit-control-anchor-parent-plain-node.tscn',
+    mode: '2d',
+  },
   // The ONE variable: a second coverage threshold on the glyph field, drawn
   // both as an outline around the fill and as an offset pass behind it. Every
   // other text scene draws the fill alone, so a threshold that lands on the

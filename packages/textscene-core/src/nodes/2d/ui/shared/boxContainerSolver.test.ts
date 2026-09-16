@@ -328,6 +328,57 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     expect(solved.get('MyHBoxContainer/Oversized')?.rect).toEqual({ x: 552, y: 0, w: 600, h: 648 });
   });
 
+  it('never lays out a child promoted past a Node2D, nor counts it toward the container minimum', () => {
+    // `Container::as_sortable_control` casts the DIRECT child to Control
+    // (container.cpp:143-155) and `_resort`/`get_minimum_size` only ever hand it
+    // `get_child(i)` (box_container.cpp:58, :198). A Control the walker promoted
+    // past a Node2D is a grandchild in the real tree, so the Container never
+    // sees it: it keeps its own anchors against its Node2D parent's zero
+    // anchorable rect (canvas_item.h:414).
+    controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
+    controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
+
+    const promoted: SolveNode = {
+      ...solveNode('MyHBoxContainer/Holder/Promoted', 'Control', {
+        layoutMode: 2,
+        customMinimumSize: { x: 600, y: 0 },
+        sizeFlagsHorizontal: HORIZONTAL,
+        offsetLeft: 20,
+        offsetTop: 30,
+        offsetRight: 620,
+        offsetBottom: 90,
+      }),
+      skippedAncestors: {
+        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+        visible: true,
+        modulate: { r: 1, g: 1, b: 1, a: 1 },
+      },
+    };
+    const root = solveNode('MyHBoxContainer', 'HBoxContainer', {
+      layoutMode: 1,
+      anchorsPreset: 15,
+      anchorRight: 1,
+      anchorBottom: 1,
+      themeOverrideConstants: { separation: 11 },
+    }, [
+      solveNode('MyHBoxContainer/Direct', 'Control', {
+        layoutMode: 2,
+        customMinimumSize: { x: 100, y: 0 },
+        sizeFlagsHorizontal: HORIZONTAL,
+      }),
+      promoted,
+    ]);
+
+    const ctx = createSolveContext(nativeTheme(1));
+    const solved = solveControlTree([root], VIEWPORT, ctx);
+
+    // One sortable child, so no separation and no 600 in the minimum.
+    expect(solved.get('MyHBoxContainer')?.minSize).toEqual({ x: 100, y: 0 });
+    expect(solved.get('MyHBoxContainer/Direct')?.rect).toEqual({ x: 0, y: 0, w: 1152, h: 648 });
+    // Its own offsets against a zero parent rect, floored at its 600 minimum.
+    expect(solved.get('MyHBoxContainer/Holder/Promoted')?.rect).toEqual({ x: 20, y: 30, w: 600, h: 60 });
+  });
+
   it('a Label child keeps its own SHRINK_CENTER vertical default inside a registered VBoxContainer (rule 3)', () => {
     controlSolverRegistry.registerContainerLayout('VBoxContainer', makeBoxContainerLayout(true));
     controlSolverRegistry.registerMinimumSize('VBoxContainer', makeBoxContainerMinimumSize(true));

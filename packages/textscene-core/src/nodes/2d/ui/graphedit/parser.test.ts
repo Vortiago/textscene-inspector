@@ -33,6 +33,31 @@ describe('parseGraphEdit', () => {
     expect(p.connections).toEqual([{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }]);
   });
 
+  it('parses the minimap family and every toolbar visibility flag', () => {
+    const p = parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {
+      minimap_enabled: 'false',
+      minimap_size: 'Vector2(200, 120)',
+      minimap_opacity: '0.4',
+      show_menu: 'false',
+      show_zoom_label: 'true',
+      show_zoom_buttons: 'false',
+      show_grid_buttons: 'false',
+      show_minimap_button: 'false',
+      show_arrange_button: 'false',
+      snapping_enabled: 'false',
+    });
+    expect(p.minimapEnabled).toBe(false);
+    expect(p.minimapSize).toEqual({ x: 200, y: 120 });
+    expect(p.minimapOpacity).toBe(0.4);
+    expect(p.showMenu).toBe(false);
+    expect(p.showZoomLabel).toBe(true);
+    expect(p.showZoomButtons).toBe(false);
+    expect(p.showGridButtons).toBe(false);
+    expect(p.showMinimapButton).toBe(false);
+    expect(p.showArrangeButton).toBe(false);
+    expect(p.snappingEnabled).toBe(false);
+  });
+
   it('leaves every member undefined (connections empty) when absent', () => {
     const p = parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {});
     expect(p.scrollOffset).toBeUndefined();
@@ -43,5 +68,15 @@ describe('parseGraphEdit', () => {
     expect(p.connectionLinesCurvature).toBeUndefined();
     expect(p.connectionLinesThickness).toBeUndefined();
     expect(p.connections).toEqual([]);
+    expect(p.minimapEnabled).toBeUndefined();
+    expect(p.minimapSize).toBeUndefined();
+    expect(p.minimapOpacity).toBeUndefined();
+    expect(p.showMenu).toBeUndefined();
+    expect(p.showZoomLabel).toBeUndefined();
+    expect(p.showZoomButtons).toBeUndefined();
+    expect(p.showGridButtons).toBeUndefined();
+    expect(p.showMinimapButton).toBeUndefined();
+    expect(p.showArrangeButton).toBeUndefined();
+    expect(p.snappingEnabled).toBeUndefined();
   });
 });

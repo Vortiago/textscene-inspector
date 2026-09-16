@@ -17,6 +17,9 @@ import {
   COLOR_PICKER_CURSOR_BG_ICON,
   MINI_CHECKERBOARD_SIZE,
   COLOR_PICKER_CURSOR_SIZE,
+  GRAPH_EDIT_ICONS,
+  GRAPH_EDIT_ICON_SIZE,
+  GRAPH_EDIT_MINIMAP_RESIZER_ICON,
 } from './themeIcons';
 
 const DATA_URL_PREFIX = 'data:image/svg+xml;base64,';
@@ -260,6 +263,33 @@ describe('ColorPicker/ColorPickerButton icons', () => {
       COLOR_PICKER_CURSOR_ICON,
       COLOR_PICKER_CURSOR_BG_ICON,
     ];
+    expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('GraphEdit/GraphEditMinimap icons', () => {
+  // scene/theme/default_theme.cpp:1279-1285 — GraphEdit registers exactly these
+  // seven toolbar icon keys; :1349 registers the minimap's own resizer.
+  const ids = ['zoomOut', 'zoomIn', 'zoomReset', 'gridToggle', 'minimapToggle', 'snappingToggle', 'layout'] as const;
+
+  it.each(ids)('%s is 16x16 — every GraphEdit toolbar icon shares that authored size', (id) => {
+    const svg = decodeSvg(GRAPH_EDIT_ICONS[id]);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(GRAPH_EDIT_ICON_SIZE);
+    expect(height).toBe(GRAPH_EDIT_ICON_SIZE);
+  });
+
+  it('GRAPH_EDIT_MINIMAP_RESIZER_ICON is 16x16 — default_theme.cpp:1349 (resizer_nw)', () => {
+    const svg = decodeSvg(GRAPH_EDIT_MINIMAP_RESIZER_ICON);
+    expect(svg).toContain('<svg');
+    const { width, height } = svgSize(svg);
+    expect(width).toBe(GRAPH_EDIT_ICON_SIZE);
+    expect(height).toBe(GRAPH_EDIT_ICON_SIZE);
+  });
+
+  it('all eight are pairwise distinct data: URLs', () => {
+    const values = [...ids.map((id) => GRAPH_EDIT_ICONS[id]), GRAPH_EDIT_MINIMAP_RESIZER_ICON];
     expect(new Set(values).size).toBe(values.length);
   });
 });

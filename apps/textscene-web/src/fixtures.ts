@@ -518,6 +518,51 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Arrange Button Hidden",
+    "file": "unit-graph-edit-arrange-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Grid Buttons Hidden",
+    "file": "unit-graph-edit-grid-buttons-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Menu Hidden",
+    "file": "unit-graph-edit-menu-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Button Hidden",
+    "file": "unit-graph-edit-minimap-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Disabled",
+    "file": "unit-graph-edit-minimap-disabled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Opacity",
+    "file": "unit-graph-edit-minimap-opacity.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Size",
+    "file": "unit-graph-edit-minimap-size.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Buttons Hidden",
+    "file": "unit-graph-edit-zoom-buttons-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Label",
+    "file": "unit-graph-edit-zoom-label.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit",
     "file": "unit-graph-edit.tscn",
     "category": "Other"
@@ -2003,6 +2048,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Anchor Parent Node2d",
+    "file": "unit-control-anchor-parent-node2d.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchor Parent Plain Node",
+    "file": "unit-control-anchor-parent-plain-node.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Anchors Preset Gate",
     "file": "unit-control-anchors-preset-gate.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2020,6 +2075,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Containers",
     "file": "unit-control-containers.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Detached Paint Order",
+    "file": "unit-control-detached-paint-order.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

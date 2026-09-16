@@ -1,0 +1,32 @@
+; The ONE variable: which rect a Control anchors against when the CanvasItem
+; chain BREAKS at its direct parent. A plain `Node` fails `get_parent_item()`'s
+; cast, so `data.parent_canvas_item` is null and `get_parent_anchorable_rect`
+; falls through to the viewport's own visible rect (control.cpp:685-711) —
+; the Control escapes the enclosing Panel and anchors to the screen. The
+; sibling fixture moves the same variable to a Node2D link, where the fallback
+; is the zero rect instead.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrlanchorplain"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 200.0
+offset_top = 100.0
+offset_right = 600.0
+offset_bottom = 400.0
+color = Color(0.15, 0.15, 0.2, 1)
+
+[node name="Holder" type="Node" parent="Panel"]
+
+[node name="Anchored" type="ColorRect" parent="Panel/Holder"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -80.0
+color = Color(0.2, 0.7, 0.9, 1)

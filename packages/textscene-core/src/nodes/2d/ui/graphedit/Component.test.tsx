@@ -26,7 +26,9 @@ function graphEdit(properties: Partial<GraphEditProperties> = {}, children: Solv
     name: 'G',
     type: 'GraphEdit',
     children: [],
-    properties: { name: 'G', connections: [], ...properties } as GraphEditProperties,
+    // Chrome off unless a test asks for it: the toolbar and the minimap draw
+    // meshes of their own, and every assertion below counts meshes globally.
+    properties: { name: 'G', connections: [], showMenu: false, minimapEnabled: false, ...properties } as GraphEditProperties,
   };
   return { ...emptySolveNode(), path: 'G', node, children };
 }
@@ -71,6 +73,14 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
   };
 }
 
+/**
+ * The four meshes GraphEdit's own two scrollbars always add — a track and a
+ * grabber each. `_update_scrollbars` grows the range past the page in every
+ * GraphEdit with a non-zero rect (`graph_edit.cpp:491-492`), so no property
+ * and no fixture can take them away.
+ */
+const SCROLL_BAR_MESHES = 4;
+
 function chromeMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -87,11 +97,11 @@ function quadMeshes(scene: Rendered['scene']) {
 }
 
 describe('<GraphEdit> (isolated painter contract)', () => {
-  it('draws one chrome mesh — the background panel', async () => {
+  it('draws one chrome mesh of its own — the background panel — beside the two scrollbars', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphEdit {...painterEnv()} solveNode={graphEdit({ showGrid: false })} rect={RECT} renderOrder={0} />
     );
-    expect(chromeMeshes(renderer.scene)).toHaveLength(1);
+    expect(chromeMeshes(renderer.scene)).toHaveLength(1 + SCROLL_BAR_MESHES);
   });
 
   it('draws grid line quads at the default LINES pattern (show_grid defaults true)', async () => {
@@ -137,7 +147,7 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
         renderOrder={0}
       />
     );
-    expect(chromeMeshes(renderer.scene)).toHaveLength(2);
+    expect(chromeMeshes(renderer.scene)).toHaveLength(2 + SCROLL_BAR_MESHES);
   });
 
   it('draws nothing extra when an endpoint node is missing', async () => {
@@ -151,7 +161,7 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
         renderOrder={0}
       />
     );
-    expect(chromeMeshes(renderer.scene)).toHaveLength(1);
+    expect(chromeMeshes(renderer.scene)).toHaveLength(1 + SCROLL_BAR_MESHES);
   });
 
   it('draws nothing extra when the port index is out of range', async () => {
@@ -165,6 +175,77 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
         renderOrder={0}
       />
     );
-    expect(chromeMeshes(renderer.scene)).toHaveLength(1);
+    expect(chromeMeshes(renderer.scene)).toHaveLength(1 + SCROLL_BAR_MESHES);
+  });
+});
+
+describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
+  const node = graphNode('N', new Map(), [leafControl('Row', 20)]);
+  const childRects: ReadonlyMap<string, Rect2> = new Map([['N', { x: 0, y: 0, w: 120, h: 80 }]]);
+
+  function render(properties: Partial<GraphEditProperties>) {
+    return ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={graphEdit({ showGrid: false, ...properties }, [node])}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+  }
+
+  // Chrome draws strictly past `subtreeChromeRenderOrder` — top_layer is
+  // INTERNAL_MODE_BACK (graph_edit.cpp:3183) — and within that band in
+  // top_layer's own child order: scrollbars, toolbar, minimap.
+  const TOOLBAR_BAND = 9.4;
+  const MINIMAP_BAND = 9.7;
+
+  function band(renderer: Rendered, from: number, to = Infinity) {
+    return chromeMeshes(renderer.scene).filter((m) => m.renderOrder > from && m.renderOrder < to);
+  }
+
+  it('always draws both scrollbars, track and grabber, below the toolbar band (graph_edit.cpp:491-492)', async () => {
+    expect(band(await render({ showMenu: false, minimapEnabled: false }), 9, TOOLBAR_BAND)).toHaveLength(SCROLL_BAR_MESHES);
+  });
+
+  it('draws the toolbar panel, each pressed toggle and the spinbox field above the whole subtree', async () => {
+    // show_grid false unpresses toggle_grid (:2735) and minimap_enabled false
+    // unpresses the minimap button (:2802), leaving toggle_snapping pressed.
+    expect(band(await render({ showMenu: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(3);
+  });
+
+  it('presses toggle_grid as well once show_grid is on (graph_edit.cpp:2729-2737)', async () => {
+    expect(band(await render({ showMenu: true, showGrid: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(4);
+  });
+
+  it('draws no toolbar at all when show_menu is false (graph_edit.cpp:2812-2815)', async () => {
+    expect(band(await render({ showMenu: false }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(0);
+  });
+
+  it('drops both grid toggles AND the spinbox together when show_grid_buttons is false (:2842-2848)', async () => {
+    // Only the panel is left: every remaining button is an unpressed FlatButton,
+    // whose normal stylebox is empty (default_theme.cpp:360,367).
+    expect(band(await render({ showMenu: true, showGridButtons: false }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(1);
+  });
+
+  it('draws the minimap panel, one node rect and the camera rect when enabled', async () => {
+    expect(band(await render({ minimapEnabled: true }), MINIMAP_BAND)).toHaveLength(3);
+  });
+
+  it('draws no minimap when minimap_enabled is false (graph_edit.cpp:1808-1810)', async () => {
+    expect(band(await render({ minimapEnabled: false }), MINIMAP_BAND)).toHaveLength(0);
+  });
+
+  it('places the minimap panel bottom-right, inset by MINIMAP_OFFSET (graph_edit.cpp:2773-2778)', async () => {
+    const renderer = await render({ minimapEnabled: true });
+    const panel = band(renderer, MINIMAP_BAND).reduce((lowest, m) => (m.renderOrder < lowest.renderOrder ? m : lowest));
+    renderer.scene.instance.updateMatrixWorld(true);
+    const world = new THREE.Vector3();
+    panel.getWorldPosition(world);
+    // 400 - 240 - 12 across, 320 - 160 - 12 down (negated for three's +Y up).
+    expect(world.x).toBeCloseTo(148, 5);
+    expect(world.y).toBeCloseTo(-148, 5);
   });
 });

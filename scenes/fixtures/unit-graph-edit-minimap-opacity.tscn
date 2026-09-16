@@ -1,0 +1,36 @@
+; GraphEdit's minimap at a NON-default opacity. `minimap_opacity` is the
+; minimap's own `modulate.a` (graph_edit.cpp:2786-2791), which multiplies
+; every draw inside it — panel, node rect, camera rect, resizer. A regression
+; that drops the modulate reads as correct at the default 0.65 in any scene
+; that does not move it, because the panel colour alone is plausible.
+; Every fixture in this family shares one GraphEdit rect and one GraphNode,
+; and `scroll_offset` is deliberately ABSENT from all of them: GraphEdit's own
+; `set_scroll_offset` clamps against min/max bounds that are still (0, 0) while
+; a scene's properties are applied (graph_edit.cpp:407), so an authored offset
+; moves the grid, the nodes AND the minimap camera at once and would mask the
+; one variable each file exists to move.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedminopacity"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+minimap_opacity = 0.25
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"

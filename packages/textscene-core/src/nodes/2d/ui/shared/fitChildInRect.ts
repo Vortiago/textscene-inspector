@@ -20,7 +20,7 @@
  */
 
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 
 /** `Control::SizeFlags` (`scene/gui/control.h:64-69`). */
@@ -90,7 +90,11 @@ export function fitChildInRect(
  *
  * `hidden` is the scene-tree eye toggle, which stands in for clearing `visible`
  * in the editor and so has to reach the same rule.
+ *
+ * A promoted child fails the cast itself rather than the visibility check: it
+ * is a grandchild in the real tree, so `get_child(i)` never yields it.
  */
 export function isSortableControl(node: SolveNode): boolean {
+  if (isPromotedControl(node)) return false;
   return !node.hidden && (node.node.properties as ControlProperties).visible !== false;
 }

@@ -17,7 +17,7 @@ import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/contro
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { graphNodeLayout, graphNodeMinimumSize } from './nativeSolver';
+import { graphNodeDrawRows, graphNodeLayout, graphNodeMinimumSize } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 
@@ -35,6 +35,18 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 
 function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return { ...leaf(name, props), hidden: true };
+}
+
+/** A Control the walker promoted past a Node2D — a grandchild, so no slot of its own. */
+function promotedLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
+  return {
+    ...leaf(name, props),
+    skippedAncestors: {
+      transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+      visible: true,
+      modulate: { r: 1, g: 1, b: 1, a: 1 },
+    },
+  };
 }
 
 function graphNode(
@@ -192,5 +204,27 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
       graphNodeLayout(n, [{ node: child, minSize: { x: 10, y: 10 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
     );
     expect(rects.get('c')).toEqual({ x: 23, y: 43, w: 154, h: 10 });
+  });
+});
+
+describe('graphNodeDrawRows — slot indices over `get_child(i)`', () => {
+  it('numbers a promoted Control out of the slot indices, matching the floor pass', () => {
+    // `GraphNode::_resort` and `get_minimum_size` index slots by the child walk
+    // (`graph_node.cpp:161-210`), which casts each `get_child(i)`
+    // (`container.cpp:143-155`). A promoted Control is a grandchild, so the
+    // sortable child after it keeps index 1 and its own slot.
+    const children = [leaf('A'), promotedLeaf('Holder/P'), leaf('B')];
+    const slots = new Map([[1, { ...defaultGraphNodeSlot(), rightEnabled: true }]]);
+    const n = graphNode('G', { slots }, children);
+    const childRects = new Map<string, Rect2>([
+      ['A', { x: 0, y: 0, w: 40, h: 10 }],
+      ['B', { x: 0, y: 20, w: 40, h: 10 }],
+    ]);
+
+    const rows = graphNodeDrawRows(n, n.node.properties as GraphNodeProperties, childRects, 0, 40);
+    const withPort = rows.filter((r) => r.slot.rightEnabled);
+    expect(withPort.map((r) => r.rawIndex)).toEqual([1]);
+    // `B`'s own centre, not `A`'s — index 1 must name `B`.
+    expect(withPort[0]!.slotY).toBe(25);
   });
 });

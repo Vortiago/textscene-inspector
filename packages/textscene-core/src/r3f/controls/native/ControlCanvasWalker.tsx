@@ -13,6 +13,11 @@
  * decomposed back to rotation/scale, since several composed ancestors can
  * shear even when none individually did.
  *
+ * A Control whose `CanvasItem` chain BROKE needs no branch here: `buildSolveTree`
+ * hoists it to the canvas it really parents to, so it arrives as a sibling of
+ * the ancestor rather than a descendant, and no ancestor group, modulate
+ * provider or `EffectiveZProvider` encloses it in the first place.
+ *
  * That emitted origin is SNAPPED to whole pixels (`controlPixelSnap.ts`, the
  * port of `Control::_update_canvas_item_transform`) while the solved rect it
  * comes from stays fractional — Godot rounds the canvas item, never

@@ -44,7 +44,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
@@ -64,12 +64,12 @@ export const TABS_POSITION_BOTTOM = 1;
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`. */
 const SIDE_MARGIN_LITERAL = 8;
 
-/** Every direct child is a tab page — `TabContainer::_get_tab_controls` (`:469-481`) uses `SortableVisibilityMode::IGNORE`, so a page whose own `visible` is `false` (every non-current page in an editor-saved `.tscn`) is still a page, just one the WALKER later hides. `top_level` is not modelled anywhere in this codebase's Control tree, so every child qualifies. */
+/** Every direct child is a tab page — `TabContainer::_get_tab_controls` (`:469-481`) uses `SortableVisibilityMode::IGNORE`, so a page whose own `visible` is `false` (every non-current page in an editor-saved `.tscn`) is still a page, just one the WALKER later hides. The cast still applies, so a Control the walker promoted past a Node2D is no page at all. `top_level` is not modelled anywhere in this codebase's Control tree, so every other child qualifies. */
 export function deriveTabContainerTabs(
   n: Pick<SolveNode, 'children'>,
   overrides: Readonly<Record<number, TabContainerTabOverride>> | undefined
 ): TabBarTabProperties[] {
-  return n.children.map((child, i) => {
+  return n.children.filter((child) => !isPromotedControl(child)).map((child, i) => {
     const override = overrides?.[i];
     return {
       title: override?.title ?? child.node.name,

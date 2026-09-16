@@ -249,26 +249,23 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   GraphEdit: {
     linterOnly: [
-      // Panning, snapping and the zoom bounds are all interactions; a scene
-      // holds the resulting scroll_offset and zoom, which the parser does read.
-      'panning_scheme', 'right_disconnects', 'snapping_enabled',
+      // Panning is an interaction; a scene holds the resulting scroll_offset
+      // and zoom, which the parser does read.
+      'panning_scheme', 'right_disconnects',
+      // The zoom bounds only disable a toolbar button, and only after
+      // `set_zoom`'s own CLAMP (graph_edit.cpp:2434,2445) has read whichever
+      // bound the file had applied by then — an order a property bag has no
+      // way to carry. `zoom_step` reaches nothing but the panner.
       'zoom_max', 'zoom_min', 'zoom_step',
       // Connection type names populate a tooltip.
       'type_names',
       // Its only reader is GraphEditMinimap's own polyline draw
-      // (graph_edit.cpp:1611) — the main canvas connection shader applies its
-      // own fixed pseudo-AA regardless, so this changes nothing this
-      // previewer draws, the (also unimplemented) minimap included.
+      // (graph_edit.cpp:1611); the main canvas connection shader applies its
+      // own fixed pseudo-AA regardless, and that polyline is the one part of
+      // the minimap this previewer does not draw.
       'connection_lines_antialiased',
     ],
-    renderGap: [
-      // The minimap and the toolbar buttons are real chrome, positioned by
-      // runtime code rather than by the scene.
-      'minimap_enabled', 'minimap_opacity', 'minimap_size', 'show_arrange_button',
-      'show_grid_buttons', 'show_menu', 'show_minimap_button', 'show_zoom_buttons',
-      'show_zoom_label',
-    ],
-    reason: 'Panning, snapping, the zoom bounds and connection antialiasing are interactions or otherwise inert here; the minimap and the toolbar are drawn by Godot and not by us yet.',
+    reason: 'Panning and the zoom bounds reach no frozen frame — the bounds only through a clamp whose input is the file\'s own property order; the type names are a tooltip, and connection antialiasing only reaches the minimap polyline.',
   },
 
   MenuBar: {

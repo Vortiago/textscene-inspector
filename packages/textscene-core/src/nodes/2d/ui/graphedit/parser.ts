@@ -20,6 +20,16 @@ export function parseGraphEdit(
   result.connectionLinesCurvature = parseOptionalFloat(properties.connection_lines_curvature);
   result.connectionLinesThickness = parseOptionalFloat(properties.connection_lines_thickness);
   result.connections = parseGraphEditConnections(properties.connections);
+  result.snappingEnabled = parseOptionalBool(properties.snapping_enabled);
+  result.minimapEnabled = parseOptionalBool(properties.minimap_enabled);
+  result.minimapSize = parseOptionalVector2(properties.minimap_size);
+  result.minimapOpacity = parseOptionalFloat(properties.minimap_opacity);
+  result.showMenu = parseOptionalBool(properties.show_menu);
+  result.showZoomLabel = parseOptionalBool(properties.show_zoom_label);
+  result.showZoomButtons = parseOptionalBool(properties.show_zoom_buttons);
+  result.showGridButtons = parseOptionalBool(properties.show_grid_buttons);
+  result.showMinimapButton = parseOptionalBool(properties.show_minimap_button);
+  result.showArrangeButton = parseOptionalBool(properties.show_arrange_button);
 
   return result;
 }

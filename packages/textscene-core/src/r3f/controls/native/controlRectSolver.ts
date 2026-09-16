@@ -3,7 +3,9 @@
  * `Control` layout math (`scene/gui/control.cpp`): Phase 1 walks the tree
  * bottom-up for combined minimum sizes, Phase 2 walks it top-down assigning
  * rects, free/anchored Controls resolving against their parent's rect (the
- * viewport for roots) and container children resolving through a registered
+ * viewport for roots, a zero rect for one promoted past a non-Control
+ * CanvasItem — `parentAnchorableRect`) and container children resolving through
+ * a registered
  * `ContainerLayoutFn` instead. No per-type solver is registered by this
  * module — an unregistered type is a leaf with minimum size `(0, 0)` and, as
  * a container, imposes no layout (its children fall back to the free/anchor
@@ -18,7 +20,7 @@
  */
 
 import type { Rect2, Vec2 } from './rect';
-import { controlLayoutOrder, controlProps, type SolveNode } from './solveTree';
+import { controlLayoutOrder, controlProps, isPromotedControl, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -132,7 +134,7 @@ function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, 
  *
  * Such a node is a `Node`, not a `CanvasItem`, so a Control beneath it has a
  * null `data.parent_canvas_item` and `Control::get_parent_anchorable_rect`
- * (`control.cpp:685-699`) answers with `get_viewport()->get_visible_rect()` —
+ * (`control.cpp:685-711`) answers with `get_viewport()->get_visible_rect()` —
  * the same null that resets modulate to white and the sampler to the root
  * default. A full-screen HUD under an offset 200x100 Panel therefore covers the
  * SCREEN, not the panel.
@@ -146,6 +148,26 @@ function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, 
  */
 function canvasBoundaryRect(originX: number, originY: number, viewport: Rect2): Rect2 {
   return { x: viewport.x - originX, y: viewport.y - originY, w: viewport.w, h: viewport.h };
+}
+
+/** `CanvasItem::get_anchorable_rect` (`canvas_item.h:414`) — only `Control` overrides it. */
+const NON_CONTROL_ANCHORABLE_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+
+/**
+ * `Control::get_parent_anchorable_rect` (`control.cpp:685-711`), which reads
+ * `data.parent_canvas_item` — `get_parent_item()`'s cast of the DIRECT parent
+ * (`canvas_item.cpp:565-571`), never a climbed ancestor.
+ *
+ * A node the walker promoted past a non-Control `CanvasItem` therefore anchors
+ * against `Rect2(0, 0, 0, 0)` and is placed by its offsets alone, not against
+ * the Control it was promoted to. The third case — no `CanvasItem` parent at
+ * all — needs no branch: such a node is a solve-tree root (or a canvas
+ * boundary's child), and `parentRect` is already the viewport there.
+ */
+function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
+  // `Control::get_anchorable_rect` is `Rect2(Point2(), get_size())`
+  // (`control.cpp:1563-1566`); the position never enters the anchor formula.
+  return n.skippedAncestors ? NON_CONTROL_ANCHORABLE_RECT : parentRect;
 }
 
 // --- Phase 1: combined minimum size ------------------------------------------
@@ -181,7 +203,7 @@ function normalizeContainerLayoutResult(
  */
 function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: Vec2; meta: unknown } {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
-  const raw = typeFn ? typeFn(n, ctx) : { x: 0, y: 0 };
+  const raw = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
   const { size: typeMin, meta } = normalizeMinimumSizeResult(raw);
   const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
   return { size: { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) }, meta };
@@ -348,7 +370,7 @@ function solveFree(
   } else {
     const layout = resolveNodeLayout(n, ctx, controlLayoutOrder(n));
     rect = floorAtMinimumSize(
-      computeAnchoredRect(layout.anchors, layout.offsets, parentRect),
+      computeAnchoredRect(layout.anchors, layout.offsets, parentAnchorableRect(n, parentRect)),
       minSize,
       layout.growHorizontal,
       layout.growVertical
@@ -387,7 +409,14 @@ function dispatchChildren(
     return;
   }
 
-  const childEntries = n.children.map((child) => ({
+  // A promoted child is not one of this Container's `get_child(i)`, so no
+  // arrangement pass ever reaches it (`isPromotedControl`) — it stays free and
+  // keeps its own anchors, against the zero rect `parentAnchorableRect` gives it.
+  for (const child of n.children.filter(isPromotedControl)) {
+    solveFree(child, rect, origin, viewport, ctx, out);
+  }
+
+  const childEntries = n.children.filter((child) => !isPromotedControl(child)).map((child) => ({
     node: child,
     minSize: ctx.combinedMinimumSize(child),
     meta: ctx.minimumSizeMeta?.(child),
@@ -395,7 +424,7 @@ function dispatchChildren(
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
   const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(
-    containerFn(n, childEntries, rect, ctx)
+    containerFn(sortableView(n), childEntries, rect, ctx)
   );
 
   // `n`'s own record already happened in the caller (`solveFree`, or this

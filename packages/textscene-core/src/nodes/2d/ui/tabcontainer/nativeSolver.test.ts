@@ -64,6 +64,20 @@ describe('deriveTabContainerTabs', () => {
     expect(tabs[2]).toMatchObject({ title: 'Locked', disabled: true, hidden: true });
   });
 
+  it('is not a tab when the walker promoted it past a Node2D — `_get_tab_controls` casts `get_child(i)` (tab_container.cpp:469-481)', () => {
+    const promoted: SolveNode = {
+      ...page('Promoted'),
+      path: 'Holder/Promoted',
+      skippedAncestors: {
+        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+        visible: true,
+        modulate: { r: 1, g: 1, b: 1, a: 1 },
+      },
+    };
+    const tabs = deriveTabContainerTabs({ children: [page('General'), promoted, page('Advanced')] }, undefined);
+    expect(tabs.map((t) => t.title)).toEqual(['General', 'Advanced']);
+  });
+
   it('returns an empty list for a childless TabContainer', () => {
     expect(deriveTabContainerTabs({ children: [] }, undefined)).toEqual([]);
   });

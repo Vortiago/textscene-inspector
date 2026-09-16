@@ -72,7 +72,15 @@ export interface SolveNode {
   path: string;
   /** The COLLAPSED live node (post instance-merge). */
   node: TscnNode;
-  /** From `liveChildGroups`; each child's own scope is already resolved. */
+  /**
+   * The Controls whose canvas item parents at THIS node's, from
+   * `liveChildGroups` with each child's own scope already resolved.
+   *
+   * Not always this node's scene children: a Control promoted past a Node2D
+   * appears here as the grandchild it is, and one whose `CanvasItem` chain
+   * broke does not appear at all — it is hoisted to the canvas it really
+   * parents to (`buildSolveTree.ts`'s module doc).
+   */
   children: readonly SolveNode[];
   /**
    * The run of canvas draw-sequence values this node's subtree owns
@@ -103,6 +111,11 @@ export interface SolveNode {
    * non-`CanvasItem` link (a plain `Node`, a `Node3D`, a `CanvasLayer`) BREAKS
    * the chain rather than being skipped over, so `null` past one of those too,
    * never the identity of everything below it.
+   *
+   * Non-null is also what tells the solver this node's `data.parent_canvas_item`
+   * is NOT a Control (`isPromotedControl`). The broken case needs no value of
+   * its own: such a node is hoisted to a canvas root, where the viewport rect
+   * is already the parent rect.
    */
   skippedAncestors: SkippedAncestors | null;
   /**
@@ -216,6 +229,39 @@ export interface SolveNode {
    * Required — see `fontOverrides`'s own doc for why.
    */
   resources: SceneScope;
+}
+
+/**
+ * Whether the walker promoted `n` past a non-Control `CanvasItem` — a Node2D
+ * between it and the Control it now hangs from.
+ *
+ * Such a node is a GRANDCHILD in the real scene tree, so the Control above it
+ * is not its `data.parent_canvas_item` (`canvas_item.cpp:565-571`) and the
+ * Container above it never reaches it: `Container::as_sortable_control` casts
+ * the DIRECT child (`container.cpp:143-155`), and every `_resort`/
+ * `get_minimum_size` hands it `get_child(i)` (`box_container.cpp:58`).
+ */
+export function isPromotedControl(n: SolveNode): boolean {
+  return n.skippedAncestors !== null;
+}
+
+/**
+ * `n` as anything walking `get_child(i)` must see it: `children` narrowed to
+ * the ones that walk would actually yield.
+ *
+ * A container's floor pass, its arrangement pass and its painter all read the
+ * same list in Godot (`container.cpp:143-155`, `box_container.cpp:58`,
+ * `tab_container.cpp:469-481`), so a promoted Control has to be invisible to
+ * every one of them — and to all three identically, or a type that indexes its
+ * children by position (`GraphNode`'s slots, `TabContainer`'s per-tab
+ * overrides) numbers them differently in each.
+ *
+ * Returns `n` itself when nothing is promoted, the overwhelmingly common tree,
+ * so no caller sees a fresh object per call.
+ */
+export function sortableView(n: SolveNode): SolveNode {
+  if (!n.children.some(isPromotedControl)) return n;
+  return { ...n, children: n.children.filter((child) => !isPromotedControl(child)) };
 }
 
 /**

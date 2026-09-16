@@ -11,26 +11,27 @@
  * holds focus, the same restriction every other Control painter in this
  * codebase carries.
  *
+ * CHROME. The two scrollbars (`scrollBars.ts`), the toolbar (`Toolbar.tsx`,
+ * geometry in `toolbar.ts`) and the minimap (`Minimap.tsx`, geometry in
+ * `minimap.ts`) are `INTERNAL_MODE_*` children of `top_layer`, itself
+ * `INTERNAL_MODE_BACK` (`graph_edit.cpp:3183`), so all three paint after
+ * every GraphElement child — off `subtreeChromeRenderOrder`, not this node's
+ * own slot, and among themselves in `top_layer`'s own child order
+ * (`:3210,3229,3329`): bars, toolbar, minimap. The scene describes none of
+ * their geometry, only which parts participate.
+ *
  * NOT DRAWN, and why:
  *
- *  - The toolbar (zoom controls, minimap, arrange button) — `menu_panel`/
- *    `menu_hbox`/`zoom_label`/every button/`minimap` are `INTERNAL_MODE_*`
- *    children the CONSTRUCTOR builds at a hardcoded runtime position
- *    (`Vector2(10, 10)`) and `PRESET_FULL_RECT` anchors (`graph_edit.cpp:3225-
- *    3169+`) — nothing about their geometry OR content (a generic zoom-
- *    percentage label, stock icons) is described by the scene file, only
- *    their six `show_*` visibility bools are. `type_names`, `zoom_min/max/
- *    step`, `panning_scheme`, `right_disconnects` are parsed by
- *    `linterParser.ts` (this renderer's parser only carries what drawing
- *    reads — `types.ts`'s own doc) but have no picture either.
+ *  - The minimap's connection polylines (`:1869-1881`) — `comparison.md`.
  *  - `connection_lines_antialiased`: `lines_antialiased`'s ONLY reader is
- *    `GraphEditMinimap`'s own simplified polyline draw
- *    (`graph_edit.cpp:1611`) — the main canvas connection shader applies its
- *    OWN fixed pseudo-AA feather unconditionally (`connectionStroke.ts`'s own
- *    doc), so this property has no effect on anything this previewer draws,
- *    the minimap included (already unimplemented toolbar chrome). Not a
- *    render gap — genuinely inert here, same as it is in Godot outside the
- *    minimap.
+ *    that polyline draw (`graph_edit.cpp:1611`); the main canvas connection
+ *    shader applies its OWN fixed pseudo-AA feather unconditionally
+ *    (`connectionStroke.ts`'s own doc), so nothing this previewer draws
+ *    reads the property.
+ *  - The zoom buttons' `disabled` state (`:2445-2446`), which compares `zoom`
+ *    against `zoom_min`/`zoom_max` AFTER `set_zoom`'s own CLAMP — and that
+ *    clamp reads whichever bound the FILE had applied by then, an order this
+ *    property bag does not carry. `comparison.md`.
  *  - `zoom`'s visual scale on a GraphElement's own drawn pixels:
  *    `ControlCanvasWalker.tsx`'s `isFreeParent` gate (`:210-216`) forces
  *    every child of a registered container to scale 1 — `nativeSolver.ts`'s
@@ -67,6 +68,17 @@ import type { ControlColor } from '../control/types';
 import { computeGridDots, computeGridLines, GRID_PATTERN_DOTS, GRID_PATTERN_LINES, type GridDot, type GridLine } from './grid';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 import { ConnectionLine } from './ConnectionLine';
+import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
+import { graphEditToolbar, zoomLabelText } from './toolbar';
+import { GraphEditToolbarChrome } from './ToolbarChrome';
+import { graphEditElements, isMinimapEnabled, minimapOpacity, minimapRect, minimapTransform } from './minimap';
+import { GraphEditMinimapChrome } from './MinimapChrome';
+import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
+import { snappedControlOrigin, type ControlDrawTransform } from '../../../../r3f/controls/native/controlPixelSnap';
 import type { GraphEditProperties } from './types';
 
 /** `default_theme.cpp:1287` — `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, an asymmetric bottom margin. */
@@ -105,6 +117,12 @@ function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlat
 const GRID_MINOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.05 };
 /** `default_theme.cpp:1294` — `Color(1, 1, 1, 0.2)`. */
 const GRID_MAJOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.2 };
+
+/** Every internal Label/LineEdit this painter draws reads Godot's plain "font" theme key, exactly as `Label`/`Button` themselves do. */
+const GRAPH_EDIT_THEME_FONT_KEY = 'font';
+
+/** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`) — `_update_text`'s own digit budget. */
+const SNAPPING_SPINBOX_STEP = 1;
 
 /** Thickness of one grid LINE, Godot px — `draw_line`'s own default width is a single hairline pixel. */
 const LINE_THICKNESS_PX = 1;
@@ -158,14 +176,49 @@ function GridDotQuad({
   );
 }
 
+/** Neither bar ever carries an authored rotation, scale or pivot — each is placed by `set_anchor_and_offset` alone (`graph_edit.cpp:844-851`). */
+const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = { rotation: 0, scale: { x: 1, y: 1 }, pivot: { x: 0, y: 0 } };
+
+/** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
+function ScrollBarChrome({
+  bar,
+  track,
+  grabber,
+  color,
+  renderOrder,
+  snapToPixels,
+}: {
+  bar: GraphEditScrollBar;
+  track: StyleBoxFlatData;
+  grabber: StyleBoxFlatData;
+  color: NativeControlComponentProps['tint']['own'];
+  renderOrder: number;
+  snapToPixels: boolean;
+}) {
+  if (!bar.visible) return null;
+  // Each bar is its own CanvasItem, so its translation is floored on its own
+  // account — `scrollcontainer/Component.tsx`'s PIXEL SNAP doc for why.
+  const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
+  return (
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
+      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={renderOrder} />
+      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
+        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={renderOrder + 0.05} />
+      </CanvasItemGroup>
+    </CanvasItemGroup>
+  );
+}
+
 export function GraphEdit({
   solveNode,
   tint,
   rect,
   theme,
   renderOrder,
+  subtreeChromeRenderOrder,
   childRects,
   measureText,
+  snapToPixels,
 }: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
   const panelStyle = solveNode.styleBoxes.panel ?? defaultPanel(theme);
@@ -214,6 +267,37 @@ export function GraphEdit({
     [showGrid, gridPattern, rectSize, scrollOffset, zoom, snappingDistance]
   );
 
+  // --- Constructor-built chrome (`Toolbar.tsx` / `Minimap.tsx`) -----------
+  // Read INSIDE the render body, not a `useMemo` (`Label`'s own `Component.tsx` for why).
+  const fontMetrics = resolveNodeFontMetrics(solveNode, GRAPH_EDIT_THEME_FONT_KEY);
+  const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
+  const shape = (text: string): TextLayoutResult => {
+    let layout = layoutCache.get(text);
+    if (!layout) {
+      layout = shapeButtonLabel(text, theme.fontSize, fontMetrics);
+      layoutCache.set(text, layout);
+    }
+    return layout;
+  };
+  const toolbar = graphEditToolbar(props, theme, {
+    measure: (text) => {
+      const l = shape(text);
+      return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
+    },
+    fontHeightPx: getFontLinePitchPx(fontMetrics, theme.fontSize, 0),
+  });
+  const toolbarText = {
+    zoomLabel: zoomLabelText(zoom),
+    snappingDistance: formatGodotNumber(snappingDistance, rangeStepDecimals(SNAPPING_SPINBOX_STEP)),
+  };
+
+  const minimapEnabled = isMinimapEnabled(props);
+  const graphEditSize = rectSize;
+  const { bounds, minimapElements } = graphEditElements(solveNode, childRects, zoom, graphEditSize, theme);
+  const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
+  const minimapPanelRect = minimapRect(graphEditSize, props);
+  const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
+
   return (
     <>
       <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={{ x: 0, y: 0, w: rect.w, h: rect.h }} renderOrder={renderOrder} />
@@ -238,6 +322,52 @@ export function GraphEdit({
           renderOrder={renderOrder}
         />
       ))}
+
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        track={theme.widgets.scrollBar.scrollHorizontal}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        renderOrder={subtreeChromeRenderOrder + 0.25}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        track={theme.widgets.scrollBar.scrollVertical}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        renderOrder={subtreeChromeRenderOrder + 0.25}
+        snapToPixels={snapToPixels}
+      />
+
+      {toolbar && (
+        <GraphEditToolbarChrome
+          toolbar={toolbar}
+          icons={solveNode.icons}
+          theme={theme}
+          tint={tint}
+          text={toolbarText}
+          shape={shape}
+          renderOrder={subtreeChromeRenderOrder + 0.5}
+        />
+      )}
+
+      {minimapEnabled && (
+        <GraphEditMinimapChrome
+          rect={minimapPanelRect}
+          transform={minimapXform}
+          bounds={bounds}
+          elements={minimapElements}
+          zoom={zoom}
+          scrollOffset={scrollOffset}
+          graphEditSize={graphEditSize}
+          opacity={minimapOpacity(props)}
+          icons={solveNode.icons}
+          theme={theme}
+          tint={tint}
+          renderOrder={subtreeChromeRenderOrder + 0.75}
+        />
+      )}
     </>
   );
 }
