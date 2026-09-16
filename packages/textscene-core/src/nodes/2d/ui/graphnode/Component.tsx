@@ -30,7 +30,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useIconTexture, useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -81,7 +81,7 @@ interface PortProps {
 function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrder }: PortProps) {
   const { externalResources, internalResources } = solveNode.resources;
   const custom = useTexture2D(iconRef, externalResources, internalResources);
-  const defaultTexture = useIconTexture(GRAPH_PORT_ICON);
+  const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
   const image = custom.texture?.image as ImageLike | undefined;
   const size =
@@ -154,7 +154,10 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
 
   const titleTintColor = useMemo(() => multiplyModulate(tint.own, fontTheme.color), [tint.own, fontTheme.color]);
 
-  const resizerTexture = useOptionalIconTexture(props.resizable === true ? RESIZER_SE_ICON : null);
+  const resizerTexture = useNodeIcon(
+    props.resizable === true ? solveNode.icons.resizer : undefined,
+    props.resizable === true ? RESIZER_SE_ICON : null
+  );
   // `resizer_color`'s default (`default_theme.cpp:800`) is `control_font_color` —
   // the SAME literal `GRAPH_NODE_TITLE_DEFAULT_COLOR` already names.
   const resizerTint = useTintedColor(tint.own, GRAPH_NODE_TITLE_DEFAULT_COLOR);

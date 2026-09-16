@@ -104,6 +104,22 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
     expect(result).toEqual({ x: 8, y: 8 });
   });
 
+  it('clip_text zeroes the text width contribution, leaving only the margin (button.cpp:492-494)', () => {
+    const result = minSize(node({ text: 'AB', clipText: true }), ctx());
+    expect(result.x).toBe(8);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('a trimming text_overrun_behavior also zeroes the text width contribution', () => {
+    const result = minSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
+    expect(result.x).toBe(8);
+  });
+
+  it('OVERRUN_NO_TRIMMING (0) and no clip_text leaves the width unaffected', () => {
+    const result = minSize(node({ text: 'AB', overrunBehavior: 0 }), ctx());
+    expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH, 6);
+  });
+
   it('reads a resolved theme_override_styles/normal content margin instead of the default theme', () => {
     const wide: StyleBoxFlatData = {
       bgColor: { r: 0, g: 0, b: 0, a: 1 },

@@ -12,7 +12,8 @@ renders_as: a panel StyleBox plus a packed grid of icon/label rows
 ItemList is a scrollable list of selectable rows, each an optional icon and a label, in
 one or more columns. The previewer draws the panel and every row's icon and text, packed
 by `max_columns`/`same_column_width`/`fixed_column_width`/`icon_mode`, with a disabled
-row's icon and text dimmed. No row is ever drawn selected, hovered, or under a cursor
+row's icon and text dimmed, plus a row/column guide line at every packed separator
+outside TOP icon mode. No row is ever drawn selected, hovered, or under a cursor
 highlight: `selected`, the current index, and a live hover/focus state are never part of
 a `.tscn` in the first place.
 
@@ -34,6 +35,7 @@ Strict parsing format-checks these `ItemList` properties, plus 53 inherited from
 | `icon_scale` | float |  |
 | `item_#/*` | item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed) |  |
 | `item_count` | integer >= 0 | error below |
+| `items` | Array literal ([...]) |  |
 | `max_columns` | integer >= 0 | error below |
 | `max_text_lines` | integer >= 1 | error below |
 | `same_column_width` | true or false |  |
@@ -59,14 +61,18 @@ The lenient parser reads every property above and the `item_N/text`/`item_N/icon
 (`ERR_FAIL_INDEX`), so this parser drops it too rather than substituting anything.
 `valid-itemlist-properties` warns when an `item_<N>/` index reaches past `item_count`,
 since Godot then drops the value with nothing logged. The deprecated compatibility
-`items = [...]` array (`ItemList::_set`, `item_list.cpp:2243-2258`) still loads in a real
-Godot editor but is not read here.
+`items = [text, icon, disabled, …]` array (`ItemList::_set`, `item_list.cpp:2242-2259`)
+is also read, but only for a file that carries NO `item_count` at all: Godot's own
+saver never writes both forms in one file (the array predates the
+`PropertyListHelper` family entirely), so a file that somehow carries both is
+read as `item_count`/`item_N/*` only. A wrong arity (`arr.size() % 3 != 0`)
+yields no rows, matching Godot's own `ERR_FAIL_COND_V` before `clear()` runs.
 
 ## Known limitations
 
-- **Not drawn** Row/column guide lines (`icon_mode` other than TOP) and the scroll-hint
-  icon (`scroll_hint_mode`) — both are runtime-scroll-state-dependent and neither is
-  vendored here.
+- **Not drawn** The scroll-hint icon (`scroll_hint_mode`) — its TOP condition
+  (`v_scroll_value > 1`) needs a live scrolled position no static file has, and
+  is not vendored here.
 - **Not drawn** The `focus` StyleBox, and every selected/hovered/cursor row background —
   none is ever reachable from a static file (`selected`, the current index and hover/focus
   are not `.tscn` properties).
@@ -83,5 +89,10 @@ Godot editor but is not read here.
   that (rather than being pinned by `fixed_column_width`) draws the same glyphs Godot would
   re-wrap at the final width.
 - **Approximated** `max_text_lines` sizes a row's reserved text height but does not cap the
-  number of wrapped lines actually drawn, and `text_overrun_behavior` is parsed but never
-  applied — every wrapped line draws in full, with no ellipsis trim.
+  number of wrapped lines actually drawn — a paragraph that wraps past it keeps every line
+  instead of the tail collapsing into an enforced ellipsis on the last visible one.
+- **Approximated** `text_overrun_behavior` trims each row against the SAME width the
+  minimum-size pass shaped at (`fixed_column_width`, or unconstrained when unset) — the
+  same "shape once" scope this sheet's `same_column_width`/dynamically-fit-column bullet
+  already names, so a row narrower than that at draw time is not re-trimmed to its own
+  final width.

@@ -92,5 +92,3 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 
 - **Approximated** A Control under a `Node2D` is placed against the viewport, so a moved,
   rotated or scaled `Node2D` ancestor does not carry it.
-- **Approximated** A theme icon — a scene-authored `Theme`'s `<Type>/icons/*`, or a node's
-  own `theme_override_icons/…` — is ignored; only the default theme's icons are drawn.

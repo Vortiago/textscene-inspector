@@ -41,15 +41,12 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 <!-- lint:end -->
 
 `linterParser.ts` format-checks all nine of LinkButton's own members. `parser.ts` reads
-`text`, `uri`, `underline` and `text_overrun_behavior`; `ellipsis_char`, `language`,
+`text`, `uri`, `underline`, `text_overrun_behavior` and `ellipsis_char`; `language`,
 `text_direction` and the structured-text-bidi pair pass into the untyped property bag
 with no substitution.
 
 ## Known limitations
 
-- **Not drawn** `text_overrun_behavior`'s character trimming/ellipsis — the label
-  always draws its full text; only its effect on the minimum size (zero width unless
-  `NO_TRIMMING`) is modelled.
 - **Approximated** A `theme_override_fonts/font` scene font's underline position and
   thickness still come from the vendored Open Sans metrics — no scene font carries its
   own baked underline data.

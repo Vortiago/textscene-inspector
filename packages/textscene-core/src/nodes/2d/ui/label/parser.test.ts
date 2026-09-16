@@ -58,4 +58,106 @@ describe('parseLabel', () => {
     const p = parseLabel(heading('Label', { name: 'T' }), { size_flags_vertical: '1' });
     expect(p.sizeFlagsVertical).toBe(1);
   });
+
+  it('parses text_overrun_behavior and clip_text', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { text_overrun_behavior: '3', clip_text: 'true' });
+    expect(p.overrunBehavior).toBe(3);
+    expect(p.clipText).toBe(true);
+  });
+
+  it('reads ellipsis_char through the StringName jacket, keeping only its first character (label.cpp:1259-1261)', () => {
+    const jacketed = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '&"ab"' });
+    expect(jacketed.ellipsisChar).toBe('a');
+    const bare = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '"*"' });
+    expect(bare.ellipsisChar).toBe('*');
+  });
+
+  it('an empty ellipsis_char literal leaves ellipsisChar undefined (falls back to the engine default)', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { ellipsis_char: '""' });
+    expect(p.ellipsisChar).toBeUndefined();
+  });
+
+  it('parses justification_flags as a raw bitmask int', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { justification_flags: '130' });
+    expect(p.justificationFlags).toBe(130);
+  });
+
+  it('parses tab_stops as a flat PackedFloat32Array literal', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { tab_stops: 'PackedFloat32Array(10, 20, 30)' });
+    expect(p.tabStopsPx).toEqual([10, 20, 30]);
+  });
+
+  it('leaves tabStopsPx undefined for a malformed tab_stops literal (lenient)', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { tab_stops: 'garbage' });
+    expect(p.tabStopsPx).toBeUndefined();
+  });
+
+  it('parses autowrap_trim_flags as a raw bitmask int', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), { autowrap_trim_flags: '192' });
+    expect(p.autowrapTrimFlags).toBe(192);
+  });
+
+  it('parses paragraph_separator, lines_skipped, max_lines_visible and label_settings', () => {
+    const p = parseLabel(heading('Label', { name: 'T' }), {
+      paragraph_separator: '"|"',
+      lines_skipped: '2',
+      max_lines_visible: '3',
+      label_settings: 'SubResource("LabelSettings_1")',
+    });
+    expect(p.paragraphSeparator).toBe('|');
+    expect(p.linesSkipped).toBe(2);
+    expect(p.maxLinesVisible).toBe(3);
+    expect(p.labelSettings).toBe('SubResource("LabelSettings_1")');
+  });
+
+  describe('visible_characters / visible_ratio cross-derivation (label.cpp:1285-1327)', () => {
+    it('visible_characters alone derives visible_ratio from the text length (happy path)', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), { text: '"Hello"', visible_characters: '2' });
+      expect(p.visibleCharacters).toBe(2);
+      expect(p.visibleRatio).toBe(0.4);
+    });
+
+    it('visible_characters = -1 is "show all", ratio 1.0 regardless of length', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), { text: '"Hello"', visible_characters: '-1' });
+      expect(p.visibleCharacters).toBe(-1);
+      expect(p.visibleRatio).toBe(1);
+    });
+
+    it('visible_ratio alone clamps at 1.0 and resets visible_characters to -1', () => {
+      // Measured on 4.6.3 (linterParser.ts's own doc): visible_ratio = 3.0 alone -> clamped to 1.0.
+      const p = parseLabel(heading('Label', { name: 'T' }), { text: '"0"', visible_ratio: '3.0' });
+      expect(p.visibleRatio).toBe(1);
+      expect(p.visibleCharacters).toBe(-1);
+    });
+
+    it('visible_characters THEN visible_ratio in file order: the later setter is a no-op once it matches the already-derived ratio, leaving the OVER-1 value unclamped', () => {
+      // Measured on 4.6.3 (linterParser.ts's own doc): text = "0", visible_characters = 3,
+      // visible_ratio = 3.0 (in that file order) -> stores 3.0, un-clamped, because
+      // `set_visible_ratio`'s whole body is gated on `visible_ratio != p_ratio`
+      // (label.cpp:1306) and visible_characters already left visible_ratio at 3.0.
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        text: '"0"',
+        visible_characters: '3',
+        visible_ratio: '3.0',
+      });
+      expect(p.visibleCharacters).toBe(3);
+      expect(p.visibleRatio).toBe(3);
+    });
+
+    it('visible_ratio THEN visible_characters in file order: the later setter wins outright', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), {
+        text: '"Hello"',
+        visible_ratio: '1.0',
+        visible_characters: '2',
+      });
+      expect(p.visibleCharacters).toBe(2);
+      expect(p.visibleRatio).toBe(0.4);
+    });
+
+    it('neither authored leaves the class defaults (edge case)', () => {
+      const p = parseLabel(heading('Label', { name: 'T' }), { text: '"Hello"' });
+      expect(p.visibleCharacters).toBeUndefined();
+      expect(p.visibleRatio).toBeUndefined();
+    });
+  });
 });

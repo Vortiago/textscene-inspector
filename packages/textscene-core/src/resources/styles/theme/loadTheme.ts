@@ -48,6 +48,7 @@ export async function resolveThemeResource(
     fonts,
     fontSizes: addresses.fontSizes,
     styles: addresses.styles,
+    icons: addresses.icons,
     colors: addresses.colors,
     constants: addresses.constants,
     typeVariations: addresses.typeVariations,

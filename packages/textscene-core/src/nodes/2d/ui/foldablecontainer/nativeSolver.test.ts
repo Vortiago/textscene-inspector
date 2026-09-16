@@ -87,6 +87,16 @@ describe('foldableContainerMinimumSize', () => {
     expect(minSize(node({ folded: true }, [child]), ctx())).toEqual({ x: MARGIN + ARROW, y: MARGIN + ARROW });
   });
 
+  it('widens on a themed "folded_arrow" icon (foldable_container.cpp:441-450: title_minimum_size.width += icon->get_width())', () => {
+    const themed = { ...node({ folded: true }), textureSlots: { folded_arrow: { x: 24, y: 20 } } };
+    expect(minSize(themed, ctx())).toEqual({ x: MARGIN + 24, y: MARGIN + 20 });
+  });
+
+  it('ignores a themed "expanded_arrow" while folded — only the CURRENT arrow (folded) counts', () => {
+    const themed = { ...node({ folded: true }), textureSlots: { expanded_arrow: { x: 99, y: 99 } } };
+    expect(minSize(themed, ctx())).toEqual({ x: MARGIN + ARROW, y: MARGIN + ARROW });
+  });
+
   it('unfolded with a title adds the h_separation + text width/height (OVERRUN_NO_TRIMMING default)', () => {
     const meta = minMeta(node({ folded: false, title: 'A' }), ctx());
     expect(meta.size).toEqual({ x: MARGIN + ARROW + H_SEP + A_WIDTH, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });

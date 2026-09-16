@@ -153,4 +153,21 @@ describe('<LinkButton> (isolated painter contract)', () => {
     expect(meshes.length).toBeGreaterThan(0);
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
+
+  it('text_overrun_behavior trims the label to the control\'s own rect width (link_button.cpp:286-289)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 28 };
+    const untrimmed = await ReactThreeTestRenderer.create(
+      <LinkButton {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+    );
+    const trimmed = await ReactThreeTestRenderer.create(
+      <LinkButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1 })}
+        rect={narrow}
+        renderOrder={0}
+      />
+    );
+    const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+  });
 });

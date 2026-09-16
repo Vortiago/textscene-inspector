@@ -16,6 +16,9 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlClipProvider } from '../../../../r3f/controls/native/controlClipping';
+import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { LineEditProperties } from './types';
 import { LineEdit } from './Component';
@@ -413,5 +416,150 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
+  });
+});
+
+/**
+ * A plain-colour `<ControlQuad>` mesh: `meshBasicMaterial` (matched by
+ * `.type`, not `instanceof` — the test renderer's own THREE module instance
+ * differs from this file's import), no vertex `color` attribute (unlike
+ * chrome) and no MSDF `uColor` uniform (unlike text).
+ */
+function findControlQuadMeshes(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => {
+      const geo = m.geometry as THREE.BufferGeometry;
+      const mat = m.material as THREE.MeshBasicMaterial;
+      return geo.attributes.color === undefined && mat.type === 'MeshBasicMaterial';
+    });
+}
+
+const TEX = 'res://icon.png';
+const ICON_SCOPE = { externalResources: [{ id: '1', type: 'Texture2D', path: TEX }], internalResources: [] };
+
+function fakeIconTexture(w: number, h: number): THREE.Texture {
+  const tex = new THREE.Texture();
+  (tex as unknown as { image: { width: number; height: number } }).image = { width: w, height: h };
+  return tex;
+}
+
+describe('<LineEdit> — right_icon', () => {
+  afterEach(() => controlSolverRegistry.clear());
+
+  async function renderWithIcon(raw: Partial<LineEditProperties>, rect: Rect2, iconSize = { x: 32, y: 16 }) {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeIconTexture(iconSize.x, iconSize.y));
+    const node: TscnNode = {
+      name: 'MyLineEdit',
+      type: 'LineEdit',
+      children: [],
+      properties: { name: 'MyLineEdit', rightIcon: 'ExtResource("1")', ...raw } as LineEditProperties,
+    };
+    const n: SolveNode = { ...emptySolveNode(), path: 'MyLineEdit', node, resources: ICON_SCOPE, textureSlots: { right_icon: iconSize } };
+    return ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={ICON_SCOPE.externalResources}>
+          <LineEdit {...painterEnv()} solveNode={n} rect={rect} renderOrder={0} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+  }
+
+  it('draws a textured quad once the icon resolves', async () => {
+    const renderer = await renderWithIcon({ text: 'Hi' }, RECT);
+    const quads = findControlQuadMeshes(renderer.scene);
+    expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(true);
+  });
+
+  it('insets the text content rect by the icon\'s own (ORIGINAL_SIZE) width', async () => {
+    const withIcon = await renderWithIcon({ text: 'Hi' }, RECT);
+    const without = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+    const material = (m: Rendered) =>
+      m.scene
+        .findAllByType('Mesh')
+        .map((x) => x.instance as THREE.Mesh)
+        .find((x) => ((x.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined))!
+        .material as THREE.ShaderMaterial & { clippingPlanes?: THREE.Plane[] };
+    // Just past the icon-narrowed content edge (200 - 4 margin - 32 icon = 164):
+    // inside the OLD (icon-unaware) content rect, outside the new one.
+    const probe = new THREE.Vector3(170, -15, 0);
+    const iconPlanes = material(withIcon).clippingPlanes!;
+    const plainPlanes = material(without).clippingPlanes!;
+    expect(iconPlanes.some((p) => p.distanceToPoint(probe) < 0)).toBe(true);
+    expect(plainPlanes.every((p) => p.distanceToPoint(probe) >= 0)).toBe(true);
+  });
+});
+
+describe('<LineEdit> — clear_button_enabled', () => {
+  it('draws NO icon at all with no text (display_clear_icon requires !using_placeholder)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ clearButtonEnabled: true })} rect={RECT} renderOrder={0} />
+    );
+    const quads = findControlQuadMeshes(renderer.scene);
+    expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(false);
+  });
+
+  it('draws the clear icon once the field has text', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hi', clearButtonEnabled: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const quads = findControlQuadMeshes(renderer.scene);
+    expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(true);
+  });
+
+  it('draws no clear icon once editable=false, even with text', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hi', clearButtonEnabled: true, editable: false })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const quads = findControlQuadMeshes(renderer.scene);
+    expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(false);
+  });
+});
+
+describe('<LineEdit> — caret_force_displayed', () => {
+  it('draws no caret quad when caret_force_displayed is unset (the pre-existing "no caret" behaviour)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    expect(quads).toHaveLength(0);
+  });
+
+  it('draws exactly one caret quad, at the left-margin pen start, for a LEFT-aligned field with text', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'Hi', caretForceDisplayed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    expect(quads).toHaveLength(1);
+    const group = quads[0]!.parent as THREE.Object3D;
+    expect(group.position.x).toBe(4); // style margin left, default theme.
+  });
+
+  it('draws the caret at the left margin even for an EMPTY field (the fallback branch, no text and no placeholder)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ caretForceDisplayed: true })} rect={RECT} renderOrder={0} />
+    );
+    const quads = findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+    expect(quads).toHaveLength(1);
+    expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
   });
 });

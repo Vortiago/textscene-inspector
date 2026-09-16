@@ -3,9 +3,10 @@
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { CheckButton } from './Component';
-import { checkButtonMinimumSize } from './nativeSolver';
+import { checkButtonMinimumSize, checkButtonTextureSlots } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'CheckButton', Component: CheckButton });
 controlSolverRegistry.registerMinimumSize('CheckButton', checkButtonMinimumSize);
+controlSolverRegistry.registerTextureSlots('CheckButton', checkButtonTextureSlots);
 
 export { CheckButton };

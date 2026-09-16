@@ -1,0 +1,22 @@
+; LineEdit's clear_button_enabled — the ONE variable this fixture moves. It
+; draws only while the field HAS text (`!using_placeholder && is_editable()`),
+; so this is also the one fixture proving the draw-time gate is checked, not
+; just the property's presence: no other LineEdit fixture sets it, so a
+; regression that always (or never) draws the clear icon is invisible
+; elsewhere.
+
+[gd_scene format=3 uid="uid://unitlineeditclearbutton"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="WithText" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 224.0
+offset_bottom = 48.0
+text = "Clearable"
+clear_button_enabled = true

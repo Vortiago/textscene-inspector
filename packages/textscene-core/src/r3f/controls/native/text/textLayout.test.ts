@@ -532,3 +532,63 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
     }).lines).toHaveLength(2);
   });
 });
+
+describe('shapeText — tab_stops (ShapeTextOptions.tabStopsPx, label.cpp:196-198,228-230)', () => {
+  const opts = { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 };
+
+  it("a tab's advance lands on the next stop past the pen — 'A' = 10.578125px, stop 15 -> tab advance 4.421875", () => {
+    const layout = shapeText('A\tB', { ...opts, tabStopsPx: [15] });
+    expect(layout.lines[0]!.glyphs[1]!.char).toBe('\t');
+    expect(layout.lines[0]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
+    expect(layout.lines[0]!.glyphs[2]!.x).toBeCloseTo(10.578125 + 4.421875, 10);
+  });
+
+  it('restarts the tab-stop cycle at each EMITTED line, not the paragraph (second `shaped_text_tab_align` pass, label.cpp:228-230)', () => {
+    const layout = shapeText('A\tB\nA\tB', { ...opts, tabStopsPx: [15] });
+    expect(layout.lines).toHaveLength(2);
+    // Both lines' tabs land on the SAME stop despite line 2 starting at a
+    // large cumulative paragraph offset -- proof the second pass measures
+    // from line 2's own pen origin, not the paragraph's.
+    expect(layout.lines[0]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
+    expect(layout.lines[1]!.glyphs[1]!.advance).toBeCloseTo(4.421875, 10);
+  });
+
+  it('no stops is a no-op, matching every caller before this option existed', () => {
+    const withoutOption = shapeText('A\tB', opts);
+    const withEmptyStops = shapeText('A\tB', { ...opts, tabStopsPx: [] });
+    expect(withEmptyStops.lines[0]!.glyphs[1]!.advance).toBe(withoutOption.lines[0]!.glyphs[1]!.advance);
+  });
+});
+
+describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags, label.h:45, text_server.cpp:1076-1093)', () => {
+  it('undefined defaults to BOTH edge trims on, exactly like every caller before this option existed', () => {
+    const withOption = shapeText('AAAA   BBBB', {
+      fontSizePx: 16, boxWidthPx: 47, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3, autowrapTrimFlags: 192,
+    });
+    const withoutOption = shapeText('AAAA   BBBB', {
+      fontSizePx: 16, boxWidthPx: 47, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3,
+    });
+    expect(withoutOption.lines.map((l) => l.text)).toEqual(withOption.lines.map((l) => l.text));
+  });
+
+  it('BREAK_TRIM_END_EDGE_SPACES off (start-only, 64) keeps the trailing spaces the default would drop', () => {
+    // "AAAA   " (4 A's + 3 spaces) = 46.46875+12.46875 = 54.78125; the only
+    // overflow is adding the 4th 'B' (96.96875 > 90), whose recorded safe
+    // break is the THIRD space (word-bound updates it at every space passed)
+    // -- with no END trim the emitted line keeps all three rather than
+    // walking back off them.
+    const layout = shapeText('AAAA   BBBB', {
+      fontSizePx: 16, boxWidthPx: 90, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3, autowrapTrimFlags: 64,
+    });
+    expect(layout.lines[0]!.text).toBe('AAAA   ');
+    expect(layout.lines[1]!.text).toBe('BBBB');
+  });
+
+  it('BREAK_TRIM_START_EDGE_SPACES off (end-only, 128) keeps a hard-break continuation\'s leading spaces (text_server.cpp:1097-1103, 1101 finalStart)', () => {
+    const layout = shapeText('AAAA\n   BBBB', {
+      fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3, autowrapTrimFlags: 128,
+    });
+    expect(layout.lines[0]!.text).toBe('AAAA');
+    expect(layout.lines[1]!.text).toBe('   BBBB');
+  });
+});

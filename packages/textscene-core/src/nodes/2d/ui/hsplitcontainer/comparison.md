@@ -1,7 +1,7 @@
 ---
 type: HSplitContainer
 category: 2D
-status: limitation
+status: done
 fixture: unit-split-container.tscn
 image: unit-split-container
 renders_as: two children side by side, split at a computed offset
@@ -34,7 +34,3 @@ Neither parser reads `split_offset`, `collapsed` or `dragger_visibility` beyond 
 scalar type, and an out-of-range `dragger_visibility` behaves as VISIBLE on both sides.
 A malformed value leaves the property `undefined` and Godot's default applies.
 
-## Known limitations
-
-- **Approximated** A `theme_override_icons/grabber` does not widen the gap between the
-  children, which stays at the default grabber's width.

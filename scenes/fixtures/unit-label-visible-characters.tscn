@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://unit_label_visible_characters"]
+
+; `visible_characters`, frozen mid-reveal at the default VC_CHARS_BEFORE_SHAPING
+; behaviour — the ONE variable this fixture pins away from unit-label-2d.tscn,
+; whose three Labels never set it. Godot truncates the STRING before shaping
+; (label.cpp:155-156), so the trailing "reveal" characters do not exist as
+; glyphs at all rather than existing but hidden — a regression that draws the
+; full string, or draws it dimmed instead of shortened, is visible only here.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 60.0
+text = "Typewriter reveal"
+visible_characters = 10

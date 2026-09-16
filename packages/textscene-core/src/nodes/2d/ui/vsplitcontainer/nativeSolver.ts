@@ -6,7 +6,12 @@
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { makeSplitContainerLayout, makeSplitContainerMinimumSize } from '../shared/splitContainerSolver';
+import {
+  makeSplitContainerLayout,
+  makeSplitContainerMinimumSize,
+  splitContainerTextureSlots,
+} from '../shared/splitContainerSolver';
 
 controlSolverRegistry.registerContainerLayout('VSplitContainer', makeSplitContainerLayout(true));
 controlSolverRegistry.registerMinimumSize('VSplitContainer', makeSplitContainerMinimumSize(true));
+controlSolverRegistry.registerTextureSlots('VSplitContainer', splitContainerTextureSlots);

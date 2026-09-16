@@ -17,6 +17,8 @@ import './materials/canvasitemmaterial/index.js';
 // Styles
 import './styles/stylebox/index.js';
 import './styles/theme/index.js';
+import './styles/codehighlighter/index.js';
+import './styles/labelsettings/index.js';
 
 // Fonts
 import './fonts/font/index.js';

@@ -27,6 +27,36 @@ describe('parseLineEdit', () => {
     expect(result.flat).toBe(true);
   });
 
+  it('parses the icon/clear-button/max-length/caret properties (happy path)', () => {
+    const result = parseLineEdit(heading, {
+      max_length: '10',
+      expand_to_text_length: 'true',
+      clear_button_enabled: 'true',
+      right_icon: 'ExtResource("1_icon")',
+      icon_expand_mode: '2',
+      right_icon_scale: '0.5',
+      caret_force_displayed: 'true',
+    });
+    expect(result.maxLength).toBe(10);
+    expect(result.expandToTextLength).toBe(true);
+    expect(result.clearButtonEnabled).toBe(true);
+    expect(result.rightIcon).toBe('ExtResource("1_icon")');
+    expect(result.iconExpandMode).toBe(2);
+    expect(result.rightIconScale).toBe(0.5);
+    expect(result.caretForceDisplayed).toBe(true);
+  });
+
+  it('leaves the icon/clear-button/max-length/caret properties undefined when absent (edge case)', () => {
+    const result = parseLineEdit(heading, {});
+    expect(result.maxLength).toBeUndefined();
+    expect(result.expandToTextLength).toBeUndefined();
+    expect(result.clearButtonEnabled).toBeUndefined();
+    expect(result.rightIcon).toBeUndefined();
+    expect(result.iconExpandMode).toBeUndefined();
+    expect(result.rightIconScale).toBeUndefined();
+    expect(result.caretForceDisplayed).toBeUndefined();
+  });
+
   it('distinguishes an explicitly empty string from an absent one (error path)', () => {
     // "" is authored intent — it must not read as "property not set", which is
     // what decides whether the placeholder or the text branch wins.

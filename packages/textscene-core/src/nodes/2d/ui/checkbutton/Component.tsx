@@ -27,17 +27,18 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { CHECK_BUTTON_ICONS, CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,
   checkButtonIconColor,
   checkButtonIconMaxWidth,
+  checkButtonIconNaturalSize,
   checkButtonMarginX,
   checkButtonMarginY,
   checkButtonTextTheme,
@@ -46,6 +47,7 @@ import {
   resolveCheckButtonDrawState,
   resolveCheckButtonIconKey,
   tintColor,
+  CHECK_BUTTON_ICON_THEME_NAME,
   CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -59,10 +61,10 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   // --- Icon: always drawn, on/off per button_pressed + disabled -----------
   const iconKey = resolveCheckButtonIconKey(props);
-  const iconTexture = useIconTexture(CHECK_BUTTON_ICONS[iconKey]);
+  const iconTexture = useNodeIcon(solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]], CHECK_BUTTON_ICONS[iconKey]);
   const iconSize = useMemo(
-    () => fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(solveNode.constants)),
-    [solveNode.constants]
+    () => fitIconSize(checkButtonIconNaturalSize(solveNode, props.disabled === true), checkButtonIconMaxWidth(solveNode.constants)),
+    [solveNode, props.disabled]
   );
 
   const baseIconColor = checkButtonIconColor(props, solveNode.colors);

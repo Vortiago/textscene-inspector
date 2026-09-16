@@ -13,6 +13,7 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
   const colors: Record<string, ControlColor> = {};
   const fontSizes: Record<string, number> = {};
   const styles: Record<string, string> = {};
+  const icons: Record<string, string> = {};
   const fonts: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(properties)) {
@@ -38,6 +39,9 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
       case 'styles':
         styles[name!] = value;
         break;
+      case 'icons':
+        icons[name!] = value;
+        break;
       case 'fonts':
         fonts[name!] = value;
         break;
@@ -51,6 +55,7 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
   if (Object.keys(colors).length) out.themeOverrideColors = colors;
   if (Object.keys(fontSizes).length) out.themeOverrideFontSizes = fontSizes;
   if (Object.keys(styles).length) out.themeOverrideStyles = styles;
+  if (Object.keys(icons).length) out.themeOverrideIcons = icons;
   if (Object.keys(fonts).length) out.themeOverrideFonts = fonts;
   return out;
 }

@@ -1,7 +1,7 @@
 ---
 type: CheckBox
 category: 2D
-status: limitation
+status: done
 fixture: unit-checkbox.tscn
 image: unit-checkbox
 renders_as: a theme icon followed by a text run
@@ -31,8 +31,3 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 beyond the inherited Control set. `button_pressed` and `disabled` become `false` for any
 value that does not read as `true`, with no warning. `button_group` is stored as the raw
 string.
-
-## Known limitations
-
-- **Approximated** A scene-authored `theme_override_icons/…` is ignored, so the indicator
-  always comes from the default theme.

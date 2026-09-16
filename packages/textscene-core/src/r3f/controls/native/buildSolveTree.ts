@@ -61,7 +61,7 @@ import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry } from './solverRegistry';
-import type { SolveNode } from './solveTree';
+import type { SolveNode, ThemedIconRef } from './solveTree';
 import {
   allocatePaintRange,
   WHOLE_CANVAS_RANGE,
@@ -176,6 +176,59 @@ function resolveThemedConstants(
 ): Readonly<Record<string, number>> {
   const local = (node.properties as ControlProperties).themeOverrideConstants ?? {};
   return mergeThemedRecord(themeScope, local, (theme) => theme.constants);
+}
+
+/**
+ * A theme's `icons` raw refs, wrapped with THAT theme's own resource scope —
+ * mirrors `resolvedStylesOfTheme`, but an icon ref is left UNRESOLVED
+ * (`ThemedIconRef`'s own doc: loading a texture needs a live
+ * `useTexture2D` subscription only a component can hold), so this only
+ * pairs each ref with its scope rather than decoding it. Memoised per
+ * `ThemeResource` object for the same reason `resolvedStylesOfTheme` is.
+ */
+const themeIconRefCache = new WeakMap<
+  ThemeResource,
+  Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>>
+>();
+
+function iconRefsOfTheme(
+  theme: ThemeResource
+): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> {
+  const cached = themeIconRefCache.get(theme);
+  if (cached) return cached;
+  const resources = theme.resources ?? { externalResources: [], internalResources: [] };
+  const out: Record<string, Record<string, ThemedIconRef>> = {};
+  for (const [type, byName] of Object.entries(theme.icons ?? {})) {
+    for (const [name, ref] of Object.entries(byName)) {
+      (out[type] ??= {})[name] = { ref, resources };
+    }
+  }
+  themeIconRefCache.set(theme, out);
+  return out;
+}
+
+/**
+ * This node's resolved theme icons — `Control::get_theme_icon`'s own local-
+ * override-then-ancestor-chain walk (`solveTree.ts`'s `SolveNode.icons` own
+ * doc), the icon counterpart of `resolveThemedColors`/`resolveThemedConstants`.
+ * A local `theme_override_icons/<name>` ref is wrapped with the NODE's own
+ * scope (`scope`, already the collapsed node's own by the time `walk` calls
+ * this); an ancestor/project Theme's `<Type>/icons/<name>` is wrapped with
+ * THAT theme's own scope by `iconRefsOfTheme`.
+ */
+export function resolveThemedIcons(
+  node: TscnNode,
+  scope: SceneScope,
+  themeScope: ThemeResolutionScope
+): Readonly<Record<string, ThemedIconRef>> {
+  const overrides = (node.properties as ControlProperties).themeOverrideIcons;
+  const local: Record<string, ThemedIconRef> = {};
+  if (overrides) {
+    for (const [key, ref] of Object.entries(overrides)) {
+      local[key] = { ref, resources: scope };
+    }
+  }
+  return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
 }
 
 /** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
@@ -368,14 +421,17 @@ function buildForest(
   function resolveTextureSize(
     node: TscnNode,
     ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[]
+    int: readonly TscnInternalResource[],
+    themedIcons: Readonly<Record<string, ThemedIconRef>>
   ): { size: Vec2 | null; slots: Readonly<Record<string, Vec2 | null>> } {
     const slotsFn = controlSolverRegistry.textureSlots(node.type);
     if (slotsFn) {
-      const requests = slotsFn(node);
+      const requests = slotsFn(node, themedIcons);
       const slots: Record<string, Vec2 | null> = {};
-      for (const { key, ref } of requests) {
-        slots[key] = ref ? resolveTextureRefSize(ref, ext, int) : null;
+      for (const { key, ref, scope } of requests) {
+        slots[key] = ref
+          ? resolveTextureRefSize(ref, scope?.externalResources ?? ext, scope?.internalResources ?? int)
+          : null;
       }
       // The FIRST registered request stands in for `textureSize` — matches
       // Godot's own first-priority slot for every registering type today
@@ -496,12 +552,18 @@ function buildForest(
       }
 
       if (isControl) {
-        const texture = resolveTextureSize(collapsed, ownScope.externalResources, ownScope.internalResources);
         const themeScope = themeResolutionScope(
           collapsed.type,
           (collapsed.properties as ControlProperties).themeTypeVariation,
           nodeThemeChain,
           projectTheme
+        );
+        const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
+        const texture = resolveTextureSize(
+          collapsed,
+          ownScope.externalResources,
+          ownScope.internalResources,
+          themedIcons
         );
         out.push({
           path,
@@ -516,6 +578,7 @@ function buildForest(
           fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
           colors: resolveThemedColors(collapsed, themeScope),
           constants: resolveThemedConstants(collapsed, themeScope),
+          icons: themedIcons,
           resources: ownScope,
           themeChain: nodeThemeChain,
           projectTheme,

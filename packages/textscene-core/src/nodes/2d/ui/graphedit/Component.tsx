@@ -1,9 +1,15 @@
 /**
  * `<GraphEdit>` — the native (WebGL canvas) painter for `GraphEdit`:
  * `GraphEdit::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_edit.cpp:853-865`)
- * — background panel, then the grid. `panel_focus` (`has_focus(true)`) is
- * never drawn: a static, pointer-less preview never holds focus, the same
- * restriction every other Control painter in this codebase carries.
+ * — background panel, then the grid, then every resolvable `connections`
+ * entry (`GraphEdit::_update_connections`, `:1614-1660` — this painter draws
+ * them at ITS OWN `renderOrder`, same as the grid, so they sit BEHIND every
+ * GraphElement child; Godot instead moves `connections_layer` to just above
+ * the grid and below every GraphFrame/GraphNode, `graph_edit.cpp:717` — a
+ * known draw-order divergence, `comparison.md`'s own note). `panel_focus`
+ * (`has_focus(true)`) is never drawn: a static, pointer-less preview never
+ * holds focus, the same restriction every other Control painter in this
+ * codebase carries.
  *
  * NOT DRAWN, and why:
  *
@@ -17,28 +23,27 @@
  *    step`, `panning_scheme`, `right_disconnects` are parsed by
  *    `linterParser.ts` (this renderer's parser only carries what drawing
  *    reads — `types.ts`'s own doc) but have no picture either.
- *  - Connection lines: **this corrects the brief that commissioned this
- *    slice.** `connections` DOES serialise — it is a real, bound property
- *    (`ADD_PROPERTY`, `graph_edit.cpp:3083`) and `set_connections` calls
- *    `connect_node` for each entry at LOAD time, not only interactively. The
- *    reason nothing is drawn here is a DIFFERENT one: each endpoint's pixel
- *    position is `GraphNode::get_output_port_position(port) +
- *    get_position_offset()` (`graph_edit.cpp:1638-1639`) — a port position
- *    computed from that GraphNode's OWN internal children (its slot rows),
- *    which live two levels below what `NativeControlComponentProps.childRects`
- *    exposes (direct children only). Reaching a referenced GraphNode's own
- *    solved sub-tree from a SIBLING's painter needs a wider contract on
- *    `ControlCanvasWalker.tsx`/`controlRectSolver.ts`, both outside this
- *    packet. Drawing a line between node CENTRES instead would be invented
- *    geometry, not a port-accurate one — worse than not drawing it.
- *  - `zoom`'s visual scale: `ControlCanvasWalker.tsx`'s `isFreeParent` gate
- *    (`:210-216`) forces every child of a registered container to scale 1 —
- *    `nativeSolver.ts`'s own doc. Exact at `zoom = 1` (the default); a
- *    non-1 zoom is a known, cited gap outside this packet's reach.
+ *  - `connection_lines_antialiased`: `lines_antialiased`'s ONLY reader is
+ *    `GraphEditMinimap`'s own simplified polyline draw
+ *    (`graph_edit.cpp:1611`) — the main canvas connection shader applies its
+ *    OWN fixed pseudo-AA feather unconditionally (`connectionStroke.ts`'s own
+ *    doc), so this property has no effect on anything this previewer draws,
+ *    the minimap included (already unimplemented toolbar chrome). Not a
+ *    render gap — genuinely inert here, same as it is in Godot outside the
+ *    minimap.
+ *  - `zoom`'s visual scale on a GraphElement's own drawn pixels:
+ *    `ControlCanvasWalker.tsx`'s `isFreeParent` gate (`:210-216`) forces
+ *    every child of a registered container to scale 1 — `nativeSolver.ts`'s
+ *    own doc. A connection endpoint still ports the full `* zoom` formula
+ *    (`connectionEndpoints.ts`), so at a non-1 zoom the line lands where
+ *    Godot's port actually is, not on this previewer's unscaled node icon —
+ *    a visible mismatch between the two, and a known, cited gap outside this
+ *    packet's reach rather than something bent to hide it.
  *
  * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`; every grid colour is composed with it while both are
- * still sRGB, matching every other two-colour chrome in this codebase.
+ * inherited `modulate`; every grid colour, and every connection colour
+ * (`ConnectionLine.tsx`), is composed with it while both are still sRGB,
+ * matching every other two-colour chrome in this codebase.
  *
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
@@ -56,9 +61,12 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ControlColor } from '../control/types';
 import { computeGridDots, computeGridLines, GRID_PATTERN_DOTS, GRID_PATTERN_LINES, type GridDot, type GridLine } from './grid';
+import { resolveGraphEditConnections } from './connectionEndpoints';
+import { ConnectionLine } from './ConnectionLine';
 import type { GraphEditProperties } from './types';
 
 /** `default_theme.cpp:1287` — `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, an asymmetric bottom margin. */
@@ -150,7 +158,15 @@ function GridDotQuad({
   );
 }
 
-export function GraphEdit({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function GraphEdit({
+  solveNode,
+  tint,
+  rect,
+  theme,
+  renderOrder,
+  childRects,
+  measureText,
+}: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
   const panelStyle = solveNode.styleBoxes.panel ?? defaultPanel(theme);
 
@@ -161,6 +177,20 @@ export function GraphEdit({ solveNode, tint, rect, theme, renderOrder }: NativeC
   const scrollOffsetY = props.scrollOffset?.y ?? 0;
   const snappingDistance = props.snappingDistance ?? 20;
   const scrollOffset = useMemo(() => ({ x: scrollOffsetX, y: scrollOffsetY }), [scrollOffsetX, scrollOffsetY]);
+
+  // `graph_edit.h:253`/`:252` — `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
+  const curvature = props.connectionLinesCurvature ?? 0.5;
+  const thickness = props.connectionLinesThickness ?? 4;
+  // `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`,
+  // `base_scale` recovered from `theme.contentMargin` the same way every other GraphNode/GraphEdit scale is.
+  const lineWidth = thickness * (theme.contentMargin / DEFAULT_CONTENT_MARGIN) + 4;
+  // `connection_rim_color`'s default is `style_normal_color` (`default_theme.cpp:1301`),
+  // the same literal `theme.styleFill.normal` already carries.
+  const rimColor = solveNode.colors.connection_rim_color ?? theme.styleFill.normal;
+  const connections = useMemo(
+    () => resolveGraphEditConnections(solveNode, childRects, props, theme, measureText),
+    [solveNode, childRects, props, theme, measureText]
+  );
 
   const majorColor = useColorQuad(solveNode.colors.grid_major ?? GRID_MAJOR_DEFAULT, tint.own);
   const minorColor = useColorQuad(solveNode.colors.grid_minor ?? GRID_MINOR_DEFAULT, tint.own);
@@ -196,6 +226,18 @@ export function GraphEdit({ solveNode, tint, rect, theme, renderOrder }: NativeC
         dots.minor.map((dot, i) => <GridDotQuad key={`m${i}`} dot={dot} colorQuad={minorDotColor} renderOrder={renderOrder} />)}
       {majorColor.opacity !== 0 &&
         dots.major.map((dot, i) => <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />)}
+
+      {connections.map((connection, i) => (
+        <ConnectionLine
+          key={i}
+          connection={connection}
+          curvature={curvature}
+          lineWidth={lineWidth}
+          rimColor={rimColor}
+          tintOwn={tint.own}
+          renderOrder={renderOrder}
+        />
+      ))}
     </>
   );
 }

@@ -174,6 +174,32 @@ describe('<CheckBox> (isolated painter contract)', () => {
     expect(meshes.length).toBeGreaterThan(0);
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
+
+  it('draws the themed "unchecked" icon instead of the vendored default when a theme resolved it', async () => {
+    const themedIconNode: SolveNode = {
+      ...solveNode({}),
+      icons: {
+        unchecked: {
+          ref: 'SubResource("GradientTexture2D_1")',
+          resources: {
+            externalResources: [],
+            internalResources: [
+              { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1)' } },
+              { id: 'GradientTexture2D_1', type: 'GradientTexture2D', data: { gradient: 'SubResource("Gradient_1")' } },
+            ],
+          },
+        },
+      },
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={themedIconNode} rect={RECT} renderOrder={0} />
+    );
+    const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    // The vendored icon loads through `THREE.TextureLoader` (a plain `Texture`);
+    // a themed `GradientTexture2D` rasterises to a `DataTexture` — the two are
+    // distinguishable without inspecting image bytes.
+    expect((iconMaterial.map as THREE.DataTexture | null)?.isDataTexture).toBe(true);
+  });
 });
 
 /**

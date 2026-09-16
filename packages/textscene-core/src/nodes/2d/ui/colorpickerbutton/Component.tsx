@@ -53,6 +53,16 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
     h: rect.h - normalStyle.contentMargin.top - normalStyle.contentMargin.bottom,
   };
 
+  // `overbright_indicator` is `BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_ICON,
+  // ColorPickerButton, overbright_indicator, "overbright_indicator",
+  // "ColorPicker")` (`color_picker.cpp:2546`) — a FOREIGN type lookup:
+  // Godot resolves it under "ColorPicker", never this node's own
+  // "ColorPickerButton" (and `get_theme_icon`'s local-override guard, which
+  // tests `p_theme_type == get_class_name()`, therefore skips even a local
+  // `theme_override_icons/overbright_indicator` authored on this very node).
+  // `SolveNode.icons` is resolved under the node's OWN type chain, so it
+  // cannot answer this without a second, foreign-scoped theme walk — left
+  // vendored-only, not modelled by the theme-icon mechanism this pass adds.
   const overbrightTexture = useIconTexture(COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
 
@@ -61,7 +71,14 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
       <Button {...props} />
       {swatch.w > 0 && swatch.h > 0 && (
         <CanvasItemGroup position={[swatch.x, -swatch.y, 0]}>
-          <AlphaCheckerboardQuad width={swatch.w} height={swatch.h} color={tint.color} opacity={tint.opacity} renderOrder={renderOrder} />
+          <AlphaCheckerboardQuad
+            width={swatch.w}
+            height={swatch.h}
+            color={tint.color}
+            opacity={tint.opacity}
+            renderOrder={renderOrder}
+            themed={solveNode.icons.bg}
+          />
           <ControlQuad width={swatch.w} height={swatch.h} color={swatchColor} opacity={filled.a} renderOrder={renderOrder} />
         </CanvasItemGroup>
       )}

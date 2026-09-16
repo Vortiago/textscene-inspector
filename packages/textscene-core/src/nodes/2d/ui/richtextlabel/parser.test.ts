@@ -31,4 +31,15 @@ describe('parseRichTextLabel', () => {
     expect(parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), { autowrap_mode: '2' }).autowrapMode).toBe(2);
     expect(parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {}).autowrapMode).toBeUndefined();
   });
+
+  it('parses tab_stops, tab_size and autowrap_trim_flags', () => {
+    const p = parseRichTextLabel(h({ name: 'T', type: 'RichTextLabel' }), {
+      tab_stops: 'PackedFloat32Array(20, 40)',
+      tab_size: '8',
+      autowrap_trim_flags: '64',
+    });
+    expect(p.tabStopsPx).toEqual([20, 40]);
+    expect(p.tabSize).toBe(8);
+    expect(p.autowrapTrimFlags).toBe(64);
+  });
 });

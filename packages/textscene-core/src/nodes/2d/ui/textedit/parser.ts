@@ -41,5 +41,6 @@ export function parseTextEdit(
     fitContentHeight: parseOptionalBool(properties.scroll_fit_content_height),
     minimapDraw: parseOptionalBool(properties.minimap_draw),
     minimapWidth: parseOptionalInt(properties.minimap_width),
+    syntaxHighlighter: properties.syntax_highlighter,
   };
 }

@@ -163,6 +163,54 @@ describe('<Label> (isolated painter contract)', () => {
     expect(mat.depthWrite).toBe(false);
     expect(mat.clippingPlanes).toEqual([]);
   });
+
+  function quadCount(renderer: Awaited<ReturnType<typeof render>>): number {
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    return geometry.attributes.position!.count / 4;
+  }
+
+  it('text_overrun_behavior trims to the rect width, replacing the tail with an ellipsis glyph', async () => {
+    const untrimmed = await render({ text: 'AAAAAAAAAAAA' }, { x: 0, y: 0, w: 100, h: 200 });
+    expect(quadCount(untrimmed)).toBe(12);
+
+    // OVERRUN_TRIM_ELLIPSIS (3): text_overrun.test.ts derives "AAAAAAAA…" (9
+    // ink glyphs) at this same width/font size.
+    const trimmed = await render(
+      { text: 'AAAAAAAAAAAA', overrunBehavior: 3 },
+      { x: 0, y: 0, w: 100, h: 200 }
+    );
+    expect(quadCount(trimmed)).toBe(9);
+  });
+
+  it('clip_text scissors this Label to its own rect (4 axis-aligned planes with no ancestor clip)', async () => {
+    const renderer = await render({ text: 'A', clipText: true });
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.clippingPlanes).toHaveLength(4);
+  });
+
+  it('justification_flags without WORD_BOUND (2) leaves a FILL line ragged — the default flags (label.h:46) would have stretched it', async () => {
+    const rect = { x: 0, y: 0, w: 200, h: 200 };
+    const stretched = await render({ text: 'A B', horizontalAlignment: 3 }, rect);
+    const ragged = await render({ text: 'A B', horizontalAlignment: 3, justificationFlags: 0 }, rect);
+    const width = (r: Awaited<ReturnType<typeof render>>) => {
+      const geo = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+      const xs = geo.attributes.position!.array as Float32Array;
+      let max = -Infinity;
+      for (let i = 0; i < xs.length; i += 3) max = Math.max(max, xs[i]!);
+      return max;
+    };
+    expect(width(stretched)).toBeGreaterThan(width(ragged));
+  });
+
+  it('tab_stops moves the glyph after a tab onto the configured stop', async () => {
+    const renderer = await render({ text: 'A\tB', tabStopsPx: [40] });
+    const geo = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const xs = geo.attributes.position!.array as Float32Array;
+    // Quad 0 = 'A' (4 verts), quad 1 = 'B' -- its top-left vertex.x is the pen
+    // x after the tab, plus the glyph's own small atlas left-bearing offset.
+    expect(xs[12]).toBeGreaterThan(39);
+    expect(xs[12]).toBeLessThan(42);
+  });
 });
 
 describe('<Label> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {

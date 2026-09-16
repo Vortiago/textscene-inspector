@@ -218,6 +218,18 @@ describe('<Button> (isolated painter contract)', () => {
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
+
+  it('text_overrun_behavior trims the label to the content box, minus the style margins (button.cpp:424)', async () => {
+    const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 32 };
+    const untrimmed = await ReactThreeTestRenderer.create(
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA' })} rect={narrow} renderOrder={0} />
+    );
+    const trimmed = await ReactThreeTestRenderer.create(
+      <Button {...painterEnv()} solveNode={solveNode({ text: 'AAAAAAAAAAAA', overrunBehavior: 1 })} rect={narrow} renderOrder={0} />
+    );
+    const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+  });
 });
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {

@@ -228,6 +228,16 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       expect(mat.clippingPlanes).toEqual([]);
     }
   });
+
+  it('tab_stops moves the glyph after a tab onto the configured stop', async () => {
+    const withStop = await render({ text: 'A\tB', autowrapMode: 0, tabStopsPx: [40] });
+    const withoutStop = await render({ text: 'A\tB', autowrapMode: 0 });
+    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
+      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
+      return (geo.attributes.position!.array as Float32Array)[12]!;
+    };
+    expect(secondQuadX(withStop)).toBeGreaterThan(secondQuadX(withoutStop));
+  });
 });
 
 describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {

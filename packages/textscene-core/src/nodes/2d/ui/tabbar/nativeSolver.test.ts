@@ -4,10 +4,17 @@ import {
   isCloseButtonVisible,
   pickTabStyleBox,
   resolveTabDrawState,
+  tabBarMinimumSize,
   tabBarStyleBoxes,
+  tabBarThemeIconSize,
   tabContentWidth,
   tabWidthStyleMinWidth,
 } from './nativeSolver';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { TabBarProperties } from './types';
 
 describe('resolveTabDrawState', () => {
   it('picks selected for the current tab', () => {
@@ -223,5 +230,72 @@ describe('computeTabBarDrawLayout', () => {
   it('returns an empty layout for zero tabs', () => {
     const layout = computeTabBarDrawLayout([], 100, 0, false, 0, 0, 16);
     expect(layout).toEqual({ items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false });
+  });
+
+  it('reserves incrementIconWidth + decrementIconWidth separately when they differ (a themed pair need not stay symmetric)', () => {
+    const tabs = [
+      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
+      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
+      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
+    ];
+    // w reaches 120 at i=2 (> limit=100), clips there: w -= 40 -> 80, maxDrawnTab=1.
+    // A small reserved gap (limitMinusButtons=90) already fits under 80: no further shedding.
+    const small = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 5, 5);
+    expect(small.maxDrawnTab).toBe(1);
+    // A large reserved gap (limitMinusButtons=100-30-30=40) does not fit under 80:
+    // the while-loop sheds tab 1 too, dropping maxDrawnTab to 0.
+    const large = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 30, 30);
+    expect(large.maxDrawnTab).toBe(0);
+    // The two widths need not match — this is exactly what a themed pair needs.
+    const asymmetric = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 55, 5);
+    expect(asymmetric.maxDrawnTab).toBe(0);
+  });
+});
+
+describe('tabBarThemeIconSize (BIND_THEME_ITEM_CUSTOM(..., close_icon, "close") et al., tab_bar.cpp:2160-2182)', () => {
+  it('is the vendored 16x16 default when nothing themed it', () => {
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close')).toEqual({ x: 16, y: 16 });
+  });
+
+  it('is the themed size when the walker resolved a "close"/"increment"/"decrement" slot', () => {
+    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({ x: 24, y: 24 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment')).toEqual({ x: 16, y: 16 });
+  });
+});
+
+describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.cpp:44-122)', () => {
+  function ctx(): SolveContext {
+    return { theme: nativeTheme(1), measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
+  }
+
+  function node(overrides: Partial<SolveNode> = {}): SolveNode {
+    const props: TabBarProperties = {
+      name: 'T',
+      tabs: [{ title: '', tooltip: '', disabled: false }],
+      tabCloseDisplayPolicy: 2, // ALWAYS
+    };
+    return {
+      ...solveNode(),
+      path: 'T',
+      node: { name: 'T', type: 'TabBar', children: [], properties: props },
+      ...overrides,
+    };
+  }
+
+  it('floors on the vendored 16x16 close icon when untethered', () => {
+    const result = tabBarMinimumSize(node(), ctx());
+    const size = 'x' in result ? result : result.size;
+    // styleMinWidth(0, no styleboxes resolved) + closeButtonMarginLeft(0, no button style resolved) + close(16).
+    expect(size.x).toBeGreaterThanOrEqual(16);
+    expect(size.y).toBeGreaterThanOrEqual(16);
+  });
+
+  it('widens on a themed "close" icon bigger than the vendored default', () => {
+    const untethered = tabBarMinimumSize(node(), ctx());
+    const themed = tabBarMinimumSize(node({ textureSlots: { close: { x: 40, y: 32 } } }), ctx());
+    const untetheredSize = 'x' in untethered ? untethered : untethered.size;
+    const themedSize = 'x' in themed ? themed : themed.size;
+    expect(themedSize.x).toBeGreaterThan(untetheredSize.x);
+    expect(themedSize.y).toBeGreaterThan(untetheredSize.y);
   });
 });

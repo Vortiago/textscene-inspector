@@ -60,12 +60,15 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
+import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
+import { resolveLineColors, type CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import {
   pickTextEditStyleBox,
   resolveTextEditStyleState,
@@ -74,6 +77,11 @@ import {
   textEditWrapWidthPx,
   shapeTextEditLines,
   layoutTextEditDrawBand,
+  textEditRowStartIndices,
+  textEditRowColorRuns,
+  textEditColorRunLine,
+  textEditGlyphColorAt,
+  textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -93,6 +101,8 @@ export interface TextEditBodyProps extends NativeControlComponentProps {
    * doc has why the two terms are never passed apart.
    */
   gutterBandWidthPx?: number;
+  /** `CodeEdit.indent_size`, forwarded to `TextEdit::set_tab_size` (`code_edit.cpp:908-920`); absent for a bare `TextEdit`, which has no `.tscn` property for it (`nativeSolver.ts`'s `textEditTabStopsPx` own doc). */
+  tabSize?: number;
 }
 
 export function TextEditBody({
@@ -102,14 +112,13 @@ export function TextEditBody({
   renderOrder,
   theme,
   gutterBandWidthPx = 0,
+  tabSize,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
   const { fontSizePx, color: baseFontColor } = textEditTextTheme(solveNode, props, state, { theme });
-  const tintedFontColor = useMemo(() => multiplyModulate(tint.own, baseFontColor), [tint.own, baseFontColor]);
-  const linearFontColor = useMemo(() => godotColorToLinear(tintedFontColor), [tintedFontColor]);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const lineSpacingPx = theme.separation; // nativeSolver.ts's own doc.
@@ -136,17 +145,48 @@ export function TextEditBody({
   );
 
   const lines = useMemo(() => (props.text ?? '').split('\n'), [props.text]);
+  const tabStopsPx = useMemo(() => textEditTabStopsPx(tabSize, fontMetrics, fontSizePx), [tabSize, fontMetrics, fontSizePx]);
   const lineLayouts = useMemo(
-    () => shapeTextEditLines(lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics),
-    [lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics]
+    () => shapeTextEditLines(lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx),
+    [lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx]
   );
+
+  // `syntax_highlighter` resolves in THIS node's own scope, never
+  // `useSceneResources()` — a `CodeHighlighter` is the one concrete
+  // `SyntaxHighlighter`; anything else (a custom script, an unresolved ref)
+  // leaves `highlighter` null and every line paints at plain `font_color`,
+  // exactly as before this resource slice existed.
+  const highlighterResource = useSubOrExtResource(
+    props.syntaxHighlighter,
+    solveNode.resources.internalResources,
+    solveNode.resources.externalResources
+  );
+  const highlighter = useMemo(
+    () =>
+      highlighterResource?.type === 'CodeHighlighter'
+        ? decodeCodeHighlighter(highlighterResource.data as Record<string, string>)
+        : null,
+    [highlighterResource]
+  );
+  // Threaded top to bottom, one buffer line at a time — the ONE open,
+  // non-line-only region (an unterminated string/comment) carries into the
+  // next line (`highlight.ts`'s own doc).
+  const lineColorSpans = useMemo<(readonly CodeHighlighterColorSpan[])[] | null>(() => {
+    if (!highlighter) return null;
+    let region = -1;
+    return lines.map((lineText) => {
+      const { spans, regionAtLineEnd } = resolveLineColors(lineText, highlighter, baseFontColor, region);
+      region = regionAtLineEnd;
+      return spans;
+    });
+  }, [highlighter, lines, baseFontColor]);
 
   const tintedCurrentLineColor = useMemo(() => multiplyModulate(tint.own, CURRENT_LINE_COLOR), [tint.own]);
 
   const { anchorRef, clippingPlanes } = useWorldClipPlanes(rect);
 
-  const tabIcon = useIconTexture(TEXT_EDIT_GLYPH_ICONS.tab);
-  const spaceIcon = useIconTexture(TEXT_EDIT_GLYPH_ICONS.space);
+  const tabIcon = useNodeIcon(solveNode.icons.tab, TEXT_EDIT_GLYPH_ICONS.tab);
+  const spaceIcon = useNodeIcon(solveNode.icons.space, TEXT_EDIT_GLYPH_ICONS.space);
 
   return (
     <CanvasItemGroup ref={anchorRef}>
@@ -160,29 +200,42 @@ export function TextEditBody({
           renderOrder={renderOrder}
         />
       )}
-      {lineLayouts.map(({ layout, startRow }, lineIndex) =>
-        layout.lines.map((line, rowInLine) => {
+      {lineLayouts.map(({ layout, startRow }, lineIndex) => {
+        const spans = lineColorSpans?.[lineIndex];
+        const rowStartIndices = spans ? textEditRowStartIndices(lines[lineIndex] ?? '', layout.lines) : undefined;
+        return layout.lines.map((line, rowInLine) => {
           const row = startRow + rowInLine;
           const rowTopPx = row * rowHeightPx;
+          const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
+          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor);
           return (
             <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[band.xMarginBeginPx, -rowTopPx, 0]}>
-              <TextRun
-                layout={soloLineLayout(line, layout)}
-                fontSizePx={fontSizePx}
-                tint={tintedFontColor}
-                clippingPlanes={clippingPlanes}
-                renderOrder={renderOrder}
-              />
+              {runs.map((run, runIndex) => (
+                <TextRun
+                  key={runIndex}
+                  layout={soloLineLayout(textEditColorRunLine(run), layout)}
+                  fontSizePx={fontSizePx}
+                  tint={multiplyModulate(tint.own, run.color)}
+                  clippingPlanes={clippingPlanes}
+                  renderOrder={renderOrder}
+                />
+              ))}
               {(props.drawTabs || props.drawSpaces) &&
                 line.glyphs.map((glyph, glyphIndex) => {
                   if (props.drawTabs && glyph.char === '\t') {
+                    // The SAME per-glyph highlighted colour tints its icon,
+                    // not a fixed font_color (text_edit.cpp:1674,1714).
+                    const iconColor = multiplyModulate(
+                      tint.own,
+                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
+                    );
                     return (
                       <CanvasItemGroup key={glyphIndex} position={[glyph.x, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}>
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}
-                          color={linearFontColor}
-                          opacity={tintedFontColor.a}
+                          color={godotColorToLinear(iconColor)}
+                          opacity={iconColor.a}
                           map={tabIcon}
                           renderOrder={renderOrder}
                         />
@@ -191,13 +244,17 @@ export function TextEditBody({
                   }
                   if (props.drawSpaces && glyph.char === ' ') {
                     const xOfs = glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
+                    const iconColor = multiplyModulate(
+                      tint.own,
+                      textEditGlyphColorAt(spans, rowStartIndex + glyphIndex, baseFontColor)
+                    );
                     return (
                       <CanvasItemGroup key={glyphIndex} position={[xOfs, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}>
                         <ControlQuad
                           width={GLYPH_ICON_SIZE_PX}
                           height={GLYPH_ICON_SIZE_PX}
-                          color={linearFontColor}
-                          opacity={tintedFontColor.a}
+                          color={godotColorToLinear(iconColor)}
+                          opacity={iconColor.a}
                           map={spaceIcon}
                           renderOrder={renderOrder}
                         />
@@ -208,8 +265,8 @@ export function TextEditBody({
                 })}
             </CanvasItemGroup>
           );
-        })
-      )}
+        });
+      })}
     </CanvasItemGroup>
   );
 }

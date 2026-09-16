@@ -33,6 +33,8 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
   linkButtonTextTheme,
   linkButtonUnderlineGeometry,
@@ -43,7 +45,7 @@ import {
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
 
-export function LinkButton({ solveNode, tint, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function LinkButton({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
   const state = resolveLinkButtonDrawState(props);
 
@@ -59,11 +61,28 @@ export function LinkButton({ solveNode, tint, renderOrder, theme, meta }: Native
   // rather than inside the `useMemo` below.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINKBUTTON_THEME_FONT_KEY);
   const cachedLayout = isTextLayoutResult(meta) ? meta : null;
-  const layout: TextLayoutResult | null = useMemo(() => {
+  const unshapedOrCachedLayout: TextLayoutResult | null = useMemo(() => {
     if (!hasText) return null;
     if (cachedLayout) return cachedLayout;
     return shapeButtonLabel(text, fontSizePx, fontMetrics);
   }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
+
+  // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` once
+  // `overrun_behavior` is anything but NO_TRIMMING -- the control's own
+  // resolved rect, no style margin (LinkButton draws no StyleBox at all).
+  const overrunFlags = useMemo(
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    [props.overrunBehavior]
+  );
+  const layout: TextLayoutResult | null = useMemo(() => {
+    if (!unshapedOrCachedLayout || !overrunFlags.trim) return unshapedOrCachedLayout;
+    const trimmedLine = trimLineToWidth(unshapedOrCachedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
+      fontMetrics,
+      fontSizePx,
+      ellipsisChar: props.ellipsisChar,
+    });
+    return soloLineLayout(trimmedLine, unshapedOrCachedLayout);
+  }, [unshapedOrCachedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
   // --- Underline: a solid stroke, per underline_mode + draw state ----------
   const underlineLinearColor = useGodotLinearColor(tintedFontColor);

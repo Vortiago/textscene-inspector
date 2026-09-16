@@ -27,4 +27,10 @@ export interface TextEditProperties extends ControlProperties {
   minimapDraw?: boolean;
   /** The reserved minimap width, Godot px. Godot default 80. */
   minimapWidth?: number;
+  /**
+   * `syntax_highlighter = ExtResource(...)` / `SubResource(...)` — raw, resolved
+   * downstream (`Component.tsx`, against THIS node's own `solveNode.resources`)
+   * rather than here, the same split `theme`/`ControlProperties` already take.
+   */
+  syntaxHighlighter?: string;
 }

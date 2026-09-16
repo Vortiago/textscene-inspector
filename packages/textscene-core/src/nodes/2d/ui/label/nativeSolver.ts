@@ -15,8 +15,12 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, clampAutowrapMode, shapeText, shapedTextSizeWidthPx, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { AutowrapMode, clampAutowrapMode, isWhitespace, shapeText, shapedTextSizeWidthPx, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
+import { JustificationFlag, fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
+import type { TscnInternalResource } from '../../../../parser/types';
+import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
 
@@ -73,6 +77,50 @@ export function labelTextTheme(
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
+/** This node's own `label_settings` resource, resolved in ITS OWN scope — undefined ref, an ExtResource (not modelled, see `comparison.md`) or an unresolved id all fall through to null, "no settings". */
+export function resolveNodeLabelSettings(
+  props: LabelProperties,
+  internalResources: readonly TscnInternalResource[]
+) {
+  return props.labelSettings ? resolveLabelSettings(props.labelSettings, internalResources) : null;
+}
+
+export interface LabelEffectiveTextTheme {
+  fontSizePx: number;
+  color: ControlColor;
+  lineSpacingPx: number;
+}
+
+/**
+ * A valid `label_settings` beats the theme OUTRIGHT — not merged with it —
+ * for `font_size` (label.cpp:186,759), `font_color` (`:761`) and
+ * `line_spacing` (`:346`): each reads `settings.is_valid() ? settings->get_X()
+ * : theme_cache.X`, so a node-local `theme_override_*` is bypassed entirely
+ * once `label_settings` is set, even where the RESOURCE'S OWN field is left
+ * at its class default. `get_line_spacing()` returns a `real_t` assigned into
+ * a C++ `int`, truncated toward zero (`Math.trunc`, not `Math.floor` — see
+ * `horizontalOffsetPx`'s own doc for why the two can disagree).
+ *
+ * `font` is the one exception (`:185`): it falls through to the theme when
+ * the RESOURCE's own `font` is unset, and even when set is NOT ported here —
+ * this previewer's font-metrics resolution has no by-reference path (only a
+ * node's own theme chain), so every Label still shapes in its OWN theme font
+ * regardless of `label_settings.font` (`comparison.md`).
+ */
+export function labelEffectiveTextTheme(
+  themeResolved: ResolvedTextTheme,
+  settings: ReturnType<typeof resolveNodeLabelSettings>
+): LabelEffectiveTextTheme {
+  if (!settings) {
+    return { fontSizePx: themeResolved.fontSizePx, color: themeResolved.color, lineSpacingPx: LABEL_LINE_SPACING_PX };
+  }
+  return {
+    fontSizePx: settings.fontSize,
+    color: settings.fontColor,
+    lineSpacingPx: Math.trunc(settings.lineSpacing),
+  };
+}
+
 /**
  * The width `Label::_shape` breaks lines at (`label.cpp:581`):
  *
@@ -92,6 +140,126 @@ export function labelTextTheme(
  */
 export function labelShapingWidthPx(controlWidthPx: number): number {
   return Math.trunc(controlWidthPx);
+}
+
+// --- lines_skipped / max_lines_visible: label.cpp:344-361,520-561 ----------
+
+export interface LabelLineRange {
+  start: number;
+  end: number;
+}
+
+/**
+ * `Label::_update_visible`'s own visible-line window (`label.cpp:344-361`),
+ * shared by `get_layout_data`'s draw-time window (`:520-561`): drop the
+ * first `linesSkipped` lines, then cap what remains to at most
+ * `maxLinesVisible` (unset or negative — the "no limit" sentinel — leaves it
+ * uncapped). Applies REGARDLESS of autowrap — `minsize.height` always
+ * reflects this window, and so does the draw pass.
+ *
+ * NOT ported: `get_layout_data`'s OWN further clamp of `lines_visible` to
+ * however many lines fit the control's rect height (`:533-548`) — a
+ * DIFFERENT, always-on limit this previewer does not model at all (a Label
+ * taller than its rect already overflows visibly here); see `comparison.md`.
+ */
+export function labelVisibleLineRange(
+  totalLines: number,
+  linesSkipped: number,
+  maxLinesVisible: number | undefined
+): LabelLineRange {
+  let linesVisible = totalLines;
+  if (maxLinesVisible !== undefined && maxLinesVisible >= 0 && linesVisible > maxLinesVisible) {
+    linesVisible = maxLinesVisible;
+  }
+  const start = Math.min(Math.max(0, linesSkipped), totalLines);
+  const end = Math.max(start, Math.min(totalLines, linesVisible + linesSkipped));
+  return { start, end };
+}
+
+/**
+ * `layout.lines` windowed to `range`, as its own `TextLayoutResult` —
+ * `heightPx`/`widthPx` recomputed over the KEPT lines only, matching how
+ * `_update_visible`/`get_layout_data` sum only the visible window's own line
+ * metrics, never a hidden line's (`label.cpp:359-361`, `:556-559`).
+ */
+export function windowLabelLines(layout: TextLayoutResult, range: LabelLineRange): TextLayoutResult {
+  const lines = layout.lines.slice(range.start, range.end);
+  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
+  return { ...layout, lines, heightPx: lines.length * layout.linePitchPx, widthPx };
+}
+
+// --- visible_characters / visible_characters_behavior: label.cpp:778-883 ---
+
+/** `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`). Godot default 0 (`label.h:74`). */
+export const VC_CHARS_BEFORE_SHAPING = 0;
+export const VC_CHARS_AFTER_SHAPING = 1;
+export const VC_GLYPHS_AUTO = 2;
+export const VC_GLYPHS_LTR = 3;
+export const VC_GLYPHS_RTL = 4;
+
+/**
+ * `Label::_shape`'s pre-shape reveal (`label.cpp:155-156`): `txt.substr(0,
+ * visible_chars)`, applied BEFORE line-breaking, so it changes which glyphs
+ * exist at all rather than merely which ones draw — a typewriter reveal at
+ * this behaviour re-wraps as it grows. A no-op for every other behaviour
+ * (those trim at DRAW time instead — `applyVisibleCharsReveal`) or an
+ * unset/negative `visibleChars` ("show all").
+ */
+export function labelPreShapeText(text: string, visibleChars: number | undefined, behavior: number | undefined): string {
+  if (visibleChars === undefined || visibleChars < 0) return text;
+  if ((behavior ?? VC_CHARS_BEFORE_SHAPING) !== VC_CHARS_BEFORE_SHAPING) return text;
+  return text.slice(0, visibleChars);
+}
+
+export interface VisibleCharsBudget {
+  behavior: number;
+  /** Final resolved `visible_chars` — CHARS_AFTER_SHAPING's own budget. */
+  visibleChars: number | undefined;
+  /** Final resolved `visible_ratio` — the two GLYPHS_* behaviours' own budget. */
+  visibleRatio: number | undefined;
+}
+
+/**
+ * `draw_text`'s per-glyph `skip` union (`label.cpp:778-780,label.h:197-240`),
+ * applied to an already shaped-and-windowed set of lines (this previewer's
+ * `lines_skipped`/`max_lines_visible` window, `label.cpp`'s own `start`/`end`
+ * bound on the SAME `total_glyphs` count, `:548-559`). CHARS_AFTER_SHAPING
+ * counts CHARACTERS from the front; GLYPHS_LTR/AUTO count GLYPHS from the
+ * front and GLYPHS_RTL from the BACK (`trim_glyphs_rtl`'s own condition,
+ * `label.cpp:780`, independent of layout direction — this engine never
+ * models RTL layout, but the RTL *behaviour* is still a same-glyphs-hidden,
+ * opposite-end reveal any LTR scene can select). One glyph is one source
+ * character in this engine's atlas shaping (no ligatures), so the character
+ * and glyph counts coincide — except across a TRIMMED edge space, which
+ * `TextLineLayout` carries no source index for; see `comparison.md`.
+ * CHARS_BEFORE_SHAPING is a no-op here — it already ran pre-shape.
+ */
+export function applyVisibleCharsReveal(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
+  if (budget.behavior === VC_CHARS_BEFORE_SHAPING) return [...lines];
+
+  let limit: number;
+  let fromEnd = false;
+  if (budget.behavior === VC_CHARS_AFTER_SHAPING) {
+    if (budget.visibleChars === undefined || budget.visibleChars < 0) return [...lines];
+    limit = budget.visibleChars;
+  } else {
+    if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
+    const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
+    limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
+    fromEnd = budget.behavior === VC_GLYPHS_RTL;
+  }
+
+  const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
+  const hideBefore = fromEnd ? totalGlyphs - limit : 0;
+  let seen = 0;
+  return lines.map((line) => ({
+    ...line,
+    glyphs: line.glyphs.filter(() => {
+      const keep = fromEnd ? seen >= hideBefore : seen < limit;
+      seen++;
+      return keep;
+    }),
+  }));
 }
 
 /**
@@ -176,15 +344,22 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
+  const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
+  const themeResolved = labelTextTheme(n, props, ctx);
+  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, settings);
+  const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  // `visible_chars`/`visible_characters_behavior` are handed to `parseLabel`'s
+  // OWN cross-derivation, so `props.visibleCharacters` is already the FINAL
+  // resolved int (label.cpp:1285-1327's own doc). CHARS_BEFORE_SHAPING (the
+  // default) truncates BEFORE shaping, so it must run before the empty-text
+  // gate below — a Label revealed to 0 characters shapes as empty.
   // Raw, with `uppercase` handed to `shapeText` as an option rather than
   // pre-applied here: the painter's own fallback shape passes the option too,
   // and one rule implemented in two places agrees only for as long as both
   // spellings happen to match. Emptiness is unaffected by case, so the
   // early-out below reads the same either way.
-  const text = props.text ?? '';
-  const { fontSizePx } = labelTextTheme(n, props, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
 
   if (text.length === 0) {
     return { x: 1, y: fontHeightPx };
@@ -192,10 +367,6 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  // Label's `line_spacing` separates lines without adding a trailing gap,
-  // which the `- lineSpacingPx` below guarantees, so nothing is added back
-  // for a single line.
-  const lineSpacingPx = LABEL_LINE_SPACING_PX;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
   // This control's own resolved width, or `undefined` on the first pass, where
   // no rect exists yet.
@@ -208,9 +379,18 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
     lineSpacingPx,
     uppercase: props.uppercase,
     fontMetrics,
-    paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
+    paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+    tabStopsPx: props.tabStopsPx,
+    autowrapTrimFlags: props.autowrapTrimFlags,
   });
-  const measuredY = Math.max(0, layout.heightPx - lineSpacingPx);
+  // `_update_visible` windows to `lines_skipped`/`max_lines_visible`
+  // REGARDLESS of autowrap (its own doc) — Label's own `line_spacing`
+  // separates lines without adding a trailing gap, which the `-
+  // lineSpacingPx` below guarantees, so nothing is added back for a single
+  // line.
+  const range = labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
+  const windowed = windowLabelLines(layout, range);
+  const measuredY = Math.max(0, windowed.heightPx - lineSpacingPx);
   const height = Math.max(measuredY, fontHeightPx);
 
   if (autowrapMode !== AutowrapMode.OFF) {
@@ -220,7 +400,17 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // (`label.cpp:252-257`), i.e. the CEILED extent, not the pen advance —
   // `max` over per-line ceils and the ceil of the max agree, so the widest
   // raw line converts once here rather than per line.
-  return { size: { x: shapedTextSizeWidthPx(layout.widthPx), y: height }, meta: layout };
+  //
+  // label.cpp:993-995: `clip_text` or any non-NO_TRIMMING overrun behaviour
+  // collapses the width floor to 1 — the box no longer needs to be wide
+  // enough for the full content, since a narrower one just trims it. The
+  // `max_lines_visible > 0` branch above this in the source (:985-987) is a
+  // NARROWER, additional clamp this slice does not model (needs autowrap ON,
+  // which this branch never reaches anyway — see `comparison.md`).
+  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
+  const widthPx =
+    props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING ? 1 : shapedTextSizeWidthPx(windowed.widthPx);
+  return { size: { x: widthPx, y: height }, meta: windowed };
 };
 
 // --- Draw-time layout: per-line placement + the vertical-origin reconciliation ---
@@ -251,31 +441,35 @@ export interface LabelLinePlacement {
   line: TextLineLayout;
 }
 
-/**
- * Redistributes `line`'s slack width evenly across its word-boundary gaps
- * (`TextServer::shaped_text_fit_to_width`'s `JUSTIFICATION_WORD_BOUND`,
- * Latin/ASCII subset — no kashida elongation, out of scope). A no-op if there
- * is no slack or no gap to grow.
- *
- * `boxWidthPx` here is the TRUNCATED control width: `_shape` justifies with the
- * same `int width` it broke the lines at (`label.cpp:297,331` —
- * `shaped_text_fit_to_width(para.lines_rid[i], width, line_jst_flags)`), not
- * with the raw `get_size()` that `_get_line_rect` reads. The two genuinely
- * differ, which is why the caller passes a different number to each.
- */
-function justifyLine(line: TextLineLayout, boxWidthPx: number): TextLineLayout {
-  const slackPx = boxWidthPx - line.widthPx;
-  const gapCount = line.glyphs.filter((g) => g.char === ' ').length;
-  if (slackPx <= 0 || gapCount === 0) return line;
+/** `Label.jst_flags`'s own default (`label.h:46`) — every Label justifies as if it set exactly these, absent a scene override. */
+export const LABEL_DEFAULT_JUSTIFICATION_FLAGS =
+  JustificationFlag.WORD_BOUND | JustificationFlag.KASHIDA | JustificationFlag.SKIP_LAST_LINE | JustificationFlag.DO_NOT_SKIP_SINGLE_LINE;
 
-  const extraPerGapPx = slackPx / gapCount;
-  let shiftPx = 0;
-  const glyphs = line.glyphs.map((g) => {
-    const placed = { ...g, x: g.x + shiftPx };
-    if (g.char === ' ') shiftPx += extraPerGapPx;
-    return placed;
-  });
-  return { ...line, glyphs, widthPx: boxWidthPx };
+/** `TS->shaped_text_has_visible_chars` reduced to this engine's charset: any glyph whose own character is not whitespace. */
+function lineHasVisibleChars(line: TextLineLayout): boolean {
+  return line.glyphs.some((g) => !isWhitespace(g.char.codePointAt(0)!));
+}
+
+/**
+ * How many of `lines` (from the start) get justified — `label.cpp:304-319`'s
+ * `jst_to_line` computation, shared by the autowrap-OFF branch this Label
+ * slice models (the autowrap-ON one at `:273-289` re-derives the identical
+ * three flags for its own `lines_hidden` case, out of scope here — see
+ * `LabelProperties.overrunBehavior`'s own doc).
+ */
+function justifyToLineIndex(lines: TextLineLayout[], flags: number): number {
+  if (lines.length === 1 && flags & JustificationFlag.DO_NOT_SKIP_SINGLE_LINE) return lines.length;
+  let jstToLine = lines.length;
+  if (flags & JustificationFlag.SKIP_LAST_LINE) jstToLine = lines.length - 1;
+  if (flags & JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lineHasVisibleChars(lines[i]!)) {
+        jstToLine = i;
+        break;
+      }
+    }
+  }
+  return jstToLine;
 }
 
 /**
@@ -328,7 +522,11 @@ export function layoutLabelLines(
   boxWidthPx: number,
   boxHeightPx: number,
   horizontalAlignment: number | undefined,
-  verticalAlignment: number | undefined
+  verticalAlignment: number | undefined,
+  justificationFlags: number = LABEL_DEFAULT_JUSTIFICATION_FLAGS,
+  // Only feeds `fitLineToWidth`'s 0.1*font_size SHRINK floor; every existing
+  // caller/test predates this parameter and justifies at the theme default (16).
+  fontSizePx: number = 16
 ): LabelLinePlacement[] {
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
@@ -368,22 +566,24 @@ export function layoutLabelLines(
 
   const effectivePitchPx = layout.linePitchPx + vsepPx;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
+  const jstToLine = isFill ? justifyToLineIndex(layout.lines, justificationFlags) : 0;
+  // `labelShapingWidthPx`, not the raw `boxWidthPx` the alignment branch below
+  // uses — `_shape` justifies at the same truncated `int width` it broke the
+  // lines at (`label.cpp:297,331`), not the raw `get_size()` `_get_line_rect` reads.
+  const fitWidthPx = labelShapingWidthPx(boxWidthPx);
 
   return layout.lines.map((line, lineIndex) => {
     const y = vbeginPx + lineIndex * effectivePitchPx;
     if (isFill) {
-      // label.h:46 default `jst_flags`: JUSTIFICATION_SKIP_LAST_LINE, EXCEPT
-      // JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE overrides it when there is only
-      // one line total (that line is both first and last).
-      const skipJustify = lineCount > 1 && lineIndex === lineCount - 1;
-      // `labelShapingWidthPx`, not the raw `boxWidthPx` the alignment branch
-      // below uses — see `justifyLine`'s own doc for why Godot reads two
-      // different widths here.
-      return { x: 0, y, line: skipJustify ? line : justifyLine(line, labelShapingWidthPx(boxWidthPx)) };
+      const justified =
+        lineIndex < jstToLine
+          ? fitLineToWidth(line, fitWidthPx, justificationFlags, { fontSizePx }).line
+          : line;
+      return { x: 0, y, line: justified };
     }
     // `_get_line_rect` aligns against `line_size = TS->shaped_text_get_size(rid)`
     // (`label.cpp:478`), the ceiled extent — NOT the raw pen advance
-    // `justifyLine` above needs.
+    // `fitLineToWidth` above needs.
     return { x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment), y, line };
   });
 }

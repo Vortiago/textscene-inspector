@@ -30,7 +30,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
@@ -43,9 +43,9 @@ import {
   optionButtonTextTheme,
   pickButtonStyleBox,
   resolveButtonDrawState,
+  optionButtonArrowSize,
   resolveOptionButtonSelectedText,
   tintColor,
-  OPTION_BUTTON_ARROW_NATURAL_SIZE,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { OptionButtonProperties } from './types';
@@ -58,7 +58,8 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
 
   const clippingPlanes = useControlClipPlanes();
 
-  const arrowTexture = useIconTexture(OPTION_BUTTON_ICONS.arrow);
+  const arrowTexture = useNodeIcon(solveNode.icons.arrow, OPTION_BUTTON_ICONS.arrow);
+  const arrowSize = useMemo(() => optionButtonArrowSize(solveNode), [solveNode]);
 
   // --- Text: the SELECTED item only, never the popup's full list -----------
   const text = resolveOptionButtonSelectedText(props);
@@ -85,7 +86,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       layoutOptionButtonContent({
         rectSize: { x: rect.w, y: rect.h },
         styleMargin: baseStyleBox.contentMargin,
-        arrowSize: OPTION_BUTTON_ARROW_NATURAL_SIZE,
+        arrowSize,
         arrowMargin,
         // Godot's draw path reads the same ceiled `text_buf->get_size()` its
         // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
@@ -97,7 +98,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, arrowMargin, layout]
+    [rect.w, rect.h, baseStyleBox.contentMargin, arrowSize, arrowMargin, layout]
   );
 
   return (

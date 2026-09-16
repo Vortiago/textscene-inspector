@@ -253,6 +253,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit Syntax Highlighter",
+    "file": "unit-code-edit-syntax-highlighter.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit",
     "file": "unit-code-edit.tscn",
     "category": "Other"
@@ -598,6 +603,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List Guide Lines",
+    "file": "unit-item-list-guide-lines.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List Legacy Items",
+    "file": "unit-item-list-legacy-items.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List",
     "file": "unit-item-list.tscn",
     "category": "Other"
@@ -610,6 +625,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Autowrap In Container",
     "file": "unit-label-autowrap-in-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Label Settings",
+    "file": "unit-label-label-settings.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Visible Characters",
+    "file": "unit-label-visible-characters.tscn",
     "category": "Other"
   },
   {
@@ -710,6 +735,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Limit Angular Velocity Modifier 3d",
     "file": "unit-limit-angular-velocity-modifier-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Clear Button",
+    "file": "unit-lineedit-clear-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Max Length",
+    "file": "unit-lineedit-max-length.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Right Icon",
+    "file": "unit-lineedit-right-icon.tscn",
     "category": "Other"
   },
   {
@@ -2018,6 +2058,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Themed Icon",
+    "file": "unit-control-themed-icon.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Transform Modulate",
     "file": "unit-control-transform-modulate.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2035,6 +2080,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Fill",
+    "file": "unit-label-2d-fill.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Trim",
+    "file": "unit-label-2d-trim.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

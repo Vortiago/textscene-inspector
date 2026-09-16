@@ -16,6 +16,7 @@ import {
   textEditContentSize,
   textEditMinimumSize,
   layoutTextEditDrawBand,
+  textEditTabStopsPx,
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
@@ -162,5 +163,22 @@ describe('layoutTextEditDrawBand', () => {
     const withoutMinimap = layoutTextEditDrawBand(300, box, 0, 80, false, 24).xMarginEndPx;
     const withMinimap = layoutTextEditDrawBand(300, box, 0, 80, true, 24).xMarginEndPx;
     expect(withMinimap).toBe(withoutMinimap - 80);
+  });
+});
+
+describe('textEditTabStopsPx (text_edit.cpp:349-351)', () => {
+  // Space glyph advance at size 16 (openSansMetrics.ts's own 532 design
+  // units, unitsPerEm 2048): 532*16/2048 = 4.15625px.
+  it('one repeating stop, tab_size widths of the space glyph', () => {
+    expect(textEditTabStopsPx(4, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+  });
+  it('undefined tab_size falls back to the class default of 4 (text_edit.h:197)', () => {
+    expect(textEditTabStopsPx(undefined, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+  });
+  it('tab_size <= 0 disables tab alignment entirely (no stops)', () => {
+    expect(textEditTabStopsPx(0, OPEN_SANS_FONT_METRICS, 16)).toEqual([]);
+  });
+  it('floors the derived stop at 1px', () => {
+    expect(textEditTabStopsPx(1, OPEN_SANS_FONT_METRICS, 1)).toEqual([1]);
   });
 });

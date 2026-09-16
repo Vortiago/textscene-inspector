@@ -38,7 +38,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import {
@@ -50,9 +50,9 @@ import {
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
-  foldableContainerArrowSize,
   foldableContainerHSeparation,
   foldableContainerTitleMetrics,
+  FOLDABLE_CONTAINER_ARROW_THEME_NAME,
   type FoldableContainerArrow,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
@@ -82,9 +82,12 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
   );
 
   const clippingPlanes = useControlClipPlanes();
-  const iconTexture = useIconTexture(ARROW_ICON_URL[title.arrow]);
+  const iconTexture = useNodeIcon(
+    solveNode.icons[FOLDABLE_CONTAINER_ARROW_THEME_NAME[title.arrow]],
+    ARROW_ICON_URL[title.arrow]
+  );
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
-  const arrowSize = foldableContainerArrowSize(theme);
+  const arrowSize = title.arrowSize;
   const hSeparation = foldableContainerHSeparation(theme);
 
   const titleMargin = title.titleStyle.contentMargin;

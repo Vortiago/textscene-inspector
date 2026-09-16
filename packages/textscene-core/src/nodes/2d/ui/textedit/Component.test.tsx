@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import type { TscnNode } from '../../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
@@ -19,14 +19,22 @@ const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function solveNode(properties: Partial<TextEditProperties> = {}): SolveNode {
+function solveNode(
+  properties: Partial<TextEditProperties> = {},
+  internalResources: readonly TscnInternalResource[] = []
+): SolveNode {
   const node: TscnNode = {
     name: 'MyTextEdit',
     type: 'TextEdit',
     children: [],
     properties: { name: 'MyTextEdit', ...properties } as TextEditProperties,
   };
-  return { ...emptySolveNode(), path: 'MyTextEdit', node };
+  return {
+    ...emptySolveNode(),
+    path: 'MyTextEdit',
+    node,
+    resources: { externalResources: [], internalResources },
+  };
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; text/icon quads do not. */
@@ -227,5 +235,68 @@ describe('<TextEdit> — clipping', () => {
     expect(planes.length).toBeGreaterThanOrEqual(4);
     const insideWholeRectButPastLineEditContentMargin = new THREE.Vector3(RECT.w - 1, -1, 0);
     expect(planes.every((p) => p.distanceToPoint(insideWholeRectButPastLineEditContentMargin) >= 0)).toBe(true);
+  });
+});
+
+describe('<TextEdit> — syntax_highlighter', () => {
+  const CODE_HIGHLIGHTER: TscnInternalResource = {
+    id: 'CH',
+    type: 'CodeHighlighter',
+    data: { keyword_colors: '{\n"if": Color(1, 0, 0, 1)\n}' },
+  };
+
+  it('splits a keyword-containing line into one TextRun mesh per colour run', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'if x', syntaxHighlighter: 'SubResource("CH")' }, [CODE_HIGHLIGHTER])}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // "if" (keyword_color) / " " (a space is `is_symbol`, so `symbol_color`) /
+    // "x" (plain `font_color`) — three colour changes, syntax_highlighter.cpp:391-401.
+    const meshes = findTextMeshes(renderer.scene);
+    expect(meshes).toHaveLength(3);
+    const colors = meshes.map(
+      (m) => (m.material as THREE.ShaderMaterial).uniforms.uColor!.value as THREE.Vector3
+    );
+    expect(colors[0]!.x).not.toBeCloseTo(colors[2]!.x, 2);
+  });
+
+  it('paints one plain-font_color run per row when no syntax_highlighter is set', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'if x' })} rect={RECT} renderOrder={0} />
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it('tints a drawn tab/space icon with the SAME per-glyph colour as the text, not a fixed font_color (text_edit.cpp:1674,1714)', async () => {
+    // A tab is `is_symbol` too, so it colours via `symbol_color` (left at its
+    // near-black default here) rather than inheriting the preceding keyword's.
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'if\tx', drawTabs: true, syntaxHighlighter: 'SubResource("CH")' }, [
+          CODE_HIGHLIGHTER,
+        ])}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const tabIcon = findPlainQuads(renderer.scene)[0]!;
+    expect((tabIcon.material as THREE.MeshBasicMaterial).color.r).toBeLessThan(0.05);
+  });
+
+  it('ignores an unresolvable syntax_highlighter ref and falls back to one plain run', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'if x', syntaxHighlighter: 'SubResource("missing")' }, [])}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
   });
 });

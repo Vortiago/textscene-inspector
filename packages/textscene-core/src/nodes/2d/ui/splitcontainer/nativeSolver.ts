@@ -9,7 +9,11 @@
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { makeSplitContainerLayout, makeSplitContainerMinimumSize } from '../shared/splitContainerSolver';
+import {
+  makeSplitContainerLayout,
+  makeSplitContainerMinimumSize,
+  splitContainerTextureSlots,
+} from '../shared/splitContainerSolver';
 import type { SplitContainerProperties } from './types';
 
 /** `SplitContainer::vertical` (`split_container.h:96`). Godot default `false`. */
@@ -29,3 +33,4 @@ export const splitContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 controlSolverRegistry.registerContainerLayout('SplitContainer', splitContainerLayout);
 controlSolverRegistry.registerMinimumSize('SplitContainer', splitContainerMinimumSize);
+controlSolverRegistry.registerTextureSlots('SplitContainer', splitContainerTextureSlots);

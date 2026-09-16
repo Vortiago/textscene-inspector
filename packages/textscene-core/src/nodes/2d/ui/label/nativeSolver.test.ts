@@ -25,8 +25,27 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { panelContainerLayout, panelContainerMinimumSize } from '../panelcontainer/nativeSolver';
 import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/boxContainerSolver';
 import type { LabelProperties } from './types';
-import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { labelMinimumSize, labelShapingWidthPx, LABEL_THEME_KEYS, LABEL_THEME_FONT_KEY, LABEL_DEFAULT_FONT_COLOR, labelTextTheme, layoutLabelLines } from './nativeSolver';
+import { shapeText, AutowrapMode, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  labelMinimumSize,
+  labelShapingWidthPx,
+  LABEL_THEME_KEYS,
+  LABEL_THEME_FONT_KEY,
+  LABEL_DEFAULT_FONT_COLOR,
+  LABEL_LINE_SPACING_PX,
+  labelTextTheme,
+  layoutLabelLines,
+  labelVisibleLineRange,
+  windowLabelLines,
+  labelPreShapeText,
+  applyVisibleCharsReveal,
+  labelEffectiveTextTheme,
+  VC_CHARS_BEFORE_SHAPING,
+  VC_CHARS_AFTER_SHAPING,
+  VC_GLYPHS_AUTO,
+  VC_GLYPHS_LTR,
+  VC_GLYPHS_RTL,
+} from './nativeSolver';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
@@ -87,6 +106,22 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
     const result = minSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(49);
     // width floors to the WIDER of the two unwrapped lines ('AB'), not 'A'.
+    expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
+  });
+
+  it('autowrap OFF + clip_text: width floors to 1px, ignoring the unwrapped line width (label.cpp:993-995)', () => {
+    const result = minSize(node({ text: 'AB', autowrapMode: 0, clipText: true }), ctx());
+    expect(result.x).toBe(1);
+    expect(result.y).toBe(23);
+  });
+
+  it('autowrap OFF + a trimming text_overrun_behavior: width also floors to 1px, with clip_text left off (label.cpp:993-995, `clip || overrun_behavior != OVERRUN_NO_TRIMMING`)', () => {
+    const result = minSize(node({ text: 'AB', autowrapMode: 0, overrunBehavior: 3 }), ctx());
+    expect(result.x).toBe(1);
+  });
+
+  it('autowrap OFF + OVERRUN_NO_TRIMMING (0) and no clip_text: width is unaffected (the explicit default, same as omitting the property)', () => {
+    const result = minSize(node({ text: 'AB', autowrapMode: 0, overrunBehavior: 0 }), ctx());
     expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
   });
 
@@ -739,5 +774,197 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
 
   it('leaves the 1px autowrap-ON width floor alone — that branch never reads a shaped size at all (label.cpp:984-991)', () => {
     expect(minSize(node({ text: 'Master volume', autowrapMode: 2 }), ctx()).x).toBe(1);
+  });
+});
+
+// --- lines_skipped / max_lines_visible ---------------------------------------
+
+describe('labelVisibleLineRange (label.cpp:344-361)', () => {
+  it('drops the first linesSkipped lines, uncapped when maxLinesVisible is unset (happy path)', () => {
+    expect(labelVisibleLineRange(5, 2, undefined)).toEqual({ start: 2, end: 5 });
+  });
+
+  it('caps what remains to maxLinesVisible after the skip', () => {
+    expect(labelVisibleLineRange(5, 1, 2)).toEqual({ start: 1, end: 3 });
+  });
+
+  it('-1 is the documented "no limit" sentinel, same as unset (error path)', () => {
+    expect(labelVisibleLineRange(4, 0, -1)).toEqual({ start: 0, end: 4 });
+  });
+
+  it('max_lines_visible = 0 shows zero lines', () => {
+    expect(labelVisibleLineRange(4, 0, 0)).toEqual({ start: 0, end: 0 });
+  });
+
+  it('skipping past the end yields an empty range, never a negative one (edge case)', () => {
+    expect(labelVisibleLineRange(3, 5, undefined)).toEqual({ start: 3, end: 3 });
+  });
+});
+
+describe('windowLabelLines', () => {
+  const layout: TextLayoutResult = {
+    lines: [
+      { text: 'a', glyphs: [], widthPx: 10 },
+      { text: 'b', glyphs: [], widthPx: 30 },
+      { text: 'c', glyphs: [], widthPx: 20 },
+    ],
+    linePitchPx: 26,
+    widthPx: 30,
+    heightPx: 78,
+    baselineOffsetPx: 18,
+    fontMetrics: { kind: 'atlas' } as TextLayoutResult['fontMetrics'],
+  };
+
+  it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {
+    const windowed = windowLabelLines(layout, { start: 1, end: 3 });
+    expect(windowed.lines.map((l) => l.widthPx)).toEqual([30, 20]);
+    expect(windowed.widthPx).toBe(30);
+    expect(windowed.heightPx).toBe(52);
+  });
+
+  it('an empty range yields zero lines and zero height (edge case)', () => {
+    const windowed = windowLabelLines(layout, { start: 3, end: 3 });
+    expect(windowed.lines).toEqual([]);
+    expect(windowed.heightPx).toBe(0);
+    expect(windowed.widthPx).toBe(0);
+  });
+});
+
+// --- visible_characters / visible_characters_behavior ------------------------
+
+describe('labelPreShapeText (label.cpp:155-156)', () => {
+  it('truncates at the default behaviour, VC_CHARS_BEFORE_SHAPING (happy path)', () => {
+    expect(labelPreShapeText('Hello', 3, undefined)).toBe('Hel');
+    expect(labelPreShapeText('Hello', 3, VC_CHARS_BEFORE_SHAPING)).toBe('Hel');
+  });
+
+  it('is a no-op for every other behaviour — those trim at draw time instead (error path)', () => {
+    expect(labelPreShapeText('Hello', 3, VC_CHARS_AFTER_SHAPING)).toBe('Hello');
+    expect(labelPreShapeText('Hello', 3, VC_GLYPHS_LTR)).toBe('Hello');
+  });
+
+  it('a negative or absent visibleChars is "show all" (edge case)', () => {
+    expect(labelPreShapeText('Hello', -1, VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
+    expect(labelPreShapeText('Hello', undefined, VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
+  });
+});
+
+function fakeLine(charCount: number): TextLineLayout {
+  return {
+    text: 'x'.repeat(charCount),
+    glyphs: Array.from({ length: charCount }, (_, i) => ({ char: 'x', x: i, advance: 1, glyph: null })),
+    widthPx: charCount,
+  };
+}
+
+describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
+  it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3)], {
+      behavior: VC_CHARS_AFTER_SHAPING,
+      visibleChars: 4,
+      visibleRatio: undefined,
+    });
+    expect(l1!.glyphs.length).toBe(3);
+    expect(l2!.glyphs.length).toBe(1);
+  });
+
+  it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_LTR,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+    });
+    expect(l1!.glyphs.length).toBe(4);
+    expect(l2!.glyphs.length).toBe(0);
+    const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_AUTO,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+    });
+    expect(auto[0]!.glyphs.length).toBe(4);
+    expect(auto[1]!.glyphs.length).toBe(0);
+  });
+
+  it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_RTL,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+    });
+    expect(l1!.glyphs.length).toBe(0);
+    expect(l2!.glyphs.length).toBe(4);
+  });
+
+  it('a ratio/chars of "show everything" (>=1, -1, or absent) is a no-op (edge case)', () => {
+    const lines = [fakeLine(3)];
+    expect(applyVisibleCharsReveal(lines, { behavior: VC_GLYPHS_LTR, visibleChars: undefined, visibleRatio: 1 })[0]!.glyphs.length).toBe(3);
+    expect(applyVisibleCharsReveal(lines, { behavior: VC_CHARS_AFTER_SHAPING, visibleChars: -1, visibleRatio: undefined })[0]!.glyphs.length).toBe(3);
+  });
+
+  it('VC_CHARS_BEFORE_SHAPING is a no-op here — it already ran pre-shape', () => {
+    const lines = [fakeLine(3)];
+    expect(applyVisibleCharsReveal(lines, { behavior: VC_CHARS_BEFORE_SHAPING, visibleChars: 0, visibleRatio: 0 })[0]!.glyphs.length).toBe(3);
+  });
+});
+
+// --- label_settings precedence (label.cpp:186,346,759,761) -------------------
+
+describe('labelEffectiveTextTheme', () => {
+  const themeResolved = { fontSizePx: 40, color: { r: 1, g: 0, b: 0, a: 1 } };
+
+  it('falls back to the theme-resolved values absent label_settings (happy path)', () => {
+    expect(labelEffectiveTextTheme(themeResolved, null)).toEqual({
+      fontSizePx: 40,
+      color: { r: 1, g: 0, b: 0, a: 1 },
+      lineSpacingPx: LABEL_LINE_SPACING_PX,
+    });
+  });
+
+  it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {
+    const settings = { lineSpacing: 3, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 } };
+    expect(labelEffectiveTextTheme(themeResolved, settings)).toEqual({
+      fontSizePx: 16,
+      color: { r: 1, g: 1, b: 1, a: 1 },
+      lineSpacingPx: 3,
+    });
+  });
+
+  it('truncates a fractional line_spacing toward zero — a real_t assigned into a C++ int (label.cpp:346)', () => {
+    const settings = { lineSpacing: 3.7, fontSize: 16, fontColor: { r: 1, g: 1, b: 1, a: 1 }, outlineSize: 0, outlineColor: { r: 1, g: 1, b: 1, a: 1 } };
+    expect(labelEffectiveTextTheme(themeResolved, settings).lineSpacingPx).toBe(3);
+  });
+});
+
+// --- Integration: labelMinimumSize honouring all four properties together ---
+
+describe('labelMinimumSize — lines_skipped / max_lines_visible / label_settings / visible_characters', () => {
+  it('lines_skipped windows the reported height (label.cpp:344-361)', () => {
+    const full = minSize(node({ text: 'A\nAB\nA', autowrapMode: 0 }), ctx());
+    const skipped = minSize(node({ text: 'A\nAB\nA', autowrapMode: 0, linesSkipped: 1 }), ctx());
+    // 3 lines: 3*26-3=75. Skip the first ('A'), leaving 2: 2*26-3=49.
+    expect(full.y).toBe(75);
+    expect(skipped.y).toBe(49);
+  });
+
+  it('max_lines_visible caps the window from the front', () => {
+    const capped = minSize(node({ text: 'A\nAB\nA', autowrapMode: 0, maxLinesVisible: 1 }), ctx());
+    // 1 line kept ('A'): 1*26-3=23, floored at fontHeightPx (23) either way.
+    expect(capped.y).toBe(23);
+  });
+
+  it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
+    const settings = { id: '1', type: 'LabelSettings', data: { id: '1', font_size: '32' } };
+    const withSettings = node(
+      { labelSettings: 'SubResource("1")' },
+      { resources: { internalResources: [settings as never], externalResources: [] } }
+    );
+    // ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10.
+    expect(minSize(withSettings, ctx()).y).toBe(45);
+  });
+
+  it('visible_characters at the default VC_CHARS_BEFORE_SHAPING truncates the shaped text itself', () => {
+    const truncated = minSize(node({ text: 'AB', autowrapMode: 0, visibleCharacters: 1 }), ctx());
+    // 'A' alone: ceil(1354*16/2048) = 11, narrower than 'AB's 22.
+    expect(truncated.x).toBeCloseTo(11, 6);
   });
 });

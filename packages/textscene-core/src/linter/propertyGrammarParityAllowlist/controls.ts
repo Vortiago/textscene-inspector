@@ -22,25 +22,13 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Label: {
     linterOnly: [],
     renderGap: [
-      // Trimming, justification and tab stops each move glyphs our own shaper
-      // places without them.
-      'autowrap_trim_flags', 'clip_text', 'ellipsis_char', 'justification_flags',
-      'tab_stops', 'text_overrun_behavior',
       // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
-      // A LabelSettings resource carries font, size, colour and outline, none of
-      // which the overlay's CSS defaults reproduce.
-      'label_settings',
-      // Each of these changes which characters are on screen: a window into the
-      // paragraph (lines_skipped, max_lines_visible), a custom split point
-      // (paragraph_separator), or a typewriter reveal frozen part-way
-      // (visible_characters and its two companions).
-      'lines_skipped', 'max_lines_visible', 'paragraph_separator',
-      'visible_characters', 'visible_characters_behavior', 'visible_ratio',
+      
     ],
     reason:
-      'Every key here changes the frozen frame and is not implemented yet: trimming and justification move glyphs, BiDi and locale are unread by a left-to-right shaper, and label_settings, the line window and the visible-character reveal each change what is on screen.',
+      'Every key here changes the frozen frame and is not implemented yet: BiDi and locale are unread by a left-to-right shaper, and label_settings, the line window and the visible-character reveal each change what is on screen.',
   },
 
   LineEdit: {
@@ -60,17 +48,9 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
-      // Draws a caret even unfocused, which is the one caret property a static
-      // frame does show.
-      'caret_force_displayed',
-      // Each of these adds or resizes something visible: the inline clear
-      // button, the trailing icon and its scaling, control characters drawn as
       // glyphs, and the field sizing itself to its content.
-      'clear_button_enabled', 'draw_control_chars', 'expand_to_text_length',
-      'icon_expand_mode', 'right_icon', 'right_icon_scale',
-      // set_max_length re-runs set_text (line_edit.cpp:2523), which truncates,
-      // so an over-long `text` renders shortened in Godot and in full here.
-      'max_length',
+      'draw_control_chars', // set_max_length re-runs set_text (line_edit.cpp:2523), which truncates,
+      
     ],
     reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi, the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
   },
@@ -85,10 +65,14 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'threaded', 'progress_bar_delay',
     ],
     renderGap: [
-      // Trimming, justification and tab stops move glyphs our own shaper places
-      // without them; BiDi and locale go unread by a left-to-right shaper.
-      'autowrap_trim_flags', 'justification_flags', 'tab_size',
-      'tab_stops', 'language', 'structured_text_bidi_override',
+      // HORIZONTAL_ALIGNMENT_FILL positions a line at its origin but never
+      // stretches it to the box — the one interaction `fitLineToWidth`
+      // (`textJustify.ts`) is not wired into here, since RichTextLabel's own
+      // per-run glyph slicing (`layoutRichTextRuns`) would need to re-derive
+      // run boundaries against a justified line rather than the shaped one.
+      'justification_flags',
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'text_direction',
       // Underlines actually drawn under [url] and [hint] spans.
       'hint_underlined', 'meta_underlined',
@@ -186,13 +170,10 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
     ],
     renderGap: [
-      // Draws a caret even unfocused, which is the one caret property a static
       // frame does show.
       'caret_draw_when_editable_disabled',
-      // Each changes which glyphs land where: control characters drawn as
       // glyphs, the indent of a wrapped row, and a highlighter's colours.
-      'draw_control_chars', 'indent_wrapped_lines', 'syntax_highlighter',
-      // BiDi and locale: our shaper runs left-to-right only.
+      'draw_control_chars', 'indent_wrapped_lines', // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'text_direction',
     ],
@@ -275,22 +256,20 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'zoom_max', 'zoom_min', 'zoom_step',
       // Connection type names populate a tooltip.
       'type_names',
+      // Its only reader is GraphEditMinimap's own polyline draw
+      // (graph_edit.cpp:1611) — the main canvas connection shader applies its
+      // own fixed pseudo-AA regardless, so this changes nothing this
+      // previewer draws, the (also unimplemented) minimap included.
+      'connection_lines_antialiased',
     ],
     renderGap: [
-      // `connections` really is serialised and `set_connections` runs at load,
-      // but each endpoint sits on a referenced GraphNode's own slot row — two
-      // levels below what a sibling's painter can see.
-      'connections',
-      // The styling of those same lines.
-      'connection_lines_antialiased', 'connection_lines_curvature',
-      'connection_lines_thickness',
       // The minimap and the toolbar buttons are real chrome, positioned by
       // runtime code rather than by the scene.
       'minimap_enabled', 'minimap_opacity', 'minimap_size', 'show_arrange_button',
       'show_grid_buttons', 'show_menu', 'show_minimap_button', 'show_zoom_buttons',
       'show_zoom_label',
     ],
-    reason: 'Panning, snapping and zoom bounds are interactions; the connections, their styling, the minimap and the toolbar are all drawn by Godot and not by us yet.',
+    reason: 'Panning, snapping, the zoom bounds and connection antialiasing are interactions or otherwise inert here; the minimap and the toolbar are drawn by Godot and not by us yet.',
   },
 
   MenuBar: {
@@ -333,16 +312,14 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     linterOnly: [
       // Deferred mode changes WHEN the colour signal fires, never the picture.
       'deferred_mode',
+      // `btn_add_preset` is the only thing this ever disables, and it lives
+      // inside `preset_container`, which stays collapsed at load (presets
+      // only ever arrive through `add_preset()` at runtime — never a
+      // `.tscn` — so the button that shows them is never in a static frame
+      // either).
+      'can_add_swatches',
     ],
-    renderGap: [
-      // Each adds or removes a whole row of the widget, and only the shape and
-      // the sample row are drawn today.
-      'color_mode', 'color_modes_visible', 'hex_visible', 'presets_visible',
-      'sampler_visible', 'sliders_visible', 'can_add_swatches',
-      // Both decide whether the alpha and intensity sliders exist.
-      'edit_alpha', 'edit_intensity',
-    ],
-    reason: 'Only the picker shape and the sample row are drawn; every row-visibility key changes the widget and is not implemented yet. Deferred mode is signal timing alone.',
+    reason: 'Deferred mode is signal timing alone; can_add_swatches only disables a button inside the presets grid, which is never expanded in a static frame.',
   },
 
   ColorPickerButton: {
@@ -356,25 +333,25 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Button: {
     linterOnly: [],
     renderGap: [
-      // Wrapping, trimming and BiDi each move the label's glyphs, and our own
-      // shaper applies none of them.
-      'text_overrun_behavior', 'autowrap_mode', 'autowrap_trim_flags', 'clip_text',
+      // Wrapping and BiDi each move the label's glyphs, and our own shaper
+      // never wraps a Button's label (a separate gap from trimming, which is
+      // implemented).
+      'autowrap_mode', 'autowrap_trim_flags',
       'text_direction', 'language',
     ],
     reason:
-      "Wrapping, trimming and BiDi all change where the label's glyphs land; this renderer shapes the text itself and reads none of them yet.",
+      "Wrapping and BiDi change where the label's glyphs land; this renderer shapes the text itself and never wraps a Button's label, and reads no BiDi yet.",
   },
 
   LinkButton: {
     linterOnly: [],
     renderGap: [
-      // Trimming and its glyph, and BiDi and locale, all change where the
-      // label's glyphs land; our own shaper reads none of them.
-      'ellipsis_char', 'language', 'structured_text_bidi_override',
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'text_direction',
     ],
     reason:
-      'Trimming and BiDi change where the underlined label\'s glyphs land, and the left-to-right shaper reads neither yet.',
+      'BiDi changes where the underlined label\'s glyphs land, and the left-to-right shaper reads none of it yet.',
   },
 
   TextureButton: {

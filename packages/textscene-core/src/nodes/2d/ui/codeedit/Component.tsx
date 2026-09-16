@@ -8,15 +8,11 @@
  * paints on top: the line-numbers column (`nativeSolver.ts`'s own doc for
  * why the main/fold gutters reserve width but draw nothing).
  *
- * SYNTAX HIGHLIGHTING. `syntax_highlighter`'s `CodeHighlighter` resource DOES
- * serialise real colour data (`scene/resources/syntax_highlighter.cpp:604-611`:
- * `number_color`/`symbol_color`/`function_color`/`member_variable_color`/
- * `keyword_colors`/`member_keyword_colors`/`color_regions`, all real exported
- * properties a `SubResource` can carry) — but APPLYING it means tokenizing
- * `text` against those rules: a lexer this previewer does not implement. This
- * painter therefore always paints at the plain `font_color`, never through a
- * highlighter, whatever colour data a scene's `SubResource` carries.
- * `comparison.md` records this as a known gap, not a decision.
+ * SYNTAX HIGHLIGHTING, `syntax_highlighter`'s `CodeHighlighter` colour data,
+ * and `indent_size`'s effect on a tab's rendered width, are both applied by
+ * `<TextEditBody>` itself (`../textedit/Component.tsx`,
+ * `resources/styles/codehighlighter/`) — this painter passes `indentSize`
+ * through as `tabSize` and otherwise defers entirely.
  *
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
@@ -38,6 +34,7 @@ import {
   textEditRowHeightPx,
   textEditWrapWidthPx,
   shapeTextEditLines,
+  textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from '../textedit/nativeSolver';
 import {
@@ -89,10 +86,22 @@ export function CodeEdit(props: NativeControlComponentProps) {
       ),
     [rect.w, styleBox, band.totalWidthPx, codeEditProps.minimapWidth, codeEditProps.minimapDraw]
   );
+  const tabStopsPx = useMemo(
+    () => textEditTabStopsPx(codeEditProps.indentSize, fontMetrics, fontSizePx),
+    [codeEditProps.indentSize, fontMetrics, fontSizePx]
+  );
   const lineLayouts = useMemo(
     () =>
-      shapeTextEditLines(lines, fontSizePx, codeEditProps.wrapMode, codeEditProps.autowrapMode, wrapWidthPx, fontMetrics),
-    [lines, fontSizePx, codeEditProps.wrapMode, codeEditProps.autowrapMode, wrapWidthPx, fontMetrics]
+      shapeTextEditLines(
+        lines,
+        fontSizePx,
+        codeEditProps.wrapMode,
+        codeEditProps.autowrapMode,
+        wrapWidthPx,
+        fontMetrics,
+        tabStopsPx
+      ),
+    [lines, fontSizePx, codeEditProps.wrapMode, codeEditProps.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx]
   );
 
   const lineNumberGutterXPx = codeEditLineNumberGutterXPx(styleBox.contentMargin.left, band.mainWidthPx);
@@ -101,7 +110,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
 
   return (
     <CanvasItemGroup ref={anchorRef}>
-      <TextEditBody {...props} gutterBandWidthPx={band.totalWidthPx} />
+      <TextEditBody {...props} gutterBandWidthPx={band.totalWidthPx} tabSize={codeEditProps.indentSize} />
       {band.lineNumbersDrawn &&
         lineLayouts.map(({ startRow }, lineIndex) => {
           const text = codeEditLineNumberText(lineIndex, band.lineNumberDigits, codeEditProps.gutterZeroPadLineNumbers);

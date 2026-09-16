@@ -26,11 +26,11 @@ export interface CodeEditProperties extends TextEditProperties {
    */
   lineFolding?: boolean;
   /**
-   * The tab stop width, in characters. Godot default 4. Parsed for
-   * completeness but inert: `set_indent_size` forwards to `TextEdit::set_tab_size`,
-   * which the shared text engine (`r3f/controls/native/text/textLayout.ts`,
-   * off-limits to this packet) has no notion of — a tab always shapes at the
-   * font's average-glyph-width fallback, whatever `indent_size` says.
+   * The tab stop width, in characters. Godot default 4.
+   * `set_indent_size` forwards to `TextEdit::set_tab_size`
+   * (`code_edit.cpp:908-920`), which re-aligns every tab glyph to a
+   * `indent_size`-wide repeating stop (`textedit/nativeSolver.ts`'s
+   * `textEditTabStopsPx`) — a real rendered-width effect.
    */
   indentSize?: number;
 }

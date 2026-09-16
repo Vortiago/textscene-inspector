@@ -105,6 +105,8 @@ export interface ControlProperties {
   themeOverrideFontSizes?: Record<string, number>;
   /** `theme_override_styles/<name>` → resource ref (e.g. panel → StyleBox). */
   themeOverrideStyles?: Record<string, string>;
+  /** `theme_override_icons/<name>` → resource ref (e.g. checked → Texture2D). */
+  themeOverrideIcons?: Record<string, string>;
   /** `theme_override_fonts/<name>` → resource ref (e.g. font → FontFile/FontVariation/SystemFont). */
   themeOverrideFonts?: Record<string, string>;
 

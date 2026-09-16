@@ -300,7 +300,7 @@ describe('property-grammar parity guard', () => {
   // can only ask "should the renderer be reading this?" about a key one side
   // already declares, so a key the previewer never read becomes VISIBLE the
   // moment a validator exists for it.
-  const EXPECTED_RENDER_GAP_KEYS = 193;
+  const EXPECTED_RENDER_GAP_KEYS = 153;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>

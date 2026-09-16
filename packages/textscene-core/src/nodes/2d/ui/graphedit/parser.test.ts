@@ -22,12 +22,26 @@ describe('parseGraphEdit', () => {
     expect(p.snappingDistance).toBe(25);
   });
 
-  it('leaves every member undefined when absent', () => {
+  it('parses connection_lines_curvature, connection_lines_thickness and connections', () => {
+    const p = parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {
+      connection_lines_curvature: '0.25',
+      connection_lines_thickness: '6.0',
+      connections: '[{ "from_node": &"Source", "from_port": 0, "to_node": &"Sink", "to_port": 0 }]',
+    });
+    expect(p.connectionLinesCurvature).toBe(0.25);
+    expect(p.connectionLinesThickness).toBe(6.0);
+    expect(p.connections).toEqual([{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }]);
+  });
+
+  it('leaves every member undefined (connections empty) when absent', () => {
     const p = parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {});
     expect(p.scrollOffset).toBeUndefined();
     expect(p.zoom).toBeUndefined();
     expect(p.showGrid).toBeUndefined();
     expect(p.gridPattern).toBeUndefined();
     expect(p.snappingDistance).toBeUndefined();
+    expect(p.connectionLinesCurvature).toBeUndefined();
+    expect(p.connectionLinesThickness).toBeUndefined();
+    expect(p.connections).toEqual([]);
   });
 });

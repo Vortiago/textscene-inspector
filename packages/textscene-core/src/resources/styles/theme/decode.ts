@@ -34,6 +34,8 @@ const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)$`, 'to_int');
 const FONT_SIZE_ENTRY = indexedKeyRegex(String.raw`^(#)/font_sizes/(#)$`, 'to_int');
 /** `<Type>/styles/<name>`. */
 const STYLE_ENTRY = indexedKeyRegex(String.raw`^(#)/styles/(#)$`, 'to_int');
+/** `<Type>/icons/<name>`. */
+const ICON_ENTRY = indexedKeyRegex(String.raw`^(#)/icons/(#)$`, 'to_int');
 /** `<Type>/colors/<name>`. */
 const COLOR_ENTRY = indexedKeyRegex(String.raw`^(#)/colors/(#)$`, 'to_int');
 /** `<Type>/constants/<name>`. */
@@ -56,13 +58,11 @@ const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
  * "explicitly nothing" from "never set" at this level. This collapse is
  * specific to fonts/font-sizes.
  *
- * `styles`/`colors`/`constants` split out by the same `<Type>/<data_type>/
- * <name>` regex, but styles stay a raw ref string (a StyleBox is a
- * sub-resource of THIS theme, resolved by the reader against `resources` —
- * see `types.ts`) while colors/constants are literal values decoded on the
- * spot. Icons are left unscanned: this codebase draws no Theme-authored icon
- * today (`native/themeIcons.ts` vendors the default theme's own instead), so
- * decoding a ref nothing reads would be dead data.
+ * `styles`/`icons`/`colors`/`constants` split out by the same
+ * `<Type>/<data_type>/<name>` regex, but styles/icons stay a raw ref string
+ * (a StyleBox or icon Texture2D is a sub-resource of THIS theme, resolved by
+ * the reader against `resources` — see `types.ts`) while colors/constants
+ * are literal values decoded on the spot.
  */
 function scanTheme<T>(
   properties: Record<string, string>,
@@ -75,6 +75,7 @@ function scanTheme<T>(
   const fonts: Record<string, Record<string, T>> = Object.create(null);
   const fontSizes: Record<string, Record<string, number>> = Object.create(null);
   const styles: Record<string, Record<string, string>> = Object.create(null);
+  const icons: Record<string, Record<string, string>> = Object.create(null);
   const colors: Record<string, Record<string, Color>> = Object.create(null);
   const constants: Record<string, Record<string, number>> = Object.create(null);
   const typeVariations: Record<string, string> = Object.create(null);
@@ -117,6 +118,13 @@ function scanTheme<T>(
       continue;
     }
 
+    const iconMatch = key.match(ICON_ENTRY);
+    if (iconMatch) {
+      const [, type, name] = iconMatch;
+      (icons[type!] ??= Object.create(null))[name!] = value;
+      continue;
+    }
+
     const colorMatch = key.match(COLOR_ENTRY);
     if (colorMatch) {
       const [, type, name] = colorMatch;
@@ -145,7 +153,7 @@ function scanTheme<T>(
     rest[key] = value;
   }
 
-  return { defaultFont, defaultFontSize, fonts, fontSizes, styles, colors, constants, typeVariations, properties: rest };
+  return { defaultFont, defaultFontSize, fonts, fontSizes, styles, icons, colors, constants, typeVariations, properties: rest };
 }
 
 /**

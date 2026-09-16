@@ -61,21 +61,18 @@ parser reads 9 — the gutter/fold/indent members the render path touches:
 `gutters_draw_breakpoints_gutter`, `gutters_draw_executing_lines`,
 `gutters_draw_fold_gutter`, `line_folding`, `indent_size` — plus every property
 TextEdit's own parser already reads. A malformed boolean reads as `false`; a
-malformed integer reads as unset. `line_folding` and `indent_size` are parsed but
-inert to what this slice draws — their own doc in `types.ts` has why. Delimiters,
-completion and brace-pair members are format-checked by the strict linter but
-never read here: none of them changes this previewer's picture.
+malformed integer reads as unset. `line_folding` is parsed but inert to what
+this slice draws — its own doc in `types.ts` has why; `indent_size` widens
+every tab stop (`indentSize`'s own doc). Delimiters, completion and brace-pair
+members are format-checked by the strict linter but never read here: none of
+them changes this previewer's picture.
 
 ## Known limitations
 
 - **Not drawn** The main gutter (bookmark/breakpoint/executing-line icons) and the
   fold gutter (fold arrows) both reserve their own column width but draw no
   icons: every icon is keyed to per-line state (`set_line_as_bookmarked`,
-  `can_fold_line`'s delimiter/comment analysis) a `.tscn` cannot serialise.
-- **Not drawn** `syntax_highlighter`'s `CodeHighlighter` colour maps are real,
-  serialised resource data, but applying them means tokenizing `text` against
-  those rules — a lexer this previewer does not implement. Text always paints at
-  the plain `font_color`.
-- **Not drawn** `indent_size` (`set_tab_size`) cannot affect a tab's rendered
-  width: the shared text engine has no notion of a tab stop at all (TextEdit's
-  own limitation, inherited unchanged).
+  `set_line_as_breakpoint`, `set_line_as_executing`, `can_fold_line`'s
+  delimiter/comment analysis) — all bound methods, never `ADD_PROPERTY`'d
+  (`code_edit.cpp:1419-1503`) — so a `.tscn` cannot serialise any of it. An
+  empty gutter of the right width is the whole truth of a scene file here.

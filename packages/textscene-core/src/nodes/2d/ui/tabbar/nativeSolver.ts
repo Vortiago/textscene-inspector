@@ -249,24 +249,41 @@ export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState
 
 // --- Texture slots: one per tab icon -------------------------------------------
 
+/** TabBar's own themeable icons — `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, TabBar, <field>, "<name>")` (`tab_bar.cpp:2160-2182`). */
+const TAB_BAR_THEME_ICON_NAMES = ['close', 'increment', 'decrement'] as const;
+type TabBarThemeIconName = (typeof TAB_BAR_THEME_ICON_NAMES)[number];
+
 /**
- * One `TextureSlotRequest` per tab whose `icon` ref is non-empty, keyed by
- * tab index — `buildSolveTree.ts`'s generic single-slot fallback (`texture`/
- * `icon`) only models ONE texture-bearing property per node, and TabBar's
- * icons are an indexed family the generic path cannot see.
+ * One `TextureSlotRequest` per tab whose `icon` ref is non-empty (keyed by
+ * tab index — `buildSolveTree.ts`'s generic single-slot fallback only models
+ * ONE texture-bearing property per node, and TabBar's icons are an indexed
+ * family the generic path cannot see), plus one per THEMED close/increment/
+ * decrement icon `SolveNode.icons` resolved.
  */
-export const tabBarTextureSlots: TextureSlotsFn = (node) => {
+export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const tabs = (node.properties as TabBarProperties).tabs ?? [];
   const requests: TextureSlotRequest[] = [];
   tabs.forEach((tab, i) => {
     if (tab.icon) requests.push({ key: String(i), ref: tab.icon });
   });
+  for (const name of TAB_BAR_THEME_ICON_NAMES) {
+    const themed = themedIcons[name];
+    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+  }
   return requests;
 };
 
 /** This tab's icon natural size from `n.textureSlots` — `null` before it resolves or when the tab carries no icon. */
 export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: number): Vec2 | null {
   return n.textureSlots[String(index)] ?? null;
+}
+
+/** The vendored default's own size (`native/themeIcons.ts`'s `TAB_BAR_ICON_SIZE`, 16x16 square) for every close/increment/decrement icon alike. */
+const TAB_BAR_VENDORED_ICON_SIZE: Vec2 = { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
+
+/** `close`/`increment`/`decrement`'s resolved size — themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
+export function tabBarThemeIconSize(n: Pick<SolveNode, 'textureSlots'>, name: TabBarThemeIconName): Vec2 {
+  return n.textureSlots[name] ?? TAB_BAR_VENDORED_ICON_SIZE;
 }
 
 // --- Per-tab natural width -----------------------------------------------------
@@ -360,6 +377,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const fontMetrics = resolveNodeFontMetrics(n, TAB_BAR_THEME_FONT_KEY);
   const layouts: (TextLayoutResult | null)[] = [];
+  const closeIconSize = tabBarThemeIconSize(n, 'close');
 
   let width = 0;
   let height = 0;
@@ -388,7 +406,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     height = Math.max(height, (layout?.heightPx ?? 0) + yMargin);
 
     const closeVisible = isCloseButtonVisible(closeDisplayPolicy, i, currentTab);
-    if (closeVisible) height = Math.max(height, TAB_BAR_ICON_SIZE + yMargin);
+    if (closeVisible) height = Math.max(height, closeIconSize.y + yMargin);
 
     const tabWidth = tabContentWidth({
       styleMinWidth,
@@ -397,7 +415,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
       textWidthPx: textWidth,
       hasText,
       closeVisible,
-      closeIconWidth: TAB_BAR_ICON_SIZE,
+      closeIconWidth: closeIconSize.x,
       closeButtonMarginLeft,
     });
 
@@ -408,7 +426,9 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const clipTabs = props.clipTabs ?? true;
   if (clipTabs) {
-    width = maxSingleTabWidth + (tabs.length > 1 ? 2 * TAB_BAR_ICON_SIZE : 0);
+    const scrollButtonsWidth =
+      tabs.length > 1 ? tabBarThemeIconSize(n, 'increment').x + tabBarThemeIconSize(n, 'decrement').x : 0;
+    width = maxSingleTabWidth + scrollButtonsWidth;
   }
 
   return { size: { x: width, y: height }, meta: { layouts } satisfies TabBarMinimumSizeMeta };
@@ -471,14 +491,19 @@ export function computeTabBarDrawLayout(
   clipTabs: boolean,
   maxTabWidthPx: number,
   tabSeparation: number,
-  scrollIconWidth: number
+  incrementIconWidth: number,
+  // Defaults to `incrementIconWidth` — `tabcontainer/nativeSolver.ts` reuses
+  // this function (module doc) and still calls it with one scroll-icon width;
+  // TabBar's own `Component.tsx`, whose increment/decrement icons can now be
+  // themed to DIFFERENT sizes, passes both explicitly.
+  decrementIconWidth: number = incrementIconWidth
 ): TabBarDrawLayout {
   if (tabs.length === 0) {
     return { items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false };
   }
 
   const limit = barWidthPx;
-  const limitMinusButtons = limit - 2 * scrollIconWidth;
+  const limitMinusButtons = limit - incrementIconWidth - decrementIconWidth;
 
   const ofsCache = new Array<number>(tabs.length).fill(0);
   const sizeCache = new Array<number>(tabs.length).fill(0);
@@ -585,7 +610,7 @@ export function layoutTabContent(input: {
   textAdvanceWidthPx: number;
   hSeparation: number;
   closeVisible: boolean;
-  closeIconSizePx: number;
+  closeIconSize: Vec2;
   buttonHlMargin: { left: number; top: number; right: number; bottom: number };
 }): TabContentLayout {
   const { style, barHeightPx, hSeparation } = input;
@@ -608,8 +633,8 @@ export function layoutTabContent(input: {
 
   let close: TabContentLayout['close'] = null;
   if (input.closeVisible) {
-    const w = input.buttonHlMargin.left + input.buttonHlMargin.right + input.closeIconSizePx;
-    const h = input.buttonHlMargin.top + input.buttonHlMargin.bottom + input.closeIconSizePx;
+    const w = input.buttonHlMargin.left + input.buttonHlMargin.right + input.closeIconSize.x;
+    const h = input.buttonHlMargin.top + input.buttonHlMargin.bottom + input.closeIconSize.y;
     const y = style.contentMargin.top + (innerHeight - h) / 2;
     close = {
       rect: { x, y, w, h },

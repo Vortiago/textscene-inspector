@@ -174,6 +174,12 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   // base font, a theme's type chain) and validate none of it yet. `Font` is the
   // abstract tier the other three descend from.
   'Font', 'FontFile', 'FontVariation', 'SystemFont', 'Theme',
+  // The highlighter and label-settings slices, which arrived with syntax
+  // highlighting and Label's content window: both decode enough to DRAW and
+  // validate none of it yet. `SyntaxHighlighter` is the abstract tier
+  // `CodeHighlighter` descends from and declares zero `ADD_PROPERTY` of its
+  // own in 4.6.3, so it is listed to record that rather than as work.
+  'CodeHighlighter', 'LabelSettings', 'SyntaxHighlighter',
 ];
 
 /**
@@ -221,8 +227,10 @@ describe('own-validator coverage for resource slices', () => {
 
   it('never lets the undeclared resource list grow', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current
-    // length is a free slot for the next silently-unvalidated slice.
-    expect(UNDECLARED_RESOURCES.length).toBe(44);
+    // length is a free slot for the next silently-unvalidated slice. Moving it
+    // UP is a deliberate act that records three more slices drawing without
+    // validating; the only correct edit afterwards is moving it back down.
+    expect(UNDECLARED_RESOURCES.length).toBe(47);
   });
 
   it('sweeps a population that cannot quietly empty', () => {

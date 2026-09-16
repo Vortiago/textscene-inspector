@@ -18,11 +18,12 @@
  *    `focus` StyleBox never have a live case to draw in a static preview.
  *  - `custom_bg`/`custom_fg` — real ItemList members, but likewise never
  *    reachable from a `.tscn` (no property-helper leaf).
- *  - Row/column guide lines (`draw_line` between rows, `icon_mode !=
- *    ICON_MODE_TOP` only) and the scroll-hint icon — both need a vendored
- *    icon or a plain line primitive this slice does not add, and the latter
- *    also needs a resolved rect to know whether it would even show; left as a
- *    documented gap (`comparison.md`).
+ *  - The scroll-hint icon — needs a vendored icon and a live scrolled
+ *    position no static file has; left as a documented gap (`comparison.md`).
+ *    Row/column guide lines ARE modelled (`itemListGuideLines`, below) — a
+ *    static file's own scroll position is always zero, so every separator is
+ *    "visible" and none of the scroll-hint icon's reasons for staying out
+ *    apply to it.
  *  - The vertical-scrollbar-driven `fit_size` adjustment
  *    (`item_list.cpp:1798-1801,1862-1864`): unreachable except when
  *    `max_columns > 1` AND `wraparound_items` is true AND `auto_width` is
@@ -61,6 +62,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
@@ -251,18 +253,47 @@ export interface ItemTextShapeInput {
   iconMode: number;
   maxTextLines: number;
   fixedColumnWidth: number;
+  /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS, `item_list.h:131`). */
+  overrunBehavior?: number;
 }
 
-/** Shapes one item's own text — `null` for an item with no text at all. */
+/**
+ * Shapes one item's own text — `null` for an item with no text at all.
+ *
+ * `item_list.cpp:1763-1766`'s minsize pass and `:1621-1661`'s draw pass both
+ * call `text_buf->set_width` then read back the paragraph's own (possibly
+ * TRIMMED) size, so the overrun trim is applied here, once, rather than as a
+ * separate step either caller repeats — the SAME "shape once, reuse the
+ * result" contract this slice's own doc already establishes for the width.
+ * Trims EVERY line uniformly (`TextParagraph::_shape_lines`'s own
+ * autowrap-disabled branch, `text_paragraph.cpp:257-270`, does exactly this
+ * absent a `max_text_lines` visible-line cap this engine does not model —
+ * see this slice's own doc).
+ */
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
-  return shapeText(input.text, {
+  const widthPx = itemListShapeWidth(input.fixedColumnWidth);
+  const layout = shapeText(input.text, {
     fontSizePx: input.fontSizePx,
-    boxWidthPx: itemListShapeWidth(input.fixedColumnWidth),
+    boxWidthPx: widthPx,
     autowrapMode: itemListAutowrapMode(input.iconMode, input.maxTextLines),
     lineSpacingPx: itemListLineSeparationForShaping(input),
     fontMetrics: input.fontMetrics,
   });
+  const overrunFlags = overrunFlagsForBehavior(input.overrunBehavior ?? OverrunBehavior.TRIM_ELLIPSIS);
+  if (!overrunFlags.trim || widthPx <= 0) return layout;
+
+  const trimmedLines = layout.lines.map((line) =>
+    // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to
+    // the vendored atlas font when the caller passes none, and the trim must
+    // agree with whichever metrics actually shaped these glyphs.
+    trimLineToWidth(line, widthPx, overrunFlags, { fontMetrics: layout.fontMetrics, fontSizePx: input.fontSizePx })
+  );
+  return {
+    ...layout,
+    lines: trimmedLines,
+    widthPx: trimmedLines.reduce((max, l) => Math.max(max, l.widthPx), 0),
+  };
 }
 
 /**
@@ -501,7 +532,7 @@ export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
     const hasText = text.length > 0;
     const layout =
       hasText && ctx.measureText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth })
+        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, overrunBehavior: props.textOverrunBehavior })
         : null;
     const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
     return itemMinimumSize({ hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth }, ctx.theme);
@@ -623,4 +654,33 @@ export function itemIconColor(disabled: boolean): ControlColor {
 /** `custom_fg` is likewise never authorable, so `txt_modulate` always resolves to `font_color`, dimmed on `disabled` (`item_list.cpp:1614-1622`). */
 export function itemTextColor(baseColor: ControlColor, disabled: boolean): ControlColor {
   return disabled ? { ...baseColor, a: baseColor.a * 0.5 } : baseColor;
+}
+
+// --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
+
+/** `default_theme.cpp:959` — `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
+export const ITEM_LIST_DEFAULT_GUIDE_COLOR: ControlColor = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
+
+/** This node's own `theme_override_colors/guide_color` (already folded onto `n.colors` by the walker), else the built-in default. */
+export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): ControlColor {
+  return n.colors.guide_color ?? ITEM_LIST_DEFAULT_GUIDE_COLOR;
+}
+
+export interface ItemListGuideLine {
+  /** Content-relative Y — the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
+  y: number;
+  /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`, non-RTL). */
+  width: number;
+}
+
+/**
+ * `item_list.cpp:1446-1459`'s visible-separator draw, minus the scroll-driven
+ * clip (a static preview has nothing scrolled out of view, so every
+ * separator is "visible") and RTL. Only `packItemListRows`'s own
+ * `separators` output feeds this — every one is a real row/column boundary,
+ * never invented here.
+ */
+export function itemListGuideLines(iconMode: number, separators: readonly number[], contentWidth: number): ItemListGuideLine[] {
+  if (iconMode === ICON_MODE_TOP) return [];
+  return separators.map((y) => ({ y, width: contentWidth }));
 }

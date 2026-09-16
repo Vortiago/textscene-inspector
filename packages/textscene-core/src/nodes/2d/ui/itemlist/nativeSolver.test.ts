@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
@@ -16,11 +17,14 @@ import type { ItemListProperties } from './types';
 import {
   ICON_MODE_LEFT,
   ICON_MODE_TOP,
+  ITEM_LIST_DEFAULT_GUIDE_COLOR,
   adjustToMaxSize,
   itemContentMinSize,
   itemIconColor,
   itemIconPackedSize,
   itemListAutowrapMode,
+  itemListGuideColor,
+  itemListGuideLines,
   itemListLineSeparation,
   itemListMinimumSize,
   itemListSeparation,
@@ -29,6 +33,7 @@ import {
   itemTextDrawOffset,
   itemTextLineCenterOffset,
   packItemListRows,
+  shapeItemListText,
 } from './nativeSolver';
 
 function size(result: Vec2 | MinimumSizeResult): Vec2 {
@@ -74,6 +79,25 @@ describe('itemListAutowrapMode', () => {
 
   it('never wraps TOP icon mode with max_text_lines <= 0 (edge case)', () => {
     expect(itemListAutowrapMode(ICON_MODE_TOP, 0)).toBe(AutowrapMode.OFF);
+  });
+});
+
+describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
+  const baseInput = { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, iconMode: ICON_MODE_LEFT, maxTextLines: 1 };
+
+  it('trims to fixedColumnWidth by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100 });
+    expect(layout!.lines[0]!.text).toBe('AAAAAAAA…');
+  });
+
+  it('is a no-op with no fixedColumnWidth — nothing to trim against (unconstrained shape width)', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 0 });
+    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+  });
+
+  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed even with a fixedColumnWidth', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', fixedColumnWidth: 100, overrunBehavior: 0 });
+    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
   });
 });
 
@@ -275,6 +299,37 @@ describe('itemIconColor / itemTextColor', () => {
     const base = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
     expect(itemTextColor(base, true)).toEqual({ r: 0.65, g: 0.65, b: 0.65, a: 0.5 });
     expect(itemTextColor(base, false)).toEqual(base);
+  });
+});
+
+describe('itemListGuideLines', () => {
+  // item_list.cpp:1447-1458 -- one hairline per row-packing separator, spanning
+  // the panel's own content width, ONLY outside TOP icon mode.
+  it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100)).toEqual([
+      { y: 24, width: 100 },
+      { y: 48, width: 100 },
+    ]);
+  });
+
+  it('never draws in TOP icon mode, even with separators (error path)', () => {
+    expect(itemListGuideLines(ICON_MODE_TOP, [24, 48], 100)).toEqual([]);
+  });
+
+  it('no separators means no lines (edge case)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [], 100)).toEqual([]);
+  });
+});
+
+describe('itemListGuideColor', () => {
+  // default_theme.cpp:959 -- theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25)).
+  it('falls back to the built-in default absent a theme override (happy path)', () => {
+    expect(itemListGuideColor({ colors: {} })).toEqual(ITEM_LIST_DEFAULT_GUIDE_COLOR);
+  });
+
+  it('a theme_override_colors/guide_color (already resolved onto n.colors) wins (error path)', () => {
+    const override = { r: 1, g: 0, b: 0, a: 1 };
+    expect(itemListGuideColor({ colors: { guide_color: override } })).toEqual(override);
   });
 });
 

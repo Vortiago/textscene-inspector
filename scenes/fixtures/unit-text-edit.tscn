@@ -3,8 +3,9 @@
 ; other Control fixture exercises. A missing row for the blank middle line is
 ; invisible in a single-line fixture, and draw_tabs's icon overlay is invisible
 ; without a literal tab in the text. syntax_highlighter is a real CodeHighlighter
-; SubResource, which the previewer parses but does not apply (it always paints at
-; font_color) — see comparison.md.
+; SubResource with no colour data of its own set, so it is applied but paints
+; every character at plain font_color regardless — unit-code-edit-syntax-
+; highlighter.tscn is the fixture that moves the highlighter's OWN colours.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]

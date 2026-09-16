@@ -36,14 +36,16 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontGlyphAdvancePx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   AutowrapMode,
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
+  type GlyphPlacement,
   type TextLayoutResult,
+  type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
@@ -53,6 +55,8 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Color } from '../../../../utils/colorParser';
+import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import type { ControlColor } from '../control/types';
 import type { TextEditProperties } from './types';
 
@@ -145,7 +149,8 @@ export function shapeTextEditLines(
   wrapMode: number | undefined,
   autowrapMode: number | undefined,
   wrapWidthPx: number,
-  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics']
+  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'],
+  tabStopsPx: number[] = []
 ): TextEditLineLayout[] {
   const mode =
     wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
@@ -157,6 +162,7 @@ export function shapeTextEditLines(
       autowrapMode: mode,
       lineSpacingPx: 0,
       fontMetrics,
+      tabStopsPx,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -230,6 +236,35 @@ export function textEditContentSize(
 }
 
 /**
+ * `TextEdit::Text::invalidate_cache` (`text_edit.cpp:348-352`, identically
+ * `TextEdit::Text::invalidate_all_lines`, `:394-398`):
+ *
+ *     if (tab_size > 0) {
+ *       Vector<float> tabs;
+ *       tabs.push_back(MAX(1, (font->get_char_size(' ', font_size).width
+ *         + font->get_spacing(SPACING_SPACE)) * tab_size));
+ *       text_line.data_buf->tab_align(tabs);
+ *     }
+ *
+ * ONE repeating stop, `tab_size` px-widths of a space glyph —
+ * `get_spacing(SPACING_SPACE)` is 0 for every font this codebase loads
+ * (`richTextTabStopsPx`'s own doc, `../richtextlabel/nativeSolver.ts`).
+ * `tab_size <= 0` disables tab alignment entirely (the whole block above is
+ * skipped), so this returns `[]` — `shapeTextEditLines`'s own `tabStopsPx`
+ * default, and `shapeText`'s no-op input. Bare `TextEdit` has no `.tscn`
+ * property for `tab_size` (only `CodeEdit.indent_size` forwards to it,
+ * `code_edit.cpp:908-920`), so every `TextEdit` shapes at the class default;
+ * `TEXT_EDIT_DEFAULT_TAB_SIZE` is that literal (`text_edit.h:197`).
+ */
+export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
+
+export function textEditTabStopsPx(tabSize: number | undefined, fontMetrics: FontMetrics, fontSizePx: number): number[] {
+  const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
+  if (size <= 0) return [];
+  return [Math.max(1, size * getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx))];
+}
+
+/**
  * `TextEdit::get_minimum_size` (`text_edit.cpp:3491-3500`):
  *
  *     Size2 ms = _get_current_stylebox()->get_minimum_size();
@@ -254,7 +289,8 @@ export function textEditMinimumSizeWith(
   ctx: SolveContext,
   props: TextEditProperties,
   styleBox: StyleBoxFlatData,
-  gutterBandWidthPx: number
+  gutterBandWidthPx: number,
+  tabSize?: number
 ): Vec2 {
   const styleMin = contentMarginSize(styleBox);
   const state = resolveTextEditStyleState(props.editable);
@@ -283,7 +319,8 @@ export function textEditMinimumSizeWith(
     effectiveWrapMode,
     props.autowrapMode,
     wrapWidthPx,
-    fontMetrics
+    fontMetrics,
+    textEditTabStopsPx(tabSize, fontMetrics, fontSizePx)
   );
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(
@@ -335,4 +372,101 @@ export function layoutTextEditDrawBand(
   let xMarginEndPx = rectWidthPx - Math.floor(styleBox.contentMargin.right);
   if (drawMinimap) xMarginEndPx -= minimapWidthPx;
   return { xMarginBeginPx, xMarginEndPx, rowHeightPx };
+}
+
+// --- Syntax-highlighter colour runs ------------------------------------
+
+/**
+ * A buffer line is shaped WHOLE (`shapeTextEditLines`), then wrapped into
+ * `layout.lines` rows; a `CodeHighlighter` colours the buffer line's own
+ * character indices (`resources/styles/codehighlighter/highlight.ts`).
+ * `TextLineLayout.glyphs` carries no such index, so this locates each row's
+ * own start by searching for its (edge-space-trimmed) `.text` inside the
+ * UNTRIMMED buffer line, forward from the previous row's end — robust
+ * against a wrap trimming a boundary space without needing the shaper's own
+ * internal break-glyph indices.
+ */
+export function textEditRowStartIndices(lineText: string, rows: readonly TextLineLayout[]): number[] {
+  const starts: number[] = [];
+  let searchFrom = 0;
+  for (const row of rows) {
+    const foundAt = lineText.indexOf(row.text, searchFrom);
+    const start = foundAt >= 0 ? foundAt : searchFrom;
+    starts.push(start);
+    searchFrom = start + row.text.length;
+  }
+  return starts;
+}
+
+function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Color): Color {
+  for (const span of spans) {
+    if (index >= span.startIndex && index < span.endIndex) return span.color;
+  }
+  return fallback;
+}
+
+/**
+ * The one glyph at `lineIndex`'s own colour — `text_edit.cpp:1674`'s
+ * `Color gl_color = current_color;`, which ALSO tints the `tab`/`space`
+ * theme icons (`:1714,1718`'s `->draw(..., gl_color)`), not a fixed
+ * `font_color`. `undefined` `spans` (no highlighter resolved) yields
+ * `fallback` unconditionally, matching `textEditRowColorRuns`.
+ */
+export function textEditGlyphColorAt(
+  spans: readonly CodeHighlighterColorSpan[] | undefined,
+  lineIndex: number,
+  fallback: Color
+): Color {
+  return spans ? colorAt(spans, lineIndex, fallback) : fallback;
+}
+
+function sameColor(a: Color, b: Color): boolean {
+  return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
+}
+
+export interface TextEditGlyphColorRun {
+  glyphs: GlyphPlacement[];
+  color: Color;
+}
+
+/**
+ * Groups one wrapped row's glyphs into consecutive-colour runs, each ready to
+ * become its own `<TextRun>` — `spans` is the OWNING buffer line's whole
+ * (unwrapped) colour spans, `rowStartIndex` that row's own offset into it
+ * (`textEditRowStartIndices`). `undefined` `spans` (no highlighter resolved),
+ * or an empty row (a blank buffer line still occupies its own row), yields a
+ * single run of `fallbackColor` — a row always renders at least one
+ * `<TextRun>`, matching plain-`font_color` painting exactly.
+ */
+export function textEditRowColorRuns(
+  rowGlyphs: readonly GlyphPlacement[],
+  rowStartIndex: number,
+  spans: readonly CodeHighlighterColorSpan[] | undefined,
+  fallbackColor: Color
+): TextEditGlyphColorRun[] {
+  if (rowGlyphs.length === 0) return [{ glyphs: [], color: fallbackColor }];
+  const runs: TextEditGlyphColorRun[] = [];
+  let current: TextEditGlyphColorRun | undefined;
+  rowGlyphs.forEach((glyph, k) => {
+    const color = spans ? colorAt(spans, rowStartIndex + k, fallbackColor) : fallbackColor;
+    if (current && sameColor(current.color, color)) {
+      current.glyphs.push(glyph);
+    } else {
+      current = { glyphs: [glyph], color };
+      runs.push(current);
+    }
+  });
+  return runs;
+}
+
+/** One colour run's glyphs, re-wrapped as its own `TextLineLayout` — `soloLineLayout`'s own input shape, so a run renders through the SAME `<TextRun>` path a whole row does. */
+export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout {
+  const first = run.glyphs[0];
+  const last = run.glyphs[run.glyphs.length - 1];
+  const widthPx = first && last ? last.x + last.advance - first.x : 0;
+  return {
+    text: run.glyphs.map((glyph) => glyph.char).join(''),
+    glyphs: run.glyphs,
+    widthPx,
+  };
 }

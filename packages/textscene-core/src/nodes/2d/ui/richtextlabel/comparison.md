@@ -68,4 +68,5 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** Only a subset of BBCode tags is styled; a tag outside it renders as
   plain text.
 - **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
-  right edge instead of stretching to the box.
+  right edge instead of stretching to the box — the per-run glyph slicing a justified
+  line would need to re-derive its own run boundaries against is not yet wired to it.

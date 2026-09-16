@@ -37,7 +37,13 @@
  */
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  ContainerLayoutFn,
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../../r3f/controls/godotDefaultTheme';
@@ -170,12 +176,36 @@ function titleArrow(folded: boolean, titlePosition: number): FoldableContainerAr
   return titlePosition === TITLE_POSITION_BOTTOM ? 'expandedMirrored' : 'expanded';
 }
 
+/** `FoldableContainerArrow` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, FoldableContainer, <name>)`, `foldable_container.cpp:588-591`). `folded_arrow_mirrored` (RTL) is never reached — see this module's own header. */
+export const FOLDABLE_CONTAINER_ARROW_THEME_NAME: Record<FoldableContainerArrow, string> = {
+  expanded: 'expanded_arrow',
+  expandedMirrored: 'expanded_arrow_mirrored',
+  folded: 'folded_arrow',
+};
+
+/** Which arrow slot(s) have a themed answer — `TextureSlotsFn` for `controlSolverRegistry.registerTextureSlots`. */
+export const foldableContainerTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME)) {
+    const themed = themedIcons[name];
+    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+  }
+  return requests;
+};
+
+/** This arrow's resolved size — themed if `SolveNode.textureSlots` resolved it, else the vendored (scaled) default. */
+function resolveArrowSize(n: Pick<SolveNode, 'textureSlots'>, arrow: FoldableContainerArrow, theme: NativeTheme): Vec2 {
+  return n.textureSlots[FOLDABLE_CONTAINER_ARROW_THEME_NAME[arrow]] ?? foldableContainerArrowSize(theme);
+}
+
 export interface FoldableContainerTitleMetrics {
   folded: boolean;
   titlePosition: number;
   titleStyle: StyleBoxFlatData;
   panelStyle: StyleBoxFlatData;
   arrow: FoldableContainerArrow;
+  /** The current arrow's resolved size — themed if a Theme touched it, else the vendored default (`resolveArrowSize`). */
+  arrowSize: Vec2;
   fontSizePx: number;
   color: ControlColor;
   /** The shaped title text, or `null` for an empty title / no measurer yet. */
@@ -229,7 +259,7 @@ export function foldableContainerTitleMetrics(
       ? shapeText(title, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics })
       : null;
 
-  const arrowSize = foldableContainerArrowSize(ctx.theme);
+  const arrowSize = resolveArrowSize(n, arrow, ctx.theme);
   const titleMargin = contentMarginSize(titleStyle);
   let width = titleMargin.x + arrowSize.x;
   let height = titleMargin.y;
@@ -247,7 +277,7 @@ export function foldableContainerTitleMetrics(
     height += arrowSize.y;
   }
 
-  return { folded, titlePosition, titleStyle, panelStyle, arrow, fontSizePx, color, layout, size: { x: width, y: height } };
+  return { folded, titlePosition, titleStyle, panelStyle, arrow, arrowSize, fontSizePx, color, layout, size: { x: width, y: height } };
 }
 
 /**

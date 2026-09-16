@@ -39,7 +39,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -144,7 +144,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   // `resizable && !autoshrink_enabled` — `autoshrink_enabled` defaults true (graph_frame.cpp:133).
   const showResizer = props.resizable === true && props.autoshrinkEnabled === false;
-  const resizerTexture = useOptionalIconTexture(showResizer ? RESIZER_SE_ICON : null);
+  const resizerTexture = useNodeIcon(showResizer ? solveNode.icons.resizer : undefined, showResizer ? RESIZER_SE_ICON : null);
   const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
   const resizerColor = useGodotLinearColor(resizerCombined);
 

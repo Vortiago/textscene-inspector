@@ -217,7 +217,7 @@ reproduced:
 - [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md) — a TextEdit with a line-number gutter
 - [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md) — nothing (a transform-only group)
 - [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md) — a toggle-gated collision outline
-- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — a colour sample and, at the default picker_shape, an SV square + hue slider
+- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md) — the sample row, the RGB/HSV/Linear mode row, the channel slider grid, the hex field, the swatches rows and, at the default picker_shape, an SV square + hue slider
 - [ColorPickerButton](../../packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/comparison.md) — a Button with a checkerboard + colour swatch over its face
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md) — a flat-filled quad
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md) — nothing of its own; children stay at their own free/anchored rects

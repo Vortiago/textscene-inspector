@@ -20,6 +20,20 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 export type { StyleBoxFlatData };
 
 /**
+ * One resolved-but-unloaded theme icon reference: the raw Texture2D-valued
+ * ref string, plus the resource SCOPE it addresses — a node's own
+ * `theme_override_icons/<name>` resolves in the node's own scope, while a
+ * `<Type>/icons/<name>` from an ancestor/project Theme resolves in THAT
+ * theme file's own scope (a Theme's sub-resources belong to its file, the
+ * same rule `styleBoxes`'s own resolution already follows). Left unloaded —
+ * see `SolveNode.icons`'s own doc for why.
+ */
+export interface ThemedIconRef {
+  ref: string;
+  resources: SceneScope;
+}
+
+/**
  * One Control (or 2D-UI node) in the live, already-collapsed scene tree —
  * instance roots merged, sub-scene scope resolved — ready for the solver.
  */
@@ -127,6 +141,22 @@ export interface SolveNode {
    * default (a painter's fallback on a miss here) is.
    */
   constants: Readonly<Record<string, number>>;
+  /**
+   * This node's resolved theme icons, keyed the same way Godot's own
+   * `get_theme_icon(name, type)` keys them (`checked`/`grabber`/`close`/…):
+   * `theme_override_icons/*` first (unconditional local override, resolved
+   * in THIS node's own scope), else every name ANY applicable ancestor/
+   * project Theme resolves for this node's type chain (`theme/lookup.ts`'s
+   * `mergeThemedRecord`, resolved in ITS OWN theme file's scope — same merge
+   * `styleBoxes` uses). Unlike `styleBoxes`, the reference is left
+   * UNRESOLVED (`ThemedIconRef`, ref + the scope it addresses) rather than
+   * eagerly decoded: loading a texture needs a live `useTexture2D`
+   * subscription (`useIconTexture.ts`'s `useNodeIcon`), which only a
+   * component can hold. A name absent here has no themed answer at all;
+   * every painter falls back to its own vendored default-theme icon
+   * (`native/themeIcons.ts`) on a miss, exactly like every other theme item.
+   */
+  icons: Readonly<Record<string, ThemedIconRef>>;
   /**
    * The resource pools this node's OWN property references resolve against.
    *

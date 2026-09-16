@@ -19,7 +19,9 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
-import { useIconTexture, useOptionalIconTexture } from './useIconTexture';
+import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
+import type { ThemedIconRef } from './solveTree';
+import type { TscnInternalResource } from '../../../parser/types';
 
 const ICON = 'data:image/svg+xml;base64,PHN2Zy8+';
 
@@ -80,5 +82,42 @@ describe('useIconTexture', () => {
 
     expect(result.current).toBeNull();
     expect(dispose).toHaveBeenCalled();
+  });
+});
+
+describe('useNodeIcon', () => {
+  const PROCEDURAL: TscnInternalResource[] = [
+    { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
+    { id: 'G1', type: 'GradientTexture2D', data: { gradient: 'SubResource("Gradient_1")' } },
+  ];
+
+  it('draws the vendored default when no theme resolved this icon (`Control::get_theme_icon` — nothing anywhere)', () => {
+    const { result } = renderHook(() => useNodeIcon(undefined, ICON));
+    expect(result.current).not.toBeNull();
+    expect(result.current!.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('draws the themed texture instead of the vendored default when a theme resolved this icon', () => {
+    const themed: ThemedIconRef = {
+      ref: 'SubResource("G1")',
+      resources: { externalResources: [], internalResources: PROCEDURAL },
+    };
+    const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
+
+    const { result } = renderHook(() => useNodeIcon(themed, ICON));
+
+    expect(result.current).not.toBeNull();
+    // The vendored data-URL path was never taken.
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the vendored default when the themed ref cannot resolve — `Control::_set`\'s NIL branch removes an invalid icon override, matching an absent one', () => {
+    const themed: ThemedIconRef = { ref: 'ExtResource("nope")', resources: { externalResources: [], internalResources: [] } };
+    const load = vi.spyOn(THREE.TextureLoader.prototype, 'load');
+
+    const { result } = renderHook(() => useNodeIcon(themed, ICON));
+
+    expect(result.current).not.toBeNull();
+    expect(load).toHaveBeenCalled();
   });
 });

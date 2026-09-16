@@ -1,7 +1,7 @@
 ---
 type: VSplitContainer
 category: 2D
-status: limitation
+status: done
 fixture: unit-split-container-vertical.tscn
 image: unit-split-container-vertical
 renders_as: two children stacked, split at a computed offset
@@ -32,7 +32,3 @@ Strict parsing format-checks the inherited set (10 inherited from SplitContainer
 
 Identical to HSplitContainer's. The three properties SplitContainer adds are plain scalars Godot clamps or ignores at layout time, so a malformed `split_offset` leaves the property undefined and the Godot default of 0 applies.
 
-## Known limitations
-
-- **Approximated** A `theme_override_icons/grabber` does not widen the gap between the
-  children, which stays at the default grabber's width.

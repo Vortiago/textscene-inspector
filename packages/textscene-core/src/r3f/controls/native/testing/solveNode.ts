@@ -47,6 +47,7 @@ const NO_FONT_OVERRIDES: SolveNode['fontOverrides'] = Object.freeze({});
 const NO_THEME_CHAIN: SolveNode['themeChain'] = Object.freeze([]);
 const NO_COLORS: SolveNode['colors'] = Object.freeze({});
 const NO_CONSTANTS: SolveNode['constants'] = Object.freeze({});
+const NO_ICONS: SolveNode['icons'] = Object.freeze({});
 const NO_RESOURCES: SolveNode['resources'] = Object.freeze({
   externalResources: Object.freeze([]),
   internalResources: Object.freeze([]),
@@ -69,6 +70,7 @@ export function solveNode(): Pick<
   | 'projectTheme'
   | 'colors'
   | 'constants'
+  | 'icons'
   | 'resources'
   | 'paintRange'
   | 'paintSequence'
@@ -84,6 +86,7 @@ export function solveNode(): Pick<
     projectTheme: null,
     colors: NO_COLORS,
     constants: NO_CONSTANTS,
+    icons: NO_ICONS,
     resources: NO_RESOURCES,
     // The whole canvas, which is what a lone Control owns. A test asserting
     // draw order between several of them wants `withPaintRanges` instead —

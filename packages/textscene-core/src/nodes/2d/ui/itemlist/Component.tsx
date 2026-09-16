@@ -52,6 +52,8 @@ import {
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
+  itemListGuideColor,
+  itemListGuideLines,
   itemListIconSlotKey,
   itemListSeparation,
   itemListTextTheme,
@@ -193,7 +195,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       const text = item.text ?? '';
       const hasText = text.length > 0;
       const textLayout = hasText
-        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth })
+        ? shapeItemListText({ text, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, overrunBehavior: props.textOverrunBehavior })
         : null;
       const textSize = textLayout
         ? { x: shapedTextSizeWidthPx(textLayout.widthPx), y: textLayout.heightPx }
@@ -201,7 +203,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
       return { item, disabled, hasIcon, iconSize, hasText, textSize, textLayout };
     });
-  }, [items, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, iconScale, props.fixedIconSize, solveNode]);
+  }, [items, fontSizePx, fontMetrics, iconMode, maxTextLines, fixedColumnWidth, iconScale, props.fixedIconSize, props.textOverrunBehavior, solveNode]);
 
   const itemSizes = useMemo(
     () =>
@@ -223,6 +225,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   );
 
   const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
+  const contentWidth = rect.w - panelMargin.x;
 
   const packed = useMemo(
     () =>
@@ -231,14 +234,21 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         maxColumnWidth,
         sameColumnWidth: props.sameColumnWidth === true,
         maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
-        fitSize: rect.w - panelMargin.x,
+        fitSize: contentWidth,
         wraparoundItems: props.wraparoundItems !== false,
         autoWidth: props.autoWidth === true,
         hSeparation,
         availableHeight: Math.max(0, rect.h - panelMargin.y),
       }),
-    [itemSizes, maxColumnWidth, props.sameColumnWidth, props.maxColumns, rect.w, rect.h, panelMargin.x, panelMargin.y, props.wraparoundItems, props.autoWidth, hSeparation]
+    [itemSizes, maxColumnWidth, props.sameColumnWidth, props.maxColumns, contentWidth, rect.h, panelMargin.y, props.wraparoundItems, props.autoWidth, hSeparation]
   );
+
+  const guideLines = useMemo(
+    () => itemListGuideLines(iconMode, packed.separators, contentWidth),
+    [iconMode, packed.separators, contentWidth]
+  );
+  const guideColorSrgb = useMemo(() => tintColor(itemListGuideColor(solveNode), tint.own), [solveNode, tint.own]);
+  const guideColorLinear = useGodotLinearColor(guideColorSrgb);
 
   const rowGeometries: RowGeometry[] = useMemo(
     () =>
@@ -291,6 +301,17 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   return (
     <>
       <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {guideLines.map((line, index) => (
+        <CanvasItemGroup key={`guide-${index}`} position={[origin.x, -(origin.y + line.y), 0]}>
+          <ControlQuad
+            renderOrder={renderOrder}
+            width={line.width}
+            height={1}
+            color={guideColorLinear}
+            opacity={guideColorSrgb.a}
+          />
+        </CanvasItemGroup>
+      ))}
       {rowGeometries.map((geometry, index) => (
         <ItemListRow
           key={index}

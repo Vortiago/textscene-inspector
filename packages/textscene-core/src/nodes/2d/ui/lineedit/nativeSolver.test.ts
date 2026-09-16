@@ -29,10 +29,16 @@ import {
   lineEditTextTheme,
   resolveLineEditTextState,
   layoutLineEditContent,
+  lineEditRightIconSize,
+  lineEditCaretRect,
+  lineEditTextureSlots,
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
   LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
   LINE_EDIT_THEME_FONT_KEY,
+  EXPAND_MODE_ORIGINAL_SIZE,
+  EXPAND_MODE_FIT_TO_TEXT,
+  EXPAND_MODE_FIT_TO_LINE_EDIT,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -134,6 +140,264 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     const fontHeight32 = Math.ceil(2189 * (32 / 2048)) + Math.ceil(600 * (32 / 2048));
     expect(result.x).toBe(8 + 4 * wAdvance32);
     expect(result.y).toBe(8 + fontHeight32);
+  });
+});
+
+describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457)', () => {
+  // 'W' has no kerning partner in the vendored metrics (`kerning: {}`), so N
+  // repeats shape to exactly N * W_ADVANCE, ceiled (`shaped_text_get_size`,
+  // `shapedTextSizeWidthPx`). 6 * 15.125 = 90.75 -> ceil 91.
+  const SIX_W_WIDTH = 91;
+
+  it('floors width on ceil(shaped display text) + caret_width once it exceeds the 4-char floor', () => {
+    const result = size(
+      lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx())
+    );
+    // caret_width theme constant defaults to 1 (default_theme.cpp:434); 8+91+1=100.
+    expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('sizes to the PLACEHOLDER when text is empty — _shape() shapes whichever string using_placeholder selects', () => {
+    const result = size(
+      lineEditMinimumSize(node({ placeholderText: 'WWWWWW', expandToTextLength: true }), ctx())
+    );
+    expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
+  });
+
+  it('a caret_width theme override changes the added margin', () => {
+    const n = { ...node({ text: 'WWWWWW', expandToTextLength: true }), constants: { caret_width: 3 } };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.x).toBe(8 + SIX_W_WIDTH + 3);
+  });
+
+  it('leaves width at the 4-char floor for a short string (the floor still wins the MAX)', () => {
+    const withShort = size(lineEditMinimumSize(node({ text: 'W', expandToTextLength: true }), ctx()));
+    const withoutFlag = size(lineEditMinimumSize(node({ text: 'W' }), ctx()));
+    expect(withShort).toEqual(withoutFlag);
+  });
+
+  it('contributes nothing without a measurer, matching the em-space width\'s own fallback', () => {
+    const result = lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx(false));
+    expect(result).toEqual({ x: 8, y: 8 + FONT_HEIGHT });
+  });
+});
+
+describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution (line_edit.cpp:2459-2472)', () => {
+  it('adds a right_icon\'s ORIGINAL_SIZE natural width, and floors height at it when taller than the font', () => {
+    const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 40 } } };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 32, 6);
+    expect(result.y).toBe(8 + 40); // icon height (40) beats FONT_HEIGHT (23)
+  });
+
+  it('a shorter icon does not shrink the font-height floor', () => {
+    const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 16 } } };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('clear_button_enabled contributes the vendored 16x16 clear icon even with NO text at all', () => {
+    const result = size(lineEditMinimumSize(node({ clearButtonEnabled: true }), ctx()));
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
+  });
+
+  it('a themed "clear" icon overrides the vendored 16x16 natural size', () => {
+    const n = { ...node({ clearButtonEnabled: true }), textureSlots: { clear: { x: 24, y: 24 } } };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 24, 6);
+  });
+
+  it('right_icon and clear_button_enabled together take the MAX of the two widths, not their sum', () => {
+    const n = {
+      ...node({ clearButtonEnabled: true }),
+      textureSlots: { right_icon: { x: 10, y: 10 }, clear: { x: 16, y: 16 } },
+    };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
+  });
+
+  it('FIT_TO_LINE_EDIT on the tree\'s FIRST pass (no tentativeRect yet) substitutes the natural size', () => {
+    const n = {
+      ...node({ iconExpandMode: 2 }),
+      textureSlots: { right_icon: { x: 32, y: 16 } },
+    };
+    const result = size(lineEditMinimumSize(n, ctx()));
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 32, 6);
+  });
+
+  it('FIT_TO_LINE_EDIT on the SECOND pass sizes the icon against the tentative resolved rect', () => {
+    const n = {
+      ...node({ iconExpandMode: 2 }),
+      textureSlots: { right_icon: { x: 32, y: 16 } },
+    };
+    const c = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 100, h: 30 }) };
+    const result = size(lineEditMinimumSize(n, c));
+    // iconWidth = 32*30/16 = 60 (<=100, no clamp); iconHeight = 30.
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 60, 6);
+    expect(result.y).toBe(8 + 30);
+  });
+});
+
+describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cpp:373-406)', () => {
+  it('ORIGINAL_SIZE returns the natural size unchanged, ignoring scale/controlSize/fontHeight', () => {
+    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_ORIGINAL_SIZE, 23, { x: 999, y: 999 }, 0.1)).toEqual({
+      x: 32,
+      y: 16,
+    });
+  });
+
+  it('FIT_TO_TEXT returns a square of the font height, ignoring the natural size', () => {
+    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_TEXT, 23, { x: 999, y: 999 }, 1)).toEqual({
+      x: 23,
+      y: 23,
+    });
+  });
+
+  it('FIT_TO_LINE_EDIT scales to the control\'s own height, preserving aspect, when it fits the width', () => {
+    // icon_width = 32*30/16 = 60 (<= control width 100, no clamp); icon_height = 30.
+    expect(
+      lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 100, y: 30 }, 1)
+    ).toEqual({ x: 60, y: 30 });
+  });
+
+  it('FIT_TO_LINE_EDIT clamps to the control\'s own width once the height-driven width overflows it', () => {
+    // icon_width = 32*30/16 = 60 > control width 40 -> icon_width=40, icon_height = 16*40/32 = 20.
+    expect(
+      lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 40, y: 30 }, 1)
+    ).toEqual({ x: 40, y: 20 });
+  });
+
+  it('FIT_TO_LINE_EDIT applies right_icon_scale to its own result only', () => {
+    expect(
+      lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 100, y: 30 }, 0.5)
+    ).toEqual({ x: 30, y: 15 });
+  });
+
+  it('FIT_TO_LINE_EDIT with no control size yet (the solver\'s first pass) substitutes the natural size', () => {
+    expect(lineEditRightIconSize({ x: 32, y: 16 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, null, 1)).toEqual({
+      x: 32,
+      y: 16,
+    });
+  });
+
+  it('a degenerate (zero-height) natural size never divides by zero', () => {
+    expect(
+      lineEditRightIconSize({ x: 0, y: 0 }, EXPAND_MODE_FIT_TO_LINE_EDIT, 23, { x: 100, y: 30 }, 1)
+    ).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('lineEditCaretRect — the caret_force_displayed static-preview position (line_edit.cpp:1552-1611)', () => {
+  const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
+  const RECT = { x: 200, y: 30 };
+  // Shared with layoutLineEditContent's own LEFT test: yArea=trunc(30-4-4)=22,
+  // y=trunc(4+(22-23)/2)=trunc(3.5)=3 — identical formula, `fontHeightPx`
+  // standing in for `text_height` (the two never diverge in this engine).
+
+  it('when real text is showing, sits at the SAME pen-start x the text itself uses (shaped_text_get_carets at column 0)', () => {
+    const rect = lineEditCaretRect({
+      rectSize: RECT,
+      styleMargin: MARGIN,
+      alignment: 1, // CENTER — must be ignored; only isPlaceholder branches on alignment.
+      fontHeightPx: 23,
+      isPlaceholder: false,
+      textPenX: 75, // whatever the caller's own content.textOffset.x resolved to.
+      rightIconRawWidthPx: 0,
+      ofsMaxPx: 192,
+      caretWidthPx: 1,
+    });
+    expect(rect).toEqual({ x: 75, y: 3, w: 1, h: 23 });
+  });
+
+  it('LEFT/FILL fallback (placeholder/empty): sits at the left margin, unaffected by an icon', () => {
+    const rect = lineEditCaretRect({
+      rectSize: RECT,
+      styleMargin: MARGIN,
+      alignment: 0,
+      fontHeightPx: 23,
+      isPlaceholder: true,
+      textPenX: 999, // must be ignored in the fallback branch.
+      rightIconRawWidthPx: 32,
+      ofsMaxPx: 192,
+      caretWidthPx: 1,
+    });
+    expect(rect.x).toBe(4);
+    expect(rect.y).toBe(3);
+  });
+
+  it('CENTER fallback: centres against the RAW right_icon width only (not the clear button, not text)', () => {
+    // total_margin=8; inner=trunc(200-8-32)=160; center=trunc(160/2)=80; x=4+80=84.
+    const rect = lineEditCaretRect({
+      rectSize: RECT,
+      styleMargin: MARGIN,
+      alignment: 1,
+      fontHeightPx: 23,
+      isPlaceholder: true,
+      textPenX: 0,
+      rightIconRawWidthPx: 32,
+      ofsMaxPx: 192,
+      caretWidthPx: 1,
+    });
+    expect(rect.x).toBe(84);
+  });
+
+  it('CENTER fallback with no icon: inner=trunc(200-8-0)=192; center=96; x=4+96=100', () => {
+    const rect = lineEditCaretRect({
+      rectSize: RECT,
+      styleMargin: MARGIN,
+      alignment: 1,
+      fontHeightPx: 23,
+      isPlaceholder: true,
+      textPenX: 0,
+      rightIconRawWidthPx: 0,
+      ofsMaxPx: 192,
+      caretWidthPx: 1,
+    });
+    expect(rect.x).toBe(100);
+  });
+
+  it('RIGHT fallback: sits exactly at ofs_max', () => {
+    const rect = lineEditCaretRect({
+      rectSize: RECT,
+      styleMargin: MARGIN,
+      alignment: 2,
+      fontHeightPx: 23,
+      isPlaceholder: true,
+      textPenX: 0,
+      rightIconRawWidthPx: 0,
+      ofsMaxPx: 176,
+      caretWidthPx: 1,
+    });
+    expect(rect.x).toBe(176);
+  });
+});
+
+describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" icon', () => {
+  it('requests right_icon under its own property key when authored', () => {
+    const requests = lineEditTextureSlots({
+      name: 'L',
+      type: 'LineEdit',
+      children: [],
+      properties: { name: 'L', rightIcon: 'ExtResource("1_icon")' },
+    });
+    expect(requests).toContainEqual({ key: 'right_icon', ref: 'ExtResource("1_icon")' });
+  });
+
+  it('requests the "clear" theme icon only when the theme walk resolved one', () => {
+    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    expect(lineEditTextureSlots(node, {})).toEqual([]);
+    const themed = { clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } } };
+    expect(lineEditTextureSlots(node, themed)).toContainEqual({
+      key: 'clear',
+      ref: 'ExtResource("1_clear")',
+      scope: themed.clear.resources,
+    });
+  });
+
+  it('requests neither when nothing is authored/themed', () => {
+    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    expect(lineEditTextureSlots(node)).toEqual([]);
   });
 });
 
@@ -297,6 +561,99 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
     });
     expect(result.contentRect.w).toBe(0);
     expect(result.contentRect.h).toBe(0);
+  });
+
+  it('without an icon, ofsMaxPx is width minus the right margin, and content rect width matches it', () => {
+    const result = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+    });
+    expect(result.ofsMaxPx).toBe(196);
+    expect(result.contentRect.w).toBe(192);
+  });
+});
+
+describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp:1444-1485)', () => {
+  const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
+
+  it('LEFT: an icon narrows ofsMaxPx/content width but never moves x_ofs off the left margin', () => {
+    const result = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 0,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 20,
+    });
+    expect(result.textOffset.x).toBe(4);
+    expect(result.ofsMaxPx).toBe(176); // trunc(200-4-20)
+    expect(result.contentRect.w).toBe(172);
+  });
+
+  it('CENTER: an icon\'s width is subtracted from the centring budget too', () => {
+    // total_margin=8; diff=trunc(200-8-50-20)=122; centered=trunc(122/2)=61; x=4+61=65.
+    const result = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 1,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 20,
+    });
+    expect(result.textOffset.x).toBe(65);
+  });
+
+  it('RIGHT: x_ofs shifts left by BOTH the icon width AND the right margin again (line_edit.cpp:1477, ported as written)', () => {
+    // base (pre-icon) = max(4, trunc(200-ceil(4+50))) = 146.
+    // with icon: max(4, trunc(146-20-4)) = 122.
+    const result = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 2,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 20,
+    });
+    expect(result.textOffset.x).toBe(122);
+  });
+
+  it('RIGHT: floors at the left margin rather than going negative for a wide icon', () => {
+    const result = layoutLineEditContent({
+      rectSize: { x: 60, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 2,
+      textWidthPx: 10,
+      textHeightPx: 23,
+      hasIcon: true,
+      iconWidthPx: 50,
+    });
+    expect(result.textOffset.x).toBe(4);
+  });
+
+  it('hasIcon:false ignores a stray iconWidthPx entirely — the no-icon formulas apply exactly', () => {
+    const withIcon = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 2,
+      textWidthPx: 50,
+      textHeightPx: 23,
+      hasIcon: false,
+      iconWidthPx: 999,
+    });
+    const without = layoutLineEditContent({
+      rectSize: { x: 200, y: 30 },
+      styleMargin: MARGIN,
+      alignment: 2,
+      textWidthPx: 50,
+      textHeightPx: 23,
+    });
+    expect(withIcon).toEqual(without);
   });
 });
 

@@ -83,4 +83,34 @@ describe('parseItemList', () => {
       { text: 'Potion', disabled: true },
     ]);
   });
+
+  // item_list.cpp:2242-2259 -- the deprecated `items = [text, icon, disabled, …]`
+  // triple array, only when the file has no `item_count` at all.
+  describe('the deprecated items compat array', () => {
+    it('reads text/icon/disabled triples, absent item_count (happy path)', () => {
+      const result = parseItemList(heading, {
+        items: '["Sword", ExtResource("1_icon"), false, "Shield", null, true]',
+      });
+      expect(result.items).toEqual([
+        { text: 'Sword', icon: 'ExtResource("1_icon")' },
+        { text: 'Shield', disabled: true },
+      ]);
+      expect(result.itemCount).toBe(2);
+    });
+
+    it('a wrong arity drops every row, matching ERR_FAIL_COND_V before clear() (error path)', () => {
+      const result = parseItemList(heading, { items: '["Sword", null]' });
+      expect(result.items).toEqual([]);
+      expect(result.itemCount).toBeUndefined();
+    });
+
+    it('modern item_N/* wins outright once item_count is present, even alongside items (edge case)', () => {
+      const result = parseItemList(heading, {
+        item_count: '1',
+        'item_0/text': '"Sword"',
+        items: '["Stale", null, false]',
+      });
+      expect(result.items).toEqual([{ text: 'Sword' }]);
+    });
+  });
 });

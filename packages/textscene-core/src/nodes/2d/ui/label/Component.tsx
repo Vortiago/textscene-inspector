@@ -43,7 +43,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { useControlClipPlanes, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
   AutowrapMode,
   clampAutowrapMode,
@@ -52,15 +52,24 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
+import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  LABEL_LINE_SPACING_PX,
+  LABEL_DEFAULT_JUSTIFICATION_FLAGS,
   LABEL_PARAGRAPH_SEPARATOR,
   LABEL_THEME_FONT_KEY,
+  VC_CHARS_BEFORE_SHAPING,
+  applyVisibleCharsReveal,
+  labelEffectiveTextTheme,
+  labelPreShapeText,
   labelShapingWidthPx,
   labelTextTheme,
+  labelVisibleLineRange,
   layoutLabelLines,
+  resolveNodeLabelSettings,
+  windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
 import type { LabelProperties } from './types';
@@ -81,14 +90,32 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 
 export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
-  const textTheme = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
+  const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
+  const labelSettings = useMemo(
+    () => resolveNodeLabelSettings(props, solveNode.resources.internalResources),
+    [props, solveNode.resources.internalResources]
+  );
+  // A valid `label_settings` beats the theme OUTRIGHT — see its own doc.
+  const textTheme = useMemo(() => labelEffectiveTextTheme(themeResolved, labelSettings), [themeResolved, labelSettings]);
 
   const tintColor = multiplyModulate(tint.own, textTheme.color);
-  const clippingPlanes = useControlClipPlanes();
+  const inheritedClippingPlanes = useControlClipPlanes();
+  // `clip_text` scissors this Label's OWN drawn ink to its rect
+  // (`label.cpp:733-734`'s `canvas_item_set_clip`) — always called (hooks run
+  // unconditionally) but only CONSUMED below when `props.clipText` is set.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
+  const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
 
-  const text = props.text ?? '';
+  // VC_CHARS_BEFORE_SHAPING (the default) truncates BEFORE shaping — see
+  // `labelPreShapeText`'s own doc; every other behaviour trims at draw time,
+  // below.
+  const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  // `labelMinimumSize` already windows its OWN `meta` to lines_skipped/
+  // max_lines_visible (`nativeSolver.ts`'s own doc), so reusing it here must
+  // NOT window a second time.
   const cachedLayout = autowrapMode === AutowrapMode.OFF && isTextLayoutResult(meta) ? meta : null;
   // Read INSIDE the render body, not the `useMemo` below: `peekSceneFontMetrics`
   // (`resolveNodeFontMetrics`'s own doc) answers synchronously from a WeakMap
@@ -100,29 +127,101 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
   const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
   const layout = useMemo(() => {
     if (cachedLayout) return cachedLayout;
-    return shapeText(text, {
+    const shaped = shapeText(text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
       autowrapMode,
-      lineSpacingPx: LABEL_LINE_SPACING_PX,
+      lineSpacingPx: textTheme.lineSpacingPx,
       uppercase: props.uppercase,
       fontMetrics,
-      paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
+      paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+      tabStopsPx: props.tabStopsPx,
+      autowrapTrimFlags: props.autowrapTrimFlags,
     });
-  }, [cachedLayout, text, textTheme.fontSizePx, rect.w, autowrapMode, props.uppercase, fontMetrics]
-  );
+    const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
+    return windowLabelLines(shaped, range);
+  }, [
+    cachedLayout,
+    text,
+    textTheme.fontSizePx,
+    textTheme.lineSpacingPx,
+    rect.w,
+    autowrapMode,
+    props.uppercase,
+    fontMetrics,
+    props.paragraphSeparator,
+    props.tabStopsPx,
+    props.autowrapTrimFlags,
+    props.linesSkipped,
+    props.maxLinesVisible,
+  ]);
+
+  // label.cpp:266-267 -- a non-empty tab_stops always adds AFTER_LAST_TAB,
+  // on top of whatever the scene's own justification_flags already set.
+  const effectiveJustificationFlags = useMemo(() => {
+    const base = props.justificationFlags ?? LABEL_DEFAULT_JUSTIFICATION_FLAGS;
+    return props.tabStopsPx && props.tabStopsPx.length > 0 ? base | JustificationFlag.AFTER_LAST_TAB : base;
+  }, [props.justificationFlags, props.tabStopsPx]);
 
   const placements = useMemo(
     () =>
-      layoutLabelLines(layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment),
-    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment]
+      layoutLabelLines(
+        layout,
+        rect.w,
+        rect.h,
+        props.horizontalAlignment,
+        props.verticalAlignment,
+        effectiveJustificationFlags,
+        textTheme.fontSizePx
+      ),
+    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, effectiveJustificationFlags, textTheme.fontSizePx]
   );
 
-  const lineLayouts = useSoloLineLayouts(placements, layout);
+  // label.cpp:302-332 (autowrap OFF): every line is overrun-trimmed at the
+  // SAME shaping width `layout` was wrapped at, regardless of clip_text —
+  // that key only collapses the minimum size (`nativeSolver.ts`) and gates
+  // the scissor above. The autowrap-ON branch (`:269-301`) only trims the
+  // ONE line `max_lines_visible` hides, which this engine does not model
+  // (see `LabelProperties.overrunBehavior`'s own doc), so it is skipped here.
+  const overrunFlags = useMemo(
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    [props.overrunBehavior]
+  );
+  const trimmedPlacements = useMemo(() => {
+    if (autowrapMode !== AutowrapMode.OFF || !overrunFlags.trim) return placements;
+    const widthPx = labelShapingWidthPx(rect.w);
+    return placements.map((placement) => ({
+      ...placement,
+      line: trimLineToWidth(placement.line, widthPx, overrunFlags, {
+        fontMetrics,
+        fontSizePx: textTheme.fontSizePx,
+        ellipsisChar: props.ellipsisChar,
+      }),
+    }));
+  }, [placements, autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
+
+  // label.cpp:778-883's draw-time reveal, on top of the overrun trim above —
+  // both are independent per-glyph skip conditions Godot ORs together in the
+  // SAME draw loop. `props.visibleCharacters`/`visibleRatio` are already
+  // `parseLabel`'s FINAL cross-derived numbers (`resolveVisibleChars`'s own
+  // doc). VC_CHARS_BEFORE_SHAPING (the default) already ran above, pre-shape.
+  const revealedPlacements = useMemo(() => {
+    const revealed = applyVisibleCharsReveal(
+      trimmedPlacements.map((placement) => placement.line),
+      {
+        behavior: props.visibleCharactersBehavior ?? VC_CHARS_BEFORE_SHAPING,
+        visibleChars: props.visibleCharacters,
+        visibleRatio: props.visibleRatio,
+      }
+    );
+    return trimmedPlacements.map((placement, index) => ({ ...placement, line: revealed[index]! }));
+  }, [trimmedPlacements, props.visibleCharactersBehavior, props.visibleCharacters, props.visibleRatio]);
+
+  const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
   return (
-    <>
-      {placements.map((placement, index) => (
+    <CanvasItemGroup ref={anchorRef}>
+      {revealedPlacements.map((placement, index) => (
         <CanvasItemGroup key={index} position={[placement.x, -placement.y, 0]}>
           <TextRun
             layout={lineLayouts[index]!}
@@ -133,6 +232,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
           />
         </CanvasItemGroup>
       ))}
-    </>
+    </CanvasItemGroup>
   );
 }

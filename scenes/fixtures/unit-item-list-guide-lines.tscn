@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://unit_item_list_guide_lines"]
+
+; A default-icon-mode (LEFT) ItemList wrapping four plain rows into two columns,
+; so `force_update_list_size`'s own row-packing separators (item_list.cpp:1840)
+; land between them. icon_mode is the ONE variable this fixture pins away from
+; every other ItemList fixture: unit-item-list.tscn sets icon_mode = 0 (TOP),
+; where Godot never draws a guide line at all (item_list.cpp:1447), so a
+; regression in the LEFT-mode guide-line draw is invisible there. No icon, no
+; StyleBox override, no theme override: the panel, the row text and the guide
+; lines are the only things this scene can show.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyItemList" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 232.0
+offset_bottom = 96.0
+max_columns = 2
+item_count = 4
+item_0/text = "Sword"
+item_1/text = "Shield"
+item_2/text = "Potion"
+item_3/text = "Bow"

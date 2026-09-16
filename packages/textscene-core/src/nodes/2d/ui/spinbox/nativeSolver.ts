@@ -25,7 +25,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -67,18 +72,48 @@ const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
  */
 export const SPIN_BOX_ARROW_ICON_SIZE: Vec2 = { x: 16, y: 8 };
 
+/** `up`/`down` — `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, SpinBox, up_icon, "up")` (and `down`, `spin_box.cpp:690,694`). The hover/pressed/disabled variants (and the deprecated `updown`) are never drawn here — see this module's own header, matching `Component.tsx`'s draw-state simplification. */
+export type SpinBoxIconName = 'up' | 'down';
+const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
+
+/** Which of `up`/`down` have a themed answer, for `SolveNode.textureSlots`. */
+export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of SPIN_BOX_ICON_NAMES) {
+    const themed = themedIcons[name];
+    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+  }
+  return requests;
+};
+
+/** This icon's resolved size — themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
+export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vec2 {
+  return n.textureSlots[name] ?? SPIN_BOX_ARROW_ICON_SIZE;
+}
+
+/**
+ * `SpinBox::_get_widest_button_icon_width` (`spin_box.cpp:411-424`),
+ * restricted to `up`/`down` (no deprecated `updown`, no hover/pressed/
+ * disabled variants — see `SPIN_BOX_ICON_NAMES`'s own doc, which is exactly
+ * what this codebase draws).
+ */
+export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>): number {
+  return Math.max(spinBoxIconSize(n, 'up').x, spinBoxIconSize(n, 'down').x);
+}
+
 /**
  * `SpinBox::_compute_sizes` (`spin_box.cpp:382-397`), restricted to the
  * DEFAULT theme's own `set_min_buttons_width_from_icons = 1` (true, no
  * per-node theme-constant override is modelled anywhere in this codebase —
- * `shared/scrollBarSolver.ts`'s own doc). `_get_widest_button_icon_width()`
- * only ever sees the up/down icons here (no deprecated `updown` icon is
- * vendored), so it collapses to `SPIN_BOX_ARROW_ICON_SIZE.x`.
+ * `shared/scrollBarSolver.ts`'s own doc). `widestIconWidth` is
+ * `spinBoxWidestButtonIconWidth`'s answer for whichever `SolveNode` is
+ * asking (the vendored 16 when nothing themed either icon, matching the
+ * codebase's previous hardcoded behaviour exactly).
  */
-export function spinBoxButtonsBlockWidth(): number {
+export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
   const separation = SPIN_BOX_FIELD_BUTTONS_SEPARATION;
   const wanted = SPIN_BOX_BUTTONS_WIDTH + separation;
-  const iconEnforced = SPIN_BOX_ARROW_ICON_SIZE.x + separation;
+  const iconEnforced = widestIconWidth + separation;
   return Math.max(wanted, iconEnforced);
 }
 
@@ -108,10 +143,10 @@ export interface SpinBoxLayout {
  * assignment, so `rectSize` is truncated once up front, matching every other
  * `int(...)` cast this function's source performs.
  */
-export function spinBoxLayout(rectSize: Vec2): SpinBoxLayout {
+export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number): SpinBoxLayout {
   const w = Math.trunc(rectSize.x);
   const h = Math.trunc(rectSize.y);
-  const blockWidth = spinBoxButtonsBlockWidth();
+  const blockWidth = spinBoxButtonsBlockWidth(widestIconWidth);
   const buttonsWidth = blockWidth - spinBoxFieldButtonsSeparation();
   const buttonsLeft = w - buttonsWidth;
   const vSep = Math.min(Math.max(SPIN_BOX_BUTTONS_VERTICAL_SEPARATION, 0), h);
@@ -309,5 +344,5 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
     y: styleMinSize.y + fontHeightPx,
   };
 
-  return { x: fieldMin.x + spinBoxButtonsBlockWidth(), y: fieldMin.y };
+  return { x: fieldMin.x + spinBoxButtonsBlockWidth(spinBoxWidestButtonIconWidth(n)), y: fieldMin.y };
 };

@@ -3,7 +3,14 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2i } from '../../../../parser/valueParsers';
 import { parseControl } from '../control/parser';
-import { indexedElements, ruleCount, boolSlotValue } from '../../../../godot/index.js';
+import {
+  arrayLiteralBody,
+  boolSlotValue,
+  dropTrailingComma,
+  indexedElements,
+  ruleCount,
+  splitTopLevel,
+} from '../../../../godot/index.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 
@@ -36,11 +43,42 @@ function parseItems(properties: Record<string, string>, itemCount: number): Item
   return items;
 }
 
+/**
+ * `ItemList::_set`'s deprecated fallback (`item_list.cpp:2242-2259`): a flat
+ * `[text, icon, disabled, …]` triple array a pre-`PropertyListHelper` save
+ * wrote. `arr.size() % 3` refuses the WHOLE write before `clear()` runs
+ * (`ERR_FAIL_COND_V`, `:2246`), so a wrong arity yields no rows rather than a
+ * partial read. Neither `add_item` nor the loop touches `selectable`, so
+ * every row keeps `Item`'s own default (true, `item_list.h:65`).
+ */
+function parseDeprecatedItems(value: string): ItemListItem[] | null {
+  const body = arrayLiteralBody(value);
+  if (body === null) return null;
+  const entries = dropTrailingComma(splitTopLevel(body));
+  if (entries.length % 3 !== 0) return null;
+  const items: ItemListItem[] = [];
+  for (let i = 0; i < entries.length; i += 3) {
+    const icon = entries[i + 1]!.trim();
+    const item: ItemListItem = { text: unquoteString(entries[i]!.trim()) };
+    if (icon !== 'null') item.icon = icon;
+    if (boolSlotValue(entries[i + 2]!.trim()) === true) item.disabled = true;
+    items.push(item);
+  }
+  return items;
+}
+
 export function parseItemList(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): ItemListProperties {
   const itemCount = ruleCount(properties.item_count) ?? 0;
+  // Godot's own saver never writes BOTH forms — item_count/item_N/* replaced
+  // `items` outright — so a file carrying `item_count` always wins, and the
+  // legacy array is read only for a pure old-format file.
+  const legacyItems =
+    properties.item_count === undefined && properties.items !== undefined
+      ? parseDeprecatedItems(properties.items)
+      : null;
   return {
     ...parseControl(heading, properties),
     selectMode: parseOptionalInt(properties.select_mode),
@@ -61,6 +99,9 @@ export function parseItemList(
     iconScale: parseOptionalFloat(properties.icon_scale),
     fixedIconSize: parseOptionalVector2i(properties.fixed_icon_size, 'fixed_icon_size'),
     textOverrunBehavior: parseOptionalInt(properties.text_overrun_behavior),
-    items: parseItems(properties, itemCount),
+    items: legacyItems ?? parseItems(properties, itemCount),
+    // No `item_count` key exists on a legacy file; stand in with the row
+    // count `add_item` would have left `get_item_count()` at.
+    ...(legacyItems ? { itemCount: legacyItems.length } : {}),
   };
 }

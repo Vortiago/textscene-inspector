@@ -38,6 +38,7 @@ import {
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
 
@@ -159,6 +160,14 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const textSize = layout
     ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
     : { x: 0, y: 0 };
+  // button.cpp:492-494: `clip_text` or any non-NO_TRIMMING overrun behaviour
+  // zeroes the TEXT's own width contribution (the icon's own width, added
+  // below, is unaffected) — the box no longer needs to be wide enough for
+  // the full label, since a narrower one just trims it.
+  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
+  if (props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING) {
+    textSize.x = 0;
+  }
 
   let width = textSize.x;
   let height = textSize.y;

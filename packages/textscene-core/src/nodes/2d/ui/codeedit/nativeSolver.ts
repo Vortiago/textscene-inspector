@@ -171,5 +171,5 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
   const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
-  return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx);
+  return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
 };

@@ -6,11 +6,11 @@
  * (`Theme::_set`/`_get`, `scene/resources/theme.cpp:36-104`: the property name
  * splits on `/` into `theme_type` / `data_type` / `prop_name`) plus a handful
  * of un-prefixed scalars (`default_font`, `default_font_size`) and
- * `<variationType>/base_type` type-variation declarations. `styles` stays a
- * raw ref string (a StyleBox is a SUB-RESOURCE of this theme file, resolved
- * against `resources` by whoever reads the entry, never here); `colors`/
- * `constants` are literal values with nothing to resolve, so they decode
- * straight to typed data. Icons stay unscanned — see `lookup.ts`'s own doc.
+ * `<variationType>/base_type` type-variation declarations. `styles`/`icons`
+ * stay a raw ref string each (a StyleBox or a Texture2D icon is a
+ * SUB-RESOURCE of this theme file, resolved against `resources` by whoever
+ * reads the entry, never here); `colors`/`constants` are literal values with
+ * nothing to resolve, so they decode straight to typed data.
  */
 
 import type { FontResource } from '../../fonts/font/types';
@@ -38,6 +38,8 @@ export interface ScannedTheme<T> {
   styles?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** `<Type>/colors/<name>`, parsed (`Theme::get_color`, `scene/resources/theme.cpp:761-767`). Optional — see `styles`'s own doc. */
   colors?: Readonly<Record<string, Readonly<Record<string, Color>>>>;
+  /** `<Type>/icons/<name>` — raw ref string (`SubResource(...)`/`ExtResource(...)`), resolved against `resources`, same as `styles`. Optional — see `styles`'s own doc. */
+  icons?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** `<Type>/constants/<name>`, parsed (`Theme::get_constant`, `scene/resources/theme.cpp:858-864`) — a literal int, never scaled. Optional — see `styles`'s own doc. */
   constants?: Readonly<Record<string, Readonly<Record<string, number>>>>;
   typeVariations: Readonly<Record<string, string>>;

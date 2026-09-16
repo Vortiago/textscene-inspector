@@ -46,12 +46,14 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import type { TscnNode } from '../../../../parser/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
+  TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { SplitContainerProperties } from './splitContainer';
@@ -283,9 +285,68 @@ export function resolveSplitSeparation(
   return Math.max(themeSeparation, theme.grabberExtent);
 }
 
-function separationOf(n: SolveNode, ctx: SolveContext): number {
-  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, ctx.theme.widgets.splitContainer);
+/**
+ * `SplitContainer::_get_grabber_icon` (`split_container.cpp:281-292`): a
+ * type registering `grabber_icon` under its OWN name — `"grabber"` — is
+ * `is_fixed` (HSplitContainer/VSplitContainer); the base `SplitContainer`
+ * registers no such item, only `"h_grabber"`/`"v_grabber"`
+ * (`default_theme.cpp:1240-1247`). `nativeType` is the LIVE node's own class
+ * (`SolveNode.node.type`), which is exactly what the walker's theme-chain
+ * lookup already keyed `SolveNode.icons`/`textureSlots` under, so no second
+ * type test is needed anywhere else.
+ */
+export function splitGrabberThemeKey(nativeType: string, vertical: boolean): string {
+  return nativeType === 'SplitContainer' ? (vertical ? 'v_grabber' : 'h_grabber') : 'grabber';
 }
+
+/** `hsplitter.svg`/`vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 8px along the split axis, 48px across it, transposed per orientation. Centralised here (each painter used to keep its own copy of this literal) now that the solver-side separation calc needs it too. */
+export function splitGrabberVendoredSize(vertical: boolean): Vec2 {
+  return vertical ? { x: 48, y: 8 } : { x: 8, y: 48 };
+}
+
+/** The grabber icon's resolved size — themed (`SolveNode.textureSlots`, keyed by `splitGrabberThemeKey`) if a Theme touched it, else the vendored default. */
+export function splitGrabberIconSize(
+  nativeType: string,
+  vertical: boolean,
+  textureSlots: Readonly<Record<string, Vec2 | null>>
+): Vec2 {
+  return textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical);
+}
+
+function separationOf(n: SolveNode, ctx: SolveContext, vertical: boolean): number {
+  const iconSize = splitGrabberIconSize(n.node.type, vertical, n.textureSlots);
+  // The ALONG-axis extent only — `_get_separation`'s own `MAX(theme_cache.
+  // separation, vertical ? g->get_height() : g->get_width())` (`split_container.cpp:314-316`).
+  const grabberExtent = vertical ? iconSize.y : iconSize.x;
+  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, {
+    ...ctx.theme.widgets.splitContainer,
+    grabberExtent,
+  });
+}
+
+/**
+ * `vertical` for a LIVE node of any of the three split types: fixed by type
+ * for HSplitContainer/VSplitContainer, read from the node's own `vertical`
+ * property for the base `SplitContainer` (`verticalOf`'s own doc, mirrored
+ * here since a `TextureSlotsFn` only receives the node, not this container's
+ * already-resolved `vertical` flag).
+ */
+function verticalOfNode(node: TscnNode): boolean {
+  if (node.type === 'VSplitContainer') return true;
+  if (node.type === 'HSplitContainer') return false;
+  // The base `SplitContainer`'s own `vertical` property — typed in
+  // `splitcontainer/types.ts`, not this module's `SplitContainerProperties`
+  // (HSplitContainer/VSplitContainer's shared shape, which fixes the axis by
+  // TYPE and so never carries the property at all).
+  return (node.properties as { vertical?: boolean }).vertical ?? false;
+}
+
+/** `TextureSlotsFn` for the one themeable grabber slot — the SAME function registered for all three split types (never a factory: `verticalOfNode` already dispatches on the node itself). */
+export const splitContainerTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
+  const key = splitGrabberThemeKey(node.type, verticalOfNode(node));
+  const themed = themedIcons[key];
+  return themed ? [{ key, ref: themed.ref, scope: themed.resources }] : [];
+};
 
 function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
   const props = node.node.properties as ControlProperties;
@@ -336,7 +397,7 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
   return (n, children, contentRect, ctx) => {
     const props = n.node.properties as SplitContainerProperties;
     const sortable = children.filter(({ node }) => isSortableControl(node)).slice(0, 2);
-    const separation = separationOf(n, ctx);
+    const separation = separationOf(n, ctx, vertical);
     const inputs = sortable.map(({ node, minSize }) => toChildInput(node, minSize));
 
     const rects = resortSplitContainer(
@@ -377,7 +438,7 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
 /** Builds the `MinimumSizeFn` for a split axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. Same two-sortable-child cap as the layout above. */
 export function makeSplitContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
-    const separation = separationOf(n, ctx);
+    const separation = separationOf(n, ctx, vertical);
     const sortable = n.children.filter(isSortableControl).slice(0, 2);
     const childMinSizes = sortable.map((child) => ctx.combinedMinimumSize(child));
     return splitContainerMinimumSize(vertical, separation, childMinSizes);

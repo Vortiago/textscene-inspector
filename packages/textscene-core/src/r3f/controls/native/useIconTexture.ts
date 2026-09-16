@@ -29,6 +29,10 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { pinNoColorSpace } from '../../canvas2DTextureDecode';
+import { useUndecodedTexture } from '../../undecodedTexture';
+import { useTexture2D } from '../../../resources/useTexture2D';
+import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import type { ThemedIconRef } from './solveTree';
 
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
   const texture = useMemo(() => {
@@ -64,4 +68,48 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
 export function useIconTexture(dataUrl: string): THREE.Texture {
   // Non-null input always yields a texture — see `useOptionalIconTexture`.
   return useOptionalIconTexture(dataUrl)!;
+}
+
+const NO_EXT_RESOURCES: readonly TscnExternalResource[] = [];
+const NO_INT_RESOURCES: readonly TscnInternalResource[] = [];
+
+/**
+ * The one call a painter needs to draw EITHER a themed icon or its vendored
+ * default — never both, and never a conditional hook call (hook order is
+ * fixed, so a painter cannot branch between `useTexture2D` and
+ * `useOptionalIconTexture` itself; this hook makes that branch internally).
+ *
+ * `themed` is `SolveNode.icons[<name>]` — present when a local
+ * `theme_override_icons/<name>` or an ancestor/project Theme resolved this
+ * icon (`solveTree.ts`'s own doc). When present it wins UNCONDITIONALLY,
+ * exactly like `Control::get_theme_icon`'s local-override branch and the
+ * ancestor-chain walk both do — the theme's own referenced texture is
+ * loaded through the ordinary `res://` pipeline (`useTexture2D`), not the
+ * vendored data-URL one, and retagged for the 2D canvas's sampling colour
+ * space (`useUndecodedTexture`) exactly like `TextureRect`'s own texture is.
+ *
+ * A themed ref that fails to resolve (`missing`) falls back to `vendoredUrl`
+ * — `Control::_set`'s NIL branch removes an icon override whose Ref failed
+ * to validate (`add_theme_icon_override`'s `ERR_FAIL_COND(!p_icon.is_valid())`,
+ * `control.cpp`), so a broken theme reference is faithfully "no override",
+ * not "no icon at all". While a themed ref is still loading (`missing` false,
+ * `texture` null), this returns `null` rather than the vendored icon:
+ * showing the vendored icon and then swapping would be a visible flash a
+ * synchronous engine load never produces.
+ *
+ * Both underlying hooks are called UNCONDITIONALLY on every render — each
+ * already degrades to "load nothing" on its own null/undefined input — so
+ * this satisfies the fixed-hook-order rule while still allocating only ONE
+ * GPU texture at a time.
+ */
+export function useNodeIcon(themed: ThemedIconRef | undefined, vendoredUrl: string | null): THREE.Texture | null {
+  const themedResult = useTexture2D(
+    themed?.ref,
+    themed?.resources.externalResources ?? NO_EXT_RESOURCES,
+    themed?.resources.internalResources ?? NO_INT_RESOURCES
+  );
+  const themedTexture = useUndecodedTexture(themed ? themedResult.texture : null);
+  const themedWins = themed !== undefined && !themedResult.missing;
+  const vendoredTexture = useOptionalIconTexture(themedWins ? null : vendoredUrl);
+  return themedWins ? themedTexture : vendoredTexture;
 }

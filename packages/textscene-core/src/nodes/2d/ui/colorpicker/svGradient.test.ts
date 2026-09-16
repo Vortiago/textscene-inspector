@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { svSquareBaseLayer, svSquareHueLayer, hueStripGeometry } from './svGradient';
+import { svSquareBaseLayer, svSquareHueLayer, hueStripGeometry, horizontalStripGeometry } from './svGradient';
 
 describe('svSquareBaseLayer', () => {
   it('is white at the top corners and black at the bottom — color_picker_shape.cpp:243-249', () => {
@@ -50,5 +50,36 @@ describe('hueStripGeometry', () => {
     const g = hueStripGeometry(30, 256);
     const lastY = g.positions[g.positions.length - 2];
     expect(lastY).toBe(-256);
+  });
+});
+
+describe('horizontalStripGeometry', () => {
+  it('runs left-to-right across the full width for a 2-stop gradient', () => {
+    const g = horizontalStripGeometry(100, 16, [
+      { r: 0, g: 0, b: 0, a: 1 },
+      { r: 1, g: 0, b: 0, a: 1 },
+    ]);
+    // top-left, bottom-left: black.
+    expect(g.colors.slice(0, 4)).toEqual([0, 0, 0, 1]);
+    expect(g.colors.slice(4, 8)).toEqual([0, 0, 0, 1]);
+    // top-right, bottom-right: red, at x=100.
+    expect(g.colors.slice(8, 12)).toEqual([1, 0, 0, 1]);
+    expect(g.positions.slice(6, 9)).toEqual([100, 0, 0]);
+    expect(g.positions.slice(9, 12)).toEqual([100, -16, 0]);
+    expect(g.indices).toEqual([0, 1, 2, 1, 3, 2]);
+  });
+
+  it('places an interior stop at its own fraction of the width for a 3-stop gradient', () => {
+    const g = horizontalStripGeometry(100, 16, [
+      { r: 0, g: 0, b: 0, a: 1 },
+      { r: 1, g: 1, b: 1, a: 1 },
+      { r: 0, g: 0, b: 1, a: 1 },
+    ]);
+    // 3 stops = 6 vertices, 2 quads = 12 indices.
+    expect(g.positions).toHaveLength(6 * 3);
+    expect(g.indices).toHaveLength(2 * 6);
+    // Middle stop's top vertex sits at x=50.
+    expect(g.positions.slice(6, 9)).toEqual([50, 0, 0]);
+    expect(g.colors.slice(8, 12)).toEqual([1, 1, 1, 1]);
   });
 });

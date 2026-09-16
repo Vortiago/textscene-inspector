@@ -177,4 +177,10 @@ validatorRegistry.registerAll('ItemList', {
   // (property_list_helper.cpp:149), gluing the index straight onto the `item_`
   // prefix, so the registry matches it under `item_#/*` rather than `item_/*`.
   'item_#/*': itemValidator,
+
+  // Not an ADD_PROPERTY: `ItemList::_set`'s deprecated `items = [text, icon,
+  // disabled, …]` fallback (item_list.cpp:2242-2259). Its own arity guard
+  // (`arr.size() % 3`) is a sibling-index concern the format layer does not
+  // reach, so only the Array-literal shape is checked here.
+  items: v.arrayLiteral('items'),
 });

@@ -12,7 +12,7 @@
 import { createTypeRegistry } from '../../../core/createTypeRegistry';
 import type { TscnNode } from '../../../parser/types';
 import type { Rect2, Vec2 } from './rect';
-import type { SolveNode } from './solveTree';
+import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 
@@ -178,22 +178,42 @@ export interface TextureSlotRequest {
   key: string;
   /** The raw Texture2D-valued property text — an `ExtResource(...)`/`SubResource(...)`/`res://` ref. */
   ref: string;
+  /**
+   * The resource scope `ref` addresses — omitted (defaulting to the
+   * requesting NODE's own scope) by every slice whose refs are all its own
+   * properties. A themed icon needs this set explicitly: a `<Type>/icons/
+   * <name>` ref from an ancestor/project Theme addresses THAT theme file's
+   * own sub-resource pool, never the node's (`ThemedIconRef`'s own doc).
+   */
+  scope?: SolveNode['resources'];
 }
 
 /**
  * Which Texture2D-valued slots a node's own type carries, given the LIVE
- * (collapsed) node — a fixed list for most registering types, or content-
- * derived (`RichTextLabel`'s `[img]` refs). "Which properties are
- * Texture2D-valued" is a per-type fact, so this lives on the type's own
- * slice, not as a central list `buildSolveTree.ts` would otherwise have to
- * keep in sync with every Control type it walks.
+ * (collapsed) node and its resolved theme icons (`SolveNode.icons` — built
+ * BEFORE this runs, since it needs the theme walk) — a fixed list for most
+ * registering types, or content-derived (`RichTextLabel`'s `[img]` refs).
+ * "Which properties are Texture2D-valued" is a per-type fact, so this lives
+ * on the type's own slice, not as a central list `buildSolveTree.ts` would
+ * otherwise have to keep in sync with every Control type it walks.
+ *
+ * `themedIcons` is unused by every registrant that carries no themeable icon
+ * (`TextureProgressBar`'s three layers, `TextureButton`'s draw states,
+ * `RichTextLabel`'s embedded images are all plain `texture`-typed
+ * PROPERTIES, never theme items) — optional, rather than forcing every
+ * existing registrant (and its unit tests, which call the exported
+ * `TextureSlotsFn` directly with one argument) to accept and drop a second
+ * one. `buildSolveTree.ts`'s own call site always passes it.
  *
  * A type that never registers one keeps `buildSolveTree.ts`'s generic
  * single-slot fallback (`texture` or `icon`, whichever it carries) — the
  * SAME resolution, just against one implicit request instead of a
  * registered list.
  */
-export type TextureSlotsFn = (node: TscnNode) => readonly TextureSlotRequest[];
+export type TextureSlotsFn = (
+  node: TscnNode,
+  themedIcons?: Readonly<Record<string, ThemedIconRef>>
+) => readonly TextureSlotRequest[];
 
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');

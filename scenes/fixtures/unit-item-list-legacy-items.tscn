@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_item_list_legacy_items"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+; The deprecated `items = [text, icon, disabled, …]` compat array
+; (`ItemList::_set`, item_list.cpp:2242-2259) in place of `item_count`/
+; `item_N/*` — the ONE variable this fixture pins away from
+; unit-item-list.tscn, which authors the same three rows through the modern
+; family. A regression that stops reading this legacy array is invisible in
+; every other ItemList fixture, none of which authors it.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyItemList" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 232.0
+offset_bottom = 96.0
+items = ["Sword", ExtResource("1_icon"), false, "Shield", null, false, "Potion", null, true]

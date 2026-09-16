@@ -35,6 +35,7 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
+  checkBoxIconNaturalSize,
   checkBoxMinimumSize,
   checkBoxTextTheme,
   resolveCheckBoxDrawState,
@@ -209,6 +210,33 @@ describe('checkBoxMinimumSize — with text', () => {
 describe('CHECKBOX_ICON_NATURAL_SIZE', () => {
   it('is 16x16 — every vendored CheckBox icon shares this authored size', () => {
     expect(CHECKBOX_ICON_NATURAL_SIZE).toEqual({ x: 16, y: 16 });
+  });
+});
+
+describe('checkBoxIconNaturalSize (check_box.cpp:35-62) — MAX over all 8 icons, not only the current draw state', () => {
+  it('is the vendored 16x16 default when no icon is themed', () => {
+    expect(checkBoxIconNaturalSize({ textureSlots: {} })).toEqual({ x: 16, y: 16 });
+  });
+
+  it('widens to a themed "checked" icon even while the widget draws "unchecked"', () => {
+    // check_box.cpp:39-40: `tex_size = tex_size.max(theme_cache.unchecked->get_size())`
+    // runs regardless of which icon is actually pressed/shown.
+    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 24, y: 24 } } })).toEqual({ x: 24, y: 24 });
+  });
+
+  it('never shrinks below an unthemed icon\'s vendored default', () => {
+    // Only "checked" themed smaller; the other 7 still default to 16x16.
+    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 8, y: 8 } } })).toEqual({ x: 16, y: 16 });
+  });
+});
+
+describe('checkBoxMinimumSize — a themed icon widens the minimum size (check_box.cpp:64-79)', () => {
+  it('floors the width on the themed icon\'s own size, not the vendored 16x16', () => {
+    const n = { ...node({}), textureSlots: { unchecked: { x: 24, y: 24 } } };
+    // No text: content_size is the icon alone (check_box.cpp:66-79), then
+    // `_get_largest_stylebox_size()` (cbx_empty's uniform content margin,
+    // 4px at scale 1) is added back on every side: 24 + 2*4 = 32.
+    expect(size(checkBoxMinimumSize(n, ctx()))).toEqual({ x: 32, y: 32 });
   });
 });
 

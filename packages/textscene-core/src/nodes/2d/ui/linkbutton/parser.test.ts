@@ -38,4 +38,14 @@ describe('parseLinkButton', () => {
     expect(p.disabled).toBe(false);
     expect(p.buttonPressed).toBe(false);
   });
+
+  it('reads ellipsis_char through the StringName jacket, keeping only its first character (link_button.cpp:93-95)', () => {
+    const p = parseLinkButton(h({ name: 'Link', type: 'LinkButton' }), { ellipsis_char: '&"xy"' });
+    expect(p.ellipsisChar).toBe('x');
+  });
+
+  it('leaves ellipsisChar undefined when absent', () => {
+    const p = parseLinkButton(h({ name: 'Link', type: 'LinkButton' }), {});
+    expect(p.ellipsisChar).toBeUndefined();
+  });
 });

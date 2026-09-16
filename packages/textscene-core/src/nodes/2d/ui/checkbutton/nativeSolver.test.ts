@@ -169,6 +169,17 @@ describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
   it('is 2*marginX(6) + icon(32x16) width, 2*marginY(4) + icon height — (44, 24)', () => {
     expect(checkButtonMinimumSize(node({}), ctx())).toEqual({ x: 44, y: 24 });
   });
+
+  it('widens on a themed "unchecked" icon — check_button.cpp:35-62 maxes the CURRENT (non-disabled) pair', () => {
+    const n = { ...node({}), textureSlots: { unchecked: { x: 40, y: 20 } } };
+    // width = 2*6 + max(checked=32 default, unchecked=40) = 52; height = 2*4 + 20 = 28.
+    expect(checkButtonMinimumSize(n, ctx())).toEqual({ x: 52, y: 28 });
+  });
+
+  it('ignores a themed "unchecked" (enabled) icon while disabled — only the _disabled pair counts', () => {
+    const n = { ...node({ disabled: true }), textureSlots: { unchecked: { x: 40, y: 20 } } };
+    expect(checkButtonMinimumSize(n, ctx())).toEqual({ x: 44, y: 24 });
+  });
 });
 
 describe('checkButtonMinimumSize — with text', () => {

@@ -76,4 +76,34 @@ describe('lineEditDisplayText', () => {
   it('paints an empty placeholder for a wholly bare LineEdit (edge case)', () => {
     expect(lineEditDisplayText({ name: 'L' })).toEqual({ text: '', isPlaceholder: true });
   });
+
+  it('truncates text longer than max_length (happy path)', () => {
+    // set_max_length re-runs set_text, which truncates via insert_text_at_caret's
+    // available_chars check (line_edit.cpp:2409-2412).
+    expect(lineEditDisplayText({ name: 'L', text: 'hello world', maxLength: 5 })).toEqual({
+      text: 'hello',
+      isPlaceholder: false,
+    });
+  });
+
+  it('truncates BEFORE the secret echo, so the echo length matches the truncated text', () => {
+    expect(lineEditDisplayText({ name: 'L', text: 'hunter2', secret: true, maxLength: 3 }).text).toBe(
+      DEFAULT_SECRET_CHARACTER.repeat(3)
+    );
+  });
+
+  it('max_length 0 (absent, or authored) means unlimited — the Godot default — text is never truncated', () => {
+    expect(lineEditDisplayText({ name: 'L', text: 'a much longer string' }).text).toBe('a much longer string');
+    expect(lineEditDisplayText({ name: 'L', text: 'a much longer string', maxLength: 0 }).text).toBe(
+      'a much longer string'
+    );
+  });
+
+  it('counts code points when truncating, not UTF-16 units (edge case)', () => {
+    expect(lineEditDisplayText({ name: 'L', text: '🎉🎉🎉', maxLength: 2 }).text).toBe('🎉🎉');
+  });
+
+  it('leaves text untouched when it is already at or under max_length', () => {
+    expect(lineEditDisplayText({ name: 'L', text: 'hi', maxLength: 5 }).text).toBe('hi');
+  });
 });

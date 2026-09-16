@@ -13,10 +13,16 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { shapeText, shapedTextSizeWidthPx, AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -26,7 +32,10 @@ import {
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { TscnNode } from '../../../../parser/types';
 import type { ControlColor } from '../control/types';
+import { lineEditDisplayText } from './displayText';
+import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 
 /**
@@ -90,6 +99,12 @@ export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR: ControlColor = { r: 0.875, g: 0
 /** `control_font_placeholder_color = Color(control_font_color.rgb, 0.6)` (`:107`) — LineEdit's `font_placeholder_color` default (`:425`). */
 export const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.6 };
 
+/** `control_font_color` — LineEdit's `clear_button_color` default too (`default_theme.cpp:429`), same literal as `LINE_EDIT_DEFAULT_FONT_COLOR`. */
+export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR: ControlColor = LINE_EDIT_DEFAULT_FONT_COLOR;
+
+/** `control_font_hover_color = Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`) — LineEdit's `caret_color` default (`:427`). */
+export const LINE_EDIT_DEFAULT_CARET_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+
 const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, ControlColor> = {
   normal: LINE_EDIT_DEFAULT_FONT_COLOR,
   read_only: LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
@@ -107,15 +122,81 @@ export function lineEditTextTheme(
   return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
 }
 
+/** `LineEdit::ExpandMode` (line_edit.cpp:3527 hint; `BIND_ENUM_CONSTANT` line_edit.cpp:3479-3481). */
+export const EXPAND_MODE_ORIGINAL_SIZE = 0;
+export const EXPAND_MODE_FIT_TO_TEXT = 1;
+export const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
+
+/** `caret_width` theme constant default (`default_theme.cpp:434`). */
+const DEFAULT_CARET_WIDTH = 1;
+
 /**
- * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`), restricted to
- * what this codebase models (no `right_icon`/`clear_button`/
- * `expand_to_text_length` — none of the three are parsed onto
- * `LineEditProperties`):
+ * `LineEdit::_get_right_icon_size` (`line_edit.cpp:373-406`) — shared by
+ * `right_icon` and the clear-button icon alike, since Godot calls it with
+ * whichever texture is active. `controlSize` is this control's own resolved
+ * rect size, needed only for FIT_TO_LINE_EDIT; `null` (the rect solver's
+ * FIRST pass, before any rect exists yet) substitutes the natural size,
+ * matching ORIGINAL_SIZE — the one non-circular datum on hand, the same
+ * reasoning `texturerect/nativeSolver.ts`'s own FIT_WIDTH/FIT_HEIGHT split
+ * documents. `right_icon_scale` applies ONLY in the FIT_TO_LINE_EDIT branch
+ * (`:403`), never to ORIGINAL_SIZE or FIT_TO_TEXT.
+ */
+export function lineEditRightIconSize(
+  naturalSize: Vec2,
+  iconExpandMode: number,
+  fontHeightPx: number,
+  controlSize: Vec2 | null,
+  rightIconScale: number
+): Vec2 {
+  switch (iconExpandMode) {
+    case EXPAND_MODE_FIT_TO_TEXT:
+      return { x: fontHeightPx, y: fontHeightPx };
+    case EXPAND_MODE_FIT_TO_LINE_EDIT: {
+      if (!controlSize) return naturalSize; // solver's first pass: no non-circular control size yet.
+      if (naturalSize.x <= 0 || naturalSize.y <= 0) return { x: 0, y: 0 }; // never divide by a degenerate natural size.
+      let iconWidth = (naturalSize.x * controlSize.y) / naturalSize.y;
+      let iconHeight = controlSize.y;
+      if (iconWidth > controlSize.x) {
+        iconWidth = controlSize.x;
+        iconHeight = (naturalSize.y * iconWidth) / naturalSize.x;
+      }
+      return { x: iconWidth * rightIconScale, y: iconHeight * rightIconScale };
+    }
+    case EXPAND_MODE_ORIGINAL_SIZE:
+    default:
+      return naturalSize;
+  }
+}
+
+/**
+ * `right_icon` (`ADD_PROPERTY` line_edit.cpp:3526) — the node's OWN resource
+ * scope, keyed `'right_icon'`; and LineEdit's `clear` theme icon
+ * (`BIND_THEME_ITEM_CUSTOM` line_edit.cpp:3547), keyed `'clear'` off
+ * `themedIcons`, present only once the theme walk resolved one —
+ * `checkbox/nativeSolver.ts`'s `checkBoxTextureSlots` is the pattern.
+ */
+export const lineEditTextureSlots: TextureSlotsFn = (node: TscnNode, themedIcons: Readonly<Record<string, ThemedIconRef>> = {}) => {
+  const props = node.properties as LineEditProperties;
+  const requests: TextureSlotRequest[] = [];
+  if (props.rightIcon !== undefined) requests.push({ key: 'right_icon', ref: props.rightIcon });
+  const clear = themedIcons.clear;
+  if (clear) requests.push({ key: 'clear', ref: clear.ref, scope: clear.resources });
+  return requests;
+};
+
+/**
+ * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`):
  *
  *     float em_space_size = font->get_char_size('W', font_size).x;
  *     min_size.width = theme_cache.minimum_character_width * em_space_size;
+ *     if (expand_to_text_length) {
+ *       min_size.width = MAX(min_size.width, full_width + theme_cache.caret_width);
+ *     }
  *     min_size.height = MAX(TS->shaped_text_get_size(text_rid).y, font->get_height(font_size));
+ *     int icon_max_width = 0;
+ *     if (right_icon.is_valid()) { ... icon_max_width = right_icon_size.width; }
+ *     if (clear_button_enabled) { ... icon_max_width = MAX(icon_max_width, clear_icon_size.width); }
+ *     min_size.width += icon_max_width;
  *     Size2 style_min_size = theme_cache.normal->get_minimum_size().max(theme_cache.read_only->get_minimum_size());
  *     return style_min_size + min_size;
  *
@@ -136,10 +217,20 @@ export function lineEditTextTheme(
  * spacing term added — the same "don't re-derive metrics" reuse
  * `label/nativeSolver.ts`'s `labelMinimumSize` already establishes.
  *
- * The node's OWN `text`/`placeholder_text` content never appears in this
- * formula: Godot floors LineEdit's width on `minimum_character_width` (a
- * fixed 4 'W'-widths) regardless of what is actually typed, not on the
- * measured string.
+ * `full_width` (`:2456`, `full_width = TS->shaped_text_get_size(text_rid).x`,
+ * set at the END of `_shape()`) is the CEILED shaped width of `_shape()`'s
+ * own display string `t` — placeholder-substituted, secret-echoed and
+ * `max_length`-truncated exactly like `lineEditDisplayText` already computes
+ * for the painter, so this reads that SAME function rather than re-deriving
+ * which string is shown. An empty field with a long placeholder therefore
+ * sizes to the PLACEHOLDER.
+ *
+ * `icon_max_width` takes the icons' natural sizes through
+ * `lineEditRightIconSize`, the MAX of `right_icon`'s and the clear button's
+ * (never their sum) — `clear_button_enabled` contributes regardless of
+ * whether the node has any text, unlike the DRAW path's `display_clear_icon`
+ * gate (`Component.tsx`), since Godot's own `get_minimum_size` reads the
+ * property directly with no `using_placeholder` check at all.
  */
 export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
@@ -158,9 +249,43 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
+  let width = LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize;
+
+  if (props.expandToTextLength && ctx.measureText) {
+    const { text: displayed } = lineEditDisplayText(props);
+    const fullWidthPx = displayed.length
+      ? shapedTextSizeWidthPx(
+          shapeText(displayed, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics }).widthPx
+        )
+      : 0;
+    const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
+    width = Math.max(width, fullWidthPx + caretWidthPx);
+  }
+
+  let height = fontHeightPx;
+  let iconMaxWidth = 0;
+  const tentative = ctx.tentativeRect?.(n);
+  const controlSize: Vec2 | null = tentative ? { x: tentative.w, y: tentative.h } : null;
+  const iconExpandMode = props.iconExpandMode ?? EXPAND_MODE_ORIGINAL_SIZE;
+  const rightIconScale = props.rightIconScale ?? 1;
+
+  const rightIconNaturalSize = n.textureSlots['right_icon'];
+  if (rightIconNaturalSize) {
+    const size = lineEditRightIconSize(rightIconNaturalSize, iconExpandMode, fontHeightPx, controlSize, rightIconScale);
+    height = Math.max(height, size.y);
+    iconMaxWidth = size.x;
+  }
+  if (props.clearButtonEnabled) {
+    const clearNaturalSize = n.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
+    const size = lineEditRightIconSize(clearNaturalSize, iconExpandMode, fontHeightPx, controlSize, rightIconScale);
+    height = Math.max(height, size.y);
+    iconMaxWidth = Math.max(iconMaxWidth, size.x);
+  }
+  width += iconMaxWidth;
+
   return {
-    x: styleMinSize.x + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize,
-    y: styleMinSize.y + fontHeightPx,
+    x: styleMinSize.x + width,
+    y: styleMinSize.y + height,
   };
 };
 
@@ -182,21 +307,35 @@ export interface LineEditContentInput {
   textWidthPx: number;
   /** The shaped display text's own natural height. */
   textHeightPx: number;
+  /** Whether `right_icon` or the clear button draws this frame (`line_edit.cpp:1444`) — gates the inset math below independently of `iconWidthPx`, since the block it guards does MORE than subtract a zero width (see this function's own doc). Defaults `false`. */
+  hasIcon?: boolean;
+  /** The active icon's own resolved (`lineEditRightIconSize`) width — meaningless while `hasIcon` is false. Defaults `0`. */
+  iconWidthPx?: number;
 }
 
 export interface LineEditContentLayout {
-  /** The rect glyphs are clipped to — this Control's own rect inset by `styleMargin` on all four sides, floored at `(0, 0)` extent. */
+  /** The rect glyphs are clipped to — this Control's own rect inset by `styleMargin` on all four sides (and the active icon's width, on the right), floored at `(0, 0)` extent. */
   contentRect: Rect2;
   /** The text paragraph's own box top-left, LOCAL Godot px — feed straight to `<TextRun>`, which anchors each line at its own baseline from there (`buildGlyphQuadArrays`'s own doc). */
   textOffset: Vec2;
+  /** `ofs_max` (`line_edit.cpp:1420,1482`) — the rightmost x a glyph pen may reach; also RIGHT alignment's own caret-fallback x (`lineEditCaretRect`). */
+  ofsMaxPx: number;
 }
 
 /**
- * `LineEdit::_notification`'s `NOTIFICATION_DRAW` (`line_edit.cpp:1392-1427`):
- * the horizontal `switch (alignment)` picking `x_ofs`, and the vertical
- * `y_area`/`y_ofs` centring — RTL and `scroll_offset` (always `0` in a static
- * preview with no caret/scroll state) are not modelled, matching every other
- * LineEdit feature this solver does not model.
+ * `LineEdit::_notification`'s `NOTIFICATION_DRAW` (`line_edit.cpp:1392-1427`,
+ * plus the icon inset at `:1444-1485`): the horizontal `switch (alignment)`
+ * picking `x_ofs`, the vertical `y_area`/`y_ofs` centring, and — when
+ * `hasIcon` — the inset an active `right_icon`/clear button carves out of the
+ * right edge. RTL and `scroll_offset` (always `0` in a static preview with no
+ * caret/scroll state) are not modelled, matching every other LineEdit feature
+ * this solver does not model.
+ *
+ * The icon block is NOT a plain "subtract `iconWidthPx`" — for LEFT/RIGHT/FILL
+ * it re-derives `x_ofs` from the ALIGNMENT-ONLY value by subtracting BOTH the
+ * icon width AND the right margin AGAIN (`:1477`, ported exactly as written,
+ * not as a nicer-looking equivalent), so `hasIcon` gates the whole re-derive
+ * rather than merely standing in for `iconWidthPx > 0`.
  *
  * Every `int(...)` cast in the source TRUNCATES toward zero, not `Math.floor`
  * — `Math.trunc` is used throughout below rather than `Math.floor`, which
@@ -204,25 +343,30 @@ export interface LineEditContentLayout {
  * not JavaScript's default).
  */
 export function layoutLineEditContent(input: LineEditContentInput): LineEditContentLayout {
-  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx } = input;
+  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, hasIcon = false, iconWidthPx = 0 } = input;
 
   let xOfs: number;
   switch (alignment) {
     case HORIZONTAL_ALIGNMENT_CENTER: {
       const totalMargin = styleMargin.left + styleMargin.right;
-      const diff = Math.trunc(rectSize.x - totalMargin - textWidthPx);
+      const iconTerm = hasIcon ? iconWidthPx : 0;
+      const diff = Math.trunc(rectSize.x - totalMargin - textWidthPx - iconTerm);
       const centered = Math.trunc(diff / 2);
       xOfs = styleMargin.left + Math.max(0, centered);
       break;
     }
     case HORIZONTAL_ALIGNMENT_RIGHT: {
       const candidate = Math.trunc(rectSize.x - Math.ceil(styleMargin.right + textWidthPx));
-      xOfs = Math.max(styleMargin.left, candidate);
+      const base = Math.max(styleMargin.left, candidate);
+      xOfs = hasIcon ? Math.max(styleMargin.left, Math.trunc(base - iconWidthPx - styleMargin.right)) : base;
       break;
     }
     case HORIZONTAL_ALIGNMENT_LEFT:
     case HORIZONTAL_ALIGNMENT_FILL:
     default:
+      // The icon block's own re-derive clamps straight back to `styleMargin.left`
+      // here too (`MAX(margin_left, margin_left - iconWidth - margin_right)`), so
+      // this branch is a no-op whether or not an icon is present.
       xOfs = styleMargin.left;
       break;
   }
@@ -239,12 +383,85 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   // assignment to `int y_ofs`, same as every other `int(...)` cast in this draw path.
   const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2);
 
+  // int ofs_max = width - style->get_margin(SIDE_RIGHT); ofs_max -= right_icon_size.width;
+  // (line_edit.cpp:1420,1482) — both truncate on assignment to `int ofs_max`.
+  const ofsMaxPx = Math.trunc(rectSize.x - styleMargin.right - (hasIcon ? iconWidthPx : 0));
+
   const contentRect: Rect2 = {
     x: styleMargin.left,
     y: styleMargin.top,
-    w: Math.max(0, rectSize.x - styleMargin.left - styleMargin.right),
+    w: Math.max(0, ofsMaxPx - styleMargin.left),
     h: Math.max(0, yArea),
   };
 
-  return { contentRect, textOffset: { x: xOfs, y: yOfs } };
+  return { contentRect, textOffset: { x: xOfs, y: yOfs }, ofsMaxPx };
+}
+
+/**
+ * `LineEdit::_notification`'s caret block (`line_edit.cpp:1546-1585`),
+ * collapsed to what a STATIC preview (`caret_column` always `0`, no
+ * selection/IME/scroll) actually draws:
+ *
+ * - Real text showing (`!isPlaceholder`): `shaped_text_get_carets(text_rid, 0)`
+ *   sits at the shaped run's own pen origin, which `caret.l_caret.position +=
+ *   ofs` (`:1608`) then places at exactly `ofs = (x_ofs, y_ofs + ascent)` —
+ *   i.e. the SAME `textOffset`/height this function's own caller already
+ *   computed for the text pen, for EVERY alignment (`x_ofs` is already
+ *   alignment-aware by the time the caret block runs).
+ * - Placeholder/empty (`isPlaceholder`, `:1552-1585` — gated on
+ *   `using_placeholder`, i.e. authored `text` being empty, REGARDLESS of
+ *   whether a placeholder string is actually shown): the alignment-specific
+ *   fallback. CENTER reads `right_icon`'s own RAW, unscaled width
+ *   (`right_icon->get_width()`, `:1570`) — NOT the resolved/expand-mode icon
+ *   size, and NEVER the clear button. RIGHT sits at `ofs_max` exactly.
+ *
+ * Y is IDENTICAL in both branches in this engine: the fallback's own
+ * `h = font->get_height(font_size)` (`:1553`) and the real branch's
+ * `text_height` never diverge here (no multi-face fallback — same fact
+ * `lineEditMinimumSize`'s own doc already relies on), so this always derives
+ * Y from `fontHeightPx` directly rather than trusting a possibly-`null`
+ * shaped layout for a wholly empty field.
+ */
+export function lineEditCaretRect(input: {
+  rectSize: Vec2;
+  styleMargin: { left: number; top: number; right: number; bottom: number };
+  alignment: number;
+  fontHeightPx: number;
+  isPlaceholder: boolean;
+  /** The real branch's own pen-start x — `content.textOffset.x`. */
+  textPenX: number;
+  /** `right_icon`'s RAW natural width, `0` when absent — the fallback CENTER arm only. */
+  rightIconRawWidthPx: number;
+  /** `ofs_max` — the fallback RIGHT arm only. */
+  ofsMaxPx: number;
+  caretWidthPx: number;
+}): Rect2 {
+  const { rectSize, styleMargin, alignment, fontHeightPx, isPlaceholder, textPenX, rightIconRawWidthPx, ofsMaxPx, caretWidthPx } = input;
+
+  const yArea = Math.trunc(rectSize.y - styleMargin.top - styleMargin.bottom);
+  const y = Math.trunc(styleMargin.top + (yArea - fontHeightPx) / 2);
+
+  let x: number;
+  if (!isPlaceholder) {
+    x = textPenX;
+  } else {
+    switch (alignment) {
+      case HORIZONTAL_ALIGNMENT_CENTER: {
+        const totalMargin = styleMargin.left + styleMargin.right;
+        const inner = Math.trunc(rectSize.x - totalMargin - rightIconRawWidthPx);
+        x = styleMargin.left + Math.max(0, Math.trunc(inner / 2));
+        break;
+      }
+      case HORIZONTAL_ALIGNMENT_RIGHT:
+        x = ofsMaxPx;
+        break;
+      case HORIZONTAL_ALIGNMENT_LEFT:
+      case HORIZONTAL_ALIGNMENT_FILL:
+      default:
+        x = styleMargin.left;
+        break;
+    }
+  }
+
+  return { x, y, w: caretWidthPx, h: fontHeightPx };
 }

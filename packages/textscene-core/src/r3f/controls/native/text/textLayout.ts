@@ -83,6 +83,7 @@ import {
   type FontMetrics,
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { tabAlignAdvances } from './textTabStops';
 
 /** Godot `TextServer::AutowrapMode` (`core/templates/rid.h`-adjacent enum; values match the engine's). */
 export enum AutowrapMode {
@@ -173,7 +174,31 @@ export interface ShapeTextOptions {
    * the engine default the callers pass.
    */
   paragraphSeparator?: string;
+  /**
+   * `Label.tab_stops` / `TextParagraph.tab_stops`, px. Applied TWICE, exactly
+   * as `Label::_shape` calls `shaped_text_tab_align` twice (`label.cpp:
+   * 196-198,228-230`): once over the WHOLE paragraph before line-breaking (so
+   * a tab's real advance — not its unaligned placeholder — decides where the
+   * line wraps), and again per EMITTED line, restarting the tab-stop cycle at
+   * that line's own pen origin (`shaped_text_tab_align`'s own `off` starts at
+   * 0 for whichever shaped text it is called on — a substring is its own
+   * text, not an offset view of the paragraph's). Undefined or empty is a
+   * no-op, matching every caller before this option existed.
+   */
+  tabStopsPx?: number[];
+  /**
+   * `Label.autowrap_trim_flags` — the `BREAK_TRIM_START_EDGE_SPACES` (64) /
+   * `BREAK_TRIM_END_EDGE_SPACES` (128) subset only; `BREAK_TRIM_INDENT` (32)
+   * is accepted as a bit but not ported (this module's own doc, above,
+   * already covers the two trims it replaces). Undefined defaults to BOTH
+   * trims on (`label.h:45`), matching every caller before this option existed.
+   */
+  autowrapTrimFlags?: number;
 }
+
+/** `TextServer::LineBreakFlag` subset this module reads (`servers/text/text_server.h:113-120`). */
+const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
+const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
@@ -352,7 +377,8 @@ function breakFlagsForAutowrap(mode: AutowrapMode): BreakFlags {
 }
 
 // core/string/char_utils.h :: is_whitespace() / is_linebreak().
-function isWhitespace(cp: number): boolean {
+/** Exported for `textOverrun.ts`/`textJustify.ts`: both need the same soft-break/edge-space predicate this module's own line breaker uses. */
+export function isWhitespace(cp: number): boolean {
   return (
     cp === 0x20 ||
     cp === 0x00a0 ||
@@ -369,6 +395,11 @@ function isWhitespace(cp: number): boolean {
 }
 function isLinebreak(cp: number): boolean {
   return (cp >= 0x000a && cp <= 0x000d) || cp === 0x0085 || cp === 0x2028 || cp === 0x2029;
+}
+
+/** `GRAPHEME_IS_TAB` — tab (U+0009) or vertical tab (U+000B) (`text_server_adv.cpp:6369-6371`). */
+export function isTabChar(ch: string): boolean {
+  return ch === '\t' || ch === '';
 }
 
 interface BreakGlyph {
@@ -537,7 +568,12 @@ function roundAdvancesToWholePixels(
  * width check above still counted the trimmed space's advance — trimming
  * only narrows what gets EMITTED, never what decided the break).
  */
-function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: BreakFlags): Array<[number, number]> {
+function shapedTextGetLineBreaks(
+  glyphs: BreakGlyph[],
+  width: number,
+  flags: BreakFlags,
+  trim: { start: boolean; end: boolean }
+): Array<[number, number]> {
   const lSize = glyphs.length;
   const rangeEnd = lSize > 0 ? glyphs[lSize - 1]!.end : 0;
 
@@ -566,8 +602,8 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
       // always-on default) — walk start/end back off edge spaces.
       let startPos = prevSafeBreak;
       let endPos = lastSafeBreak;
-      while (trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
-      while (startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
+      while (trim.start && trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
+      while (trim.end && startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
       if (lastEnd <= glyphs[startPos]!.start && glyphs[startPos]!.start !== glyphs[endPos]!.end) {
         lines.push([glyphs[startPos]!.start, glyphs[endPos]!.end]);
         lastEnd = glyphs[endPos]!.end;
@@ -590,8 +626,8 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
       const curSafeBrk = i;
       let startPos = prevSafeBreak;
       let endPos = i;
-      while (trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
-      while (startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
+      while (trim.start && trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
+      while (trim.end && startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
       if (lastEnd <= glyphs[startPos]!.start && glyphs[startPos]!.start !== glyphs[endPos]!.end) {
         lines.push([glyphs[startPos]!.start, glyphs[endPos]!.end]);
         lastEnd = glyphs[i]!.end;
@@ -629,7 +665,7 @@ function shapedTextGetLineBreaks(glyphs: BreakGlyph[], width: number, flags: Bre
       if (lastEnd <= glyphs[startPos0]!.start) {
         let startPos = startPos0;
         const endPos = lSize - 1;
-        while (trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
+        while (trim.start && trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
         finalStart = glyphs[startPos]!.start;
       } else {
         finalStart = lastEnd;
@@ -682,9 +718,16 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     fontSizePxAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
     paragraphSeparator,
+    tabStopsPx,
+    autowrapTrimFlags,
   } = options;
+  const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
   const transformed = uppercase ? text.toUpperCase() : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
+  const trim = {
+    start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
+    end: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_END_EDGE_SPACES) !== 0,
+  };
   // AUTOWRAP_OFF never soft-wraps: force an unconstrained width regardless of
   // what the caller passed, so only the always-on hard-break branch can
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
@@ -712,20 +755,40 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       : undefined;
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt);
-    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags)) {
+    // Paragraph-level tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc,
+    // first pass) -- a tab's REAL advance, not its unaligned placeholder,
+    // must be in place before line-breaking measures against it.
+    if (hasTabStops) {
+      const paragraphEntries = Array.from(paraText, (char, i) => ({ char, advance: breakGlyphs[i]!.advance }));
+      const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
+      for (let i = 0; i < aligned.length; i++) breakGlyphs[i]!.advance = aligned[i]!;
+    }
+    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags, trim)) {
       const clampedEnd = Math.min(end, paraText.length);
+      // Per-line tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc, second
+      // pass) -- restarts the tab-stop cycle at THIS line's own pen origin,
+      // which is what actually reaches the painter.
+      const lineAdvances = hasTabStops
+        ? tabAlignAdvances(
+            Array.from({ length: clampedEnd - start }, (_v, i) => ({
+              char: paraText[start + i]!,
+              advance: breakGlyphs[start + i]!.advance,
+            })),
+            tabStopsPx!
+          )
+        : null;
       let penX = 0;
       const glyphs: GlyphPlacement[] = [];
       for (let idx = start; idx < clampedEnd; idx++) {
         const ch = paraText[idx]!;
-        const bg = breakGlyphs[idx]!;
+        const advance = lineAdvances ? lineAdvances[idx - start]! : breakGlyphs[idx]!.advance;
         glyphs.push({
           char: ch,
           x: penX,
-          advance: bg.advance,
+          advance,
           glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
         });
-        penX += bg.advance;
+        penX += advance;
       }
       lines.push({ text: paraText.slice(start, clampedEnd), glyphs, widthPx: penX });
     }

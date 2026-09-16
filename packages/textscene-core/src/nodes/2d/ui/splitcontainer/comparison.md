@@ -50,7 +50,3 @@ leaves the property `undefined` and Godot's default applies, an unparseable `col
 or `vertical` reads as `false` (a bool slot stores what it can, never unset), and an
 out-of-range `dragger_visibility` behaves as VISIBLE.
 
-## Known limitations
-
-- **Approximated** A `theme_override_icons/grabber` does not widen the gap between the
-  children, which stays at the default grabber's width.

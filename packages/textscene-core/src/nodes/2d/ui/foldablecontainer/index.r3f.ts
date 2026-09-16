@@ -7,10 +7,15 @@
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { FoldableContainer } from './Component';
-import { foldableContainerMinimumSize, foldableContainerLayout } from './nativeSolver';
+import {
+  foldableContainerMinimumSize,
+  foldableContainerLayout,
+  foldableContainerTextureSlots,
+} from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'FoldableContainer', Component: FoldableContainer });
 controlSolverRegistry.registerMinimumSize('FoldableContainer', foldableContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('FoldableContainer', foldableContainerLayout);
+controlSolverRegistry.registerTextureSlots('FoldableContainer', foldableContainerTextureSlots);
 
 export { FoldableContainer };

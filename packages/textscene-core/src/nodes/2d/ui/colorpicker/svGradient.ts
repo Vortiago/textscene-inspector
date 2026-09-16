@@ -56,6 +56,32 @@ export function svSquareHueLayer(w: number, h: number, hue: number): QuadGeometr
 }
 
 /**
+ * A HORIZONTAL N-stop gradient strip, evenly spaced across `w` — the shared
+ * shape behind every `color_mode.cpp`/`color_picker.cpp` channel-slider draw
+ * (`slider_draw`'s 2- and 3-stop polygons, `_alpha_slider_draw`'s 2-stop
+ * polygon, and `ColorModeOKHSL::slider_draw`'s 7-stop hue texture) — one quad
+ * per pair of adjacent stops, each a plain left/right lerp (top and bottom
+ * vertices share a colour, so the gradient runs along x only).
+ */
+export function horizontalStripGeometry(w: number, h: number, stops: readonly ControlColor[]): QuadGeometry {
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const segments = stops.length - 1;
+  for (let i = 0; i <= segments; i++) {
+    const x = (w * i) / segments;
+    const c = stops[i]!;
+    positions.push(x, 0, 0, x, -h, 0);
+    colors.push(c.r, c.g, c.b, c.a, c.r, c.g, c.b, c.a);
+  }
+  for (let i = 0; i < segments; i++) {
+    const a = i * 2;
+    indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  return { positions, indices, colors };
+}
+
+/**
  * The `color_hue` `GradientTexture2D`'s own 7 stops
  * (`default_theme.cpp:1104-1128`, `precision = 7`, `Color::from_hsv(h, 1, 1)`
  * per stop, `Gradient`'s default `GRADIENT_INTERPOLATE_LINEAR`) as one

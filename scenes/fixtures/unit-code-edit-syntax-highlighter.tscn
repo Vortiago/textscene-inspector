@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3]
+
+; syntax_highlighter is the ONE variable this fixture moves: an otherwise-bare
+; CodeEdit (no gutters, no wrap) gets one CodeHighlighter, and the four buffer
+; lines are chosen so each hits a DIFFERENT branch of
+; _get_line_syntax_highlighting_impl (syntax_highlighter.cpp:118-411) — "if"
+; a keyword, "1" a number, "hi" a quoted string region, "# trailing" a
+; line-only comment region, "position" a bare member keyword, and
+; ".position" the SAME member keyword disqualified by its leading dot,
+; falling through to the general member-variable colour instead
+; (syntax_highlighter.cpp:339-356, :375-384). A wrong branch paints the wrong
+; span the wrong colour and is invisible without this fixture's five distinct
+; hues; a broken region carry-over would bleed the string colour into the
+; comment line that follows it.
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
+number_color = Color(0.639216, 0.858824, 0.933333, 1)
+symbol_color = Color(0.780392, 0.780392, 0.780392, 1)
+function_color = Color(0.34902, 0.701961, 0.882353, 1)
+member_variable_color = Color(0.702, 0.882, 1, 1)
+keyword_colors = {
+"if": Color(1, 0.44, 0.52, 1)
+}
+member_keyword_colors = {
+"position": Color(0.4, 0.6, 1, 1)
+}
+color_regions = {
+"#": Color(0.5, 0.6, 0.5, 1),
+"\" \"": Color(0.909804, 0.831373, 0.329412, 1)
+}
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MyCodeEdit" type="CodeEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 260.0
+offset_bottom = 120.0
+text = "if 1:\n\"hi\" # trailing\nposition\n.position"
+syntax_highlighter = SubResource("CodeHighlighter_1")

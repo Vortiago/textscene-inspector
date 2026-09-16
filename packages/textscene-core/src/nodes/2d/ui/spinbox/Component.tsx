@@ -27,7 +27,7 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -46,7 +46,8 @@ import {
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
-  SPIN_BOX_ARROW_ICON_SIZE,
+  spinBoxIconSize,
+  spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
 
@@ -56,7 +57,11 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const props = painterView<SpinBoxProperties>(solveNode);
   const editable = props.editable !== false;
 
-  const layout = useMemo(() => spinBoxLayout({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode);
+  const layout = useMemo(
+    () => spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth),
+    [rect.w, rect.h, widestIconWidth]
+  );
 
   // --- Field chrome + text ---------------------------------------------------
   const styleState = resolveLineEditStyleState(props.editable);
@@ -91,8 +96,10 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   // --- Stepper arrows ---------------------------------------------------------
   const upState = spinBoxUpButtonState(props, resolvedValue);
   const downState = spinBoxDownButtonState(props, resolvedValue);
-  const upIconTexture = useIconTexture(SPIN_BOX_ICONS.up);
-  const downIconTexture = useIconTexture(SPIN_BOX_ICONS.down);
+  const upIconTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
+  const downIconTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
+  const upIconSize = spinBoxIconSize(solveNode, 'up');
+  const downIconSize = spinBoxIconSize(solveNode, 'down');
 
   const upIconColorSrgb = useMemo(
     () => tintColor(spinBoxIconColor(solveNode.colors, 'up', upState), tint.own),
@@ -108,12 +115,12 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   // `Point2i up_icon_left/top` (`spin_box.cpp:475-476`) — centred within the
   // button's own rect, at the icon's native (unscaled, see `nativeSolver.ts`) size.
   const upIconPos = {
-    x: layout.upRect.x + (layout.upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-    y: layout.upRect.y + (layout.upRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
+    x: layout.upRect.x + (layout.upRect.w - upIconSize.x) / 2,
+    y: layout.upRect.y + (layout.upRect.h - upIconSize.y) / 2,
   };
   const downIconPos = {
-    x: layout.downRect.x + (layout.downRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,
-    y: layout.downRect.y + (layout.downRect.h - SPIN_BOX_ARROW_ICON_SIZE.y) / 2,
+    x: layout.downRect.x + (layout.downRect.w - downIconSize.x) / 2,
+    y: layout.downRect.y + (layout.downRect.h - downIconSize.y) / 2,
   };
 
   // `theme_override_styles/*` authored on THIS node — SpinBox's own item
@@ -175,8 +182,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
       <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={SPIN_BOX_ARROW_ICON_SIZE.x}
-          height={SPIN_BOX_ARROW_ICON_SIZE.y}
+          width={upIconSize.x}
+          height={upIconSize.y}
           color={upIconLinear}
           opacity={upIconColorSrgb.a}
           map={upIconTexture}
@@ -185,8 +192,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
       <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={SPIN_BOX_ARROW_ICON_SIZE.x}
-          height={SPIN_BOX_ARROW_ICON_SIZE.y}
+          width={downIconSize.x}
+          height={downIconSize.y}
           color={downIconLinear}
           opacity={downIconColorSrgb.a}
           map={downIconTexture}

@@ -14,6 +14,8 @@ export interface LinkButtonProperties extends ControlProperties {
    * character trimming/ellipsis is not drawn.
    */
   overrunBehavior?: number;
+  /** `LinkButton.ellipsis_char`'s first character; undefined falls back to the engine default (…). */
+  ellipsisChar?: string;
   /** BaseButton's own disabled flag (`base_button.cpp:567`) — LinkButton parses no `_bind_methods` of its own beyond `text`/`underline`/`uri`, so this is read the same inline way every other BaseButton-family slice does. */
   disabled?: boolean;
   /** BaseButton's own button_pressed flag (`base_button.cpp:569`). */

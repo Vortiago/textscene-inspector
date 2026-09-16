@@ -89,6 +89,7 @@ import {
   imageObjectFontMetrics,
   layoutRichTextRuns,
   richTextLabelTextTheme,
+  richTextTabStopsPx,
   richTextUnderlineMetrics,
   styledTextRuns,
   underlineRectPx,
@@ -200,8 +201,10 @@ export function RichTextLabel({ solveNode, tint, rect, renderOrder, theme }: Nat
         // Decorated so an [img] run's placeholder character shapes at its own
         // resolved width — nativeSolver.ts's imageObjectFontMetrics.
         fontMetrics: imageObjectFontMetrics(fontMetrics),
+        tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, textTheme.fontSizePx),
+        autowrapTrimFlags: props.autowrapTrimFlags,
       }),
-    [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics]
+    [plainText, textTheme.fontSizePx, rect.w, autowrapMode, fontSizePxAt, fontMetrics, props.tabStopsPx, props.tabSize, props.autowrapTrimFlags]
   );
 
   const placements = useMemo(

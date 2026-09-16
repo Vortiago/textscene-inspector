@@ -17,4 +17,8 @@ export interface ButtonProperties extends ControlProperties {
   verticalIconAlignment?: number;
   /** When true the icon scales to the button, keeping its aspect. Default false. */
   expandIcon?: boolean;
+  /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). */
+  overrunBehavior?: number;
+  /** `Button.clip_text` — collapses the text's own minimum-width contribution to 0 (button.cpp:492-494), same trigger as a trimming `overrunBehavior`. */
+  clipText?: boolean;
 }

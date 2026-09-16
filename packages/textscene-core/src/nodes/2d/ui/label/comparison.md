@@ -10,7 +10,9 @@ renders_as: a shaped text run on the canvas
 # Label
 
 Label is the 2D UI text node. The previewer shapes the string in the theme's own font
-and draws the glyphs on the canvas, honouring its alignment, case and wrap settings.
+(or `label_settings`'s own size/colour/line-spacing, which overrides the theme outright)
+and draws the glyphs on the canvas, honouring its alignment, case, wrap, line-window and
+partial-reveal settings.
 
 ## Linting
 
@@ -52,12 +54,54 @@ Strict parsing format-checks these `Label` properties, plus 53 inherited from Co
 | `valid-label-autowrap-sizing` | `label-autowrap-needs-custom-minimum-size` | warning |
 <!-- lint:end -->
 
-The lenient parser reads only `text`, `horizontal_alignment`, `vertical_alignment`,
-`autowrap_mode` and `uppercase`. An out-of-range or unparseable alignment becomes
-`undefined` with no warning, and `uppercase` turns on only for a value that reads as
-`true`.
+The lenient parser reads `text`, `horizontal_alignment`, `vertical_alignment`,
+`autowrap_mode`, `uppercase`, `text_overrun_behavior`, `clip_text`, `ellipsis_char`,
+`justification_flags`, `tab_stops`, `autowrap_trim_flags`, `paragraph_separator`,
+`lines_skipped`, `max_lines_visible`, `label_settings`, `visible_characters`,
+`visible_ratio` and `visible_characters_behavior`. An out-of-range or unparseable
+alignment becomes `undefined` with no warning, `uppercase` turns on only for a value
+that reads as `true`, `ellipsis_char` keeps only its first character, and a malformed
+`tab_stops` literal leaves tab stops unset. `visible_characters`/`visible_ratio`
+cross-derive each other exactly as `Label::set_visible_characters`/`set_visible_ratio`
+do (label.cpp:1285-1327): whichever the scene writes LAST (by file order) wins outright,
+because each setter's own guard is `if (this_field != new_value)` and the earlier
+setter already left the field at the value the later write matches — this parser
+replays both writes it finds, in file order, against `Label`'s own construction
+defaults, assuming `text` (whose length is the derivation's own denominator) is
+already applied, which every real Godot save guarantees (`text` is `ADD_PROPERTY`'d
+first) but a hand-edited file that writes `text` AFTER either is not.
 
 ## Known limitations
 
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
+- **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped
+  continuation line does not reserve the leading tab/space indent Godot re-applies to it.
+- **Approximated** A Label combining `HORIZONTAL_ALIGNMENT_FILL`, autowrap OFF and a
+  trimming `text_overrun_behavior` all at once does not re-justify the trimmed remainder
+  back out to the box edge (`JUSTIFICATION_CONSTRAIN_ELLIPSIS`) — the ellipsis lands
+  right after the last kept glyph instead.
+- **Not drawn** `label_settings`'s own `font`, `outline_size`/`outline_color`,
+  `shadow_size`/`shadow_color`/`shadow_offset`, `paragraph_spacing` and the
+  stacked-outline/stacked-shadow arrays. `font` needs a by-reference font-metrics
+  resolution this previewer's text engine has no path for (only a node's own theme
+  chain, `resolveNodeFontMetrics`); every Label still shapes in its OWN theme font
+  regardless of `label_settings.font`. The outline/shadow fields decode (for a future
+  consumer) but draw nowhere — this previewer draws no font outline or shadow for ANY
+  text control, not a Label-specific gap.
+- **Approximated** `visible_characters_behavior` values other than the default
+  (`VC_CHARS_AFTER_SHAPING`, `VC_GLYPHS_AUTO/LTR/RTL`) count GLYPHS as a proxy for
+  Godot's own per-glyph character/glyph indices. The two coincide in this engine's
+  atlas shaping (no ligatures) — except across a line's own TRIMMED edge space
+  (Label's always-on `BREAK_TRIM_START/END_EDGE_SPACES`), which drops a character from
+  the draw entirely without leaving an index behind for these behaviours' running
+  counters to see, so the reveal count drifts by one per trimmed edge past the first.
+- **Not drawn** `paragraph_separator`'s doubled-backslash escapes (e.g. a literal
+  `"\\n"` authored to mean a real newline): Godot re-runs `String::c_unescape()` on the
+  property (label.cpp:158) on top of the `.tscn` format's own string-literal unescape;
+  no shared reader for `c_unescape()` exists in this codebase, so the value is kept
+  exactly as the file's own quoting already decoded it.
+- **Not drawn** `get_layout_data`'s own additional line-count clamp to however many
+  lines fit the control's rect height (label.cpp:533-548) — always active, independent
+  of `lines_skipped`/`max_lines_visible`. A Label taller than its rect overflows
+  visibly here instead of silently dropping its lowest lines.

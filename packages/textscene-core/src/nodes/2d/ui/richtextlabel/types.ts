@@ -23,4 +23,10 @@ export interface RichTextLabelProperties extends ControlProperties {
    * (`rich_text_label.cpp:1619-1652`). Default Top (`:581`).
    */
   verticalAlignment?: number;
+  /** `RichTextLabel.tab_stops`, px. Undefined/empty falls back to `tabSize` (`_find_tab_stops`, `rich_text_label.cpp:479-482`). */
+  tabStopsPx?: number[];
+  /** `RichTextLabel.tab_size`. Godot default 4 (`rich_text_label.h:575`). Only consulted when `tabStopsPx` is empty. */
+  tabSize?: number;
+  /** `TextServer::LineBreakFlag`'s BREAK_TRIM_* subset. Godot default (`rich_text_label.h:558`, the SAME pair Label defaults to) applies when undefined — `shapeText`'s own default. */
+  autowrapTrimFlags?: number;
 }

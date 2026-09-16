@@ -49,8 +49,10 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
   isTextLayoutResult,
   shapedTextSizeWidthPx,
+  soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
@@ -165,6 +167,26 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
     ]
   );
 
+  // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`
+  // — the icon's ALREADY-COMPUTED reservation (`content.icon.rect.w`, unaffected
+  // by any trim), never re-derived here, keeps this in step with
+  // `layoutButtonContent`'s own icon-fitting math without duplicating it.
+  const overrunFlags = useMemo(
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    [props.overrunBehavior]
+  );
+  const trimmedLayout: TextLayoutResult | null = useMemo(() => {
+    if (!layout || !overrunFlags.trim) return layout;
+    const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
+    const iconReserve =
+      content.icon && (props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT) !== HORIZONTAL_ALIGNMENT_CENTER
+        ? content.icon.rect.w + (solveNode.constants.h_separation ?? theme.separation)
+        : 0;
+    const trimWidthPx = Math.ceil(Math.max(1, customElementWidth - iconReserve));
+    const trimmedLine = trimLineToWidth(layout.lines[0]!, trimWidthPx, overrunFlags, { fontMetrics, fontSizePx });
+    return soloLineLayout(trimmedLine, layout);
+  }, [layout, overrunFlags, rect.w, baseStyleBox.contentMargin, content.icon, props.iconAlignment, solveNode.constants, theme.separation, fontMetrics, fontSizePx]);
+
   return (
     <>
       {!props.flat && <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />}
@@ -180,10 +202,10 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
           />
         </CanvasItemGroup>
       )}
-      {content.text && layout && (
+      {content.text && trimmedLayout && (
         <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
           <TextRun
-            layout={layout}
+            layout={trimmedLayout}
             fontSizePx={fontSizePx}
             tint={tintedFontColor}
             clippingPlanes={clippingPlanes}

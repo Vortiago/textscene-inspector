@@ -5,9 +5,19 @@
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { sliderMinimumSize } from '../shared/sliderSolver';
+import type { MinimumSizeFn, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver';
 
-export const vSliderMinimumSize: MinimumSizeFn = (_n, ctx) => sliderMinimumSize(true, ctx.theme);
+/** `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"`) — the one themeable slot the min-size solve reads. */
+export const vSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const themed = themedIcons.grabber;
+  const requests: TextureSlotRequest[] = [];
+  if (themed) requests.push({ key: 'grabber', ref: themed.ref, scope: themed.resources });
+  return requests;
+};
+
+export const vSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
+  sliderMinimumSize(true, ctx.theme, sliderGrabberIconSize(ctx.theme, n.textureSlots));
 
 controlSolverRegistry.registerMinimumSize('VSlider', vSliderMinimumSize);
+controlSolverRegistry.registerTextureSlots('VSlider', vSliderTextureSlots);

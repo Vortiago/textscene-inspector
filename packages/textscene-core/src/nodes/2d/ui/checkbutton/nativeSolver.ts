@@ -37,7 +37,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { centredTextTopPx, fitIconSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
@@ -126,6 +131,50 @@ export function resolveCheckButtonIconKey(props: CheckButtonProperties): CheckBu
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
+/** `CheckButtonIconKey` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, CheckButton, <name>)`, `check_button.cpp:156-159`). RTL-mirrored variants are out of scope repo-wide, so only these four are themeable here. */
+export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = {
+  checked: 'checked',
+  unchecked: 'unchecked',
+  checkedDisabled: 'checked_disabled',
+  uncheckedDisabled: 'unchecked_disabled',
+};
+
+const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME);
+
+/** Which of CheckButton's 4 icon slots have a themed answer — mirrors `checkbox/nativeSolver.ts`'s `checkBoxTextureSlots`. */
+export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
+    const themed = themedIcons[name];
+    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+  }
+  return requests;
+};
+
+/**
+ * `CheckButton::get_icon_size` (`check_button.cpp:35-62`), RTL omitted: the
+ * MAX over exactly the two icons the CURRENT `disabled` state selects
+ * (`checked`/`unchecked`, or `checked_disabled`/`unchecked_disabled`) —
+ * unlike CheckBox, which maxes over all 8 regardless of state, CheckButton's
+ * own source only ever reads the pair it is about to draw. A name
+ * `SolveNode.textureSlots` never resolved falls back to the vendored
+ * default's own size, same reasoning as `checkbox/nativeSolver.ts`'s
+ * `checkBoxIconNaturalSize`.
+ */
+export function checkButtonIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, disabled: boolean): Vec2 {
+  const names: readonly CheckButtonIconKey[] = disabled
+    ? ['checkedDisabled', 'uncheckedDisabled']
+    : ['checked', 'unchecked'];
+  let w = 0;
+  let h = 0;
+  for (const key of names) {
+    const size = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
+    w = Math.max(w, size.x);
+    h = Math.max(h, size.y);
+  }
+  return { x: w, y: h };
+}
+
 /** `button_checked_color`/`button_unchecked_color` — both `Color(1, 1, 1)` (`default_theme.cpp:352-353`), bindable via `theme_override_colors`, read regardless of `disabled` (the dimming is baked into the `_disabled` icon variants themselves, `check_button.cpp:139-141`). */
 const CHECKBUTTON_ICON_MODULATE_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -195,7 +244,7 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
-  const iconSize = fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(n.constants));
+  const iconSize = fitIconSize(checkButtonIconNaturalSize(n, state === 'disabled'), checkButtonIconMaxWidth(n.constants));
   const hSeparation = checkButtonHSeparation(n.constants, ctx);
 
   const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;

@@ -144,3 +144,26 @@ describe('<CodeEdit> — line-number gutter', () => {
     expect(deepestLineNumberY(wrapped.scene)).toBeLessThan(deepestLineNumberY(unwrapped.scene));
   });
 });
+
+describe('<CodeEdit> — indent_size (text_edit.cpp:349-351)', () => {
+  it('a wider indent_size widens every tab stop, wrapping a tab-heavy line into MORE rows at the same width', async () => {
+    const tabs = '\t'.repeat(10);
+    const narrow = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: tabs, wrapMode: 1, indentSize: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const wide = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: tabs, wrapMode: 1, indentSize: 16 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findTextMeshes(wide.scene).length).toBeGreaterThan(findTextMeshes(narrow.scene).length);
+  });
+});

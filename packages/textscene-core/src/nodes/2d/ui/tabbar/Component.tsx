@@ -28,7 +28,7 @@ import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxF
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -39,7 +39,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
-import { TAB_BAR_ICONS, TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
   TAB_ALIGNMENT_LEFT,
   TAB_BAR_THEME_FONT_KEY,
@@ -55,6 +55,7 @@ import {
   tabBarIconColor,
   tabBarStyleBoxes,
   tabBarTextTheme,
+  tabBarThemeIconSize,
   tabContentWidth,
   tabIconNaturalSize,
   tabWidthStyleMinWidth,
@@ -89,6 +90,9 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
   const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
+  const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
+  const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment');
+  const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement');
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
   const cachedLayouts = meta && isTabBarMinimumSizeMeta(meta) ? meta.layouts : null;
@@ -120,22 +124,32 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
           textWidthPx: naturalTextWidth,
           hasText: tab.title.length > 0,
           closeVisible,
-          closeIconWidth: TAB_BAR_ICON_SIZE,
+          closeIconWidth: closeIconSize.x,
           closeButtonMarginLeft: closeButtonMargin.left,
         });
         return { disabled: tab.disabled, hidden: tab.hidden === true, naturalWidth, naturalTextWidth };
       }),
-    [computed, overrides, defaults, hSeparation, closeDisplayPolicy, currentTab, closeButtonMargin.left]
+    [computed, overrides, defaults, hSeparation, closeDisplayPolicy, currentTab, closeButtonMargin.left, closeIconSize.x]
   );
 
   const drawLayout = useMemo(
-    () => computeTabBarDrawLayout(drawInputs, rect.w, alignment, clipTabs, maxTabWidth, tabSeparation, TAB_BAR_ICON_SIZE),
-    [drawInputs, rect.w, alignment, clipTabs, maxTabWidth, tabSeparation]
+    () =>
+      computeTabBarDrawLayout(
+        drawInputs,
+        rect.w,
+        alignment,
+        clipTabs,
+        maxTabWidth,
+        tabSeparation,
+        incrementIconSize.x,
+        decrementIconSize.x
+      ),
+    [drawInputs, rect.w, alignment, clipTabs, maxTabWidth, tabSeparation, incrementIconSize.x, decrementIconSize.x]
   );
 
-  const closeIconTexture = useIconTexture(TAB_BAR_ICONS.close);
-  const incrementIconTexture = useIconTexture(TAB_BAR_ICONS.incrementScroll);
-  const decrementIconTexture = useIconTexture(TAB_BAR_ICONS.decrementScroll);
+  const closeIconTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
+  const incrementIconTexture = useNodeIcon(solveNode.icons.increment, TAB_BAR_ICONS.incrementScroll);
+  const decrementIconTexture = useNodeIcon(solveNode.icons.decrement, TAB_BAR_ICONS.decrementScroll);
   const clippingPlanes = useControlClipPlanes();
 
   const unselectedItems = drawLayout.items.filter((it) => it.index !== currentTab);
@@ -153,6 +167,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
     hSeparation,
     closeButtonMargin,
     closeIconTexture,
+    closeIconSize,
     fontSizePx,
     clippingPlanes,
   };
@@ -171,6 +186,8 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
           missingRight={drawLayout.missingRight}
           incrementIconTexture={incrementIconTexture}
           decrementIconTexture={decrementIconTexture}
+          incrementIconSize={incrementIconSize}
+          decrementIconSize={decrementIconSize}
           tint={tint}
           renderOrder={renderOrder}
         />
@@ -192,7 +209,8 @@ interface TabBarTabChromeProps {
   barHeight: number;
   hSeparation: number;
   closeButtonMargin: { left: number; top: number; right: number; bottom: number };
-  closeIconTexture: ReturnType<typeof useIconTexture>;
+  closeIconTexture: ReturnType<typeof useNodeIcon>;
+  closeIconSize: { x: number; y: number };
   fontSizePx: number;
   clippingPlanes: readonly Plane[];
   closeDisplayPolicy: number;
@@ -213,6 +231,7 @@ function TabBarTabChrome({
   hSeparation,
   closeButtonMargin,
   closeIconTexture,
+  closeIconSize,
   fontSizePx,
   clippingPlanes,
   closeDisplayPolicy,
@@ -241,7 +260,7 @@ function TabBarTabChrome({
     textAdvanceWidthPx: item.textBudgetPx,
     hSeparation,
     closeVisible,
-    closeIconSizePx: TAB_BAR_ICON_SIZE,
+    closeIconSize,
     buttonHlMargin: closeButtonMargin,
   });
 
@@ -280,8 +299,8 @@ function TabBarTabChrome({
         <CanvasItemGroup position={[content.close.iconOffset.x, -content.close.iconOffset.y, 0]}>
           <ControlQuad
             renderOrder={renderOrder}
-            width={TAB_BAR_ICON_SIZE}
-            height={TAB_BAR_ICON_SIZE}
+            width={closeIconSize.x}
+            height={closeIconSize.y}
             color={closeLinearColor}
             opacity={tint.own.a}
             map={closeIconTexture}
@@ -295,16 +314,27 @@ function TabBarTabChrome({
 interface ScrollArrowsProps {
   rect: NativeControlComponentProps['rect'];
   missingRight: boolean;
-  incrementIconTexture: ReturnType<typeof useIconTexture>;
-  decrementIconTexture: ReturnType<typeof useIconTexture>;
+  incrementIconTexture: ReturnType<typeof useNodeIcon>;
+  decrementIconTexture: ReturnType<typeof useNodeIcon>;
+  incrementIconSize: { x: number; y: number };
+  decrementIconSize: { x: number; y: number };
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
 }
 
 /** `tab_bar.cpp:564-592`, non-RTL: the decrement (left) arrow is always half-opacity (`offset` never scrolls above 0 statically); the increment (right) arrow is full opacity only while tabs are actually clipped off the right edge. */
-function ScrollArrows({ rect, missingRight, incrementIconTexture, decrementIconTexture, tint, renderOrder }: ScrollArrowsProps) {
-  const vofs = (rect.h - TAB_BAR_ICON_SIZE) / 2;
-  const limitMinusButtons = rect.w - 2 * TAB_BAR_ICON_SIZE;
+function ScrollArrows({
+  rect,
+  missingRight,
+  incrementIconTexture,
+  decrementIconTexture,
+  incrementIconSize,
+  decrementIconSize,
+  tint,
+  renderOrder,
+}: ScrollArrowsProps) {
+  const vofs = (rect.h - decrementIconSize.y) / 2;
+  const limitMinusButtons = rect.w - incrementIconSize.x - decrementIconSize.x;
   const white = useGodotLinearColor({ r: 1, g: 1, b: 1 });
   const dimAlpha = 0.5 * tint.own.a;
 
@@ -313,18 +343,18 @@ function ScrollArrows({ rect, missingRight, incrementIconTexture, decrementIconT
       <CanvasItemGroup position={[limitMinusButtons, -vofs, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={TAB_BAR_ICON_SIZE}
-          height={TAB_BAR_ICON_SIZE}
+          width={decrementIconSize.x}
+          height={decrementIconSize.y}
           color={white}
           opacity={dimAlpha}
           map={decrementIconTexture}
         />
       </CanvasItemGroup>
-      <CanvasItemGroup position={[limitMinusButtons + TAB_BAR_ICON_SIZE, -vofs, 0]}>
+      <CanvasItemGroup position={[limitMinusButtons + decrementIconSize.x, -vofs, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
-          width={TAB_BAR_ICON_SIZE}
-          height={TAB_BAR_ICON_SIZE}
+          width={incrementIconSize.x}
+          height={incrementIconSize.y}
           color={white}
           opacity={missingRight ? tint.own.a : dimAlpha}
           map={incrementIconTexture}

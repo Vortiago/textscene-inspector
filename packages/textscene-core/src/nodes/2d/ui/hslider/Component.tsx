@@ -27,10 +27,11 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
+  sliderGrabberIconSize,
   sliderGrabberRect,
   sliderTickRects,
   sliderTrackRect,
@@ -46,15 +47,19 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
   const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;
 
+  const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
   const trackRect = sliderTrackRect(false, size, theme);
-  const fillRect = sliderGrabberAreaRect(false, size, ratio, theme);
-  const grabberRect = sliderGrabberRect(false, size, ratio, theme);
+  const fillRect = sliderGrabberAreaRect(false, size, ratio, theme, grabberIconSize);
+  const grabberRect = sliderGrabberRect(false, size, ratio, grabberIconSize);
   const tickIndices = sliderTickIndices(props);
-  const tickRects = sliderTickRects(false, size, tickIndices, props.tickCount ?? 0, theme);
+  const tickRects = sliderTickRects(false, size, tickIndices, props.tickCount ?? 0, theme, grabberIconSize);
 
   const editable = props.editable ?? SLIDER_DEFAULT_EDITABLE;
-  const grabberTexture = useIconTexture(editable ? SLIDER_GRABBER_ICONS.grabber : SLIDER_GRABBER_ICONS.grabberDisabled);
-  const tickTexture = useIconTexture(SLIDER_TICK_ICONS.hslider);
+  const grabberTexture = useNodeIcon(
+    solveNode.icons[editable ? 'grabber' : 'grabber_disabled'],
+    editable ? SLIDER_GRABBER_ICONS.grabber : SLIDER_GRABBER_ICONS.grabberDisabled
+  );
+  const tickTexture = useNodeIcon(solveNode.icons.tick, SLIDER_TICK_ICONS.hslider);
 
   return (
     <>

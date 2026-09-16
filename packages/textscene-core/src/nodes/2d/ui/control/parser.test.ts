@@ -29,11 +29,13 @@ describe('parseControl', () => {
       'theme_override_font_sizes/font_size': '18',
       'theme_override_colors/font_color': 'Color(0.2, 0.18, 0.12, 1)',
       'theme_override_styles/panel': 'SubResource("StyleBoxFlat_1")',
+      'theme_override_icons/checked': 'SubResource("GradientTexture2D_1")',
     });
     expect(p.themeOverrideConstants?.separation).toBe(6);
     expect(p.themeOverrideFontSizes?.font_size).toBe(18);
     expect(p.themeOverrideColors?.font_color?.r).toBeCloseTo(0.2, 5);
     expect(p.themeOverrideStyles?.panel).toBe('SubResource("StyleBoxFlat_1")');
+    expect(p.themeOverrideIcons?.checked).toBe('SubResource("GradientTexture2D_1")');
   });
 
   describe('theme reference + type variation', () => {

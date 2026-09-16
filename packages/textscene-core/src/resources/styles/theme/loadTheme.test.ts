@@ -33,6 +33,25 @@ const MULTI_THEME_TRES = [
 ].join('\n');
 
 describe('resolveThemeResource', () => {
+  it('carries icons through unresolved, same as styles', async () => {
+    const addresses: ThemeAddresses = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      styles: {},
+      icons: { CheckBox: { checked: 'ExtResource("1")' } },
+      colors: {},
+      constants: {},
+      typeVariations: {},
+      properties: {},
+      resources: { externalResources: [], internalResources: [] },
+    };
+    const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
+    expect(resource.icons?.CheckBox?.checked).toBe('ExtResource("1")');
+  });
+
+
   it('resolves default_font and every <Type>/fonts/<name> address through loadFont', async () => {
     const loadFont = vi.fn(async (address: string) =>
       address === 'res://fonts/default.ttf' ? FONT_A : address === 'res://fonts/label.ttf' ? FONT_B : null

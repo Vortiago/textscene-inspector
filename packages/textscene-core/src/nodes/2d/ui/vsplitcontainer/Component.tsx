@@ -11,7 +11,7 @@ import { painterView, type SolveNode } from '../../../../r3f/controls/native/sol
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
@@ -20,11 +20,10 @@ import {
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
+  splitGrabberIconSize,
+  splitGrabberThemeKey,
 } from '../shared/splitContainerSolver';
 import type { SplitContainerProperties } from '../shared/splitContainer';
-
-/** `vsplitter.svg`'s own authored size (`native/themeIcons.ts`) — 48px across the split axis, 8px along it. */
-const ICON_SIZE = { x: 48, y: 8 };
 
 export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
@@ -36,13 +35,18 @@ export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
   const drawsGrabber =
     sortable.length === 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
-  const texture = useOptionalIconTexture(drawsGrabber ? SPLIT_CONTAINER_ICONS.vsplitter : null);
+  const themeKey = splitGrabberThemeKey(solveNode.node.type, true);
+  const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? SPLIT_CONTAINER_ICONS.vsplitter : null);
 
   if (!drawsGrabber || !texture) {
     return null;
   }
 
-  const separation = resolveSplitSeparation(props, solveNode.constants, theme.widgets.splitContainer);
+  const iconSize = splitGrabberIconSize(solveNode.node.type, true, solveNode.textureSlots);
+  const separation = resolveSplitSeparation(props, solveNode.constants, {
+    ...theme.widgets.splitContainer,
+    grabberExtent: iconSize.y,
+  });
   const [first, second] = sortable as [SolveNode, SolveNode];
   const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
   const draggerPos =
@@ -55,7 +59,7 @@ export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
       props.splitOffset ?? 0,
       props.collapsed === true
     );
-  const iconRect = splitGrabberIconRect(true, { width: rect.w, height: rect.h }, draggerPos, separation, ICON_SIZE);
+  const iconRect = splitGrabberIconRect(true, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 
   return (
     <CanvasItemGroup position={[iconRect.x, -iconRect.y, 0]}>

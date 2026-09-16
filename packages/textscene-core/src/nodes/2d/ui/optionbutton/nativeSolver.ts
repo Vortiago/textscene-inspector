@@ -40,7 +40,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -128,6 +133,26 @@ export function resolveOptionButtonSelectedText(props: OptionButtonProperties): 
 /** `option_button_arrow.svg`'s own authored size (`native/themeIcons.ts`), 12x12 — NEVER run through `_fit_icon_size`. */
 export const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vec2 = { x: 12, y: 12 };
 
+/** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, OptionButton, arrow_icon, "arrow")` (`option_button.cpp:620`) — the one themeable icon slot. */
+export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const themed = themedIcons.arrow;
+  const requests: TextureSlotRequest[] = [];
+  if (themed) requests.push({ key: 'arrow', ref: themed.ref, scope: themed.resources });
+  return requests;
+};
+
+/**
+ * `OptionButton::get_minimum_size`/`_notification` read `theme_cache.
+ * arrow_icon->get_size()` directly (`option_button.cpp:62,131-133`) — a
+ * themed arrow of a different size changes both the reserved width AND the
+ * draw position, never run through `_fit_icon_size`/`icon_max_width`
+ * (this module's own header). Falls back to the vendored natural size when
+ * nothing themed it.
+ */
+export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 {
+  return n.textureSlots.arrow ?? OPTION_BUTTON_ARROW_NATURAL_SIZE;
+}
+
 function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
@@ -173,7 +198,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   }
 
   const hSeparation = optionButtonHSeparation(n.constants, ctx);
-  const arrow = OPTION_BUTTON_ARROW_NATURAL_SIZE;
+  const arrow = optionButtonArrowSize(n);
 
   const width = marginX + textW + arrow.x + hSeparation;
   const height = marginY + Math.max(textH, arrow.y);

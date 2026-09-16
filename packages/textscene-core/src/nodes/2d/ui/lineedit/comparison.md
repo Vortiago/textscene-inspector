@@ -9,8 +9,10 @@ renders_as: a single-line text box
 
 # LineEdit
 
-LineEdit is a single-line text field. The previewer draws its stylebox and one clipped
-run of text — the string, or the placeholder — in the colour its state calls for.
+LineEdit is a single-line text field. The previewer draws its stylebox, its `right_icon`
+or clear button, its caret while `caret_force_displayed` is set, and one clipped run of
+text (the string, or the placeholder) in the colour its state calls for. `max_length`
+truncates an over-long `text` the same way Godot does.
 
 ## Linting
 
@@ -72,5 +74,5 @@ An empty `secret_character` falls back to the bullet, as Godot does.
 
 ## Known limitations
 
-- **Not drawn** The clear button and `right_icon` are missing, so a field that has one in
-  Godot ends at its text.
+- **Not drawn** `draw_control_chars` never renders control characters as visible glyphs.
+  The text shaper has no preserve-control or hex-code-box path.

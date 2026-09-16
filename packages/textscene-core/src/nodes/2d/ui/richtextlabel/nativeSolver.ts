@@ -33,7 +33,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveTextTheme, type ResolvedTextTheme, type TextThemeDefaults, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f/controls/native/text/openSansMetrics';
-import { getFontAscentPx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontAscentPx, getFontGlyphAdvancePx, getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
@@ -319,6 +319,25 @@ export function imageObjectFontMetrics(base: FontMetrics): FontMetrics {
  * the caller was, leaving each widget to undo it — which is how the widgets
  * that did not undo it ended up a whole `line_spacing` too tall.
  */
+/**
+ * `RichTextLabel.tab_stops`, or one derived stop from `tab_size` when empty
+ * (`_find_tab_stops`/inline fallback, `rich_text_label.cpp:479-482`):
+ * `max(1, tab_size * space_advance)` — `get_spacing(SPACING_SPACE)` is 0 for
+ * every font this codebase loads, so that term drops. `tab_size <= 0`
+ * disables inline tab alignment entirely (`:479`'s `else if (tab_size > 0)`).
+ */
+export function richTextTabStopsPx(
+  tabStopsPx: number[] | undefined,
+  tabSize: number | undefined,
+  fontMetrics: FontMetrics,
+  fontSizePx: number
+): number[] {
+  if (tabStopsPx && tabStopsPx.length > 0) return tabStopsPx;
+  const size = tabSize ?? 4;
+  if (size <= 0) return [];
+  return [Math.max(1, size * getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx))];
+}
+
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as RichTextLabelProperties;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
@@ -373,6 +392,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
     // exactly like `Component.tsx`'s matching `shapeText` call, or an image
     // wraps differently at measure time than at paint time.
     fontMetrics: imageObjectFontMetrics(fontMetrics),
+    tabStopsPx: richTextTabStopsPx(props.tabStopsPx, props.tabSize, fontMetrics, fontSizePx),
+    autowrapTrimFlags: props.autowrapTrimFlags,
   });
   // `get_content_height` sums each PARAGRAPH's `text_buf->get_size().y`, itself
   // the sum of its own lines' ascent+descent — never a count times one pitch,

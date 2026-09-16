@@ -5,16 +5,26 @@ import type { FontResource } from '../../fonts/font/types';
 const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
 
 describe('decodeThemeAddresses', () => {
-  it('decodes default_font/default_font_size and leaves an unscanned key (icons) raw', () => {
+  it('decodes default_font/default_font_size and leaves an unrecognised key raw', () => {
     const addresses = decodeThemeAddresses(
       'res://theme.tres',
-      { default_font: 'ExtResource("1")', default_font_size: '20', 'Panel/icons/panel': 'SubResource("2")' },
+      { default_font: 'ExtResource("1")', default_font_size: '20', 'Panel/unknown_data_type/panel': 'SubResource("2")' },
       [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
       []
     );
     expect(addresses.defaultFont).toBe('res://fonts/a.ttf');
     expect(addresses.defaultFontSize).toBe(20);
-    expect(addresses.properties).toEqual({ 'Panel/icons/panel': 'SubResource("2")' });
+    expect(addresses.properties).toEqual({ 'Panel/unknown_data_type/panel': 'SubResource("2")' });
+  });
+
+  it('decodes <Type>/icons/<name> as a raw ref string, same as styles', () => {
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'CheckBox/icons/checked': 'SubResource("2")' },
+      [],
+      []
+    );
+    expect(addresses.icons?.CheckBox?.checked).toBe('SubResource("2")');
   });
 
   it('decodes <Type>/styles/<name> as a raw ref string, and carries the theme file\'s own resource pools', () => {
@@ -125,13 +135,14 @@ describe('resolveInlineThemeResource', () => {
     expect(resource.fonts.Label?.font).toEqual({ kind: 'system', fontNames: ['monospace'], properties: {} });
   });
 
-  it('leaves an unscanned key (icons) raw, and decodes styles/colors/constants inline', () => {
+  it('leaves an unrecognised key raw, and decodes styles/icons/colors/constants inline', () => {
     const ext = [{ id: '1', path: 'res://tex.png', type: 'Texture2D' }];
     const int = [{ id: '2', type: 'StyleBoxFlat', data: {} }];
     const resource = resolveInlineThemeResource(
       {
-        'Panel/icons/panel': 'null',
+        'Panel/unknown_data_type/panel': 'null',
         'Panel/styles/panel': 'SubResource("2")',
+        'CheckBox/icons/checked': 'ExtResource("1")',
         'Label/colors/font_color': 'Color(1, 0, 0, 1)',
         'Button/constants/h_separation': '4',
       },
@@ -140,8 +151,9 @@ describe('resolveInlineThemeResource', () => {
       { getCached: () => undefined },
       new Set()
     );
-    expect(resource.properties).toEqual({ 'Panel/icons/panel': 'null' });
+    expect(resource.properties).toEqual({ 'Panel/unknown_data_type/panel': 'null' });
     expect(resource.styles?.Panel?.panel).toBe('SubResource("2")');
+    expect(resource.icons?.CheckBox?.checked).toBe('ExtResource("1")');
     expect(resource.colors?.Label?.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
     expect(resource.constants?.Button?.h_separation).toBe(4);
     expect(resource.resources).toEqual({ externalResources: ext, internalResources: int });

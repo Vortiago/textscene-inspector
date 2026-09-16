@@ -134,6 +134,11 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
     expect(optionButtonMinimumSize(node({}), ctx())).toEqual({ x: 16 + 12 + 4, y: 8 + 12 });
   });
 
+  it('widens on a themed "arrow" icon (option_button.cpp:62 reads theme_cache.arrow_icon->get_size() directly)', () => {
+    const n = { ...node({}), textureSlots: { arrow: { x: 20, y: 18 } } };
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 20 + 4, y: 8 + 18 });
+  });
+
   it('uses the WIDEST item\'s text, not the selected one\'s, for the width floor', () => {
     const items = [
       { text: 'A', id: 0 }, // 10.578125 wide

@@ -29,7 +29,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
@@ -41,13 +41,14 @@ import {
   checkBoxIconMaxWidth,
   checkBoxHSeparation,
   checkBoxCheckVOffset,
+  checkBoxIconNaturalSize,
   checkBoxTextTheme,
   fitIconSize,
   layoutCheckBoxContent,
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
   tintColor,
-  CHECKBOX_ICON_NATURAL_SIZE,
+  CHECK_BOX_ICON_THEME_NAME,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
@@ -60,11 +61,11 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
   // --- Icon: always drawn, checked/unchecked (or radio_*) per state --------
   const iconKey = resolveCheckBoxIconKey(props);
-  const iconTexture = useIconTexture(CHECK_BOX_ICONS[iconKey]);
+  const iconTexture = useNodeIcon(solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]], CHECK_BOX_ICONS[iconKey]);
   const iconSize = useMemo(() => {
-    const fitted = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(solveNode.constants));
+    const fitted = fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants));
     return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [solveNode.constants]);
+  }, [solveNode]);
 
   // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';

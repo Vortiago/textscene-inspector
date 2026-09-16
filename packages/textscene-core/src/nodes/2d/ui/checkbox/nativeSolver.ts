@@ -29,7 +29,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotRequest,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { centredTextTopPx, fitIconSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
@@ -144,6 +149,59 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
 /** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
 export const CHECKBOX_ICON_NATURAL_SIZE: Vec2 = { x: 16, y: 16 };
 
+/**
+ * `CheckBoxIconKey` (this codebase's vendored-table key) → the Theme item
+ * name Godot itself registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON,
+ * CheckBox, <name>)`, `check_box.cpp:157-164`) — the key `SolveNode.icons`/
+ * `SolveNode.textureSlots` carry a themed answer under.
+ */
+export const CHECK_BOX_ICON_THEME_NAME: Record<CheckBoxIconKey, string> = {
+  checked: 'checked',
+  unchecked: 'unchecked',
+  radioChecked: 'radio_checked',
+  radioUnchecked: 'radio_unchecked',
+  checkedDisabled: 'checked_disabled',
+  uncheckedDisabled: 'unchecked_disabled',
+  radioCheckedDisabled: 'radio_checked_disabled',
+  radioUncheckedDisabled: 'radio_unchecked_disabled',
+};
+
+const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
+
+/**
+ * Which of CheckBox's 8 icon slots have a themed answer, for `SolveNode.
+ * textureSlots` — `Control::get_theme_icon`'s local-override/ancestor-chain
+ * walk was already run by the walker (`SolveNode.icons`); this only turns
+ * the names it resolved into texture-size requests.
+ */
+export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
+    const themed = themedIcons[name];
+    if (themed) requests.push({ key: name, ref: themed.ref, scope: themed.resources });
+  }
+  return requests;
+};
+
+/**
+ * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the MAX over all 8
+ * icons' own sizes, whichever draw state is actually showing — every valid
+ * `theme_cache` entry contributes, not only the currently-selected one. A
+ * name `SolveNode.textureSlots` never resolved (no theme touched it) falls
+ * back to the vendored default's own size, since Godot's own default theme
+ * registers a valid icon for every one of the 8 (`default_theme.cpp:288-295`).
+ */
+export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 {
+  let w = 0;
+  let h = 0;
+  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
+    const size = n.textureSlots[name] ?? CHECKBOX_ICON_NATURAL_SIZE;
+    w = Math.max(w, size.x);
+    h = Math.max(h, size.y);
+  }
+  return { x: w, y: h };
+}
+
 /** `check_v_offset` theme constant default (`default_theme.cpp:309`). */
 const DEFAULT_CHECK_V_OFFSET = 0;
 
@@ -191,7 +249,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
-  const iconSize = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(n.constants));
+  const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);
 
   // Godot's own guard is `content_size.width > 0 && tex_size.width > 0`

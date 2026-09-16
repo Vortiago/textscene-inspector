@@ -32,6 +32,7 @@ import {
   spinBoxIconColor,
   spinBoxFieldTextTheme,
   spinBoxMinimumSize,
+  spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
@@ -59,7 +60,21 @@ function ctx(withMeasurer = true): SolveContext {
 
 describe('spinBoxButtonsBlockWidth', () => {
   it('is buttons_width(16) + field_and_buttons_separation(2), unscaled (happy path)', () => {
-    expect(spinBoxButtonsBlockWidth()).toBe(18);
+    expect(spinBoxButtonsBlockWidth(16)).toBe(18);
+  });
+
+  it('widens when the icon-enforced width exceeds buttons_width (spin_box.cpp:389: MAX(icon_enforced, wanted))', () => {
+    expect(spinBoxButtonsBlockWidth(30)).toBe(32);
+  });
+});
+
+describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
+  it('is the vendored 16 when neither icon is themed', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} })).toBe(16);
+  });
+
+  it('widens to a themed icon wider than the vendored default', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
   });
 });
 
@@ -71,7 +86,7 @@ describe('spinBoxFieldButtonsSeparation', () => {
 
 describe('spinBoxLayout', () => {
   it('splits the field from the buttons block, LTR (happy path)', () => {
-    const layout = spinBoxLayout({ x: 100, y: 30 });
+    const layout = spinBoxLayout({ x: 100, y: 30 }, 16);
     expect(layout.fieldRect).toEqual({ x: 0, y: 0, w: 82, h: 30 });
     expect(layout.upRect).toEqual({ x: 84, y: 0, w: 16, h: 15 });
     expect(layout.downRect).toEqual({ x: 84, y: 15, w: 16, h: 15 });
@@ -79,11 +94,11 @@ describe('spinBoxLayout', () => {
   });
 
   it('floors the field width at 0 when the rect is narrower than the buttons block (error path)', () => {
-    expect(spinBoxLayout({ x: 10, y: 30 }).fieldRect.w).toBe(0);
+    expect(spinBoxLayout({ x: 10, y: 30 }, 16).fieldRect.w).toBe(0);
   });
 
   it('truncates a fractional rect size toward zero, matching Size2i (edge case)', () => {
-    const layout = spinBoxLayout({ x: 100.9, y: 29.9 });
+    const layout = spinBoxLayout({ x: 100.9, y: 29.9 }, 16);
     expect(layout.fieldRect.h).toBe(29);
   });
 });
@@ -190,5 +205,12 @@ describe('spinBoxMinimumSize', () => {
   it('contributes zero em-width when no measurer is wired (error path)', () => {
     const result = size(spinBoxMinimumSize(node(), ctx(false)));
     expect(result.x).toBe(8 + 18);
+  });
+
+  it('widens the buttons block on a themed "down" icon wider than the vendored 16 (spin_box.cpp:82-86,382-397)', () => {
+    const n = { ...node(), textureSlots: { down: { x: 40, y: 8 } } };
+    const result = size(spinBoxMinimumSize(n, ctx(false)));
+    // blockWidth = max(18, 40+2) = 42, vs the untethered 18.
+    expect(result.x).toBe(8 + 42);
   });
 });

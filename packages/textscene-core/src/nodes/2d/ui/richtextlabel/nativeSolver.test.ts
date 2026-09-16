@@ -49,6 +49,7 @@ import {
   BOLD_DISTANCE_BIAS,
   ITALIC_SKEW,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextTabStopsPx,
 } from './nativeSolver';
 import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { IMAGE_OBJECT_CHAR } from './bbcode';
@@ -1302,5 +1303,29 @@ describe('RichTextLabel paragraph alignment', () => {
         expect(richTextVerticalOffsets(400, 300, alignment, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });
       }
     });
+  });
+});
+
+describe('richTextTabStopsPx (rich_text_label.cpp:479-482)', () => {
+  it('an explicit tab_stops array wins outright, ignoring tab_size', () => {
+    expect(richTextTabStopsPx([10, 20], 8, OPEN_SANS_FONT_METRICS, 16)).toEqual([10, 20]);
+  });
+
+  it('falls back to ONE stop derived from tab_size * the space glyph advance when tab_stops is empty', () => {
+    // Space glyph advance at size 16 (openSansMetrics.ts's own 532 design
+    // units, unitsPerEm 2048): 532*16/2048 = 4.15625px; tab_size 4 -> 16.625.
+    expect(richTextTabStopsPx(undefined, 4, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+  });
+
+  it('undefined tab_size falls back to the Godot default of 4', () => {
+    expect(richTextTabStopsPx([], undefined, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+  });
+
+  it('tab_size <= 0 disables inline tab alignment entirely (no stops)', () => {
+    expect(richTextTabStopsPx(undefined, 0, OPEN_SANS_FONT_METRICS, 16)).toEqual([]);
+  });
+
+  it('floors the derived stop at 1px even for a tiny font size', () => {
+    expect(richTextTabStopsPx(undefined, 1, OPEN_SANS_FONT_METRICS, 1)).toEqual([1]);
   });
 });

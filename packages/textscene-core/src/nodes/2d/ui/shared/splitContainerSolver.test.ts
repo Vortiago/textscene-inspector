@@ -31,7 +31,10 @@ import {
   resolveSplitSeparation,
   resortSplitContainer,
   splitContainerMinimumSize,
+  splitContainerTextureSlots,
   splitGrabberIconRect,
+  splitGrabberIconSize,
+  splitGrabberThemeKey,
   DRAGGER_VISIBLE,
   type SplitAxisChild,
   type SplitChildInput,
@@ -331,6 +334,49 @@ function solveNode(path: string, type: string, properties: Record<string, unknow
   return { ...emptySolveNode(), path, node: tscnNode, children, constants };
 }
 
+describe('splitGrabberThemeKey (SplitContainer::_get_grabber_icon, split_container.cpp:281-292)', () => {
+  it('is "grabber" for a fixed-axis type (HSplitContainer/VSplitContainer), regardless of the vertical argument', () => {
+    expect(splitGrabberThemeKey('HSplitContainer', true)).toBe('grabber');
+    expect(splitGrabberThemeKey('VSplitContainer', false)).toBe('grabber');
+  });
+
+  it('is "h_grabber"/"v_grabber" for the base SplitContainer, per its own vertical', () => {
+    expect(splitGrabberThemeKey('SplitContainer', false)).toBe('h_grabber');
+    expect(splitGrabberThemeKey('SplitContainer', true)).toBe('v_grabber');
+  });
+});
+
+describe('splitGrabberIconSize', () => {
+  it('is the vendored (transposed) default when nothing themed the grabber', () => {
+    expect(splitGrabberIconSize('HSplitContainer', false, {})).toEqual({ x: 8, y: 48 });
+    expect(splitGrabberIconSize('VSplitContainer', true, {})).toEqual({ x: 48, y: 8 });
+  });
+
+  it('is the themed size when the walker resolved the type-appropriate slot', () => {
+    expect(splitGrabberIconSize('HSplitContainer', false, { grabber: { x: 20, y: 60 } })).toEqual({ x: 20, y: 60 });
+    expect(splitGrabberIconSize('SplitContainer', true, { v_grabber: { x: 30, y: 10 } })).toEqual({ x: 30, y: 10 });
+  });
+});
+
+describe('splitContainerTextureSlots', () => {
+  it('requests "grabber" for HSplitContainer/VSplitContainer when themed, ignoring any authored `vertical`', () => {
+    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    const themed = { grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } } };
+    expect(splitContainerTextureSlots(node, themed)).toEqual([{ key: 'grabber', ref: 'ExtResource("1")', scope: themed.grabber.resources }]);
+  });
+
+  it('requests "v_grabber" for a base SplitContainer authored vertical=true', () => {
+    const node: TscnNode = { name: 'S', type: 'SplitContainer', children: [], properties: { vertical: true } };
+    const themed = { v_grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } } };
+    expect(splitContainerTextureSlots(node, themed)).toEqual([{ key: 'v_grabber', ref: 'ExtResource("1")', scope: themed.v_grabber.resources }]);
+  });
+
+  it('requests nothing when the type-appropriate slot has no themed answer', () => {
+    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    expect(splitContainerTextureSlots(node, {})).toEqual([]);
+  });
+});
+
 describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registered end-to-end', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
@@ -368,6 +414,29 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     // back instead of recomputing it from a narrower subset of the inputs)
     // — exactly where RatioLeft's rect ends, 294.
     expect(solved.get('Split')?.meta).toEqual({ draggerPos: 294 });
+  });
+
+  it('widens on a themed "grabber" wider than the vendored default (_get_separation: MAX(theme separation, grabber width))', () => {
+    controlSolverRegistry.registerContainerLayout('HSplitContainer', makeSplitContainerLayout(false));
+    controlSolverRegistry.registerMinimumSize('HSplitContainer', makeSplitContainerMinimumSize(false));
+
+    const root = {
+      ...solveNode(
+        'Split',
+        'HSplitContainer',
+        { layoutMode: 1, offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 60 },
+        [
+          solveNode('Split/A', 'Control', { layoutMode: 2, customMinimumSize: { x: 50, y: 20 } }),
+          solveNode('Split/B', 'Control', { layoutMode: 2, customMinimumSize: { x: 50, y: 20 } }),
+        ]
+      ),
+      textureSlots: { grabber: { x: 40, y: 48 } },
+    };
+
+    const ctx = createSolveContext(nativeTheme(1));
+    // The container's own combined minimum size: 50 + 50 + separation.
+    // Vendored separation is MAX(theme.separation, 8) = 8; themed widens it to 40.
+    expect(ctx.combinedMinimumSize(root)).toEqual({ x: 140, y: 20 });
   });
 
   it('meta.draggerPos is undefined with fewer than two sortable children — nothing to report', () => {

@@ -59,13 +59,30 @@ export const SLIDER_TICK_CROSS_AXIS = 8;
  *
  * `slider_style`'s margins are equal on every side (`make_flat_stylebox(color,
  * 4, 4, 4, 4, 4)`, `default_theme.cpp:579`), so `ss.width === ss.height ===
- * sliderTrackThickness` regardless of axis; `grabber_icon` is a square texture,
- * so `rs.width === rs.height === sliderGrabberSize`.
+ * sliderTrackThickness` regardless of axis. `grabber` is `rs` — the vendored
+ * default is a square texture (`sliderGrabberIconSize`'s own doc), but a
+ * themed `grabber` icon need not be, so every formula below takes it as a
+ * `Vec2` rather than reading `theme.sliderGrabberSize` as a scalar.
  */
-export function sliderMinimumSize(vertical: boolean, theme: NativeTheme): Vec2 {
+export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber: Vec2): Vec2 {
   const track = theme.sliderTrackThickness;
-  const grabber = theme.sliderGrabberSize;
-  return vertical ? { x: Math.max(track, grabber), y: track } : { x: track, y: Math.max(track, grabber) };
+  return vertical ? { x: Math.max(track, grabber.x), y: track } : { x: track, y: Math.max(track, grabber.y) };
+}
+
+/**
+ * `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"` —
+ * `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, Slider, grabber_icon,
+ * "grabber")`, `slider.cpp:480`) — the ONE icon every geometry formula in
+ * this module reads; `grabber_highlight`/`grabber_disabled` are interactive
+ * draw states this previewer never reaches (module doc). Falls back to the
+ * vendored default's own (square) size, `theme.sliderGrabberSize` on both
+ * axes, when nothing themed it.
+ */
+export function sliderGrabberIconSize(
+  theme: NativeTheme,
+  textureSlots: Readonly<Record<string, Vec2 | null>>
+): Vec2 {
+  return textureSlots.grabber ?? { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
 }
 
 /**
@@ -128,21 +145,28 @@ export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeT
  * vertical branch calls `Math::round` explicitly on BOTH its origin and its
  * size — that asymmetry is Godot's own, not an inconsistency introduced here.
  */
-export function sliderGrabberAreaRect(vertical: boolean, rawSize: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+export function sliderGrabberAreaRect(
+  vertical: boolean,
+  rawSize: Vec2,
+  ratio: number,
+  theme: NativeTheme,
+  grabber: Vec2
+): Rect2 {
   const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;
-  const grabber = theme.sliderGrabberSize;
-  // `grabber->get_height() / 2` / `get_width() / 2` are INTEGER divisions in
-  // `slider.cpp:302,334` — an odd grabber contributes the floor, not the half.
-  const halfGrabber = Math.trunc(grabber / 2);
   if (vertical) {
-    const areasize = size.y - grabber;
+    const areasize = size.y - grabber.y;
+    // `grabber->get_height() / 2` is an INTEGER division (`slider.cpp:302`) —
+    // an odd grabber contributes the floor, not the half.
+    const halfGrabber = Math.trunc(grabber.y / 2);
     const x = Math.trunc((size.x - thickness) / 2);
     const y = Math.round(size.y - areasize * ratio - halfGrabber);
     const h = Math.round(areasize * ratio + halfGrabber);
     return { x, y, w: thickness, h };
   }
-  const areasize = size.x - grabber;
+  const areasize = size.x - grabber.x;
+  // `grabber->get_width() / 2` — same integer division (`slider.cpp:334`).
+  const halfGrabber = Math.trunc(grabber.x / 2);
   const p = Math.trunc(areasize * ratio + halfGrabber);
   return { x: 0, y: Math.trunc((size.y - thickness) / 2), w: p, h: thickness };
 }
@@ -164,20 +188,19 @@ export function sliderGrabberAreaRect(vertical: boolean, rawSize: Vec2, ratio: n
  * off-by-a-grabber-width error is invisible at
  * `ratio = 0` and wrong everywhere else.
  */
-export function sliderGrabberRect(vertical: boolean, rawSize: Vec2, ratio: number, theme: NativeTheme): Rect2 {
+export function sliderGrabberRect(vertical: boolean, rawSize: Vec2, ratio: number, grabber: Vec2): Rect2 {
   const size = size2i(rawSize);
-  const grabber = theme.sliderGrabberSize;
   if (vertical) {
-    const areasize = size.y - grabber;
-    const x = Math.trunc(size.x / 2) - Math.trunc(grabber / 2);
-    const y = Math.trunc(size.y - ratio * areasize - grabber);
-    return { x, y, w: grabber, h: grabber };
+    const areasize = size.y - grabber.y;
+    const x = Math.trunc(size.x / 2) - Math.trunc(grabber.x / 2);
+    const y = Math.trunc(size.y - ratio * areasize - grabber.y);
+    return { x, y, w: grabber.x, h: grabber.y };
   }
-  const areasize = size.x - grabber;
+  const areasize = size.x - grabber.x;
   const x = Math.trunc(ratio * areasize);
   // Two SEPARATE integer divisions (`slider.cpp:363`), as the vertical branch above.
-  const y = Math.trunc(size.y / 2) - Math.trunc(grabber / 2);
-  return { x, y, w: grabber, h: grabber };
+  const y = Math.trunc(size.y / 2) - Math.trunc(grabber.y / 2);
+  return { x, y, w: grabber.x, h: grabber.y };
 }
 
 /**
@@ -206,17 +229,21 @@ export function sliderTickRects(
   rawSize: Vec2,
   indices: readonly number[],
   tickCount: number,
-  theme: NativeTheme
+  theme: NativeTheme,
+  grabber: Vec2
 ): Rect2[] {
   const size = size2i(rawSize);
-  const grabber = theme.sliderGrabberSize;
   const along = theme.sliderTickBox;
   const cross = SLIDER_TICK_CROSS_AXIS;
   const divisions = tickCount - 1;
-  const grabberOffset = Math.trunc(grabber / 2) - Math.trunc(along / 2);
+  // The travel axis's own grabber extent: WIDTH for horizontal, HEIGHT for
+  // vertical (`slider.cpp:342-347,304-311`) — same axis `sliderGrabberAreaRect`
+  // reads `areasize` off.
+  const grabberAlong = vertical ? grabber.y : grabber.x;
+  const grabberOffset = Math.trunc(grabberAlong / 2) - Math.trunc(along / 2);
 
   if (vertical) {
-    const areasize = size.y - grabber;
+    const areasize = size.y - grabberAlong;
     const x = Math.trunc(theme.sliderTrackThickness + (size.x - theme.sliderTrackThickness) / 2);
     return indices.map((i) => ({
       x,
@@ -225,7 +252,7 @@ export function sliderTickRects(
       h: along,
     }));
   }
-  const areasize = size.x - grabber;
+  const areasize = size.x - grabberAlong;
   const y = Math.trunc(theme.sliderTrackThickness + (size.y - theme.sliderTrackThickness) / 2);
   return indices.map((i) => ({
     x: Math.trunc((i * areasize) / divisions + grabberOffset),
