@@ -114,8 +114,8 @@ export function shouldUnderline(state: LinkButtonDrawState, underlineMode: numbe
 }
 
 /** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */
-export function linkButtonUnderlineSpacing(props: LinkButtonProperties, ctx: Pick<SolveContext, 'theme'>): number {
-  const override = props.themeOverrideConstants?.underline_spacing;
+export function linkButtonUnderlineSpacing(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+  const override = constants.underline_spacing;
   if (override !== undefined) return override;
   return Math.round(2 * ctx.theme.scale);
 }

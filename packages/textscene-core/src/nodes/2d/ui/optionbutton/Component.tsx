@@ -78,7 +78,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   );
 
   // --- Content layout: text + arrow placement within the solved rect ------
-  const arrowMargin = props.themeOverrideConstants?.arrow_margin ?? theme.separation;
+  const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
 
   const content = useMemo(
     () =>

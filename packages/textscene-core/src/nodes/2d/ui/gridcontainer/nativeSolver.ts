@@ -76,7 +76,7 @@ function columnsOf(n: SolveNode): number {
 }
 
 function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme: NativeTheme): number {
-  return props(n).themeOverrideConstants?.[key] ?? theme.separation;
+  return n.constants[key] ?? theme.separation;
 }
 
 // --- get_minimum_size ---------------------------------------------------------

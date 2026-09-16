@@ -131,13 +131,13 @@ export function progressBarTextTheme(
 }
 
 /** `theme_override_colors/font_outline_color`, else `Color(0, 0, 0)`. */
-export function progressBarOutlineColor(props: ProgressBarProperties): ControlColor {
-  return props.themeOverrideColors?.font_outline_color ?? PROGRESS_BAR_DEFAULT_OUTLINE_COLOR;
+export function progressBarOutlineColor(colors: SolveNode['colors']): ControlColor {
+  return colors.font_outline_color ?? PROGRESS_BAR_DEFAULT_OUTLINE_COLOR;
 }
 
 /** `theme_override_constants/outline_size`, else `0`. */
-export function progressBarOutlineSize(props: ProgressBarProperties): number {
-  return props.themeOverrideConstants?.outline_size ?? PROGRESS_BAR_DEFAULT_OUTLINE_SIZE;
+export function progressBarOutlineSize(constants: SolveNode['constants']): number {
+  return constants.outline_size ?? PROGRESS_BAR_DEFAULT_OUTLINE_SIZE;
 }
 
 /**

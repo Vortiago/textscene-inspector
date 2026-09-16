@@ -101,8 +101,8 @@ export const menuButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const iconAlignment = props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
   const verticalIconAlignment = props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER;
-  const iconMaxWidth = props.themeOverrideConstants?.icon_max_width ?? 0;
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? ctx.theme.separation;
+  const iconMaxWidth = n.constants.icon_max_width ?? 0;
+  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
 
   if (!props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0) {
     const iconSize = fitIconSize(n.textureSize, iconMaxWidth);

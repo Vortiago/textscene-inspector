@@ -27,6 +27,9 @@ function node(props: Partial<MenuButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'M',
     node: { name: 'M', type: 'MenuButton', children: [], properties: { name: 'M', ...props } as MenuButtonProperties },
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not props.
+    colors: props.themeOverrideColors ?? {},
   };
 }
 

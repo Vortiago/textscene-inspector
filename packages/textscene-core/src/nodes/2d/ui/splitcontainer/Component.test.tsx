@@ -20,11 +20,16 @@ function solveNode(
   properties: Record<string, unknown>,
   children: SolveNode[] = []
 ): SolveNode {
+  // A local theme_override_constants/* now reaches a solver through
+  // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
+  const constants =
+    (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return {
     ...emptySolveNode(),
     path: name,
     node: { name, type, children: [], properties: { name, ...properties } } as TscnNode,
     children,
+    constants,
   };
 }
 

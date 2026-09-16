@@ -6,13 +6,16 @@
  * (`Theme::_set`/`_get`, `scene/resources/theme.cpp:36-104`: the property name
  * splits on `/` into `theme_type` / `data_type` / `prop_name`) plus a handful
  * of un-prefixed scalars (`default_font`, `default_font_size`) and
- * `<variationType>/base_type` type-variation declarations. The decode covers
- * only what a font lookup needs; everything else (styles, colors, constants,
- * icons) stays a raw property string for a future consumer — the same shallow
- * contract every other Godot-text slice uses.
+ * `<variationType>/base_type` type-variation declarations. `styles` stays a
+ * raw ref string (a StyleBox is a SUB-RESOURCE of this theme file, resolved
+ * against `resources` by whoever reads the entry, never here); `colors`/
+ * `constants` are literal values with nothing to resolve, so they decode
+ * straight to typed data. Icons stay unscanned — see `lookup.ts`'s own doc.
  */
 
 import type { FontResource } from '../../fonts/font/types';
+import type { SceneScope } from '../../../parser/types';
+import type { Color } from '../../../utils/colorParser';
 
 /**
  * The shape both a file-backed Theme (`T` = address string, resolved later by
@@ -25,8 +28,22 @@ export interface ScannedTheme<T> {
   defaultFontSize: number | undefined;
   fonts: Readonly<Record<string, Readonly<Record<string, T>>>>;
   fontSizes: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /**
+   * `<Type>/styles/<name>` — raw ref string (`SubResource(...)`/`ExtResource(...)`),
+   * resolved against `resources`. Optional (unlike every other field here, all
+   * of which `scanTheme` always populates) purely so a `ThemeResource` literal
+   * hand-built before this field existed keeps compiling; a real decode always
+   * sets it, and a reader treats an absent map as empty.
+   */
+  styles?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** `<Type>/colors/<name>`, parsed (`Theme::get_color`, `scene/resources/theme.cpp:761-767`). Optional — see `styles`'s own doc. */
+  colors?: Readonly<Record<string, Readonly<Record<string, Color>>>>;
+  /** `<Type>/constants/<name>`, parsed (`Theme::get_constant`, `scene/resources/theme.cpp:858-864`) — a literal int, never scaled. Optional — see `styles`'s own doc. */
+  constants?: Readonly<Record<string, Readonly<Record<string, number>>>>;
   typeVariations: Readonly<Record<string, string>>;
   properties: Readonly<Record<string, string>>;
+  /** This theme file's OWN sub-resource pools — what a `styles`/icon ref addresses against, never the referencing node's. Optional — see `styles`'s own doc. */
+  resources?: SceneScope;
 }
 
 /**

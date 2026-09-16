@@ -17,9 +17,9 @@
  * `default_font_size` when no more specific entry matches
  * (`Theme::get_font_size`, `scene/resources/theme.cpp:658-666`); otherwise
  * `defaults.fontSizePx` (this previewer's OWN `ThemeDB::get_fallback_font_size()`
- * stand-in). Colour has NO such ancestor walk — this codebase decodes no
- * `Theme` colour data at all (the Theme slice's own scope), so it stays
- * override-or-default exactly as before.
+ * stand-in). Colour walks the SAME ancestor chain via `n.colors`
+ * (`buildSolveTree.ts`'s `resolveThemedColors`, `Control::get_theme_color`),
+ * falling back to `defaults.color` only once nothing anywhere resolves it.
  */
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import type { SolveNode } from './solveTree';
@@ -28,13 +28,12 @@ import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
 export interface TextThemeKeys {
   /** `theme_override_font_sizes/<sizeKey>` (e.g. `font_size`, `normal_font_size`) — ALSO the `<Type>/font_sizes/<name>` name `resolveNodeFontSizePx`'s ancestor walk looks up (Godot passes the SAME `StringName` to both the local-override read and `get_theme_font_size`, `control.cpp:3107-3129`). */
   sizeKey: string;
-  /** `theme_override_colors/<colorKey>` (e.g. `font_color`, `default_color`). */
+  /** `theme_override_colors/<colorKey>` (e.g. `font_color`, `default_color`) — ALSO the `<Type>/colors/<name>` name `n.colors` was built under (same StringName reused, mirroring `sizeKey`). */
   colorKey: string;
 }
 
 interface TextThemeProps {
   themeOverrideFontSizes?: Record<string, number>;
-  themeOverrideColors?: Record<string, ControlColor>;
 }
 
 export interface TextThemeDefaults {
@@ -50,11 +49,11 @@ export interface ResolvedTextTheme {
 }
 
 /**
- * `theme_override_font_sizes/<sizeKey>` / `theme_override_colors/<colorKey>`.
- * Colour falls back to `defaults.color` directly; font size walks `n`'s own
- * ancestor Theme chain (`resolveNodeFontSizePx`, this module's own header) —
- * the two resolve independently, so one can be overridden while the other
- * still defaults, exactly as before this walk existed.
+ * `theme_override_font_sizes/<sizeKey>` / effectively `theme_override_colors/
+ * <colorKey>` (already folded into `n.colors` by the walker). Colour and font
+ * size resolve independently (`n.colors[keys.colorKey]` vs. `n`'s ancestor
+ * Theme chain via `resolveNodeFontSizePx`), so one can be overridden while
+ * the other still defaults.
  */
 export function resolveTextTheme(
   n: SolveNode,
@@ -64,6 +63,6 @@ export function resolveTextTheme(
 ): ResolvedTextTheme {
   return {
     fontSizePx: resolveNodeFontSizePx(n, keys.sizeKey, props.themeOverrideFontSizes?.[keys.sizeKey], defaults.fontSizePx),
-    color: props.themeOverrideColors?.[keys.colorKey] ?? defaults.color,
+    color: n.colors[keys.colorKey] ?? defaults.color,
   };
 }

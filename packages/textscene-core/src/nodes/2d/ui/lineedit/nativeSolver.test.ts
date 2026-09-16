@@ -50,6 +50,9 @@ function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, Sty
     path: 'L',
     node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as LineEditProperties },
     styleBoxes,
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not props.
+    colors: props.themeOverrideColors ?? {},
   };
 }
 

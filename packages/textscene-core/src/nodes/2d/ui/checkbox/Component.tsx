@@ -62,9 +62,9 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const iconKey = resolveCheckBoxIconKey(props);
   const iconTexture = useIconTexture(CHECK_BOX_ICONS[iconKey]);
   const iconSize = useMemo(() => {
-    const fitted = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(props));
+    const fitted = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(solveNode.constants));
     return { x: Math.round(fitted.x), y: Math.round(fitted.y) };
-  }, [props]);
+  }, [solveNode.constants]);
 
   // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';
@@ -90,8 +90,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         rectSize: { x: rect.w, y: rect.h },
         margin: theme.contentMargin,
         iconSize,
-        checkVOffset: checkBoxCheckVOffset(props),
-        hSeparation: checkBoxHSeparation(props, { theme }),
+        checkVOffset: checkBoxCheckVOffset(solveNode.constants),
+        hSeparation: checkBoxHSeparation(solveNode.constants, { theme }),
         hasText,
         // Godot's draw path reads the same ceiled `text_buf->get_size()` its
         // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
@@ -103,7 +103,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, theme, iconSize, props, hasText, layout]
+    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout]
   );
 
   return (

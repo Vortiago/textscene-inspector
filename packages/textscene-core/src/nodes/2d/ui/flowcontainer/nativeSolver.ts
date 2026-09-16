@@ -118,7 +118,7 @@ function orientationOf(n: SolveNode): boolean {
 }
 
 function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme: NativeTheme): number {
-  return (n.node.properties as ControlProperties).themeOverrideConstants?.[key] ?? theme.separation;
+  return n.constants[key] ?? theme.separation;
 }
 
 // --- The shared line-wrap pass (flow_container.cpp:65-129) -------------------

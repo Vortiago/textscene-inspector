@@ -223,3 +223,45 @@ export function resolveThemeFontSizeIn(
   }
   return builtInDefaultPx;
 }
+
+/**
+ * The StyleBox/Color/Constant sibling of `resolveThemeFontIn` — same walk
+ * (`ThemeOwner::get_theme_item_in_types`, `theme_owner.cpp:227-261`: owners
+ * outer, theme_types inner, first hit wins), but done for every NAME at once
+ * instead of one. The two are equivalent: iterating (owner, type) pairs in
+ * the SAME order and filling only a name not already set gives each name its
+ * first (owner, type) hit — identical to resolving it individually — while
+ * letting a widget's whole `styleBoxes`/`colors`/`constants` bag be built in
+ * one pass instead of one lookup per key a painter might ask for.
+ *
+ * `localOverrides` seeds the result UNCONDITIONALLY (a `theme_override_*`
+ * entry, once declared, always wins — `Control::get_theme_stylebox`/
+ * `get_theme_color`/`get_theme_constant`'s own local-override branch, no
+ * validity check unlike an ancestor Theme), so a name it already carries is
+ * never touched by the walk below.
+ *
+ * `itemsOf` reads whichever per-type map `scope`'s theme carries (`theme.styles`/
+ * `theme.colors`/`theme.constants`) — StyleBoxes go through a caller-supplied
+ * per-theme RESOLVED cache (a StyleBox is a sub-resource of the owning theme
+ * file, resolved against that theme's OWN `resources`, never this scope's
+ * node), while colors/constants read the decoded literal maps directly.
+ */
+export function mergeThemedRecord<V>(
+  scope: ThemeResolutionScope,
+  localOverrides: Readonly<Record<string, V>>,
+  itemsOf: (theme: ThemeResource) => Readonly<Record<string, Readonly<Record<string, V>>>> | undefined
+): Readonly<Record<string, V>> {
+  const out: Record<string, V> = { ...localOverrides };
+  for (const theme of scope.searchOrder) {
+    const byType = itemsOf(theme);
+    if (!byType) continue;
+    for (const type of scope.typeChain) {
+      const atType = byType[type];
+      if (!atType) continue;
+      for (const [name, value] of Object.entries(atType)) {
+        if (!Object.hasOwn(out, name)) out[name] = value;
+      }
+    }
+  }
+  return out;
+}

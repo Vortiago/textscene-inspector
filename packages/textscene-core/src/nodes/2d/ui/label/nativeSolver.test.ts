@@ -252,6 +252,9 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
         properties: { name: 'Column', themeOverrideConstants: { separation } } as ControlProperties,
       },
       children: [label('Heading', heading), label('Body', body)],
+      // A local theme_override_constants/* now reaches `separationOf` through
+      // `n.constants` (the walker folds it in unconditionally), not props.
+      constants: { separation },
     };
     return {
       ...emptySolveNode(),

@@ -24,7 +24,10 @@ const THEME = nativeTheme(1);
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
-  return { ...emptySolveNode(), path, node: tscnNode };
+  // A local theme_override_colors/* reaches `resolveTextTheme` through
+  // `n.colors` (the walker folds it in unconditionally), not properties.
+  const colors = (properties as { themeOverrideColors?: SolveNode['colors'] }).themeOverrideColors ?? {};
+  return { ...emptySolveNode(), path, node: tscnNode, colors };
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {

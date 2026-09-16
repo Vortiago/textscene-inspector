@@ -16,6 +16,7 @@
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteStringName } from '../../../parser/utils';
 import { parseOptionalFloat } from '../../../parser/valueParsers';
+import { parseColorOrUndefined, type Color } from '../../../utils/colorParser';
 import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/font/decode';
 import type { FontCacheReader } from '../../fonts/font/types';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
@@ -31,6 +32,12 @@ import { indexedKeyRegex } from '../../../godot/index.js';
 const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)$`, 'to_int');
 /** `<Type>/font_sizes/<name>`. */
 const FONT_SIZE_ENTRY = indexedKeyRegex(String.raw`^(#)/font_sizes/(#)$`, 'to_int');
+/** `<Type>/styles/<name>`. */
+const STYLE_ENTRY = indexedKeyRegex(String.raw`^(#)/styles/(#)$`, 'to_int');
+/** `<Type>/colors/<name>`. */
+const COLOR_ENTRY = indexedKeyRegex(String.raw`^(#)/colors/(#)$`, 'to_int');
+/** `<Type>/constants/<name>`. */
+const CONSTANT_ENTRY = indexedKeyRegex(String.raw`^(#)/constants/(#)$`, 'to_int');
 /** `<variationType>/base_type`. */
 const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
 
@@ -47,19 +54,29 @@ const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
  * matching `Theme::has_font`'s `Ref<Font>::is_valid()` gate
  * (`scene/resources/theme.cpp:549-552`): a Theme can never distinguish
  * "explicitly nothing" from "never set" at this level. This collapse is
- * specific to fonts/font-sizes — colors, constants and styles (kept raw here)
- * do NOT share it.
+ * specific to fonts/font-sizes.
+ *
+ * `styles`/`colors`/`constants` split out by the same `<Type>/<data_type>/
+ * <name>` regex, but styles stay a raw ref string (a StyleBox is a
+ * sub-resource of THIS theme, resolved by the reader against `resources` —
+ * see `types.ts`) while colors/constants are literal values decoded on the
+ * spot. Icons are left unscanned: this codebase draws no Theme-authored icon
+ * today (`native/themeIcons.ts` vendors the default theme's own instead), so
+ * decoding a ref nothing reads would be dead data.
  */
 function scanTheme<T>(
   properties: Record<string, string>,
   resolveRef: (ref: string) => T | null
-): ScannedTheme<T> {
+): Omit<ScannedTheme<T>, 'resources'> {
   // Prototype-free: the theme-item TYPE and NAME halves are parsed straight out
   // of a `.tres` key, so `__proto__/fonts/toString = …` would otherwise resolve
   // truthy through the chain, skip the `??=` and land the write on
   // `Object.prototype`. `in` on the read side (`lookup.ts`) walks the chain too.
   const fonts: Record<string, Record<string, T>> = Object.create(null);
   const fontSizes: Record<string, Record<string, number>> = Object.create(null);
+  const styles: Record<string, Record<string, string>> = Object.create(null);
+  const colors: Record<string, Record<string, Color>> = Object.create(null);
+  const constants: Record<string, Record<string, number>> = Object.create(null);
   const typeVariations: Record<string, string> = Object.create(null);
   const rest: Record<string, string> = Object.create(null);
 
@@ -93,6 +110,30 @@ function scanTheme<T>(
       continue;
     }
 
+    const styleMatch = key.match(STYLE_ENTRY);
+    if (styleMatch) {
+      const [, type, name] = styleMatch;
+      (styles[type!] ??= Object.create(null))[name!] = value;
+      continue;
+    }
+
+    const colorMatch = key.match(COLOR_ENTRY);
+    if (colorMatch) {
+      const [, type, name] = colorMatch;
+      const c = parseColorOrUndefined(value);
+      if (c !== undefined) (colors[type!] ??= Object.create(null))[name!] = c;
+      continue;
+    }
+
+    const constantMatch = key.match(CONSTANT_ENTRY);
+    if (constantMatch) {
+      const [, type, name] = constantMatch;
+      const n = parseOptionalFloat(value);
+      // `int constant_map` (`theme.h`) — `_to_int` truncates a fractional literal.
+      if (n !== undefined) (constants[type!] ??= Object.create(null))[name!] = Math.trunc(n);
+      continue;
+    }
+
     const baseMatch = key.match(BASE_TYPE_ENTRY);
     if (baseMatch) {
       const [, variation] = baseMatch;
@@ -104,7 +145,7 @@ function scanTheme<T>(
     rest[key] = value;
   }
 
-  return { defaultFont, defaultFontSize, fonts, fontSizes, typeVariations, properties: rest };
+  return { defaultFont, defaultFontSize, fonts, fontSizes, styles, colors, constants, typeVariations, properties: rest };
 }
 
 /**
@@ -121,7 +162,8 @@ export function decodeThemeAddresses(
 ): ThemeAddresses {
   const extPathById = new Map(extResources.map((r) => [r.id, r.path]));
   const gate = subResourceTypeGate(subResources, FONT_SUB_RESOURCE_TYPES);
-  return scanTheme(properties, (ref) => resolveRefToResourcePath(ref, extPathById, selfPath, gate));
+  const scanned = scanTheme(properties, (ref) => resolveRefToResourcePath(ref, extPathById, selfPath, gate));
+  return { ...scanned, resources: { externalResources: extResources, internalResources: subResources } };
 }
 
 /**
@@ -142,7 +184,8 @@ export function resolveInlineThemeResource(
   fontCache: FontCacheReader,
   pending: Set<string>
 ): ThemeResource {
-  return scanTheme(properties, (ref) =>
+  const scanned = scanTheme(properties, (ref) =>
     resolveInlineFontResource(ref, externalResources, internalResources, fontCache, pending)
   );
+  return { ...scanned, resources: { externalResources, internalResources } };
 }

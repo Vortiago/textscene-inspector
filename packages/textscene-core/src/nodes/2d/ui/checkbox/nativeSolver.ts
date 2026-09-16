@@ -148,18 +148,18 @@ export const CHECKBOX_ICON_NATURAL_SIZE: Vec2 = { x: 16, y: 16 };
 const DEFAULT_CHECK_V_OFFSET = 0;
 
 /** `icon_max_width` — CheckBox never registers its own; Button's default (`0`, unclamped) applies via the shared `theme_override_constants` key. */
-export function checkBoxIconMaxWidth(props: CheckBoxProperties): number {
-  return props.themeOverrideConstants?.icon_max_width ?? 0;
+export function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
+  return constants.icon_max_width ?? 0;
 }
 
 /** `h_separation` — CheckBox's own default (`default_theme.cpp:308`, `round(4*scale)`) is numerically `theme.separation`'s own literal. */
-export function checkBoxHSeparation(props: CheckBoxProperties, ctx: Pick<SolveContext, 'theme'>): number {
-  return Math.max(0, props.themeOverrideConstants?.h_separation ?? ctx.theme.separation);
+export function checkBoxHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
 /** `check_v_offset` — a `theme_override_constants` key CheckBox reads directly (`check_box.cpp:133`). */
-export function checkBoxCheckVOffset(props: CheckBoxProperties): number {
-  return props.themeOverrideConstants?.check_v_offset ?? DEFAULT_CHECK_V_OFFSET;
+export function checkBoxCheckVOffset(constants: SolveNode['constants']): number {
+  return constants.check_v_offset ?? DEFAULT_CHECK_V_OFFSET;
 }
 
 // --- Minimum size --------------------------------------------------------------
@@ -191,8 +191,8 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
-  const iconSize = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(props));
-  const hSeparation = checkBoxHSeparation(props, ctx);
+  const iconSize = fitIconSize(CHECKBOX_ICON_NATURAL_SIZE, checkBoxIconMaxWidth(n.constants));
+  const hSeparation = checkBoxHSeparation(n.constants, ctx);
 
   // Godot's own guard is `content_size.width > 0 && tex_size.width > 0`
   // (`check_box.cpp:70`) — gated on the MEASURED text width, not on whether

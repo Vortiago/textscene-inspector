@@ -46,6 +46,10 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
       children: [],
       properties: { name: 'CB', ...props } as CheckButtonProperties,
     },
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not props.
+    colors: props.themeOverrideColors ?? {},
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 
@@ -127,11 +131,11 @@ describe('resolveCheckButtonIconKey (check_button.cpp:112-142)', () => {
 
 describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   it('is opaque white when unchecked', () => {
-    expect(checkButtonIconColor({} as CheckButtonProperties)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(checkButtonIconColor({} as CheckButtonProperties, {})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('is opaque white when checked (a DIFFERENT theme key, same default literal)', () => {
-    expect(checkButtonIconColor({ buttonPressed: true } as CheckButtonProperties)).toEqual({
+    expect(checkButtonIconColor({ buttonPressed: true } as CheckButtonProperties, {})).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -139,13 +143,11 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
     });
   });
 
-  it('a theme_override_colors/button_checked_color override wins when checked', () => {
-    const props: CheckButtonProperties = {
-      name: 'CB',
-      buttonPressed: true,
-      themeOverrideColors: { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } },
-    };
-    expect(checkButtonIconColor(props)).toEqual({ r: 0, g: 1, b: 0, a: 1 });
+  it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
+    const props: CheckButtonProperties = { name: 'CB', buttonPressed: true };
+    expect(
+      checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })
+    ).toEqual({ r: 0, g: 1, b: 0, a: 1 });
   });
 });
 

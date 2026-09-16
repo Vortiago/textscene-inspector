@@ -128,7 +128,7 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const popups = popupChildren(n);
   if (popups.length === 0) return { size: { x: 0, y: 0 } };
 
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? ctx.theme.separation;
+  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
 
   // `ctx.measureText` is only a READINESS gate here (`solverRegistry.ts`'s own
   // contract) — every title's text is non-empty by construction (falls back

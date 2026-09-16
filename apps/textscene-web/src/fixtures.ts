@@ -2013,6 +2013,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Theme Stylebox Color",
+    "file": "unit-control-theme-stylebox-color.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Transform Modulate",
     "file": "unit-control-transform-modulate.tscn",
     "category": "Unit - 2D UI Controls"

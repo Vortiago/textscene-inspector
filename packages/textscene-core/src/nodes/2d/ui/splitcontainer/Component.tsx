@@ -45,7 +45,7 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
   // this painter has no rect to draw an icon between otherwise.
   const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
   const drawsGrabber =
-    sortable.length === 2 && isSplitGrabberVisible(props, theme.widgets.splitContainer);
+    sortable.length === 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
   const texture = useOptionalIconTexture(drawsGrabber ? icon : null);
 
@@ -53,7 +53,7 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
     return null;
   }
 
-  const separation = resolveSplitSeparation(props, theme.widgets.splitContainer);
+  const separation = resolveSplitSeparation(props, solveNode.constants, theme.widgets.splitContainer);
   const [first, second] = sortable as [SolveNode, SolveNode];
   const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
   const draggerPos =

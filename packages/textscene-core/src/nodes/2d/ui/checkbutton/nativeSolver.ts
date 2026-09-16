@@ -129,9 +129,9 @@ export function resolveCheckButtonIconKey(props: CheckButtonProperties): CheckBu
 /** `button_checked_color`/`button_unchecked_color` — both `Color(1, 1, 1)` (`default_theme.cpp:352-353`), bindable via `theme_override_colors`, read regardless of `disabled` (the dimming is baked into the `_disabled` icon variants themselves, `check_button.cpp:139-141`). */
 const CHECKBUTTON_ICON_MODULATE_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-export function checkButtonIconColor(props: CheckButtonProperties): ControlColor {
+export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): ControlColor {
   const key = props.buttonPressed ? 'button_checked_color' : 'button_unchecked_color';
-  return props.themeOverrideColors?.[key] ?? CHECKBUTTON_ICON_MODULATE_DEFAULT;
+  return colors[key] ?? CHECKBUTTON_ICON_MODULATE_DEFAULT;
 }
 
 // --- Theme constants -----------------------------------------------------------
@@ -147,18 +147,18 @@ export function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
 }
 
 /** `icon_max_width` — CheckButton never registers its own; Button's default (`0`, unclamped) applies via the shared `theme_override_constants` key (`check_button.cpp` binds no `icon_max_width` of its own; Button's `_bind_methods` does). */
-export function checkButtonIconMaxWidth(props: CheckButtonProperties): number {
-  return props.themeOverrideConstants?.icon_max_width ?? 0;
+export function checkButtonIconMaxWidth(constants: SolveNode['constants']): number {
+  return constants.icon_max_width ?? 0;
 }
 
 /** `h_separation` — CheckButton's own default (`default_theme.cpp:348`, `round(4*scale)`) is numerically `theme.separation`'s own literal. */
-export function checkButtonHSeparation(props: CheckButtonProperties, ctx: Pick<SolveContext, 'theme'>): number {
-  return Math.max(0, props.themeOverrideConstants?.h_separation ?? ctx.theme.separation);
+export function checkButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
 /** `check_v_offset` — a `theme_override_constants` key CheckButton reads directly (`check_button.cpp:143`), default `0` (`default_theme.cpp:349`). */
-export function checkButtonCheckVOffset(props: CheckButtonProperties): number {
-  return props.themeOverrideConstants?.check_v_offset ?? 0;
+export function checkButtonCheckVOffset(constants: SolveNode['constants']): number {
+  return constants.check_v_offset ?? 0;
 }
 
 /** CheckButton's own default text alignment is LEFT (`CheckButton::CheckButton()`, `check_button.cpp:169`: `set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)`), overriding Button's CENTER default — a scene's own `alignment` override still wins. */
@@ -195,8 +195,8 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
-  const iconSize = fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(props));
-  const hSeparation = checkButtonHSeparation(props, ctx);
+  const iconSize = fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(n.constants));
+  const hSeparation = checkButtonHSeparation(n.constants, ctx);
 
   const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
   const height = 2 * marginY + Math.max(textSize.y, iconSize.y);

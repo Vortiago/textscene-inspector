@@ -69,6 +69,11 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
       children: [],
       properties: { name: 'O', ...props } as OptionButtonProperties,
     },
+    // A local theme_override_colors/*(constants/*) reaches a solver through
+    // `n.colors`/`n.constants` (the walker folds them in unconditionally),
+    // not props.
+    colors: props.themeOverrideColors ?? {},
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 

@@ -42,8 +42,12 @@ describe('resolveThemeResource', () => {
       defaultFontSize: 20,
       fonts: { Label: { font: 'res://fonts/label.ttf' } },
       fontSizes: { Label: { font_size: 24 } },
+      styles: {},
+      colors: {},
+      constants: {},
       typeVariations: {},
       properties: {},
+      resources: { externalResources: [], internalResources: [] },
     };
 
     const resource = await resolveThemeResource(addresses, loadFont);
@@ -59,8 +63,12 @@ describe('resolveThemeResource', () => {
       defaultFontSize: undefined,
       fonts: { Button: { font: 'res://fonts/missing.ttf' } },
       fontSizes: {},
+      styles: {},
+      colors: {},
+      constants: {},
       typeVariations: {},
       properties: {},
+      resources: { externalResources: [], internalResources: [] },
     };
     const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
     expect(resource.fonts.Button).toBeUndefined();
@@ -72,8 +80,12 @@ describe('resolveThemeResource', () => {
       defaultFontSize: undefined,
       fonts: {},
       fontSizes: {},
+      styles: {},
+      colors: {},
+      constants: {},
       typeVariations: {},
       properties: {},
+      resources: { externalResources: [], internalResources: [] },
     };
     const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
     expect(resource.defaultFont).toBeNull();
@@ -88,7 +100,7 @@ describe('createThemeResourceFromContent', () => {
     expect(resource.defaultFontSize).toBe(20);
     expect(resource.fonts.Label?.font).toBe(FONT_A);
     expect(resource.typeVariations.title_panel).toBe('Panel');
-    expect(resource.properties['Panel/styles/panel']).toBe('null');
+    expect(resource.styles?.Panel?.panel).toBe('null');
   });
 
   it('resolves a named Theme sub-resource inside a shared file', async () => {

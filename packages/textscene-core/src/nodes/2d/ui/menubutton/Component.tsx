@@ -99,7 +99,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
     return w > 0 && h > 0 ? { x: w, y: h } : null;
   }, [props.icon, iconTexture]);
 
-  const baseIconColor = buttonIconColor(props, state);
+  const baseIconColor = buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(
     () => tintColor(baseIconColor, tint.own),
     [baseIconColor, tint.own]
@@ -112,8 +112,8 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
       layoutButtonContent({
         rectSize: { x: rect.w, y: rect.h },
         styleMargin: baseStyleBox.contentMargin,
-        hSeparation: props.themeOverrideConstants?.h_separation ?? theme.separation,
-        iconMaxWidth: props.themeOverrideConstants?.icon_max_width ?? 0,
+        hSeparation: solveNode.constants.h_separation ?? theme.separation,
+        iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
         textAlignment: props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER,
         iconAlignment: props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT,
         verticalIconAlignment: props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER,
@@ -128,7 +128,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
       rect.w,
       rect.h,
       baseStyleBox.contentMargin,
-      props.themeOverrideConstants,
+      solveNode.constants,
       props.alignment,
       props.iconAlignment,
       props.verticalIconAlignment,

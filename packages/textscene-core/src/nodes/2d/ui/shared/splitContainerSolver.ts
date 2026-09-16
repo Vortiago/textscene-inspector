@@ -273,14 +273,18 @@ export interface SplitSeparationTheme {
  * without a second theme-reading implementation to drift from this one — see
  * `hsplitcontainer/Component.tsx`'s module doc for why it needs to.
  */
-export function resolveSplitSeparation(props: SplitContainerProperties, theme: SplitSeparationTheme): number {
+export function resolveSplitSeparation(
+  props: SplitContainerProperties,
+  constants: SolveNode['constants'],
+  theme: SplitSeparationTheme
+): number {
   if (props.draggerVisibility === DRAGGER_HIDDEN_COLLAPSED) return 0;
-  const themeSeparation = props.themeOverrideConstants?.separation ?? theme.separation;
+  const themeSeparation = constants.separation ?? theme.separation;
   return Math.max(themeSeparation, theme.grabberExtent);
 }
 
 function separationOf(n: SolveNode, ctx: SolveContext): number {
-  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, ctx.theme.widgets.splitContainer);
+  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, ctx.theme.widgets.splitContainer);
 }
 
 function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
@@ -415,9 +419,13 @@ export interface SplitGrabberTheme {
  * and draws nothing regardless of any of this, so it contributes no further
  * visibility case.
  */
-export function isSplitGrabberVisible(props: SplitContainerProperties, theme: SplitGrabberTheme): boolean {
+export function isSplitGrabberVisible(
+  props: SplitContainerProperties,
+  constants: SolveNode['constants'],
+  theme: SplitGrabberTheme
+): boolean {
   const draggerVisibility = props.draggerVisibility ?? DRAGGER_VISIBLE;
-  const autohideOverride = props.themeOverrideConstants?.autohide;
+  const autohideOverride = constants.autohide;
   const autohide = autohideOverride !== undefined ? autohideOverride !== 0 : theme.autohide;
   return props.collapsed !== true && draggerVisibility === DRAGGER_VISIBLE && !autohide;
 }

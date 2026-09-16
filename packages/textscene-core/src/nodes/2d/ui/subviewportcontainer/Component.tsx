@@ -187,6 +187,8 @@ function ViewportSurfaceNative({
       fontOverrides: {},
       themeChain: [],
       projectTheme: null,
+      colors: {},
+      constants: {},
       // The scope this container itself was resolved in: the SubViewport is a
       // child of this node, so its refs name the same pools.
       resources: { externalResources, internalResources },

@@ -128,8 +128,8 @@ export function resolveOptionButtonSelectedText(props: OptionButtonProperties): 
 /** `option_button_arrow.svg`'s own authored size (`native/themeIcons.ts`), 12x12 — NEVER run through `_fit_icon_size`. */
 export const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vec2 = { x: 12, y: 12 };
 
-function optionButtonHSeparation(props: OptionButtonProperties, ctx: Pick<SolveContext, 'theme'>): number {
-  return Math.max(0, props.themeOverrideConstants?.h_separation ?? ctx.theme.separation);
+function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
 // --- Minimum size ----------------------------------------------------------------
@@ -172,7 +172,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
   }
 
-  const hSeparation = optionButtonHSeparation(props, ctx);
+  const hSeparation = optionButtonHSeparation(n.constants, ctx);
   const arrow = OPTION_BUTTON_ARROW_NATURAL_SIZE;
 
   const width = marginX + textW + arrow.x + hSeparation;

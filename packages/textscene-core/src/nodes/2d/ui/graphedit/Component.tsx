@@ -162,8 +162,8 @@ export function GraphEdit({ solveNode, tint, rect, theme, renderOrder }: NativeC
   const snappingDistance = props.snappingDistance ?? 20;
   const scrollOffset = useMemo(() => ({ x: scrollOffsetX, y: scrollOffsetY }), [scrollOffsetX, scrollOffsetY]);
 
-  const majorColor = useColorQuad(props.themeOverrideColors?.grid_major ?? GRID_MAJOR_DEFAULT, tint.own);
-  const minorColor = useColorQuad(props.themeOverrideColors?.grid_minor ?? GRID_MINOR_DEFAULT, tint.own);
+  const majorColor = useColorQuad(solveNode.colors.grid_major ?? GRID_MAJOR_DEFAULT, tint.own);
+  const minorColor = useColorQuad(solveNode.colors.grid_minor ?? GRID_MINOR_DEFAULT, tint.own);
   // `transparent_grid_minor.a *= CLAMP(1.0 * (zoom - 0.4), 0, 1)` (graph_edit.cpp:1932).
   const minorDotAlphaFactor = Math.min(1, Math.max(0, zoom - 0.4));
   const minorDotColor = useMemo(

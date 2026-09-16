@@ -263,24 +263,19 @@ describe('resolveSplitSeparation', () => {
   }
 
   it('uses the theme default (12) when nothing overrides it', () => {
-    expect(resolveSplitSeparation(separationProps(), THEME)).toBe(12);
+    expect(resolveSplitSeparation(separationProps(), {}, THEME)).toBe(12);
   });
 
-  it('floors an undersized theme_override_constants/separation at the grabber extent (8)', () => {
-    expect(resolveSplitSeparation(separationProps({ themeOverrideConstants: { separation: 0 } }), THEME)).toBe(8);
+  it('floors an undersized theme_override_constants/separation (already folded into n.constants) at the grabber extent (8)', () => {
+    expect(resolveSplitSeparation(separationProps(), { separation: 0 }, THEME)).toBe(8);
   });
 
   it('honours an oversized override', () => {
-    expect(resolveSplitSeparation(separationProps({ themeOverrideConstants: { separation: 30 } }), THEME)).toBe(30);
+    expect(resolveSplitSeparation(separationProps(), { separation: 30 }, THEME)).toBe(30);
   });
 
   it('forces 0 for DRAGGER_HIDDEN_COLLAPSED regardless of theme/override', () => {
-    expect(
-      resolveSplitSeparation(
-        separationProps({ draggerVisibility: 2, themeOverrideConstants: { separation: 99 } }),
-        THEME
-      )
-    ).toBe(0);
+    expect(resolveSplitSeparation(separationProps({ draggerVisibility: 2 }), { separation: 99 }, THEME)).toBe(0);
   });
 });
 
@@ -292,26 +287,19 @@ function props(overrides: Partial<SplitContainerProperties> = {}): SplitContaine
 
 describe('isSplitGrabberVisible', () => {
   it('hidden by DEFAULT: autohide theme default (true) with no mouse/drag state a static render ever has', () => {
-    expect(isSplitGrabberVisible(props(), { autohide: true })).toBe(false);
+    expect(isSplitGrabberVisible(props(), {}, { autohide: true })).toBe(false);
   });
 
-  it('visible when a scene overrides autohide to 0', () => {
-    expect(isSplitGrabberVisible(props({ themeOverrideConstants: { autohide: 0 } }), { autohide: true })).toBe(true);
+  it('visible when a scene overrides autohide to 0 (already folded into n.constants)', () => {
+    expect(isSplitGrabberVisible(props(), { autohide: 0 }, { autohide: true })).toBe(true);
   });
 
   it('still hidden with autohide overridden false if dragger_visibility is not VISIBLE', () => {
-    expect(
-      isSplitGrabberVisible(
-        props({ themeOverrideConstants: { autohide: 0 }, draggerVisibility: 2 }),
-        { autohide: true }
-      )
-    ).toBe(false);
+    expect(isSplitGrabberVisible(props({ draggerVisibility: 2 }), { autohide: 0 }, { autohide: true })).toBe(false);
   });
 
   it('still hidden with autohide overridden false while collapsed', () => {
-    expect(
-      isSplitGrabberVisible(props({ themeOverrideConstants: { autohide: 0 }, collapsed: true }), { autohide: true })
-    ).toBe(false);
+    expect(isSplitGrabberVisible(props({ collapsed: true }), { autohide: 0 }, { autohide: true })).toBe(false);
   });
 
   it('DRAGGER_VISIBLE is the explicit default enum value', () => {
@@ -337,7 +325,10 @@ describe('splitGrabberIconRect', () => {
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  return { ...emptySolveNode(), path, node: tscnNode, children };
+  // A local theme_override_constants/* now reaches a solver through
+  // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
+  const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+  return { ...emptySolveNode(), path, node: tscnNode, children, constants };
 }
 
 describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registered end-to-end', () => {
@@ -435,7 +426,11 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path) };
+        // A local theme_override_constants/* now reaches a solver through
+        // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
+        const constants =
+          (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path), constants };
       });
     }
 
@@ -466,7 +461,11 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path) };
+        // A local theme_override_constants/* now reaches a solver through
+        // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
+        const constants =
+          (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
+        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path), constants };
       });
     }
 

@@ -94,10 +94,13 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const upIconTexture = useIconTexture(SPIN_BOX_ICONS.up);
   const downIconTexture = useIconTexture(SPIN_BOX_ICONS.down);
 
-  const upIconColorSrgb = useMemo(() => tintColor(spinBoxIconColor(props, 'up', upState), tint.own), [props, upState, tint.own]);
+  const upIconColorSrgb = useMemo(
+    () => tintColor(spinBoxIconColor(solveNode.colors, 'up', upState), tint.own),
+    [solveNode.colors, upState, tint.own]
+  );
   const downIconColorSrgb = useMemo(
-    () => tintColor(spinBoxIconColor(props, 'down', downState), tint.own),
-    [props, downState, tint.own]
+    () => tintColor(spinBoxIconColor(solveNode.colors, 'down', downState), tint.own),
+    [solveNode.colors, downState, tint.own]
   );
   const upIconLinear = useGodotLinearColor(upIconColorSrgb);
   const downIconLinear = useGodotLinearColor(downIconColorSrgb);

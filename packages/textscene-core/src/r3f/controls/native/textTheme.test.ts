@@ -1,11 +1,10 @@
 /**
  * `resolveTextTheme` — the override key-name mapping a Control authors as
  * `theme_override_font_sizes/<key>` / `theme_override_colors/<key>`, resolved
- * to plain data a painter can read. Font SIZE goes through the SAME
- * ancestor-Theme walk `resolveNodeFontMetrics` already performs for the font
- * itself (`resolveNodeFontSizePx`/`Control::get_theme_font_size`,
- * `scene/gui/control.cpp:3107-3129`); colour does not (no `Theme` colour
- * decode exists in this codebase — the Theme slice's own scope).
+ * to plain data a painter can read. Font size and colour both go through an
+ * ancestor-Theme walk (`resolveNodeFontSizePx`/`Control::get_theme_font_size`
+ * for size; `n.colors`, already folded by `buildSolveTree.ts`'s
+ * `resolveThemedColors`/`Control::get_theme_color`, for colour).
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from './solveTree';
@@ -38,11 +37,8 @@ describe('resolveTextTheme', () => {
 
   it('reads font_size/font_color for Label-shaped keys', () => {
     const resolved = resolveTextTheme(
-      node(),
-      {
-        themeOverrideFontSizes: { font_size: 24 },
-        themeOverrideColors: { font_color: { r: 0.2, g: 0.4, b: 0.6, a: 0.8 } },
-      },
+      node({ colors: { font_color: { r: 0.2, g: 0.4, b: 0.6, a: 0.8 } } }),
+      { themeOverrideFontSizes: { font_size: 24 } },
       LABEL_KEYS,
       DEFAULTS
     );
@@ -51,11 +47,8 @@ describe('resolveTextTheme', () => {
 
   it('reads normal_font_size/default_color for RichTextLabel-shaped keys, ignoring Label-shaped ones', () => {
     const resolved = resolveTextTheme(
-      node(),
-      {
-        themeOverrideFontSizes: { normal_font_size: 20, font_size: 99 },
-        themeOverrideColors: { default_color: { r: 0, g: 0, b: 0, a: 1 } },
-      },
+      node({ colors: { default_color: { r: 0, g: 0, b: 0, a: 1 } } }),
+      { themeOverrideFontSizes: { normal_font_size: 20, font_size: 99 } },
       RICH_TEXT_LABEL_KEYS,
       DEFAULTS
     );
@@ -101,9 +94,19 @@ describe('resolveTextTheme', () => {
     expect(resolved.fontSizePx).toBe(30);
   });
 
-  it('(edge) the ancestor walk never touches colour — an ancestor theme with a matching font_sizes entry still defaults colour independently', () => {
+  it('colour and font size resolve independently through their own ancestor-theme data — a font_sizes-only theme still defaults colour', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 28 } } };
     const resolved = resolveTextTheme(node({ themeChain: [theme] }), {}, LABEL_KEYS, DEFAULTS);
     expect(resolved.color).toEqual(DEFAULTS.color);
+  });
+
+  it('colour reads from n.colors (the walker-merged bag), not from props', () => {
+    const resolved = resolveTextTheme(
+      node({ colors: { font_color: { r: 0.2, g: 0.4, b: 0.6, a: 0.8 } } }),
+      {},
+      LABEL_KEYS,
+      DEFAULTS
+    );
+    expect(resolved.color).toEqual({ r: 0.2, g: 0.4, b: 0.6, a: 0.8 });
   });
 });

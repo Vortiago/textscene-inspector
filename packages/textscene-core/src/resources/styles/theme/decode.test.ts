@@ -5,16 +5,51 @@ import type { FontResource } from '../../fonts/font/types';
 const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
 
 describe('decodeThemeAddresses', () => {
-  it('decodes default_font/default_font_size and leaves the rest raw', () => {
+  it('decodes default_font/default_font_size and leaves an unscanned key (icons) raw', () => {
     const addresses = decodeThemeAddresses(
       'res://theme.tres',
-      { default_font: 'ExtResource("1")', default_font_size: '20', 'Panel/styles/panel': 'SubResource("2")' },
+      { default_font: 'ExtResource("1")', default_font_size: '20', 'Panel/icons/panel': 'SubResource("2")' },
       [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
       []
     );
     expect(addresses.defaultFont).toBe('res://fonts/a.ttf');
     expect(addresses.defaultFontSize).toBe(20);
-    expect(addresses.properties).toEqual({ 'Panel/styles/panel': 'SubResource("2")' });
+    expect(addresses.properties).toEqual({ 'Panel/icons/panel': 'SubResource("2")' });
+  });
+
+  it('decodes <Type>/styles/<name> as a raw ref string, and carries the theme file\'s own resource pools', () => {
+    const ext = [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }];
+    const sub = [{ id: '2', type: 'StyleBoxFlat', data: {} }];
+    const addresses = decodeThemeAddresses('res://theme.tres', { 'Panel/styles/panel': 'SubResource("2")' }, ext, sub);
+    expect(addresses.styles?.Panel?.panel).toBe('SubResource("2")');
+    expect(addresses.resources).toEqual({ externalResources: ext, internalResources: sub });
+  });
+
+  it('decodes <Type>/colors/<name> (Theme::get_color, theme.cpp:761-767)', () => {
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'Label/colors/font_color': 'Color(0.2, 0.4, 0.6, 1)' },
+      [],
+      []
+    );
+    expect(addresses.colors?.Label?.font_color).toEqual({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
+  });
+
+  it('omits a colors entry whose value is not a Color literal', () => {
+    const addresses = decodeThemeAddresses('res://theme.tres', { 'Label/colors/font_color': 'not-a-color' }, [], []);
+    expect(addresses.colors?.Label).toBeUndefined();
+  });
+
+  it('decodes <Type>/constants/<name> as a literal int, unscaled (Theme::get_constant, theme.cpp:858-864)', () => {
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      { 'Button/constants/h_separation': '4', 'Button/constants/outline_size': '-1.9' },
+      [],
+      []
+    );
+    expect(addresses.constants?.Button?.h_separation).toBe(4);
+    // `int constant_map` (`theme.h`) — a fractional literal truncates towards zero.
+    expect(addresses.constants?.Button?.outline_size).toBe(-1);
   });
 
   it('is absent when default_font/default_font_size are not declared', () => {
@@ -90,14 +125,25 @@ describe('resolveInlineThemeResource', () => {
     expect(resource.fonts.Label?.font).toEqual({ kind: 'system', fontNames: ['monospace'], properties: {} });
   });
 
-  it('leaves non-font properties raw', () => {
+  it('leaves an unscanned key (icons) raw, and decodes styles/colors/constants inline', () => {
+    const ext = [{ id: '1', path: 'res://tex.png', type: 'Texture2D' }];
+    const int = [{ id: '2', type: 'StyleBoxFlat', data: {} }];
     const resource = resolveInlineThemeResource(
-      { 'Panel/styles/panel': 'null' },
-      [],
-      [],
+      {
+        'Panel/icons/panel': 'null',
+        'Panel/styles/panel': 'SubResource("2")',
+        'Label/colors/font_color': 'Color(1, 0, 0, 1)',
+        'Button/constants/h_separation': '4',
+      },
+      ext,
+      int,
       { getCached: () => undefined },
       new Set()
     );
-    expect(resource.properties).toEqual({ 'Panel/styles/panel': 'null' });
+    expect(resource.properties).toEqual({ 'Panel/icons/panel': 'null' });
+    expect(resource.styles?.Panel?.panel).toBe('SubResource("2")');
+    expect(resource.colors?.Label?.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(resource.constants?.Button?.h_separation).toBe(4);
+    expect(resource.resources).toEqual({ externalResources: ext, internalResources: int });
   });
 });

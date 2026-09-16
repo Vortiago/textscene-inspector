@@ -157,17 +157,14 @@ describe('spinBoxFullyDisabled / spinBoxUpButtonState / spinBoxDownButtonState',
 
 describe('spinBoxIconColor', () => {
   it('defaults to control_font_color / control_font_disabled_color (happy path)', () => {
-    expect(spinBoxIconColor({ name: 'S' }, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-    expect(spinBoxIconColor({ name: 'S' }, 'down', 'disabled')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
+    expect(spinBoxIconColor({}, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+    expect(spinBoxIconColor({}, 'down', 'disabled')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
   });
 
-  it('a theme_override_colors entry wins (error path — malformed keys are absent, not applied)', () => {
-    const props: SpinBoxProperties = {
-      name: 'S',
-      themeOverrideColors: { up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } },
-    };
-    expect(spinBoxIconColor(props, 'up', 'normal')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-    expect(spinBoxIconColor(props, 'down', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  it('a theme_override_colors entry (already folded into n.colors) wins (error path — malformed keys are absent, not applied)', () => {
+    const colors = { up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } };
+    expect(spinBoxIconColor(colors, 'up', 'normal')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(spinBoxIconColor(colors, 'down', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 });
 

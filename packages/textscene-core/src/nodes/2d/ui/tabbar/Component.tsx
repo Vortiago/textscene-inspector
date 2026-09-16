@@ -81,9 +81,9 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? theme.separation;
-  const tabSeparation = props.themeOverrideConstants?.tab_separation ?? 0;
-  const iconMaxWidth = props.themeOverrideConstants?.icon_max_width ?? 0;
+  const hSeparation = solveNode.constants.h_separation ?? theme.separation;
+  const tabSeparation = solveNode.constants.tab_separation ?? 0;
+  const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
 
   const scale = reconstructThemeScale(theme);
   const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
@@ -227,7 +227,7 @@ function TabBarTabChrome({
 
   const fontColor = tabBarTextTheme(solveNode, props, state, { theme }).color;
   const tintedFontColor = tintColor(fontColor, tint.own);
-  const baseIconColor = tabBarIconColor(props, state);
+  const baseIconColor = tabBarIconColor(solveNode.colors, state);
   const tintedIconColor = tintColor(baseIconColor, tint.own);
   const iconLinearColor = useGodotLinearColor(tintedIconColor);
   const closeLinearColor = useGodotLinearColor(tint.own);

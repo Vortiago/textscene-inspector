@@ -46,6 +46,9 @@ function grid(name: string, props: Partial<GridContainerProperties>, children: S
       properties: { name, ...props } as GridContainerProperties,
     },
     children,
+    // A local theme_override_constants/* now reaches `separationOf` through
+    // `n.constants` (the walker folds it in unconditionally), not props.
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 

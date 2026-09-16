@@ -137,6 +137,41 @@ describe('editor-camera constants mirror the previewer', () => {
   });
 });
 
+describe('projectConfig — an autoload is a script too', () => {
+  const withAutoloads = [
+    '[application]',
+    'config/name="Tool"',
+    '',
+    '[autoload]',
+    'ThemeManager="*res://common/autoloads/theme_manager.gd"',
+    'WindowManager="*res://common/autoloads/window_manager.gd"',
+    '',
+    '[rendering]',
+    'anti_aliasing/quality/msaa_3d=2',
+  ].join('\n');
+
+  /**
+   * Stripping a scene's own scripts is only half the rule: an autoload runs
+   * before the scene exists and reaches it anyway. A real project does exactly
+   * that — protongraph's `ThemeManager._ready` assigns
+   * `get_tree().get_root().theme`, so every widget is themed by a singleton
+   * while the scene file says nothing about a theme at all.
+   */
+  it('drops the autoloads when the scene is rendered as the editor shows it', () => {
+    const ini = projectConfig(withAutoloads, { width: 400, height: 300, runScripts: false });
+    expect(ini).not.toMatch(/theme_manager\.gd/);
+    expect(ini).not.toMatch(/WindowManager/);
+    // Everything else the project set still travels.
+    expect(ini).toMatch(/anti_aliasing\/quality\/msaa_3d=2/);
+    expect(ini).toMatch(/config\/name="Tool"/);
+  });
+
+  it('keeps them for a runtime render, which is a running game', () => {
+    const ini = projectConfig(withAutoloads, { width: 400, height: 300, runScripts: true });
+    expect(ini).toMatch(/theme_manager\.gd/);
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * The editor does not run a plain script's `_ready`, and this harness's

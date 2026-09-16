@@ -775,6 +775,133 @@ describe('useBuildSolveTree — theme resolution', () => {
   });
 });
 
+describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () => {
+  it("a themed widget picks the ancestor Theme's StyleBox over nothing, when it authors no local override", () => {
+    const loader = createFakeResourceLoader();
+    const flatBox: TscnInternalResource = { id: 'flat1', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } };
+    loader.themes.seed(
+      'res://theme.tres',
+      theme({
+        styles: { Panel: { panel: 'SubResource("flat1")' } },
+        resources: { externalResources: [], internalResources: [flatBox] },
+      })
+    );
+
+    const nodes = [node('Root', 'Panel', { properties: { name: 'Root', theme: 'ExtResource("1_theme")' } })];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.styleBoxes.panel?.bgColor).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('a local theme_override_styles/* still beats both the ancestor Theme and the local override on a farther ancestor', () => {
+    const loader = createFakeResourceLoader();
+    const themedBox: TscnInternalResource = { id: 'flat1', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } };
+    const localBox: TscnInternalResource = { id: 'flat2', type: 'StyleBoxFlat', data: { bg_color: 'Color(0, 1, 0, 1)' } };
+    loader.themes.seed(
+      'res://theme.tres',
+      theme({
+        styles: { Panel: { panel: 'SubResource("flat1")' } },
+        resources: { externalResources: [], internalResources: [themedBox] },
+      })
+    );
+
+    const nodes = [
+      node('Root', 'Panel', {
+        properties: {
+          name: 'Root',
+          theme: 'ExtResource("1_theme")',
+          themeOverrideStyles: { panel: 'SubResource("flat2")' },
+        } as Record<string, unknown>,
+      }),
+    ];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, [localBox]), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.styleBoxes.panel?.bgColor).toEqual({ r: 0, g: 1, b: 0, a: 1 });
+  });
+
+  it("a themed widget's descendant resolves a Theme colour through the SAME ancestor chain, and a local theme_override_colors/* still wins", () => {
+    const loader = createFakeResourceLoader();
+    loader.themes.seed(
+      'res://theme.tres',
+      theme({ colors: { Panel: { font_color: { r: 0, g: 0, b: 1, a: 1 } } } })
+    );
+
+    const nodes = [node('Root', 'Panel', { properties: { name: 'Root', theme: 'ExtResource("1_theme")' } })];
+    (nodes[0] as TscnNode).children = [
+      node('Child', 'Panel', {
+        properties: { name: 'Child', themeOverrideColors: { font_color: { r: 1, g: 1, b: 1, a: 1 } } } as Record<
+          string,
+          unknown
+        >,
+      }),
+    ];
+    const externalResources = [{ id: '1_theme', path: 'res://theme.tres', type: 'Theme' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    const root = result.current.tree.find((n) => n.path === 'Root')!;
+    const child = root.children.find((c) => c.path === 'Root/Child')!;
+    expect(root.colors.font_color).toEqual({ r: 0, g: 0, b: 1, a: 1 });
+    expect(child.colors.font_color).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+  });
+
+  it('an empty ancestor Theme contributes nothing, and a Theme constant reaches SolveNode.constants unscaled from the PROJECT theme', async () => {
+    const projectGodot = ['config_version=5', '', '[gui]', '', 'theme/custom="res://project_theme.tres"', ''].join(
+      '\n'
+    );
+    const themeTres = [
+      '[gd_resource type="Theme" load_steps=1 format=3]',
+      '',
+      '[resource]',
+      'Panel/constants/h_separation = 8',
+      '',
+    ].join('\n');
+    const files: Record<string, string> = {
+      'res://project.godot': projectGodot,
+      'res://project_theme.tres': themeTres,
+    };
+    const provider: ResourceProvider = {
+      async loadResource(path: string) {
+        const content = files[path];
+        if (content === undefined) throw new Error(`Resource not found: ${path}`);
+        return content;
+      },
+    };
+    const bus = new FileEventBus(provider);
+    const loader = new ResourceLoader(bus);
+    loader.setProvider(provider);
+
+    const nodes = [node('Root', 'Panel', { properties: { name: 'Root' } })];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>
+          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+        </ResourceLoaderProvider>
+      ),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // Unscaled — the literal `8` the project theme's own `.tres` declares,
+    // never multiplied by this previewer's own built-in-default scale.
+    expect(result.current.tree[0]?.constants.h_separation).toBe(8);
+  });
+});
+
 /**
  * The inline-procedural texture's minimum-size contribution, end to end:
  * `.tscn` text → `useBuildSolveTree` → `solveControlTree`. The unit test above

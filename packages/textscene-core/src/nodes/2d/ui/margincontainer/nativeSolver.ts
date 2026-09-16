@@ -44,7 +44,7 @@ function props(n: SolveNode): ControlProperties {
 
 
 function marginsOf(n: SolveNode): { left: number; top: number; right: number; bottom: number } {
-  const c = props(n).themeOverrideConstants ?? {};
+  const c = n.constants;
   return {
     left: c.margin_left ?? DEFAULT_MARGIN,
     top: c.margin_top ?? DEFAULT_MARGIN,

@@ -47,6 +47,9 @@ function flow(
       properties: { name: 'F', ...rest, themeOverrideConstants } as FlowContainerProperties,
     },
     children,
+    // A local theme_override_constants/* now reaches `separationOf` through
+    // `n.constants` (the walker folds it in unconditionally), not props.
+    constants: themeOverrideConstants,
   };
 }
 

@@ -135,7 +135,7 @@ export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
 
 /** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`) — scale recovered as `defaultStyles`'s own doc explains. */
 function separationOf(n: SolveNode, theme: NativeTheme): number {
-  const override = (n.node.properties as GraphNodeProperties).themeOverrideConstants?.separation;
+  const override = n.constants.separation;
   if (override !== undefined) return override;
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
   return Math.round(2 * scale);

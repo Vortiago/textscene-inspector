@@ -64,6 +64,10 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
     ...solveNode(),
     path: 'C',
     node: { name: 'C', type: 'CheckBox', children: [], properties: { name: 'C', ...props } as CheckBoxProperties },
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not props.
+    colors: props.themeOverrideColors ?? {},
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 

@@ -7,7 +7,6 @@
  */
 
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import { controlProps } from '../../../../r3f/controls/native/solveTree';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { SeparatorOrientation } from './styleBoxLine';
 
@@ -24,8 +23,7 @@ import type { SeparatorOrientation } from './styleBoxLine';
  */
 export function separatorMinimumSize(orientation: SeparatorOrientation): MinimumSizeFn {
   return (n, ctx): Vec2 => {
-    const override = controlProps(n).themeOverrideConstants?.separation;
-    const separation = override ?? ctx.theme.separation;
+    const separation = n.constants.separation ?? ctx.theme.separation;
     return orientation === 'vertical' ? { x: separation, y: 3 } : { x: 3, y: separation };
   };
 }

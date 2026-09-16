@@ -98,8 +98,8 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
 }
 
 /** `theme_override_constants/port_h_offset`, else `0` (`default_theme.cpp`'s own literal, not scaled). */
-function portHOffsetOf(props: GraphNodeProperties): number {
-  return props.themeOverrideConstants?.port_h_offset ?? 0;
+function portHOffsetOf(constants: SolveNode['constants']): number {
+  return constants.port_h_offset ?? 0;
 }
 
 export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRects }: NativeControlComponentProps) {
@@ -150,7 +150,7 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
       ),
     [solveNode, props, childRects, panelStyle, rect.w]
   );
-  const portHOffset = portHOffsetOf(props);
+  const portHOffset = portHOffsetOf(solveNode.constants);
 
   const titleTintColor = useMemo(() => multiplyModulate(tint.own, fontTheme.color), [tint.own, fontTheme.color]);
 

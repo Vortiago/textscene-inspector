@@ -73,13 +73,13 @@ export function LinkButton({ solveNode, tint, renderOrder, theme, meta }: Native
     // `theme_override_fonts/font` scene font shapes the text at its own
     // ascent, and the underline must sit relative to THAT, not Open Sans's.
     const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
-    const spacingConstant = linkButtonUnderlineSpacing(props, { theme });
+    const spacingConstant = linkButtonUnderlineSpacing(solveNode.constants, { theme });
     // The stroke's position/thickness stay Open Sans's own `post`-table
     // values regardless of `fontMetrics` — no scene font this engine loads
     // carries baked underline metrics of its own.
     const { y, thickness } = linkButtonUnderlineGeometry(fontSizePx, spacingConstant, ascentPx);
     return { top: y - thickness / 2, thickness, width: Math.trunc(layout.widthPx) };
-  }, [layout, state, props, theme, fontSizePx, fontMetrics]);
+  }, [layout, state, props, theme, fontSizePx, fontMetrics, solveNode.constants]);
 
   return (
     <>

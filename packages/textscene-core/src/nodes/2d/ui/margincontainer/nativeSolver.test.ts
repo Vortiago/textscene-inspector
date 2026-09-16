@@ -44,6 +44,9 @@ function container(name: string, props: Partial<ControlProperties>, children: So
       properties: { name, ...props } as ControlProperties,
     },
     children,
+    // A local theme_override_constants/* now reaches `marginsOf` through
+    // `n.constants` (the walker folds it in unconditionally), not props.
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 

@@ -224,7 +224,7 @@ const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, ControlColor> = {
 /** Resolves TabBar's own theme font size/colour for `state` (`resolveTextTheme`'s own doc). */
 export function tabBarTextTheme(
   n: SolveNode,
-  props: Pick<TabBarProperties, 'themeOverrideFontSizes' | 'themeOverrideColors'>,
+  props: Pick<TabBarProperties, 'themeOverrideFontSizes'>,
   state: TabDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
@@ -243,11 +243,8 @@ const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
 /** `default_theme.cpp:1051-1054`: all four icon-colour states default `Color(1, 1, 1, 1)` — TabBar never dims a tab's icon by state, unlike its font. */
 const TAB_BAR_DEFAULT_ICON_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-export function tabBarIconColor(
-  props: Pick<TabBarProperties, 'themeOverrideColors'>,
-  state: TabDrawState
-): ControlColor {
-  return props.themeOverrideColors?.[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
+export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
+  return colors[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
 }
 
 // --- Texture slots: one per tab icon -------------------------------------------
@@ -341,8 +338,8 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const tabs = props.tabs ?? [];
   const currentTab = props.currentTab ?? -1;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? ctx.theme.separation;
-  const iconMaxWidth = props.themeOverrideConstants?.icon_max_width ?? 0;
+  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
+  const iconMaxWidth = n.constants.icon_max_width ?? 0;
   const closeButtonMarginLeft = ctx.theme.widgets.button.normal.contentMargin.left;
 
   if (tabs.length === 0) return { x: 0, y: 0 };
@@ -405,7 +402,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     });
 
     width += tabWidth;
-    if (i < tabs.length - 1) width += props.themeOverrideConstants?.tab_separation ?? 0;
+    if (i < tabs.length - 1) width += n.constants.tab_separation ?? 0;
     maxSingleTabWidth = Math.max(maxSingleTabWidth, tabWidth);
   });
 

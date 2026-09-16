@@ -36,6 +36,9 @@ function node(props: Partial<LinkButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'L',
     node: { name: 'L', type: 'LinkButton', children: [], properties: { name: 'L', ...props } as LinkButtonProperties },
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not props.
+    colors: props.themeOverrideColors ?? {},
   };
 }
 
@@ -117,16 +120,15 @@ describe('shouldUnderline (link_button.cpp:249-278)', () => {
 
 describe('linkButtonUnderlineSpacing (default_theme.cpp:210)', () => {
   it('is round(2*scale)', () => {
-    expect(linkButtonUnderlineSpacing({} as LinkButtonProperties, ctx())).toBe(2);
+    expect(linkButtonUnderlineSpacing({}, ctx())).toBe(2);
   });
 
-  it('a theme_override_constants/underline_spacing override wins over the theme default', () => {
-    const props: LinkButtonProperties = { name: 'L', themeOverrideConstants: { underline_spacing: 9 } };
-    expect(linkButtonUnderlineSpacing(props, ctx())).toBe(9);
+  it('a theme_override_constants/underline_spacing override (already folded into n.constants) wins over the theme default', () => {
+    expect(linkButtonUnderlineSpacing({ underline_spacing: 9 }, ctx())).toBe(9);
   });
 
   it('moves with a non-1 theme scale (default_theme.cpp:210: round(2*scale))', () => {
-    expect(linkButtonUnderlineSpacing({} as LinkButtonProperties, { theme: nativeTheme(2.5) })).toBe(5);
+    expect(linkButtonUnderlineSpacing({}, { theme: nativeTheme(2.5) })).toBe(5);
   });
 });
 

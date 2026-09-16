@@ -66,8 +66,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const showPercentage = !indeterminate && (props.showPercentage ?? true);
 
   const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props, { theme });
-  const outlineColorSrgb = progressBarOutlineColor(props);
-  const outlineSize = progressBarOutlineSize(props);
+  const outlineColorSrgb = progressBarOutlineColor(solveNode.colors);
+  const outlineSize = progressBarOutlineSize(solveNode.constants);
   const fontMetrics = resolveNodeFontMetrics(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
 
   const percentText = showPercentage

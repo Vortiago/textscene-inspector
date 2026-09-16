@@ -75,7 +75,7 @@ export function MenuBar({ solveNode, tint, theme, renderOrder, meta }: NativeCon
   const clippingPlanes = useControlClipPlanes();
   // menu_bar.cpp:194: `Math::round(4 * scale)`, MenuBar's own theme constant —
   // numerically identical to Button's `theme.separation`, a separate default.
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? theme.separation;
+  const hSeparation = solveNode.constants.h_separation ?? theme.separation;
 
   let offset = 0;
   const items = titles.map((title) => {

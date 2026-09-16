@@ -91,9 +91,9 @@ const BUTTON_ICON_MODULATE: Record<ButtonDrawState, ControlColor> = {
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };
 
-/** Resolves this Button's icon modulate colour for `state` (a `theme_override_colors` override wins, else the default-theme literal above). */
-export function buttonIconColor(props: ButtonProperties, state: ButtonDrawState): ControlColor {
-  return props.themeOverrideColors?.[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
+/** Resolves this Button's icon modulate colour for `state` (`n.colors` — a local override or the ancestor Theme chain — wins, else the default-theme literal above). */
+export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): ControlColor {
+  return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
 /** Resolves this Button's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / Button's own literal — `resolveTextTheme`'s own doc). */
@@ -165,8 +165,8 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const iconAlignment = props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
   const verticalIconAlignment = props.verticalIconAlignment ?? VERTICAL_ALIGNMENT_CENTER;
-  const iconMaxWidth = props.themeOverrideConstants?.icon_max_width ?? 0;
-  const hSeparation = props.themeOverrideConstants?.h_separation ?? ctx.theme.separation;
+  const iconMaxWidth = n.constants.icon_max_width ?? 0;
+  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
 
   if (!props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0) {
     const iconSize = fitIconSize(n.textureSize, iconMaxWidth);

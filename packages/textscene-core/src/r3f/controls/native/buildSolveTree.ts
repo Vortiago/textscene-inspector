@@ -35,7 +35,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { joinPath } from '../../../utils/nodePath';
 import {
   findSubResource,
@@ -53,6 +53,7 @@ import { resolveInlineFontResource } from '../../../resources/fonts/font/decode'
 import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
+import { mergeThemedRecord, themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
@@ -82,31 +83,99 @@ const NO_RESOURCE_CACHE = { getCached: (): ParsedResource | null | undefined => 
 const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => undefined };
 const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
+/** No ancestor/project theme — `mergeThemedRecord` walks nothing and returns the seed unchanged. */
+const NO_THEME_SCOPE: ThemeResolutionScope = { typeChain: [], searchOrder: [] };
+
 /**
- * Resolve every `theme_override_styles/*` ref on a node, IN ITS OWN SCOPE —
- * `scope` is already the collapsed node's own scope by the time `walk` calls
- * this (a sub-scene's SubResource pool for a merged/subscene node, the outer
- * pool otherwise). `parseStyleBox` degrades to `null` for an
- * absent/malformed/unresolvable ref, which this simply omits from the result
- * rather than fabricating a fallback stylebox. Covers all four concrete
- * StyleBox kinds (`native/parseStyleBox.ts`'s `ResolvedStyleBox`) — a
- * `StyleBoxLine`/`StyleBoxTexture` override is kept here exactly like a
- * `StyleBoxFlat` one, not dropped: each wraps a neutral `StyleBoxFlatData`
- * core carrying its own kind-correct `contentMargin`, so `SolveNode.styleBoxes`
- * (typed `Record<string, StyleBoxFlatData>`) stays satisfied without widening.
+ * A theme's `styles` raw refs, resolved to `ResolvedStyleBox` against THAT
+ * theme's own sub-resource pool (never the querying node's — a Theme's
+ * StyleBoxes are sub-resources of the theme file, `types.ts`'s own doc).
+ * Memoised per `ThemeResource` OBJECT (a file-backed theme is cached and
+ * reused across every node that references it, so this resolves each once
+ * per theme rather than once per node × key), mirroring
+ * `text/resolveNodeFontMetrics.ts`'s `scopeFor` cache.
+ */
+const themeStyleBoxCache = new WeakMap<
+  ThemeResource,
+  Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>>
+>();
+
+function resolvedStylesOfTheme(
+  theme: ThemeResource
+): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> {
+  const cached = themeStyleBoxCache.get(theme);
+  if (cached) return cached;
+  const { externalResources, internalResources } = theme.resources ?? { externalResources: [], internalResources: [] };
+  const out: Record<string, Record<string, ResolvedStyleBox>> = {};
+  for (const [type, byName] of Object.entries(theme.styles ?? {})) {
+    for (const [name, ref] of Object.entries(byName)) {
+      const resolved = parseStyleBox(ref, externalResources, internalResources);
+      if (resolved) (out[type] ??= {})[name] = resolved;
+    }
+  }
+  themeStyleBoxCache.set(theme, out);
+  return out;
+}
+
+/**
+ * Resolve every StyleBox slot this node can draw, keyed the way
+ * `Control::get_theme_stylebox` keys them (`solveTree.ts`'s own doc):
+ * `theme_override_styles/*` on the node ITSELF, IN ITS OWN SCOPE — `scope` is
+ * already the collapsed node's own scope by the time `walk` calls this (a
+ * sub-scene's SubResource pool for a merged/subscene node, the outer pool
+ * otherwise) — wins unconditionally over anything `themeScope`'s ancestor/
+ * project theme chain supplies for the SAME name (`mergeThemedRecord`'s
+ * seed). `parseStyleBox` degrades to `null` for an absent/malformed/
+ * unresolvable ref, which this simply omits rather than fabricating a
+ * fallback stylebox. Covers all four concrete StyleBox kinds (`native/
+ * parseStyleBox.ts`'s `ResolvedStyleBox`) — a `StyleBoxLine`/`StyleBoxTexture`
+ * override is kept here exactly like a `StyleBoxFlat` one, not dropped: each
+ * wraps a neutral `StyleBoxFlatData` core carrying its own kind-correct
+ * `contentMargin`, so `SolveNode.styleBoxes` (typed `Record<string,
+ * StyleBoxFlatData>`) stays satisfied without widening.
  */
 export function resolveStyleBoxes(
   node: TscnNode,
-  scope: SceneScope
+  scope: SceneScope,
+  themeScope: ThemeResolutionScope = NO_THEME_SCOPE
 ): Readonly<Record<string, ResolvedStyleBox>> {
   const overrides = (node.properties as ControlProperties).themeOverrideStyles;
-  if (!overrides) return {};
-  const out: Record<string, ResolvedStyleBox> = {};
-  for (const [key, ref] of Object.entries(overrides)) {
-    const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
-    if (resolved) out[key] = resolved;
+  const local: Record<string, ResolvedStyleBox> = {};
+  if (overrides) {
+    for (const [key, ref] of Object.entries(overrides)) {
+      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources);
+      if (resolved) local[key] = resolved;
+    }
   }
-  return out;
+  return mergeThemedRecord(themeScope, local, resolvedStylesOfTheme);
+}
+
+/**
+ * Resolve every theme colour this node can draw, keyed the way
+ * `Control::get_theme_color` keys them: `theme_override_colors/*` on the
+ * node itself (unconditional local override — no validity gate, same as
+ * StyleBox/Constant), else `themeScope`'s ancestor/project theme chain.
+ */
+function resolveThemedColors(
+  node: TscnNode,
+  themeScope: ThemeResolutionScope
+): Readonly<Record<string, ControlColor>> {
+  const local = (node.properties as ControlProperties).themeOverrideColors ?? {};
+  return mergeThemedRecord(themeScope, local, (theme) => theme.colors);
+}
+
+/**
+ * The constant counterpart of `resolveThemedColors` (`Control::
+ * get_theme_constant`). A scene Theme's own `<Type>/constants/<name>` is a
+ * literal, unscaled int — only this previewer's OWN built-in default (a
+ * painter's own fallback on a miss here) is scaled.
+ */
+function resolveThemedConstants(
+  node: TscnNode,
+  themeScope: ThemeResolutionScope
+): Readonly<Record<string, number>> {
+  const local = (node.properties as ControlProperties).themeOverrideConstants ?? {};
+  return mergeThemedRecord(themeScope, local, (theme) => theme.constants);
 }
 
 /** An uncached sub-scene the walk found: the path to request, and the ExtResource to register first (absent for a raw `res://` instance). */
@@ -428,6 +497,12 @@ function buildForest(
 
       if (isControl) {
         const texture = resolveTextureSize(collapsed, ownScope.externalResources, ownScope.internalResources);
+        const themeScope = themeResolutionScope(
+          collapsed.type,
+          (collapsed.properties as ControlProperties).themeTypeVariation,
+          nodeThemeChain,
+          projectTheme
+        );
         out.push({
           path,
           node: collapsed,
@@ -435,10 +510,12 @@ function buildForest(
           paintRange,
           paintSequence: allocated.self,
           hidden: hiddenNodePaths.has(path),
-          styleBoxes: resolveStyleBoxes(collapsed, ownScope),
+          styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
           textureSize: texture.size,
           textureSlots: texture.slots,
           fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
+          colors: resolveThemedColors(collapsed, themeScope),
+          constants: resolveThemedConstants(collapsed, themeScope),
           resources: ownScope,
           themeChain: nodeThemeChain,
           projectTheme,

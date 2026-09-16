@@ -244,8 +244,7 @@ export function boxContainerMinimumSize(
 // --- Registry adapters ------------------------------------------------------
 
 function separationOf(n: SolveNode, ctx: SolveContext): number {
-  const props = n.node.properties as BoxContainerProperties;
-  return props.themeOverrideConstants?.separation ?? ctx.theme.separation;
+  return n.constants.separation ?? ctx.theme.separation;
 }
 
 /** `BoxContainer::AlignmentMode`: absent/out-of-range treated as `ALIGNMENT_BEGIN` (Godot default `0`, `box_container.h`). */

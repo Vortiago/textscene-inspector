@@ -8,7 +8,7 @@
  */
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
-import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { Vec2 } from './rect';
@@ -47,7 +47,17 @@ export interface SolveNode {
    * Godot's walk, after any `show_behind_parent` children and before the rest.
    */
   paintSequence: number;
-  /** This node's `theme_override_styles/*` StyleBoxes, resolved in ITS scope. */
+  /**
+   * This node's resolved StyleBoxes, keyed by the SAME names Godot's own
+   * `get_theme_stylebox(name, type)` uses (`normal`/`hover`/`panel`/…):
+   * `theme_override_styles/*` first (wins unconditionally once declared,
+   * `Control::get_theme_stylebox`'s local-override branch), else every name
+   * ANY applicable ancestor/project Theme resolves for this node's type chain
+   * (`theme/lookup.ts`'s `mergeThemedRecord`, resolved in ITS scope — a
+   * Theme's own StyleBoxes are sub-resources of THAT theme file, never this
+   * node's). A name absent here has no themed answer at all; every painter
+   * already falls back to the default theme's own box on a miss.
+   */
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vec2 | null;
@@ -100,6 +110,23 @@ export interface SolveNode {
    * unset/unresolved/failed. Required — see `fontOverrides`'s own doc for why.
    */
   projectTheme: ThemeResource | null;
+  /**
+   * This node's resolved theme colours, keyed by the same names Godot's
+   * `get_theme_color(name, type)` uses (`font_color`/`font_hover_color`/…):
+   * `theme_override_colors/*` first (unconditional local override), else the
+   * theme chain — same merge `styleBoxes` uses, `theme/lookup.ts`'s
+   * `mergeThemedRecord` over `theme.colors`. A name absent here has no themed
+   * answer; a painter falls back to the default theme's own colour.
+   */
+  colors: Readonly<Record<string, ControlColor>>;
+  /**
+   * This node's resolved theme constants, keyed by the same names Godot's
+   * `get_theme_constant(name, type)` uses (`h_separation`/`outline_size`/…) —
+   * same merge as `colors`, over `theme.constants`. A scene Theme's constant
+   * is a literal int and is NEVER scaled; only this previewer's OWN built-in
+   * default (a painter's fallback on a miss here) is.
+   */
+  constants: Readonly<Record<string, number>>;
   /**
    * The resource pools this node's OWN property references resolve against.
    *

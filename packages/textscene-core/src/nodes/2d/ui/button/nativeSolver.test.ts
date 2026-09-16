@@ -73,6 +73,10 @@ function node(
     node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ButtonProperties },
     styleBoxes,
     textureSize,
+    // A local theme_override_colors/* now reaches `resolveTextTheme` through
+    // `n.colors` (the walker folds it in unconditionally), not through props.
+    colors: props.themeOverrideColors ?? {},
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 
@@ -271,19 +275,20 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
 
 describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
   it('is opaque white for the normal state (icon_normal_color = Color(1,1,1,1))', () => {
-    expect(buttonIconColor({} as ButtonProperties, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonIconColor({}, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('is white at 0.4 alpha for the disabled state (icon_disabled_color = Color(1,1,1,0.4))', () => {
-    expect(buttonIconColor({} as ButtonProperties, 'disabled')).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
+    expect(buttonIconColor({}, 'disabled')).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
   });
 
-  it('a theme_override_colors/icon_disabled_color override wins over the default', () => {
-    const props: ButtonProperties = {
-      name: 'B',
-      themeOverrideColors: { icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
-    expect(buttonIconColor(props, 'disabled')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  it('a theme_override_colors/icon_disabled_color override (already folded into n.colors) wins over the default', () => {
+    expect(buttonIconColor({ icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } }, 'disabled')).toEqual({
+      r: 1,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 });
 

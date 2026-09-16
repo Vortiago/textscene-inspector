@@ -61,11 +61,11 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const iconKey = resolveCheckButtonIconKey(props);
   const iconTexture = useIconTexture(CHECK_BUTTON_ICONS[iconKey]);
   const iconSize = useMemo(
-    () => fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(props)),
-    [props]
+    () => fitIconSize(CHECK_BUTTON_ICON_NATURAL_SIZE, checkButtonIconMaxWidth(solveNode.constants)),
+    [solveNode.constants]
   );
 
-  const baseIconColor = checkButtonIconColor(props);
+  const baseIconColor = checkButtonIconColor(props, solveNode.colors);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
@@ -91,15 +91,15 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         marginX: checkButtonMarginX({ theme }),
         marginY: checkButtonMarginY({ theme }),
         iconSize,
-        checkVOffset: checkButtonCheckVOffset(props),
-        hSeparation: checkButtonHSeparation(props, { theme }),
+        checkVOffset: checkButtonCheckVOffset(solveNode.constants),
+        hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
         hasText,
         textAlignment: props.alignment ?? CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, theme, iconSize, props, hasText, layout]
+    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment]
   );
 
   return (

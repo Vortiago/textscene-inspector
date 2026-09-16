@@ -67,14 +67,14 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   // GPU texture for a quad that never draws.
   const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
   const drawsGrabber =
-    sortable.length === 2 && isSplitGrabberVisible(props, theme.widgets.splitContainer);
+    sortable.length === 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const texture = useOptionalIconTexture(drawsGrabber ? SPLIT_CONTAINER_ICONS.hsplitter : null);
 
   if (!drawsGrabber || !texture) {
     return null;
   }
 
-  const separation = resolveSplitSeparation(props, theme.widgets.splitContainer);
+  const separation = resolveSplitSeparation(props, solveNode.constants, theme.widgets.splitContainer);
   const [first, second] = sortable as [SolveNode, SolveNode];
   const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
   const draggerPos =

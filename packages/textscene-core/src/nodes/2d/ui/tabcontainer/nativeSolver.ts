@@ -106,11 +106,11 @@ export const tabContainerTextureSlots: TextureSlotsFn = (node) => {
  * `icon_max_width` forward verbatim (both default 0, neither set in
  * `default_theme.cpp`'s "TabContainer" section either).
  */
-function internalTabBarThemeConstants(props: TabContainerProperties, theme: NativeTheme) {
+function internalTabBarThemeConstants(constants: SolveNode['constants'], theme: NativeTheme): SolveNode['constants'] {
   return {
-    h_separation: props.themeOverrideConstants?.icon_separation ?? theme.separation,
-    tab_separation: props.themeOverrideConstants?.tab_separation ?? 0,
-    icon_max_width: props.themeOverrideConstants?.icon_max_width ?? 0,
+    h_separation: constants.icon_separation ?? theme.separation,
+    tab_separation: constants.tab_separation ?? 0,
+    icon_max_width: constants.icon_max_width ?? 0,
   };
 }
 
@@ -135,14 +135,20 @@ export function buildInternalTabBarNode(
     clipTabs: props.clipTabs,
     maxTabWidth: 0,
     tabCloseDisplayPolicy: 0,
-    themeOverrideConstants: internalTabBarThemeConstants(props, theme),
-    themeOverrideColors: props.themeOverrideColors,
+    // Font SIZE still resolves the OLD way — a local override read straight
+    // off `node.properties` (`resolveNodeFontSizePx`'s own contract, never
+    // folded into a `SolveNode` bag the way colour/constant/stylebox are).
     themeOverrideFontSizes: props.themeOverrideFontSizes,
   };
   return {
     ...n,
     node: { ...n.node, type: 'TabBar', properties: barProps, children: [] },
     children: [],
+    // The synthetic TabBar's own resolved bags — `constants` REMAPS the outer
+    // TabContainer's keys (`internalTabBarThemeConstants`'s own doc), never a
+    // verbatim copy; `colors`/`styleBoxes` (already on `n` via the spread
+    // above) read under the SAME key names either way, so no remap needed.
+    constants: internalTabBarThemeConstants(n.constants, theme),
   };
 }
 

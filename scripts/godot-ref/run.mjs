@@ -548,7 +548,26 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
-export function projectConfig(sourceIni, { width, height, pinWindowToViewport = false }) {
+/**
+ * A whole `[name]` section of a Godot ConfigFile, removed — the entries under
+ * it are arbitrary keys, so there is no per-key pattern to match.
+ */
+function dropSection(ini, name) {
+  const lines = ini.split('\n');
+  const out = [];
+  let inSection = false;
+  for (const line of lines) {
+    const heading = /^\s*\[([^\]]+)\]/.exec(line);
+    if (heading) inSection = heading[1] === name;
+    if (!inSection) out.push(line);
+  }
+  return out.join('\n');
+}
+
+export function projectConfig(
+  sourceIni,
+  { width, height, pinWindowToViewport = false, runScripts = true }
+) {
   const drop = [
     /^environment\/defaults\/default_environment\s*=/,
     /^rendering\/environment\/defaults\/default_environment\s*=/,
@@ -579,7 +598,13 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     );
   }
 
-  const kept = (sourceIni ?? '')
+  // An autoload is a script too, and it runs BEFORE the scene exists — so
+  // stripping the scene's own scripts leaves it untouched. A real project
+  // relies on exactly that: protongraph's ThemeManager._ready assigns
+  // `get_tree().get_root().theme`, so every widget is themed by a singleton
+  // while the scene file says nothing about a theme. Dropping the section
+  // whole is what makes the reference show what the scene describes.
+  const kept = (runScripts ? sourceIni ?? '' : dropSection(sourceIni ?? '', 'autoload'))
     .split('\n')
     .filter((line) => !drop.some((re) => re.test(line.trim())))
     .join('\n')
@@ -1414,10 +1439,11 @@ async function renderInto(
   // project-viewport rect; every other arm keeps the 3D frame override.
   await writeFile(
     join(work, 'project.godot'),
-    projectConfig(
-      sourceIni,
-      rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }
-    )
+    projectConfig(sourceIni, {
+      ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
+      // Same axis as the scene's own scripts: the editor runs neither.
+      runScripts: !previews,
+    })
   );
 
   const resPath = `res://${relative(root, scenePath).split(sep).join('/')}`;

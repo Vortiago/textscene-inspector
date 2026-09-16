@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildThemeTypeChain,
+  mergeThemedRecord,
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
   themeResolutionScope,
@@ -18,8 +19,12 @@ function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
     defaultFontSize: undefined,
     fonts: {},
     fontSizes: {},
+    styles: {},
+    colors: {},
+    constants: {},
     typeVariations: {},
     properties: {},
+    resources: { externalResources: [], internalResources: [] },
     ...overrides,
   };
 }
@@ -150,5 +155,56 @@ describe('resolveThemeFontSizeIn', () => {
     expect(
       resolveThemeFontSizeIn(themeResolutionScope('Label', undefined, [nearest, farther], null), 'font_size', undefined, 16)
     ).toBe(20);
+  });
+});
+
+describe('mergeThemedRecord', () => {
+  it('a local override wins unconditionally, even where a theme also defines the name', () => {
+    const ancestor = theme({ colors: { Label: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } });
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Label', undefined, [ancestor], null),
+      { font_color: { r: 0, g: 1, b: 0, a: 1 } },
+      (t) => t.colors
+    );
+    expect(merged.font_color).toEqual({ r: 0, g: 1, b: 0, a: 1 });
+  });
+
+  it('a gap name (no override, no theme entry) is simply absent from the result', () => {
+    const merged = mergeThemedRecord(themeResolutionScope('Label', undefined, [theme()], null), {}, (t) => t.colors);
+    expect(merged.font_color).toBeUndefined();
+  });
+
+  it('a nearer owner matching only a BASE type beats a farther owner matching the EXACT type (owners outer, types inner)', () => {
+    // `nearest` has nothing under `PanelContainer`, but does under `Control` —
+    // a base type in its own chain, tried BEFORE `farther` is ever visited.
+    const nearest = theme({ colors: { Control: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } });
+    const farther = theme({ colors: { PanelContainer: { font_color: { r: 0, g: 1, b: 0, a: 1 } } } });
+    const scope = themeResolutionScope('PanelContainer', undefined, [nearest, farther], null);
+    expect(scope.typeChain).toEqual(['PanelContainer', 'Control', 'Node']);
+    const merged = mergeThemedRecord(scope, {}, (t) => t.colors);
+    expect(merged.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('the type-variation chain is honoured — a variation-registered type wins over the plain native type', () => {
+    const t = theme({
+      typeVariations: { title_panel: 'Panel' },
+      colors: { title_panel: { font_color: { r: 1, g: 0, b: 0, a: 1 } }, Panel: { font_color: { r: 0, g: 1, b: 0, a: 1 } } },
+    });
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Panel', 'title_panel', [t], null),
+      {},
+      (theme) => theme.colors
+    );
+    expect(merged.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+  });
+
+  it('falls through every ancestor to the project theme', () => {
+    const project = theme({ constants: { Button: { h_separation: 8 } } });
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Button', undefined, [theme(), theme()], project),
+      {},
+      (t) => t.constants
+    );
+    expect(merged.h_separation).toBe(8);
   });
 });

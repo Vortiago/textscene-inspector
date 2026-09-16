@@ -15,6 +15,9 @@ function node(name: string, type: string, props: Partial<ControlProperties> = {}
     ...solveNode(),
     path: name,
     node: { name, type, children: [], properties: { name, ...props } as ControlProperties },
+    // A local theme_override_constants/* reaches a solver through `n.constants`
+    // (the walker folds it in unconditionally), not `node.properties`.
+    constants: props.themeOverrideConstants ?? {},
   };
 }
 

@@ -47,8 +47,12 @@ export async function resolveThemeResource(
     defaultFontSize: addresses.defaultFontSize,
     fonts,
     fontSizes: addresses.fontSizes,
+    styles: addresses.styles,
+    colors: addresses.colors,
+    constants: addresses.constants,
     typeVariations: addresses.typeVariations,
     properties: addresses.properties,
+    resources: addresses.resources,
   };
 }
 

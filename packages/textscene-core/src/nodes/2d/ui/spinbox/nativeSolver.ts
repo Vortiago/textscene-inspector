@@ -228,15 +228,15 @@ const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState,
   down: { normal: 'down_icon_modulate', disabled: 'down_disabled_icon_modulate' },
 };
 
-/** A `theme_override_colors/<key>` override wins; else the default-theme literal for `direction`/`state`. */
+/** A `theme_override_colors/<key>` override (already folded into `n.colors`) wins; else the default-theme literal for `direction`/`state`. */
 export function spinBoxIconColor(
-  props: SpinBoxProperties,
+  colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
 ): ControlColor {
   const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
   const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
-  return props.themeOverrideColors?.[key] ?? defaults[state];
+  return colors[key] ?? defaults[state];
 }
 
 // --- Field theme scope: `"SpinBoxInnerLineEdit"` based at `"LineEdit"` ------
