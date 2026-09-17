@@ -32,6 +32,7 @@ import {
   PAINT_SEQUENCE_STRIDE,
   allocatePaintRange,
   canvasRenderOrder,
+  canvasRootRanges,
   layerRankOf,
   layerRanks,
   paintRangeSize,
@@ -135,6 +136,94 @@ describe('paintRangeSize', () => {
     // those rows interleave with the layer's SIBLINGS — so they need sequence
     // values of their own, and how many is only known once the tileset loads.
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
+  });
+});
+
+describe('canvasRootRanges', () => {
+  // A `CanvasItem` whose own parent is not one parents at the CANVAS rather
+  // than at an ancestor item (`_enter_canvas`, canvas_item.cpp:246-267) and
+  // takes its draw index from `gui_get_canvas_sort_index()` /
+  // `CanvasLayer::get_sort_index()` (canvas_item.cpp:222-232,
+  // viewport.cpp:3721-3724, canvas_layer.cpp:261-267). Those counters are
+  // handed out while SceneTree iterates the `_root_canvas` group
+  // (canvas_item.cpp:453-466), which `_update_group_order` sorts with
+  // `Node::Comparator` — tree pre-order (scene_tree.cpp:333-348,
+  // node.h:132-134, node.cpp:2152-2187). The canvas then draws its children in
+  // that index order (`Canvas::ChildItem::operator<`,
+  // renderer_canvas_cull.h:146-151, sorted in render_canvas, :494-511), each
+  // root's subtree whole, so a root nested in the tree still draws AFTER
+  // everything under the root it is nested in.
+
+  it('draws a nested canvas root after the whole subtree of the root it hangs under', () => {
+    const detached = node('Detached', 'ColorRect');
+    const root = node('Root', 'Control', [
+      node('Holder', 'Node', [detached]),
+      node('Later', 'ColorRect'),
+    ]);
+    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
+    const roots = canvasRootRanges([root], ranges);
+
+    const own = roots.get(root)!;
+    const carved = roots.get(detached)!;
+    expect(carved.base).toBeGreaterThanOrEqual(own.base + own.size);
+    expect(carved.base + carved.size).toBeLessThanOrEqual(ranges[0]!.base + ranges[0]!.size);
+  });
+
+  it('keeps a nested canvas root before the NEXT root of the same canvas', () => {
+    // Pre-order among the canvas's roots: [First, Detached, Second]. A canvas
+    // is not free to draw the detached item last — that is the CanvasLayer
+    // case, where the layer's own children are the roots being ordered.
+    const detached = node('Detached', 'ColorRect');
+    const first = node('First', 'Control', [node('Holder', 'Node', [detached])]);
+    const second = node('Second', 'Control');
+    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [first, second]).children;
+    const roots = canvasRootRanges([first, second], ranges);
+
+    const firstOwn = roots.get(first)!;
+    const carved = roots.get(detached)!;
+    expect(carved.base).toBeGreaterThanOrEqual(firstOwn.base + firstOwn.size);
+    expect(carved.base + carved.size).toBeLessThanOrEqual(roots.get(second)!.base);
+  });
+
+  it('makes a top_level item a canvas root under a CanvasItem parent', () => {
+    // `get_parent_item()` returns nullptr for a top_level item
+    // (canvas_item.cpp:565-571), so `_enter_canvas` parents it at the canvas
+    // and its draw index comes from the canvas's own sort counter
+    // (`_top_level_raise_self`, canvas_item.cpp:222-232) — the same slot a
+    // broken CanvasItem chain gives, out of the tail of the root it hangs
+    // under rather than the sequence its nesting would give it.
+    const detached = node('Detached', 'ColorRect', [], { top_level: true });
+    const root = node('Root', 'Node2D', [detached, node('Later', 'Sprite2D')]);
+    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
+    const roots = canvasRootRanges([root], ranges);
+
+    const own = roots.get(root)!;
+    const carved = roots.get(detached)!;
+    expect(carved.base).toBeGreaterThanOrEqual(own.base + own.size);
+    expect(carved.base + carved.size).toBeLessThanOrEqual(ranges[0]!.base + ranges[0]!.size);
+  });
+
+  it('leaves an instanced sub-scene alone, whose real parenting the host tree cannot see', () => {
+    // The node's own type and children are the sub-scene's; placing its
+    // content from what the host tree says would order it against a parent
+    // that is not the one it ends up under.
+    const inside = node('Inside', 'ColorRect');
+    const instanced = { ...node('HUD', 'Node', [inside]), instance: 'ExtResource("1")' } as TscnNode;
+    const root = node('Root', 'Control', [instanced]);
+    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
+
+    expect(canvasRootRanges([root], ranges).has(inside)).toBe(false);
+  });
+
+  it('leaves a tree with no detached item allocated exactly as before', () => {
+    // The reserve is what a nested root draws from; a canvas whose items all
+    // nest under a CanvasItem parent has none, and must keep the numbers the
+    // plain pre-order allocation gives it.
+    const root = node('Root', 'Control', [node('A', 'ColorRect'), node('B', 'ColorRect')]);
+    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
+
+    expect(paintRangeSize(root)).toBe(3);
+    expect(canvasRootRanges([root], ranges).get(root)).toEqual(ranges[0]);
   });
 });
 

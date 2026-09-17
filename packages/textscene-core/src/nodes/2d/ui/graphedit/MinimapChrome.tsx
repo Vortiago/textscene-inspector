@@ -11,24 +11,32 @@
  * quad's own sRGB colour here, before the single linear conversion, the same
  * ordering every other two-colour chrome in this codebase uses.
  *
- * NOT DRAWN: the connection polylines (`:1869-1881`). They are
- * `draw_polyline_colors(..., 0.5, lines_antialiased)`, a hairline with its
- * own antialiasing variant that no other painter in this codebase needs;
- * `comparison.md` records the gap.
+ * The connection polylines (`:1870-1883`) are the one draw here that is not a
+ * stylebox: `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`
+ * (`:1611`), whose geometry `polylineStroke.ts` ports and whose points and
+ * colours `minimapConnections.ts` solves. `connection_lines_antialiased` has
+ * no other reader anywhere in the engine.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
+import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { CONNECTION_SRGB_VERTEX_COLORS } from './ConnectionLine';
+import { minimapConnectionLines } from './minimapConnections';
+import { polylineStrokeGeometry } from './polylineStroke';
 import {
   GRAPH_EDIT_ICON_SIZE,
   GRAPH_EDIT_MINIMAP_RESIZER_ICON,
@@ -37,8 +45,12 @@ import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultThe
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { ControlColor } from '../control/types';
+import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
 import { minimapCameraRect, minimapNodeRect } from './minimap';
+
+/** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
+const MINIMAP_LINE_WIDTH = 0.5;
 
 /** `GraphEditMinimap`'s `resizer_color` (`default_theme.cpp:1350`). */
 const RESIZER_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.85 };
@@ -75,6 +87,72 @@ function flatBox(
   };
 }
 
+interface MinimapConnectionsProps {
+  connections: readonly ResolvedConnection[];
+  transform: MinimapTransform;
+  bounds: GraphScrollBounds;
+  curvature: number;
+  /** `connection_lines_antialiased` — `lines_antialiased`'s only reader (`graph_edit.h:254`, default true). */
+  antialiased: boolean;
+  /** The minimap's own opacity, already folded onto the inherited tint. */
+  lineTint: ControlColor;
+  renderOrder: number;
+}
+
+/**
+ * Every connection as ONE mesh — the polylines are coplanar, share a material
+ * and paint in one band, so merging them costs nothing and keeps the draw
+ * count independent of the graph's size.
+ */
+function MinimapConnections({ connections, transform, bounds, curvature, antialiased, lineTint, renderOrder }: MinimapConnectionsProps) {
+  const clippingPlanes = useControlClipPlanes();
+  const geometry = useMemo(() => {
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const colors: number[] = [];
+    for (const line of minimapConnectionLines(connections, transform, bounds, curvature)) {
+      const stroke = polylineStrokeGeometry(
+        line.points,
+        line.colors.map((c) => multiplyModulate(lineTint, c)),
+        MINIMAP_LINE_WIDTH,
+        antialiased
+      );
+      const base = positions.length / 3;
+      positions.push(...stroke.positions);
+      colors.push(...stroke.colors);
+      for (const index of stroke.indices) indices.push(base + index);
+    }
+    if (positions.length === 0) return null;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+    geo.setIndex(indices);
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
+    return geo;
+  }, [connections, transform, bounds, curvature, antialiased, lineTint]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  if (!geometry) return null;
+
+  const program = materialProgramInputs({
+    props: {
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      injection: CONNECTION_SRGB_VERTEX_COLORS,
+      clippingPlanes: clippingPlanes as THREE.Plane[],
+    },
+    merge: [canvasItemFacing()],
+  });
+
+  return (
+    <mesh renderOrder={renderOrder}>
+      <primitive object={geometry} attach="geometry" />
+      <meshBasicMaterial key={program.key} {...program.props} />
+    </mesh>
+  );
+}
+
 export interface GraphEditMinimapProps {
   /** The minimap panel's rect in GraphEdit's own local space. */
   rect: Rect2;
@@ -88,6 +166,12 @@ export interface GraphEditMinimapProps {
   graphEditSize: { x: number; y: number };
   /** `minimap->get_modulate().a`. */
   opacity: number;
+  /** Every connection `_update_connections` resolved, in GraphEdit's own order. */
+  connections: readonly ResolvedConnection[];
+  /** `connection_lines_curvature`, the same curve the main canvas draws. */
+  curvature: number;
+  /** `connection_lines_antialiased`. */
+  connectionLinesAntialiased: boolean;
   icons: NativeControlComponentProps['solveNode']['icons'];
   theme: NativeControlComponentProps['theme'];
   tint: NativeControlComponentProps['tint'];
@@ -103,6 +187,9 @@ export function GraphEditMinimapChrome({
   scrollOffset,
   graphEditSize,
   opacity,
+  connections,
+  curvature,
+  connectionLinesAntialiased,
   icons,
   theme,
   tint,
@@ -158,6 +245,16 @@ export function GraphEditMinimapChrome({
           </CanvasItemGroup>
         );
       })}
+
+      <MinimapConnections
+        connections={connections}
+        transform={transform}
+        bounds={bounds}
+        curvature={curvature}
+        antialiased={connectionLinesAntialiased}
+        lineTint={modulated}
+        renderOrder={renderOrder + 0.03}
+      />
 
       <CanvasItemGroup position={[cameraRect.x, -cameraRect.y, 0]}>
         <StyleBoxQuad

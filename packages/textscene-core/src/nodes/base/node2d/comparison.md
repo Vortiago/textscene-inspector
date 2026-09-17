@@ -41,6 +41,8 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 
 `transform` takes priority when present. A malformed matrix warns and falls back to the discrete `position`, `rotation`, `scale` and `skew` path, which default to `(0, 0)`, `0`, `(1, 1)` and `0`. `z_index` falls back to `0`. The six `global_*` properties are never read by the lenient parser, so an authored `global_position` has no effect.
 
+`top_level` makes the node a canvas root: it draws in canvas space, with a white inherited modulate, `z_index` accumulated from 0 and the viewport's own texture sampler defaults. A node whose direct parent is not a `CanvasItem` is a canvas root for the same reason and gets the same reset. Its parent still hides it, because visibility crosses the break in Godot too.
+
 ## Known limitations
 
 - **Approximated** With `z_as_relative = false` Godot makes `z_index` absolute, but nested 2D groups here still accumulate ancestor Z.

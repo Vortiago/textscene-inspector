@@ -1,0 +1,49 @@
+; GraphEdit whose ZOOM-OUT button is disabled, the only state either zoom
+; button can take that a scene file reaches. `set_zoom_custom` clamps `zoom`
+; against the bounds as they stand (graph_edit.cpp:2434) and only then presses
+; `zoom_minus_button->set_disabled(zoom == zoom_min)` (:2445) — and it returns
+; BEFORE that line whenever the clamp changed nothing (:2435-2437). So no file
+; can disable a button by parking `zoom` on a bound directly: the value has to
+; MOVE onto it. `zoom = 0.5` lands inside the constructor's own range (:3175
+; -3177), then `zoom_min = 1.0` re-runs `set_zoom(zoom)` (:2487) and drags it
+; back up to 1.0, which equals the new min.
+; The stored `zoom` therefore ends at its own default, so this scene draws the
+; family's picture at scale 1 with ONE pixel difference: the zoom-out icon at
+; `icon_disabled_color`'s alpha of 0.4 (default_theme.cpp:169) instead of 1.
+; A previewer that read `zoom` as authored would draw the whole graph at 0.5,
+; and one that ignored the order would leave the icon opaque. No other fixture
+; writes a zoom bound at all, and the only one that writes `zoom` sits it well
+; inside both bounds, where neither effect exists.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode,
+; and `scroll_offset` is deliberately ABSENT from all but
+; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
+; GraphEdit's own `set_scroll_offset` clamps against min/max bounds that are
+; still (0, 0) while a scene's properties are applied (graph_edit.cpp:407), so
+; an authored offset moves the grid, the nodes AND the minimap camera at once
+; and would mask the one variable each file exists to move.
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedzoombnd"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+zoom = 0.5
+zoom_min = 1.0
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"

@@ -13,6 +13,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import type { YSortContextValue } from './contexts/YSortContext.js';
+import { isTopLevelItem } from './canvasPaintOrder.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
@@ -102,6 +103,9 @@ function itemSortKey(node: TscnNode, parent: YSortContextValue): { sortY: number
  * `liftedPast` is the chain of y_sort_enabled ancestors between the sort root
  * and the current level; it grows on every descent and rides each item so the
  * renderer can put back what the flattening took away.
+ *
+ * A `top_level` child is not collected at all: it is a canvas root, drawn
+ * outside the sort entirely.
  */
 export function collectYSortedItems(
   node: TscnNode,
@@ -113,6 +117,11 @@ export function collectYSortedItems(
   let order = startOrder;
 
   for (const child of node.children) {
+    // `_collect_ysort_children` walks the RenderingServer's `child_items`
+    // (`renderer_canvas_cull.cpp:110-115`); a top_level item is parented at the
+    // canvas instead (`canvas_item.cpp:234-285`), so it is never among them.
+    // `<YSortDispatcher>` draws it as the canvas root it is.
+    if (isTopLevelItem(child)) continue;
     const key = itemSortKey(child, parent);
     const props = child.properties as Record<string, unknown>;
     const isYSort = props.y_sort_enabled === true;

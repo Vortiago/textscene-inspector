@@ -410,4 +410,81 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-lineedit-control-chars.tscn',
     mode: '2d',
   },
+  // The ONE variable, one per scene: where a canvas ROOT sits. A CanvasItem
+  // whose direct parent is not one, or that sets `top_level`, is parented at
+  // the canvas rather than at its tree parent, which decides its transform, its
+  // anchors, its tint and its place in the draw order at once. Both walks are
+  // represented because the Control solve and the Node2D dispatch reach that
+  // state through separate code, so a regression in one is invisible in the
+  // other. Measured against Godot 4.6.3 at `--mode 2d` before their baselines
+  // were written: 0.000 of 255 each.
+  {
+    name: 'control-detached-paint-order',
+    file: 'unit-control-detached-paint-order.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-top-level',
+    file: 'unit-control-top-level.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-in-parallax-background',
+    file: 'unit-control-in-parallax-background.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'node2d-detached-transform',
+    file: 'unit-node2d-detached-transform.tscn',
+    mode: '2d',
+  },
+  { name: 'node2d-top-level', file: 'unit-node2d-top-level.tscn', mode: '2d' },
+  // GraphEdit's toolbar, minimap and scrollbars are built in its C++
+  // constructor, so every scene below draws all three and each moves ONE
+  // property on top of them. They are a family rather than one scene because
+  // the chrome is the thing under test: a widget that stops being laid out is
+  // invisible in the scene that hides it and obvious in the eight that do not.
+  // Measured against Godot 4.6.3 at `--mode 2d` before their baselines were
+  // written: 0.413 for the base scene and 0.53-0.77 of 255 for the rest, the
+  // residual being cross-rasterizer text antialiasing in the zoom label.
+  { name: 'graph-edit', file: 'unit-graph-edit.tscn', mode: '2d' },
+  { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn', mode: '2d' },
+  {
+    name: 'graph-edit-zoom-buttons-hidden',
+    file: 'unit-graph-edit-zoom-buttons-hidden.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'graph-edit-grid-buttons-hidden',
+    file: 'unit-graph-edit-grid-buttons-hidden.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'graph-edit-minimap-button-hidden',
+    file: 'unit-graph-edit-minimap-button-hidden.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'graph-edit-arrange-button-hidden',
+    file: 'unit-graph-edit-arrange-button-hidden.tscn',
+    mode: '2d',
+  },
+  { name: 'graph-edit-minimap-disabled', file: 'unit-graph-edit-minimap-disabled.tscn', mode: '2d' },
+  { name: 'graph-edit-minimap-size', file: 'unit-graph-edit-minimap-size.tscn', mode: '2d' },
+  { name: 'graph-edit-minimap-opacity', file: 'unit-graph-edit-minimap-opacity.tscn', mode: '2d' },
+  {
+    name: 'graph-edit-minimap-connection',
+    file: 'unit-graph-edit-minimap-connection.tscn',
+    mode: '2d',
+  },
+  // The load-time clamps: `scroll_offset` against a still-zero bound and `zoom`
+  // against whichever bound the file had applied by then. Both store a value
+  // the scene never wrote, and neither is visible in a scene that omits them.
+  {
+    name: 'graph-edit-scroll-offset-clamped',
+    file: 'unit-graph-edit-scroll-offset-clamped.tscn',
+    mode: '2d',
+  },
+  { name: 'graph-edit-zoom-bound-order', file: 'unit-graph-edit-zoom-bound-order.tscn', mode: '2d' },
 ];

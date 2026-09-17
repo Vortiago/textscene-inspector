@@ -43,6 +43,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
 import {
@@ -92,6 +93,9 @@ function tintedPanel(
 
 export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<GraphFrameProperties>(solveNode);
+  // `<TextRun>` builds its own material, so it takes the ambient planes as a
+  // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
+  const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphFrameStyles(solveNode, theme);
   const basePanel = selected ? styles.panelSelected : styles.panel;
@@ -165,6 +169,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
               layout={titleLineLayouts[i]!}
               fontSizePx={fontTheme.fontSizePx}
               tint={titleTintColor}
+              clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />
           </CanvasItemGroup>

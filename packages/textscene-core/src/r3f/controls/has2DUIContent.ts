@@ -85,6 +85,10 @@ export const TWO_D_UI_TYPES = new Set<string>([
   'Tree',
   'VideoStreamPlayer',
   'CanvasLayer',
+  // `ParallaxBackground extends CanvasLayer` (`parallax_background.h:34`), so
+  // it is a canvas boundary in the Control walk exactly as a plain CanvasLayer
+  // is — see `parallaxbackground/index.r3f.ts`.
+  'ParallaxBackground',
   // A Control like any other for the purposes of this set, which mirrors the
   // Control COMPONENT registry. The 3D dispatcher subtracts it separately via
   // `isViewportSurface` — see ADR-0033.

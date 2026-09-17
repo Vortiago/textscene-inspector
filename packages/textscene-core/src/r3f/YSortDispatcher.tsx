@@ -31,10 +31,18 @@ import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import {
   allocatePaintRange,
+  isTopLevelItem,
   packPaintRanges,
   paintRangeSize,
 } from './canvasPaintOrder.js';
-import { PaintRangeProvider, useLayerRank, usePaintRange } from './contexts/PaintOrderContext.js';
+import {
+  PaintRangeProvider,
+  useCanvasRootRanges,
+  useLayerRank,
+  usePaintRange,
+} from './contexts/PaintOrderContext.js';
+import { ParentIsCanvasItemProvider } from './canvasRootScope.js';
+import { joinPath } from '../utils/nodePath.js';
 import { useCanvasLayerIndex } from './lighting2d/canvasItemPlacement.js';
 // Sorted children go back through the ONE dispatcher rather than a second
 // renderer here: that is what keeps `instance=` sub-scenes, selection
@@ -83,11 +91,25 @@ function SortedChildren({
   // own pixels at — the sorted items go after it, exactly as Godot appends the
   // y-sorted node itself before descending (`_collect_ysort_children`).
   const paintRange = usePaintRange();
-  const ownSequence = useMemo(
-    () => allocatePaintRange(paintRange, node.children, true).self,
+  const allocated = useMemo(
+    () => allocatePaintRange(paintRange, node.children, true),
     [paintRange, node.children]
   );
+  const ownSequence = allocated.self;
   const layerRank = useLayerRank(useCanvasLayerIndex());
+  // A top_level child is no `child_item` of this node, so the sort never
+  // collected it (`ySortItems.ts`); it is drawn here instead. The SAME
+  // predicate the collection skipped it by — the canvas's own root index is
+  // only a preference, and it is absent for a subtree `canvasRootRanges` could
+  // not see into (an `instance=` node's).
+  const canvasRoots = useCanvasRootRanges();
+  const topLevelChildren = useMemo(
+    () =>
+      node.children
+        .map((child, index) => ({ child, index }))
+        .filter(({ child }) => isTopLevelItem(child)),
+    [node.children]
+  );
 
   // Expand tileGroup items into per-Y-group items using groupBySortY,
   // then flatten (preserving tree-order position of the original layer).
@@ -188,7 +210,11 @@ function SortedChildren({
   }, [sorted, ownSequence, paintRange]);
 
   return (
-    <>
+    // Every item here is a descendant of this y_sort_enabled node, and every
+    // level `LiftedAncestors` restores is a CanvasItem too — so the cast each
+    // re-dispatched node runs against its parent (`canvas_item.cpp:565-571`)
+    // succeeds, which the sort's own re-parenting would otherwise hide.
+    <ParentIsCanvasItemProvider value>
       {packed.map(({ item, range }) => {
         const Renderer = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer : undefined;
         if (item.kind === 'tileGroup' && item.node && Renderer) {
@@ -223,6 +249,14 @@ function SortedChildren({
         }
         return null;
       })}
-    </>
+      {topLevelChildren.map(({ child, index }) => (
+        <PaintRangeProvider
+          key={`tl-${child.name}`}
+          value={canvasRoots.get(child) ?? allocated.children[index]!}
+        >
+          <DispatchedNode node={child} path={joinPath(basePath, child.name)} />
+        </PaintRangeProvider>
+      ))}
+    </ParentIsCanvasItemProvider>
   );
 }

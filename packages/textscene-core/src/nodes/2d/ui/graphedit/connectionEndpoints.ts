@@ -35,6 +35,8 @@ import type { GraphEditProperties } from './types.js';
 export interface ResolvedConnectionEndpoint {
   /** GraphEdit's own local space — the same frame `rect` is drawn in. */
   pos: Vec2;
+  /** `conn->_cache.<from|to>_pos * zoom` (`graph_edit.cpp:1872-1873`) — before any scroll subtraction, the frame the minimap measures against. */
+  graphPos: Vec2;
   color: ControlColor;
 }
 
@@ -43,11 +45,9 @@ export interface ResolvedConnection {
   to: ResolvedConnectionEndpoint;
 }
 
-function endpointPos(portLocal: Vec2, positionOffset: Vec2, zoom: number, scrollOffset: Vec2): Vec2 {
-  return {
-    x: (portLocal.x + positionOffset.x) * zoom - scrollOffset.x,
-    y: (portLocal.y + positionOffset.y) * zoom - scrollOffset.y,
-  };
+function endpoint(portLocal: Vec2, positionOffset: Vec2, zoom: number, scrollOffset: Vec2, color: ControlColor): ResolvedConnectionEndpoint {
+  const graphPos = { x: (portLocal.x + positionOffset.x) * zoom, y: (portLocal.y + positionOffset.y) * zoom };
+  return { pos: { x: graphPos.x - scrollOffset.x, y: graphPos.y - scrollOffset.y }, graphPos, color };
 }
 
 export function resolveGraphEditConnections(
@@ -81,8 +81,8 @@ export function resolveGraphEditConnections(
     const toOffset = (toChild.node.properties as GraphElementProperties).positionOffset ?? { x: 0, y: 0 };
 
     resolved.push({
-      from: { pos: endpointPos(outputPort.pos, fromOffset, zoom, scrollOffset), color: outputPort.color },
-      to: { pos: endpointPos(inputPort.pos, toOffset, zoom, scrollOffset), color: inputPort.color },
+      from: endpoint(outputPort.pos, fromOffset, zoom, scrollOffset, outputPort.color),
+      to: endpoint(inputPort.pos, toOffset, zoom, scrollOffset, inputPort.color),
     });
   }
   return resolved;

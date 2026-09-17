@@ -155,3 +155,30 @@ describe('graphEditToolbar toggle states', () => {
     expect(pressed({}, 'arrange')).toBe(false);
   });
 });
+
+describe('graphEditToolbar disabled states (graph_edit.cpp:2445-2446)', () => {
+  function disabled(p: Partial<GraphEditProperties>, id: string): boolean {
+    return graphEditToolbar(props(p), theme, metrics)!.items.find((i) => i.id === id)!.disabled;
+  }
+
+  it('leaves every button enabled while zoom sits between its bounds — the constructor sets no disabled flag', () => {
+    expect(disabled({}, 'zoom_minus')).toBe(false);
+    expect(disabled({}, 'zoom_plus')).toBe(false);
+    expect(disabled({}, 'zoom_reset')).toBe(false);
+  });
+
+  it('disables the minus button once zoom has been parked on zoom_min', () => {
+    expect(disabled({ zoomMinusDisabled: true }, 'zoom_minus')).toBe(true);
+    expect(disabled({ zoomMinusDisabled: true }, 'zoom_plus')).toBe(false);
+  });
+
+  it('disables the plus button once zoom has been parked on zoom_max', () => {
+    expect(disabled({ zoomPlusDisabled: true }, 'zoom_plus')).toBe(true);
+    expect(disabled({ zoomPlusDisabled: true }, 'zoom_minus')).toBe(false);
+  });
+
+  it('never disables a button GraphEdit does not bind to a zoom bound', () => {
+    const all = graphEditToolbar(props({ zoomMinusDisabled: true, zoomPlusDisabled: true }), theme, metrics)!.items;
+    expect(all.filter((i) => i.disabled).map((i) => i.id)).toEqual(['zoom_minus', 'zoom_plus']);
+  });
+});

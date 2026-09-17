@@ -39,6 +39,33 @@ export function PaintRangeProvider({ value, children }: { value: PaintRange; chi
   return <PaintRangeContext.Provider value={value}>{children}</PaintRangeContext.Provider>;
 }
 
+const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
+
+const CanvasRootRangesContext = createContext<ReadonlyMap<TscnNode, PaintRange>>(NO_CANVAS_ROOTS);
+CanvasRootRangesContext.displayName = 'CanvasRootRangesContext';
+
+/**
+ * Where each canvas root of the enclosing canvas draws (`canvasRootRanges`).
+ *
+ * A canvas item whose own parent is not one parents at the canvas rather than
+ * at that parent, and is drawn in its pre-order rank among the canvas's roots
+ * — not at the slot its nesting gives it. A parent looks its children up here
+ * before handing out runs of its own.
+ */
+export function useCanvasRootRanges(): ReadonlyMap<TscnNode, PaintRange> {
+  return useContext(CanvasRootRangesContext);
+}
+
+export function CanvasRootRangesProvider({
+  value,
+  children,
+}: {
+  value: ReadonlyMap<TscnNode, PaintRange>;
+  children: ReactNode;
+}) {
+  return <CanvasRootRangesContext.Provider value={value}>{children}</CanvasRootRangesContext.Provider>;
+}
+
 const LayerRankContext = createContext<readonly number[]>(layerRanks([]));
 LayerRankContext.displayName = 'LayerRankContext';
 

@@ -11,6 +11,11 @@
  * holds focus, the same restriction every other Control painter in this
  * codebase carries.
  *
+ * CLIP. `set_clip_contents(true)` in the constructor (`graph_edit.cpp:3342`)
+ * makes every GraphEdit scissor its own rect, chrome and GraphElement children
+ * alike. That is not cosmetic here: `set_scroll_offset`'s load-time clamp
+ * (`loadOrder.ts`) routinely parks the whole graph outside the widget.
+ *
  * CHROME. The two scrollbars (`scrollBars.ts`), the toolbar (`Toolbar.tsx`,
  * geometry in `toolbar.ts`) and the minimap (`Minimap.tsx`, geometry in
  * `minimap.ts`) are `INTERNAL_MODE_*` children of `top_layer`, itself
@@ -22,16 +27,6 @@
  *
  * NOT DRAWN, and why:
  *
- *  - The minimap's connection polylines (`:1869-1881`) — `comparison.md`.
- *  - `connection_lines_antialiased`: `lines_antialiased`'s ONLY reader is
- *    that polyline draw (`graph_edit.cpp:1611`); the main canvas connection
- *    shader applies its OWN fixed pseudo-AA feather unconditionally
- *    (`connectionStroke.ts`'s own doc), so nothing this previewer draws
- *    reads the property.
- *  - The zoom buttons' `disabled` state (`:2445-2446`), which compares `zoom`
- *    against `zoom_min`/`zoom_max` AFTER `set_zoom`'s own CLAMP — and that
- *    clamp reads whichever bound the FILE had applied by then, an order this
- *    property bag does not carry. `comparison.md`.
  *  - `zoom`'s visual scale on a GraphElement's own drawn pixels:
  *    `ControlCanvasWalker.tsx`'s `isFreeParent` gate (`:210-216`) forces
  *    every child of a registered container to scale 1 — `nativeSolver.ts`'s
@@ -46,8 +41,10 @@
  * (`ConnectionLine.tsx`), is composed with it while both are still sRGB,
  * matching every other two-colour chrome in this codebase.
  *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * This component never checks `props.visible` and never applies a transform —
+ * both are `ControlCanvasWalker`'s job. It does render `children`, which the
+ * walker hands over (`wrapsChildren`) because the clip above only reaches
+ * them from inside the provider.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -56,6 +53,7 @@
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -219,6 +217,7 @@ export function GraphEdit({
   childRects,
   measureText,
   snapToPixels,
+  children,
 }: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
   const panelStyle = solveNode.styleBoxes.panel ?? defaultPanel(theme);
@@ -298,76 +297,86 @@ export function GraphEdit({
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clip } = useWorldClipPlanes(ownRect);
+
   return (
-    <>
-      <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={{ x: 0, y: 0, w: rect.w, h: rect.h }} renderOrder={renderOrder} />
+    <CanvasItemGroup ref={anchorRef}>
+      <ControlClipProvider value={clip}>
+        <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={{ x: 0, y: 0, w: rect.w, h: rect.h }} renderOrder={renderOrder} />
 
-      {lines.map((line, i) => (
-        <GridLineQuad key={i} line={line} rect={rect} majorColor={majorColor} minorColor={minorColor} renderOrder={renderOrder} />
-      ))}
+        {lines.map((line, i) => (
+          <GridLineQuad key={i} line={line} rect={rect} majorColor={majorColor} minorColor={minorColor} renderOrder={renderOrder} />
+        ))}
 
-      {minorDotColor.opacity !== 0 &&
-        dots.minor.map((dot, i) => <GridDotQuad key={`m${i}`} dot={dot} colorQuad={minorDotColor} renderOrder={renderOrder} />)}
-      {majorColor.opacity !== 0 &&
-        dots.major.map((dot, i) => <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />)}
+        {minorDotColor.opacity !== 0 &&
+          dots.minor.map((dot, i) => <GridDotQuad key={`m${i}`} dot={dot} colorQuad={minorDotColor} renderOrder={renderOrder} />)}
+        {majorColor.opacity !== 0 &&
+          dots.major.map((dot, i) => <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />)}
 
-      {connections.map((connection, i) => (
-        <ConnectionLine
-          key={i}
-          connection={connection}
-          curvature={curvature}
-          lineWidth={lineWidth}
-          rimColor={rimColor}
-          tintOwn={tint.own}
-          renderOrder={renderOrder}
+        {connections.map((connection, i) => (
+          <ConnectionLine
+            key={i}
+            connection={connection}
+            curvature={curvature}
+            lineWidth={lineWidth}
+            rimColor={rimColor}
+            tintOwn={tint.own}
+            renderOrder={renderOrder}
+          />
+        ))}
+
+        {children}
+
+        <ScrollBarChrome
+          bar={scrollBars.horizontal}
+          track={theme.widgets.scrollBar.scrollHorizontal}
+          grabber={theme.widgets.scrollBar.grabber}
+          color={tint.own}
+          renderOrder={subtreeChromeRenderOrder + 0.25}
+          snapToPixels={snapToPixels}
         />
-      ))}
-
-      <ScrollBarChrome
-        bar={scrollBars.horizontal}
-        track={theme.widgets.scrollBar.scrollHorizontal}
-        grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
-        renderOrder={subtreeChromeRenderOrder + 0.25}
-        snapToPixels={snapToPixels}
-      />
-      <ScrollBarChrome
-        bar={scrollBars.vertical}
-        track={theme.widgets.scrollBar.scrollVertical}
-        grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
-        renderOrder={subtreeChromeRenderOrder + 0.25}
-        snapToPixels={snapToPixels}
-      />
-
-      {toolbar && (
-        <GraphEditToolbarChrome
-          toolbar={toolbar}
-          icons={solveNode.icons}
-          theme={theme}
-          tint={tint}
-          text={toolbarText}
-          shape={shape}
-          renderOrder={subtreeChromeRenderOrder + 0.5}
+        <ScrollBarChrome
+          bar={scrollBars.vertical}
+          track={theme.widgets.scrollBar.scrollVertical}
+          grabber={theme.widgets.scrollBar.grabber}
+          color={tint.own}
+          renderOrder={subtreeChromeRenderOrder + 0.25}
+          snapToPixels={snapToPixels}
         />
-      )}
 
-      {minimapEnabled && (
-        <GraphEditMinimapChrome
-          rect={minimapPanelRect}
-          transform={minimapXform}
-          bounds={bounds}
-          elements={minimapElements}
-          zoom={zoom}
-          scrollOffset={scrollOffset}
-          graphEditSize={graphEditSize}
-          opacity={minimapOpacity(props)}
-          icons={solveNode.icons}
-          theme={theme}
-          tint={tint}
-          renderOrder={subtreeChromeRenderOrder + 0.75}
-        />
-      )}
-    </>
+        {toolbar && (
+          <GraphEditToolbarChrome
+            toolbar={toolbar}
+            icons={solveNode.icons}
+            theme={theme}
+            tint={tint}
+            text={toolbarText}
+            shape={shape}
+            renderOrder={subtreeChromeRenderOrder + 0.5}
+          />
+        )}
+
+        {minimapEnabled && (
+          <GraphEditMinimapChrome
+            rect={minimapPanelRect}
+            transform={minimapXform}
+            bounds={bounds}
+            elements={minimapElements}
+            zoom={zoom}
+            scrollOffset={scrollOffset}
+            graphEditSize={graphEditSize}
+            opacity={minimapOpacity(props)}
+            connections={connections}
+            curvature={curvature}
+            connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
+            icons={solveNode.icons}
+            theme={theme}
+            tint={tint}
+            renderOrder={subtreeChromeRenderOrder + 0.75}
+          />
+        )}
+      </ControlClipProvider>
+    </CanvasItemGroup>
   );
 }

@@ -100,6 +100,14 @@ describe('parseControl', () => {
   });
 
   describe('CanvasItem draw-order + sampler properties', () => {
+    it('parses top_level, which makes the Control a canvas root', () => {
+      // `Control`'s own `NOTIFICATION_ENTER_CANVAS` climb stops at
+      // `!node->is_set_as_top_level()` (control.cpp:3876), so the flag decides
+      // whether the Control anchors against an ancestor or the viewport.
+      expect(parseControl(heading('Control', { name: 'C' }), { top_level: 'true' }).topLevel).toBe(true);
+      expect(parseControl(heading('Control', { name: 'C' }), {}).topLevel).toBe(false);
+    });
+
     it('parses explicit z_index, show_behind_parent, light_mask, texture_filter, texture_repeat', () => {
       const p = parseControl(heading('Control', { name: 'Badge' }), {
         z_index: '3',

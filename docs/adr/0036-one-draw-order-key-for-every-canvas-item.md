@@ -72,6 +72,13 @@ layer's per-row groups, an `instance=` node's sub-scene roots), so they hold roo
 up front; that keeps the allocation a pure function of the tree, which is what lets the
 world walk and the Control walk derive the same numbers without talking to each other.
 
+**A canvas root draws from the tail of the range it is nested in.** An item whose own
+parent is not a `CanvasItem`, or whose own `top_level` is set, parents at the canvas and
+is drawn in its pre-order rank among that canvas's roots, each root's subtree whole —
+never at the slot its nesting gives it. Its run is carved from the end of the enclosing root's range, which is after
+that root's whole subtree and still before the next root, and the enclosing root holds
+the room back the same way a dynamic node does.
+
 ## Consequences
 
 Fractional `+Z` is no longer an ordering mechanism anywhere. `Z_INDEX_STEP`,

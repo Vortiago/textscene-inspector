@@ -29,6 +29,10 @@ import '../../nodes/2d/ui/vslider/index.r3f';
 import '../../nodes/2d/ui/texturerect/index.r3f';
 import '../../nodes/2d/ui/richtextlabel/index.r3f';
 import '../../nodes/2d/ui/canvaslayer/index.r3f';
+// Not a `ui/` slice, but it IS a `CanvasLayer` (`parallax_background.h:34`) and
+// so a canvas boundary the Control walk has to know about; its own `index.r3f`
+// registers both halves, and the world barrel imports the same module.
+import '../../nodes/2d/parallaxbackground/index.r3f';
 import '../../nodes/2d/ui/codeedit/index.r3f';
 import '../../nodes/2d/ui/colorpicker/index.r3f';
 import '../../nodes/2d/ui/colorpickerbutton/index.r3f';

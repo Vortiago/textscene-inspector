@@ -11,7 +11,10 @@ renders_as: a full-rect layout region
 
 Control is the base UI node. It draws nothing of its own. A Control directly under it
 anchors against its rect. One separated from it by another node anchors against that
-node instead, or against the viewport where the node is not a canvas item.
+node instead. Where that node is not a canvas item the Control is a canvas root: it
+anchors against the viewport, and draws after everything under the root it hangs in.
+`top_level` makes it one wherever it sits, and nothing above it composes onto it — no
+transform, no tint, no rect to anchor against, and no container lays it out.
 
 ## Linting
 

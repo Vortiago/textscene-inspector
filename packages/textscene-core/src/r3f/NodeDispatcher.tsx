@@ -36,14 +36,17 @@ import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocatePaintRange,
-  CANVAS_LAYER_TYPES,
+  canvasRootRanges,
+  isCanvasLayerType,
   declaredCanvasLayers,
   layerRanks,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder.js';
 import {
+  CanvasRootRangesProvider,
   LayerRanksProvider,
   PaintRangeProvider,
+  useCanvasRootRanges,
   usePaintRange,
 } from './contexts/PaintOrderContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
@@ -71,6 +74,12 @@ import { node2dGroupProps } from './node2dTransform.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
+import {
+  CanvasRootScope,
+  ParentIsCanvasItemProvider,
+  useParentIsCanvasItem,
+} from './canvasRootScope.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
@@ -129,6 +138,10 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   // derive the same numbers from the same nodes without this walk telling it.
   const ranks = useMemo(() => layerRanks(declaredCanvasLayers(nodes)), [nodes]);
   const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);
+  // Where each canvas root of the viewport's own canvas draws: an item whose
+  // parent is not a CanvasItem is drawn in its pre-order rank among the
+  // canvas's roots, not at the slot its nesting gives it (`canvasRootRanges`).
+  const canvasRoots = useMemo(() => canvasRootRanges(nodes, rootRanges), [nodes, rootRanges]);
 
   return (
     // paint-order-safe: the delegated pointer root, ABOVE every canvas
@@ -145,11 +158,13 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
           skips it entirely, exactly as Godot's base pass does. */}
       <CanvasModulateContext.Provider value={canvasModulate}>
         <LayerRanksProvider value={ranks}>
-          {nodes.map((node, i) => (
-            <PaintRangeProvider key={node.name} value={rootRanges[i]!}>
-              <DispatchedNode node={node} path={node.name} />
-            </PaintRangeProvider>
-          ))}
+          <CanvasRootRangesProvider value={canvasRoots}>
+            {nodes.map((node, i) => (
+              <PaintRangeProvider key={node.name} value={canvasRoots.get(node) ?? rootRanges[i]!}>
+                <DispatchedNode node={node} path={node.name} />
+              </PaintRangeProvider>
+            ))}
+          </CanvasRootRangesProvider>
         </LayerRanksProvider>
       </CanvasModulateContext.Provider>
     </group>
@@ -273,6 +288,19 @@ function PlainNode({
     [paintRange, node.children, node.properties]
   );
   const isHidden = hiddenNodePaths.has(path);
+  const inheritedCanvasRoots = useCanvasRootRanges();
+  // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
+  // ITS counter over ITS children (`canvas_layer.cpp:261-267`).
+  const startsCanvas = isCanvasLayerType(node.type);
+  const canvasRoots = useMemo(
+    () => (startsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
+    [startsCanvas, node.children, allocated.children, inheritedCanvasRoots]
+  );
+
+  // Whether `Object::cast_to<CanvasItem>(get_parent())` would succeed for this
+  // node — published by the parent, because only the parent knows its own type
+  // (`canvasRootScope.tsx`).
+  const parentIsCanvasItem = useParentIsCanvasItem();
 
   const wrapperRef = useCallback(
     (object: THREE.Object3D | null) => {
@@ -298,10 +326,6 @@ function PlainNode({
   const isCanvasItem =
     !isViewportSurface(node.type) &&
     (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
-  // A CanvasLayer is its OWN canvas — what that means is `<CanvasLayerScope>`,
-  // shared with the Control walk's `CanvasLayer` painter.
-  const startsCanvas = CANVAS_LAYER_TYPES.has(node.type);
-
   if (workspace === '3d' && isCanvasItem) return null;
   if (
     workspace === '2d' &&
@@ -324,7 +348,7 @@ function PlainNode({
   // rest after it. A child's run covers its whole subtree, so nothing inside it
   // can reach a sibling's sequence however deeply it nests.
   const inlineChildren = node.children.map((child, i) => (
-    <PaintRangeProvider key={child.name} value={allocated.children[i]!}>
+    <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
       <DispatchedNode node={child} path={joinPath(path, child.name)} />
     </PaintRangeProvider>
   ));
@@ -369,27 +393,41 @@ function PlainNode({
           nearer to every mesh. A type that draws without the CanvasItem
           ritual takes the key from `useCanvasItemRenderOrder` instead. */}
       <group ref={wrapperRef} visible={!isHidden}>
-        <ErrorBoundary
-          resetKeys={[node]}
-          fallback={() => (
-            <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
-          )}
-        >
-          <Component node={node}>
-            {children.length > 0 ? (
-              /* Every node's children, at every level, so a non-sprite parent
-                 always overwrites with white — `sprite_3d.cpp:75` accumulates
-                 from the IMMEDIATE parent only. */
-              <SpriteBase3DChildAccum node={node}>
-                {startsCanvas ? (
-                  <CanvasLayerScope node={node}>{children}</CanvasLayerScope>
-                ) : (
-                  <>{children}</>
-                )}
-              </SpriteBase3DChildAccum>
-            ) : null}
-          </Component>
-        </ErrorBoundary>
+        {/* Inside the eye-toggle group, never outside it: a canvas root drops
+            its ancestors' transform and tint but NOT their visibility
+            (`canvasRootScope.tsx`). */}
+        <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
+          <ErrorBoundary
+            resetKeys={[node]}
+            fallback={() => (
+              <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
+            )}
+          >
+            <Component node={node}>
+              {children.length > 0 ? (
+                /* Every node's children, at every level, so a non-sprite parent
+                   always overwrites with white — `sprite_3d.cpp:75` accumulates
+                   from the IMMEDIATE parent only. */
+                <SpriteBase3DChildAccum node={node}>
+                  {/* The cast every child runs against its direct parent
+                      (`canvas_item.cpp:565-571`) — answered with THIS node's
+                      type, which for a merged instance is the sub-scene root's. */}
+                  <ParentIsCanvasItemProvider value={descendsFrom(node.type, 'CanvasItem')}>
+                    {startsCanvas ? (
+                      <CanvasLayerScope node={node}>
+                        {/* `<CanvasLayerScope>` is what "its own canvas" means here,
+                            shared with the Control walk's `CanvasLayer` painter. */}
+                        <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
+                      </CanvasLayerScope>
+                    ) : (
+                      <>{children}</>
+                    )}
+                  </ParentIsCanvasItemProvider>
+                </SpriteBase3DChildAccum>
+              ) : null}
+            </Component>
+          </ErrorBoundary>
+        </CanvasRootScope>
       </group>
     </NodePathProvider>
   );

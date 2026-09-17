@@ -252,20 +252,12 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Panning is an interaction; a scene holds the resulting scroll_offset
       // and zoom, which the parser does read.
       'panning_scheme', 'right_disconnects',
-      // The zoom bounds only disable a toolbar button, and only after
-      // `set_zoom`'s own CLAMP (graph_edit.cpp:2434,2445) has read whichever
-      // bound the file had applied by then — an order a property bag has no
-      // way to carry. `zoom_step` reaches nothing but the panner.
-      'zoom_max', 'zoom_min', 'zoom_step',
+      // `zoom_step` reaches nothing but the panner's own scroll factor.
+      'zoom_step',
       // Connection type names populate a tooltip.
       'type_names',
-      // Its only reader is GraphEditMinimap's own polyline draw
-      // (graph_edit.cpp:1611); the main canvas connection shader applies its
-      // own fixed pseudo-AA regardless, and that polyline is the one part of
-      // the minimap this previewer does not draw.
-      'connection_lines_antialiased',
     ],
-    reason: 'Panning and the zoom bounds reach no frozen frame — the bounds only through a clamp whose input is the file\'s own property order; the type names are a tooltip, and connection antialiasing only reaches the minimap polyline.',
+    reason: 'Panning and the zoom step reach no frozen frame, and the type names are a tooltip.',
   },
 
   MenuBar: {

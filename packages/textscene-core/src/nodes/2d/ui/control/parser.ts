@@ -112,6 +112,7 @@ export function parseControl(
   // real Godot too, so the parsed type should not lie about it.
   result.zIndex = intOr(properties.z_index, 0);
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
+  result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
   result.textureFilter = intOr(
     properties.texture_filter,

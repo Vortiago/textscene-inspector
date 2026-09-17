@@ -76,6 +76,13 @@ export interface ControlProperties {
    */
   showBehindParent?: boolean;
   /**
+   * CanvasItem `top_level`: the Control is a canvas root whatever sits above
+   * it — `Control`'s own `NOTIFICATION_ENTER_CANVAS` climb never starts
+   * (`control.cpp:3876`), and no Container lays it out
+   * (`container.cpp:143-146`).
+   */
+  topLevel?: boolean;
+  /**
    * CanvasItem `light_mask`: which 2D lights may reach this Control (ANDed
    * against a light's `range_item_cull_mask`). Godot default `1`
    * (`scene/main/canvas_item.h:98`). Per-item, NOT inherited by children.

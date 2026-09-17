@@ -65,6 +65,20 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
 }
 
 /**
+ * The same local transform as a `Matrix4` — what a consumer composing this
+ * item's space with another needs, rather than re-deriving it from the
+ * discrete props and risking a different answer for a sheared item.
+ */
+export function node2dGroupMatrix(g: Node2DGroupProps): THREE.Matrix4 {
+  if (g.matrix) return g.matrix.clone();
+  return new THREE.Matrix4().compose(
+    new THREE.Vector3(...g.position),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(...g.rotation)),
+    new THREE.Vector3(...g.scale)
+  );
+}
+
+/**
  * Spreadable `<group>` transform props: discrete position/rotation/scale for the
  * common (skew-free) case, or a baked `matrix` with `matrixAutoUpdate=false`
  * when a shear is present (the matrix would otherwise be overwritten from the

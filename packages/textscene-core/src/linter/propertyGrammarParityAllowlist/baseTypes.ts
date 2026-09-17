@@ -68,12 +68,11 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // leaf and every Control instead of forty near-identical copies.
   CanvasItem: {
     linterOnly: [
-      // Editor/scene-tree concerns with no render equivalent: `top_level`
-      // detaches from the parent transform (the dispatcher does not model it),
+      // Culling, clipping and sampler settings with no render equivalent:
       // `visibility_layer` and `clip_children` gate culling and stencil
       // clipping, and the texture sampler modes are set per material rather
       // than per node in three.js.
-      'top_level', 'visibility_layer', 'clip_children',
+      'visibility_layer', 'clip_children',
       'texture_filter', 'texture_repeat',
       // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
       // whatever GLSL the attached ShaderMaterial declares. This previewer has
@@ -82,7 +81,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // uniform override onto.
       'instance_shader_parameters/*',
     ],
-    reason: 'The CanvasItem base has no parser of its own; these six are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
+    reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, top_level, material…) are read by each family parser.',
   },
 
   Node: {

@@ -54,6 +54,17 @@ describe('deriveTabContainerTabs', () => {
     expect(tabs.every((t) => !t.disabled && !t.hidden)).toBe(true);
   });
 
+  it('leaves a top_level child out of the page list entirely', () => {
+    // `as_sortable_control` rejects the flag before it looks at visibility
+    // (`container.cpp:144-146`), and `_get_tab_controls` (`:469-481`) calls it
+    // for every child, so a top_level Control is no page at all.
+    const tabs = deriveTabContainerTabs(
+      { children: [page('General'), page('Floating', { topLevel: true }), page('Advanced')] },
+      undefined
+    );
+    expect(tabs.map((t) => t.title)).toEqual(['General', 'Advanced']);
+  });
+
   it('a tab_<idx>/title override replaces the child name; other overrides are per-index too', () => {
     const tabs = deriveTabContainerTabs(
       { children: [page('General'), page('Advanced'), page('Locked')] },

@@ -44,6 +44,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
@@ -64,21 +65,23 @@ export const TABS_POSITION_BOTTOM = 1;
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`. */
 const SIDE_MARGIN_LITERAL = 8;
 
-/** Every direct child is a tab page — `TabContainer::_get_tab_controls` (`:469-481`) uses `SortableVisibilityMode::IGNORE`, so a page whose own `visible` is `false` (every non-current page in an editor-saved `.tscn`) is still a page, just one the WALKER later hides. The cast still applies, so a Control the walker promoted past a Node2D is no page at all. `top_level` is not modelled anywhere in this codebase's Control tree, so every other child qualifies. */
+/** Every direct child is a tab page — `TabContainer::_get_tab_controls` (`:469-481`) uses `SortableVisibilityMode::IGNORE`, so a page whose own `visible` is `false` (every non-current page in an editor-saved `.tscn`) is still a page, just one the WALKER later hides. The cast still applies, so neither a Control the walker promoted past a Node2D nor a `top_level` one (`container.cpp:144-146`, ahead of every visibility mode) is a page at all. */
 export function deriveTabContainerTabs(
   n: Pick<SolveNode, 'children'>,
   overrides: Readonly<Record<number, TabContainerTabOverride>> | undefined
 ): TabBarTabProperties[] {
-  return n.children.filter((child) => !isPromotedControl(child)).map((child, i) => {
-    const override = overrides?.[i];
-    return {
-      title: override?.title ?? child.node.name,
-      tooltip: '',
-      icon: override?.icon,
-      disabled: override?.disabled ?? false,
-      hidden: override?.hidden ?? false,
-    };
-  });
+  return n.children
+    .filter((child) => !isPromotedControl(child) && !isTopLevelItem(child.node))
+    .map((child, i) => {
+      const override = overrides?.[i];
+      return {
+        title: override?.title ?? child.node.name,
+        tooltip: '',
+        icon: override?.icon,
+        disabled: override?.disabled ?? false,
+        hidden: override?.hidden ?? false,
+      };
+    });
 }
 
 /**

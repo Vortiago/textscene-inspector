@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { GraphNodeProperties, GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
@@ -18,6 +19,11 @@ import { GraphEdit } from './Component';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
+
+function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) => void }) {
+  onPlanes(useControlClipPlanes());
+  return null;
+}
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -247,5 +253,167 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
     // 400 - 240 - 12 across, 320 - 160 - 12 down (negated for three's +Y up).
     expect(world.x).toBeCloseTo(148, 5);
     expect(world.y).toBeCloseTo(-148, 5);
+  });
+});
+
+/**
+ * `set_clip_contents(true)` (`graph_edit.cpp:3342`) — a constructor fact, so
+ * every GraphEdit clips, whatever the scene says. It is load-bearing rather
+ * than cosmetic: `set_scroll_offset`'s own load-time clamp (`loadOrder.ts`)
+ * routinely parks the whole graph outside the widget's rect.
+ */
+describe('<GraphEdit> — clip_contents', () => {
+  it("publishes exactly 4 world-space planes matching this node's own rect", async () => {
+    let captured: readonly THREE.Plane[] = [];
+    await ReactThreeTestRenderer.create(
+      <GraphEdit {...painterEnv()} solveNode={graphEdit()} rect={{ x: 0, y: 0, w: 300, h: 200 }} renderOrder={0}>
+        <ClipProbe onPlanes={(p) => (captured = p)} />
+      </GraphEdit>
+    );
+    expect(captured).toHaveLength(4);
+    expect(captured.every((p) => p.distanceToPoint(new THREE.Vector3(150, -100, 0)) >= 0)).toBe(true);
+    expect(captured.some((p) => p.distanceToPoint(new THREE.Vector3(310, -100, 0)) < 0)).toBe(true);
+    expect(captured.some((p) => p.distanceToPoint(new THREE.Vector3(150, 10, 0)) < 0)).toBe(true);
+  });
+
+  it('clips its own connection ribbons, which scroll_offset can drive right out of the rect', async () => {
+    const connection: GraphEditConnection = { fromNode: 'A', fromPort: 0, toNode: 'B', toPort: 0 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        solveNode={graphEdit({ connections: [connection] }, [
+          graphNode('A', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('A/L', 20)]),
+          graphNode('B', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('B/L', 20)]),
+        ])}
+        childRects={new Map([
+          ['A', { x: 0, y: 0, w: 60, h: 40 }],
+          ['B', { x: 120, y: 0, w: 60, h: 40 }],
+        ])}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const ribbons = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => (m.geometry as THREE.BufferGeometry).getIndex() !== null && (m.geometry as THREE.BufferGeometry).attributes.color?.itemSize === 4);
+    expect(ribbons.length).toBeGreaterThan(0);
+    for (const ribbon of ribbons) {
+      expect((ribbon.material as THREE.Material).clippingPlanes).toHaveLength(4);
+    }
+  });
+});
+
+/**
+ * `GraphEdit::_draw_minimap_connection_line` (`graph_edit.cpp:1592-1612`) —
+ * `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`, the only
+ * reader of `connection_lines_antialiased` anywhere in the engine.
+ */
+describe('<GraphEdit> minimap connection polylines', () => {
+  const connections: GraphEditConnection[] = [{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }];
+  const childRects: ReadonlyMap<string, Rect2> = new Map([
+    ['Source', { x: 0, y: 0, w: 120, h: 80 }],
+    ['Sink', { x: 200, y: 0, w: 120, h: 80 }],
+  ]);
+
+  function render(properties: Partial<GraphEditProperties>) {
+    return ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={graphEdit({ showGrid: false, minimapEnabled: true, connections, ...properties }, [
+          graphNode('Source', new Map([[0, fullSlot({ rightEnabled: true })]]), [leafControl('Value', 20)]),
+          graphNode('Sink', new Map([[0, fullSlot({ leftEnabled: true })]]), [leafControl('Result', 20)]),
+        ])}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+  }
+
+  /** The one mesh drawn between the minimap's node rects and its camera rect. */
+  function polyline(renderer: Rendered): THREE.Mesh | undefined {
+    return renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .find((m) => Math.abs(m.renderOrder - (9 + 0.75 + 0.03)) < 1e-9);
+  }
+
+  it('draws one merged polyline mesh for every resolvable connection', async () => {
+    const mesh = polyline(await render({}));
+    expect(mesh).toBeDefined();
+    expect((mesh!.geometry as THREE.BufferGeometry).attributes.position!.count).toBeGreaterThan(0);
+  });
+
+  it('draws none when the minimap is off (graph_edit.cpp:1808-1810)', async () => {
+    expect(polyline(await render({ minimapEnabled: false }))).toBeUndefined();
+  });
+
+  it('adds the two feather strips and both end caps only while connection_lines_antialiased is on', async () => {
+    const aliased = polyline(await render({ connectionLinesAntialiased: false }))!;
+    const antialiased = polyline(await render({ connectionLinesAntialiased: true }))!;
+    const plain = (aliased.geometry as THREE.BufferGeometry).attributes.position!.count;
+    const feathered = (antialiased.geometry as THREE.BufferGeometry).attributes.position!.count;
+    // 2N without AA; (2N + 4) + 2 * (2N + 5) with it (renderer_canvas_cull.cpp:1024-1055).
+    expect(feathered).toBe(3 * plain + 14);
+  });
+
+  it('defaults to antialiased, the member default the file need not state (graph_edit.h:254)', async () => {
+    const byDefault = polyline(await render({}))!;
+    const explicit = polyline(await render({ connectionLinesAntialiased: true }))!;
+    expect((byDefault.geometry as THREE.BufferGeometry).attributes.position!.count).toBe(
+      (explicit.geometry as THREE.BufferGeometry).attributes.position!.count
+    );
+  });
+});
+
+/**
+ * `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:321-329`): a
+ * disabled button modulates its icon with `icon_disabled_color`. The stylebox
+ * does NOT change — `FlatButton`'s `disabled` box is the same empty box as its
+ * `normal` one (`default_theme.cpp:370`) — so the icon's alpha is the whole
+ * visible difference.
+ */
+describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
+  function render(properties: Partial<GraphEditProperties>) {
+    return ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        solveNode={graphEdit({ showGrid: false, showMenu: true, ...properties })}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+  }
+
+  /** Every toolbar icon drawn at `icon_disabled_color`'s own alpha (`default_theme.cpp:169`). */
+  function dimmedIcons(renderer: Rendered): number {
+    return renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => (m.material as THREE.MeshBasicMaterial).map !== null)
+      .filter((m) => Math.abs((m.material as THREE.MeshBasicMaterial).opacity - 0.4) < 1e-9).length;
+  }
+
+  it('draws every icon at full alpha while neither bound has been reached', async () => {
+    expect(dimmedIcons(await render({}))).toBe(0);
+  });
+
+  it('dims exactly the minus button once zoom is parked on zoom_min', async () => {
+    expect(dimmedIcons(await render({ zoomMinusDisabled: true }))).toBe(1);
+  });
+
+  it('dims exactly the plus button once zoom is parked on zoom_max', async () => {
+    expect(dimmedIcons(await render({ zoomPlusDisabled: true }))).toBe(1);
+  });
+
+  it('dims both when a single-step zoom range parks it on each', async () => {
+    expect(dimmedIcons(await render({ zoomMinusDisabled: true, zoomPlusDisabled: true }))).toBe(2);
+  });
+
+  it('draws no dimmed icon when the zoom buttons are hidden altogether', async () => {
+    expect(dimmedIcons(await render({ zoomMinusDisabled: true, showZoomButtons: false }))).toBe(0);
   });
 });

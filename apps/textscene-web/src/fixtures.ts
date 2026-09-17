@@ -538,6 +538,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Minimap Connection",
+    "file": "unit-graph-edit-minimap-connection.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Minimap Disabled",
     "file": "unit-graph-edit-minimap-disabled.tscn",
     "category": "Other"
@@ -550,6 +555,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Graph Edit Minimap Size",
     "file": "unit-graph-edit-minimap-size.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Scroll Offset Clamped",
+    "file": "unit-graph-edit-scroll-offset-clamped.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Bound Order",
+    "file": "unit-graph-edit-zoom-bound-order.tscn",
     "category": "Other"
   },
   {
@@ -2083,6 +2098,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control In Parallax Background",
+    "file": "unit-control-in-parallax-background.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Instanced Hud Badge",
     "file": "unit-control-instanced-hud-badge.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2145,6 +2165,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Themed Icon",
     "file": "unit-control-themed-icon.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Top Level",
+    "file": "unit-control-top-level.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -2280,6 +2305,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Empty Scene",
     "file": "unit-empty-scene.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node2d Detached Transform",
+    "file": "unit-node2d-detached-transform.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node2d Top Level",
+    "file": "unit-node2d-top-level.tscn",
     "category": "Unit - Basic Nodes"
   },
   {

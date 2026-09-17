@@ -5,6 +5,7 @@ import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalV
 import type { GraphEditProperties } from './types';
 import { parseControl } from '../control/parser';
 import { parseGraphEditConnections } from './connections';
+import { resolveGraphEditLoadState } from './loadOrder';
 
 export function parseGraphEdit(
   heading: ParsedHeading,
@@ -12,14 +13,20 @@ export function parseGraphEdit(
 ): GraphEditProperties {
   const result: GraphEditProperties = { ...parseControl(heading, properties), connections: [] };
 
-  result.scrollOffset = parseOptionalVector2(properties.scroll_offset);
-  result.zoom = parseOptionalFloat(properties.zoom);
+  // `scroll_offset` and `zoom` are what their setters STORED, not what the
+  // file wrote: each clamps against state an earlier key left behind.
+  const loadState = resolveGraphEditLoadState(properties);
+  result.scrollOffset = loadState.scrollOffset;
+  result.zoom = loadState.zoom;
+  result.zoomMinusDisabled = loadState.zoomMinusDisabled;
+  result.zoomPlusDisabled = loadState.zoomPlusDisabled;
   result.showGrid = parseOptionalBool(properties.show_grid);
   result.gridPattern = parseOptionalInt(properties.grid_pattern);
   result.snappingDistance = parseOptionalInt(properties.snapping_distance);
   result.connectionLinesCurvature = parseOptionalFloat(properties.connection_lines_curvature);
   result.connectionLinesThickness = parseOptionalFloat(properties.connection_lines_thickness);
   result.connections = parseGraphEditConnections(properties.connections);
+  result.connectionLinesAntialiased = parseOptionalBool(properties.connection_lines_antialiased);
   result.snappingEnabled = parseOptionalBool(properties.snapping_enabled);
   result.minimapEnabled = parseOptionalBool(properties.minimap_enabled);
   result.minimapSize = parseOptionalVector2(properties.minimap_size);

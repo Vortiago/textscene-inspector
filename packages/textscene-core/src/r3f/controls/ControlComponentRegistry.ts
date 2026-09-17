@@ -204,9 +204,10 @@ export interface ControlComponentRegistration {
    * second hardcoded branch, and the two could drift on which types wrap.
    *
    * Only a type that establishes a new ambient scope for its subtree needs it.
-   * Two do: `CanvasLayer` publishes a draw-order band and a fresh modulate scope,
-   * and `ScrollContainer` publishes clip planes — different scopes, same
-   * structural requirement, which is why this is one flag rather than two.
+   * Three do: `CanvasLayer` publishes a draw-order band and a fresh modulate
+   * scope, and `ScrollContainer` and `GraphEdit` each publish clip planes —
+   * different scopes, same structural requirement, which is why this is one
+   * flag rather than two.
    */
   wrapsChildren?: boolean;
 }

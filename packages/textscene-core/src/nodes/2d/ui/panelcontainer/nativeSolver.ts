@@ -25,13 +25,13 @@
  * border width" sentinel), so both functions read it directly with no
  * further fallback.
  *
- * Both functions apply `as_sortable_control`'s visibility filter
- * (`container.cpp:143-155`, `isSortableControl`) like every other container
- * solver here: a hidden child contributes nothing to the aggregate minimum
- * size, which is what Godot does and is observable — a PanelContainer wrapping
- * one hidden and one visible child must size to the visible one alone. Its
- * `top_level` half is not modelled, since `top_level` Controls do not exist
- * anywhere in this codebase's solve tree.
+ * Both functions apply `as_sortable_control` (`container.cpp:143-155`,
+ * `isSortableControl`) like every other container solver here: a hidden child
+ * contributes nothing to the aggregate minimum size, which is what Godot does
+ * and is observable — a PanelContainer wrapping one hidden and one visible
+ * child must size to the visible one alone. The same helper drops a
+ * `top_level` child, which is a canvas root and no child of this container's
+ * layout at all.
  *
  * Pure data + functions, no React, no THREE.
  */

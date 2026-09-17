@@ -713,6 +713,34 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     expect(result.current.tree[0]!.children).toHaveLength(0);
   });
 
+  it('makes a top_level Control a canvas root even though its parent IS a Control', () => {
+    // The climb's own loop condition is `while (!node->is_set_as_top_level())`
+    // (control.cpp:3876), so it never starts: `has_parent_control` stays false
+    // and the Control registers as a viewport root exactly as a broken chain
+    // does.
+    const nodes = [control('Root', { anchors_preset: 15 })];
+    (nodes[0] as TscnNode).children = [label('Floating', { topLevel: true })];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Floating']);
+    expect(result.current.tree[0]!.children).toHaveLength(0);
+  });
+
+  it('keeps a top_level Control clear of the Node2D ancestors it sits under', () => {
+    // `get_parent_item()` short-circuits before the parent cast
+    // (canvas_item.cpp:565-571), so the Node2D between them composes onto
+    // nothing — unlike a promoted Control, which rides its transform.
+    const anchor = node2D('Anchor', { position: { x: 30, y: 40 } }, {
+      children: [label('Floating', { topLevel: true })],
+    });
+    const root = control('Root', { anchors_preset: 15 });
+    (root as TscnNode).children = [anchor];
+
+    const { result } = renderHook(() => useBuildSolveTree([root], [], []));
+    expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Anchor/Floating']);
+    expect(result.current.tree[1]!.skippedAncestors).toBeNull();
+  });
+
   it('stops the hoist at the enclosing CanvasLayer, whose canvas the item actually parents to', () => {
     // `_enter_canvas` climbs plain `Node` parents for a CanvasLayer before
     // falling back to the viewport's World2D canvas (canvas_item.cpp:251-267).
@@ -742,6 +770,51 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     const { result } = renderHook(() => useBuildSolveTree([root], [], []));
     expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Holder/Anchor/Promoted']);
     expect(result.current.tree[1]!.skippedAncestors!.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 30, ty: 40 });
+  });
+
+  it('draws after the whole subtree of the root it was hoisted out of', () => {
+    // A hoisted Control is a root of the viewport's canvas, and a canvas draws
+    // its roots in the order a per-canvas counter indexed them
+    // (`gui_get_canvas_sort_index()`, canvas_item.cpp:222-232,
+    // viewport.cpp:3721-3724) while SceneTree walked the `_root_canvas` group
+    // in tree pre-order (canvas_item.cpp:453-466, scene_tree.cpp:333-348,
+    // node.cpp:2152-2187) — each root's subtree whole
+    // (renderer_canvas_cull.cpp:494-511). So it draws OVER a sibling authored
+    // after it, which the slot its own file position gives it cannot express.
+    const detached = node('Holder', 'Node', { children: [label('Detached')] });
+    const nodes = [control('Root', { anchors_preset: 15 })];
+    (nodes[0] as TscnNode).children = [detached, label('Later')];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const [root, hoisted] = result.current.tree;
+    expect(hoisted!.path).toBe('Root/Holder/Detached');
+    const later = root!.children[0]!;
+    expect(later.path).toBe('Root/Later');
+    expect(hoisted!.paintSequence).toBeGreaterThan(later.paintSequence);
+    expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(root!.paintRange.base + root!.paintRange.size);
+  });
+
+  it('orders a Control hoisted to a CanvasLayer against THAT layer’s own roots', () => {
+    // The layer is its own canvas, and its counter is `CanvasLayer::
+    // get_sort_index()` (canvas_layer.cpp:261-267) over the layer's own roots
+    // — pre-order [First, Detached, Second], so the hoisted item draws over
+    // the first child's subtree and still under the second's.
+    const detached = node('Holder', 'Node', { children: [label('Detached')] });
+    const first = control('First');
+    (first as TscnNode).children = [detached];
+    const second = control('Second');
+    const layer = node('Layer', 'CanvasLayer', { children: [first, second] });
+    const root = control('Root', { anchors_preset: 15 });
+    (root as TscnNode).children = [layer];
+
+    const { result } = renderHook(() => useBuildSolveTree([root], [], []));
+    const solvedLayer = result.current.tree[0]!.children[0]!;
+    const [solvedFirst, solvedSecond, hoisted] = solvedLayer.children;
+    expect(hoisted!.path).toBe('Root/Layer/First/Holder/Detached');
+    expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(
+      solvedFirst!.paintRange.base + solvedFirst!.paintRange.size
+    );
+    expect(hoisted!.paintSequence).toBeLessThan(solvedSecond!.paintSequence);
   });
 
   it('still carries the eye toggle of every ancestor it was hoisted past', () => {

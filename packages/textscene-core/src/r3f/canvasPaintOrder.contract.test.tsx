@@ -178,6 +178,59 @@ polygon = PackedVector2Array(0, 0, 640, 0, 640, 400)
     expect(compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))).toBeLessThan(0);
   });
 
+  it('a ParallaxBackground hosts the canvas its CONTROL children draw on too', async () => {
+    // `_enter_canvas`'s climb stops at `Object::cast_to<CanvasLayer>(n)`
+    // (canvas_item.cpp:246-252), and `ParallaxBackground` IS one
+    // (`parallax_background.h:34`) — so a Control under it parents at THAT
+    // canvas, on layer -100, exactly as a Node2D does. Hoisting past it would
+    // put the Control on the world canvas, where its canvas-root rank draws it
+    // over the ball instead.
+    const root = await renderWorld(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(320, 200)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="BG" type="ParallaxBackground" parent="."]
+
+[node name="Art" type="ColorRect" parent="BG"]
+offset_right = 640.0
+offset_bottom = 400.0
+color = Color(0.9, 0.2, 0.2, 1)
+`);
+    expect(compareKeys(paintKey(drawnMeshUnder(root, 'Art')), paintKey(drawnMeshUnder(root, 'Ball')))).toBeLessThan(0);
+  });
+
+  it('a canvas item under a plain Node draws over a sibling authored after it', async () => {
+    // Its parent is not a CanvasItem, so `_enter_canvas` parents it at the
+    // viewport's own canvas (canvas_item.cpp:246-267) and it is drawn in its
+    // pre-order rank among the canvas's ROOTS — the draw index
+    // `gui_get_canvas_sort_index()` hands out while SceneTree walks the
+    // `_root_canvas` group (canvas_item.cpp:222-232, :453-466,
+    // scene_tree.cpp:333-348, node.cpp:2152-2187), consumed by
+    // `Canvas::ChildItem::operator<` (renderer_canvas_cull.h:146-151). Each
+    // root's subtree draws whole, so it covers everything under the root it
+    // hangs under however early in the file it was authored.
+    const root = await renderWorld(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Holder" type="Node" parent="."]
+
+[node name="Detached" type="Polygon2D" parent="Holder"]
+polygon = PackedVector2Array(0, 0, 640, 0, 640, 400)
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(320, 200)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`);
+    expect(
+      compareKeys(paintKey(drawnMeshUnder(root, 'Detached')), paintKey(drawnMeshUnder(root, 'Ball')))
+    ).toBeGreaterThan(0);
+  });
+
   it('a ColorRect authored LAST paints over an earlier Polygon2D sibling', async () => {
     const root = await renderWorld(scene('background-last'));
     const background = paintKey(drawnMeshUnder(root, 'Background'));

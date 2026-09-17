@@ -35,6 +35,7 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   resolveTitleFontTheme,
@@ -104,6 +105,9 @@ function portHOffsetOf(constants: SolveNode['constants']): number {
 
 export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRects }: NativeControlComponentProps) {
   const props = painterView<GraphNodeProperties>(solveNode);
+  // `<TextRun>` builds its own material, so it takes the ambient planes as a
+  // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
+  const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphNodeStyles(solveNode, theme);
   const panelStyle = selected ? styles.panelSelected : styles.panel;
@@ -177,6 +181,7 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
               layout={titleLineLayouts[i]!}
               fontSizePx={fontTheme.fontSizePx}
               tint={titleTintColor}
+              clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
             />
           </CanvasItemGroup>

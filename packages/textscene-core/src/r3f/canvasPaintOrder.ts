@@ -45,12 +45,21 @@
  * anything outside its own subtree — it re-packs its own range — and it is why
  * `size` counts the whole subtree rather than one value per node.
  *
+ * The one item that does NOT draw at the slot its nesting gives it is a canvas
+ * ROOT — one whose own parent is not a `CanvasItem`, or whose own `top_level`
+ * is set, either of which parents it at the canvas itself
+ * (`isCanvasRoot`). A canvas draws its roots in their pre-order rank among
+ * THEM, each root's subtree whole, so a nested root's run is carved from the
+ * end of the enclosing root's range (`canvasRootRanges`).
+ *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
 import type { TscnNode } from '../parser/types';
+import { descendsFrom } from '../godot/nodeBaseTypes';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import {
   CANVAS_ITEM_Z_MAX,
   CANVAS_ITEM_Z_MIN,
@@ -169,16 +178,18 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
 }
 
 /**
- * Node types that START A CANVAS of their own — Godot's `CanvasLayer` and every
- * subclass of it. `ParallaxBackground extends CanvasLayer`
- * (`scene/2d/parallax_background.h`), so its `layer` orders its subtree against
- * the rest of the canvases exactly as a plain `CanvasLayer`'s does; matching on
- * the literal type name alone silently left it on the world canvas.
+ * Whether this type STARTS A CANVAS of its own — `_enter_canvas`'s climb ends
+ * at `Object::cast_to<CanvasLayer>(n)` (`canvas_item.cpp:246-252`), so the
+ * question is the cast and nothing narrower. Derived from ClassDB rather than
+ * listed, because a literal name list silently left `ParallaxBackground`
+ * (`parallax_background.h:34`) on the world canvas, and a second subclass would
+ * repeat that. `controlSolverRegistry.registerCanvasBoundary` is the Control
+ * walk's half of the same fact, held to this one by
+ * `controls/canvasBoundary.driftguard.test.ts`.
  */
-export const CANVAS_LAYER_TYPES: ReadonlySet<string> = new Set([
-  'CanvasLayer',
-  'ParallaxBackground',
-]);
+export function isCanvasLayerType(type: string): boolean {
+  return descendsFrom(type, 'CanvasLayer');
+}
 
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
@@ -190,7 +201,7 @@ export function canvasLayerOf(node: TscnNode): number {
 export function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
   const found: number[] = [];
   const visit = (node: TscnNode): void => {
-    if (CANVAS_LAYER_TYPES.has(node.type)) found.push(canvasLayerOf(node));
+    if (isCanvasLayerType(node.type)) found.push(canvasLayerOf(node));
     for (const child of node.children) visit(child);
   };
   for (const node of nodes) visit(node);
@@ -228,7 +239,138 @@ function reservesRoom(node: TscnNode): boolean {
 export function paintRangeSize(node: TscnNode): number {
   let size = reservesRoom(node) ? DYNAMIC_CHILD_RESERVE : 1;
   for (const child of node.children) size += paintRangeSize(child);
+  // A canvas root nested under this item draws after its WHOLE subtree, out of
+  // room held at the end of its run rather than the slot its nesting gives it.
+  if (isCanvasItem(node)) {
+    for (const root of nestedCanvasRoots(node)) size += paintRangeSize(root);
+  }
   return size;
+}
+
+/**
+ * Whether `Object::cast_to<CanvasItem>` would accept this node — the cast
+ * `CanvasItem::get_parent_item()` applies to the DIRECT parent
+ * (`canvas_item.cpp:565-571`), which is what decides whether an item nests
+ * under that parent or parents at the canvas itself.
+ */
+function isCanvasItem(node: TscnNode): boolean {
+  return descendsFrom(node.type, 'CanvasItem');
+}
+
+/**
+ * `top_level`, under either casing the two parsers produce — `Node2DProperties`
+ * keeps the `.tscn` snake_case, `ControlProperties` is camelCase, exactly as
+ * `drawsBehindParent` reads both.
+ */
+export function isTopLevelItem(node: TscnNode): boolean {
+  const props = node.properties as { top_level?: boolean; topLevel?: boolean };
+  return props.top_level === true || props.topLevel === true;
+}
+
+/**
+ * Whether this item parents at the CANVAS rather than at the node above it.
+ *
+ * `CanvasItem::get_parent_item()` answers with nullptr in two cases, and
+ * `_enter_canvas` treats them identically (`canvas_item.cpp:234-285`): the
+ * direct parent fails the `Object::cast_to<CanvasItem>`, or the item's own
+ * `top_level` short-circuits the cast before it runs
+ * (`canvas_item.cpp:565-571`). One predicate because Godot asks one question —
+ * a second test for the flag is how the two halves drift.
+ */
+export function isCanvasRoot(node: TscnNode, parentIsCanvasItem: boolean): boolean {
+  return isCanvasItem(node) && (!parentIsCanvasItem || isTopLevelItem(node));
+}
+
+/**
+ * Whether this node owns a canvas of its own, so the roots below it are
+ * ordered against ITS roots rather than the enclosing canvas's — a
+ * `CanvasLayer` (`canvas_item.cpp:259-262`) or a sub-viewport (ADR-0033).
+ */
+function hostsOwnCanvas(node: TscnNode): boolean {
+  return isCanvasLayerType(node.type) || isViewportBoundary(node.type);
+}
+
+/**
+ * The canvas roots nested under `node`, in tree pre-order — every `CanvasItem`
+ * `_enter_canvas` parents at the canvas instead of at an ancestor item
+ * (`canvas_item.cpp:246-267`), which is `isCanvasRoot`'s question.
+ *
+ * The descent stops at each root found (its own nested roots ride inside its
+ * range) and at a node hosting a canvas of its own.
+ */
+export function nestedCanvasRoots(node: TscnNode): TscnNode[] {
+  const found: TscnNode[] = [];
+  const visit = (parent: TscnNode): void => {
+    const parentIsItem = isCanvasItem(parent);
+    for (const child of parent.children) {
+      if (hostsOwnCanvas(child) || opaqueToCanvasRoots(child)) continue;
+      if (isCanvasRoot(child, parentIsItem)) found.push(child);
+      else visit(child);
+    }
+  };
+  visit(node);
+  return found;
+}
+
+/**
+ * Whether the tree stops describing the canvas parenting below this node — an
+ * `instance=` node, whose real type and real children are the sub-scene's and
+ * only known once the PackedScene loads. Its subtree keeps the run its nesting
+ * gives it rather than being placed from a type the host tree cannot see.
+ */
+function opaqueToCanvasRoots(node: TscnNode): boolean {
+  return node.instance !== undefined;
+}
+
+/**
+ * Where every canvas root of ONE canvas draws, keyed by its node.
+ *
+ * A canvas root's draw index comes from a counter the canvas hands out
+ * (`gui_get_canvas_sort_index()` / `CanvasLayer::get_sort_index()`,
+ * `canvas_item.cpp:222-232`) while SceneTree iterates the `_root_canvas`
+ * group (`canvas_item.cpp:453-466`), which `_update_group_order` keeps in tree
+ * pre-order (`scene_tree.cpp:333-348`, `node.cpp:2152-2187`); the canvas draws
+ * its children in that order, each root's subtree whole
+ * (`renderer_canvas_cull.cpp:494-511`). So a root nested deep in the tree
+ * draws after everything under the root it hangs under, and still before the
+ * next root — which is the tail of that root's own run.
+ *
+ * `children` and `ranges` are the canvas host's own children and the runs
+ * `allocatePaintRange` gave them. Each root's value is the run its own subtree
+ * owns: what it was allocated, less the tail its nested roots hold.
+ */
+export function canvasRootRanges(
+  children: readonly TscnNode[],
+  ranges: readonly PaintRange[]
+): ReadonlyMap<TscnNode, PaintRange> {
+  const out = new Map<TscnNode, PaintRange>();
+  const addRoot = (root: TscnNode, range: PaintRange): void => {
+    const nested = nestedCanvasRoots(root);
+    const sizes = nested.map(paintRangeSize);
+    const reserve = sizes.reduce((sum, size) => sum + size, 0);
+    const end = range.base + range.size;
+    // Never the whole run: the root itself still needs a value of its own.
+    const from = reserve > 0 ? Math.min(end, Math.max(range.base + 1, end - reserve)) : end;
+    out.set(root, { base: range.base, size: from - range.base });
+    const packed = packPaintRanges(range, sizes, from);
+    nested.forEach((child, i) => addRoot(child, packed[i]!));
+  };
+  const visit = (node: TscnNode, range: PaintRange): void => {
+    if (hostsOwnCanvas(node) || opaqueToCanvasRoots(node)) return;
+    if (isCanvasItem(node)) {
+      addRoot(node, range);
+      return;
+    }
+    // Not an item itself: its own canvas-item children are the roots, at the
+    // runs the plain pre-order allocation gives them.
+    const allocated = allocatePaintRange(range, node.children);
+    node.children.forEach((child, i) => visit(child, allocated.children[i]!));
+  };
+  children.forEach((child, i) => {
+    const range = ranges[i];
+    if (range) visit(child, range);
+  });
+  return out;
 }
 
 /** A parent's own sequence value, and the range each of its children owns. */

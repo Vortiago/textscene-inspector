@@ -4,11 +4,12 @@
 ; renderer that conflates the two draws the right picture in every fixture
 ; that moves neither, and the wrong one only here.
 ; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all of them: GraphEdit's own
-; `set_scroll_offset` clamps against min/max bounds that are still (0, 0) while
-; a scene's properties are applied (graph_edit.cpp:407), so an authored offset
-; moves the grid, the nodes AND the minimap camera at once and would mask the
-; one variable each file exists to move.
+; and `scroll_offset` is deliberately ABSENT from all but
+; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
+; GraphEdit's own `set_scroll_offset` clamps against min/max bounds that are
+; still (0, 0) while a scene's properties are applied (graph_edit.cpp:407), so
+; an authored offset moves the grid, the nodes AND the minimap camera at once
+; and would mask the one variable each file exists to move.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminbtn"]
 

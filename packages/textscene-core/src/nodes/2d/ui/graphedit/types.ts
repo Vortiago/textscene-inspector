@@ -14,16 +14,23 @@ export interface GraphEditConnection {
 }
 
 /**
- * GraphEdit's own members THE RENDERER READS. `GraphEdit` serialises a few
- * more (`type_names`, `panning_scheme`, `right_disconnects`, the zoom
- * bounds/step — `linterParser.ts` validates all of them), which reach no
- * frozen frame.
+ * GraphEdit's own members THE RENDERER READS. `GraphEdit` serialises four
+ * more (`type_names`, `panning_scheme`, `right_disconnects`, `zoom_step` —
+ * `linterParser.ts` validates all of them), which reach no frozen frame.
+ *
+ * `scrollOffset`, `zoom` and the two `zoom*Disabled` flags are what
+ * `loadOrder.ts` replays rather than what the file wrote: each of their
+ * setters reads state an earlier key left behind.
  */
 export interface GraphEditProperties extends ControlProperties {
-  /** `scroll_offset` — `graph_edit.cpp:3069`. Default `Vector2()` (`graph_edit.h:234`). */
+  /** `scroll_offset` — `graph_edit.cpp:3069`, as STORED after `set_scroll_offset`'s load-time clamp (`loadOrder.ts`). Default `Vector2()` (`graph_edit.h:234`). */
   scrollOffset?: { x: number; y: number };
-  /** `zoom` — `graph_edit.cpp:3086`. Default `1.0` (`graph_edit.h:226`). */
+  /** `zoom` — `graph_edit.cpp:3086`, as STORED after `set_zoom`'s own clamp (`loadOrder.ts`). Default `1.0` (`graph_edit.h:226`). */
   zoom?: number;
+  /** `zoom_min` reached `zoom` — `zoom_minus_button->set_disabled(zoom == zoom_min)` (`graph_edit.cpp:2445`). */
+  zoomMinusDisabled?: boolean;
+  /** `zoom_max` reached `zoom` — `zoom_plus_button->set_disabled(zoom == zoom_max)` (`graph_edit.cpp:2446`). */
+  zoomPlusDisabled?: boolean;
   /** `show_grid` — `graph_edit.cpp:3070`. Default `true` (`graph_edit.h:200`). */
   showGrid?: boolean;
   /** `grid_pattern` — `graph_edit.cpp:3071`, `PROPERTY_HINT_ENUM "Lines,Dots"`. Default `0` (LINES, `graph_edit.h:201`). */
@@ -36,6 +43,8 @@ export interface GraphEditProperties extends ControlProperties {
   connectionLinesThickness?: number;
   /** `connections` — `graph_edit.cpp:3083`. Absent/malformed entries drop out; default `[]`. */
   connections: GraphEditConnection[];
+  /** `connection_lines_antialiased` — `graph_edit.cpp:3082`; read only by the minimap's own polyline (`:1611`). Default `true` (`graph_edit.h:254`). */
+  connectionLinesAntialiased?: boolean;
   /** `snapping_enabled` — `graph_edit.cpp:3072`; `set_snapping_enabled` mirrors it into `toggle_snapping_button`'s pressed state (`:2709`). Default `true` (`graph_edit.h:198`). */
   snappingEnabled?: boolean;
   /** `minimap_enabled` — `graph_edit.cpp:3092`. Default `true`: the constructor seeds `minimap_button->set_pressed(show_grid)` off the MEMBER default (`:3311`), which no scene property reaches. */

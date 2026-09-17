@@ -6,6 +6,7 @@
  */
 
 import { useMemo, type ReactNode } from 'react';
+import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 import {
@@ -19,7 +20,8 @@ import {
   accumulateCanvasItemZ,
   useEffectiveZ,
 } from './lighting2d/canvasItemPlacement.js';
-import { node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
+import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from './node2dTransform.js';
+import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { joinPath } from '../utils/nodePath.js';
 
 /**
@@ -49,6 +51,9 @@ export function LiftedAncestors({
   // down the tree, so an item lifted out of two nested containers has to be told
   // what those containers contributed before it adds its own.
   const parentEffectiveZ = useEffectiveZ();
+  // The restored groups are real transforms in the rendered tree, so a canvas
+  // root below them has to cancel them too (`canvasRootScope.tsx`).
+  const ambient = useCanvasSpace();
   const liftedZ = useMemo(
     () =>
       liftedPast.reduce((z, ancestor) => {
@@ -59,6 +64,23 @@ export function LiftedAncestors({
         });
       }, parentEffectiveZ),
     [liftedPast, parentEffectiveZ]
+  );
+
+  const liftedSpace = useMemo(
+    () =>
+      liftedPast.reduce<THREE.Matrix4 | null>((space, ancestor) => {
+        const props = ancestor.properties as Partial<Node2DProperties>;
+        const own = node2dGroupMatrix(
+          node2dGroupProps({
+            position: props.position ?? { x: 0, y: 0 },
+            rotation: props.rotation ?? 0,
+            scale: props.scale ?? { x: 1, y: 1 },
+            skew: props.skew,
+          })
+        );
+        return space ? space.clone().multiply(own) : own;
+      }, ambient),
+    [liftedPast, ambient]
   );
 
   let wrapped = children;
@@ -100,7 +122,9 @@ export function LiftedAncestors({
 
   return (
     <Modulate2DContext.Provider value={inherited}>
-      <EffectiveZProvider value={liftedZ}>{wrapped}</EffectiveZProvider>
+      <EffectiveZProvider value={liftedZ}>
+        <CanvasSpaceProvider value={liftedSpace}>{wrapped}</CanvasSpaceProvider>
+      </EffectiveZProvider>
     </Modulate2DContext.Provider>
   );
 }

@@ -1,0 +1,29 @@
+; The ONE variable: `top_level` on a CONTROL. The climb that decides where a
+; Control lands is `while (!node->is_set_as_top_level())` (control.cpp:3876), so
+; the flag ends it before it starts: the Control is a canvas root, anchoring
+; against the viewport and drawing in canvas space rather than riding the
+; Node2D above it. `unit-node2d-top-level.tscn` moves the same flag in the
+; Node2D world walk, which is a different walker entirely and cannot see this
+; one; every other Control fixture leaves the flag unset.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrltoplevel"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Holder" type="Node2D" parent="."]
+position = Vector2(300, 200)
+
+[node name="Floating" type="ColorRect" parent="Holder"]
+top_level = true
+offset_right = 160.0
+offset_bottom = 80.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Nested" type="ColorRect" parent="Holder"]
+offset_top = 120.0
+offset_right = 160.0
+offset_bottom = 200.0
+color = Color(0.2, 0.5, 0.9, 1)

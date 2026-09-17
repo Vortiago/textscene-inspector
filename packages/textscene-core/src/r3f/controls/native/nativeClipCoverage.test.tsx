@@ -4,11 +4,18 @@
  * array is per-MATERIAL state (`THREE.Material.clippingPlanes`), never
  * inherited by the scene graph the way a `THREE.Object3D` transform is
  * (`controlClipping.tsx`'s own doc). `StyleBoxQuad` and `ControlQuad` are the
- * two quad primitives every native Control painter is built from — a NEW
- * painter that reinvents its own raw `<mesh>` instead of one of these two
- * would need its own test, but a regression in EITHER shared primitive would
- * silently un-clip every painter built on it, which is the failure this
- * module exists to catch in one place rather than per consumer.
+ * two quad primitives every native Control painter is built from, and a
+ * regression in EITHER would silently un-clip every painter built on it —
+ * which is the failure the first half of this module catches in one place
+ * rather than per consumer.
+ *
+ * The second half catches what a per-primitive test structurally cannot: a
+ * painter that mounts something else — a raw `<mesh>`, a `<TextRun>` — and
+ * forgets to hand it the ambient planes. It mounts a real clipping Control
+ * through the real walker and asserts that NOTHING it draws is left
+ * unclipped. `GraphNode`/`GraphFrame` title text escaped exactly that way,
+ * visible only as a few hundred pixels of text outside a GraphEdit whose
+ * children had scrolled out of its own rect.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -20,6 +27,16 @@ import { ControlQuad } from './controlQuad';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
+import { ControlCanvasLayer } from './ControlCanvasLayer';
+import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext';
+import { SelectionProvider } from '../../contexts/SelectionContext';
+import { SceneResourcesProvider } from '../../SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { TscnParser } from '../../../parser/TscnParser';
+
+import '../../nodes/index';
+import '../index';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -122,5 +139,109 @@ describe('local clipping is enabled on every canvas that draws Controls', () => 
     const canvasTag = /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
     expect(canvasTag).not.toBe('');
     expect(canvasTag).toMatch(/localClippingEnabled:\s*true/);
+  });
+});
+
+/**
+ * `Control::set_clip_contents(true)` is a property of the CONTROL, so it has
+ * to reach every pixel that control's painter draws, whatever primitive drew
+ * it. `GraphEdit` sets it in its own constructor (`graph_edit.cpp:3342`) and
+ * `ScrollContainer` from the property, so both are real clipping ancestors to
+ * mount a subtree under.
+ *
+ * Reads the WHOLE rendered tree rather than a named painter: the point is to
+ * fail for a primitive nobody thought to list, which is how this regression
+ * arrived.
+ */
+async function meshesOf(tscn: string): Promise<THREE.Mesh[]> {
+  const parsed = new TscnParser().parse(tscn);
+  const fake = createFakeResourceLoader();
+  const renderer = await ReactThreeTestRenderer.create(
+    <CanvasWorkspaceProvider workspace="2d">
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={parsed.internalResources}
+          externalResources={parsed.externalResources}
+        >
+          <SelectionProvider>
+            <ControlCanvasLayer nodes={parsed.nodes} />
+          </SelectionProvider>
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    </CanvasWorkspaceProvider>
+  );
+  await new Promise<void>((r) => setTimeout(r, 20));
+  const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
+    .children?.[0]?.instance;
+  let root: THREE.Object3D | null | undefined = first;
+  while (root?.parent) root = root.parent;
+  const found: THREE.Mesh[] = [];
+  root?.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) found.push(o as THREE.Mesh);
+  });
+  return found;
+}
+
+/** The node path a mesh hangs under, so a failure names the painter. */
+function ownerOf(mesh: THREE.Object3D): string {
+  const parts: string[] = [];
+  for (let a: THREE.Object3D | null = mesh; a; a = a.parent) if (a.name) parts.unshift(a.name);
+  return parts.join('/');
+}
+
+function unclipped(meshes: readonly THREE.Mesh[]): string[] {
+  return meshes
+    .filter((m) => {
+      const planes = (m.material as THREE.Material).clippingPlanes;
+      return !Array.isArray(planes) || planes.length === 0;
+    })
+    .map(ownerOf);
+}
+
+describe('a clipping Control clips everything its own painters draw', () => {
+  it('leaves nothing under a GraphEdit unclipped — titles included', async () => {
+    const meshes = await meshesOf(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+offset_right = 400.0
+offset_bottom = 320.0
+
+[node name="Frame" type="GraphFrame" parent="Graph"]
+offset_right = 360.0
+offset_bottom = 140.0
+title = "Group"
+
+[node name="Node" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+`);
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(unclipped(meshes)).toEqual([]);
+  });
+
+  it('leaves nothing under a ScrollContainer unclipped', async () => {
+    const meshes = await meshesOf(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+offset_right = 200.0
+offset_bottom = 120.0
+
+[node name="Inner" type="Label" parent="Scroll"]
+text = "Scrolled"
+`);
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(unclipped(meshes)).toEqual([]);
   });
 });

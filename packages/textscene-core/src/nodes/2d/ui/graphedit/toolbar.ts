@@ -60,6 +60,8 @@ export interface ToolbarItem {
   rect: Rect2;
   /** `BaseButton::is_pressed()`; always false for the two non-toggles and for every non-button. */
   pressed: boolean;
+  /** `BaseButton::is_disabled()`. Only the two zoom-step buttons are ever disabled (`graph_edit.cpp:2445-2446`). */
+  disabled: boolean;
 }
 
 export interface GraphEditToolbar {
@@ -155,6 +157,7 @@ interface ToolbarEntry {
   id: ToolbarItemId;
   kind: ToolbarItemKind;
   pressed: boolean;
+  disabled: boolean;
   box: BoxChildInput;
 }
 
@@ -170,10 +173,11 @@ export function graphEditToolbar(
   if (props.showMenu === false) return null;
 
   const buttonMin = toolbarButtonMinSize(theme);
-  const button = (id: ToolbarItemId, pressed: boolean): ToolbarEntry => ({
+  const button = (id: ToolbarItemId, pressed: boolean, disabled = false): ToolbarEntry => ({
     id,
     kind: 'button',
     pressed,
+    disabled,
     box: { minSize: buttonMin, hSizeFlags: SIZE_FILL, vSizeFlags: SIZE_FILL, stretchRatio: 1 },
   });
 
@@ -183,6 +187,7 @@ export function graphEditToolbar(
       id: 'zoom_label',
       kind: 'label',
       pressed: false,
+      disabled: false,
       box: {
         minSize: zoomLabelMinSize(theme, metrics, props.zoom ?? 1),
         hSizeFlags: SIZE_FILL,
@@ -192,7 +197,11 @@ export function graphEditToolbar(
     });
   }
   if (props.showZoomButtons !== false) {
-    entries.push(button('zoom_minus', false), button('zoom_reset', false), button('zoom_plus', false));
+    entries.push(
+      button('zoom_minus', false, props.zoomMinusDisabled === true),
+      button('zoom_reset', false),
+      button('zoom_plus', false, props.zoomPlusDisabled === true)
+    );
   }
   if (props.showGridButtons !== false) {
     entries.push(button('toggle_grid', props.showGrid !== false), button('toggle_snapping', props.snappingEnabled !== false));
@@ -200,6 +209,7 @@ export function graphEditToolbar(
       id: 'snapping_distance',
       kind: 'spinBox',
       pressed: false,
+      disabled: false,
       box: {
         minSize: toolbarSpinBoxMinSize(theme, metrics),
         hSizeFlags: SIZE_FILL,
@@ -244,6 +254,7 @@ export function graphEditToolbar(
       id: e.id,
       kind: e.kind,
       pressed: e.pressed,
+      disabled: e.disabled,
       rect: {
         x: contentRect.x + laid[i]!.x,
         y: contentRect.y + laid[i]!.y,

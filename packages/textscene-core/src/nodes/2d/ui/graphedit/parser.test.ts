@@ -9,13 +9,16 @@ function h(attributes: Record<string, string>): ParsedHeading {
 describe('parseGraphEdit', () => {
   it('parses scroll_offset, zoom, show_grid, grid_pattern, snapping_distance', () => {
     const p = parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {
+      offset_right: '400.0',
+      offset_bottom: '320.0',
       scroll_offset: 'Vector2(10, 20)',
       zoom: '1.5',
       show_grid: 'false',
       grid_pattern: '1',
       snapping_distance: '25',
     });
-    expect(p.scrollOffset).toEqual({ x: 10, y: 20 });
+    // `set_scroll_offset` clamps against bounds still at (0, 0) — `loadOrder.ts`.
+    expect(p.scrollOffset).toEqual({ x: -400, y: -320 });
     expect(p.zoom).toBe(1.5);
     expect(p.showGrid).toBe(false);
     expect(p.gridPattern).toBe(1);
@@ -31,6 +34,11 @@ describe('parseGraphEdit', () => {
     expect(p.connectionLinesCurvature).toBe(0.25);
     expect(p.connectionLinesThickness).toBe(6.0);
     expect(p.connections).toEqual([{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }]);
+  });
+
+  it('parses connection_lines_antialiased, the minimap polyline\'s own flag', () => {
+    expect(parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), { connection_lines_antialiased: 'false' }).connectionLinesAntialiased).toBe(false);
+    expect(parseGraphEdit(h({ name: 'G', type: 'GraphEdit' }), {}).connectionLinesAntialiased).toBeUndefined();
   });
 
   it('parses the minimap family and every toolbar visibility flag', () => {

@@ -20,6 +20,7 @@
  */
 
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 
@@ -92,9 +93,13 @@ export function fitChildInRect(
  * in the editor and so has to reach the same rule.
  *
  * A promoted child fails the cast itself rather than the visibility check: it
- * is a grandchild in the real tree, so `get_child(i)` never yields it.
+ * is a grandchild in the real tree, so `get_child(i)` never yields it. So does
+ * a `top_level` one — `if (!c || c->is_set_as_top_level())` runs ahead of every
+ * visibility mode (`container.cpp:144-146`), so even the `IGNORE` mode that
+ * keeps a hidden TabContainer page drops it.
  */
 export function isSortableControl(node: SolveNode): boolean {
   if (isPromotedControl(node)) return false;
+  if (isTopLevelItem(node.node)) return false;
   return !node.hidden && (node.node.properties as ControlProperties).visible !== false;
 }

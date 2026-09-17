@@ -22,11 +22,18 @@ import { controlComponentRegistry } from '../index';
 
 /**
  * A painter wraps its children only to give them a scope they must inherit:
- * `CanvasLayer` publishes a draw-order band plus a fresh modulate scope,
- * `ScrollContainer` publishes clip planes. Chrome-only painters must not — the
- * walker places their children as siblings.
+ * `CanvasLayer` and `ParallaxBackground` (a `CanvasLayer` subclass,
+ * `parallax_background.h:34`) publish a draw-order band plus a fresh modulate
+ * scope, and `ScrollContainer` and `GraphEdit` publish clip planes (both set
+ * `clip_contents` — one from the property, one from its own constructor).
+ * Chrome-only painters must not — the walker places their children as siblings.
  */
-const WRAPS_CHILDREN = new Set(['CanvasLayer', 'ScrollContainer']);
+const WRAPS_CHILDREN = new Set([
+  'CanvasLayer',
+  'ParallaxBackground',
+  'ScrollContainer',
+  'GraphEdit',
+]);
 
 describe('wrapsChildren ↔ ControlComponentRegistry drift guard', () => {
   it('every scope-establishing type declares it on its real registration', () => {

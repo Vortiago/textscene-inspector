@@ -86,8 +86,10 @@ function bareSolveNode(type: string): SolveNode {
 /**
  * Every Control type Godot's 2D UI needs, and the only ones this renderer
  * claims: the 59 Control types `ClassDB.can_instantiate` accepts, plus
- * `CanvasLayer`, which is a `Node` rather than a Control but roots a 2D UI
- * subtree and so registers here alongside them.
+ * `CanvasLayer` and `ParallaxBackground`, which are `Node`s rather than
+ * Controls but each root a 2D UI subtree on a canvas of their own
+ * (`canvas_item.cpp:246-252` stops the climb at either) and so register here
+ * alongside them.
  *
  * The six Control types NOT here cannot appear in a scene at all —
  * `ScrollBar`, `Separator`, `Slider` and the three `OpenXR*Editor*` classes are
@@ -99,7 +101,7 @@ function bareSolveNode(type: string): SolveNode {
  * slice deleted from both sides would leave all of them green. Adding or
  * removing a slice is always a deliberate act, so updating this is too.
  */
-const REGISTERED_CONTROL_TYPES = 60;
+const REGISTERED_CONTROL_TYPES = 61;
 
 /**
  * A slice that writes a `TextureSlotsFn` and never registers it.

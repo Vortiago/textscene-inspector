@@ -42,6 +42,12 @@ export interface Node2DProperties {
   z_as_relative: boolean;
   /** When true, the node draws behind its parent (CanvasItem, default false). */
   show_behind_parent: boolean;
+  /**
+   * CanvasItem `top_level`: the item parents at the CANVAS rather than at the
+   * node above it, so nothing from above the break composes onto it
+   * (`canvas_item.cpp:565-571` returns nullptr before the parent cast runs).
+   */
+  top_level: boolean;
 
   /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
   modulate: Color;

@@ -12,7 +12,10 @@
  * and `disabled` styleboxes are both `StyleBoxEmpty` (`default_theme.cpp:
  * 360-370`): only a PRESSED toggle draws a box. `icon_normal_color` and
  * `icon_pressed_color` are both opaque white (`default_theme.cpp:164-165`),
- * so an icon's own modulate never changes with the state.
+ * so those two states leave an icon's modulate alone — but `DRAW_DISABLED`
+ * swaps in `icon_disabled_color` (`button.cpp:321-329`), and the variation
+ * inherits `Button`'s own `Color(1, 1, 1, 0.4)` (`default_theme.cpp:169`).
+ * With the box unchanged, that alpha is the entire drawn difference.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -43,6 +46,9 @@ import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } f
 const LABEL_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 /** `control_font_color` (`default_theme.cpp:101`) — `LineEdit`'s own `font_color` (`:422`) and both SpinBox arrow modulates (`:634,638`). */
 const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+
+/** `icon_disabled_color` for `Button` (`default_theme.cpp:169`) — `Color(1, 1, 1, 0.4)`, so only the alpha moves. */
+const ICON_DISABLED_ALPHA = 0.4;
 
 /** `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` duplicated with `bg_color * Color(1, 1, 1, 0.85)`. */
 function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
@@ -86,7 +92,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonI
         width={GRAPH_EDIT_ICON_SIZE}
         height={GRAPH_EDIT_ICON_SIZE}
         color={tint.color}
-        opacity={tint.opacity}
+        opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
         map={texture}
         renderOrder={renderOrder}
       />

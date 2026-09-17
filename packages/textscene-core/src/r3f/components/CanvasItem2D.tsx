@@ -11,7 +11,8 @@
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
-import { node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
+import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
+import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useCanvasModulateFor } from '../canvasModulate';
 import {
@@ -59,7 +60,15 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   // Draw order does NOT ride the group's z — it is `renderOrder` below, which
   // three compares before camera distance. The group stays in the z=0 plane
   // with every other canvas item, so a 2D scene occupies no depth at all.
-  const transform = useMemo(() => node2dGroupSpread(node2dGroupProps(props)), [props]);
+  const local = useMemo(() => node2dGroupProps(props), [props]);
+  const transform = useMemo(() => node2dGroupSpread(local), [local]);
+  // What a canvas root nested below this item cancels: the transform every
+  // `<CanvasItem2D>` group between it and the canvas contributes.
+  const ambient = useCanvasSpace();
+  const canvasSpace = useMemo(() => {
+    const own = node2dGroupMatrix(local);
+    return ambient ? ambient.clone().multiply(own) : own;
+  }, [ambient, local]);
   const material = useCanvasItemMaterial(props);
   // The canvas tint rides this item's own pixels only, and only when its light
   // mode admits it — never the inherited modulate its children read. The light
@@ -94,7 +103,9 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
             so the provider carries what THIS node resolved — including a null,
             which correctly stops an inherited material at a node that clears it. */}
         <EffectiveZProvider value={effectiveZ}>
-          <CanvasItemMaterialProvider value={material}>{children}</CanvasItemMaterialProvider>
+          <CanvasItemMaterialProvider value={material}>
+            <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>
+          </CanvasItemMaterialProvider>
         </EffectiveZProvider>
       </Modulate2DContext.Provider>
     </group>

@@ -1,0 +1,39 @@
+; GraphEdit with a NEGATIVE authored `scroll_offset`, the one branch of
+; `set_scroll_offset`'s load-time clamp no other fixture reaches.
+; `scroll_offset = p_offset.clamp(min_scroll_offset, max_scroll_offset -
+; get_size())` (graph_edit.cpp:407) runs while both bounds are still (0, 0):
+; the node is not in the tree yet when a scene's properties are applied
+; (packed_scene.cpp:492 sets, :541 parents), so `NOTIFICATION_RESIZED` never
+; fires and `_update_scrollbars` never writes them. `CLAMP` tests the MIN
+; first (typedefs.h:139-141), so a negative offset lands on (0, 0) while every
+; non-negative one — including the (32, 16) of unit-graph-edit.tscn, and
+; including a plain (0, 0) — lands on `-size` instead. A clamp that kept only
+; the max branch, or that clamped against a symmetric range, still produces
+; unit-graph-edit.tscn's picture exactly; here it would slide the grid, both
+; nodes and the minimap camera by the authored (-64, -48).
+; The rest of the file is this family's shared rect and single GraphNode.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedscrclamp"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+scroll_offset = Vector2(-64, -48)
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"

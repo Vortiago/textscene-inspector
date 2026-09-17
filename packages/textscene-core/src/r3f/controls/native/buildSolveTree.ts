@@ -29,10 +29,19 @@
  * - A `Node3D` or raw `Node` is not, so the climb ends there: the Control is a
  *   canvas ROOT and is HOISTED out to the nearest enclosing canvas boundary,
  *   or to this forest's own roots. Nothing above the break reaches it — not a
- *   rect to anchor against, not a transform, not a tint, not a z. A
- *   `CanvasLayer` ends the climb the same way, but it keeps a `SolveNode` of
- *   its own (`controlSolverRegistry.isCanvasBoundary`), so it is where those
- *   hoisted Controls land rather than something they are hoisted past.
+ *   rect to anchor against, not a transform, not a tint, not a z — and it
+ *   draws in its pre-order rank among that canvas's roots rather than at the
+ *   slot its own position in the file gives it (`canvasRootRanges`). A
+ *   `CanvasLayer` (and its subclass `ParallaxBackground`) ends the climb the
+ *   same way, but it keeps a `SolveNode` of its own
+ *   (`controlSolverRegistry.isCanvasBoundary`), so it is where those hoisted
+ *   Controls land rather than something they are hoisted past.
+ * - `top_level` ends the climb wherever it appears, because the loop's own
+ *   condition is `while (!node->is_set_as_top_level())` (`control.cpp:3876`).
+ *   On the Control itself it also strips `skippedAncestors`, since
+ *   `get_parent_item()` returns nullptr before the parent cast runs
+ *   (`canvas_item.cpp:565-571`) and no Container lays such a child out
+ *   (`container.cpp:144-146`).
  *
  * `generation` bumps whenever ANY scene/texture/generic-resource/theme/font-
  * resource load/failure lands on the bus, OR a runtime font's metrics settle — a
@@ -88,6 +97,9 @@ import type { Affine2D, SkippedAncestors, SolveNode, ThemedIconRef } from './sol
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
+  canvasRootRanges,
+  isCanvasLayerType,
+  isTopLevelItem,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../canvasPaintOrder';
@@ -95,7 +107,7 @@ import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 import type { Vec2 } from './rect';
 
 export interface UseBuildSolveTreeResult {
-  /** Every Control whose canvas item parents at the viewport's own canvas — real scene roots, Controls promoted up through a skipped non-Control ancestor, and Controls hoisted out of a broken CanvasItem chain. */
+  /** Every Control whose canvas item parents at the viewport's own canvas — real scene roots, Controls promoted up through a skipped non-Control ancestor, Controls hoisted out of a broken CanvasItem chain, and `top_level` Controls. */
   tree: readonly SolveNode[];
   /** Bumps on every scene/texture load or failure; a stable dep for a consumer's own memoisation. */
   generation: number;
@@ -608,13 +620,20 @@ function buildForest(
      * the ancestor's emitted group entirely; both would otherwise escape a
      * toggle `NodeDispatcher` applies with one `<group visible>`.
      */
-    ancestorHidden: boolean
+    ancestorHidden: boolean,
+    /**
+     * Where each canvas root of the enclosing canvas draws — the draw index a
+     * canvas hands its roots, which is their pre-order rank among THEM and not
+     * the slot their nesting gives them (`canvasRootRanges`). One map per
+     * canvas, so a node found in it takes that run instead of its parent's.
+     */
+    canvasRoots: ReadonlyMap<TscnNode, PaintRange>
   ): WalkResult {
     const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
     const hoisted: SolveNode[] = [];
     for (const [index, node] of list.entries()) {
-      const paintRange = ranges[index] ?? WHOLE_CANVAS_RANGE;
+      const paintRange = canvasRoots.get(node) ?? ranges[index] ?? WHOLE_CANVAS_RANGE;
       // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
       // drawn by its own viewport surface, never by the enclosing canvas.
       if (isViewportBoundary(node.type)) continue;
@@ -693,10 +712,22 @@ function buildForest(
       // start a fresh accumulation; a skipped node folds its own CanvasItem
       // transform (if any) into what its descendants inherit instead.
       const childSkippedAncestors = isControl ? null : nextSkippedAncestors(collapsed, skippedAncestors);
+      // `NOTIFICATION_ENTER_CANVAS`'s climb is `while (!node->is_set_as_top_level())`
+      // (`control.cpp:3876`), so the flag ends it wherever it appears — on the
+      // Control itself, before the loop runs at all, or on a CanvasItem the
+      // climb would otherwise have passed through.
+      const topLevel = isTopLevelItem(collapsed);
       // A real Control ends the climb (`control.cpp:3883-3886`); a CanvasItem
       // continues it unchanged; anything else is the break itself.
-      const childCanvasChainBroken = isControl ? false : !isCanvasItem(collapsed) || canvasChainBroken;
+      const childCanvasChainBroken = isControl
+        ? false
+        : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
       const hidden = ancestorHidden || hiddenNodePaths.has(path);
+      // A CanvasLayer is a canvas of its own, so its roots are indexed by its
+      // OWN counter (`canvas_layer.cpp:261-267`) over its own children.
+      const childCanvasRoots = isCanvasLayerType(collapsed.type)
+        ? canvasRootRanges(inlineChildren, allocated.children)
+        : canvasRoots;
 
       // Each group walks with the slice of ranges belonging to ITS children.
       // Both allocations are over flattened lists, so the slices are handed
@@ -718,7 +749,8 @@ function buildForest(
           groupRanges,
           childSkippedAncestors,
           childCanvasChainBroken,
-          hidden
+          hidden,
+          childCanvasRoots
         );
         children.push(...walked.nodes);
         childHoisted.push(...walked.hoisted);
@@ -754,7 +786,11 @@ function buildForest(
           // parents a CanvasLayer's children at `canvas_layer->get_canvas()`,
           // never at a climbed CanvasItem ancestor). Forced `null` here so an
           // ancestor Node2D never rotates a CanvasLayer's whole canvas.
-          skippedAncestors: isBoundary ? null : skippedAncestors,
+          // A top_level Control's own canvas item parents at the canvas
+          // (`canvas_item.cpp:565-571`), so no skipped ancestor composes onto
+          // it — unlike a Control merely hoisted for anchoring, whose item
+          // still hangs under the CanvasItem above it.
+          skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
           hidden,
           styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
           textureSize: texture.size,
@@ -767,7 +803,7 @@ function buildForest(
           themeChain: nodeThemeChain,
           projectTheme,
         };
-        (canvasChainBroken ? hoisted : out).push(solved);
+        (canvasChainBroken || topLevel ? hoisted : out).push(solved);
         if (!isBoundary) hoisted.push(...childHoisted);
       } else {
         // Not a genuine Control type — transparent passthrough (see module doc):
@@ -779,15 +815,17 @@ function buildForest(
     return { nodes: out, hoisted };
   }
 
+  const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
   const walked = walk(
     nodes,
     '',
     { externalResources, internalResources },
     [],
-    allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children,
+    rootRanges,
     null,
     false,
-    false
+    false,
+    canvasRootRanges(nodes, rootRanges)
   );
   // The viewport's own canvas is the last adopter — `_enter_canvas` finds no
   // CanvasLayer above and parents at `find_world_2d()->get_canvas()`
