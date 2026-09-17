@@ -26,7 +26,9 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3069: VECTOR2, PROPERTY_HINT_NONE "suffix:px".
   // set_scroll_offset clamps to [min_scroll_offset, max_scroll_offset -
   // get_size()] (graph_edit.cpp:407), both derived from the laid-out children,
-  // so there is no bound a static file can be measured against.
+  // so there is no bound a static file can be measured against. What the load
+  // then keeps depends on the order the file lists the keys in, which is
+  // linter.ts's rule.
   scroll_offset: v.vector2('scroll_offset'),
   // graph_edit.cpp:3070: bare BOOL. set_show_grid (graph_edit.cpp:2729-2737) is
   // an assignment plus a button sync.

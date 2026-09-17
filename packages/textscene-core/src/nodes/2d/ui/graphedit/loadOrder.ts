@@ -11,13 +11,22 @@
  *
  *  - `Control::_size_changed` updates `data.size_cache` but skips
  *    `NOTIFICATION_RESIZED` outside the tree (`scene/gui/control.cpp:1812`),
- *    so `GraphEdit::_update_scrollbars` — the only writer of
- *    `min_scroll_offset`/`max_scroll_offset` (`graph_edit.cpp:492-493`), and
- *    the only other `NOTIFICATION_RESIZED` handler (`:867`) — never runs
- *    during load. Both bounds are therefore still `(0, 0)` when
- *    `set_scroll_offset` clamps against them (`:407`), and `CLAMP` takes the
- *    MIN branch first (`core/typedefs.h:139-141`): every authored offset lands
- *    on `0` or on `-size`, never in between.
+ *    so the resize handler that calls `GraphEdit::_update_scrollbars` (`:867`)
+ *    — the only writer of `min_scroll_offset`/`max_scroll_offset`
+ *    (`graph_edit.cpp:492-493`) — never runs during load. Both bounds are
+ *    therefore still `(0, 0)` when `set_scroll_offset` clamps against them
+ *    (`:407`), and `CLAMP` takes the MIN branch first
+ *    (`core/typedefs.h:139-141`): the range is INVERTED and every authored
+ *    offset lands on `0` or on `-size`, never in between.
+ *    One load-time path does reach `_update_scrollbars` first: a `zoom` write
+ *    that actually moves the value calls it (`:2448`). It measures a child
+ *    list that is still empty — `SceneState` parents GraphEdit's children
+ *    after its own properties — so the merged rect is one size out from the
+ *    origin in every direction (`:488-493`) and the clamp that follows reads
+ *    the PROPER range `min_scroll_offset` to `max_scroll_offset - size`, where
+ *    an authored offset inside it survives. `set_scroll_offset` reruns
+ *    `_update_scrollbars` itself (`:414`), but only after its own clamp, and a
+ *    file writes the key once.
  *  - `get_parent_anchorable_rect` returns an empty `Rect2` outside the tree
  *    (`control.cpp:687-689`), so every `anchor_*` contributes zero and the
  *    size is exactly `offset_right - offset_left` by `offset_bottom -
@@ -64,8 +73,8 @@ export const GRAPH_EDIT_DEFAULT_ZOOM_MAX = Math.fround(Math.pow(DEFAULT_ZOOM_STE
 /** `zoom`'s own member default (`graph_edit.h:226`). */
 const DEFAULT_ZOOM = 1;
 
-/** Both `min_scroll_offset` and `max_scroll_offset` while a scene loads — the clamp reads them per component. */
-const ZERO_SCROLL_BOUND = 0;
+/** `min_scroll_offset` and `max_scroll_offset` as GraphEdit's constructor leaves them. */
+const ZERO_SCROLL_BOUNDS = { x: 0, y: 0 };
 
 export interface GraphEditLoadState {
   /** `scroll_offset` as STORED, or undefined where the file never ran the setter. */
@@ -92,6 +101,8 @@ interface ReplayState {
   zoomTouched: boolean;
   minusDisabled: boolean;
   plusDisabled: boolean;
+  scrollMin: Vec2;
+  scrollMax: Vec2;
   scrollOffset: Vec2 | undefined;
 }
 
@@ -103,7 +114,18 @@ function sizeOf(state: ReplayState): Vec2 {
   };
 }
 
-/** `GraphEdit::set_zoom_custom` (`graph_edit.cpp:2431-2446`), the parts a load reaches: `is_visible_in_tree()` is false, so the scroll-anchor rewrite at `:2452-2453` never runs. */
+/**
+ * `GraphEdit::_update_scrollbars` (`graph_edit.cpp:488-493`) over the empty
+ * child list a load presents it with: the merged rect is a point at the origin,
+ * grown by one size in every direction.
+ */
+function installScrollBounds(state: ReplayState): void {
+  const size = sizeOf(state);
+  state.scrollMin = { x: -size.x, y: -size.y };
+  state.scrollMax = { x: size.x, y: size.y };
+}
+
+/** `GraphEdit::set_zoom_custom` (`graph_edit.cpp:2431-2448`), the parts a load reaches: `is_visible_in_tree()` is false, so the scroll-anchor rewrite at `:2452-2453` never runs. */
 function applySetZoom(state: ReplayState, requested: number): void {
   const zoom = clamp(requested, state.zoomMin, state.zoomMax);
   state.zoomTouched = true;
@@ -111,6 +133,7 @@ function applySetZoom(state: ReplayState, requested: number): void {
   state.zoom = zoom;
   state.minusDisabled = zoom === state.zoomMin;
   state.plusDisabled = zoom === state.zoomMax;
+  installScrollBounds(state);
 }
 
 const OFFSET_KEYS: Record<string, 0 | 1 | 2 | 3> = {
@@ -130,6 +153,8 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     zoomTouched: false,
     minusDisabled: false,
     plusDisabled: false,
+    scrollMin: ZERO_SCROLL_BOUNDS,
+    scrollMax: ZERO_SCROLL_BOUNDS,
     scrollOffset: undefined,
   };
 
@@ -150,11 +175,11 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
         const value = parseOptionalVector2(properties.scroll_offset);
         if (!value) break;
         // `p_offset.clamp(min_scroll_offset, max_scroll_offset - get_size())` (`:407`),
-        // per component (`core/math/vector2.cpp:132-136`), both bounds still zero.
+        // per component (`core/math/vector2.cpp:132-136`).
         const size = sizeOf(state);
         state.scrollOffset = {
-          x: clamp(value.x, ZERO_SCROLL_BOUND, ZERO_SCROLL_BOUND - size.x),
-          y: clamp(value.y, ZERO_SCROLL_BOUND, ZERO_SCROLL_BOUND - size.y),
+          x: clamp(value.x, state.scrollMin.x, state.scrollMax.x - size.x),
+          y: clamp(value.y, state.scrollMin.y, state.scrollMax.y - size.y),
         };
         break;
       }

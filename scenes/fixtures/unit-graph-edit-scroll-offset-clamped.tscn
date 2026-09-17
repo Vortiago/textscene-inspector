@@ -4,7 +4,8 @@
 ; get_size())` (graph_edit.cpp:407) runs while both bounds are still (0, 0):
 ; the node is not in the tree yet when a scene's properties are applied
 ; (packed_scene.cpp:492 sets, :541 parents), so `NOTIFICATION_RESIZED` never
-; fires and `_update_scrollbars` never writes them. `CLAMP` tests the MIN
+; fires, and no earlier `zoom` write calls `_update_scrollbars` (:2448) either,
+; so nothing has written them. `CLAMP` tests the MIN
 ; first (typedefs.h:139-141), so a negative offset lands on (0, 0) while every
 ; non-negative one — including the (32, 16) of unit-graph-edit.tscn, and
 ; including a plain (0, 0) — lands on `-size` instead. A clamp that kept only

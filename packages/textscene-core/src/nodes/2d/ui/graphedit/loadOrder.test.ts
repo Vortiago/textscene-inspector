@@ -41,6 +41,70 @@ describe('resolveGraphEditLoadState — scroll_offset', () => {
   it('leaves the offset unset when the file never calls the setter', () => {
     expect(resolveGraphEditLoadState(SIZED_400_320).scrollOffset).toBeUndefined();
   });
+
+  it('keeps an offset inside the bounds a preceding zoom write installed (graph_edit.cpp:2448, :488-493)', () => {
+    // A zoom that MOVES runs `_update_scrollbars` over the still-empty child
+    // list, so the clamp that follows reads -size to (size - size), a proper
+    // range rather than the inverted one.
+    const state = resolveGraphEditLoadState({
+      ...SIZED_400_320,
+      zoom: '2.0',
+      scroll_offset: 'Vector2(-64, -48)',
+    });
+    expect(state.scrollOffset).toEqual({ x: -64, y: -48 });
+  });
+
+  it('sends a positive offset to the max end of those bounds, which is (0, 0)', () => {
+    const state = resolveGraphEditLoadState({
+      ...SIZED_400_320,
+      zoom: '2.0',
+      scroll_offset: 'Vector2(32, 16)',
+    });
+    expect(state.scrollOffset).toEqual({ x: 0, y: 0 });
+  });
+
+  it('leaves the bounds inverted when the preceding zoom write changes nothing (graph_edit.cpp:2435-2437)', () => {
+    // `zoom = 1.0` is already the constructor's value, so set_zoom_custom
+    // returns before `_update_scrollbars` and the bounds stay at (0, 0).
+    const state = resolveGraphEditLoadState({
+      ...SIZED_400_320,
+      zoom: '1.0',
+      scroll_offset: 'Vector2(-64, -48)',
+    });
+    expect(state.scrollOffset).toEqual({ x: 0, y: 0 });
+  });
+
+  it('installs the bounds from a zoom the file moved through a LIMIT (graph_edit.cpp:2487)', () => {
+    const state = resolveGraphEditLoadState({
+      ...SIZED_400_320,
+      zoom_min: '1.5',
+      scroll_offset: 'Vector2(-64, -48)',
+    });
+    expect(state.scrollOffset).toEqual({ x: -64, y: -48 });
+  });
+
+  it('measures the bounds at the ZOOM key and the page at its own key', () => {
+    // `max_scroll_offset - get_size()` samples the rect at two different
+    // moments, so a rect that grows in between gives an asymmetric range:
+    // min -400 from the zoom key, max 400 - 600 from this one.
+    const state = resolveGraphEditLoadState({
+      offset_right: '400.0',
+      offset_bottom: '320.0',
+      zoom: '2.0',
+      custom_minimum_size: 'Vector2(600, 500)',
+      scroll_offset: 'Vector2(-500, -400)',
+    });
+    expect(state.scrollOffset).toEqual({ x: -400, y: -320 });
+  });
+
+  it('ignores a zoom written AFTER the offset, which cannot move a clamp already applied', () => {
+    const state = resolveGraphEditLoadState({
+      ...SIZED_400_320,
+      scroll_offset: 'Vector2(-64, -48)',
+      zoom: '2.0',
+    });
+    expect(state.scrollOffset).toEqual({ x: 0, y: 0 });
+  });
 });
 
 describe('resolveGraphEditLoadState — zoom', () => {

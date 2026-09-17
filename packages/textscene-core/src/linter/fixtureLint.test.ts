@@ -91,6 +91,15 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'demonstrates the bare Container type itself — no script attached is exactly what container.cpp:210-211 warns about, and this fixture exists to show that a plain, unscripted Container renders as nothing',
   },
+  'unit-graph-edit.tscn': {
+    rules: ['graphedit-scroll-offset-discarded'],
+    reason:
+      "exercises every ADD_PROPERTY GraphEdit binds, scroll_offset included, and in the saver's key order scroll_offset precedes zoom, so the load clamps it against an inverted range no authored value survives",
+  },
+  'unit-graph-edit-scroll-offset-clamped.tscn': {
+    rules: ['graphedit-scroll-offset-discarded'],
+    reason: 'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
+  },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
     reason: 'TileMap itself is unconditionally deprecated (tile_map.cpp:843); the fixture demonstrates the legacy type, not a defect',

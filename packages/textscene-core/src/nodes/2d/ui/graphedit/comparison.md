@@ -23,11 +23,15 @@ child (`GraphNode`/`GraphFrame`) at `position_offset * zoom - scroll_offset`, ma
 setter clamps against state an earlier property left behind and a scene is applied in
 the file's own order (`packed_scene.cpp:492`, which parents the node only afterwards at
 `:541`). `set_scroll_offset` (`:407`) clamps against `min_scroll_offset`/
-`max_scroll_offset`, both still `(0, 0)` because `_update_scrollbars` runs off
-`NOTIFICATION_RESIZED` and `Control::_size_changed` suppresses that outside the tree
-(`control.cpp:1812`); with `CLAMP` testing its min first (`typedefs.h:139-141`), a
-negative authored offset lands on `(0, 0)` and every other one on minus the size the
-preceding `offset_*` keys produced. `set_zoom` (`:2434`) clamps against
+`max_scroll_offset`, normally both still `(0, 0)` because the handler that writes them
+runs off `NOTIFICATION_RESIZED` (`:867`) and `Control::_size_changed` suppresses that
+outside the tree (`control.cpp:1812`); with `CLAMP` testing its min first
+(`typedefs.h:139-141`), that range is inverted, so a negative authored offset lands on
+`(0, 0)` and every other one on minus the size the preceding `offset_*` keys produced.
+A `zoom` write that MOVES the value is the one load-time path that writes the pair
+first (`:2448`). It measures a child list still empty at that point, so the bounds
+become `-size` and `+size` and the clamp spans `-size` to `(0, 0)`, where an offset
+inside it survives. `set_zoom` (`:2434`) clamps against
 `zoom_min`/`zoom_max` as they stand — the constructor's `1 / 1.2^8` and `1.2^4`
 (`:3175-3177`) until the file states otherwise — and each bound's own setter re-runs
 `set_zoom(zoom)` (`:2487`, `:2502`), which also presses the two zoom buttons' disabled
@@ -98,7 +102,8 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
 |  | `control-property-order` | warning |
-| `valid-graphedit-zoom-limits` | `graphedit-zoom-min-above-max` | error |
+| `valid-graphedit-properties` | `graphedit-zoom-min-above-max` | error |
+|  | `graphedit-scroll-offset-discarded` | info |
 <!-- lint:end -->
 
 The lenient parser reads the twenty-one members drawing needs — `scroll_offset`, `zoom`,
