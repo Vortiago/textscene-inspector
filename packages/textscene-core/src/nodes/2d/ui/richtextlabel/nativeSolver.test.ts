@@ -987,6 +987,36 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
   });
 
+  // `_draw_line` measures the line as `text_buf->get_line_size(line).x`
+  // (`rich_text_label.cpp:984`) — `TextParagraph::get_line_size`
+  // (`text_paragraph.cpp:773-779`) returns `TS->shaped_text_get_size`, which
+  // is `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`),
+  // never the raw pen advance. The box it aligns against is `int p_width`
+  // (`rich_text_label.h:672,678`), truncated once from the control rect, so
+  // only a FRACTIONAL box width tells the ceiled measure apart from the raw
+  // one: at a whole box width the outer floor absorbs the fraction.
+  describe('line measure (rich_text_label.cpp:984,1000-1014)', () => {
+    // "Threat level" at 16px: raw pen advance 91.03125, ceiled 92 - both read
+    // out of the running engine (`textLayout.test.ts`'s own advance table).
+    const TEXT = 'Threat level';
+    const BOX_WIDTH_PX = 201.5;
+
+    function offsetAt(alignment: number): number {
+      const runs = [{ text: TEXT, bold: false, italic: false, underline: false, color: WHITE, fontSizePx: FONT_SIZE, alignment }];
+      const layout = shape(TEXT);
+      expect(layout.lines[0]!.widthPx).toBe(91.03125);
+      const placements = layoutRichTextRuns(runs, layout, { boxWidthPx: BOX_WIDTH_PX, boxHeightPx: 40, horizontalAlignment: alignment });
+      return placements[0]!.lineOffsetXPx;
+    }
+
+    it('RIGHT lands at `width - length` with BOTH terms whole - trunc(201.5) - ceil(91.03125) = 109, not floor(201.5 - 91.03125)', () => {
+      expect(offsetAt(2)).toBe(109);
+    });
+
+    it('CENTER lands at `Math::floor((width - length) / 2.0)` over those same whole terms - floor((201 - 92) / 2) = 54', () => {
+      expect(offsetAt(1)).toBe(54);
+    });
+  });
   describe('[img]', () => {
     const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
 
@@ -1236,7 +1266,7 @@ describe('RichTextLabel paragraph alignment', () => {
     });
   });
 
-  describe('richTextHorizontalOffsetPx (text_paragraph.cpp:989-1023)', () => {
+  describe('richTextHorizontalOffsetPx (rich_text_label.cpp:1000-1014)', () => {
     it('leaves LEFT at the box origin', () => {
       expect(richTextHorizontalOffsetPx(70, 200, 0)).toBe(0);
     });
@@ -1255,18 +1285,32 @@ describe('RichTextLabel paragraph alignment', () => {
       expect(richTextHorizontalOffsetPx(70.5, 200, 2)).toBe(129);
     });
 
-    it('no-ops CENTER on an OVERFLOWING line but not RIGHT', () => {
-      // `:1004`'s `length <= l_width` guard has no counterpart in the RIGHT
-      // arm, so an overflowing line centres at the origin and right-aligns off
-      // the left edge.
-      expect(richTextHorizontalOffsetPx(300, 200, 1)).toBe(0);
+    it('leaves LEFT at the origin whatever the box width is', () => {
+      expect(richTextHorizontalOffsetPx(70, 0, 0)).toBe(0);
+    });
+
+    it('CENTER keeps centring once the line OVERFLOWS its box (rich_text_label.cpp:1007-1010)', () => {
+      // `_draw_line`'s own arm is `off.x += Math::floor((width - length) / 2.0)`
+      // with no `length <= l_width` guard — that guard belongs to
+      // `TextParagraph::draw` (text_paragraph.cpp:1004), which RichTextLabel's
+      // main text path does not go through. Engine-checked against Godot 4.6.3.
+      expect(richTextHorizontalOffsetPx(287, 200, 1)).toBe(-44);
+      expect(richTextHorizontalOffsetPx(201, 200, 1)).toBe(-1);
+    });
+
+    it('hangs an OVERFLOWING line off the leading edge under CENTER and RIGHT alike', () => {
+      // Neither arm of `_draw_line`'s switch guards on the line fitting.
+      expect(richTextHorizontalOffsetPx(300, 200, 1)).toBe(-50);
       expect(richTextHorizontalOffsetPx(300, 200, 2)).toBe(-100);
     });
 
-    it('aligns nothing when the paragraph has no width', () => {
-      // `:990`'s `if (width > 0)` guards the whole switch.
-      expect(richTextHorizontalOffsetPx(70, 0, 1)).toBe(0);
-      expect(richTextHorizontalOffsetPx(70, 0, 2)).toBe(0);
+    it('still aligns a ZERO-width paragraph, which TextParagraph::draw would have skipped', () => {
+      // `if (width > 0)` (text_paragraph.cpp:990) guards that switch, not
+      // `_draw_line`'s — so CENTER/RIGHT keep subtracting the line and pull
+      // the text off the leading edge. `RichTextLabel` clips its own contents
+      // (`:8225`), so a control that narrow shows none of it either way.
+      expect(richTextHorizontalOffsetPx(70, 0, 1)).toBe(-35);
+      expect(richTextHorizontalOffsetPx(70, 0, 2)).toBe(-70);
     });
 
     it('positions FILL like LEFT — justification is intra-line, not an origin shift', () => {

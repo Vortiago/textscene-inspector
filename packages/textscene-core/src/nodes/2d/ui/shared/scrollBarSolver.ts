@@ -28,8 +28,12 @@
  *  - hover/focus/drag ("highlighted") draw states and the `scroll_focus`
  *    StyleBox — interactive states a static previewer never reaches, the
  *    same restriction as every other widget here.
- *  - `is_layout_rtl()` — no notion of layout direction anywhere in this
- *    codebase; every rect below is the LTR branch.
+ *
+ * RTL needs nothing here: `scene/gui/scroll_bar.cpp` contains no
+ * `is_layout_rtl()` call at all, so a bar's INTERNAL track/grabber geometry is
+ * direction-independent. A standalone HScrollBar/VScrollBar is mirrored as a
+ * whole by `Control::_size_changed` (`control.cpp:1785-1787`), and
+ * `ScrollContainer` positions its own embedded bars itself.
  *
  * Pure data + functions, no React, no THREE.
  *

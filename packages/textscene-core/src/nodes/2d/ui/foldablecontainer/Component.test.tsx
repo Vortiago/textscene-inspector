@@ -122,6 +122,35 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     expect((rightMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2 + 83);
   });
 
+  it('under RTL puts the arrow at the trailing edge and the text at the leading margin (foldable_container.cpp:293-300)', async () => {
+    // `icon_pos.x = size.width - title_style->get_margin(SIDE_RIGHT) - icon->get_width()`
+    // and `title_text_pos.x += title_controls_width` (0 — `title_controls` is
+    // never serialised), leaving the style's own LEFT margin.
+    const rtlNode = { ...solveNode({ folded: true, title: 'A', titleAlignment: 2 }), rtl: true };
+    const renderer = await ReactThreeTestRenderer.create(
+      <FoldableContainer {...painterEnv()} solveNode={rtlNode} rect={RECT} renderOrder={0} />
+    );
+    const icon = findIconMeshes(renderer.scene)[0]!;
+    expect((icon.parent as THREE.Object3D).position.x).toBe(120 - 4 - 16);
+    // title_alignment RIGHT becomes LEFT under RTL, so no alignment shift.
+    const text = findTextMeshes(renderer.scene)[0]!;
+    expect((text.parent as THREE.Object3D).position.x).toBe(4);
+  });
+
+  it('swaps the title alignment LEFT/RIGHT under RTL, leaving CENTER alone (foldable_container.cpp:503-511)', async () => {
+    // `_get_actual_alignment`. extraSpace = 94 - 11 = 83 as above.
+    const alignmentX = async (titleAlignment: number) => {
+      const n = { ...solveNode({ folded: true, title: 'A', titleAlignment }), rtl: true };
+      const r = await ReactThreeTestRenderer.create(
+        <FoldableContainer {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
+      );
+      return (findTextMeshes(r.scene)[0]!.parent as THREE.Object3D).position.x;
+    };
+    expect(await alignmentX(0)).toBe(4 + 83); // LEFT -> RIGHT
+    expect(await alignmentX(1)).toBe(4 + Math.floor(83 / 2)); // CENTER unchanged
+    expect(await alignmentX(2)).toBe(4); // RIGHT -> LEFT
+  });
+
   it('applies the walker-composed tint alpha to the title chrome', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FoldableContainer
@@ -153,5 +182,43 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     );
     const quadCount = (r: Rendered) => findTextMeshes(r.scene)[0]!.geometry.attributes.position!.count / 4;
     expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+  });
+});
+
+describe('<FoldableContainer> chrome placement', () => {
+  /** World Y of a mesh, in three space (Godot Y-down is negated by the painter). */
+  function worldY(scene: Rendered['scene'], mesh: THREE.Mesh) {
+    scene.instance.updateMatrixWorld(true);
+    return mesh.getWorldPosition(new THREE.Vector3()).y;
+  }
+
+  it('draws the content panel BELOW the title bar, not over it (foldable_container.cpp:317-321)', async () => {
+    // `Rect2 panel_rect(Point2(0, title_minimum_size.height), ...)` — the panel
+    // starts where the title bar ends. `StyleBoxQuad` takes only a SIZE, so the
+    // offset has to come from the group around it, the same way the arrow and
+    // the title text already reach theirs.
+    const renderer = await ReactThreeTestRenderer.create(
+      <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false, title: 'A' })} rect={RECT} renderOrder={0} />
+    );
+    const [titleChrome, panelChrome] = findChromeMeshes(renderer.scene);
+    // title bar height = content margin 8 + max(font height 23, arrow 16) = 31.
+    expect(worldY(renderer.scene, titleChrome!)).toBe(0);
+    expect(worldY(renderer.scene, panelChrome!)).toBe(-31);
+  });
+
+  it('draws the title bar at the BOTTOM edge for title_position BOTTOM (foldable_container.cpp:437-439)', async () => {
+    // `Rect2(0, (title_position == POSITION_TOP) ? 0 : get_size().height -
+    // title_minimum_size.height, ...)`; RECT.h is 80, so the title starts at 49.
+    const renderer = await ReactThreeTestRenderer.create(
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false, title: 'A', titlePosition: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const [titleChrome, panelChrome] = findChromeMeshes(renderer.scene);
+    expect(worldY(renderer.scene, titleChrome!)).toBe(-49);
+    expect(worldY(renderer.scene, panelChrome!)).toBe(0);
   });
 });

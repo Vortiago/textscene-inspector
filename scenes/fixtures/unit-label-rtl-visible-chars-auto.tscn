@@ -1,0 +1,38 @@
+; The ONE variable: `layout_direction = 3` beside VC_GLYPHS_AUTO. AUTO is the one
+; visible_characters_behavior that resolves its reveal END from the layout
+; direction (label.cpp:779-780): LTR hides the tail, RTL hides the head. The two
+; Labels below carry identical text and an identical budget, so only that
+; resolution can separate them. unit-label-visible-characters.tscn pins
+; VC_CHARS_BEFORE_SHAPING and never sets a direction, so this is invisible there.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.16, 0.1, 0.16, 1)
+
+[node name="LtrAuto" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 24.0
+offset_bottom = 64.0
+text = "Typewriter reveal"
+visible_characters_behavior = 2
+visible_ratio = 0.5
+
+[node name="RtlAuto" type="Label" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 96.0
+offset_bottom = 136.0
+text = "Typewriter reveal"
+visible_characters_behavior = 2
+visible_ratio = 0.5

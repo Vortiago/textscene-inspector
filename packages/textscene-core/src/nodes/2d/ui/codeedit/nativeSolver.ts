@@ -44,6 +44,7 @@ import {
   TEXT_EDIT_THEME_FONT_KEY,
 } from '../textedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { ControlColor } from '../control/types';
 import type { CodeEditProperties } from './types';
 
@@ -146,6 +147,26 @@ function codeEditFontMetrics(
  */
 export function codeEditLineNumberGutterXPx(styleLeftMarginPx: number, mainWidthPx: number): number {
   return Math.ceil(styleLeftMarginPx) + mainWidthPx;
+}
+
+/**
+ * Where the line number itself draws. Two steps, both of which RTL flips: the
+ * gutter's own region mirrors about the control before the CUSTOM callback
+ * ever sees it (`text_edit.cpp:1471-1476`), and
+ * `_line_number_draw_callback` then right-aligns the number inside that region
+ * instead of left-aligning it (`code_edit.cpp:1583-1587`). `textWidthPx` is
+ * measured the way `shaped_text_get_size` reports it.
+ */
+export function codeEditLineNumberTextXPx(
+  gutterXPx: number,
+  gutterWidthPx: number,
+  rectWidthPx: number,
+  textWidthPx: number,
+  rtl: boolean
+): number {
+  if (!rtl) return gutterXPx;
+  const regionXPx = rectWidthPx - gutterXPx - gutterWidthPx;
+  return regionXPx + gutterWidthPx - shapedTextSizeWidthPx(textWidthPx);
 }
 
 /**

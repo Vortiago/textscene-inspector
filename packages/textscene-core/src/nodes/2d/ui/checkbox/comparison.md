@@ -31,3 +31,10 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 beyond the inherited Control set. `button_pressed` and `disabled` become `false` for any
 value that does not read as `true`, with no warning. `button_group` is stored as the raw
 string.
+
+## Known limitations
+
+- **Approximated** The label's paragraph direction is not applied, so under
+  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
+  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  icon and the chrome sit on does follow the layout direction.

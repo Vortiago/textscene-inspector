@@ -16,6 +16,8 @@ import {
   textEditContentSize,
   textEditMinimumSize,
   layoutTextEditDrawBand,
+  textEditCurrentLineXPx,
+  textEditRowOriginXPx,
   textEditTabStopsPx,
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
@@ -186,5 +188,33 @@ describe('textEditTabStopsPx (text_edit.cpp:349-351)', () => {
   });
   it('floors the derived stop at 1px', () => {
     expect(textEditTabStopsPx(1, OPEN_SANS_FONT_METRICS, 1)).toEqual([1]);
+  });
+});
+
+describe('textEditRowOriginXPx (text_edit.cpp:1490-1494)', () => {
+  it('is the band start under LTR, whatever the row measures', () => {
+    expect(textEditRowOriginXPx(26, 300, 120, false)).toBe(26);
+  });
+
+  it('mirrors the band start about the control under RTL, by the ROW\'s own width', () => {
+    // `char_margin = size.width - char_margin - TS->shaped_text_get_size(rid).x
+    // - wrap_indent` (:1490-1491), with `wrap_indent` 0 (indent_wrapped_lines
+    // is not modelled). 300 - 26 - 120 = 154.
+    expect(textEditRowOriginXPx(26, 300, 120, true)).toBe(154);
+  });
+
+  it('measures the row at its CEILED shaped size, as shaped_text_get_size does (edge case)', () => {
+    expect(textEditRowOriginXPx(26, 300, 119.25, true)).toBe(154);
+  });
+});
+
+describe('textEditCurrentLineXPx (text_edit.cpp:1404-1409)', () => {
+  it('starts at the control origin under LTR', () => {
+    expect(textEditCurrentLineXPx(280, 300, false)).toBe(0);
+  });
+
+  it('ends at the control edge under RTL, keeping the band width', () => {
+    // `Rect2(size.width - xmargin_end, ofs_y, xmargin_end, row_height)` (:1406).
+    expect(textEditCurrentLineXPx(280, 300, true)).toBe(20);
   });
 });

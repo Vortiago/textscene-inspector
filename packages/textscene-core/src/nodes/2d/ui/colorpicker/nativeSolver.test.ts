@@ -385,6 +385,98 @@ describe('sliderGridRowRects', () => {
   });
 });
 
+/**
+ * `layout_direction = RTL` on a ColorPicker. `color_picker.cpp` never calls
+ * `is_layout_rtl()` at all: the whole widget tree is built from ordinary
+ * containers in the constructor, and each one mirrors its OWN row.
+ * `BoxContainer::_resort` walks an RTL horizontal box's children in REVERSE
+ * and lays them out left to right (`box_container.cpp:184-192`);
+ * `GridContainer` starts `col_ofs` at the grid's right edge and walks left
+ * (`grid_container.cpp:193-197,218-223`). `Container::fit_child_in_rect` is
+ * not a second mirror — `Control::set_rect` pre-mirrors through
+ * `_compute_offsets` (`control.cpp:904-915`) exactly as much as
+ * `_size_changed` mirrors back (`:1785-1787`), so a child lands where its
+ * container put it either way.
+ *
+ * Every expectation below is that reverse walk done by hand, never the
+ * implementation's own mirror applied twice.
+ */
+describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-223)', () => {
+  it('svAndHueRects puts hue_slider first, at the left edge', () => {
+    // Reverse walk of [sv_square, hue_slider] at 400 wide: hue(30) at 0,
+    // sep(4), sv(366) at 34, ending at 400.
+    const { svSquare, hueSlider } = svAndHueRects({ x: 0, y: 0, w: 400, h: 256 }, THEME, true);
+    expect(hueSlider).toEqual({ x: 0, y: 0, w: 30, h: 256 });
+    expect(svSquare).toEqual({ x: 34, y: 0, w: 366, h: 256 });
+  });
+
+  it('hexRowColumns puts the field first and hex_label last', () => {
+    // Reverse walk of [hex_label, text_type, c_text]: field(326) at 0, sep(4),
+    // text_type(28) at 330, sep(4), label(38) at 362, ending at 400.
+    const cols = hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME, true);
+    expect(cols.field).toEqual({ x: 0, y: 0, w: 326, h: 28 });
+    expect(cols.textType).toEqual({ x: 330, y: 0, w: 28, h: 28 });
+    expect(cols.label).toEqual({ x: 362, y: 0, w: 38, h: 28 });
+  });
+
+  it('modeRowButtonRects puts btn_mode first and RGB last', () => {
+    // Reverse walk of [RGB, HSV, Linear, btn_mode]: dropdown(28) at 0, sep(4),
+    // Linear(120) at 32, sep, HSV at 156, sep, RGB at 280, ending at 400.
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, true);
+    expect(cols.dropdown).toEqual({ x: 0, y: 0, w: 28, h: 20 });
+    expect(cols.buttons).toEqual([
+      { x: 280, y: 0, w: 120, h: 20 },
+      { x: 156, y: 0, w: 120, h: 20 },
+      { x: 32, y: 0, w: 120, h: 20 },
+    ]);
+  });
+
+  it('swatchesRowRects puts menu_btn first, and leaves the full-width second row alone', () => {
+    // palette_box reverse walk: menu_btn(24) at 0, sep(4), btn_preset(372) at
+    // 28. `btn_recent_preset` spans the whole row, so its own mirror is the
+    // identity.
+    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME, true);
+    expect(cols.menuButton).toEqual({ x: 0, y: 0, w: 24, h: 20 });
+    expect(cols.swatchesButton).toEqual({ x: 28, y: 0, w: 372, h: 20 });
+    expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 });
+  });
+
+  it('sliderGridRowRects starts each row at the grid\'s right edge and walks left', () => {
+    // `col_ofs = get_size().width` (400): label(10) at 390, col_ofs 386;
+    // slider(334) at 52, col_ofs 48; value(48) at 0.
+    const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48, true);
+    expect(rows[0]).toEqual({
+      label: { x: 390, y: 0, w: 10, h: 28 },
+      slider: { x: 52, y: 0, w: 334, h: 28 },
+      value: { x: 0, y: 0, w: 48, h: 28 },
+    });
+    // Rows still stack downward: only the COLUMN axis mirrors.
+    expect(rows[4]!.label.y).toBe(128);
+  });
+
+  it('sampleRowColumns puts btn_shape first and btn_pick last', () => {
+    // Reverse walk of [btn_pick, sample, btn_shape]: shape(28) at 0, sep(4),
+    // sample(336) at 32, sep(4), pick(28) at 372.
+    const cols = sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0, true);
+    expect(cols.shape).toEqual({ x: 0, y: 0, w: 28, h: 24 });
+    expect(cols.sample).toEqual({ x: 32, y: 0, w: 336, h: 24 });
+    expect(cols.pick).toEqual({ x: 372, y: 0, w: 28, h: 24 });
+  });
+
+  it('colorPickerChannelGrabberRect reads the ratio from the right — slider.cpp:363', () => {
+    // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the SAME branch
+    // the stock grabber already takes (`shared/sliderSolver.ts`).
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8, true).x).toBe(392);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, { x: 16, y: 16 }, 8, true).x).toBe(-8);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, { x: 16, y: 16 }, 8, true).x).toBe(192);
+  });
+
+  it('leaves every row where it was under LTR', () => {
+    expect(hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME, false)).toEqual(hexRowColumns({ x: 0, y: 0, w: 400, h: 28 }, THEME));
+    expect(sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0, false)).toEqual(sampleRowColumns({ x: 0, y: 0, w: 400, h: 24 }, THEME, 0));
+  });
+});
+
 describe('sampleRowColumns', () => {
   const SAMPLE = { x: 0, y: 0, w: 400, h: 24 };
 

@@ -76,3 +76,10 @@ them changes this previewer's picture.
   delimiter/comment analysis) — all bound methods, never `ADD_PROPERTY`'d
   (`code_edit.cpp:1419-1503`) — so a `.tscn` cannot serialise any of it. An
   empty gutter of the right width is the whole truth of a scene file here.
+- **Not drawn** `_draw_guidelines`' RTL mirror (code_edit.cpp:295-312):
+  `line_length_guidelines` are not drawn at all. The line-number gutter's two RTL
+  shifts — the CUSTOM region mirroring about the control (text_edit.cpp:1471-1476)
+  and the number right-aligning inside it (code_edit.cpp:1583-1587) — draw.
+- **Not drawn** The completion popup's RTL arms (code_edit.cpp:75,236) and the
+  fold-icon hit test's (:426,451,471): a popup needs `code_completion_active`, the
+  hit test pointer state.

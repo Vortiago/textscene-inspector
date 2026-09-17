@@ -168,8 +168,9 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         textHeightPx: layout?.heightPx ?? 0,
         hasIcon,
         iconWidthPx: iconSize.x,
+        rtl: solveNode.rtl,
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, hasIcon, iconSize.x]
+    [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, hasIcon, iconSize.x, solveNode.rtl]
   );
 
   // Text is clipped to the content rect, never the whole widget.
@@ -191,7 +192,11 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const iconLinearColor = useMemo(() => godotColorToLinear(tintedIconColor), [tintedIconColor]);
   // Point2(width - icon.width - margin_right, height/2 - icon.height/2) (line_edit.cpp:1457) —
   // `height/2` is an INTEGER division in the source (both `int`), the rest float.
-  const iconPos = { x: rect.w - iconSize.x - baseStyleBox.contentMargin.right, y: Math.trunc(rect.h / 2) - iconSize.y / 2 };
+  // RTL replaces the x outright with the left margin (line_edit.cpp:1458-1460).
+  const iconPos = {
+    x: solveNode.rtl ? baseStyleBox.contentMargin.left : rect.w - iconSize.x - baseStyleBox.contentMargin.right,
+    y: Math.trunc(rect.h / 2) - iconSize.y / 2,
+  };
 
   // --- Caret: only while caret_force_displayed --------------------------
   const caretWidthPx = solveNode.constants['caret_width'] ?? DEFAULT_CARET_WIDTH_PX;
@@ -211,6 +216,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             rightIconRawWidthPx: rightIconNaturalSize?.x ?? 0,
             ofsMaxPx: content.ofsMaxPx,
             caretWidthPx,
+            rtl: solveNode.rtl,
           })
         : null,
     [
@@ -225,6 +231,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       content.ofsMaxPx,
       rightIconNaturalSize,
       caretWidthPx,
+      solveNode.rtl,
     ]
   );
 

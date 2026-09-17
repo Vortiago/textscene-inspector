@@ -267,6 +267,8 @@ export interface VisibleCharsBudget {
   visibleChars: number | undefined;
   /** Final resolved `visible_ratio` — the two GLYPHS_* behaviours' own budget. */
   visibleRatio: number | undefined;
+  /** `is_layout_rtl()` (`SolveNode.rtl`) — GLYPHS_AUTO's own end (`label.cpp:779-780`). Defaults `false`. */
+  rtl?: boolean;
 }
 
 /**
@@ -276,9 +278,9 @@ export interface VisibleCharsBudget {
  * bound on the SAME `total_glyphs` count, `:548-559`). CHARS_AFTER_SHAPING
  * counts CHARACTERS from the front; GLYPHS_LTR/AUTO count GLYPHS from the
  * front and GLYPHS_RTL from the BACK (`trim_glyphs_rtl`'s own condition,
- * `label.cpp:780`, independent of layout direction — this engine never
- * models RTL layout, but the RTL *behaviour* is still a same-glyphs-hidden,
- * opposite-end reveal any LTR scene can select). One glyph is one source
+ * `label.cpp:780`). GLYPHS_LTR and GLYPHS_RTL name their end outright; only
+ * GLYPHS_AUTO reads `rtl_layout` (`:779-780`), so an LTR scene can still
+ * select the opposite-end reveal explicitly. One glyph is one source
  * character in this engine's atlas shaping (no ligatures), so the character
  * and glyph counts coincide — except across a TRIMMED edge space, which
  * `TextLineLayout` carries no source index for; see `comparison.md`.
@@ -296,7 +298,7 @@ export function applyVisibleCharsReveal(lines: readonly TextLineLayout[], budget
     if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
     const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
     limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
-    fromEnd = budget.behavior === VC_GLYPHS_RTL;
+    fromEnd = budget.behavior === VC_GLYPHS_RTL || (budget.behavior === VC_GLYPHS_AUTO && budget.rtl === true);
   }
 
   const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
@@ -523,7 +525,7 @@ function justifyToLineIndex(lines: TextLineLayout[], flags: number): number {
 }
 
 /**
- * `Label::_get_line_rect`'s x, non-RTL (`label.cpp:487-512`). Both non-zero
+ * `Label::_get_line_rect`'s x (`label.cpp:487-512`). Both non-zero
  * branches land on a WHOLE pixel in the engine, and neither does so by
  * rounding: H_CENTER writes `int(size.width - line_size.width) / 2` — a C++
  * `int` conversion followed by C++ integer division, each truncating TOWARD
@@ -545,17 +547,37 @@ function justifyToLineIndex(lines: TextLineLayout[], flags: number): number {
  * well as even ones. The double step stays because it is what `_get_line_rect`
  * does; nothing downstream depends on the two being distinguishable.
  */
-function horizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number | undefined): number {
+function horizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number | undefined, rtl: boolean): number {
+  // `rtl_layout` swaps the two arms outright (`:481-497`): LEFT takes the
+  // trailing-edge expression and RIGHT takes `style->get_offset().x`, which is
+  // zero for the StyleBoxEmpty above. CENTER carries no arm.
+  const trailingEdge = Math.trunc(boxWidthPx - lineWidthPx);
   switch (alignment ?? H_LEFT) {
     case H_CENTER:
       return Math.trunc(Math.trunc(boxWidthPx - lineWidthPx) / 2);
     case H_RIGHT:
-      return Math.trunc(boxWidthPx - lineWidthPx);
+      return rtl ? 0 : trailingEdge;
     case H_LEFT:
+      return rtl ? trailingEdge : 0;
     case H_FILL:
     default:
       return 0;
   }
+}
+
+/**
+ * `_get_line_rect`'s x reads TWO directions (`label.cpp:470-471`). Only
+ * `rtl_layout` is here: the other is the shaped PARAGRAPH direction, which
+ * `text_direction` decides, and its default is `TEXT_DIRECTION_AUTO`
+ * (`label.h:70`), not INHERITED — so `:179` never hands `is_layout_rtl()` to
+ * the TextServer at the default and the inferred direction stays LTR for any
+ * Latin paragraph (`text_server_adv.cpp:7241-7247`). FILL's own arm (`:472`)
+ * is therefore unreachable while `text_direction` is unmodelled;
+ * `comparison.md` records it.
+ */
+export interface LabelLayoutDirection {
+  /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
+  rtl?: boolean;
 }
 
 /**
@@ -576,8 +598,10 @@ export function layoutLabelLines(
   justificationFlags: number = LABEL_DEFAULT_JUSTIFICATION_FLAGS,
   // Only feeds `fitLineToWidth`'s 0.1*font_size SHRINK floor; every existing
   // caller/test predates this parameter and justifies at the theme default (16).
-  fontSizePx: number = 16
+  fontSizePx: number = 16,
+  direction: LabelLayoutDirection = {}
 ): LabelLinePlacement[] {
+  const { rtl = false } = direction;
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
 
@@ -634,6 +658,6 @@ export function layoutLabelLines(
     // `_get_line_rect` aligns against `line_size = TS->shaped_text_get_size(rid)`
     // (`label.cpp:478`), the ceiled extent — NOT the raw pen advance
     // `fitLineToWidth` above needs.
-    return { x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment), y, line };
+    return { x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl), y, line };
   });
 }

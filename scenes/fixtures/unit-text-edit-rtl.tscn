@@ -1,0 +1,32 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a TextEdit. Each drawn row is
+; placed by its OWN shaped width rather than by one band value
+; (text_edit.cpp:1490-1494), so the three lines below — deliberately unequal in
+; length — must fan out from the trailing edge instead of stacking flush at the
+; leading one; and the current-line highlight quad moves to the far side while
+; keeping its band width (:1404-1409). Both TextEdits span the full viewport
+; width so their OWN rect mirror (control.cpp:1785) is the identity. No other
+; fixture pairs a TextEdit with a direction.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="TextEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 136.0
+text = "Wave rift over quiet stone\nAmber\nSlow light across the shelf"
+highlight_current_line = true
+
+[node name="Rtl" type="TextEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 168.0
+offset_bottom = 288.0
+text = "Wave rift over quiet stone\nAmber\nSlow light across the shelf"
+highlight_current_line = true

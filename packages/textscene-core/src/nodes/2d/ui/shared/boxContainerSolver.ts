@@ -16,13 +16,9 @@
  * (`has_stretched` false) — the instant any child expands, the offset switch
  * below is skipped entirely and `alignment` becomes dead.
  *
- * `layout_direction` (RTL) is not modelled anywhere else in this codebase
- * (see `native/controlRectSolver.ts`'s own note), so every caller of this
- * module passes `rtl = false`; the parameter exists because `_resort` and
- * `fit_child_in_rect` both branch on it, and a solver that hard-codes LTR
- * inside the ported formula (rather than threading the parameter through)
- * would silently diverge from Godot's own source the moment RTL support
- * lands upstream of this module.
+ * `rtl` is the CONTAINER's own `is_layout_rtl()` (`SolveNode.rtl`, resolved by
+ * `native/buildSolveTree.ts`), which is what both `_resort` and
+ * `fit_child_in_rect` read — never the child's.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -290,7 +286,7 @@ export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
       { width: contentRect.w, height: contentRect.h },
       separation,
       alignment,
-      false, // layout_direction/RTL is not modelled by this codebase (see module doc)
+      n.rtl,
       inputs
     );
 

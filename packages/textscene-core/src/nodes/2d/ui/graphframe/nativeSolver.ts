@@ -183,7 +183,8 @@ export const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ct
   const rects = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
-    rects.set(child.path, fitChildInRect(rawRect, minSize, hFlagsOf(child), vFlagsOf(child)));
+    // `graph_frame.cpp` has no RTL branch; `fit_child_in_rect` reads the flag itself.
+    rects.set(child.path, fitChildInRect(rawRect, minSize, hFlagsOf(child), vFlagsOf(child), n.rtl));
   }
   return rects;
 };

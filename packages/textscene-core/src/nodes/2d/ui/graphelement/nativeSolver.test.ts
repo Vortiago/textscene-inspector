@@ -79,3 +79,22 @@ describe('graphElementLayout', () => {
     expect(rects.get('a')).toEqual({ x: 0, y: 0, w: 10, h: 10 });
   });
 });
+
+describe('graphElementLayout under RTL', () => {
+  it('hands the container rtl to fit_child_in_rect (container.cpp:99,109)', () => {
+    // `graph_element.cpp` calls `is_layout_rtl()` nowhere; the flag reaches a
+    // child only through `Container::fit_child_in_rect`.
+    const child = leaf('c', { customMinimumSize: { x: 30, y: 10 }, sizeFlagsHorizontal: 0 });
+    const n = {
+      ...solveNode(),
+      path: 'G',
+      node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties },
+      children: [child],
+      rtl: true,
+    };
+    const rects = asMap(
+      graphElementLayout(n, [{ node: child, minSize: { x: 30, y: 10 } }], { x: 0, y: 0, w: 100, h: 50 }, ctx())
+    );
+    expect(rects.get('c')).toEqual({ x: 70, y: 0, w: 30, h: 50 });
+  });
+});

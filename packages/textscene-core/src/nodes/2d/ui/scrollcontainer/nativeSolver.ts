@@ -49,6 +49,18 @@
  * documented gap, not a silent one: `scrollContainerMinimumSize`'s own tests
  * pin exactly this scope.
  *
+ * RTL moves the vertical bar to the leading edge and shifts the content past
+ * the strip it reserves. Both bars are ANCHORED children, so
+ * `Control::_size_changed` mirrors each one's whole rect
+ * (`control.cpp:1785-1787`); the content children are not, since Godot places
+ * them through `fit_child_in_rect`/`set_rect`, whose `_compute_offsets`
+ * un-mirrors precisely what `_size_changed` mirrors back (`control.cpp:906-909`)
+ * — `_reposition_children`'s own `ofs.x += width` (`:357-363`) is the whole
+ * horizontal move. `_update_scrollbar_position`'s `lmar`/`rmar` swap
+ * (`:294-295`) reads the `panel` StyleBox's own margins, which are 0 here (see
+ * above), so it changes nothing. `_update_scroll_hints` (`:605-658`) draws the
+ * `scroll_hint_*` TextureRects, which this codebase does not render at all.
+ *
  * Every rect/page/ratio formula below was cross-checked against the real
  * engine and `pnpm ref:godot --probe` pixels — see `nativeSolver.test.ts`'s
  * own header for the measurements.
@@ -243,14 +255,16 @@ export function scrollContainerScrollBars(
   // actually VISIBLE (hmin/vmin there are Size2() when invisible) — a
   // RESERVE-mode bar that isn't currently shown does not push the other
   // bar's own rect around, even though it still reserves content space.
+  const hWidth = rect.w - (vVisible ? vThickness : 0);
   const hRect: Rect2 = {
-    x: 0,
+    // An anchored child's rect is mirrored whole under RTL (module doc).
+    x: n.rtl ? rect.w - hWidth : 0,
     y: rect.h - hThickness,
-    w: rect.w - (vVisible ? vThickness : 0),
+    w: hWidth,
     h: hThickness,
   };
   const vRect: Rect2 = {
-    x: rect.w - vThickness,
+    x: n.rtl ? 0 : rect.w - vThickness,
     y: 0,
     w: vThickness,
     h: rect.h - (hVisible ? hThickness : 0),
@@ -319,6 +333,10 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
   const layout = scrollContainerScrollBars(n, ctx, rect);
   const { contentSize } = layout;
   const { x: scrollX, y: scrollY } = layout.scroll;
+  // `if (reserve_vscroll) { ...; if (rtl) ofs.x += width; }`
+  // (`scroll_container.cpp:357-363`) — the reserved strip sits at the leading
+  // edge under RTL, so the content starts past it.
+  const ofsX = n.rtl ? rect.w - contentSize.x : 0;
 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
@@ -331,9 +349,9 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
     const h = hasFlag(vFlags, SIZE_EXPAND) ? Math.max(contentSize.y, minSize.y) : minSize.y;
     // `0 - scrollX` rather than `-scrollX`: unary negation of 0 produces -0,
     // which fails a strict rect comparison against the unscrolled +0 case.
-    const r: Rect2 = { x: Math.floor(0 - scrollX), y: Math.floor(0 - scrollY), w, h };
+    const r: Rect2 = { x: Math.floor(ofsX - scrollX), y: Math.floor(0 - scrollY), w, h };
 
-    out.set(child.path, fitChildInRect(r, minSize, hFlags, vFlags));
+    out.set(child.path, fitChildInRect(r, minSize, hFlags, vFlags, n.rtl));
   }
   return { rects: out, meta: layout };
 };

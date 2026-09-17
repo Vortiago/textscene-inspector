@@ -19,8 +19,8 @@
  * explicitly does not model that (Button itself never triggers it: its doc
  * calls it "an OptionButton/CheckBox concern"),
  * so this module ports the icon+text placement math itself rather than
- * force-fitting CheckBox's fixed left-icon arrangement through Button's
- * generic icon parameter.
+ * force-fitting CheckBox's fixed icon-beside-text arrangement through
+ * Button's generic icon parameter.
  *
  * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
  *
@@ -36,7 +36,13 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { centredTextTopPx, fitIconSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import {
+  buttonTextAlignShiftPx,
+  centredTextTopPx,
+  fitIconSize,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  tintColor,
+} from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -132,7 +138,8 @@ export type CheckBoxIconKey = keyof CheckBoxIcons;
  * `is_radio()` (a valid `button_group`) swaps the whole checked/unchecked
  * pair for the `radio_*` pair; within either pair, `is_disabled()` picks the
  * `_disabled` variant and `is_pressed()` (== `button_pressed`) picks
- * checked vs unchecked. RTL is out of scope repo-wide.
+ * checked vs unchecked. `check_box.cpp` binds no `_mirrored` icon of its own
+ * (contrast CheckButton), so layout direction never reaches this choice.
  */
 export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconKey {
   const radio = props.buttonGroup !== undefined;
@@ -276,6 +283,8 @@ export interface CheckBoxContentInput {
   hasText: boolean;
   /** The shaped text's own natural (unwrapped) size — ignored when `hasText` is false. */
   textNaturalSize: Vec2;
+  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — moves the check to the right edge and the label against it. */
+  rtl: boolean;
 }
 
 export interface CheckBoxContentLayout {
@@ -286,20 +295,27 @@ export interface CheckBoxContentLayout {
 }
 
 /**
- * `CheckBox::_notification`'s icon `ofs` (`check_box.cpp:126-133`, RTL
- * omitted) plus Button's OWN internal-margin text reservation
+ * `CheckBox::_notification`'s icon `ofs` (`check_box.cpp:126-133`) plus
+ * Button's OWN internal-margin text reservation
  * (`button.cpp:247-260,444-456`) specialised to CheckBox's fixed
- * left-icon/left-text arrangement: `_internal_margin[SIDE_LEFT]` is always
- * the icon's width (`check_box.cpp:96-101`), so the reserved gap ahead of
- * the text is unconditionally `iconSize.x + h_separation` — Button only
- * skips the `+= h_separation` step when the internal margin itself is zero,
- * which never happens here (the icon always occupies non-zero width).
+ * icon-then-text arrangement: the internal margin is always the icon's width
+ * (`check_box.cpp:96-101`), so the reserved gap between the icon and the text
+ * is unconditionally `iconSize.x + h_separation` — Button only skips the
+ * `+= h_separation` step when the internal margin itself is zero, which never
+ * happens here (the icon always occupies non-zero width).
+ *
+ * `rtl` moves that reservation from SIDE_LEFT to SIDE_RIGHT (`:98-100`) and
+ * the icon to the right content margin (`:129`); the constructor's
+ * `HORIZONTAL_ALIGNMENT_LEFT` (`:174`) then swaps to RIGHT
+ * (`button.cpp:271-275`), which puts the label at the far end of the
+ * narrowed box rather than at its start. Both sides reduce to one reserved
+ * strip plus one alignment shift, so they share the arithmetic below.
  */
 export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize } = input;
+  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, rtl } = input;
 
   const iconRect: Rect2 = {
-    x: Math.floor(margin),
+    x: Math.floor(rtl ? rectSize.x - margin - iconSize.x : margin),
     y: Math.floor((rectSize.y - iconSize.y) / 2 + checkVOffset),
     w: iconSize.x,
     h: iconSize.y,
@@ -307,9 +323,12 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
 
   let textOffset: Vec2 | null = null;
   if (hasText) {
-    const leftReserved = iconSize.x + hSeparation;
+    const reserved = iconSize.x + hSeparation;
     const customElementHeight = rectSize.y - 2 * margin;
-    const x = margin + leftReserved;
+    const drawableWidth = rectSize.x - 2 * margin - reserved;
+    const x = rtl
+      ? margin + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, HORIZONTAL_ALIGNMENT_RIGHT)
+      : margin + reserved;
     const y = centredTextTopPx(customElementHeight, textNaturalSize.y, margin);
     textOffset = { x, y };
   }

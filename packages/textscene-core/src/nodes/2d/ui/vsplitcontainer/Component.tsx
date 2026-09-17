@@ -57,7 +57,9 @@ export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
       axisChildFromCustomMinimumSize(first, true),
       axisChildFromCustomMinimumSize(second, true),
       props.splitOffset ?? 0,
-      props.collapsed === true
+      props.collapsed === true,
+      // A vertical split never inverts (`split_container.cpp:703`).
+      false
     );
   const iconRect = splitGrabberIconRect(true, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 

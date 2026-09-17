@@ -10,7 +10,8 @@ renders_as: children laid out along a row
 # HBoxContainer
 
 HBoxContainer stacks its children in a horizontal row, spaced by `separation` and
-sized by each child's `size_flags`.
+sized by each child's `size_flags`. A right-to-left `layout_direction` reverses that
+row and packs it against the opposite edge.
 
 ## Linting
 

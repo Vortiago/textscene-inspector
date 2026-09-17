@@ -22,6 +22,7 @@ import {
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
   parseProjectSettings,
+  projectLayoutDirectionEnv,
   projectThemeScale,
   projectViewportSize,
 } from './projectSettingsParser';
@@ -184,5 +185,107 @@ describe('projectViewportSize', () => {
       '[display]\n\nwindow/size/viewport_width=640\nwindow/size/viewport_height=400\n'
     );
     expect(projectViewportSize(settings)).toEqual({ width: 640, height: 400 });
+  });
+});
+
+describe('projectLayoutDirectionEnv', () => {
+  it('answers Godot\'s own defaults without a project file', () => {
+    // `GLOBAL_DEF_RST(".../force_right_to_left_layout_direction", false)` and
+    // `GLOBAL_DEF_BASIC(PropertyInfo(INT, ".../root_node_layout_direction", …), 0)`
+    // (`core/config/project_settings.cpp:1797-1798`); arm 0 is "Based on
+    // Application Locale", and no `internationalization/locale/test` means the
+    // OS locale, which this previewer cannot read.
+    expect(projectLayoutDirectionEnv(null)).toEqual({
+      forceRtl: false,
+      rootRtl: false,
+      applicationLocaleRtl: false,
+      systemLocaleRtl: false,
+    });
+  });
+
+  it('reads the force flag, which the two locale arms honour', () => {
+    expect(
+      projectLayoutDirectionEnv({
+        'internationalization/rendering/force_right_to_left_layout_direction': 'true',
+      }).forceRtl
+    ).toBe(true);
+  });
+
+  it('resolves the root direction from `root_node_layout_direction`', () => {
+    // `control.cpp:3600-3608`: 1 => LTR, 2 => RTL, 3 => system locale,
+    // anything else => the application locale.
+    const root = (value: string) =>
+      projectLayoutDirectionEnv({
+        'internationalization/rendering/root_node_layout_direction': value,
+      }).rootRtl;
+    expect(root('1')).toBe(false);
+    expect(root('2')).toBe(true);
+    expect(root('3')).toBe(false);
+    expect(root('0')).toBe(false);
+  });
+
+  it('reads the application locale from `internationalization/locale/test`', () => {
+    // `Object::_get_locale()` (`core/object/object.cpp:1793-1804`) ends at
+    // `TranslationServer::get_locale()`, which `setup()` seeds from the test
+    // locale when one is set (`core/string/translation_server.cpp:592-599`).
+    const settings = { 'internationalization/locale/test': 'he_IL' };
+    expect(projectLayoutDirectionEnv(settings).applicationLocaleRtl).toBe(true);
+    // The root's own arm 0 goes through the same locale.
+    expect(
+      projectLayoutDirectionEnv({
+        ...settings,
+        'internationalization/rendering/root_node_layout_direction': '0',
+      }).rootRtl
+    ).toBe(true);
+    // Arm 3 is the SYSTEM locale, which the test locale never stands in for.
+    expect(
+      projectLayoutDirectionEnv({
+        ...settings,
+        'internationalization/rendering/root_node_layout_direction': '3',
+      }).rootRtl
+    ).toBe(false);
+  });
+
+  it('leaves the system-locale answer false — the host locale is not in the scene', () => {
+    expect(
+      projectLayoutDirectionEnv({ 'internationalization/locale/test': 'ar' }).systemLocaleRtl
+    ).toBe(false);
+  });
+
+  it('ignores a blank test locale, which `setup()` strips before testing it', () => {
+    // `test = test.strip_edges(); if (!test.is_empty())`
+    // (`translation_server.cpp:593-595`).
+    expect(
+      projectLayoutDirectionEnv({ 'internationalization/locale/test': '   ' }).applicationLocaleRtl
+    ).toBe(false);
+  });
+});
+
+describe('projectLayoutDirectionEnv — the settings are engine slots, not text', () => {
+  it('booleanizes the force flag, so an int spelling reads like `true`', () => {
+    // `GLOBAL_GET_CACHED(bool, …)` converts whatever the ConfigFile parsed
+    // (`variant.cpp:550-558`), so `1` is true and `0` is false.
+    const force = (value: string) =>
+      projectLayoutDirectionEnv({
+        'internationalization/rendering/force_right_to_left_layout_direction': value,
+      }).forceRtl;
+    expect(force('1')).toBe(true);
+    expect(force('0')).toBe(false);
+    expect(force('false')).toBe(false);
+  });
+
+  it('truncates the root direction the way the INT slot does', () => {
+    // `_to_int` (`core/variant/variant.h:360-377`) runs before the comparison.
+    expect(
+      projectLayoutDirectionEnv({
+        'internationalization/rendering/root_node_layout_direction': '2.9',
+      }).rootRtl
+    ).toBe(true);
+    // An unreadable value stores 0, which is the application-locale arm.
+    expect(
+      projectLayoutDirectionEnv({
+        'internationalization/rendering/root_node_layout_direction': 'nonsense',
+      }).rootRtl
+    ).toBe(false);
   });
 });

@@ -1,0 +1,53 @@
+; The ONE variable: `layout_direction = 3` on a default (LEFT) icon-mode
+; ItemList. Godot mirrors each row's icon inside the list's OWN width
+; (item_list.cpp:1582-1584), then moves the label to its own RTL pen,
+; `size.width - rect.width + icon.width - text_ofs.x + h_separation`
+; (:1664-1667), and right-aligns it in its box (:1668). That pen is NOT the
+; mirror of the LTR one, so the label sits a different distance from its icon
+; in each direction and a plain mirror reads wrong. Both lists are the same
+; width and hold the same two rows, of deliberately different widths, so only
+; the direction can move either piece. unit-item-list-guide-lines.tscn is the
+; only other LEFT-mode ItemList and it is LTR with no icon at all, so a
+; regression in either branch is invisible everywhere else.
+
+[gd_scene load_steps=2 format=3 uid="uid://unit_item_list_rtl"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 240.0
+offset_bottom = 96.0
+fixed_icon_size = Vector2i(16, 16)
+item_count = 2
+item_0/text = "Sword"
+item_0/icon = ExtResource("1_icon")
+item_1/text = "Bow"
+item_1/icon = ExtResource("1_icon")
+
+[node name="Rtl" type="ItemList" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 16.0
+offset_top = 112.0
+offset_right = 240.0
+offset_bottom = 192.0
+fixed_icon_size = Vector2i(16, 16)
+item_count = 2
+item_0/text = "Sword"
+item_0/icon = ExtResource("1_icon")
+item_1/text = "Bow"
+item_1/icon = ExtResource("1_icon")

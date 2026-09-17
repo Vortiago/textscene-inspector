@@ -72,6 +72,29 @@ describe('pickButtonStyleBox', () => {
   it('falls back to the default-theme struct for the current state when no override resolves', () => {
     expect(pickButtonStyleBox({}, defaults, 'disabled')).toBe(defaults.disabled);
   });
+
+  // `Button::_get_current_stylebox` (`scene/gui/button.cpp:100-148`): every
+  // draw-state arm reads `rtl && has_theme_stylebox("<state>_mirrored")`
+  // before its plain key.
+  it('prefers the <state>_mirrored key under RTL', () => {
+    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
+    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
+    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', true)).toBe(mirrored);
+    expect(pickButtonStyleBox({ disabled_mirrored: mirrored }, defaults, 'disabled', true)).toBe(mirrored);
+  });
+
+  it('ignores the <state>_mirrored key under LTR', () => {
+    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
+    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
+    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(plain);
+    expect(pickButtonStyleBox({ normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(defaults.normal);
+  });
+
+  it('falls through to the plain key under RTL when nothing resolved a mirrored one', () => {
+    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
+    expect(pickButtonStyleBox({ normal: plain }, defaults, 'normal', true)).toBe(plain);
+    expect(pickButtonStyleBox({}, defaults, 'normal', true)).toBe(defaults.normal);
+  });
 });
 
 describe('tintStyleBox', () => {
@@ -128,6 +151,7 @@ const BASE_INPUT: ButtonContentInput = {
   iconNaturalSize: null,
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
+  rtl: false,
 };
 
 describe('layoutButtonContent — text only, no icon', () => {
@@ -153,6 +177,76 @@ describe('layoutButtonContent — text only, no icon', () => {
   it('returns text: null when hasText is false', () => {
     const { text } = layoutButtonContent({ ...BASE_INPUT, hasText: false, textNaturalSize: { x: 0, y: 0 } });
     expect(text).toBeNull();
+  });
+});
+
+/**
+ * `button.cpp:437-441` sets the paragraph's own width to
+ * `Math::ceil(MAX(1.0f, drawable_size_remained.width))` and hands the
+ * alignment to the TextServer, which measures every arm against THAT width
+ * and floors its own half (`text_paragraph.cpp:887-922`, the block
+ * `TextParagraph::draw` runs). Only the CENTER arm carries the box's own
+ * `(drawable - text_buf_width) / 2`, and it is the only arm that does not
+ * shift at all once the line is wider than the box (`:902`).
+ */
+describe('layoutButtonContent — the paragraph box the alignment measures against', () => {
+  it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
+    // drawable 112, text_buf_width 112, length 51: floor(61/2) = 30, not 30.5.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      textNaturalSize: { x: 51, y: 26 },
+    });
+    expect(text!.offset.x).toBe(34);
+  });
+
+  it('CENTER measures against the CEILED width and keeps the box offset that ceiling leaves (button.cpp:437,439)', () => {
+    // drawable 112.5 -> text_buf_width 113; box offset (112.5 - 113)/2 = -0.25;
+    // paragraph shift floor((113 - 50)/2) = 31. 4 - 0.25 + 31 = 34.75.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 120.5, y: 32 },
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+    });
+    expect(text!.offset.x).toBeCloseTo(34.75, 10);
+  });
+
+  it('CENTER does not shift an OVERFLOWING line at all (text_paragraph.cpp:902)', () => {
+    // length 200 > text_buf_width 112, so the centring arm is skipped entirely
+    // and the else-branch needs an RTL inferred direction this shaper never
+    // produces. Only the style margin is left.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      textNaturalSize: { x: 200, y: 26 },
+    });
+    expect(text!.offset.x).toBe(4);
+  });
+
+  it('RIGHT hugs the CEILED width, not the raw drawable (text_paragraph.cpp:916-922)', () => {
+    // drawable 112.5 -> text_buf_width 113; 113 - 50 = 63; + style margin 4.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 120.5, y: 32 },
+      textAlignment: HORIZONTAL_ALIGNMENT_RIGHT,
+    });
+    expect(text!.offset.x).toBeCloseTo(67, 10);
+  });
+
+  it('a box with no drawable width left still lays out against MAX(1, ...) (button.cpp:437)', () => {
+    // rect 8 wide, margins 4+4 -> drawable 0 -> text_buf_width 1. The label
+    // overflows it, so CENTER contributes only the box offset (0 - 1)/2.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 8, y: 32 },
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+    });
+    expect(text!.offset.x).toBeCloseTo(3.5, 10);
+  });
+
+  it('LEFT is untouched by all of it — the source adds nothing for it', () => {
+    const { text } = layoutButtonContent({ ...BASE_INPUT, rectSize: { x: 120.5, y: 32 } });
+    expect(text!.offset.x).toBe(4);
   });
 });
 
@@ -265,5 +359,68 @@ describe('layoutButtonContent — no icon at all', () => {
     const { icon, text } = layoutButtonContent({ ...BASE_INPUT, iconNaturalSize: { x: 0, y: 0 } });
     expect(icon).toBeNull();
     expect(text!.offset.x).toBe(4);
+  });
+});
+
+/**
+ * `Button::_notification`'s RTL side swap (`scene/gui/button.cpp:262-276`):
+ *
+ *     if (is_layout_rtl()) {
+ *       if (horizontal_icon_alignment == HORIZONTAL_ALIGNMENT_RIGHT) { icon_align_rtl_checked = LEFT; }
+ *       else if (horizontal_icon_alignment == HORIZONTAL_ALIGNMENT_LEFT) { icon_align_rtl_checked = RIGHT; }
+ *       if (alignment == HORIZONTAL_ALIGNMENT_RIGHT) { align_rtl_checked = LEFT; }
+ *       else if (alignment == HORIZONTAL_ALIGNMENT_LEFT) { align_rtl_checked = RIGHT; }
+ *     }
+ *
+ * CENTER is absent from both ladders, so it never moves. Everything below the
+ * swap (`:277-456`) then reads the swapped values and nothing else, so the
+ * expected pixels are the LTR ones of the OPPOSITE alignment.
+ */
+describe('layoutButtonContent — RTL swaps the text alignment side', () => {
+  it('lays LEFT-aligned text out at the RIGHT edge of the drawable box', () => {
+    const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true });
+    // align_rtl_checked = RIGHT: 4 (style margin) + (112 - 50) = 66.
+    expect(text!.offset.x).toBe(66);
+  });
+
+  it('lays RIGHT-aligned text out flush at the style margin', () => {
+    const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true, textAlignment: HORIZONTAL_ALIGNMENT_RIGHT });
+    expect(text!.offset.x).toBe(4);
+  });
+
+  it('leaves CENTER-aligned text where LTR puts it', () => {
+    const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true, textAlignment: HORIZONTAL_ALIGNMENT_CENTER });
+    expect(text!.offset.x).toBe(35);
+  });
+});
+
+describe('layoutButtonContent — RTL swaps the icon side', () => {
+  const WITH_ICON: ButtonContentInput = {
+    ...BASE_INPUT,
+    rtl: true,
+    iconNaturalSize: { x: 16, y: 16 },
+    textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+  };
+
+  it('draws a LEFT icon at the right edge, and stops shifting the text past it', () => {
+    const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_LEFT });
+    // icon_align_rtl_checked = RIGHT: x = 120 - 4 - 16 = 100; y = 4 + (24-16)/2 = 8.
+    expect(icon).toEqual({ rect: { x: 100, y: 8, w: 16, h: 16 } });
+    // drawableWidth = 112-(16+4)=92; the LEFT-icon shift (`:449`) no longer applies: 4 + (92-50)/2 = 25.
+    expect(text!.offset.x).toBe(25);
+  });
+
+  it('draws a RIGHT icon at the left edge, and shifts the text past it', () => {
+    const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_RIGHT });
+    // icon_align_rtl_checked = LEFT: x = style margin 4.
+    expect(icon).toEqual({ rect: { x: 4, y: 8, w: 16, h: 16 } });
+    // 4 + (112-92) + (92-50)/2 = 4 + 20 + 21 = 45.
+    expect(text!.offset.x).toBe(45);
+  });
+
+  it('leaves a CENTER icon, and the text beside it, exactly where LTR puts them', () => {
+    const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_CENTER });
+    expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
+    expect(text!.offset.x).toBe(35);
   });
 });

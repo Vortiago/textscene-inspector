@@ -94,6 +94,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         checkVOffset: checkBoxCheckVOffset(solveNode.constants),
         hSeparation: checkBoxHSeparation(solveNode.constants, { theme }),
         hasText,
+        rtl: solveNode.rtl,
         // Godot's draw path reads the same ceiled `text_buf->get_size()` its
         // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
         // shift is computed against the ceiled width, not the raw pen advance.
@@ -104,7 +105,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout]
+    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, solveNode.rtl]
   );
 
   return (

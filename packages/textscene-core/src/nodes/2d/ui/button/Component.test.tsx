@@ -380,4 +380,26 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
+
+  // `button.cpp:271-275` swaps the text alignment side under RTL, so LEFT must
+  // land exactly where RIGHT lands under LTR.
+  it('places a LEFT-aligned label under RTL exactly where a RIGHT-aligned one lands under LTR', async () => {
+    const labelX = async (alignment: number, rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <Button
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'File', alignment }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return findTextMesh(renderer.scene)!.parent!.position.x;
+    };
+
+    const ltrLeft = await labelX(0, false);
+    const ltrRight = await labelX(2, false);
+    expect(ltrRight).toBeGreaterThan(ltrLeft);
+    expect(await labelX(0, true)).toBe(ltrRight);
+  });
+
 });

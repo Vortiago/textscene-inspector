@@ -180,6 +180,9 @@ function ViewportSurfaceNative({
       paintSequence: WHOLE_CANVAS_RANGE.base,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
+      // A Viewport is neither a Control nor a Window, so it states no layout
+      // direction of its own.
+      rtl: false,
       styleBoxes: {},
       textureSize: null,
       textureSlots: {},

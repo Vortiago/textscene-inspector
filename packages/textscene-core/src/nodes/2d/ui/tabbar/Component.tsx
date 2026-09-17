@@ -7,6 +7,11 @@
  * icon where `tab_close_display_policy` calls for it, and the scroll arrows
  * when the tabs overflow `clip_tabs`'s bar width.
  *
+ * Under `is_layout_rtl()` (`SolveNode.rtl`) every tab is mirrored inside the
+ * bar and its own icon/title/close flow back from the trailing edge
+ * (`nativeSolver.ts`'s `tabDrawX`/`layoutTabContent`), and the scroll arrows
+ * move to the opposite edge.
+ *
  * A static previewer has no pointer: `hover`/`rb_hover`/`cb_hover`/drag state
  * are never modelled (`buttonBase.ts`'s own precedent), so this never draws
  * `tab_hovered`, `tab_focus`, the close/right button's hover background, or
@@ -47,6 +52,7 @@ import {
   fitTabIconSize,
   isCloseButtonVisible,
   isTabBarMinimumSizeMeta,
+  layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
   reconstructThemeScale,
@@ -57,6 +63,7 @@ import {
   tabBarTextTheme,
   tabBarThemeIconSize,
   tabContentWidth,
+  tabDrawX,
   tabIconNaturalSize,
   tabWidthStyleMinWidth,
   type TabDrawState,
@@ -164,6 +171,8 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
     tint,
     renderOrder,
     barHeight: rect.h,
+    barWidth: rect.w,
+    rtl: solveNode.rtl,
     hSeparation,
     closeButtonMargin,
     closeIconTexture,
@@ -183,6 +192,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
       {drawLayout.buttonsVisible && (
         <ScrollArrows
           rect={rect}
+          rtl={solveNode.rtl}
           missingRight={drawLayout.missingRight}
           incrementIconTexture={incrementIconTexture}
           decrementIconTexture={decrementIconTexture}
@@ -207,6 +217,8 @@ interface TabBarTabChromeProps {
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;
+  barWidth: number;
+  rtl: boolean;
   hSeparation: number;
   closeButtonMargin: { left: number; top: number; right: number; bottom: number };
   closeIconTexture: ReturnType<typeof useNodeIcon>;
@@ -228,6 +240,8 @@ function TabBarTabChrome({
   tint,
   renderOrder,
   barHeight,
+  barWidth,
+  rtl,
   hSeparation,
   closeButtonMargin,
   closeIconTexture,
@@ -254,6 +268,8 @@ function TabBarTabChrome({
   const content = layoutTabContent({
     barHeightPx: barHeight,
     style,
+    tabWidthPx: item.width,
+    rtl,
     iconSize,
     hasText: tab.title.length > 0,
     textNaturalHeightPx: layout.heightPx,
@@ -265,7 +281,7 @@ function TabBarTabChrome({
   });
 
   return (
-    <CanvasItemGroup position={[item.ofs, 0, 0]}>
+    <CanvasItemGroup position={[tabDrawX(item.ofs, item.width, barWidth, rtl), 0, 0]}>
       <StyleBoxQuad
         styleBox={style}
         color={tint.own}
@@ -313,6 +329,7 @@ function TabBarTabChrome({
 
 interface ScrollArrowsProps {
   rect: NativeControlComponentProps['rect'];
+  rtl: boolean;
   missingRight: boolean;
   incrementIconTexture: ReturnType<typeof useNodeIcon>;
   decrementIconTexture: ReturnType<typeof useNodeIcon>;
@@ -322,9 +339,10 @@ interface ScrollArrowsProps {
   renderOrder: number;
 }
 
-/** `tab_bar.cpp:564-592`, non-RTL: the decrement (left) arrow is always half-opacity (`offset` never scrolls above 0 statically); the increment (right) arrow is full opacity only while tabs are actually clipped off the right edge. */
+/** `tab_bar.cpp:564-592` through `layoutScrollArrows` — which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
 function ScrollArrows({
   rect,
+  rtl,
   missingRight,
   incrementIconTexture,
   decrementIconTexture,
@@ -333,30 +351,36 @@ function ScrollArrows({
   tint,
   renderOrder,
 }: ScrollArrowsProps) {
-  const vofs = (rect.h - decrementIconSize.y) / 2;
-  const limitMinusButtons = rect.w - incrementIconSize.x - decrementIconSize.x;
+  const arrows = layoutScrollArrows({
+    barWidthPx: rect.w,
+    barHeightPx: rect.h,
+    incrementIconSize,
+    decrementIconSize,
+    missingRight,
+    rtl,
+  });
   const white = useGodotLinearColor({ r: 1, g: 1, b: 1 });
-  const dimAlpha = 0.5 * tint.own.a;
+  const alpha = (dim: boolean) => (dim ? 0.5 : 1) * tint.own.a;
 
   return (
     <>
-      <CanvasItemGroup position={[limitMinusButtons, -vofs, 0]}>
+      <CanvasItemGroup position={[arrows.decrement.x, -arrows.decrement.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={decrementIconSize.x}
           height={decrementIconSize.y}
           color={white}
-          opacity={dimAlpha}
+          opacity={alpha(arrows.decrement.dim)}
           map={decrementIconTexture}
         />
       </CanvasItemGroup>
-      <CanvasItemGroup position={[limitMinusButtons + decrementIconSize.x, -vofs, 0]}>
+      <CanvasItemGroup position={[arrows.increment.x, -arrows.increment.y, 0]}>
         <ControlQuad
           renderOrder={renderOrder}
           width={incrementIconSize.x}
           height={incrementIconSize.y}
           color={white}
-          opacity={missingRight ? tint.own.a : dimAlpha}
+          opacity={alpha(arrows.increment.dim)}
           map={incrementIconTexture}
         />
       </CanvasItemGroup>

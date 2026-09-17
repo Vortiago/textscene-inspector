@@ -596,3 +596,135 @@ describe('splitContainerMinimumSize — (int) accumulation', () => {
     expect(min.y).toBe(7);
   });
 });
+
+// --- RTL --------------------------------------------------------------------
+
+describe('computeSplitDraggerPosition under RTL', () => {
+  it('inverts the clamped position against the axis size on a HORIZONTAL split (split_container.cpp:703-707)', () => {
+    // `if (!vertical && is_layout_rtl()) dragger_positions[i] = size - dragger_positions[i] - sep`.
+    // The "Offset" row above clamps to 254, so RTL reports 400 - 254 - 12 = 134.
+    const pos = computeSplitDraggerPosition(
+      400,
+      12,
+      axisChild({ expands: true }),
+      axisChild({ expands: true }),
+      60,
+      false,
+      true
+    );
+    expect(pos).toBe(134);
+  });
+
+  it('inverts a COLLAPSED position too (split_container.cpp:641-646)', () => {
+    // The collapsed branch runs its own copy of the same inversion and drops
+    // `split_offset`. Only the first child expands, so the LTR position is
+    // `size - sep` = 388 and RTL is 400 - 388 - 12 = 0.
+    const pos = computeSplitDraggerPosition(400, 12, axisChild({ expands: true }), axisChild(), 60, true, true);
+    expect(pos).toBe(0);
+  });
+
+  it('is already axis-scoped: the `!vertical` guard belongs to the caller (split_container.cpp:703)', () => {
+    // This function only ever sees ONE axis, so a vertical caller must pass
+    // `rtl && !vertical` — `resortSplitContainer` below is what enforces it.
+    const pos = computeSplitDraggerPosition(
+      300,
+      12,
+      axisChild({ expands: true }),
+      axisChild({ expands: true }),
+      50,
+      false,
+      false
+    );
+    expect(pos).toBe(194);
+  });
+});
+
+describe('resortSplitContainer under RTL', () => {
+  it('gives the FIRST child the trailing band (split_container.cpp:738-751)', () => {
+    // `start_pos = dragger_positions[0] + sep; end_pos = new_size[axis]` for
+    // i == 0, then `start_pos = 0; end_pos = dragger_positions[0]` for i == 1,
+    // with dragger_positions[0] = 400 - 254 - 12 = 134.
+    const rects = resortSplitContainer(
+      false,
+      { width: 400, height: 60 },
+      12,
+      60,
+      false,
+      [child({ hSizeFlags: EXPAND_FILL }), child({ hSizeFlags: EXPAND_FILL })],
+      true
+    );
+    expect(rects).toEqual<Rect2[]>([
+      { x: 146, y: 0, w: 254, h: 60 },
+      { x: 0, y: 0, w: 134, h: 60 },
+    ]);
+  });
+
+  it('a lone child still fits the whole rect, but through fit_child_in_rect’s RTL arm (split_container.cpp:714-719, container.cpp:99,109)', () => {
+    const rects = resortSplitContainer(
+      false,
+      { width: 400, height: 60 },
+      12,
+      0,
+      false,
+      [child({ minSize: { x: 40, y: 10 }, hSizeFlags: 0, vSizeFlags: 0 })],
+      true
+    );
+    // No SIZE_FILL: width drops to 40 and, under RTL, sits at 400 - 40.
+    expect(rects).toEqual<Rect2[]>([{ x: 360, y: 0, w: 40, h: 10 }]);
+  });
+
+  it('leaves a VERTICAL split unmoved (split_container.cpp:738-741)', () => {
+    const rects = resortSplitContainer(
+      true,
+      { width: 120, height: 300 },
+      12,
+      0,
+      false,
+      [child({ vSizeFlags: EXPAND_FILL }), child({ vSizeFlags: EXPAND_FILL })],
+      true
+    );
+    expect(rects).toEqual<Rect2[]>([
+      { x: 0, y: 0, w: 120, h: 144 },
+      { x: 0, y: 156, w: 120, h: 144 },
+    ]);
+  });
+});
+
+describe('makeSplitContainerLayout under RTL — registered end-to-end', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('mirrors the "Ratio" row and reports the inverted dragger position (split_container.cpp:703-707,738-751)', () => {
+    controlSolverRegistry.registerContainerLayout('HSplitContainer', makeSplitContainerLayout(false));
+    controlSolverRegistry.registerMinimumSize('HSplitContainer', makeSplitContainerMinimumSize(false));
+
+    const rtl = <T extends SolveNode>(n: T): T => ({ ...n, rtl: true });
+    const root = rtl(
+      solveNode(
+        'Split',
+        'HSplitContainer',
+        { layoutMode: 1, offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 60 },
+        [
+          rtl(
+            solveNode('Split/RatioLeft', 'Control', {
+              layoutMode: 2,
+              sizeFlagsHorizontal: EXPAND_FILL,
+              sizeFlagsStretchRatio: 3,
+            })
+          ),
+          rtl(solveNode('Split/RatioRight', 'Control', { layoutMode: 2, sizeFlagsHorizontal: EXPAND_FILL })),
+        ]
+      )
+    );
+
+    const ctx = createSolveContext(nativeTheme(1));
+    const solved = solveControlTree([root], VIEWPORT, ctx);
+
+    // LTR puts RatioLeft at 0..294 and RatioRight at 306..400; RTL mirrors both.
+    expect(solved.get('Split/RatioLeft')?.rect).toEqual({ x: 106, y: 0, w: 294, h: 60 });
+    expect(solved.get('Split/RatioRight')?.rect).toEqual({ x: 0, y: 0, w: 94, h: 60 });
+    // The grabber band sits at the INVERTED position, 400 - 294 - 12.
+    expect(solved.get('Split')?.meta).toEqual({ draggerPos: 94 });
+  });
+});

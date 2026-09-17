@@ -200,6 +200,17 @@ describe('importRootScale', () => {
       bake: true,
     });
   });
+
+  it('booleanizes apply_root_scale — `bool apply_root = p_options[…]` (resource_importer_scene.cpp:3154-3157)', () => {
+    // `Variant::operator bool()` is `!is_zero()` (`variant_op.cpp:1114-1122`),
+    // so a numeric spelling reads as the number's truth, not as its text.
+    const bake = (value: string) =>
+      importRootScale(parseImportFile(`[params]\n\nnodes/apply_root_scale=${value}\nnodes/root_scale=4.0\n`))!
+        .bake;
+    expect(bake('0')).toBe(false);
+    expect(bake('1')).toBe(true);
+    expect(bake('2')).toBe(true);
+  });
 });
 
 describe('importExternalMaterials', () => {

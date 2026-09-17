@@ -2,8 +2,9 @@
  * `<TabContainer>` — the native (WebGL canvas) painter for `TabContainer`:
  * `TabContainer::_notification(NOTIFICATION_DRAW)` (`tab_container.cpp:247-
  * 277`). Draws the `panel` StyleBox behind the content band, the
- * `tabbar_background` StyleBox behind the strip (an EMPTY box by default —
- * draws nothing unless overridden), and the internal tab strip itself,
+ * `tabbar_background` StyleBox across the FULL-width header band (`:262` —
+ * an EMPTY box by default, so it draws nothing unless overridden), and the
+ * internal tab strip itself inside that band,
  * delegating entirely to `../tabbar/Component.tsx`'s own `<TabBar>` against
  * a synthetic `SolveNode` (`nativeSolver.ts`'s `buildInternalTabBarNode`) —
  * one strip-drawing implementation, not a second copy that could drift.
@@ -38,6 +39,9 @@ import {
   deriveTabContainerTabs,
   tabBarRect,
   tabContentBand,
+  tabHeaderBand,
+  tabHeaderHeight,
+  tabbarStyleMargins,
 } from './nativeSolver';
 
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))` — same literal `nativeSolver.ts`'s own `SIDE_MARGIN_LITERAL` uses for the minimum-size contribution. */
@@ -70,13 +74,20 @@ export function TabContainer({
 
   const barCtx: Pick<SolveContext, 'theme' | 'measureText'> = { theme, measureText };
   const barResult = tabBarMinimumSize(syntheticBar, barCtx as SolveContext);
-  const headerHeight = tabsVisible ? ('size' in barResult ? barResult.size.y : barResult.y) : 0;
+  const barMinHeight = 'size' in barResult ? barResult.size.y : barResult.y;
+
+  const tabbarMargin = tabbarStyleMargins(solveNode.styleBoxes);
+  const showsStrip = tabsVisible && derivedTabs.length > 0;
+  const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
 
   const sideMargin = Math.round(SIDE_MARGIN_LITERAL * reconstructThemeScale(theme));
-  const barRect = tabsVisible ? tabBarRect(rect, headerHeight, tabsPosition, alignment, sideMargin) : null;
+  const barRect = showsStrip
+    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, sideMargin, tabbarMargin, solveNode.rtl)
+    : null;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
 
   const tabbarBackground = solveNode.styleBoxes.tabbar_background;
+  const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
 
   // Godot's DEFAULT (`all_tabs_in_front === false`) draws the strip AFTER
   // every page (`INTERNAL_MODE_BACK`) — this painter's own output otherwise
@@ -86,11 +97,27 @@ export function TabContainer({
 
   return (
     <>
-      <PanelChrome solveNode={solveNode} rect={contentBand} theme={theme} tint={tint} renderOrder={renderOrder} />
-      {tabbarBackground && barRect && (
-        <StyleBoxQuad styleBox={tabbarBackground} color={tint.own} rect={barRect} renderOrder={renderOrder} />
+      {/* `<StyleBoxQuad>` sizes off the rect and is POSITIONED by its group. */}
+      <CanvasItemGroup position={[contentBand.x, -contentBand.y, 0]}>
+        <PanelChrome
+          solveNode={solveNode}
+          rect={{ x: 0, y: 0, w: contentBand.w, h: contentBand.h }}
+          theme={theme}
+          tint={tint}
+          renderOrder={renderOrder}
+        />
+      </CanvasItemGroup>
+      {tabbarBackground && headerHeight > 0 && (
+        <CanvasItemGroup position={[headerBand.x, -headerBand.y, 0]}>
+          <StyleBoxQuad
+            styleBox={tabbarBackground}
+            color={tint.own}
+            rect={{ x: 0, y: 0, w: headerBand.w, h: headerBand.h }}
+            renderOrder={renderOrder}
+          />
+        </CanvasItemGroup>
       )}
-      {tabsVisible && barRect && (
+      {barRect && (
         <CanvasItemGroup position={[barRect.x, -barRect.y, 0]}>
           <TabBar
             solveNode={syntheticBar}

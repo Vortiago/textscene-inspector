@@ -48,3 +48,11 @@ Each title's text comes from its PopupMenu child's own `title` property when set
 its node name — the same fallback `MenuBar::_refresh_menu_names` applies. A title is
 always drawn in Godot's plain "normal" state: `disabled`/`hidden` per menu are runtime-only
 APIs with no serialised property, so a `.tscn` can never author them.
+
+## Known limitations
+
+- **Approximated** A menu title's paragraph direction is not applied, so under
+  `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
+  Which end of the bar the titles start from does follow the layout direction.
+- **Not drawn** Opening a menu, hovering a title and the `*_mirrored` hover and
+  pressed StyleBoxes all need a pointer, so none of them appears.

@@ -1,0 +1,39 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a SpinBox. `_compute_sizes`
+; puts the stepper block at x 0 and the field/buttons separator directly after it
+; (spin_box.cpp:403,409), while the internal LineEdit — which carries no
+; is_layout_rtl branch of its own — reaches the far side through its own rect
+; mirror (control.cpp:1785). The LTR twin above holds the unmirrored split. No
+; other fixture pairs a SpinBox with a direction, so a regression in either half
+; of that split is invisible everywhere else.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="SpinBox" parent="."]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 224.0
+offset_bottom = 56.0
+min_value = 0.0
+max_value = 20.0
+step = 0.25
+value = 5.5
+prefix = "$"
+
+[node name="Rtl" type="SpinBox" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 476.0
+offset_top = 96.0
+offset_right = 676.0
+offset_bottom = 128.0
+min_value = 0.0
+max_value = 20.0
+step = 0.25
+value = 5.5
+prefix = "$"

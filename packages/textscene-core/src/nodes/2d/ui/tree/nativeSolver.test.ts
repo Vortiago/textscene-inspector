@@ -8,6 +8,7 @@ import {
   treeTitleButtonHeightPx,
   treeContentRect,
   treeColumnWidthPx,
+  treeTitleButtonX,
 } from './nativeSolver';
 
 const THEME = nativeTheme(1);
@@ -80,5 +81,25 @@ describe('treeColumnWidthPx', () => {
     const box = THEME.widgets.button.pressed;
     const minWidth = box.contentMargin.left + box.contentMargin.right;
     expect(treeColumnWidthPx(minWidth * 3, 3, true, box)).toBe(minWidth);
+  });
+});
+
+describe('treeTitleButtonX', () => {
+  // tree.cpp:5154-5160 — `ofs2` starts at the panel's own SIDE_LEFT margin and
+  // advances one column width per header cell.
+  it('walks the header cells left to right from the panel margin', () => {
+    expect(treeTitleButtonX(0, 4, 30, 100, false)).toBe(4);
+    expect(treeTitleButtonX(1, 4, 30, 100, false)).toBe(34);
+    expect(treeTitleButtonX(2, 4, 30, 100, false)).toBe(64);
+  });
+  // tree.cpp:5158-5160 — `tbrect.position.x = get_size().width - tbrect.size.x
+  // - tbrect.position.x`: mirrored inside the Tree's OWN width.
+  it('mirrors each cell inside the Tree own width under RTL', () => {
+    expect(treeTitleButtonX(0, 4, 30, 100, true)).toBe(66);
+    expect(treeTitleButtonX(1, 4, 30, 100, true)).toBe(36);
+    expect(treeTitleButtonX(2, 4, 30, 100, true)).toBe(6);
+  });
+  it('leaves a single full-width column in place under RTL', () => {
+    expect(treeTitleButtonX(0, 0, 100, 100, true)).toBe(0);
   });
 });

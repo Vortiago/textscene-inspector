@@ -5,6 +5,7 @@ import { unquoteStringName } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import { intOr, parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
+import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
@@ -90,6 +91,12 @@ export function parseControl(
   result.offsetRight = parseOptionalFloat(properties.offset_right);
   result.offsetBottom = parseOptionalFloat(properties.offset_bottom);
   result.growHorizontal = parseOptionalFloat(properties.grow_horizontal);
+  // Never left undefined: an unset Control holds INHERITED in Godot too.
+  result.layoutDirection = intOr(
+    properties.layout_direction,
+    LAYOUT_DIRECTION_INHERITED,
+    `${result.name || 'Control'}.layout_direction`
+  );
   result.growVertical = parseOptionalFloat(properties.grow_vertical);
   result.sizeFlagsHorizontal = parseOptionalFloat(properties.size_flags_horizontal);
   result.sizeFlagsVertical = parseOptionalFloat(properties.size_flags_vertical);

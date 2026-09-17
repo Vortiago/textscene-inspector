@@ -590,20 +590,27 @@ export interface TabContentLayout {
 }
 
 /**
- * `TabBar::_draw_tab` (`tab_bar.cpp:643-738`), non-RTL, minus `right_button`
- * (dead — see this module's own header) and the hover/pressed background the
- * close button's OWN `button_hl_style`/`button_pressed_style` draws only on
+ * `TabBar::_draw_tab` (`tab_bar.cpp:643-738`), minus `right_button` (dead —
+ * see this module's own header) and the hover/pressed background the close
+ * button's OWN `button_hl_style`/`button_pressed_style` draws only on
  * interaction (never statically — the close ICON itself still draws
  * unconditionally, `:734`, which is what `close` below positions).
  *
  * `textAdvanceWidthPx` is `tabs[i].size_text` — the (possibly truncated) DRAW
  * width the pen advances by, distinct from the text's own NATURAL width used
- * for centring nothing (Godot centres by HEIGHT only; horizontal placement is
- * pure left-to-right flow, `:676`).
+ * for centring nothing (Godot centres by HEIGHT only).
+ *
+ * Under `rtl` the pen starts at `tabWidthPx - contentMargin.left` (`:660` —
+ * the LEFT margin measured from the tab's RIGHT edge, never the right one)
+ * and each element is placed at `p_x - its own width` before the pen steps
+ * back by that width plus one `h_separation` (`:668,671,676,684,721`).
+ * Vertical placement is direction-independent.
  */
 export function layoutTabContent(input: {
   barHeightPx: number;
   style: StyleBoxFlatData;
+  /** `tabs[p_index].size_cache` — the drawn tab's own width, the RTL pen's origin. */
+  tabWidthPx: number;
   iconSize: Vec2 | null;
   hasText: boolean;
   textNaturalHeightPx: number;
@@ -612,23 +619,25 @@ export function layoutTabContent(input: {
   closeVisible: boolean;
   closeIconSize: Vec2;
   buttonHlMargin: { left: number; top: number; right: number; bottom: number };
+  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — flows the content from the tab's trailing edge. */
+  rtl: boolean;
 }): TabContentLayout {
-  const { style, barHeightPx, hSeparation } = input;
+  const { style, barHeightPx, hSeparation, rtl } = input;
   const innerHeight = barHeightPx - (style.contentMargin.top + style.contentMargin.bottom);
 
-  let x = style.contentMargin.left;
+  let x = rtl ? input.tabWidthPx - style.contentMargin.left : style.contentMargin.left;
   let icon: TabContentLayout['icon'] = null;
   if (input.iconSize) {
     const y = style.contentMargin.top + (innerHeight - input.iconSize.y) / 2;
-    icon = { rect: { x, y, w: input.iconSize.x, h: input.iconSize.y } };
-    x += input.iconSize.x + hSeparation;
+    icon = { rect: { x: rtl ? x - input.iconSize.x : x, y, w: input.iconSize.x, h: input.iconSize.y } };
+    x = rtl ? x - input.iconSize.x - hSeparation : x + input.iconSize.x + hSeparation;
   }
 
   let text: TabContentLayout['text'] = null;
   if (input.hasText) {
     const y = style.contentMargin.top + (innerHeight - input.textNaturalHeightPx) / 2;
-    text = { offset: { x, y } };
-    x += input.textAdvanceWidthPx + hSeparation;
+    text = { offset: { x: rtl ? x - input.textAdvanceWidthPx : x, y } };
+    x = rtl ? x - input.textAdvanceWidthPx - hSeparation : x + input.textAdvanceWidthPx + hSeparation;
   }
 
   let close: TabContentLayout['close'] = null;
@@ -636,11 +645,73 @@ export function layoutTabContent(input: {
     const w = input.buttonHlMargin.left + input.buttonHlMargin.right + input.closeIconSize.x;
     const h = input.buttonHlMargin.top + input.buttonHlMargin.bottom + input.closeIconSize.y;
     const y = style.contentMargin.top + (innerHeight - h) / 2;
+    const cbX = rtl ? x - w : x;
     close = {
-      rect: { x, y, w, h },
-      iconOffset: { x: x + input.buttonHlMargin.left, y: y + input.buttonHlMargin.top },
+      rect: { x: cbX, y, w, h },
+      iconOffset: { x: cbX + input.buttonHlMargin.left, y: y + input.buttonHlMargin.top },
     };
   }
 
   return { icon, text, close };
+}
+
+/**
+ * A drawn tab's own x inside the bar — `_notification(DRAW)`'s two
+ * `_draw_tab` calls and `TabBar::get_tab_rect` (`tab_bar.cpp:552,561,1929,1931`),
+ * which agree exactly. `ofsPx` is the LTR-space `ofs_cache`
+ * `computeTabBarDrawLayout` produces; `_update_cache` itself never reads the
+ * layout direction.
+ */
+export function tabDrawX(ofsPx: number, tabWidthPx: number, barWidthPx: number, rtl: boolean): number {
+  return rtl ? barWidthPx - ofsPx - tabWidthPx : ofsPx;
+}
+
+// --- Scroll arrows --------------------------------------------------------------
+
+export interface ScrollArrowPlacement {
+  x: number;
+  y: number;
+  /** `Color(1, 1, 1, 0.5)` rather than full opacity. */
+  dim: boolean;
+}
+
+export interface ScrollArrowsLayout {
+  decrement: ScrollArrowPlacement;
+  increment: ScrollArrowPlacement;
+}
+
+/**
+ * `TabBar::_notification(DRAW)`'s `buttons_visible` block
+ * (`tab_bar.cpp:564-592`). `offset` never scrolls above 0 here
+ * (`computeTabBarDrawLayout`'s own doc), so whichever arrow scrolls TOWARDS
+ * the start is always dim and `missing_right` alone lights the other one.
+ * RTL puts the pair against the LEFT edge and swaps those roles, and places
+ * the increment icon at the INCREMENT icon's own width (`:575`) where LTR
+ * steps by the DECREMENT icon's (`:587`) — the two differ only under a theme
+ * that sizes them differently.
+ *
+ * `vofs` is an `int` measured off the INCREMENT icon's height for BOTH arrows
+ * (`:565`), so an odd leftover truncates rather than landing on a half pixel.
+ */
+export function layoutScrollArrows(input: {
+  barWidthPx: number;
+  barHeightPx: number;
+  incrementIconSize: Vec2;
+  decrementIconSize: Vec2;
+  missingRight: boolean;
+  rtl: boolean;
+}): ScrollArrowsLayout {
+  const { barWidthPx, incrementIconSize, decrementIconSize, missingRight, rtl } = input;
+  const y = Math.trunc((input.barHeightPx - incrementIconSize.y) / 2);
+  if (rtl) {
+    return {
+      decrement: { x: 0, y, dim: !missingRight },
+      increment: { x: incrementIconSize.x, y, dim: true },
+    };
+  }
+  const limitMinusButtons = barWidthPx - incrementIconSize.x - decrementIconSize.x;
+  return {
+    decrement: { x: limitMinusButtons, y, dim: true },
+    increment: { x: limitMinusButtons + decrementIconSize.x, y, dim: !missingRight },
+  };
 }

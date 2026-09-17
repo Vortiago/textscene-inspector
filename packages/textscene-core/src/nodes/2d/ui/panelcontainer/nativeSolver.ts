@@ -67,19 +67,21 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 /**
- * `Container::fit_child_in_rect` (`container.cpp:95-128`), the non-RTL branch
- * (this codebase does not model `layout_direction`, matching
- * `controlRectSolver.ts`'s own scope note). `r_p_rect` here is the CONTENT
- * rect `panelContainerLayout` already computed — this function only decides
- * how one child sits inside it.
+ * `Container::fit_child_in_rect` (`container.cpp:95-128`). `rect` here is the
+ * CONTENT rect `panelContainerLayout` already computed — this function only
+ * decides how one child sits inside it. PanelContainer has no RTL branch of
+ * its own (`panel_container.cpp` calls `is_layout_rtl()` nowhere), but
+ * `fit_child_in_rect` reads the CONTAINER's flag itself, so `rtl` comes from
+ * the container, never the child.
  */
-function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2): Rect2 {
+function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2, rtl: boolean): Rect2 {
   const props = controlProps(child);
   return fitChildInRect(
     rect,
     minSize,
     props.sizeFlagsHorizontal ?? SIZE_FILL,
-    props.sizeFlagsVertical ?? SIZE_FILL
+    props.sizeFlagsVertical ?? SIZE_FILL,
+    rtl
   );
 }
 
@@ -106,7 +108,7 @@ export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) 
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
-    out.set(child.path, fitChild(child, minSize, contentRect));
+    out.set(child.path, fitChild(child, minSize, contentRect, n.rtl));
   }
   return out;
 };

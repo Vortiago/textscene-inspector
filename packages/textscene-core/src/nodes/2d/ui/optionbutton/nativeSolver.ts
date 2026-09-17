@@ -24,14 +24,12 @@
  * `icon_max_width` (`OptionButton::get_minimum_size`/`_notification` read
  * `theme_cache.arrow_icon->get_size()`/`get_width()`/`get_height()` directly)
  * and reserves its space via Button's OWN `_internal_margin` mechanism exactly
- * like CheckBox's check icon does on the LEFT — `buttonBase.ts`'s
+ * like CheckBox's check icon does — `buttonBase.ts`'s
  * `layoutButtonContent` does not model that, so this module ports the
- * text/arrow placement math itself. The reservation's `h_separation`
- * component only ever affects the RIGHT internal margin here — LEFT stays
- * unset (OptionButton never reserves left-side space), so Button's own
- * `left_internal_margin_with_h_separation` term is always zero and the
- * LEFT-aligned text offset below never needs it: it drops straight out of
- * the general formula, not a simplification this port introduces.
+ * text/arrow placement math itself. Exactly one of the two internal margins
+ * is ever set (`option_button.cpp:139-147` picks the side from
+ * `is_layout_rtl()`), so the reservation is always one strip plus one
+ * `h_separation`.
  *
  * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
  *
@@ -49,7 +47,9 @@ import type {
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  buttonTextAlignShiftPx,
   centredTextTopPx,
+  HORIZONTAL_ALIGNMENT_RIGHT,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
@@ -153,7 +153,8 @@ export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 
   return n.textureSlots.arrow ?? OPTION_BUTTON_ARROW_NATURAL_SIZE;
 }
 
-function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
+/** `h_separation` — OptionButton's own default (`default_theme.cpp:249`, `round(4*scale)`) is numerically `theme.separation`'s own literal. */
+export function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
@@ -174,7 +175,7 @@ function optionButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<So
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveButtonDrawState(props.disabled);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const { fontSizePx } = optionButtonTextTheme(n, props, state, ctx);
@@ -216,8 +217,12 @@ export interface OptionButtonContentInput {
   arrowSize: Vec2;
   /** `arrow_margin` theme constant — measured from the FULL rect edge, not the content-margin edge. */
   arrowMargin: number;
+  /** `h_separation` theme constant, already clamped to >= 0 — part of the arrow's internal-margin reservation. */
+  hSeparation: number;
   /** The shaped (selected item's) text natural size — `(0, 0)` when there is no selection. */
   textNaturalSize: Vec2;
+  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — moves the arrow to the left edge and the label against the right margin. */
+  rtl: boolean;
 }
 
 export interface OptionButtonContentLayout {
@@ -228,28 +233,41 @@ export interface OptionButtonContentLayout {
 }
 
 /**
- * `OptionButton::_notification`'s arrow `ofs` (`option_button.cpp:113-121`,
- * RTL omitted) plus Button's OWN internal-margin text reservation
+ * `OptionButton::_notification`'s arrow `ofs` (`option_button.cpp:122-131`)
+ * plus Button's OWN internal-margin text reservation
  * (`button.cpp:247-260,444-456`) specialised to OptionButton's fixed
- * right-arrow/left-text arrangement: `_internal_margin[SIDE_RIGHT]` is always
- * the arrow's width (`option_button.cpp:83-89`), so the reserved gap before
- * the text's right edge is `arrowSize.x + h_separation` — but the arrow's OWN
+ * arrow-beside-text arrangement: the internal margin is always the arrow's
+ * width (`option_button.cpp:83-89,139-147`), so the reserved gap between the
+ * label and the arrow is `arrowSize.x + h_separation` — but the arrow's OWN
  * draw position never reads the stylebox margin at all, only `arrow_margin`
  * against the FULL control size.
+ *
+ * Under `rtl` the arrow sits at `arrow_margin` from the LEFT edge, the
+ * reservation moves to SIDE_LEFT, and the constructor's
+ * `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) swaps to RIGHT
+ * (`button.cpp:271-275`), landing the label against the right content
+ * margin. `h_separation` only reaches the offset on that arm — the LTR one
+ * leaves the label at the left margin whatever the reservation is.
  */
 export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, textNaturalSize } = input;
+  const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textNaturalSize, rtl } = input;
 
   const arrowRect: Rect2 = {
-    x: Math.floor(rectSize.x - arrowSize.x - arrowMargin),
+    x: Math.floor(rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
     y: Math.floor(Math.abs((rectSize.y - arrowSize.y) / 2)),
     w: arrowSize.x,
     h: arrowSize.y,
   };
 
   const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
+  const reserved = arrowSize.x + hSeparation;
+  const drawableWidth = rectSize.x - styleMargin.left - styleMargin.right - reserved;
   const textOffset: Vec2 = {
-    x: styleMargin.left,
+    x: rtl
+      ? styleMargin.left +
+        reserved +
+        buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, HORIZONTAL_ALIGNMENT_RIGHT)
+      : styleMargin.left,
     y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
   };
 

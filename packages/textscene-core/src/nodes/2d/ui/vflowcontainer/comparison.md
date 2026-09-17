@@ -11,7 +11,8 @@ renders_as: children flowed down a column, wrapping to a new column
 
 VFlowContainer is a FlowContainer fixed to the vertical axis: children flow top to
 bottom and wrap to a new column when the current one runs out of height. It draws
-nothing itself.
+nothing itself. A right-to-left `layout_direction` mirrors the column order, and cancels
+with `reverse_fill` when both are set.
 
 ## Linting
 

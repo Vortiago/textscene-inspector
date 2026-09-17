@@ -52,11 +52,10 @@
  * unavailable to a deterministic single solve — and is deliberately not
  * ported; such a child is sized like any other.
  *
- * RTL (`is_layout_rtl()`) out of scope, matching every other container in
- * this codebase (`native/controlRectSolver.ts`'s own note) — `reverse_fill`
- * below is ported with `rtl` hardcoded `false`, which is why it flips the
- * CROSS axis (not main) when `vertical`: `(rtl != reverse_fill) && vertical`
- * reduces to `reverse_fill && vertical` once `rtl` is always `false`.
+ * `reverse_fill` flips the CROSS axis and `rtl` flips X, but on a VERTICAL
+ * flow both flips land on the same axis and Godot XORs them
+ * (`(rtl != reverse_fill) && vertical`, `flow_container.cpp:248`) — two flips
+ * cancel, leaving the columns unmoved.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -357,6 +356,7 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
   const alignment = props(n).alignment ?? ALIGNMENT_BEGIN;
   const lastWrapAlignment = props(n).lastWrapAlignment ?? LAST_WRAP_ALIGNMENT_INHERIT;
   const reverseFill = props(n).reverseFill === true;
+  const rtl = n.rtl;
 
   const sortable = children.filter(({ node }) => isSortableControl(node));
   const out = new Map<string, Rect2>();
@@ -420,14 +420,14 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
 
     let rectX = ofsX;
     let rectY = ofsY;
-    // rtl hardcoded false (module doc): reverse_fill flips the CROSS axis —
-    // Y when horizontal, X when vertical.
+    // flow_container.cpp:245-250 — the cross-axis flip, then the X flip whose
+    // condition XORs the two on a vertical flow (module doc).
     if (reverseFill && !vertical) rectY = contentRect.h - ofsY - childH;
-    if (reverseFill && vertical) rectX = contentRect.w - ofsX - childW;
+    if ((rtl && !vertical) || (rtl !== reverseFill && vertical)) rectX = contentRect.w - ofsX - childW;
 
     out.set(
       child.path,
-      fitChildInRect({ x: rectX, y: rectY, w: childW, h: childH }, minSize, hFlagsOf(child), vFlagsOf(child))
+      fitChildInRect({ x: rectX, y: rectY, w: childW, h: childH }, minSize, hFlagsOf(child), vFlagsOf(child), rtl)
     );
 
     if (vertical) ofsY += childH + vSep;

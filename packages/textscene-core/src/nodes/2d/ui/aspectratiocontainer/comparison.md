@@ -11,7 +11,8 @@ renders_as: each child scaled and aligned to a fixed ratio
 
 AspectRatioContainer scales and aligns every child to a fixed width-to-height ratio,
 fitting, covering, or driving one axis from the other per `stretch_mode`. It draws
-nothing itself.
+nothing itself. A right-to-left `layout_direction` mirrors the horizontal alignment, so
+`alignment_horizontal` Begin puts the child against the right edge.
 
 ## Linting
 

@@ -39,3 +39,10 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 An absent or unparseable `selected` becomes `undefined` and the control renders an empty
 label rather than item 0. An invalid `popup/item_N/id` falls back to the item's own
 index. `linter.ts` warns when `selected` names an index `item_count` never provides.
+
+## Known limitations
+
+- **Approximated** The label's paragraph direction is not applied, so under
+  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
+  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  icon and the chrome sit on does follow the layout direction.

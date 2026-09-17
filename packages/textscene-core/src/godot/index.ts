@@ -68,7 +68,21 @@ export {
   CANVAS_LAYER_MAX,
 } from './rendering.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
-export { CURSOR_ARROW, CURSOR_MAX, CURSOR_SHAPES } from './control.js';
+export {
+  CURSOR_ARROW,
+  CURSOR_MAX,
+  CURSOR_SHAPES,
+  LAYOUT_DIRECTION_INHERITED,
+  LAYOUT_DIRECTION_APPLICATION_LOCALE,
+  LAYOUT_DIRECTION_LTR,
+  LAYOUT_DIRECTION_RTL,
+  LAYOUT_DIRECTION_SYSTEM_LOCALE,
+  LAYOUT_DIRECTION_MAX,
+  LTR_LAYOUT_ENV,
+  resolveLayoutRtl,
+  type LayoutDirectionEnv,
+} from './control.js';
+export { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './textServer.js';
 export {
   allFinite,
   FLOAT_PATTERN_SOURCE,

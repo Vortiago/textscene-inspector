@@ -41,6 +41,7 @@ import {
   codeEditGutterBand,
   codeEditLineNumberText,
   codeEditLineNumberGutterXPx,
+  codeEditLineNumberTextXPx,
   codeEditGutterCellTextTopPx,
   CODE_EDIT_LINE_NUMBER_COLOR,
 } from './nativeSolver';
@@ -106,7 +107,9 @@ export function CodeEdit(props: NativeControlComponentProps) {
 
   const lineNumberGutterXPx = codeEditLineNumberGutterXPx(styleBox.contentMargin.left, band.mainWidthPx);
 
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(rect);
+  // LOCAL, not `rect` — `../textedit/Component.tsx`'s own `ownRect` doc.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
 
   return (
     <CanvasItemGroup ref={anchorRef}>
@@ -124,7 +127,14 @@ export function CodeEdit(props: NativeControlComponentProps) {
           const rowTopPx = startRow * rowHeightPx;
           const textTopPx = codeEditGutterCellTextTopPx(rowTopPx, rowHeightPx, layout.heightPx);
           return (
-            <CanvasItemGroup key={lineIndex} position={[lineNumberGutterXPx, -textTopPx, 0]}>
+            <CanvasItemGroup
+              key={lineIndex}
+              position={[
+                codeEditLineNumberTextXPx(lineNumberGutterXPx, band.lineNumberWidthPx, rect.w, layout.widthPx, solveNode.rtl),
+                -textTopPx,
+                0,
+              ]}
+            >
               <TextRun
                 layout={layout}
                 fontSizePx={fontSizePx}

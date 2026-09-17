@@ -1039,19 +1039,40 @@ export function resolveParagraphAlignment(
 }
 
 /**
- * One line's own left offset — `TextParagraph::draw`'s alignment switch
- * (`scene/resources/text_paragraph.cpp:989-1023`), LTR arm.
+ * One line's own left offset — `RichTextLabel::_draw_line`'s own alignment
+ * switch (`rich_text_label.cpp:1000-1014`), LTR arms. NOT
+ * `TextParagraph::draw`'s (`scene/resources/text_paragraph.cpp:989-1023`):
+ * RichTextLabel walks the glyphs itself and never calls it, and the two
+ * differ by TWO guards `_draw_line` does not have. `TextParagraph` no-ops
+ * CENTER once the line overflows its box (`:1004`'s `length <= l_width`),
+ * and wraps the whole switch in `if (width > 0)` (`:990`). `_draw_line`
+ * centres unconditionally, lets an overflowing line hang off the leading
+ * edge, and aligns a zero-width paragraph like any other — a control that
+ * narrow shows none of it, since `RichTextLabel` clips its own contents
+ * (`:8225`). Engine-checked.
  *
- * NOT Label's arithmetic, and deliberately so: Label aligns through
- * `Label::_get_line_rect`, which truncates and measures against the CEILED
- * shaped size, while RichTextLabel goes through `TextParagraph`, which floors
- * and measures against `shaped_text_get_width` — the raw pen advance. The two
- * disagree by a pixel on the same text, so each slice transcribes its own.
+ * `_draw_line` carries RTL arms of its own
+ * (`rich_text_label.cpp:987-1014`), but their `rtl` is the PARAGRAPH
+ * direction — `l.text_buf->get_direction()`, set from `_find_direction`
+ * (`:599`, `:3507-3525`), which returns `is_layout_rtl()` ONLY while
+ * `text_direction` is INHERITED. Its default is `TEXT_DIRECTION_AUTO`
+ * (`rich_text_label.h:615`), so `layout_direction` alone never reaches those
+ * arms; `comparison.md` records the gap.
  *
- * `width > 0` guards the whole switch (`:990`): a paragraph with no width set
- * aligns nothing. CENTER additionally no-ops when the line OVERFLOWS its box
- * (`:1004`'s `length <= l_width`), where LEFT and CENTER coincide for LTR;
- * RIGHT carries no such guard and pushes an overflowing line off to the left.
+ * `lineWidthPx` is the line's CEILED shaped extent — `_draw_line` measures it
+ * as `text_buf->get_line_size(line).x` (`:984`), which is
+ * `TS->shaped_text_get_size` (`text_paragraph.cpp:773-779`) and so
+ * `Size2(sd->width, …).ceil()` (`text_server_adv.cpp:7524-7537`). The caller
+ * applies `shapedTextSizeWidthPx`, as Label's own `_get_line_rect` does.
+ * `boxWidthPx` needs no matching truncation even though the engine's is an
+ * `int p_width` (`rich_text_label.h:672,678`): flooring the whole expression
+ * absorbs the box's own fraction, since `floor(x / n) === floor(floor(x) / n)`
+ * for a positive integer `n`. The line's ceil is not absorbed, and it moves
+ * the offset a pixel wherever the box width is fractional.
+ *
+ * NOT Label's arithmetic, and deliberately so: both measure the ceiled shaped
+ * size, but `Label::_get_line_rect` truncates toward zero where this floors,
+ * so the two disagree by a pixel on a line WIDER than its box.
  *
  * The result is floored because Godot's own floor lands one step later, on the
  * assembled glyph position (`text_server_adv.cpp:4084`'s `cpos.x =
@@ -1063,10 +1084,9 @@ export function richTextHorizontalOffsetPx(
   boxWidthPx: number,
   alignment: number
 ): number {
-  if (boxWidthPx <= 0) return 0;
   switch (alignment) {
     case H_CENTER:
-      return lineWidthPx <= boxWidthPx ? Math.floor((boxWidthPx - lineWidthPx) / 2) : 0;
+      return Math.floor((boxWidthPx - lineWidthPx) / 2);
     case H_RIGHT:
       return Math.floor(boxWidthPx - lineWidthPx);
     case H_LEFT:
@@ -1144,8 +1164,9 @@ export interface RichTextAlignment {
  * Alignment is resolved PER LINE rather than once for the paragraph, because
  * `_find_alignment` reads the tag stack (`[center]` et al.) and a wrapped
  * paragraph can carry different ones on different lines. `alignment` omitted
- * — the default — leaves every offset at 0, which is what LEFT/TOP produce
- * anyway.
+ * — the default — aligns against a ZERO-width box, which is the same as
+ * LEFT/TOP only while no run carries an alignment tag of its own; the
+ * renderer always passes the control's own rect.
  */
 export function layoutRichTextRuns(
   styledRuns: readonly StyledTextRun[],
@@ -1180,7 +1201,7 @@ export function layoutRichTextRuns(
       ? styledRuns[segments[0].runIndex]!.alignment
       : (alignment?.horizontalAlignment ?? H_LEFT);
     const lineOffsetXPx = richTextHorizontalOffsetPx(
-      layout.lines[lineIndex]?.widthPx ?? 0,
+      shapedTextSizeWidthPx(layout.lines[lineIndex]?.widthPx ?? 0),
       boxWidthPx,
       lineAlignment
     );

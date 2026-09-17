@@ -71,3 +71,13 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 through the optional-int reader, so a malformed or out-of-range value left-aligns
 silently. `secret` and `flat` become `false` for any value that does not read as `true`.
 An empty `secret_character` falls back to the bullet, as Godot does.
+
+## Known limitations
+
+- **Not drawn** `_is_over_clear_button`'s RTL hit region (line_edit.cpp:1175) and
+  the direction-aware caret markers (:1590-1601): both need pointer or focus state.
+  The alignment swap, the clear button's side, the text's floor past it and
+  `ofs_max` (:1397-1421,1455-1483) all draw.
+- **Not drawn** `shaped_text_set_direction` at :3104: it takes `is_layout_rtl()`
+  only while `text_direction` is INHERITED, and the default is
+  `TEXT_DIRECTION_AUTO` (line_edit.h:144).

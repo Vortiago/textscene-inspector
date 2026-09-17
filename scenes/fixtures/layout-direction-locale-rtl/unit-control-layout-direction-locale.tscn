@@ -1,0 +1,35 @@
+; The ONE variable: `internationalization/locale/test`, set to a right-to-left
+; language in this directory's own project.godot. Every node leaves
+; `layout_direction` at INHERITED and `root_node_layout_direction` is unset, so
+; the root falls through to the application locale (control.cpp:3607) —
+; `TranslationServer::setup` seeds that from the test locale when the project
+; states one (translation_server.cpp:592-599) and
+; `TextServerAdvanced::_is_locale_right_to_left` answers from a fixed
+; seven-code table (text_server_adv.cpp:534-541). Invisible in every loose
+; fixture, and in the two sibling directories: they answer from a setting that
+; never consults a locale at all.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrlldlocale"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Inherited" type="HBoxContainer" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 464.0
+offset_bottom = 128.0
+
+[node name="A" type="ColorRect" parent="Inherited"]
+custom_minimum_size = Vector2(60, 0)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Inherited"]
+custom_minimum_size = Vector2(120, 0)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Inherited"]
+custom_minimum_size = Vector2(180, 0)
+color = Color(0.2, 0.4, 0.9, 1)

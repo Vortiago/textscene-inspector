@@ -11,7 +11,7 @@ renders_as: children flowed left to right, wrapping to a new row
 
 HFlowContainer is a FlowContainer fixed to the horizontal axis: children flow left to
 right and wrap to a new row when the current one runs out of width. It draws nothing
-itself.
+itself. A right-to-left `layout_direction` mirrors every row horizontally.
 
 ## Linting
 

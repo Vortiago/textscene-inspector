@@ -75,6 +75,7 @@ export function solveNode(): Pick<
   | 'paintRange'
   | 'paintSequence'
   | 'skippedAncestors'
+  | 'rtl'
 > {
   return {
     children: [],
@@ -97,6 +98,8 @@ export function solveNode(): Pick<
     paintSequence: WHOLE_CANVAS_RANGE.base,
     // No skipped Node2D ancestor — the common case a hand-built tree states.
     skippedAncestors: null,
+    // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
+    rtl: false,
   };
 }
 

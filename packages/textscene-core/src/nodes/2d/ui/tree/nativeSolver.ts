@@ -139,3 +139,19 @@ export function treeColumnWidthPx(
   if (expandAreaPx < columns) return minWidthPx;
   return minWidthPx + Math.trunc(expandAreaPx / columns);
 }
+
+/**
+ * One header cell's own x, `tree.cpp:5154-5160`: `ofs2` starts at the panel's
+ * `SIDE_LEFT` margin and advances one column width per cell, then RTL mirrors
+ * the rect inside the Tree's OWN width rather than its parent's.
+ */
+export function treeTitleButtonX(
+  index: number,
+  contentRectX: number,
+  columnWidthPx: number,
+  controlWidthPx: number,
+  rtl: boolean
+): number {
+  const x = contentRectX + index * columnWidthPx;
+  return rtl ? controlWidthPx - columnWidthPx - x : x;
+}

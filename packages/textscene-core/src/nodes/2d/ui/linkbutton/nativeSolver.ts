@@ -148,6 +148,35 @@ export function linkButtonUnderlineGeometry(
   return { y, thickness };
 }
 
+export interface LinkButtonTextPlacement {
+  /** The paragraph's own left edge, LOCAL Godot px. */
+  originX: number;
+  /** `text_buf->get_line_width()` narrowed to `int` — the CEILED pen extent, and the underline stroke's own length. */
+  lineWidthPx: number;
+}
+
+/**
+ * `LinkButton::_notification`'s text and underline origin
+ * (`link_button.cpp:289-314`): LTR draws at `x = 0`, RTL at
+ * `x = size.width - width`, and the underline spans `width` px from
+ * whichever of the two it is.
+ *
+ * `width` is `TextParagraph::get_line_width`
+ * (`scene/resources/text_paragraph.cpp:810`), i.e.
+ * `TS->shaped_text_get_width` = `Math::ceil(sd->width)`
+ * (`text_server_adv.cpp:7569`); LinkButton's `int width` narrowing therefore
+ * removes nothing, and the stroke is a whole pixel WIDER than the raw pen
+ * advance whenever that advance is fractional.
+ */
+export function linkButtonTextPlacement(
+  rectWidthPx: number,
+  shapedWidthPx: number,
+  rtl: boolean
+): LinkButtonTextPlacement {
+  const lineWidthPx = shapedTextSizeWidthPx(shapedWidthPx);
+  return { originX: rtl ? rectWidthPx - lineWidthPx : 0, lineWidthPx };
+}
+
 // --- Minimum size --------------------------------------------------------------
 
 const OVERRUN_NO_TRIMMING = 0;

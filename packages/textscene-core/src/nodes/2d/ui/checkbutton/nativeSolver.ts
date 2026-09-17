@@ -25,10 +25,10 @@
  *
  * CheckButton reserves space for its check icon via Button's OWN
  * `_internal_margin` mechanism (`Button::_set_internal_margin`,
- * `check_button.cpp:96-103`, RTL omitted) — `buttonBase.ts`'s
- * `layoutButtonContent` explicitly does not model that, so this module ports
- * the icon+text placement math itself, mirroring `checkbox/nativeSolver.ts`'s
- * `layoutCheckBoxContent` with the icon moved to the RIGHT edge.
+ * `check_button.cpp:96-104`) — `buttonBase.ts`'s `layoutButtonContent`
+ * explicitly does not model that, so this module ports the icon+text
+ * placement math itself, mirroring `checkbox/nativeSolver.ts`'s
+ * `layoutCheckBoxContent` with the icon on the opposite edge.
  *
  * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
  *
@@ -44,7 +44,12 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { centredTextTopPx, fitIconSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import {
+  buttonTextAlignShiftPx,
+  centredTextTopPx,
+  fitIconSize,
+  tintColor,
+} from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -119,29 +124,37 @@ export function checkButtonTextTheme(
 export type CheckButtonIconKey = keyof CheckButtonIcons;
 
 /**
- * `CheckButton::_notification`'s `NOTIFICATION_DRAW` (`check_button.cpp:112-142`,
- * RTL mirrored variants omitted): `is_disabled()` picks the `_disabled`
- * variant, `is_pressed()` (== `button_pressed`) picks the checked ("on") vs
- * unchecked ("off") icon.
+ * `CheckButton::_notification`'s `NOTIFICATION_DRAW` (`check_button.cpp:105-127`):
+ * `is_layout_rtl()` swaps the whole four-icon table for the `_mirrored` one,
+ * then `is_disabled()` picks the `_disabled` variant and `is_pressed()`
+ * (== `button_pressed`) the checked ("on") vs unchecked ("off") icon.
  */
-export function resolveCheckButtonIconKey(props: CheckButtonProperties): CheckButtonIconKey {
+export function resolveCheckButtonIconKey(props: CheckButtonProperties, rtl: boolean): CheckButtonIconKey {
   const disabled = props.disabled === true;
   const checked = props.buttonPressed === true;
+  if (rtl) {
+    if (checked) return disabled ? 'checkedDisabledMirrored' : 'checkedMirrored';
+    return disabled ? 'uncheckedDisabledMirrored' : 'uncheckedMirrored';
+  }
   if (checked) return disabled ? 'checkedDisabled' : 'checked';
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
-/** `CheckButtonIconKey` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, CheckButton, <name>)`, `check_button.cpp:156-159`). RTL-mirrored variants are out of scope repo-wide, so only these four are themeable here. */
+/** `CheckButtonIconKey` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, CheckButton, <name>)`, `check_button.cpp:152-159`). */
 export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = {
   checked: 'checked',
   unchecked: 'unchecked',
   checkedDisabled: 'checked_disabled',
   uncheckedDisabled: 'unchecked_disabled',
+  checkedMirrored: 'checked_mirrored',
+  uncheckedMirrored: 'unchecked_mirrored',
+  checkedDisabledMirrored: 'checked_disabled_mirrored',
+  uncheckedDisabledMirrored: 'unchecked_disabled_mirrored',
 };
 
 const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME);
 
-/** Which of CheckButton's 4 icon slots have a themed answer — mirrors `checkbox/nativeSolver.ts`'s `checkBoxTextureSlots`. */
+/** Which of CheckButton's 8 icon slots have a themed answer — mirrors `checkbox/nativeSolver.ts`'s `checkBoxTextureSlots`. */
 export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const requests: TextureSlotRequest[] = [];
   for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
@@ -152,19 +165,26 @@ export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {})
 };
 
 /**
- * `CheckButton::get_icon_size` (`check_button.cpp:35-62`), RTL omitted: the
- * MAX over exactly the two icons the CURRENT `disabled` state selects
- * (`checked`/`unchecked`, or `checked_disabled`/`unchecked_disabled`) —
- * unlike CheckBox, which maxes over all 8 regardless of state, CheckButton's
- * own source only ever reads the pair it is about to draw. A name
- * `SolveNode.textureSlots` never resolved falls back to the vendored
+ * `CheckButton::get_icon_size` (`check_button.cpp:35-65`): the MAX over
+ * exactly the two icons the CURRENT `disabled` state and layout direction
+ * select — unlike CheckBox, which maxes over all 8 regardless of state,
+ * CheckButton's own source only ever reads the pair it is about to draw. A
+ * name `SolveNode.textureSlots` never resolved falls back to the vendored
  * default's own size, same reasoning as `checkbox/nativeSolver.ts`'s
  * `checkBoxIconNaturalSize`.
  */
-export function checkButtonIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, disabled: boolean): Vec2 {
-  const names: readonly CheckButtonIconKey[] = disabled
-    ? ['checkedDisabled', 'uncheckedDisabled']
-    : ['checked', 'unchecked'];
+export function checkButtonIconNaturalSize(
+  n: Pick<SolveNode, 'textureSlots'>,
+  disabled: boolean,
+  rtl: boolean
+): Vec2 {
+  const names: readonly CheckButtonIconKey[] = rtl
+    ? disabled
+      ? ['checkedDisabledMirrored', 'uncheckedDisabledMirrored']
+      : ['checkedMirrored', 'uncheckedMirrored']
+    : disabled
+      ? ['checkedDisabled', 'uncheckedDisabled']
+      : ['checked', 'unchecked'];
   let w = 0;
   let h = 0;
   for (const key of names) {
@@ -212,7 +232,6 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
 
 /** CheckButton's own default text alignment is LEFT (`CheckButton::CheckButton()`, `check_button.cpp:169`: `set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)`), overriding Button's CENTER default — a scene's own `alignment` override still wins. */
 export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
-const ALIGNMENT_CENTER = 1;
 const ALIGNMENT_RIGHT = 2;
 
 // --- Minimum size --------------------------------------------------------------
@@ -244,7 +263,10 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const measured = hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
   const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
 
-  const iconSize = fitIconSize(checkButtonIconNaturalSize(n, state === 'disabled'), checkButtonIconMaxWidth(n.constants));
+  const iconSize = fitIconSize(
+    checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),
+    checkButtonIconMaxWidth(n.constants)
+  );
   const hSeparation = checkButtonHSeparation(n.constants, ctx);
 
   const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
@@ -269,6 +291,8 @@ export interface CheckButtonContentInput {
   textAlignment: number;
   /** The shaped text's own natural (unwrapped) size — ignored when `hasText` is false. */
   textNaturalSize: Vec2;
+  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — moves the toggle to the left edge and swaps the label's alignment side. */
+  rtl: boolean;
 }
 
 export interface CheckButtonContentLayout {
@@ -279,14 +303,18 @@ export interface CheckButtonContentLayout {
 }
 
 /**
- * `CheckButton::_notification`'s icon `ofs` (`check_button.cpp:126-133`, RTL
- * omitted) plus Button's OWN internal-margin text reservation
+ * `CheckButton::_notification`'s icon `ofs` (`check_button.cpp:129-137`) plus
+ * Button's OWN internal-margin text reservation
  * (`button.cpp:247-260,444-456`) specialised to CheckButton's fixed
- * right-icon arrangement: `_internal_margin[SIDE_RIGHT]` is always the
- * icon's width (`check_button.cpp:96-103`), so the reserved gap ahead of the
- * text is unconditionally `iconSize.x + h_separation` on the RIGHT, mirroring
- * `checkbox/nativeSolver.ts`'s `layoutCheckBoxContent` (LEFT icon) about the
- * control's own vertical axis.
+ * toggle-beside-text arrangement: the internal margin is always the icon's
+ * width (`check_button.cpp:96-104`), so the reserved gap between the label
+ * and the toggle is unconditionally `iconSize.x + h_separation`.
+ *
+ * `rtl` moves that reservation from SIDE_RIGHT to SIDE_LEFT and the toggle to
+ * the left content margin, and swaps the label's own alignment side
+ * (`button.cpp:271-275`) — so the constructor's LEFT default
+ * (`check_button.cpp:174`) lands the label at the far end of the narrowed
+ * box.
  */
 export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckButtonContentLayout {
   const {
@@ -299,10 +327,11 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     hasText,
     textAlignment,
     textNaturalSize,
+    rtl,
   } = input;
 
   const iconRect: Rect2 = {
-    x: Math.floor(rectSize.x - (iconSize.x + marginX)),
+    x: Math.floor(rtl ? marginX : rectSize.x - (iconSize.x + marginX)),
     y: Math.floor((rectSize.y - iconSize.y) / 2 + checkVOffset),
     w: iconSize.x,
     h: iconSize.y,
@@ -310,25 +339,22 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
 
   let textOffset: Vec2 | null = null;
   if (hasText) {
-    const rightReserved = iconSize.x + hSeparation;
-    const textBoxWidth = rectSize.x - marginX - rightReserved - marginX;
+    const reserved = iconSize.x + hSeparation;
+    const textBoxWidth = rectSize.x - 2 * marginX - reserved;
     const customElementHeight = rectSize.y - 2 * marginY;
-    let shiftX: number;
-    switch (textAlignment) {
-      case ALIGNMENT_CENTER:
-        shiftX = (textBoxWidth - textNaturalSize.x) / 2;
-        break;
-      case ALIGNMENT_RIGHT:
-        shiftX = textBoxWidth - textNaturalSize.x;
-        break;
-      default:
-        shiftX = 0;
-        break;
-    }
-    const x = marginX + shiftX;
+    const align = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
+    const shiftX = buttonTextAlignShiftPx(textNaturalSize.x, textBoxWidth, align);
+    const x = marginX + (rtl ? reserved : 0) + shiftX;
     const y = centredTextTopPx(customElementHeight, textNaturalSize.y, marginY);
     textOffset = { x, y };
   }
 
   return { iconRect, textOffset };
+}
+
+/** `button.cpp:271-275` — LEFT and RIGHT trade places under RTL; CENTER is left alone. */
+function swapAlignmentSide(alignment: number): number {
+  if (alignment === ALIGNMENT_RIGHT) return CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT;
+  if (alignment === CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT) return ALIGNMENT_RIGHT;
+  return alignment;
 }

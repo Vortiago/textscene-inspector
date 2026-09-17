@@ -3,9 +3,10 @@
  * only, NO StyleBox chrome mesh (LinkButton registers none — only a `focus`
  * StyleBox, which a static pointer-less preview never draws), plus a solid
  * underline stroke when `underline_mode` calls for it at this draw state.
- * Text draws at the control's own top-left with no margin at all — unlike
- * every StyleBox-backed Button-family painter, `link_button.cpp`'s own draw
- * call is `text_buf->draw(ci, Vector2(0, 0), color)`.
+ * Text draws at the control's own top edge with no margin at all — unlike
+ * every StyleBox-backed Button-family painter — and hugs the leading edge
+ * layout direction picks (`nativeSolver.ts`'s `linkButtonTextPlacement`), the
+ * underline running the same span.
  *
  * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
  * inherited `modulate`. Multiplied into the font colour BEFORE the single
@@ -36,6 +37,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
+  linkButtonTextPlacement,
   linkButtonTextTheme,
   linkButtonUnderlineGeometry,
   linkButtonUnderlineSpacing,
@@ -84,6 +86,13 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
     return soloLineLayout(trimmedLine, unshapedOrCachedLayout);
   }, [unshapedOrCachedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
+  // `link_button.cpp:289-303` — the paragraph's own origin, which RTL moves
+  // to the far edge; the underline below starts from the same x.
+  const placement = useMemo(
+    () => linkButtonTextPlacement(rect.w, layout?.widthPx ?? 0, solveNode.rtl),
+    [rect.w, layout, solveNode.rtl]
+  );
+
   // --- Underline: a solid stroke, per underline_mode + draw state ----------
   const underlineLinearColor = useGodotLinearColor(tintedFontColor);
   const underline = useMemo(() => {
@@ -97,22 +106,24 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
     // values regardless of `fontMetrics` — no scene font this engine loads
     // carries baked underline metrics of its own.
     const { y, thickness } = linkButtonUnderlineGeometry(fontSizePx, spacingConstant, ascentPx);
-    return { top: y - thickness / 2, thickness, width: Math.trunc(layout.widthPx) };
-  }, [layout, state, props, theme, fontSizePx, fontMetrics, solveNode.constants]);
+    return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
+  }, [layout, state, props, theme, fontSizePx, fontMetrics, solveNode.constants, placement]);
 
   return (
     <>
       {layout && (
-        <TextRun
-          layout={layout}
-          fontSizePx={fontSizePx}
-          tint={tintedFontColor}
-          clippingPlanes={clippingPlanes}
-          renderOrder={renderOrder}
-        />
+        <CanvasItemGroup position={[placement.originX, 0, 0]}>
+          <TextRun
+            layout={layout}
+            fontSizePx={fontSizePx}
+            tint={tintedFontColor}
+            clippingPlanes={clippingPlanes}
+            renderOrder={renderOrder}
+          />
+        </CanvasItemGroup>
       )}
       {underline && underline.width > 0 && (
-        <CanvasItemGroup position={[0, -underline.top, 0]}>
+        <CanvasItemGroup position={[placement.originX, -underline.top, 0]}>
           <ControlQuad
             renderOrder={renderOrder}
             width={underline.width}

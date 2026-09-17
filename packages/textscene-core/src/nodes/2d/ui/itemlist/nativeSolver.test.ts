@@ -27,6 +27,11 @@ import {
   itemListGuideLines,
   itemListLineSeparation,
   itemListMinimumSize,
+  itemListMirrorX,
+  itemListRightAlignOffsetPx,
+  itemListRowTextX,
+  itemListLineTextWidthPx,
+  itemListWrappedTextWidthPx,
   itemListSeparation,
   itemMinimumSize,
   itemTextColor,
@@ -349,5 +354,87 @@ describe('itemListMinimumSize', () => {
   it('contributes zero text size when no measurer is wired, never throwing (edge case)', () => {
     const n = node({ autoWidth: true, autoHeight: true, items: [{ text: 'Sword' }] });
     expect(() => itemListMinimumSize(n, ctx(false))).not.toThrow();
+  });
+});
+
+describe('itemListMirrorX', () => {
+  // item_list.cpp:1582-1584 (icon) and :1639-1641 (wrapped text box) both
+  // mirror inside `size.width`, the control's own width.
+  it('leaves the LTR x untouched', () => {
+    expect(itemListMirrorX(6, 16, 200, false)).toBe(6);
+  });
+  it('mirrors a piece inside the control own width', () => {
+    expect(itemListMirrorX(6, 16, 200, true)).toBe(178);
+  });
+  it('leaves a full-width piece in place', () => {
+    expect(itemListMirrorX(0, 200, 200, true)).toBe(0);
+  });
+});
+
+describe('itemListRowTextX', () => {
+  // item_list.cpp:1664-1667 with base_ofs.x 4, rect_cache (x 0, w 100),
+  // icon_size.x 16, icon_margin 4, h_separation 4 — text_ofs.x 22, so the
+  // LTR pen sits at 26 and RTL is `200 - 100 + 16 - 26 + 4`.
+  const INPUT = {
+    ltrX: 26,
+    itemRectWidthPx: 100,
+    iconWidthPx: 16,
+    controlWidthPx: 200,
+    contentWidthPx: 192,
+    wraparoundItems: true,
+    hSeparation: 4,
+  };
+  it('is the LTR pen origin unchanged under LTR', () => {
+    expect(itemListRowTextX({ ...INPUT }, false)).toBe(26);
+  });
+  it('is Godot own RTL formula, not a mirror of the LTR box', () => {
+    expect(itemListRowTextX({ ...INPUT }, true)).toBe(94);
+  });
+  // `200 - 200 + 16 - 26 + 4` is -6, plus `MAX(200 - 192, 0)` (:1665-1667).
+  it('pushes the pen right by the row overflow while wraparound_items is on', () => {
+    expect(itemListRowTextX({ ...INPUT, itemRectWidthPx: 200 }, true)).toBe(2);
+  });
+  it('drops the overflow term with wraparound_items off', () => {
+    expect(itemListRowTextX({ ...INPUT, itemRectWidthPx: 200, wraparoundItems: false }, true)).toBe(-6);
+  });
+});
+
+describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
+  // item_list.cpp:1657-1660 — `text_w = rect.w - text_width_ofs`, shrunk by
+  // the row's own overflow past `width` while wraparound_items is on.
+  it('is the row width less the text pen offset', () => {
+    expect(itemListLineTextWidthPx(100, 22, 192, true)).toBe(78);
+  });
+  it('sheds the row overflow past the content width under wraparound_items', () => {
+    expect(itemListLineTextWidthPx(200, 22, 192, true)).toBe(170);
+  });
+  it('keeps the full row width with wraparound_items off', () => {
+    expect(itemListLineTextWidthPx(200, 22, 192, false)).toBe(178);
+  });
+  // item_list.cpp:1629-1632 — `text_w = rect.w - text_ofs.x * 2`, clamped to
+  // `width - text_ofs.x` when the box would run past the content width.
+  it('insets the wrapped box by the pen offset on both sides', () => {
+    expect(itemListWrappedTextWidthPx(100, 2, 192, true)).toBe(96);
+  });
+  it('clamps the wrapped box to the content width under wraparound_items', () => {
+    expect(itemListWrappedTextWidthPx(300, 2, 192, true)).toBe(190);
+  });
+  it('leaves the wrapped box unclamped with wraparound_items off', () => {
+    expect(itemListWrappedTextWidthPx(300, 2, 192, false)).toBe(296);
+  });
+});
+
+describe('itemListRightAlignOffsetPx', () => {
+  // text_paragraph.cpp:888,916-921 — HORIZONTAL_ALIGNMENT_RIGHT shifts the
+  // line by `width - line_width`, and only while `width > 0`.
+  it('pushes a short line to the right edge of its box', () => {
+    expect(itemListRightAlignOffsetPx(78, 30)).toBe(48);
+  });
+  it('is zero for a box of zero or negative width', () => {
+    expect(itemListRightAlignOffsetPx(0, 30)).toBe(0);
+    expect(itemListRightAlignOffsetPx(-4, 30)).toBe(0);
+  });
+  it('goes negative for a line wider than its box, exactly as the engine does', () => {
+    expect(itemListRightAlignOffsetPx(30, 78)).toBe(-48);
   });
 });

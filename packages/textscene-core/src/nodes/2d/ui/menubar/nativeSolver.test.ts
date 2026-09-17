@@ -23,7 +23,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuBarProperties } from './types';
-import { menuBarMinimumSize, type MenuBarTitle } from './nativeSolver';
+import { layoutMenuBarItems, menuBarMinimumSize, type MenuBarTitle } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -103,5 +103,27 @@ describe('menuBarMinimumSize', () => {
       x: MARGIN * 2 + H_SEPARATION,
       y: MARGIN,
     });
+  });
+});
+
+describe('layoutMenuBarItems', () => {
+  const titles = [
+    { name: 'File', layout: null, size: { x: 60, y: 31 } },
+    { name: 'Edit', layout: null, size: { x: 100, y: 31 } },
+    { name: 'Help', layout: null, size: { x: 40, y: 31 } },
+  ] as unknown as MenuBarTitle[];
+
+  it('walks left to right from 0, one h_separation between items (menu_bar.cpp:412-420)', () => {
+    const items = layoutMenuBarItems(titles, H_SEPARATION, 400, false);
+    expect(items.map((i) => i.x)).toEqual([0, 64, 168]);
+  });
+
+  it('mirrors each item inside the bar under RTL: size.x - offset - size.x (menu_bar.cpp:424)', () => {
+    const items = layoutMenuBarItems(titles, H_SEPARATION, 400, true);
+    expect(items.map((i) => i.x)).toEqual([400 - 0 - 60, 400 - 64 - 100, 400 - 168 - 40]);
+  });
+
+  it('keeps the first item against the trailing edge whatever the bar width', () => {
+    expect(layoutMenuBarItems(titles, H_SEPARATION, 700, true)[0]!.x).toBe(640);
   });
 });

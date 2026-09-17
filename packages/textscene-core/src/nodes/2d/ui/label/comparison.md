@@ -106,3 +106,12 @@ first) but a hand-edited file that writes `text` AFTER either is not.
   lines fit the control's rect height (label.cpp:533-548) — always active, independent
   of `lines_skipped`/`max_lines_visible`. A Label taller than its rect overflows
   visibly here instead of silently dropping its lowest lines.
+- **Not drawn** `HORIZONTAL_ALIGNMENT_FILL`'s own RTL arm (label.cpp:472-478) and
+  the RTL ellipsis side, which puts the ellipsis before the kept glyphs and trims
+  the head of the line (label.h:198-241, text_server_adv.cpp:6053-6064). Both read
+  the shaped paragraph direction, which only `text_direction` sets; its default is
+  `TEXT_DIRECTION_AUTO` (label.h:70), so `layout_direction` never reaches them
+  (:177-181). The LEFT/RIGHT swap (:481-497) and `VC_GLYPHS_AUTO`'s reveal end
+  (:779-780) read `is_layout_rtl()` and do draw.
+- **Not drawn** Bidirectional reordering of a mixed-direction paragraph
+  (text_server_adv.cpp:5374): the bundled atlas covers no RTL script.

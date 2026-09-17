@@ -9,7 +9,10 @@
  * per-node math, no THREE/React.
  *
  * NOT modelled, matching this codebase's established restrictions elsewhere:
- *  - `is_layout_rtl()` — always the LTR branch.
+ *  - Each item's own SHAPED direction: `_shape_text` hands `is_layout_rtl()`
+ *    to the TextServer (`item_list.cpp:41-45`), and this codebase's text
+ *    engine has no bidi pass, so a right-to-left script draws in logical
+ *    order. Every LAYOUT branch of `is_layout_rtl()` IS ported (below).
  *  - `selected`/`hovered`/cursor/focus backgrounds — none of `selected`,
  *    `current` or a live hover/focus state is ever serialised (item_list.cpp's
  *    `PropertyListHelper` registers only `text`/`icon`/`selectable`/`disabled`,
@@ -562,7 +565,7 @@ export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
 controlSolverRegistry.registerMinimumSize('ItemList', itemListMinimumSize);
 controlSolverRegistry.registerTextureSlots('ItemList', itemListTextureSlots);
 
-// --- Draw-time per-item geometry (item_list.cpp:1536-1691, minus RTL) ------
+// --- Draw-time per-item geometry (item_list.cpp:1536-1691) ----------------
 
 export interface ItemIconDraw {
   /** Relative to the item's OWN rect origin. `null` when the item has no icon. */
@@ -614,10 +617,10 @@ export function itemIconDraw(
 }
 
 /**
- * `item_list.cpp:1606-1691`'s pen origin, minus the wraparound width clamp
- * (this codebase shapes once, see the module header) and RTL. TOP mode
- * centres (`HORIZONTAL_ALIGNMENT_CENTER`); LEFT mode is a single line whose
- * OWN alignment is always LEFT (never modelled RTL-right).
+ * `item_list.cpp:1606-1691`'s LTR pen origin, before the RTL branches
+ * (`itemListRowTextX`/`itemListMirrorX`) move it. TOP mode centres
+ * (`HORIZONTAL_ALIGNMENT_CENTER`); LEFT mode is a single line, aligned LEFT
+ * under LTR and RIGHT under RTL (`:1668,1670`).
  */
 export function itemTextDrawOffset(
   iconMode: number,
@@ -669,18 +672,105 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): ControlColor {
 export interface ItemListGuideLine {
   /** Content-relative Y — the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
   y: number;
-  /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`, non-RTL). */
+  /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
   width: number;
 }
 
 /**
  * `item_list.cpp:1446-1459`'s visible-separator draw, minus the scroll-driven
  * clip (a static preview has nothing scrolled out of view, so every
- * separator is "visible") and RTL. Only `packItemListRows`'s own
+ * separator is "visible"). RTL only moves a separator while the vertical
+ * scrollbar is VISIBLE (`:1454-1458`), and this codebase draws no scrollbar,
+ * so both directions share one span. Only `packItemListRows`'s own
  * `separators` output feeds this — every one is a real row/column boundary,
  * never invented here.
  */
 export function itemListGuideLines(iconMode: number, separators: readonly number[], contentWidth: number): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
   return separators.map((y) => ({ y, width: contentWidth }));
+}
+
+// --- RTL draw geometry: item_list.cpp:1582-1584,1629-1641,1657-1668 -------
+
+/**
+ * Mirrors one drawn piece inside the control's own width — the icon rect
+ * (`item_list.cpp:1582-1584`) and the wrapped text box (`:1639-1641`).
+ *
+ * The `size.width` those branches mirror against IS `get_size().width`: the
+ * only thing that widens it is the `!wraparound_items` expansion by
+ * `scroll_bar_h->get_max() - get_page()` (`:1438-1440`), and RTL sets that
+ * max TO the page (`:1891-1893`), so the term is zero whichever way
+ * `wraparound_items` goes.
+ */
+export function itemListMirrorX(ltrX: number, widthPx: number, controlWidthPx: number, rtl: boolean): number {
+  return rtl ? controlWidthPx - ltrX - widthPx : ltrX;
+}
+
+export interface ItemListRowTextXInput {
+  /** `base_ofs.x + rect_cache.position.x + text_ofs.x` — the LTR pen origin. */
+  ltrX: number;
+  itemRectWidthPx: number;
+  /** `icon_size.x`, the item's own PACKED icon width — zero without an icon. */
+  iconWidthPx: number;
+  controlWidthPx: number;
+  /** `width` (`item_list.cpp:1387`), the panel's own content width. */
+  contentWidthPx: number;
+  wraparoundItems: boolean;
+  hSeparation: number;
+}
+
+/**
+ * The single-line pen origin (`item_list.cpp:1664-1667`). The RTL arm is NOT
+ * a mirror of the LTR box: it lands `h_separation/2 - icon_margin` off one,
+ * so the label sits a different distance from its icon in each direction.
+ * That difference is the engine's, reproduced rather than corrected.
+ */
+export function itemListRowTextX(input: ItemListRowTextXInput, rtl: boolean): number {
+  if (!rtl) return input.ltrX;
+  let x =
+    input.controlWidthPx - input.itemRectWidthPx + input.iconWidthPx - input.ltrX + Math.max(input.hSeparation, 0);
+  if (input.wraparoundItems) x += Math.max(input.itemRectWidthPx - input.contentWidthPx, 0);
+  return x;
+}
+
+/**
+ * The width `text_buf->set_width()` gets for a single-line item
+ * (`item_list.cpp:1657-1660`): the row less the text pen offset, shrunk
+ * again by whatever the row overflows the content width by.
+ */
+export function itemListLineTextWidthPx(
+  itemRectWidthPx: number,
+  textOffsetX: number,
+  contentWidthPx: number,
+  wraparoundItems: boolean
+): number {
+  let w = itemRectWidthPx - textOffsetX;
+  if (wraparoundItems && itemRectWidthPx > contentWidthPx) w -= itemRectWidthPx - contentWidthPx;
+  return w;
+}
+
+/**
+ * The same width for a WRAPPED item (`item_list.cpp:1629-1632`): the row
+ * inset by the pen offset on both sides, clamped so the box cannot run past
+ * the content width.
+ */
+export function itemListWrappedTextWidthPx(
+  itemRectWidthPx: number,
+  textOffsetX: number,
+  contentWidthPx: number,
+  wraparoundItems: boolean
+): number {
+  const w = itemRectWidthPx - textOffsetX * 2;
+  if (wraparoundItems && w + textOffsetX > contentWidthPx) return contentWidthPx - textOffsetX;
+  return w;
+}
+
+/**
+ * `HORIZONTAL_ALIGNMENT_RIGHT`'s own per-line shift, `width - line_width`,
+ * applied only while the box has a positive width
+ * (`TextParagraph::draw`, `text_paragraph.cpp:888,916-921`). `lineWidthPx`
+ * is the RAW pen extent (`shaped_text_get_width`), never the ceiled size.
+ */
+export function itemListRightAlignOffsetPx(textWidthPx: number, lineWidthPx: number): number {
+  return textWidthPx > 0 ? textWidthPx - lineWidthPx : 0;
 }

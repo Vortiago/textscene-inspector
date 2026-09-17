@@ -56,6 +56,12 @@ OptionButton's `item_<idx>/*` walk is. The two `linter.ts` advisories compare a
 
 ## Known limitations
 
+- **Approximated** A tab title's paragraph direction is not applied, so under
+  `layout_direction = 3` a right-to-left script, or a title ending in punctuation,
+  keeps left-to-right glyph order. Where each tab sits in the strip, and where its
+  icon, title and close icon sit inside it, do follow the layout direction.
+- **Not drawn** The drag drop-mark and the hover and pressed chrome on a tab, its
+  close button and the scroll arrows all need a pointer, so none of them appears.
 - **Approximated** `max_tab_width` correctly caps a tab's on-screen width and
   reserves the same pixel budget Godot does, but the glyphs inside that budget draw
   unclipped rather than as Godot's own `OVERRUN_TRIM_ELLIPSIS` truncation with a

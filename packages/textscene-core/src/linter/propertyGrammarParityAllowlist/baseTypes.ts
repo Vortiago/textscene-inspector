@@ -280,16 +280,13 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'focus_mode', 'mouse_filter',
     ],
     renderGap: [
-      // These five DO change what Godot draws, for every Control below here.
-      // `theme` and `theme_type_variation` decide which fonts, colours and
-      // styleboxes the whole subtree resolves, and no Theme resource slice
-      // exists in this repo at all. `clip_contents` sets the canvas clip rect.
-      // `layout_direction` mirrors anchors and rects under RTL. And
+      // Both DO change what Godot draws, for every Control below here.
+      // `clip_contents` sets the canvas clip rect, and
       // `localize_numeral_system` swaps the numeral glyphs ProgressBar,
       // SpinBox, CodeEdit and RichTextLabel draw.
-      'clip_contents', 'layout_direction',
+      'clip_contents',
       'localize_numeral_system',
     ],
-    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the theme/clip/direction group genuinely changes the drawing and is unimplemented.',
+    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the clip and numeral-system keys genuinely change the drawing and are unimplemented.',
   },
 };

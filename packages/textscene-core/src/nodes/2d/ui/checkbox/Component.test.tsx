@@ -263,4 +263,19 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(position.getY(0)).toBeCloseTo(4, 6);
   });
+
+  // `check_box.cpp:129`: `ofs.x = get_size().x - normal_style->get_margin(SIDE_RIGHT) - get_icon_size().width`,
+  // against `:131`'s plain left margin. `cbx_empty`'s margin is 4 and the
+  // vendored check is 16 wide, so 150 - 4 - 16 = 130.
+  it('draws the check against the RIGHT content margin under RTL', async () => {
+    const iconX = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <CheckBox {...painterEnv()} solveNode={{ ...solveNode({ text: 'On' }), rtl }} rect={RECT} renderOrder={0} />
+      );
+      return findIconMesh(renderer.scene)!.parent!.position.x;
+    };
+    expect(await iconX(false)).toBe(4);
+    expect(await iconX(true)).toBe(130);
+  });
+
 });

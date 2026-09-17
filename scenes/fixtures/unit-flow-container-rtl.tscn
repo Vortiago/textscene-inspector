@@ -1,0 +1,70 @@
+; The ONE variable: `layout_direction = 3` on an HFlowContainer. Godot mirrors
+; every wrapped row against the container's own width
+; (flow_container.cpp:248-250), leaving the wrap points and the row order
+; alone. The three children have different widths and the LTR container above
+; holds the unmirrored rows beside it, so a mirror that also reordered — or a
+; reorder that did not mirror — reads differently from the correct answer.
+; unit-h-flow-container.tscn moves alignment and reverse_fill at direction
+; LTR, so a regression in this mirror is invisible there.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="HFlowContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 140.0
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="A" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 30)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 30)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 30)
+color = Color(0.2, 0.4, 0.9, 1)
+
+[node name="Rtl" type="HFlowContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 240.0
+offset_bottom = 280.0
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="A" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 30)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 30)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 30)
+color = Color(0.2, 0.4, 0.9, 1)

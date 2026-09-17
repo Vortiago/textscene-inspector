@@ -168,7 +168,12 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
 
   return (
     <>
-      <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
+          doc), so a box drawn at an offset INSIDE this control needs that
+          offset from the group around it. */}
+      <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
+        <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+      </CanvasItemGroup>
       <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebarBand.rect} renderOrder={renderOrder} />
 
       {titleLayout &&
@@ -190,7 +195,9 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
       {rows.map((row) => (
         <Fragment key={row.rawIndex}>
           {row.styleboxRect && (
-            <StyleBoxQuad styleBox={styles.slot} color={tint.own} rect={row.styleboxRect} renderOrder={renderOrder} />
+            <CanvasItemGroup position={[row.styleboxRect.x, -row.styleboxRect.y, 0]}>
+              <StyleBoxQuad styleBox={styles.slot} color={tint.own} rect={row.styleboxRect} renderOrder={renderOrder} />
+            </CanvasItemGroup>
           )}
           {row.slot.leftEnabled && (
             <GraphNodePort

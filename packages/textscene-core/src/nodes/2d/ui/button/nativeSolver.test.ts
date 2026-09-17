@@ -80,6 +80,26 @@ function node(
   };
 }
 
+function styleBoxWithMargin(contentMargin: StyleBoxFlatData['contentMargin']): StyleBoxFlatData {
+  return {
+    bgColor: { r: 0, g: 0, b: 0, a: 1 },
+    borderColor: { r: 0, g: 0, b: 0, a: 1 },
+    borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
+    cornerRadius: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 },
+    expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+    contentMargin,
+    drawCenter: true,
+    borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
+    cornerDetail: 8,
+    skew: { x: 0, y: 0 },
+    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+    shadowSize: 0,
+    shadowOffset: { x: 0, y: 0 },
+  };
+}
+
 function ctx(withMeasurer = true): SolveContext {
   return {
     theme: nativeTheme(1),
@@ -160,6 +180,16 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
       shadowOffset: { x: 0, y: 0 },
     };
     expect(minSize(node({ disabled: true }, { disabled: narrow }), ctx())).toEqual({ x: 40, y: 4 });
+  });
+
+  // `button.cpp:525` sizes off `_get_current_stylebox()`, whose every arm
+  // (`:100-148`) prefers `<state>_mirrored` under `is_layout_rtl()`.
+  it('sizes off the normal_mirrored margin under RTL, and off normal under LTR', () => {
+    const mirrored = styleBoxWithMargin({ left: 9, top: 5, right: 5, bottom: 5 });
+    const plain = styleBoxWithMargin({ left: 1, top: 3, right: 9, bottom: 3 });
+    const boxes = { normal: plain, normal_mirrored: mirrored };
+    expect(minSize({ ...node({}, boxes), rtl: true }, ctx())).toEqual({ x: 14, y: 10 });
+    expect(minSize({ ...node({}, boxes), rtl: false }, ctx())).toEqual({ x: 10, y: 6 });
   });
 });
 

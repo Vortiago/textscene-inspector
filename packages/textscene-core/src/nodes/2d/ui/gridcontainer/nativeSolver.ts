@@ -26,10 +26,11 @@
  * `-0.7` to grow toward the cell's leading edge instead of overflowing its
  * trailing one.
  *
- * RTL (`is_layout_rtl()`) is out of scope everywhere this codebase touches
- * anchors/containers (`native/controlRectSolver.ts`'s own note), so the
- * phantom-column insertion, `fit_child_in_rect`, and the minimum-size floor
- * below all take the non-RTL branch only.
+ * Under RTL each row starts at the container's trailing edge and walks back
+ * (`grid_container.cpp:157,190-194,220-228`); `fit_child_in_rect` gets the
+ * container's own flag too. Column INDEXING is unchanged — only the offset
+ * each column's cell is measured from moves, so the phantom expanded columns
+ * past the last used one still sit at the high indices.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -193,6 +194,7 @@ function remainingPixelIndex(expanded: ReadonlySet<number>, usedCount: number, r
  */
 export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const columns = columnsOf(n);
+  const rtl = n.rtl;
   const hSep = separationOf(n, 'h_separation', ctx.theme);
   const vSep = separationOf(n, 'v_separation', ctx.theme);
 
@@ -262,7 +264,9 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     const col = index % columns;
 
     if (col === 0) {
-      colOfs = 0;
+      // `col_ofs = get_size().width` under RTL (`grid_container.cpp:190-194`);
+      // this container insets nothing, so its content rect IS its own size.
+      colOfs = rtl ? contentRect.w : 0;
       if (row > 0) {
         const prevRow = row - 1;
         rowOfs += (rowExpanded.has(prevRow) ? rowExpand : rowMinH.get(prevRow) ?? 0) + vSep;
@@ -275,13 +279,13 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     if (colExpanded.has(col) && col < colRemainingPixelIndex) w += 1;
     if (rowExpanded.has(row) && row < rowRemainingPixelIndex) h += 1;
 
-    const cell: Rect2 = { x: colOfs, y: rowOfs, w, h };
+    const cell: Rect2 = { x: rtl ? colOfs - w : colOfs, y: rowOfs, w, h };
     // No local minimum re-floor: the solver core applies `Control::set_rect`'s
     // floor (grow direction included) to every rect a container returns, so
     // doing it here too would be a second copy of the same rule to keep in sync.
-    rects.set(child.path, fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child)));
+    rects.set(child.path, fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child), rtl));
 
-    colOfs += w + hSep;
+    colOfs += rtl ? -(w + hSep) : w + hSep;
   });
 
   return rects;

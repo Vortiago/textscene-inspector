@@ -21,11 +21,14 @@
  * indexed family"), so a static `.tscn` can never author them and every title
  * solves as Godot's plain "normal" draw mode.
  *
- * RTL layout (`is_layout_rtl()`, mirrored StyleBoxes, right-to-left offsets)
- * and the native/global menu bar (`is_native_menu()`, unreachable without a
- * host OS window manager) are out of scope, matching every other native
- * Control painter in this codebase (`centercontainer/nativeSolver.ts`'s own
- * doc on RTL).
+ * Under `is_layout_rtl()` (`SolveNode.rtl`) `_get_menu_item_rect` mirrors
+ * every item inside the bar (`:424`) and `_draw_menu_item` prefers the
+ * `<state>_mirrored` StyleBox where the theme defines one (`:437-500`,
+ * `pickButtonStyleBox`'s own `rtl` arm). Neither `get_minimum_size`
+ * (`:865-886`) nor the item rect itself reads that mirrored box: both measure
+ * `theme_cache.normal`, so the pick below stays direction-blind. The
+ * native/global menu bar (`is_native_menu()`, unreachable without a host OS
+ * window manager) is out of scope.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -156,3 +159,31 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (titles.length > 1) width += hSeparation * (titles.length - 1);
   return { size: { x: width, y: height }, meta: titles };
 };
+
+export interface MenuBarItemPlacement {
+  title: MenuBarTitle;
+  /** This item's own x inside the bar. */
+  x: number;
+}
+
+/**
+ * `MenuBar::_get_menu_item_rect` (`menu_bar.cpp:408-428`) applied to every
+ * title in turn: each item's own LTR offset is the summed width of the
+ * previous ones plus one `h_separation` each, and under `rtl` the item is
+ * then mirrored inside the bar (`barWidthPx - offset - its own width`,
+ * `:424`) — the bar's WIDTH, not its minimum, so a bar stretched past its
+ * content still hangs its first item off the trailing edge.
+ */
+export function layoutMenuBarItems(
+  titles: readonly MenuBarTitle[],
+  hSeparationPx: number,
+  barWidthPx: number,
+  rtl: boolean
+): MenuBarItemPlacement[] {
+  let offset = 0;
+  return titles.map((title) => {
+    const x = rtl ? barWidthPx - offset - title.size.x : offset;
+    offset += title.size.x + hSeparationPx;
+    return { title, x };
+  });
+}

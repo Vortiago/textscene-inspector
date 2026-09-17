@@ -159,3 +159,18 @@ describe('centerContainerLayout', () => {
     expect(rects.has('Hidden')).toBe(false);
   });
 });
+
+describe('centerContainerLayout under RTL', () => {
+  it('places a child exactly where LTR does — the fitted rect IS its minimum, so every RTL term is zero (container.cpp:99,109)', () => {
+    const child = leaf('C', { customMinimumSize: { x: 40, y: 20 }, sizeFlagsHorizontal: 0 });
+    const entries = [{ node: child, minSize: { x: 40, y: 20 } }];
+    const contentRect = { x: 0, y: 0, w: 100, h: 50 };
+    const ltr = asMap(centerContainerLayout(container('C0', {}, [child]), entries, contentRect, ctx()));
+    const rtl = asMap(
+      centerContainerLayout({ ...container('C0', {}, [child]), rtl: true }, entries, contentRect, ctx())
+    );
+    // `Point2 ofs = ((size - minsize) / 2.0).floor()` = (30, 15).
+    expect(ltr.get('C')).toEqual({ x: 30, y: 15, w: 40, h: 20 });
+    expect(rtl.get('C')).toEqual(ltr.get('C'));
+  });
+});

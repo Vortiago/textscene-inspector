@@ -215,12 +215,27 @@ export type TextureSlotsFn = (
   themedIcons?: Readonly<Record<string, ThemedIconRef>>
 ) => readonly TextureSlotRequest[];
 
+/**
+ * The `visible` a container WRITES onto each of its direct sortable Control
+ * children while sorting them — `FoldableContainer`'s `c->set_visible(!folded)`
+ * (`scene/gui/foldable_container.cpp:376-386`) is the one such type today.
+ * `undefined` leaves the authored flag alone.
+ *
+ * Takes the container's own live node, since the answer is a property of the
+ * PARENT, and answers for every child at once: Godot's loop writes the same
+ * value to all of them.
+ */
+export type ChildVisibilityFn = (node: TscnNode) => boolean | undefined;
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
     'controlSolverRegistry.containerLayout'
   );
   private readonly textureSlotFns = createTypeRegistry<TextureSlotsFn>('controlSolverRegistry.textureSlots');
+  private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
+    'controlSolverRegistry.childVisibility'
+  );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Set<string>();
 
@@ -273,6 +288,16 @@ class ControlSolverRegistry {
     this.textureSlotFns.register(typeName, fn);
   }
 
+  /** Declares a container that writes its children's `visible` (see `ChildVisibilityFn`). */
+  registerChildVisibility(typeName: string, fn: ChildVisibilityFn): void {
+    this.childVisibilityFns.register(typeName, fn);
+  }
+
+  /** The `visible` `node` writes onto its direct sortable Control children, or `undefined` for every type that writes none. */
+  childVisibility(node: TscnNode): boolean | undefined {
+    return this.childVisibilityFns.get(node.type)?.(node);
+  }
+
   /** This type's own `TextureSlotsFn`, or `undefined` for a type that keeps the generic single-slot fallback (see `TextureSlotsFn`'s own doc). */
   textureSlots(typeName: string): TextureSlotsFn | undefined {
     return this.textureSlotFns.get(typeName);
@@ -291,6 +316,7 @@ class ControlSolverRegistry {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
     this.textureSlotFns.clear();
+    this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

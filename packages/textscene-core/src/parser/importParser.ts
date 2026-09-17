@@ -26,6 +26,7 @@ import {
   type ValueScanState,
 } from './utils';
 import * as logger from '../logger';
+import { boolSlotValue } from '../godot/index.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -135,7 +136,9 @@ export function importRootScale(
   // do — returning null keeps the caller's hot path untouched.
   if (scale === 1) return null;
 
-  return { scale, bake: parsed!.params['nodes/apply_root_scale'] !== 'false' };
+  // `bool apply_root = p_options["nodes/apply_root_scale"]`
+  // (`resource_importer_scene.cpp:3154-3157`) booleanizes the Variant, so `0` is false.
+  return { scale, bake: boolSlotValue(parsed!.params['nodes/apply_root_scale']) !== false };
 }
 
 /**

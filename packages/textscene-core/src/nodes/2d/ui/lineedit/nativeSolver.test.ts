@@ -695,3 +695,78 @@ describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
+
+describe('layoutLineEditContent — RTL layout (line_edit.cpp:1397-1421,1455-1483)', () => {
+  const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
+  const BOX = { x: 200, y: 30 };
+
+  it('LEFT/FILL take the RIGHT arm under RTL (:1399-1403)', () => {
+    // `MAX(margin_left, int(size.width - ceil(margin_right + text_width)))`:
+    // trunc(200 - ceil(4 + 50)) = 146; MAX(4, 146) = 146.
+    for (const alignment of [0, 3]) {
+      const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment, textWidthPx: 50, textHeightPx: 23, rtl: true });
+      expect(result.textOffset.x).toBe(146);
+    }
+  });
+
+  it('RIGHT takes the LEFT arm under RTL (:1415-1419)', () => {
+    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 2, textWidthPx: 50, textHeightPx: 23, rtl: true });
+    expect(result.textOffset.x).toBe(4);
+  });
+
+  it('CENTER is unbranched on RTL without an icon (:1406-1414)', () => {
+    const ltr = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23 });
+    const rtl = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23, rtl: true });
+    expect(rtl.textOffset.x).toBe(ltr.textOffset.x);
+  });
+
+  it('leaves ofs_max at the right margin under RTL — the icon is subtracted only when !rtl (:1481-1483)', () => {
+    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    expect(result.ofsMaxPx).toBe(196);
+  });
+
+  it('floors x_ofs at the left margin PLUS the icon width under RTL (:1473-1474)', () => {
+    // Alignment arm first: MAX(4, trunc(200 - ceil(4 + 190))) = MAX(4, 6) = 6;
+    // then MAX(margin_left + icon_width, x_ofs) = MAX(20, 6) = 20.
+    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 190, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    expect(result.textOffset.x).toBe(20);
+  });
+
+  it('adds the icon width to CENTER under RTL (:1469-1471)', () => {
+    // diff = trunc(200 - 8 - 50 - 16) = 126; centered = 63; x_ofs = 4 + 63 = 67; + 16 = 83.
+    const result = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 1, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    expect(result.textOffset.x).toBe(83);
+  });
+
+  it('moves the clip band to the far side of the icon under RTL, keeping its LTR width', () => {
+    // The drawn band is [x_ofs, ofs_max] (:1481-1483,1541): LTR [4, 180], RTL [20, 196].
+    const ltr = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16 });
+    const rtl = layoutLineEditContent({ rectSize: BOX, styleMargin: MARGIN, alignment: 0, textWidthPx: 50, textHeightPx: 23, hasIcon: true, iconWidthPx: 16, rtl: true });
+    expect(ltr.contentRect.x).toBe(4);
+    expect(rtl.contentRect.x).toBe(20);
+    expect(rtl.contentRect.w).toBe(ltr.contentRect.w);
+  });
+});
+
+describe('lineEditCaretRect — RTL layout (line_edit.cpp:1560-1584)', () => {
+  const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
+  const BASE = { rectSize: { x: 200, y: 30 }, styleMargin: MARGIN, fontHeightPx: 23, isPlaceholder: true, textPenX: 146, rightIconRawWidthPx: 0, ofsMaxPx: 196, caretWidthPx: 1 };
+
+  it('the placeholder fallback puts LEFT/FILL at ofs_max under RTL (:1562-1568)', () => {
+    for (const alignment of [0, 3]) {
+      expect(lineEditCaretRect({ ...BASE, alignment, rtl: true }).x).toBe(196);
+    }
+  });
+
+  it('the placeholder fallback puts RIGHT at x_ofs under RTL (:1578-1584)', () => {
+    expect(lineEditCaretRect({ ...BASE, alignment: 2, rtl: true }).x).toBe(146);
+  });
+
+  it('CENTER carries no RTL arm (:1569-1577)', () => {
+    expect(lineEditCaretRect({ ...BASE, alignment: 1, rtl: true }).x).toBe(lineEditCaretRect({ ...BASE, alignment: 1 }).x);
+  });
+
+  it('real text still rides the pen x under RTL — the fallback is gated on using_placeholder (:1555)', () => {
+    expect(lineEditCaretRect({ ...BASE, alignment: 0, isPlaceholder: false, rtl: true }).x).toBe(146);
+  });
+});

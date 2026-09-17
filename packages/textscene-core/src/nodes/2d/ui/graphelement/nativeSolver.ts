@@ -59,13 +59,15 @@ controlSolverRegistry.registerMinimumSize('GraphElement', graphElementMinimumSiz
 
 /**
  * `GraphElement::_resort` (`:47-57`): every VISIBLE child fitted into this
- * node's own full rect — no chrome, no margin.
+ * node's own full rect — no chrome, no margin. No RTL branch of its own
+ * (`graph_element.cpp` calls `is_layout_rtl()` nowhere); the container's flag
+ * still reaches a child through `fit_child_in_rect`, which reads it itself.
  */
-export const graphElementLayout: ContainerLayoutFn = (_n, children, contentRect) => {
+export const graphElementLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const rects = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
-    rects.set(child.path, fitChildInRect(contentRect, minSize, hFlagsOf(child), vFlagsOf(child)));
+    rects.set(child.path, fitChildInRect(contentRect, minSize, hFlagsOf(child), vFlagsOf(child), n.rtl));
   }
   return rects;
 };

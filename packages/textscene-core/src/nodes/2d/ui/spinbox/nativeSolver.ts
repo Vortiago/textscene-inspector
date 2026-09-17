@@ -137,30 +137,38 @@ export interface SpinBoxLayout {
 }
 
 /**
- * `SpinBox::_compute_sizes`'s remaining, per-draw geometry (`spin_box.cpp:399-410`),
- * LTR only (`is_layout_rtl()` is never modelled true in this codebase).
+ * `SpinBox::_compute_sizes`'s remaining, per-draw geometry (`spin_box.cpp:399-410`).
  * `Size2i size = get_size();` truncates both components toward zero on
  * assignment, so `rectSize` is truncated once up front, matching every other
  * `int(...)` cast this function's source performs.
+ *
+ * `rtl` is the node's own `is_layout_rtl()` (`SolveNode.rtl`): it puts the
+ * buttons block at x 0 and the separator directly after it (`:403,409`). The
+ * field carries no `is_layout_rtl()` branch of its own — it is the internal
+ * `LineEdit`'s full-rect preset at offsets `[0, -buttons_block_width]`
+ * (`:394-395`), and its OWN `Control::_size_changed` mirror
+ * (`control.cpp:1785-1787`) moves it to `parent_width - x - w`.
  */
-export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number): SpinBoxLayout {
+export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number, rtl = false): SpinBoxLayout {
   const w = Math.trunc(rectSize.x);
   const h = Math.trunc(rectSize.y);
   const blockWidth = spinBoxButtonsBlockWidth(widestIconWidth);
   const buttonsWidth = blockWidth - spinBoxFieldButtonsSeparation();
-  const buttonsLeft = w - buttonsWidth;
+  const buttonsLeft = rtl ? 0 : w - buttonsWidth;
   const vSep = Math.min(Math.max(SPIN_BOX_BUTTONS_VERTICAL_SEPARATION, 0), h);
   const buttonUpHeight = Math.trunc((h - vSep) / 2);
   const buttonDownHeight = h - buttonUpHeight - vSep;
   const secondButtonTop = h - buttonDownHeight;
 
   const fieldWidth = Math.max(0, w - blockWidth);
+  const fieldLeft = rtl ? w - fieldWidth : 0;
+  const separatorLeft = rtl ? buttonsWidth : fieldWidth;
 
   return {
-    fieldRect: { x: 0, y: 0, w: fieldWidth, h },
+    fieldRect: { x: fieldLeft, y: 0, w: fieldWidth, h },
     upRect: { x: buttonsLeft, y: 0, w: buttonsWidth, h: buttonUpHeight },
     downRect: { x: buttonsLeft, y: secondButtonTop, w: buttonsWidth, h: buttonDownHeight },
-    fieldAndButtonsSeparatorRect: { x: fieldWidth, y: 0, w: spinBoxFieldButtonsSeparation(), h },
+    fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: spinBoxFieldButtonsSeparation(), h },
   };
 }
 

@@ -82,4 +82,30 @@ describe('<MenuButton> (isolated painter contract)', () => {
     expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.3, 5);
   });
+
+  // MenuButton declares no `_notification(NOTIFICATION_DRAW)` of its own, so
+  // it inherits Button's alignment-side swap (`button.cpp:271-275`) whole:
+  // LEFT under RTL must land exactly where RIGHT lands under LTR. This
+  // painter is a SECOND assembly of `layoutButtonContent`, so nothing in
+  // `button/Component.test.tsx` notices a missing `rtl` argument here.
+  it('places a LEFT-aligned label under RTL exactly where a RIGHT-aligned one lands under LTR', async () => {
+    const labelX = async (properties: Partial<MenuButtonProperties>, rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <MenuButton
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'File', ...properties }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return findTextMesh(renderer.scene)!.parent!.position.x;
+    };
+
+    const ltrLeft = await labelX({ alignment: 0 }, false);
+    const ltrRight = await labelX({ alignment: 2 }, false);
+    const rtlLeft = await labelX({ alignment: 0 }, true);
+
+    expect(ltrRight).toBeGreaterThan(ltrLeft);
+    expect(rtlLeft).toBe(ltrRight);
+  });
 });

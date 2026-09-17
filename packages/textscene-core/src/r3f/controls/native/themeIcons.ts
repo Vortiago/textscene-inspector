@@ -43,8 +43,9 @@
  *      set_icon("checked_disabled",   "CheckButton", icons["toggle_on_disabled"])
  *      set_icon("unchecked",          "CheckButton", icons["toggle_off"])
  *      set_icon("unchecked_disabled", "CheckButton", icons["toggle_off_disabled"])
- *    The four `_mirrored` variants (`:332-335`, RTL) are not vended, matching
- *    every other painter here.
+ *    plus the four `_mirrored` twins (`:332-335`), which
+ *    `CheckButton::_notification` selects whole under `is_layout_rtl()`
+ *    (`check_button.cpp:109-120`).
  *  - FoldableContainer (`default_theme.cpp:1329-1332`), the fold-state arrows:
  *      set_icon("expanded_arrow",          "FoldableContainer", icons["arrow_down"])
  *      set_icon("expanded_arrow_mirrored", "FoldableContainer", icons["arrow_up"])
@@ -246,12 +247,32 @@ const TOGGLE_ON_DISABLED_B64 =
 const TOGGLE_OFF_DISABLED_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PGcgZmlsbC1vcGFjaXR5PSIuMjUiPjxyZWN0IHdpZHRoPSIzMCIgaGVpZ2h0PSIxNCIgeD0iMSIgeT0iMSIgZmlsbD0iIzFhMWExYSIgcng9IjciLz48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNSIgZmlsbD0iI2ZmZiIvPjwvZz48L3N2Zz4K';
 
-/** CheckButton's four non-mirrored icon draw states — `default_theme.cpp:327-330`. */
+/** `scene/theme/icons/toggle_on_mirrored.svg` (32x16) — CheckButton's `checked_mirrored`. */
+const TOGGLE_ON_MIRRORED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii43NSIgcng9IjciLz48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNSIgZmlsbD0iIzFhMWExYSIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/toggle_off_mirrored.svg` (32x16) — CheckButton's `unchecked_mirrored`. */
+const TOGGLE_OFF_MIRRORED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PGcgZmlsbC1vcGFjaXR5PSIuNSI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjMWExYTFhIiByeD0iNyIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iOCIgcj0iNSIgZmlsbD0iI2ZmZiIvPjwvZz48L3N2Zz4K';
+
+/** `scene/theme/icons/toggle_on_disabled_mirrored.svg` (32x16) — CheckButton's `checked_disabled_mirrored`. */
+const TOGGLE_ON_DISABLED_MIRRORED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjMwIiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4zNyIgcng9IjciLz48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNSIgZmlsbD0iIzFhMWExYSIgZmlsbC1vcGFjaXR5PSIuNSIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/toggle_off_disabled_mirrored.svg` (32x16) — CheckButton's `unchecked_disabled_mirrored`. */
+const TOGGLE_OFF_DISABLED_MIRRORED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIxNiI+PGcgZmlsbC1vcGFjaXR5PSIuMjUiPjxyZWN0IHdpZHRoPSIzMCIgaGVpZ2h0PSIxNCIgeD0iMSIgeT0iMSIgZmlsbD0iIzFhMWExYSIgcng9IjciLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjgiIHI9IjUiIGZpbGw9IiNmZmYiLz48L2c+PC9zdmc+Cg==';
+
+/** CheckButton's eight icon draw states — the four plain (`default_theme.cpp:327-330`) and their RTL twins (`:332-335`), which are separate authored SVGs rather than a flip of the plain ones. */
 export interface CheckButtonIcons {
   checked: string;
   checkedDisabled: string;
   unchecked: string;
   uncheckedDisabled: string;
+  checkedMirrored: string;
+  checkedDisabledMirrored: string;
+  uncheckedMirrored: string;
+  uncheckedDisabledMirrored: string;
 }
 
 export const CHECK_BUTTON_ICONS: CheckButtonIcons = {
@@ -259,6 +280,10 @@ export const CHECK_BUTTON_ICONS: CheckButtonIcons = {
   checkedDisabled: svgDataUrl(TOGGLE_ON_DISABLED_B64),
   unchecked: svgDataUrl(TOGGLE_OFF_B64),
   uncheckedDisabled: svgDataUrl(TOGGLE_OFF_DISABLED_B64),
+  checkedMirrored: svgDataUrl(TOGGLE_ON_MIRRORED_B64),
+  checkedDisabledMirrored: svgDataUrl(TOGGLE_ON_DISABLED_MIRRORED_B64),
+  uncheckedMirrored: svgDataUrl(TOGGLE_OFF_MIRRORED_B64),
+  uncheckedDisabledMirrored: svgDataUrl(TOGGLE_OFF_DISABLED_MIRRORED_B64),
 };
 
 /** Every vendored CheckButton icon shares this authored size (`toggle_on.svg` et al, 32x16). */

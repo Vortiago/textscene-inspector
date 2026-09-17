@@ -1,0 +1,42 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a ColorPicker. Every other
+; property is left at the default `unit-color-picker.tscn` already covers, so
+; the two scenes differ in exactly this flag.
+;
+; `color_picker.cpp` never calls `is_layout_rtl()`. ColorPicker builds its
+; whole widget tree from ordinary containers in its constructor, so the
+; mirroring is each container's own: `BoxContainer::_resort` walks an RTL
+; horizontal box's children in REVERSE (box_container.cpp:184-192) and
+; `GridContainer` starts `col_ofs` at the grid's right edge
+; (grid_container.cpp:193-197,218-223). Every row therefore swaps ends at
+; once — the sample row, the shape row, the mode row, the channel grid, the
+; hex row and the swatches row — which no other RTL fixture can show, because
+; no other node type nests six differently-shaped rows inside one control.
+;
+; The picker is centred in the 1152px viewport, so its OWN rect mirror
+; (control.cpp:1785-1787) is the identity and cannot be mistaken for the
+; internal row mirroring this fixture is for. Its width is chosen so the mode
+; row's three equal buttons divide the row exactly (354 / 3), keeping the
+; picture clear of BoxContainer's own leftover-pixel distribution.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="RtlColorPicker" type="ColorPicker" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 375.0
+offset_top = 4.0
+offset_right = 777.0
+offset_bottom = 604.0
+color = Color(0.2, 0.4, 0.6, 0.8)
+picker_shape = 0

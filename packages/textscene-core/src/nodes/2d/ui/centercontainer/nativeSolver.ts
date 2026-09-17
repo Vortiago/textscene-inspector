@@ -22,8 +22,10 @@
  * CenterContainer by setting FILL; it always ends up at its own minimum,
  * centred.
  *
- * RTL is out of scope (no `layout_direction` is modelled anywhere in this
- * solver — see `controlRectSolver.ts`).
+ * RTL changes nothing here. `center_container.cpp` calls `is_layout_rtl()`
+ * nowhere, and the rect it hands `fit_child_in_rect` IS the child's own
+ * minimum size — so every RTL term in that function
+ * (`p_rect.size.width - minsize.width`, `container.cpp:99,109`) is zero.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -48,7 +50,7 @@ function props(n: SolveNode): CenterContainerProperties {
 
 /** See `margincontainer/nativeSolver.ts`'s identical helper for the caveat about ancestor visibility. */
 
-/** `Container::fit_child_in_rect` (`container.cpp:95-128`), RTL omitted (see module doc). */
+/** `Container::fit_child_in_rect` (`container.cpp:95-128`), LTR branch only (see module doc). */
 
 /**
  * `CenterContainer::get_minimum_size` (`center_container.cpp:33-48`):

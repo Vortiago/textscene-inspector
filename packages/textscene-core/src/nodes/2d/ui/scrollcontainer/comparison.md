@@ -10,7 +10,8 @@ renders_as: a clipped content rect with themed scrollbars
 # ScrollContainer
 
 ScrollContainer clips its single child to its own rect and draws the theme's scrollbar
-on whichever axis overflows.
+on whichever axis overflows. A right-to-left `layout_direction` moves the vertical
+scrollbar to the left edge and shifts the content past the strip it reserves.
 
 ## Linting
 

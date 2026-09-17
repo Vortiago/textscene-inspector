@@ -15,7 +15,14 @@ import {
   tabContainerLayout,
   tabContainerMinimumSize,
   tabContentBand,
+  tabHeaderBand,
+  tabHeaderHeight,
 } from './nativeSolver';
+
+/** `tabbar_background` is `make_empty_stylebox(0, 0, 0, 0)` in the default theme (`default_theme.cpp:994`). */
+const NO_TABBAR_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
+/** An asymmetric `theme_override_styles/tabbar_background`, so a left/right swap cannot hide. */
+const TABBAR_MARGIN = { left: 10, top: 5, right: 30, bottom: 7 };
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
@@ -29,9 +36,20 @@ function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return { ...solveNode(), path: name, node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties } };
 }
 
-function tabContainer(name: string, props: Partial<TabContainerProperties>, children: SolveNode[]): SolveNode {
+/** A `theme_override_styles/tabbar_background` carrying `TABBAR_MARGIN`, everything else the default-theme panel's. */
+function tabbarBackgroundStyleBoxes(): SolveNode['styleBoxes'] {
+  return { tabbar_background: { ...nativeTheme(1).widgets.panel, contentMargin: TABBAR_MARGIN } };
+}
+
+function tabContainer(
+  name: string,
+  props: Partial<TabContainerProperties>,
+  children: SolveNode[],
+  styleBoxes?: SolveNode['styleBoxes']
+): SolveNode {
   return {
     ...solveNode(),
+    ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
     node: { name, type: 'TabContainer', children: [], properties: { name, ...props } as TabContainerProperties },
     children,
@@ -98,19 +116,19 @@ describe('tabBarRect', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
   it('LEFT alignment insets the bar by side_margin on the left only', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8)).toEqual({ x: 8, y: 0, w: 192, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 8, y: 0, w: 192, h: 24 });
   });
 
   it('CENTER alignment spans the full width, no inset', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8)).toEqual({ x: 0, y: 0, w: 200, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 0, y: 0, w: 200, h: 24 });
   });
 
   it('RIGHT alignment insets the bar by side_margin on the right only', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8)).toEqual({ x: 0, y: 0, w: 192, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 0, y: 0, w: 192, h: 24 });
   });
 
   it('BOTTOM position places the strip at the container\'s own bottom edge', () => {
-    expect(tabBarRect(RECT, 24, TABS_POSITION_BOTTOM, TAB_ALIGNMENT_LEFT, 8)).toEqual({ x: 8, y: 76, w: 192, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_BOTTOM, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false)).toEqual({ x: 8, y: 76, w: 192, h: 24 });
   });
 });
 
@@ -185,5 +203,169 @@ describe('tabContainerLayout', () => {
     const n = tabContainer('T', {}, []);
     const rects = asMap(tabContainerLayout(n, [], { x: 0, y: 0, w: 200, h: 100 }, ctx()));
     expect(rects.size).toBe(0);
+  });
+});
+
+describe('tabHeaderHeight', () => {
+  it("adds the tabbar style's own top and bottom margin to the bar's minimum height (tab_container.cpp:51-58)", () => {
+    expect(tabHeaderHeight(24, TABBAR_MARGIN)).toBe(36);
+    expect(tabHeaderHeight(24, NO_TABBAR_MARGIN)).toBe(24);
+  });
+});
+
+describe('tabHeaderBand', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
+
+  it('spans the whole container width, never the tab bar rect (tab_container.cpp:262)', () => {
+    expect(tabHeaderBand(RECT, 36, TABS_POSITION_TOP)).toEqual({ x: 0, y: 0, w: 200, h: 36 });
+  });
+
+  it('sits against the bottom edge for POSITION_BOTTOM (tab_container.cpp:258)', () => {
+    expect(tabHeaderBand(RECT, 36, TABS_POSITION_BOTTOM)).toEqual({ x: 0, y: 64, w: 200, h: 36 });
+  });
+});
+
+describe('tabBarRect with an authored tabbar_background margin', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 400, h: 200 };
+
+  it('insets the bar by that style\u2019s own margins, side_margin on top of the LEFT one (tab_container.cpp:409-429, 372-373)', () => {
+    // offset_left = 10 + 8, offset_right = -30 -> x 18, w 400 - 30 - 18 = 352.
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, TABBAR_MARGIN, false)).toEqual({
+      x: 18,
+      y: 5,
+      w: 352,
+      h: 24,
+    });
+  });
+
+  it('swaps the left and right margins, then mirrors the whole bar (tab_container.cpp:412, control.cpp:1785-1787)', () => {
+    // Swapped: offset_left = 30 + 8 = 38, offset_right = -10 -> unmirrored x 38,
+    // w 352; mirrored x = 400 - 38 - 352 = 10. The AUTHORED left margin stays on
+    // the left; side_margin is what moves to the trailing edge.
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, TABBAR_MARGIN, true)).toEqual({
+      x: 10,
+      y: 5,
+      w: 352,
+      h: 24,
+    });
+  });
+
+  it('leaves a CENTER-aligned bar in the same place either way (the swap and the mirror cancel)', () => {
+    const ltr = tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, TABBAR_MARGIN, false);
+    expect(ltr).toEqual({ x: 10, y: 5, w: 360, h: 24 });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_CENTER, 8, TABBAR_MARGIN, true)).toEqual(ltr);
+  });
+
+  it('moves a RIGHT-aligned bar\u2019s side_margin to the leading edge under RTL (tab_container.cpp:438-453)', () => {
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8, TABBAR_MARGIN, false)).toEqual({
+      x: 10,
+      y: 5,
+      w: 352,
+      h: 24,
+    });
+    expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_RIGHT, 8, TABBAR_MARGIN, true)).toEqual({
+      x: 18,
+      y: 5,
+      w: 352,
+      h: 24,
+    });
+  });
+
+  it('keeps the side_margin flip for the default zero-margin style (default_theme.cpp:994)', () => {
+    const ltr = tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, false);
+    const rtl = tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, NO_TABBAR_MARGIN, true);
+    expect(ltr).toEqual({ x: 8, y: 0, w: 392, h: 24 });
+    expect(rtl).toEqual({ x: 0, y: 0, w: 392, h: 24 });
+  });
+
+  it('offsets a BOTTOM-positioned bar by the header height, then back down by the top margin (tab_container.cpp:369-370)', () => {
+    expect(tabBarRect(RECT, 24, TABS_POSITION_BOTTOM, TAB_ALIGNMENT_LEFT, 8, TABBAR_MARGIN, false)).toEqual({
+      x: 18,
+      y: 200 - 36 + 5,
+      w: 352,
+      h: 24,
+    });
+  });
+});
+
+describe('the tabbar style margins reach the minimum size and the page band', () => {
+  it("adds all four of the tabbar style's margins to the minimum size (tab_container.cpp:1032-1033)", () => {
+    const p = page('Only', { customMinimumSize: { x: 10, y: 10 } });
+    const bare = asVec2(tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p]), ctx()));
+    const margined = asVec2(
+      tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()), ctx())
+    );
+    expect(margined.x - bare.x).toBe(TABBAR_MARGIN.left + TABBAR_MARGIN.right);
+    expect(margined.y - bare.y).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
+  });
+
+  it('pushes the page band down by the same top and bottom margin (_get_tab_height, tab_container.cpp:383)', () => {
+    const p = page('Only');
+    const child = [{ node: p, minSize: { x: 0, y: 0 } }];
+    const rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 };
+    const bare = asMap(tabContainerLayout(tabContainer('T', { tabsVisible: true }, [p]), child, rect, ctx())).get('Only')!;
+    const margined = asMap(
+      tabContainerLayout(tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()), child, rect, ctx())
+    ).get('Only')!;
+    expect(margined.y - bare.y).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
+    expect(bare.h - margined.h).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
+  });
+
+  it('leaves a header-less TabContainer untouched by them', () => {
+    const p = page('Only');
+    const child = [{ node: p, minSize: { x: 0, y: 0 } }];
+    const rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 };
+    const rects = asMap(
+      tabContainerLayout(tabContainer('T', { tabsVisible: false }, [p], tabbarBackgroundStyleBoxes()), child, rect, ctx())
+    );
+    expect(rects.get('Only')).toEqual(rect);
+  });
+});
+
+describe('the page band under RTL', () => {
+  /** A `theme_override_styles/panel` whose left and right content margins differ. */
+  function panelStyleBoxes(): SolveNode['styleBoxes'] {
+    return { panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } } };
+  }
+
+  function pageRect(rtl: boolean): Rect2 {
+    const p = page('Only');
+    const n = { ...tabContainer('T', { tabsVisible: false }, [p], panelStyleBoxes()), rtl };
+    const rects = asMap(tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 300, h: 120 }, ctx()));
+    return rects.get('Only')!;
+  }
+
+  it("insets the page by the panel style's own left margin under LTR (tab_container.cpp:390-391)", () => {
+    expect(pageRect(false)).toEqual({ x: 6, y: 3, w: 300 - 6 - 26, h: 120 - 6 });
+  });
+
+  it('mirrors that inset under RTL, so the RIGHT margin lands on the left (control.cpp:1785-1787)', () => {
+    // `_repaint` sets the page's offsets directly and never routes through
+    // `fit_child_in_rect`, so `_size_changed`'s mirror is the last word:
+    // x = 300 - 6 - 268 = 26.
+    expect(pageRect(true)).toEqual({ x: 26, y: 3, w: 300 - 6 - 26, h: 120 - 6 });
+  });
+
+  it('leaves a symmetric panel margin in the same place either way', () => {
+    const p = page('Only');
+    const symmetric: SolveNode['styleBoxes'] = {
+      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 8, top: 3, right: 8, bottom: 3 } },
+    };
+    const child = [{ node: p, minSize: { x: 0, y: 0 } }];
+    const rect: Rect2 = { x: 0, y: 0, w: 300, h: 120 };
+    const ltr = asMap(tabContainerLayout(tabContainer('T', { tabsVisible: false }, [p], symmetric), child, rect, ctx()));
+    const rtl = asMap(
+      tabContainerLayout({ ...tabContainer('T', { tabsVisible: false }, [p], symmetric), rtl: true }, child, rect, ctx())
+    );
+    expect(rtl.get('Only')).toEqual(ltr.get('Only'));
+  });
+
+  it('counts PAGES, not children, when deciding whether a header exists at all (tab_container.cpp:52)', () => {
+    // `_get_tab_controls` drops a `top_level` child (`container.cpp:144-146`),
+    // so a container holding only one has no tabs and therefore no header.
+    const p = page('Floating', { topLevel: true } as never);
+    const n = tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes());
+    const rects = asMap(tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx()));
+    expect(rects.get('Floating')!.y).toBe(0);
   });
 });

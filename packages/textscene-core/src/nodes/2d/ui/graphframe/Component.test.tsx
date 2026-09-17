@@ -139,3 +139,31 @@ describe('<GraphFrame> (isolated painter contract)', () => {
     expect(iconMeshes(renderer.scene)).toHaveLength(1);
   });
 });
+
+describe('<GraphFrame> chrome placement', () => {
+  /** World Y of a mesh, in three space (Godot Y-down is negated by the painter). */
+  function worldY(scene: Rendered['scene'], mesh: THREE.Mesh) {
+    scene.instance.updateMatrixWorld(true);
+    return mesh.getWorldPosition(new THREE.Vector3()).y;
+  }
+
+  /** A mesh's own height, from its geometry bounding box. */
+  function meshHeight(mesh: THREE.Mesh) {
+    mesh.geometry.computeBoundingBox();
+    const bb = mesh.geometry.boundingBox!;
+    return bb.max.y - bb.min.y;
+  }
+
+  it('draws the body panel BELOW the titlebar, not over it (graph_frame.cpp:106-110)', async () => {
+    // `Rect2 body_rect(Point2(0, titlebar_rect.size.height), body_size)`.
+    // `StyleBoxQuad` takes only a SIZE, so the offset has to come from the
+    // group around it.
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphFrame {...painterEnv()} solveNode={graphFrame({ title: 'F' })} rect={RECT} renderOrder={0} />
+    );
+    const [body, titlebar] = chromeMeshes(renderer.scene);
+    expect(worldY(renderer.scene, titlebar!)).toBe(0);
+    expect(worldY(renderer.scene, body!)).toBe(-meshHeight(titlebar!));
+    expect(meshHeight(titlebar!)).toBeGreaterThan(0);
+  });
+});

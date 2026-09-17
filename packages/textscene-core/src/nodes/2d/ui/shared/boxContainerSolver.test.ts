@@ -441,3 +441,63 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     expect(solved.get('Root/MyHBoxContainer/Oversized')?.rect).toEqual({ x: 552, y: 0, w: 600, h: 648 });
   });
 });
+
+describe('makeBoxContainerLayout — the container\'s own layout direction reaches _resort', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('an RTL HBoxContainer mirrors its own rect and lays its children out from the far edge', () => {
+    // `BoxContainer::_resort` reads `is_layout_rtl()` once (`box_container.cpp:48`)
+    // and uses it twice: ALIGNMENT_BEGIN takes the far-edge offset (`:154-155`)
+    // and the placement loop walks back to front (`:187-195`).
+    //
+    // Worked through, three children of 60/120/180 at separation 4 in a
+    // 400-wide box: stretch_min 360, stretch_max 400-2*4=392, stretch_diff 32,
+    // so ofs starts at 32 and the children place C, B, A at 32, 216 and 340.
+    // The box itself is mirrored by `Control::_size_changed` (`control.cpp:1785-1787`):
+    // 1152 - 64 - 400 = 688.
+    controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
+    controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
+
+    const bar = (name: string, width: number): SolveNode => ({
+      ...solveNode(`Rtl/${name}`, 'ColorRect', { customMinimumSize: { x: width, y: 0 } }),
+      rtl: true,
+    });
+    const root: SolveNode = {
+      ...solveNode(
+        'Rtl',
+        'HBoxContainer',
+        { offsetLeft: 64, offsetTop: 176, offsetRight: 464, offsetBottom: 256 },
+        [bar('A', 60), bar('B', 120), bar('C', 180)]
+      ),
+      rtl: true,
+    };
+
+    const solved = solveControlTree([root], VIEWPORT, createSolveContext(nativeTheme(1)));
+    expect(solved.get('Rtl')?.rect).toEqual({ x: 688, y: 176, w: 400, h: 80 });
+    expect(solved.get('Rtl/A')?.rect).toEqual({ x: 340, y: 0, w: 60, h: 80 });
+    expect(solved.get('Rtl/B')?.rect).toEqual({ x: 216, y: 0, w: 120, h: 80 });
+    expect(solved.get('Rtl/C')?.rect).toEqual({ x: 32, y: 0, w: 180, h: 80 });
+  });
+
+  it('the same box LTR keeps the authored order at the near edge', () => {
+    controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
+    controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
+
+    const bar = (name: string, width: number) =>
+      solveNode(`Ltr/${name}`, 'ColorRect', { customMinimumSize: { x: width, y: 0 } });
+    const root = solveNode(
+      'Ltr',
+      'HBoxContainer',
+      { offsetLeft: 64, offsetTop: 48, offsetRight: 464, offsetBottom: 128 },
+      [bar('A', 60), bar('B', 120), bar('C', 180)]
+    );
+
+    const solved = solveControlTree([root], VIEWPORT, createSolveContext(nativeTheme(1)));
+    expect(solved.get('Ltr')?.rect).toEqual({ x: 64, y: 48, w: 400, h: 80 });
+    expect(solved.get('Ltr/A')?.rect).toEqual({ x: 0, y: 0, w: 60, h: 80 });
+    expect(solved.get('Ltr/B')?.rect).toEqual({ x: 64, y: 0, w: 120, h: 80 });
+    expect(solved.get('Ltr/C')?.rect).toEqual({ x: 188, y: 0, w: 180, h: 80 });
+  });
+});

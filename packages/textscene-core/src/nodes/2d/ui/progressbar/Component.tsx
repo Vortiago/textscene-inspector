@@ -61,8 +61,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const orderedKeys = controlLayoutOrder(solveNode);
 
   const fillRect = indeterminate
-    ? progressBarIndeterminateFillRect(size, props.fillMode)
-    : progressBarFillRect(size, props.fillMode, rangeRatio(props, orderedKeys), contentMarginSize(fillBox));
+    ? progressBarIndeterminateFillRect(size, props.fillMode, solveNode.rtl)
+    : progressBarFillRect(size, props.fillMode, rangeRatio(props, orderedKeys), contentMarginSize(fillBox), solveNode.rtl);
 
   // `progress_bar.cpp:109` — the indeterminate branch `return`s before the
   // percentage block runs at all, whatever `show_percentage` says.

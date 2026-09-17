@@ -2,10 +2,12 @@
  * `<MenuBar>` — the native (WebGL canvas) painter for `MenuBar`:
  * `MenuBar::_notification(NOTIFICATION_DRAW)` (`scene/gui/menu_bar.cpp:352-359`,
  * `_draw_menu_item:431-518`) — one `normal` StyleBox (unless `flat`) plus one
- * title run per PopupMenu child, laid out left to right with `h_separation`
- * between them. Every title draws in Godot's plain "normal" mode: see
- * `nativeSolver.ts`'s own doc for why no other draw state is reachable from a
- * static `.tscn`.
+ * title run per PopupMenu child, laid out with `h_separation` between them,
+ * from the leading edge of the bar's own rect: under `is_layout_rtl()` that
+ * is the right edge and every item is mirrored inside the bar, and the
+ * `normal_mirrored` StyleBox draws where the theme defines one. Every title
+ * draws in Godot's plain "normal" mode: see `nativeSolver.ts`'s own doc for
+ * why no other draw state is reachable from a static `.tscn`.
  *
  * Tint: the walker's `tint` prop, exactly as `Button`'s painter applies it —
  * `tint.own` (raw sRGB) to `<StyleBoxQuad>`'s `color`, multiplied into the
@@ -35,6 +37,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import {
   MENU_BAR_TEXT_THEME_KEYS,
   MENU_BAR_THEME_FONT_KEY,
+  layoutMenuBarItems,
   menuBarTitles,
   type MenuBarTitle,
 } from './nativeSolver';
@@ -53,10 +56,13 @@ function isMenuBarTitleArray(meta: unknown): meta is MenuBarTitle[] {
   );
 }
 
-export function MenuBar({ solveNode, tint, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function MenuBar({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<MenuBarProperties>(solveNode);
-  const style = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
-  const marginSize = contentMarginSize(style);
+  const style = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal', solveNode.rtl);
+  // `_get_menu_item_rect`/`get_minimum_size` measure `theme_cache.normal`
+  // (`menu_bar.cpp:412,869`); only the drawn quad takes the mirrored box.
+  const measuringStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
+  const marginSize = contentMarginSize(measuringStyle);
 
   const { fontSizePx, color: baseFontColor } = resolveTextTheme(
     solveNode,
@@ -77,12 +83,7 @@ export function MenuBar({ solveNode, tint, theme, renderOrder, meta }: NativeCon
   // numerically identical to Button's `theme.separation`, a separate default.
   const hSeparation = solveNode.constants.h_separation ?? theme.separation;
 
-  let offset = 0;
-  const items = titles.map((title) => {
-    const x = offset;
-    offset += title.size.x + hSeparation;
-    return { title, x };
-  });
+  const items = layoutMenuBarItems(titles, hSeparation, rect.w, solveNode.rtl);
 
   return (
     <>

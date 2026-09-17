@@ -228,3 +228,18 @@ describe('graphNodeDrawRows — slot indices over `get_child(i)`', () => {
     expect(withPort[0]!.slotY).toBe(25);
   });
 });
+
+describe('graphNodeLayout under RTL', () => {
+  it('hands the container rtl to fit_child_in_rect (container.cpp:99,109)', () => {
+    // `graph_node.cpp` calls `is_layout_rtl()` nowhere; the flag reaches a
+    // child only through `Container::fit_child_in_rect`. The row is the same
+    // (18, 43, 164, 20) as the LTR SHRINK case, so a 50-wide child lands at
+    // 18 + 164 - 50.
+    const child = leaf('c', { customMinimumSize: { x: 50, y: 20 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
+    const n = { ...graphNode('N', {}, [child]), rtl: true };
+    const rects = asMap(
+      graphNodeLayout(n, [{ node: child, minSize: { x: 50, y: 20 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
+    );
+    expect(rects.get('c')).toEqual({ x: 132, y: 43, w: 50, h: 20 });
+  });
+});

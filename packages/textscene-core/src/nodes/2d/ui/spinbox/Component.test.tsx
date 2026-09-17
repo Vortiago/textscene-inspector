@@ -195,3 +195,42 @@ describe('<SpinBox> — render order', () => {
     expect(findTextMesh(renderer.scene)!.renderOrder).toBe(7);
   });
 });
+
+describe('<SpinBox> — RTL layout', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  /** The widest button icon is the vendored 16, so the buttons block is 18 and the field 82 of a 100-wide rect. */
+  const FIELD_LEFT_RTL = 18;
+
+  it('draws the field chrome at the mirrored field rect, not at the control origin (spin_box.cpp:394-395, control.cpp:1785-1787)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpinBox {...painterEnv()} solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }} rect={RECT} renderOrder={0} />
+    );
+    const field = findChromeMeshes(renderer.scene)[0]!;
+    expect(field.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(FIELD_LEFT_RTL, 5);
+  });
+
+  it('leaves the field chrome at the control origin under LTR', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpinBox {...painterEnv()} solveNode={solveNode({ value: 5, step: 1 })} rect={RECT} renderOrder={0} />
+    );
+    const field = findChromeMeshes(renderer.scene)[0]!;
+    expect(field.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(0, 5);
+  });
+
+  it('right-aligns the field text under RTL — the internal LineEdit reads the SAME direction (line_edit.cpp:1399-1403)', async () => {
+    // LEFT alignment takes the trailing-edge arm under RTL, so the pen sits at
+    // the field's own right edge rather than its left margin.
+    const rtl = await ReactThreeTestRenderer.create(
+      <SpinBox {...painterEnv()} solveNode={{ ...solveNode({ value: 5, step: 1 }), rtl: true }} rect={RECT} renderOrder={0} />
+    );
+    const ltr = await ReactThreeTestRenderer.create(
+      <SpinBox {...painterEnv()} solveNode={solveNode({ value: 5, step: 1 })} rect={RECT} renderOrder={0} />
+    );
+    const rtlX = findTextMesh(rtl.scene)!.getWorldPosition(new THREE.Vector3()).x;
+    const ltrX = findTextMesh(ltr.scene)!.getWorldPosition(new THREE.Vector3()).x;
+    expect(rtlX).toBeGreaterThan(ltrX + FIELD_LEFT_RTL);
+  });
+});

@@ -5,7 +5,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { isSortableControl } from './fitChildInRect';
+import {
+  fitChildInRect,
+  isSortableControl,
+  SIZE_FILL,
+  SIZE_SHRINK_CENTER,
+  SIZE_SHRINK_END,
+} from './fitChildInRect';
 
 function child(properties: Record<string, unknown>, extra: Partial<SolveNode> = {}): SolveNode {
   return {
@@ -43,5 +49,66 @@ describe('isSortableControl', () => {
     // — ahead of every visibility mode, so even `SortableVisibilityMode::IGNORE`
     // drops it.
     expect(isSortableControl(child({ topLevel: true }))).toBe(false);
+  });
+});
+
+/**
+ * `Container::fit_child_in_rect`'s horizontal shrink arms
+ * (`scene/gui/container.cpp:103-112`), where `rtl` is the CONTAINER's own
+ * `is_layout_rtl()` and swaps which edge "begin" and "end" name.
+ */
+describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
+  const NO_FLAGS = 0;
+  const CELL = { x: 10, y: 0, w: 100, h: 40 };
+  const MIN = { x: 30, y: 40 };
+
+  it('SHRINK_END takes the LEFT edge under RTL and the right edge under LTR', () => {
+    //   r.position.x += rtl ? 0 : (p_rect.size.width - minsize.width);
+    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_END, SIZE_FILL, true)).toEqual({
+      x: 10,
+      y: 0,
+      w: 30,
+      h: 40,
+    });
+    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_END, SIZE_FILL, false)).toEqual({
+      x: 80,
+      y: 0,
+      w: 30,
+      h: 40,
+    });
+  });
+
+  it('no shrink bit takes the RIGHT edge under RTL and the left edge under LTR', () => {
+    //   r.position.x += rtl ? (p_rect.size.width - minsize.width) : 0;
+    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SIZE_FILL, true)).toEqual({
+      x: 80,
+      y: 0,
+      w: 30,
+      h: 40,
+    });
+    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SIZE_FILL, false)).toEqual({
+      x: 10,
+      y: 0,
+      w: 30,
+      h: 40,
+    });
+  });
+
+  it('SHRINK_CENTER and the vertical axis ignore the direction entirely', () => {
+    // `container.cpp:107` has no `rtl` ternary, and `:114-122` names no `rtl`
+    // at all — only the horizontal begin/end pair mirrors.
+    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, true)).toEqual(
+      fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, false)
+    );
+    expect(fitChildInRect(CELL, { x: 30, y: 10 }, SIZE_FILL, SIZE_SHRINK_END, true)).toEqual({
+      x: 10,
+      y: 30,
+      w: 100,
+      h: 10,
+    });
+  });
+
+  it('SIZE_FILL short-circuits the whole horizontal arm, so RTL cannot move it', () => {
+    expect(fitChildInRect(CELL, MIN, SIZE_FILL | SIZE_SHRINK_END, SIZE_FILL, true)).toEqual(CELL);
   });
 });

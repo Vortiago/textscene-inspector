@@ -38,6 +38,7 @@
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
+  ChildVisibilityFn,
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
@@ -163,24 +164,25 @@ function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxF
   return flatStyleBox(STYLE_FILL.normal, margin, panelCornerRadius(theme.cornerRadius, titlePosition));
 }
 
-export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded';
+export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded' | 'foldedMirrored';
 
 /**
- * `FoldableContainer::_get_title_icon` (`foldable_container.cpp:428-435`),
- * minus its `is_layout_rtl()` branch (RTL out of scope, see module doc): only
- * `folded_arrow` is ever reachable folded, `expanded_arrow`/`_mirrored` by
- * `title_position` alone when unfolded.
+ * `FoldableContainer::_get_title_icon` (`foldable_container.cpp:428-435`):
+ * unfolded, `title_position` alone picks `expanded_arrow`/`_mirrored`; folded,
+ * the arrow points along the reading direction, so RTL takes
+ * `folded_arrow_mirrored`.
  */
-function titleArrow(folded: boolean, titlePosition: number): FoldableContainerArrow {
-  if (folded) return 'folded';
+function titleArrow(folded: boolean, titlePosition: number, rtl: boolean): FoldableContainerArrow {
+  if (folded) return rtl ? 'foldedMirrored' : 'folded';
   return titlePosition === TITLE_POSITION_BOTTOM ? 'expandedMirrored' : 'expanded';
 }
 
-/** `FoldableContainerArrow` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, FoldableContainer, <name>)`, `foldable_container.cpp:588-591`). `folded_arrow_mirrored` (RTL) is never reached — see this module's own header. */
+/** `FoldableContainerArrow` → the Theme item name Godot registers it under (`BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, FoldableContainer, <name>)`, `foldable_container.cpp:588-591`). */
 export const FOLDABLE_CONTAINER_ARROW_THEME_NAME: Record<FoldableContainerArrow, string> = {
   expanded: 'expanded_arrow',
   expandedMirrored: 'expanded_arrow_mirrored',
   folded: 'folded_arrow',
+  foldedMirrored: 'folded_arrow_mirrored',
 };
 
 /** Which arrow slot(s) have a themed answer — `TextureSlotsFn` for `controlSolverRegistry.registerTextureSlots`. */
@@ -243,7 +245,7 @@ export function foldableContainerTitleMetrics(
     ? (n.styleBoxes.title_collapsed_panel ?? defaultTitleStyle(ctx.theme, true, titlePosition))
     : (n.styleBoxes.title_panel ?? defaultTitleStyle(ctx.theme, false, titlePosition));
   const panelStyle = n.styleBoxes.panel ?? defaultPanelStyle(ctx.theme, titlePosition);
-  const arrow = titleArrow(folded, titlePosition);
+  const arrow = titleArrow(folded, titlePosition, n.rtl);
 
   const stateKey = folded ? 'folded' : 'expanded';
   const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
@@ -281,6 +283,16 @@ export function foldableContainerTitleMetrics(
 }
 
 /**
+ * `NOTIFICATION_SORT_CHILDREN`'s `c->set_visible(!folded)`
+ * (`foldable_container.cpp:376-386`) — a runtime WRITE to each direct sortable
+ * Control child's own `visible`, so it overrides the authored flag in both
+ * directions: folded hides a child that authored nothing, and unfolding shows
+ * one that authored `visible = false`.
+ */
+export const foldableContainerChildVisibility: ChildVisibilityFn = (node) =>
+  (node.properties as FoldableContainerProperties).folded !== true;
+
+/**
  * `FoldableContainer::get_minimum_size` (`foldable_container.cpp:36-51`):
  * folded, the title bar's own minimum size IS the container's; unfolded, the
  * per-axis max of every visible child's combined minimum size, plus the
@@ -316,11 +328,9 @@ export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
  * `FoldableContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`
  * (`foldable_container.cpp:329-386`), the content-fitting half only —
  * `title_controls` is never serialised (see module doc). Folded, Godot skips
- * `fit_child_in_rect` entirely and only flips each child's OWN `visible`
- * (`:378-384`); returning an EMPTY map here reaches the same result through
- * `controlRectSolver.ts`'s own contract (an entry missing from a
- * `ContainerLayoutFn`'s map floors to a zero-size rect), rather than this
- * slice reaching into a sibling's `visible` flag.
+ * `fit_child_in_rect` entirely, so this returns an EMPTY map; the children do
+ * not draw because {@link foldableContainerChildVisibility} has already
+ * cleared their `visible`, which is what makes an absent rect unobservable.
  */
 export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const props = n.node.properties as FoldableContainerProperties;
@@ -330,7 +340,9 @@ export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ct
 
   const { left, top, right, bottom } = title.panelStyle.contentMargin;
   const contentRect: Rect2 = {
-    x: left,
+    // `inner_rect.position.x = rtl ? margin(SIDE_RIGHT) : margin(SIDE_LEFT)`
+    // (`foldable_container.cpp:365-367`); the WIDTH subtracts both either way.
+    x: n.rtl ? right : left,
     y: top + (title.titlePosition === TITLE_POSITION_TOP ? title.size.y : 0),
     w: rect.w - left - right,
     h: rect.h - top - bottom - title.size.y,
@@ -341,7 +353,13 @@ export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ct
     const childProps = controlProps(child);
     out.set(
       child.path,
-      fitChildInRect(contentRect, minSize, childProps.sizeFlagsHorizontal ?? SIZE_FILL, childProps.sizeFlagsVertical ?? SIZE_FILL)
+      fitChildInRect(
+        contentRect,
+        minSize,
+        childProps.sizeFlagsHorizontal ?? SIZE_FILL,
+        childProps.sizeFlagsVertical ?? SIZE_FILL,
+        n.rtl
+      )
     );
   }
   return out;

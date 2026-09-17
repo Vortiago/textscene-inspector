@@ -40,6 +40,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   layoutOptionButtonContent,
+  optionButtonHSeparation,
   optionButtonTextTheme,
   pickButtonStyleBox,
   resolveButtonDrawState,
@@ -54,7 +55,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const props = painterView<OptionButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state);
+  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.optionButton, state, solveNode.rtl);
 
   const clippingPlanes = useControlClipPlanes();
 
@@ -88,6 +89,8 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         styleMargin: baseStyleBox.contentMargin,
         arrowSize,
         arrowMargin,
+        hSeparation: optionButtonHSeparation(solveNode.constants, { theme }),
+        rtl: solveNode.rtl,
         // Godot's draw path reads the same ceiled `text_buf->get_size()` its
         // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
         // shift is computed against the ceiled width, not the raw pen advance.
@@ -98,7 +101,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, baseStyleBox.contentMargin, arrowSize, arrowMargin, layout]
+    [rect.w, rect.h, baseStyleBox.contentMargin, arrowSize, arrowMargin, layout, solveNode.constants, theme, solveNode.rtl]
   );
 
   return (

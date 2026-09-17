@@ -70,3 +70,17 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
   right edge instead of stretching to the box — the per-run glyph slicing a justified
   line would need to re-derive its own run boundaries against is not yet wired to it.
+- **Not drawn** Every `_draw_line` RTL arm (rich_text_label.cpp:987-1014): the
+  line's trailing-edge origin, the LEFT/FILL-versus-RIGHT swap and the dropcap side.
+  All read the paragraph direction from `_find_direction` (:599,3507-3525), which
+  returns `is_layout_rtl()` only while `text_direction` is INHERITED; the default is
+  `TEXT_DIRECTION_AUTO` (rich_text_label.h:615), and `[p dir=]` is not modelled.
+  Engine-checked: an RTL RichTextLabel draws its lines where an LTR one does.
+- **Not drawn** `lrtl`'s scrollbar-width term (:988-996,2093-2100), the loading
+  progress bar's RTL fill (:2580-2588) and `VC_GLYPHS_AUTO`'s reveal end
+  (:944-945): no scrollbar is drawn, the bar is transient, and
+  `visible_characters` is not drawn here.
+- **Not drawn** The clip to `_get_text_rect()` (rich_text_label.cpp:158,2594): a
+  line wider than its own box hangs past the control's edge here, where Godot cuts
+  it at the edge. The horizontal placement of such a line matches
+  (`unit-rich-text-label-center-overflow.tscn`); only the cut is missing.

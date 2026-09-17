@@ -192,3 +192,20 @@ describe('marginContainerLayout', () => {
     expect(rects.has('Hidden')).toBe(false);
   });
 });
+
+describe('marginContainerLayout under RTL', () => {
+  it('hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the trailing edge (container.cpp:99,109)', () => {
+    // MarginContainer has no RTL branch of its own (`margin_container.cpp` has
+    // no `is_layout_rtl()` call); the flag reaches the child through
+    // `Container::fit_child_in_rect`, which reads it directly.
+    const child = leaf('C', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 0 });
+    const n = {
+      ...container('M', { themeOverrideConstants: { margin_left: 0, margin_top: 0, margin_right: 0, margin_bottom: 0 } }, [child]),
+      rtl: true,
+    };
+    const rects = asMap(
+      marginContainerLayout(n, [{ node: child, minSize: { x: 20, y: 10 } }], { x: 0, y: 0, w: 100, h: 50 }, ctx())
+    );
+    expect(rects.get('C')).toEqual({ x: 80, y: 0, w: 20, h: 50 });
+  });
+});

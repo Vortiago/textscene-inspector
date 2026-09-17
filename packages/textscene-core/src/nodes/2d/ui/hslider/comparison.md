@@ -33,3 +33,10 @@ Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inher
 the optional-float reader. An unparseable number becomes `undefined` and the slider
 takes Godot's defaults of 0, 0 and 100. A `value` outside the range is clamped silently,
 and a malformed `tick_count` draws no ticks.
+
+## Known limitations
+
+- **Not drawn** Slider's RTL arms that need pointer or gamepad state: the drag
+  origin and motion (slider.cpp:77,116), the `ui_left`/`ui_right` step (:144,160)
+  and its joypad repeat (:216,224). The `grabber_area` fill and the grabber icon
+  (:331-339,363) both follow the layout direction.

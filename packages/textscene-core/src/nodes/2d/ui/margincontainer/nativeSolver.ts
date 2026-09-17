@@ -14,9 +14,9 @@
  * FILL/SHRINK branch below is symmetric left-right and top-bottom, unlike a
  * box container where one axis is already sized before the fit runs.
  *
- * RTL is out of scope (no `layout_direction` is modelled anywhere in this
- * solver — see `controlRectSolver.ts`), matching `fit_child_in_rect`'s own
- * horizontal-only RTL branches, which this port omits.
+ * MarginContainer has no RTL branch of its own (`margin_container.cpp` calls
+ * `is_layout_rtl()` nowhere); the container's own flag still reaches a child
+ * through `fit_child_in_rect`, which reads it itself.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -100,7 +100,7 @@ export const marginContainerLayout: ContainerLayoutFn = (n, children, contentRec
     const cp = props(child);
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
-    out.set(child.path, fitChildInRect(rect, minSize, hFlags, vFlags));
+    out.set(child.path, fitChildInRect(rect, minSize, hFlags, vFlags, n.rtl));
   }
   return out;
 };

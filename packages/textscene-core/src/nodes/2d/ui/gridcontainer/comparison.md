@@ -9,7 +9,9 @@ renders_as: children packed into a fixed column count
 
 # GridContainer
 
-GridContainer lays its children into a fixed number of columns, wrapping to a new row.
+GridContainer lays its children into a fixed number of columns, wrapping to a new row. A
+right-to-left `layout_direction` starts each row at the opposite edge and fills it back
+the other way; the column widths and row heights are unchanged.
 Column widths and row heights come from the children's own minimum sizes.
 
 ## Linting

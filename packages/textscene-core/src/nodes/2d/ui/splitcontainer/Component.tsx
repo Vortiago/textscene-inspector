@@ -67,7 +67,8 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
       axisChildFromCustomMinimumSize(first, vertical),
       axisChildFromCustomMinimumSize(second, vertical),
       props.splitOffset ?? 0,
-      props.collapsed === true
+      props.collapsed === true,
+      solveNode.rtl && !vertical
     );
   const iconRect = splitGrabberIconRect(vertical, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 

@@ -34,9 +34,12 @@
  * the AUTHORED `split_offset`, exactly like every other native solver in this
  * codebase renders one authored frame, never an interaction.
  *
- * `layout_direction` (RTL) is not modelled anywhere else in this codebase (see
- * `native/controlRectSolver.ts`'s own note and `boxContainerSolver.ts`'s), so it
- * is not threaded here either.
+ * RTL applies to the HORIZONTAL axis only. `_update_dragger_positions` ends by
+ * inverting each position against the axis size (`:641-646` collapsed,
+ * `:703-707` otherwise), and `_resort`'s own `!vertical && rtl` branch
+ * (`:738-751`) then reads the children back in the opposite order — so the
+ * reported dragger position IS the inverted one, and the grabber a painter
+ * draws at it needs no second flip.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -110,8 +113,11 @@ function godotClamp(x: number, lo: number, hi: number): number {
  * `SplitContainer::_update_default_dragger_positions` + `_update_dragger_positions`,
  * specialised to exactly two children (see module doc for the closed form and
  * its citations). Returns `computed_split_offset` — the split axis position,
- * relative to this container's own top-left, where the first child ends and
- * the separation begins.
+ * relative to this container's own top-left, where the separation band starts.
+ *
+ * `rtl` is already AXIS-SCOPED: this function only ever sees one axis, and
+ * Godot's inversion is guarded on `!vertical` (`split_container.cpp:703`), so
+ * a caller that handles both axes passes `rtl && !vertical`.
  */
 export function computeSplitDraggerPosition(
   size: number,
@@ -119,7 +125,8 @@ export function computeSplitDraggerPosition(
   first: SplitAxisChild,
   second: SplitAxisChild,
   splitOffset: number,
-  collapsed: boolean
+  collapsed: boolean,
+  rtl = false
 ): number {
   // `const int size = (int)get_size()[axis]` (`split_container.cpp:527`, and the
   // same line in `_update_dragger_positions` and `_get_valid_range`): every
@@ -145,7 +152,10 @@ export function computeSplitDraggerPosition(
   const lo = Math.trunc(first.minSize);
   const hi = axisSize - separation - Math.trunc(second.minSize);
   const raw = collapsed ? wished : wished + splitOffset;
-  return godotClamp(raw, lo, hi);
+  const clamped = godotClamp(raw, lo, hi);
+  // `size - dragger_positions[i] - sep` (`split_container.cpp:644-645,703-707`)
+  // — the caller supplies the split axis, so `!vertical` is implicit here.
+  return rtl ? axisSize - clamped - separation : clamped;
 }
 
 /**
@@ -185,7 +195,8 @@ export function resortSplitContainer(
   separation: number,
   splitOffset: number,
   collapsed: boolean,
-  children: readonly SplitChildInput[]
+  children: readonly SplitChildInput[],
+  rtl = false
 ): Rect2[] {
   if (children.length === 0) return [];
 
@@ -193,7 +204,7 @@ export function resortSplitContainer(
 
   if (children.length === 1) {
     const only = children[0]!;
-    return [fitChildInRect(whole, only.minSize, only.hSizeFlags, only.vSizeFlags)];
+    return [fitChildInRect(whole, only.minSize, only.hSizeFlags, only.vSizeFlags, rtl)];
   }
 
   const [c0, c1] = children as readonly [SplitChildInput, SplitChildInput];
@@ -201,6 +212,7 @@ export function resortSplitContainer(
   // branch above stays full-precision, as Godot's does.
   const size = Math.trunc(vertical ? containerSize.height : containerSize.width);
   const crossSize = Math.trunc(vertical ? containerSize.width : containerSize.height);
+  const horizontalRtl = rtl && !vertical;
 
   const draggerPos = computeSplitDraggerPosition(
     size,
@@ -208,20 +220,28 @@ export function resortSplitContainer(
     toSplitAxisChild(vertical, c0),
     toSplitAxisChild(vertical, c1),
     splitOffset,
-    collapsed
+    collapsed,
+    horizontalRtl
   );
 
+  // `split_container.cpp:738-751` — under a horizontal RTL the first child
+  // takes the band ABOVE the (already inverted) dragger and the second the
+  // band below it, which is the mirror of the LTR pair.
+  const firstStart = horizontalRtl ? draggerPos + separation : 0;
+  const firstEnd = horizontalRtl ? size : draggerPos;
+  const secondStart = horizontalRtl ? 0 : draggerPos + separation;
+  const secondEnd = horizontalRtl ? draggerPos : size;
+
   const rect0: Rect2 = vertical
-    ? { x: 0, y: 0, w: crossSize, h: draggerPos }
-    : { x: 0, y: 0, w: draggerPos, h: crossSize };
-  const secondStart = draggerPos + separation;
+    ? { x: 0, y: firstStart, w: crossSize, h: firstEnd - firstStart }
+    : { x: firstStart, y: 0, w: firstEnd - firstStart, h: crossSize };
   const rect1: Rect2 = vertical
-    ? { x: 0, y: secondStart, w: crossSize, h: size - secondStart }
-    : { x: secondStart, y: 0, w: size - secondStart, h: crossSize };
+    ? { x: 0, y: secondStart, w: crossSize, h: secondEnd - secondStart }
+    : { x: secondStart, y: 0, w: secondEnd - secondStart, h: crossSize };
 
   return [
-    fitChildInRect(rect0, c0.minSize, c0.hSizeFlags, c0.vSizeFlags),
-    fitChildInRect(rect1, c1.minSize, c1.hSizeFlags, c1.vSizeFlags),
+    fitChildInRect(rect0, c0.minSize, c0.hSizeFlags, c0.vSizeFlags, rtl),
+    fitChildInRect(rect1, c1.minSize, c1.hSizeFlags, c1.vSizeFlags, rtl),
   ];
 }
 
@@ -369,7 +389,7 @@ function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
  * a painter is limited to without this channel.
  */
 export interface SplitContainerLayoutMeta {
-  /** `computed_split_offset` — this container's own local-space position where the first child ends and the separation begins. `undefined` with fewer than two sortable children (no boundary to report). */
+  /** `computed_split_offset` — this container's own local-space position where the separation band starts (under a horizontal RTL, already inverted, so a painter draws the grabber straight at it). `undefined` with fewer than two sortable children (no boundary to report). */
   draggerPos: number | undefined;
 }
 
@@ -406,7 +426,8 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
       separation,
       props.splitOffset ?? 0,
       props.collapsed === true,
-      inputs
+      inputs,
+      n.rtl
     );
 
     const out = new Map<string, Rect2>();
@@ -427,7 +448,8 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
             toSplitAxisChild(vertical, inputs[0]!),
             toSplitAxisChild(vertical, inputs[1]!),
             props.splitOffset ?? 0,
-            props.collapsed === true
+            props.collapsed === true,
+            n.rtl && !vertical
           )
         : undefined;
 

@@ -352,3 +352,44 @@ describe('gridContainerLayout', () => {
     expect(rects.size).toBe(0);
   });
 });
+
+describe('gridContainerLayout under RTL', () => {
+  it('walks every row from the trailing edge back (grid_container.cpp:157,190-194,220-228)', () => {
+    // `if (rtl) { col_ofs = get_size().width; }` per row, then
+    // `Point2 p(col_ofs - s.width, row_ofs); col_ofs -= s.width + h_separation`.
+    // Same 2x2 grid as the LTR case above: columns 40/50, rows 20/25, h_sep 8,
+    // v_sep 12, container 400 wide. A: 400-40 = 360; B: 360-8-50 = 302.
+    const a = leaf('A', { customMinimumSize: { x: 30, y: 10 } });
+    const b = leaf('B', { customMinimumSize: { x: 50, y: 20 } });
+    const c = leaf('C', { customMinimumSize: { x: 40, y: 15 } });
+    const d = leaf('D', { customMinimumSize: { x: 20, y: 25 } });
+    const children = [a, b, c, d];
+    const n = {
+      ...grid('Grid', { columns: 2, themeOverrideConstants: { h_separation: 8, v_separation: 12 } }, children),
+      rtl: true,
+    };
+    const rects = asMap(gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 400, h: 400 }, ctx()));
+
+    expect(rects.get('A')).toEqual({ x: 360, y: 0, w: 40, h: 20 });
+    expect(rects.get('B')).toEqual({ x: 302, y: 0, w: 50, h: 20 });
+    expect(rects.get('C')).toEqual({ x: 360, y: 32, w: 40, h: 25 });
+    expect(rects.get('D')).toEqual({ x: 302, y: 32, w: 50, h: 25 });
+  });
+
+  it('hands its own rtl to fit_child_in_rect, shrinking a non-FILL child to the cell trailing edge (container.cpp:99,109)', () => {
+    // `r.position.x += rtl ? (p_rect.size.width - minsize.width) : 0` for the
+    // no-SHRINK-bit branch. Column 0 is 40 wide (B's minimum); the RTL cell
+    // starts at 100 - 40 = 60, and A shrinks to 20 at 60 + (40 - 20) = 80.
+    const a = leaf('A', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 0 });
+    const b = leaf('B', { customMinimumSize: { x: 40, y: 10 } });
+    const children = [a, b];
+    const n = {
+      ...grid('Grid', { columns: 1, themeOverrideConstants: { h_separation: 0, v_separation: 0 } }, children),
+      rtl: true,
+    };
+    const rects = asMap(gridContainerLayout(n, childEntries(children), { x: 0, y: 0, w: 100, h: 100 }, ctx()));
+
+    expect(rects.get('A')).toEqual({ x: 80, y: 0, w: 20, h: 10 });
+    expect(rects.get('B')).toEqual({ x: 60, y: 10, w: 40, h: 10 });
+  });
+});

@@ -93,7 +93,8 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
       axisChildFromCustomMinimumSize(first, false),
       axisChildFromCustomMinimumSize(second, false),
       props.splitOffset ?? 0,
-      props.collapsed === true
+      props.collapsed === true,
+      solveNode.rtl
     );
   const iconRect = splitGrabberIconRect(false, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 

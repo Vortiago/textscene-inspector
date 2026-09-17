@@ -901,3 +901,161 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
     expect(solved.get('Root')?.rect).toEqual({ x: 40, y: 40, w: 1352, h: 768 });
   });
 });
+
+/**
+ * `Control::_size_changed`'s RTL mirror (`scene/gui/control.cpp:1785-1787`):
+ *
+ *     if (is_layout_rtl()) {
+ *       new_pos_cache.x = parent_rect.size.x + 2 * parent_rect.position.x
+ *                         - new_pos_cache.x - new_size_cache.x;
+ *     }
+ *
+ * `parent_rect` is `get_parent_anchorable_rect()`, and `get_anchorable_rect`
+ * is `Rect2(Point2(), get_size())` (`control.cpp:1563-1566`), so the position
+ * term is zero for every parent a scene can state.
+ */
+describe('solveControlTree — RTL mirrors a free Control inside its parent', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('mirrors a viewport-anchored rect about the viewport centre', () => {
+    // 1152 + 0 - 64 - 400 = 688.
+    const root: SolveNode = {
+      ...node('Bar', 'Control', { offsetLeft: 64, offsetTop: 48, offsetRight: 464, offsetBottom: 128 }),
+      rtl: true,
+    };
+    expect(solveControlTree([root], VIEWPORT, ctx()).get('Bar')?.rect).toEqual({
+      x: 688,
+      y: 48,
+      w: 400,
+      h: 80,
+    });
+  });
+
+  it('leaves the same rect alone under LTR', () => {
+    const root = node('Bar', 'Control', { offsetLeft: 64, offsetTop: 48, offsetRight: 464, offsetBottom: 128 });
+    expect(solveControlTree([root], VIEWPORT, ctx()).get('Bar')?.rect).toEqual({
+      x: 64,
+      y: 48,
+      w: 400,
+      h: 80,
+    });
+  });
+
+  it("mirrors a nested Control inside its PARENT's width, not the viewport's", () => {
+    // The parent is LTR at (100, 0, 400, 200); the child is RTL at offsets
+    // 10..110 inside it, so 400 - 10 - 100 = 290.
+    const child: SolveNode = {
+      ...node('Panel/Inner', 'Control', { offsetLeft: 10, offsetTop: 5, offsetRight: 110, offsetBottom: 55 }),
+      rtl: true,
+    };
+    const root = node(
+      'Panel',
+      'Control',
+      { offsetLeft: 100, offsetTop: 0, offsetRight: 500, offsetBottom: 200 },
+      [child]
+    );
+    const solved = solveControlTree([root], VIEWPORT, ctx());
+    expect(solved.get('Panel')?.rect).toEqual({ x: 100, y: 0, w: 400, h: 200 });
+    expect(solved.get('Panel/Inner')?.rect).toEqual({ x: 290, y: 5, w: 100, h: 50 });
+  });
+
+  it('mirrors AFTER the width is floored at the minimum, so the shortfall grows leftward', () => {
+    // `_size_changed` runs the h_grow floor at `:1775-1783` and the mirror at
+    // `:1785-1787`. GROW_DIRECTION_END leaves the position alone, so the
+    // pre-mirror rect is (64, 200) and the mirror gives 1152 - 64 - 200 = 888.
+    const root: SolveNode = {
+      ...node('Bar', 'Control', {
+        offsetLeft: 64,
+        offsetTop: 0,
+        offsetRight: 164,
+        offsetBottom: 40,
+        customMinimumSize: { x: 200, y: 40 },
+      }),
+      rtl: true,
+    };
+    expect(solveControlTree([root], VIEWPORT, ctx()).get('Bar')?.rect).toEqual({
+      x: 888,
+      y: 0,
+      w: 200,
+      h: 40,
+    });
+  });
+});
+
+/**
+ * A container child never moves under RTL when it fits: `fit_child_in_rect`
+ * ends at `set_rect` (`container.cpp:126`), whose `_compute_offsets`
+ * un-mirrors the x it was handed (`control.cpp:906-909`) so that
+ * `_size_changed`'s mirror puts it straight back.
+ */
+describe('solveControlTree — RTL round-trips a container-assigned rect', () => {
+  const TYPE = 'TestSolverRtlContainer';
+
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  /** Hands every child the same fixed rect, so the solve under test is the re-floor alone. */
+  function registerCell(cell: Rect2) {
+    const layout: ContainerLayoutFn = (_n, children) => {
+      const out = new Map<string, Rect2>();
+      children.forEach((c) => out.set(c.node.path, cell));
+      return out;
+    };
+    controlSolverRegistry.registerContainerLayout(TYPE, layout);
+  }
+
+  it('keeps a fitting child exactly where the container put it', () => {
+    registerCell({ x: 10, y: 0, w: 120, h: 20 });
+    const child: SolveNode = { ...node('Box/Child', 'Control', {}), rtl: true };
+    const root: SolveNode = {
+      ...node('Box', TYPE, { offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 200 }, [child]),
+      rtl: true,
+    };
+    expect(solveControlTree([root], VIEWPORT, ctx()).get('Box/Child')?.rect).toEqual({
+      x: 10,
+      y: 0,
+      w: 120,
+      h: 20,
+    });
+  });
+
+  it('mirrors the grow direction when the child outgrows its cell', () => {
+    // Container 400 wide, cell (10, 50) wide, child minimum 80.
+    // `_compute_offsets` stores x' = 400 - 10 - 50 = 340; the GROW_END floor
+    // leaves it and widens to 80; the mirror gives 400 - 340 - 80 = -20 — the
+    // child's RIGHT edge stays at the cell's right edge, the mirror image of
+    // the LTR case below.
+    registerCell({ x: 10, y: 0, w: 50, h: 20 });
+    const rtlChild: SolveNode = {
+      ...node('Box/Child', 'Control', { customMinimumSize: { x: 80, y: 20 } }),
+      rtl: true,
+    };
+    const rtlRoot: SolveNode = {
+      ...node('Box', TYPE, { offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 200 }, [rtlChild]),
+      rtl: true,
+    };
+    expect(solveControlTree([rtlRoot], VIEWPORT, ctx()).get('Box/Child')?.rect).toEqual({
+      x: -20,
+      y: 0,
+      w: 80,
+      h: 20,
+    });
+
+    const ltrChild = node('Box2/Child', 'Control', { customMinimumSize: { x: 80, y: 20 } });
+    const ltrRoot = node(
+      'Box2',
+      TYPE,
+      { offsetLeft: 0, offsetTop: 0, offsetRight: 400, offsetBottom: 200 },
+      [ltrChild]
+    );
+    expect(solveControlTree([ltrRoot], VIEWPORT, ctx()).get('Box2/Child')?.rect).toEqual({
+      x: 10,
+      y: 0,
+      w: 80,
+      h: 20,
+    });
+  });
+});

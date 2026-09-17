@@ -250,13 +250,12 @@ export interface TextLineLayout {
  * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`): the size a
  * shaped line reports back is `Size2(sd->width, ascent + descent).ceil()` —
  * a WHOLE number of pixels, even though the pen advance it is derived from
- * is fractional. Godot exposes both quantities and they are NOT
- * interchangeable: `shaped_text_get_width` returns the raw `sd->width` (what
- * `shaped_text_fit_to_width` justifies against), while every widget that
- * floors a minimum size or aligns a line reads the ceiled
- * `shaped_text_get_size`. `TextLineLayout.widthPx` and
- * `TextLayoutResult.widthPx` are the RAW one, so this is the conversion at
- * that seam rather than a rounding baked into shaping.
+ * is fractional. `shaped_text_get_width` ceils the same `sd->width`
+ * independently (`:7561-7570`), so a widget aligning a line against it and
+ * one folding this size into a minimum read the same whole number.
+ * `TextLineLayout.widthPx` and `TextLayoutResult.widthPx` are the RAW pen
+ * advance, so this is the conversion at that seam rather than a rounding
+ * baked into shaping.
  *
  * `Math.ceil`, matching `Vector2::ceil()`'s own `Math::ceil` per component:
  * toward POSITIVE infinity, so a degenerate negative extent rounds toward

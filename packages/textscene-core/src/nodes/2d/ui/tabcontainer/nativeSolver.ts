@@ -2,7 +2,7 @@
  * TabContainer's native (WebGL canvas) rect solver — `TabContainer::
  * get_minimum_size` (`scene/gui/tab_container.cpp:1027-1065`) and its child
  * layout, `TabContainer::_repaint` (`:359-403`) plus `_update_margins`
- * (`:405-460`) and `_get_tab_height`/`_get_tab_rect` (`:35-59`). Registered
+ * (`:405-460`) and `_get_tab_height` (`:51-58`). Registered
  * via `controlSolverRegistry.registerMinimumSize`/`registerContainerLayout`.
  *
  * TabContainer's internal `TabBar` is never a real scene node (`memnew`d at
@@ -12,6 +12,11 @@
  * `'TabBar'` — and calling `../tabbar/nativeSolver.ts`'s own
  * `tabBarMinimumSize` directly. One tab-layout implementation, not a second
  * transcription that could drift from TabBar's own.
+ *
+ * `_get_tab_rect` (`:35-42`) is NOT ported: its three consumers are all the
+ * tab-menu popup (`gui_input`'s hit test twice, and the menu icon in DRAW),
+ * and no `Popup` is modelled — the strip's own rect comes from
+ * `_update_margins`, never from there.
  *
  * A page's tab title is its CHILD's own node name, UNLESS this
  * TabContainer's own `tab_<idx>/title` override says otherwise
@@ -160,25 +165,74 @@ function tabBarHeight(synthetic: SolveNode, ctx: Pick<SolveContext, 'theme' | 'm
   return 'size' in result ? result.size.y : result.y;
 }
 
+export interface StyleMargins {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+const NO_STYLE_MARGINS: StyleMargins = { left: 0, top: 0, right: 0, bottom: 0 };
+
+/** `theme_cache.tabbar_style->get_margin(...)` — an authored `theme_override_styles/tabbar_background`, else the default theme's own empty box (`default_theme.cpp:994`). */
+export function tabbarStyleMargins(styleBoxes: SolveNode['styleBoxes']): StyleMargins {
+  return styleBoxes.tabbar_background?.contentMargin ?? NO_STYLE_MARGINS;
+}
+
+/** `TabContainer::_get_tab_height` (`:51-58`): the strip's own minimum height plus the tabbar style's top and bottom margin. The caller answers 0 where the header is hidden or there are no tabs. */
+export function tabHeaderHeight(barMinHeightPx: number, tabbarMargin: StyleMargins): number {
+  return barMinHeightPx + tabbarMargin.top + tabbarMargin.bottom;
+}
+
 /**
- * `TabContainer::_get_tab_rect`/`_update_margins` (`:35-43,405-460`), popup
- * always absent (no `Popup` node concept modelled), so the RIGHT-alignment
- * branch never needs to reclaim `side_margin` for an overflowing bar — that
- * one case (`get_clip_tabs() && (offset_buttons_visible || total_tabs_width
- * + side_margin > size.width)`, `:450`) is NOT reproduced; documented in
- * `comparison.md`.
+ * `TabContainer::_update_margins` (`:405-460`) followed by `_repaint`'s own
+ * vertical anchoring (`:362-373`), resolved to the rect the internal TabBar
+ * ends up holding.
+ *
+ * `_update_margins` SWAPS the tabbar style's left and right margin under
+ * `is_layout_rtl()` (`:412`) and `Control::_size_changed` then mirrors the
+ * bar inside its parent (`control.cpp:1785-1787`) — the internal bar is a
+ * real Control child whose layout direction is inherited, and TabContainer
+ * never overrides it. The two together keep the AUTHORED margins on their
+ * authored sides and move `side_margin` to the opposite edge.
+ *
+ * Popup always absent (no `Popup` node concept modelled), so the
+ * RIGHT-alignment branch never needs to reclaim `side_margin` for an
+ * overflowing bar — that one case (`get_clip_tabs() &&
+ * (offset_buttons_visible || total_tabs_width + side_margin > size.width)`,
+ * `:450`) is NOT reproduced; documented in `comparison.md`.
  */
-export function tabBarRect(containerRect: Rect2, headerHeight: number, tabsPosition: number, alignment: number, sideMargin: number): Rect2 {
-  const y = tabsPosition === TABS_POSITION_BOTTOM ? containerRect.h - headerHeight : 0;
-  let x = 0;
-  let w = containerRect.w;
+export function tabBarRect(
+  containerRect: Rect2,
+  barMinHeightPx: number,
+  tabsPosition: number,
+  alignment: number,
+  sideMargin: number,
+  tabbarMargin: StyleMargins,
+  rtl: boolean
+): Rect2 {
+  const leftMargin = rtl ? tabbarMargin.right : tabbarMargin.left;
+  const rightMargin = rtl ? tabbarMargin.left : tabbarMargin.right;
+
+  let offsetLeft = leftMargin;
+  let offsetRight = -rightMargin;
   if (alignment === TAB_ALIGNMENT_LEFT) {
-    x = sideMargin;
-    w = containerRect.w - sideMargin;
+    offsetLeft = leftMargin + sideMargin;
   } else if (alignment === TAB_ALIGNMENT_RIGHT) {
-    w = containerRect.w - sideMargin;
+    offsetRight = -rightMargin - sideMargin;
   }
-  return { x, y, w, h: headerHeight };
+
+  const w = containerRect.w + offsetRight - offsetLeft;
+  const x = rtl ? containerRect.w - offsetLeft - w : offsetLeft;
+  const headerHeight = tabHeaderHeight(barMinHeightPx, tabbarMargin);
+  const y = (tabsPosition === TABS_POSITION_BOTTOM ? containerRect.h - headerHeight : 0) + tabbarMargin.top;
+  return { x, y, w, h: barMinHeightPx };
+}
+
+/** `TabContainer::_notification(DRAW)` (`:257-262`): `tabbar_style` draws across the FULL container width, not the tab bar's own inset rect. */
+export function tabHeaderBand(containerRect: Rect2, headerHeight: number, tabsPosition: number): Rect2 {
+  const y = tabsPosition === TABS_POSITION_BOTTOM ? containerRect.h - headerHeight : 0;
+  return { x: 0, y, w: containerRect.w, h: headerHeight };
 }
 
 /** `TabContainer::_repaint` (`:359-403`), the content band BEFORE `panel_style`'s own margin inset — this module's own header on why every page gets the SAME rect. */
@@ -203,8 +257,9 @@ export const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     const synthetic = buildInternalTabBarNode(n, derivedTabs, props, ctx.theme);
     const barResult = tabBarMinimumSize(synthetic, ctx);
     const barSize = 'size' in barResult ? barResult.size : barResult;
-    width += barSize.x;
-    height += barSize.y;
+    const tabbarMargin = tabbarStyleMargins(n.styleBoxes);
+    width += barSize.x + tabbarMargin.left + tabbarMargin.right;
+    height += barSize.y + tabbarMargin.top + tabbarMargin.bottom;
 
     // `side_margin` only widens the minimum for LEFT/RIGHT alignment — the
     // popup-present exception on the RIGHT branch is moot, popup is never
@@ -245,17 +300,22 @@ export const tabContainerLayout: ContainerLayoutFn = (n, children, contentRect, 
   const tabsVisible = props.tabsVisible ?? true;
   const tabsPosition = props.tabsPosition ?? TABS_POSITION_TOP;
 
+  // `_get_tab_height` answers 0 without a header or PAGES (`:51-58` —
+  // `get_tab_count()` counts sortable children, not children).
+  const derivedTabs = deriveTabContainerTabs(n, props.tabOverrides);
   let headerHeight = 0;
-  if (tabsVisible) {
-    const derivedTabs = deriveTabContainerTabs(n, props.tabOverrides);
+  if (tabsVisible && derivedTabs.length > 0) {
     const synthetic = buildInternalTabBarNode(n, derivedTabs, props, ctx.theme);
-    headerHeight = tabBarHeight(synthetic, ctx);
+    headerHeight = tabHeaderHeight(tabBarHeight(synthetic, ctx), tabbarStyleMargins(n.styleBoxes));
   }
 
   const band = tabContentBand(contentRect, headerHeight, tabsPosition);
   const panelStyle = n.styleBoxes.panel ?? ctx.theme.widgets.panel;
   const pageRect: Rect2 = {
-    x: band.x + panelStyle.contentMargin.left,
+    // `_repaint` sets the page's offsets directly (`:389-392`), so
+    // `_size_changed`'s RTL mirror (`control.cpp:1785-1787`) lands the
+    // panel's RIGHT margin on the left. The panel box itself never mirrors.
+    x: band.x + (n.rtl ? panelStyle.contentMargin.right : panelStyle.contentMargin.left),
     y: band.y + panelStyle.contentMargin.top,
     w: band.w - panelStyle.contentMargin.left - panelStyle.contentMargin.right,
     h: band.h - panelStyle.contentMargin.top - panelStyle.contentMargin.bottom,

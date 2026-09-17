@@ -14,6 +14,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { CheckButton } from './Component';
 import type { CheckButtonProperties } from './types';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -155,4 +156,34 @@ describe('<CheckButton> (isolated painter contract)', () => {
     expect(leftGroup.position.x).toBe(6);
     expect(centerGroup.position.x).toBeGreaterThan(leftGroup.position.x);
   });
+
+  // `check_button.cpp:135`: `ofs.x = normal_style->get_margin(SIDE_LEFT)` under
+  // RTL, against `:137`'s `size.width - (tex_size.width + margin(SIDE_RIGHT))`.
+  // `cb_empty`'s X margin is 6 and the vendored toggle is 32 wide, so the LTR
+  // arm is 150 - (32 + 6) = 112.
+  it('draws the toggle at the LEFT content margin under RTL', async () => {
+    const iconX = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <CheckButton {...painterEnv()} solveNode={{ ...solveNode({ text: 'On' }), rtl }} rect={RECT} renderOrder={0} />
+      );
+      return findIconMesh(renderer.scene)!.parent!.position.x;
+    };
+    expect(await iconX(false)).toBe(112);
+    expect(await iconX(true)).toBe(6);
+  });
+
+  // `check_button.cpp:109-120` swaps the whole icon table for the `_mirrored`
+  // one, a separately authored SVG (`default_theme.cpp:332-335`).
+  it('draws the MIRRORED toggle SVG under RTL', async () => {
+    const iconSrc = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <CheckButton {...painterEnv()} solveNode={{ ...solveNode({}), rtl }} rect={RECT} renderOrder={0} />
+      );
+      const material = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+      return (material.map!.image as { src?: string }).src;
+    };
+    expect(await iconSrc(false)).toBe(CHECK_BUTTON_ICONS.unchecked);
+    expect(await iconSrc(true)).toBe(CHECK_BUTTON_ICONS.uncheckedMirrored);
+  });
+
 });

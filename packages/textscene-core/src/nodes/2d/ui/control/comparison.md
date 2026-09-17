@@ -16,6 +16,12 @@ anchors against the viewport, and draws after everything under the root it hangs
 `top_level` makes it one wherever it sits, and nothing above it composes onto it — no
 transform, no tint, no rect to anchor against, and no container lays it out.
 
+`layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
+the value alone; INHERITED climbs to the nearest ancestor Control, and at the top of the
+tree falls back to `internationalization/rendering/root_node_layout_direction` and the
+project's test locale. A right-to-left Control is mirrored inside its parent, and an
+HBoxContainer also reverses its children.
+
 ## Linting
 
 <!-- lint:begin Control -->
@@ -91,3 +97,26 @@ malformed `anchor_left`, `offset_top`, `rotation`, `scale`, `pivot_offset`,
 `custom_minimum_size` or `size_flags_*` becomes `undefined` with no warning, and the
 renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 `visible` is `true` for anything other than a value that reads as `false`.
+
+## Known limitations
+
+- **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE in a project
+  that states no `internationalization/locale/test`, draws left-to-right: the answer is
+  the machine's own locale, which the scene files do not contain.
+- **Approximated** A right-to-left Control inside a SubViewport starts a fresh direction
+  climb instead of continuing past the viewport to the Control above it, so it draws
+  left-to-right unless it states a direction itself.
+- **Approximated** A `Window` ends the climb in Godot and answers from its own
+  `layout_direction`. No Window type is drawn here, so a Control below one inherits from
+  whatever Control sits above the Window instead.
+- **Approximated** Text is always shaped left-to-right. Every widget places its runs on
+  the resolved direction, but the runs themselves are never reordered, so a `Label`,
+  `Button` title or `ItemList` row holding right-to-left script draws its characters in
+  code-point order. The bundled atlas carries no right-to-left script, so nothing in the
+  shipped corpus reaches it.
+- **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO
+  rather than INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
+  `rich_text_label.h:615`), so every engine branch that consults the PARAGRAPH direction
+  rather than the layout direction is dead at the default and is deliberately not ported.
+- **Needs runtime** The direction reaches hit-testing, keyboard and drag arms in TabBar,
+  Tree, ItemList, the sliders and the text controls. A frozen frame has none of those.

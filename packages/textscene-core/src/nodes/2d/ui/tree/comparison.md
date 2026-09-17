@@ -13,7 +13,8 @@ Tree is the hierarchical multi-column list Control, built from TreeItem objects 
 runtime. A `.tscn` Tree never carries any `TreeItem` — they, and every column's title
 text, exist only when a script creates them — so the previewer draws exactly the `panel`
 StyleBox plus, when `column_titles_visible`, one blank-titled header cell per column.
-That empty panel IS the whole truth of such a scene, not a limitation short of one.
+That empty panel IS the whole truth of such a scene, not a limitation short of one. A
+right-to-left Tree mirrors each header cell inside its own width (`tree.cpp:5158-5160`).
 
 ## Linting
 
@@ -59,3 +60,11 @@ an item-less Tree draws. Rows and cells are created by script and never reach th
 
 - **Not drawn** Godot draws the rows, columns and fold arrows. The previewer draws
   nothing for this node.
+- **Approximated** Right-to-left SHAPING. Each column title's paragraph direction follows
+  `is_layout_rtl()` (`tree.cpp:2155`), and this previewer has no bidi pass. No title is
+  ever serialised, so the header cells are blank either way and nothing of it shows.
+- **Needs runtime** Godot's right-to-left arms of `get_column_at_position`
+  (`tree.cpp:6426`), `get_drop_section_at_position` (`:6458`), `get_item_at_position`
+  (`:6508`) and `get_tooltip` (`:6568`) answer mouse hits, and `gui_input` swaps the
+  `ui_left`/`ui_right` actions (`:3794,3812`). All of them need a live cursor or
+  keyboard, which a static preview has none of.

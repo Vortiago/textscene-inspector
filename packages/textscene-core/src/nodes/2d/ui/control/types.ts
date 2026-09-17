@@ -33,6 +33,13 @@ export interface ControlProperties {
   growHorizontal?: number;
   growVertical?: number;
 
+  /**
+   * `Control::LayoutDirection` (`scene/gui/control.h:155-160`): 0 INHERITED,
+   * 1 APPLICATION_LOCALE, 2 LTR, 3 RTL, 4 SYSTEM_LOCALE. Resolved to a single
+   * boolean per node by the solve-tree walk (`SolveNode.rtl`).
+   */
+  layoutDirection?: number;
+
   /** Container child sizing bitmask (1=FILL, 2=EXPAND, 4=SHRINK_CENTER, 8=SHRINK_END). */
   sizeFlagsHorizontal?: number;
   sizeFlagsVertical?: number;

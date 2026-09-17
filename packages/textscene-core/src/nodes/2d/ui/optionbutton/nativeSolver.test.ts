@@ -211,7 +211,9 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
     arrowSize: { x: 12, y: 12 },
     arrowMargin: 4,
+    hSeparation: 4,
     textNaturalSize: { x: 60, y: 26 },
+    rtl: false,
   };
 
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
@@ -241,6 +243,52 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
     // customElementHeight = 32-8=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
     const { textOffset } = layoutOptionButtonContent({ ...BASE, textNaturalSize: { x: 60, y: 23 } });
     expect(textOffset.y).toBe(4);
+  });
+});
+
+/**
+ * `OptionButton::_notification`'s RTL arms. The arrow changes side —
+ *
+ *     ofs = Point2(theme_cache.arrow_margin, int(Math::abs((size.height - arrow_icon->get_height()) / 2)));   // option_button.cpp:126
+ *
+ * — the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`),
+ * and the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT
+ * through `Button::_notification`'s swap (`button.cpp:271-275`).
+ */
+describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
+  const BASE = {
+    rectSize: { x: 150, y: 32 },
+    styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
+    arrowSize: { x: 12, y: 12 },
+    arrowMargin: 4,
+    hSeparation: 4,
+    textNaturalSize: { x: 60, y: 26 },
+    rtl: false,
+  };
+  const RTL = { ...BASE, rtl: true };
+
+  it('draws the arrow at arrow_margin from the LEFT edge, vertically unchanged', () => {
+    const { arrowRect } = layoutOptionButtonContent(RTL);
+    expect(arrowRect).toEqual({ x: 4, y: 10, w: 12, h: 12 });
+  });
+
+  it('lays the selected item out against the right content margin', () => {
+    const { textOffset } = layoutOptionButtonContent(RTL);
+    // reserved = 12+4 = 16 on the LEFT; drawable = 150-8-8-16 = 118;
+    // text_ofs.x = 8 + 16, RIGHT shift = 118-60 = 58 -> 82.
+    expect(textOffset.x).toBe(82);
+    expect(textOffset.y).toBeCloseTo(3, 10);
+  });
+
+  it('hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
+    // rect 150.5 -> drawable 118.5 -> text_buf_width 119; 119 - 60 = 59; + 8 + 16.
+    const { textOffset } = layoutOptionButtonContent({ ...RTL, rectSize: { x: 150.5, y: 32 } });
+    expect(textOffset.x).toBeCloseTo(83, 10);
+  });
+
+  it('moves the label with h_separation, which the LTR arm never feels', () => {
+    expect(layoutOptionButtonContent({ ...RTL, hSeparation: 10 }).textOffset.x).toBe(82);
+    expect(layoutOptionButtonContent({ ...BASE, hSeparation: 10 }).textOffset.x).toBe(8);
   });
 });
 

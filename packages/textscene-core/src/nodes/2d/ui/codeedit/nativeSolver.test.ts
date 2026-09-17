@@ -8,6 +8,7 @@ import {
   codeEditLineNumberDigits,
   codeEditLineNumberText,
   codeEditLineNumberGutterXPx,
+  codeEditLineNumberTextXPx,
   codeEditGutterCellTextTopPx,
   codeEditGutterBand,
   CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT,
@@ -102,5 +103,25 @@ describe('codeEditGutterBand', () => {
     const without = codeEditGutterBand({} as CodeEditProperties, rowHeightPx, charWidth0Px, 1);
     expect(withGutter.totalWidthPx).toBe(withGutter.lineNumberWidthPx + 2);
     expect(without.totalWidthPx).toBe(0);
+  });
+});
+
+describe('codeEditLineNumberTextXPx (text_edit.cpp:1471-1476, code_edit.cpp:1583-1587)', () => {
+  it('sits at the gutter region\'s own left edge under LTR', () => {
+    // `ofs.x = p_region.position.x` (:1586) — the region starts at gutter_offset.
+    expect(codeEditLineNumberTextXPx(26, 40, 300, 18, false)).toBe(26);
+  });
+
+  it('right-aligns inside a gutter region mirrored about the control under RTL', () => {
+    // The CUSTOM gutter's own region mirrors first — `gutter_rect.position.x =
+    // size.width - gutter_rect.position.x - gutter_rect.size.x` (text_edit.cpp:1474)
+    // -> 300 - 26 - 40 = 234 — then the text right-aligns inside it,
+    // `ofs.x = p_region.get_end().x - text_size.width` (code_edit.cpp:1584) ->
+    // 234 + 40 - 18 = 256.
+    expect(codeEditLineNumberTextXPx(26, 40, 300, 18, true)).toBe(256);
+  });
+
+  it('measures the number at its CEILED shaped size, as shaped_text_get_size does (edge case)', () => {
+    expect(codeEditLineNumberTextXPx(26, 40, 300, 17.25, true)).toBe(256);
   });
 });

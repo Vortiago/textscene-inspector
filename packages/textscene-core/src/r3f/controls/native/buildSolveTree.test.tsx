@@ -1689,3 +1689,209 @@ region = Rect2(32, 32, 64, 64)
     }
   );
 });
+
+/**
+ * `Control::is_layout_rtl()` (`scene/gui/control.cpp:3551-3620`) resolved once
+ * per node, on the walk that can still see the scene tree: the INHERITED climb
+ * (`:3584-3593`) steps over every ancestor that is neither a Control nor a
+ * Window, which the Control-only solve tree no longer knows about.
+ */
+describe('useBuildSolveTree — layout direction', () => {
+  it('resolves an explicit RTL, and an explicit LTR beneath it', () => {
+    // `data.is_rtl = (data.layout_dir == LAYOUT_DIRECTION_RTL);` (`control.cpp:3619`).
+    const nodes = [
+      node('Rtl', 'Control', {
+        properties: { name: 'Rtl', layoutDirection: 3 } as Record<string, unknown>,
+        children: [
+          label('Inherited'),
+          node('Ltr', 'Control', {
+            properties: { name: 'Ltr', layoutDirection: 2 } as Record<string, unknown>,
+            children: [label('UnderLtr')],
+          }),
+        ],
+      }),
+    ];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const root = result.current.tree[0]!;
+    expect(root.rtl).toBe(true);
+    expect(root.children[0]!.rtl).toBe(true);
+    expect(root.children[1]!.rtl).toBe(false);
+    expect(root.children[1]!.children[0]!.rtl).toBe(false);
+  });
+
+  it('a root Control with no ancestor is left-to-right without a project file', () => {
+    // The climb runs off the top and `root_layout_direction` decides
+    // (`control.cpp:3600-3608`); its default is 0 and the locale is not RTL.
+    const { result } = renderHook(() => useBuildSolveTree([label('Lone')], [], []));
+    expect(result.current.tree[0]!.rtl).toBe(false);
+  });
+
+  it('climbs PAST a non-Control ancestor, which ends no chain', () => {
+    // The loop only stops at `Object::cast_to<Control>` or `<Window>`
+    // (`control.cpp:3586-3592`); a Node2D between them is simply stepped over,
+    // even though it breaks this codebase's own Control parenting.
+    const nodes = [
+      node('Rtl', 'Control', {
+        properties: { name: 'Rtl', layoutDirection: 3 } as Record<string, unknown>,
+        children: [node2D('Mid', { position: { x: 10, y: 0 } }, { children: [label('Deep')] })],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.children[0]!.rtl).toBe(true);
+  });
+
+  it('honours `root_node_layout_direction = 2` for an INHERITED root', async () => {
+    // `proj_root_layout_direction == 2` => RTL (`control.cpp:3602-3603`), seeded
+    // into the static by `scene/register_scene_types.cpp:568-570`.
+    const files: Record<string, string> = {
+      'res://project.godot': [
+        'config_version=5',
+        '',
+        '[internationalization]',
+        '',
+        'rendering/root_node_layout_direction=2',
+        '',
+      ].join('\n'),
+    };
+    const provider: ResourceProvider = {
+      async loadResource(path: string) {
+        const content = files[path];
+        if (content === undefined) throw new Error(`Resource not found: ${path}`);
+        return content;
+      },
+    };
+    const bus = new FileEventBus(provider);
+    const loader = new ResourceLoader(bus);
+    loader.setProvider(provider);
+
+    const { result } = renderHook(() => useBuildSolveTree([label('Lone')], [], []), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>
+          <ProjectSettingsProvider sceneKey="res://scene.tscn">{children}</ProjectSettingsProvider>
+        </ResourceLoaderProvider>
+      ),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.tree[0]!.rtl).toBe(true);
+  });
+});
+
+describe('useBuildSolveTree — a container that writes its children’s `visible`', () => {
+  // `FoldableContainer::_notification`'s NOTIFICATION_SORT_CHILDREN runs
+  // `c->set_visible(!folded)` on every direct child `as_sortable_control`
+  // accepts in IGNORE mode (`scene/gui/foldable_container.cpp:376-386`), so the
+  // authored flag is overwritten in BOTH directions before anything reads it.
+  function foldable(name: string, folded: boolean, children: TscnNode[]): TscnNode {
+    return node(name, 'FoldableContainer', {
+      properties: { name, folded, title: 'T' } as Record<string, unknown>,
+      children,
+    });
+  }
+
+  it('clears a folded container’s direct Control child (foldable_container.cpp:381)', () => {
+    const nodes = [foldable('FC', true, [label('Contents', { text: 'Sword' })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const child = result.current.tree[0]!.children[0]!;
+    expect((child.node.properties as { visible?: boolean }).visible).toBe(false);
+  });
+
+  it('SETS an unfolded container’s child visible, overriding an authored `visible = false`', () => {
+    const nodes = [foldable('FC', false, [label('Contents', { text: 'Volume', visible: false })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const child = result.current.tree[0]!.children[0]!;
+    expect((child.node.properties as { visible?: boolean }).visible).toBe(true);
+  });
+
+  it('leaves a grandchild promoted past a Node2D alone — `cast_to<Control>` never sees it (container.cpp:144)', () => {
+    const nodes = [foldable('FC', true, [node2D('N', {}, { children: [label('Promoted')] })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const promoted = result.current.tree[0]!.children[0]!;
+    expect(promoted.path).toBe('FC/N/Promoted');
+    expect((promoted.node.properties as { visible?: boolean }).visible).toBeUndefined();
+  });
+
+  it('leaves a top_level child alone — `is_set_as_top_level()` is checked first (container.cpp:145)', () => {
+    const nodes = [foldable('FC', true, [label('Floating', { topLevel: true })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const floating = result.current.tree.find((n) => n.path === 'FC/Floating')!;
+    expect((floating.node.properties as { visible?: boolean }).visible).toBeUndefined();
+  });
+
+  it('leaves a CanvasLayer child alone — `cast_to<Control>` fails on a plain Node (container.cpp:144)', () => {
+    const nodes = [foldable('FC', true, [node('Layer', 'CanvasLayer', { properties: { name: 'Layer' } })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const layer = result.current.tree[0]!.children[0]!;
+    expect(layer.node.type).toBe('CanvasLayer');
+    expect((layer.node.properties as { visible?: boolean }).visible).toBeUndefined();
+  });
+
+  it('never un-hides a child the outliner’s eye toggle cleared', () => {
+    const nodes = [foldable('FC', false, [label('Contents')])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <SelectionProvider>
+          <HiddenPathSeeder paths={['FC/Contents']} />
+          {children}
+        </SelectionProvider>
+      ),
+    });
+    expect(result.current.tree[0]!.children[0]!.hidden).toBe(true);
+  });
+
+  // The consequence the property write exists for: `isSortableControl` reads
+  // `visible`, so the write decides whether the child gets a slot at all.
+  function solveFoldable(folded: boolean): ReadonlyMap<string, SolvedControl> {
+    const scene = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="FC" type="FoldableContainer" parent="."]
+layout_mode = 1
+offset_right = 200.0
+offset_bottom = 120.0
+folded = ${folded}
+title = "T"
+
+[node name="Contents" type="ColorRect" parent="FC"]
+layout_mode = 2
+visible = false
+`);
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(
+      () => useBuildSolveTree(scene.nodes, scene.externalResources, scene.internalResources),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+    return solveControlTree(result.current.tree, { x: 0, y: 0, w: 1152, h: 648 }, createSolveContext(nativeTheme(1)));
+  }
+
+  it('gives an unfolded container’s authored-invisible child the inner rect, `size.x` minus both panel margins (foldable_container.cpp:366-368)', () => {
+    // `content_margin` is 4 on every side at scale 1 (`default_theme.cpp`).
+    expect(solveFoldable(false).get('Root/FC/Contents')!.rect.w).toBe(200 - 4 - 4);
+  });
+
+  it('hands a folded container’s child no rect, so the solver’s zero fallback floored at its own minimum is what stands', () => {
+    // A ColorRect's minimum is (0, 0); a child with a text or
+    // `custom_minimum_size` minimum keeps a real rect here and is unobservable
+    // only because the write above cleared its `visible`.
+    expect(solveFoldable(true).get('Root/FC/Contents')!.rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+  });
+
+  it('leaves every other container’s children at their authored `visible`', () => {
+    const box = node('VB', 'VBoxContainer', {
+      properties: { name: 'VB' } as Record<string, unknown>,
+      children: [label('Contents', { visible: false })],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([box], [], []));
+    const child = result.current.tree[0]!.children[0]!;
+    expect((child.node.properties as { visible?: boolean }).visible).toBe(false);
+  });
+});

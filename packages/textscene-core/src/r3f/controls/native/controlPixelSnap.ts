@@ -41,6 +41,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { boolSlotValue } from '../../../godot/index.js';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser.js';
 import type { Vec2 } from './rect';
 
@@ -60,14 +61,21 @@ const SNAP_ROTATION_EPSILON = 0.00001;
  *
  *     GLOBAL_DEF_BASIC("gui/common/snap_controls_to_pixels", true);
  *
- * so the default is ON, and `main/main.cpp`'s
- * `sml->get_root()->set_snap_controls_to_pixels(GLOBAL_GET(…))` is the only
- * thing that ever turns it off. Godot writes the bool unquoted, so the sole
- * disabling form is the literal `false`; a missing key, an empty value or
- * anything else keeps Godot's default rather than inventing a third state.
+ * so the default is ON, and `main/main.cpp:4577-4578`'s
+ *
+ *     bool snap_controls = GLOBAL_GET("gui/common/snap_controls_to_pixels");
+ *     sml->get_root()->set_snap_controls_to_pixels(snap_controls);
+ *
+ * is the only thing that ever turns it off. `_GLOBAL_DEF` leaves an
+ * already-loaded value at whatever type the file wrote
+ * (`project_settings.cpp:1320-1325`), so the `bool` conversion on that first
+ * line is `Variant::booleanize`, `!is_zero()` (`variant_op.cpp:1114-1122`):
+ * `=0` disables the snap exactly as `=false` does, and every non-zero number
+ * enables it. A missing key, an empty value or a spelling no numeric slot
+ * converts keeps Godot's default.
  */
 export function snapControlsToPixelsEnabled(settings: ProjectSettings | null): boolean {
-  return settings?.[SNAP_CONTROLS_TO_PIXELS_SETTING]?.trim() !== 'false';
+  return boolSlotValue(settings?.[SNAP_CONTROLS_TO_PIXELS_SETTING]) !== false;
 }
 
 /**

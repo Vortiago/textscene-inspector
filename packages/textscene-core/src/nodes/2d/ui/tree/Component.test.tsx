@@ -16,14 +16,14 @@ import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/tes
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
-function solveNode(properties: Partial<TreeProperties> = {}): SolveNode {
+function solveNode(properties: Partial<TreeProperties> = {}, rtl = false): SolveNode {
   const node: TscnNode = {
     name: 'MyTree',
     type: 'Tree',
     children: [],
     properties: { name: 'MyTree', ...properties } as TreeProperties,
   };
-  return { ...emptySolveNode(), path: 'MyTree', node };
+  return { ...emptySolveNode(), path: 'MyTree', node, rtl };
 }
 
 function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: number } {
@@ -126,5 +126,35 @@ describe('<Tree> — column header row', () => {
       <Tree {...painterEnv()} solveNode={solveNode({ columns: 0, columnTitlesVisible: true })} rect={RECT} renderOrder={0} />
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(2);
+  });
+});
+
+describe('<Tree> — RTL header row', () => {
+  // tree.cpp:5154-5160 with rect.w 300, panel margin 4/4 and
+  // `treeColumnWidthPx(292, 3, …) === 97`: LTR 4/101/198, each mirrored to
+  // `300 - 97 - x`.
+  async function headerXs(rtl: boolean): Promise<number[]> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <Tree
+        {...painterEnv()}
+        solveNode={solveNode({ columns: 3, columnTitlesVisible: true }, rtl)}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    return renderer.scene
+      .findAllByType('Group')
+      .map((g) => g.instance.position.x)
+      .filter((x, i, arr) => arr.indexOf(x) === i)
+      .sort((a, b) => a - b);
+  }
+
+  // The leading 0 is the painter's own outer `<CanvasItemGroup>`, not a cell.
+  it('walks the header cells from the panel left margin under LTR', async () => {
+    expect(await headerXs(false)).toEqual([0, 4, 101, 198]);
+  });
+
+  it('mirrors every header cell inside the Tree own width under RTL', async () => {
+    expect(await headerXs(true)).toEqual([0, 5, 102, 199]);
   });
 });

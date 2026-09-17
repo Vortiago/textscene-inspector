@@ -136,45 +136,104 @@ describe('progressBarPercentRatio (progress_bar.cpp:149-166)', () => {
 
 describe('progressBarIndeterminateFillRect (progress_bar.cpp:69-110, always the "centre it" frame)', () => {
   it('FILL_TOP_TO_BOTTOM at (100, 32): fill_size=64, ifp=82, rect (0,18,100,14)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 2)).toEqual({ x: 0, y: 18, w: 100, h: 14 });
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 2, false)).toEqual({ x: 0, y: 18, w: 100, h: 14 });
   });
 
   it('FILL_BOTTOM_TO_TOP at (100, 32): the mirror image, rect (0,0,100,14)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 3)).toEqual({ x: 0, y: 0, w: 100, h: 14 });
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 3, false)).toEqual({ x: 0, y: 0, w: 100, h: 14 });
   });
 
   it('FILL_BEGIN_TO_END vs FILL_END_TO_BEGIN at (32, 100) diverge in x (32 is the MINOR axis here)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 0)).toEqual({ x: 18, y: 0, w: 14, h: 100 });
-    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 1)).toEqual({ x: 0, y: 0, w: 14, h: 100 });
+    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 0, false)).toEqual({ x: 18, y: 0, w: 14, h: 100 });
+    expect(progressBarIndeterminateFillRect({ x: 32, y: 100 }, 1, false)).toEqual({ x: 0, y: 0, w: 14, h: 100 });
   });
 
   it('an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode\'s ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)', () => {
-    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 4)).toEqual({ x: 18, y: 0, w: 64, h: 32 });
+    expect(progressBarIndeterminateFillRect({ x: 100, y: 32 }, 4, false)).toEqual({ x: 18, y: 0, w: 64, h: 32 });
   });
 });
 
 describe('progressBarFillRect (progress_bar.cpp:112-147)', () => {
   it('FILL_BEGIN_TO_END grows from the left', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 })).toEqual({ x: 0, y: 0, w: 52, h: 20 });
+    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 0, y: 0, w: 52, h: 20 });
   });
 
   it('FILL_END_TO_BEGIN grows from the right (mirrors FILL_BEGIN_TO_END\'s width, opposite x)', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 1, 0.5, { x: 4, y: 4 })).toEqual({ x: 48, y: 0, w: 52, h: 20 });
+    expect(progressBarFillRect({ x: 100, y: 20 }, 1, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 48, y: 0, w: 52, h: 20 });
   });
 
   it('a zero ratio draws nothing (p <= 0)', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0, { x: 4, y: 4 })).toBeNull();
+    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0, { x: 4, y: 4 }, false)).toBeNull();
   });
 
   it('FILL_TOP_TO_BOTTOM grows downward', () => {
-    expect(progressBarFillRect({ x: 20, y: 100 }, 2, 0.3, { x: 4, y: 6 })).toEqual({ x: 0, y: 0, w: 20, h: 34 });
+    expect(progressBarFillRect({ x: 20, y: 100 }, 2, 0.3, { x: 4, y: 6 }, false)).toEqual({ x: 0, y: 0, w: 20, h: 34 });
   });
 
   it('FILL_BOTTOM_TO_TOP grows upward', () => {
-    expect(progressBarFillRect({ x: 20, y: 100 }, 3, 0.3, { x: 4, y: 6 })).toEqual({ x: 0, y: 66, w: 20, h: 34 });
+    expect(progressBarFillRect({ x: 20, y: 100 }, 3, 0.3, { x: 4, y: 6 }, false)).toEqual({ x: 0, y: 66, w: 20, h: 34 });
   });
 
   it('an out-of-range fill_mode draws as FILL_BEGIN_TO_END (set_fill_mode\'s ERR_FAIL_INDEX refuses the write, progress_bar.cpp:199-203)', () => {
-    expect(progressBarFillRect({ x: 100, y: 20 }, 4, 0.5, { x: 4, y: 4 })).toEqual({ x: 0, y: 0, w: 52, h: 20 });
+    expect(progressBarFillRect({ x: 100, y: 20 }, 4, 0.5, { x: 4, y: 4 }, false)).toEqual({ x: 0, y: 0, w: 52, h: 20 });
+  });
+});
+
+describe('is_layout_rtl() — the fill DIRECTION swap (progress_bar.cpp:82,121)', () => {
+  // `right_to_left = mode == (is_layout_rtl() ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN)`:
+  // RTL does not mirror the rect, it swaps which of the two horizontal fill
+  // modes counts as "from the right", so each mode takes the OTHER mode's rect.
+  it('RTL fills FILL_BEGIN_TO_END from the right — the LTR FILL_END_TO_BEGIN rect', () => {
+    expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 }, true)).toEqual({
+      x: 48,
+      y: 0,
+      w: 52,
+      h: 20,
+    });
+  });
+
+  it('RTL fills FILL_END_TO_BEGIN from the left — the LTR FILL_BEGIN_TO_END rect', () => {
+    expect(progressBarFillRect({ x: 100, y: 20 }, 1, 0.5, { x: 4, y: 4 }, true)).toEqual({
+      x: 0,
+      y: 0,
+      w: 52,
+      h: 20,
+    });
+  });
+
+  it('leaves the two VERTICAL fill modes alone — progress_bar.cpp:128-141 reads no layout direction', () => {
+    expect(progressBarFillRect({ x: 20, y: 100 }, 2, 0.3, { x: 4, y: 6 }, true)).toEqual({
+      x: 0,
+      y: 0,
+      w: 20,
+      h: 34,
+    });
+    expect(progressBarFillRect({ x: 20, y: 100 }, 3, 0.3, { x: 4, y: 6 }, true)).toEqual({
+      x: 0,
+      y: 66,
+      w: 20,
+      h: 34,
+    });
+  });
+
+  it('swaps the indeterminate bar too, on a bar TALLER than it is wide (progress_bar.cpp:82)', () => {
+    // 20x60: fill_size = min(20,60)*2 = 40; the centred `_indeterminate_fill_progress`
+    // is max(20,60)/2 + 40/2 = 50. LTR FILL_BEGIN_TO_END puts the band at
+    // `ifp - fill_size` = 10, so only its first 10px land inside the bar; RTL
+    // puts it at `size.width - ifp` = -30, so only its LAST 10px do. A bar
+    // WIDER than it is tall cannot show this: there `ifp` is w/2 + fill_size/2,
+    // which makes both expressions the same number.
+    expect(progressBarIndeterminateFillRect({ x: 20, y: 60 }, 0, false)).toEqual({
+      x: 10,
+      y: 0,
+      w: 10,
+      h: 60,
+    });
+    expect(progressBarIndeterminateFillRect({ x: 20, y: 60 }, 0, true)).toEqual({
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 60,
+    });
   });
 });

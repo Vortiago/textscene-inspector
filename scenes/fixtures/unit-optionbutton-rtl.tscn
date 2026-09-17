@@ -1,0 +1,46 @@
+; The ONE variable: `layout_direction = 3` on an OptionButton. Godot draws the
+; chevron `arrow_margin` in from the LEADING edge rather than the trailing one
+; (option_button.cpp:124-130), moves Button's internal margin to the opposite
+; side (:139-147), and swaps the constructor's LEFT text alignment to RIGHT
+; (button.cpp:271-275), so the selected item's label hugs the far margin. Both
+; controls select the same item and are the same width, so only the direction
+; can move either piece. `unit-optionbutton` is LTR and no other fixture pairs
+; an OptionButton with a direction, so a regression in the arrow side or the
+; label side is invisible everywhere else.
+;
+; The popup itself is never drawn here — this fixture covers the button's own
+; chrome only.
+
+[gd_scene format=3 uid="uid://unitoptionbuttonrtl"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="OptionButton" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 384.0
+offset_bottom = 84.0
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "Windowed"
+popup/item_0/id = 0
+popup/item_1/text = "Fullscreen"
+popup/item_1/id = 1
+selected = 1
+
+[node name="Rtl" type="OptionButton" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 112.0
+offset_right = 384.0
+offset_bottom = 148.0
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "Windowed"
+popup/item_0/id = 0
+popup/item_1/text = "Fullscreen"
+popup/item_1/id = 1
+selected = 1

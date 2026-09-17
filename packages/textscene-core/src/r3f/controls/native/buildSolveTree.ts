@@ -68,6 +68,8 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { descendsFrom } from '../../../godot/nodeBaseTypes';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
   findSubResource,
@@ -406,7 +408,8 @@ function buildForest(
   internalResources: readonly TscnInternalResource[],
   loader: ResourceLoader | null,
   projectThemeRef: string | undefined,
-  hiddenNodePaths: ReadonlySet<string>
+  hiddenNodePaths: ReadonlySet<string>,
+  layoutDirectionEnv: LayoutDirectionEnv
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
@@ -627,7 +630,25 @@ function buildForest(
      * the slot their nesting gives them (`canvasRootRanges`). One map per
      * canvas, so a node found in it takes that run instead of its parent's.
      */
-    canvasRoots: ReadonlyMap<TscnNode, PaintRange>
+    canvasRoots: ReadonlyMap<TscnNode, PaintRange>,
+    /**
+     * The nearest drawn ancestor Control's own `is_layout_rtl()`, or `null`
+     * where the climb would run off the top of the tree
+     * (`scene/gui/control.cpp:3584-3608`). Passed through every other node type
+     * unchanged, since the climb steps over those rather than stopping at them
+     * — a `Window` is the one exception Godot makes that this walk cannot, as
+     * no Window type is drawn here at all.
+     */
+    inheritedRtl: boolean | null,
+    /**
+     * The `visible` the enclosing container writes onto each of its direct
+     * sortable Control children (`ChildVisibilityFn`), or `undefined` where it
+     * writes none. Applied here rather than left to the container's own
+     * `ContainerLayoutFn`, because Godot's mechanism IS a property write — one
+     * every reader of `visible` (the painter's group, `isSortableControl`,
+     * every ancestor container above it) already honours.
+     */
+    childVisibility: boolean | undefined
   ): WalkResult {
     const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
@@ -665,6 +686,16 @@ function buildForest(
       const ownScope = mergedGroup ? mergedGroup.scope : scope;
 
       const isControl = TWO_D_UI_TYPES.has(collapsed.type);
+
+      // A CanvasLayer counts as `isControl` here without being a Control at
+      // all, so it never states a direction and simply passes one through.
+      const rtl = isControl
+        ? resolveLayoutRtl(
+            (collapsed.properties as ControlProperties).layoutDirection,
+            inheritedRtl,
+            layoutDirectionEnv
+          )
+        : inheritedRtl;
 
       // Godot: theme inheritance BREAKS at a non-Control/Window ancestor
       // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`:
@@ -723,6 +754,19 @@ function buildForest(
         ? false
         : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
       const hidden = ancestorHidden || hiddenNodePaths.has(path);
+      // `Container::as_sortable_control` casts the DIRECT child and rejects a
+      // `top_level` one ahead of every visibility mode (`container.cpp:144-145`),
+      // so the write reaches neither a Control promoted past a Node2D nor a
+      // top_level one. `isControl` also covers `CanvasLayer`, which is no
+      // Control at all.
+      const writtenVisible =
+        childVisibility !== undefined && isControl && !topLevel && !isCanvasLayerType(collapsed.type)
+          ? childVisibility
+          : undefined;
+      const live =
+        writtenVisible === undefined
+          ? collapsed
+          : { ...collapsed, properties: { ...collapsed.properties, visible: writtenVisible } };
       // A CanvasLayer is a canvas of its own, so its roots are indexed by its
       // OWN counter (`canvas_layer.cpp:261-267`) over its own children.
       const childCanvasRoots = isCanvasLayerType(collapsed.type)
@@ -750,7 +794,9 @@ function buildForest(
           childSkippedAncestors,
           childCanvasChainBroken,
           hidden,
-          childCanvasRoots
+          childCanvasRoots,
+          rtl,
+          isControl ? controlSolverRegistry.childVisibility(collapsed) : undefined
         );
         children.push(...walked.nodes);
         childHoisted.push(...walked.hoisted);
@@ -775,7 +821,7 @@ function buildForest(
         const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
         const solved: SolveNode = {
           path,
-          node: collapsed,
+          node: live,
           children: isBoundary ? [...children, ...childHoisted] : children,
           paintRange,
           paintSequence: allocated.self,
@@ -791,6 +837,7 @@ function buildForest(
           // it — unlike a Control merely hoisted for anchoring, whose item
           // still hangs under the CanvasItem above it.
           skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
+          rtl: rtl ?? layoutDirectionEnv.rootRtl,
           hidden,
           styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
           textureSize: texture.size,
@@ -825,7 +872,9 @@ function buildForest(
     null,
     false,
     false,
-    canvasRootRanges(nodes, rootRanges)
+    canvasRootRanges(nodes, rootRanges),
+    null,
+    undefined
   );
   // The viewport's own canvas is the last adopter — `_enter_canvas` finds no
   // CanvasLayer above and parents at `find_world_2d()->get_canvas()`
@@ -852,7 +901,13 @@ export function useBuildSolveTree(
   // ancestor walk before the built-in default (`ProjectSettingsContext`'s
   // safe-default value has no `settings`, so this is `undefined` without a
   // provider, matching every other un-set project setting).
-  const projectThemeRef = useProjectSettings().settings?.['gui/theme/custom']?.trim() || undefined;
+  const projectSettings = useProjectSettings().settings;
+  const projectThemeRef = projectSettings?.['gui/theme/custom']?.trim() || undefined;
+  // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches on.
+  const layoutDirectionEnv = useMemo(
+    () => projectLayoutDirectionEnv(projectSettings),
+    [projectSettings]
+  );
 
   useEffect(() => {
     const bump = () => setGeneration((g) => g + 1);
@@ -899,7 +954,8 @@ export function useBuildSolveTree(
         internalResources,
         loader,
         projectThemeRef,
-        hiddenNodePaths
+        hiddenNodePaths,
+        layoutDirectionEnv
       ),
     // `generation` is an intentional cache-buster: it increments each time a
     // scene/texture/resource-file/theme/font load or failure lands so the
@@ -907,7 +963,7 @@ export function useBuildSolveTree(
     // value is not read inside the callback — mirrors `useLiveSceneTree.ts`'s
     // identical `version` pattern.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, externalResources, internalResources, loader, projectThemeRef, hiddenNodePaths, generation]
+    [nodes, externalResources, internalResources, loader, projectThemeRef, hiddenNodePaths, layoutDirectionEnv, generation]
   );
 
   // Kick off loads for anything the walk found uncached — after render, not

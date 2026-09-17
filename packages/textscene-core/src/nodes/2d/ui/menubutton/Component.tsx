@@ -65,7 +65,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
   const props = painterView<MenuButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state);
+  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state, solveNode.rtl);
 
   const clippingPlanes = useControlClipPlanes();
 
@@ -120,6 +120,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
         expandIcon: props.expandIcon === true,
         iconNaturalSize,
         hasText,
+        rtl: solveNode.rtl,
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
@@ -137,6 +138,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
       hasText,
       layout,
       theme.separation,
+      solveNode.rtl,
     ]
   );
 

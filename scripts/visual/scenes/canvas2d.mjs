@@ -487,4 +487,78 @@ export const CANVAS_2D_SCENES = [
     mode: '2d',
   },
   { name: 'graph-edit-zoom-bound-order', file: 'unit-graph-edit-zoom-bound-order.tscn', mode: '2d' },
+  // The ONE variable per scene: `layout_direction`. RTL both mirrors a Control's
+  // own rect inside its parent (control.cpp:1785) and reverses a box
+  // container's children (box_container.cpp:48) — two mechanisms one scene
+  // cannot tell apart, so the bars have three different widths and the LTR row
+  // sits above the RTL one. The second scene moves the flag on a CHILD of an
+  // RTL Control, which is the only place the inherit climb is visible.
+  // Measured against Godot 4.6.3 at `--mode 2d` before their baselines were
+  // written: 0.017 and 0.000 of 255. The first residual is the two green bars
+  // at max 1/255 — `0.7 x 255 = 178.5`, where Godot's own vulkan and opengl3
+  // backends disagree with each other.
+  {
+    name: 'control-layout-direction-rtl',
+    file: 'unit-control-layout-direction-rtl.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'control-layout-direction-inherit',
+    file: 'unit-control-layout-direction-inherit.tscn',
+    mode: '2d',
+  },
+  // Every scene below pairs an LTR node with an otherwise identical RTL twin in
+  // one frame, so a mirror that fails shows as the two halves disagreeing rather
+  // than as a whole-frame shift. Each was measured against Godot 4.6.3 at
+  // `--mode 2d` before its baseline was written, and each was checked band by
+  // band: the LTR and RTL residuals are the same size, which a 1px misplacement
+  // on one side would break. `layout_direction` reaches a widget's internal
+  // arrangement, which is why one container scene cannot stand in for the rest.
+  { name: 'grid-container-rtl', file: 'unit-grid-container-rtl.tscn', mode: '2d' },
+  { name: 'flow-container-rtl', file: 'unit-flow-container-rtl.tscn', mode: '2d' },
+  { name: 'flow-container-rtl-reverse-fill', file: 'unit-flow-container-rtl-reverse-fill.tscn', mode: '2d' },
+  { name: 'aspect-ratio-container-rtl', file: 'unit-aspect-ratio-container-rtl.tscn', mode: '2d' },
+  { name: 'margin-container-rtl', file: 'unit-margin-container-rtl.tscn', mode: '2d' },
+  { name: 'split-container-rtl', file: 'unit-split-container-rtl.tscn', mode: '2d' },
+  { name: 'scroll-container-rtl', file: 'unit-scroll-container-rtl.tscn', mode: '2d' },
+  { name: 'foldable-container-rtl', file: 'unit-foldable-container-rtl.tscn', mode: '2d' },
+  { name: 'tab-bar-rtl', file: 'unit-tab-bar-rtl.tscn', mode: '2d' },
+  { name: 'tab-bar-rtl-scroll', file: 'unit-tab-bar-rtl-scroll.tscn', mode: '2d' },
+  { name: 'tab-container-rtl', file: 'unit-tab-container-rtl.tscn', mode: '2d' },
+  { name: 'menu-bar-rtl', file: 'unit-menu-bar-rtl.tscn', mode: '2d' },
+  // The button family mirrors an icon side and a stylebox key, not a rect, so
+  // each type needs its own scene: CheckBox and CheckButton swap which edge the
+  // check sits on, OptionButton its arrow, LinkButton its text origin.
+  { name: 'button-rtl', file: 'unit-button-rtl.tscn', mode: '2d' },
+  { name: 'checkbox-rtl', file: 'unit-checkbox-rtl.tscn', mode: '2d' },
+  { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn', mode: '2d' },
+  { name: 'optionbutton-rtl', file: 'unit-optionbutton-rtl.tscn', mode: '2d' },
+  { name: 'link-button-rtl', file: 'unit-link-button-rtl.tscn', mode: '2d' },
+  // The text family places runs on the resolved direction without reordering
+  // them. Two of these pin an ABSENCE — Godot does NOT mirror a FILL label or a
+  // RichTextLabel line, because those arms read the paragraph direction, which
+  // is dead at `text_direction`'s AUTO default. They guard against re-adding a
+  // mirror the engine does not have.
+  { name: 'label-rtl-alignment', file: 'unit-label-rtl-alignment.tscn', mode: '2d' },
+  { name: 'label-rtl-fill-autowrap', file: 'unit-label-rtl-fill-autowrap.tscn', mode: '2d' },
+  { name: 'label-rtl-visible-chars-auto', file: 'unit-label-rtl-visible-chars-auto.tscn', mode: '2d' },
+  { name: 'line-edit-rtl', file: 'unit-line-edit-rtl.tscn', mode: '2d' },
+  { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn', mode: '2d' },
+  { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn', mode: '2d' },
+  { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn', mode: '2d' },
+  { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn', mode: '2d' },
+  // Lists, ranges and the picker. The Tree scene is 100px wide on purpose: the
+  // column division leaves a remainder there, and a width that divides evenly
+  // makes the RTL row identical to the LTR one and proves nothing.
+  { name: 'item-list-rtl', file: 'unit-item-list-rtl.tscn', mode: '2d' },
+  { name: 'item-list-rtl-icon-top', file: 'unit-item-list-rtl-icon-top.tscn', mode: '2d' },
+  { name: 'tree-rtl', file: 'unit-tree-rtl.tscn', mode: '2d' },
+  { name: 'hslider-rtl', file: 'unit-hslider-rtl.tscn', mode: '2d' },
+  { name: 'progress-bar-rtl', file: 'unit-progress-bar-rtl.tscn', mode: '2d' },
+  { name: 'color-picker-rtl', file: 'unit-color-picker-rtl.tscn', mode: '2d' },
+  // Two LTR alignment scenes, both from defects found while porting RTL. The
+  // fractional-box one needs a NON-integer box width: at a whole width the
+  // ceiled and raw line extents give the same offset, so it would prove nothing.
+  { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },
+  { name: 'rich-text-label-fractional-box', file: 'unit-rich-text-label-fractional-box.tscn', mode: '2d' },
 ];

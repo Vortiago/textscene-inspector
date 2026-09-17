@@ -33,6 +33,7 @@ import {
   treeTitleButtonHeightPx,
   treeContentRect,
   treeColumnWidthPx,
+  treeTitleButtonX,
 } from './nativeSolver';
 import type { TreeProperties } from './types';
 
@@ -53,7 +54,10 @@ export function Tree({ solveNode, tint, rect, renderOrder, theme }: NativeContro
       <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {props.columnTitlesVisible &&
         Array.from({ length: columns }, (_, i) => (
-          <CanvasItemGroup key={i} position={[contentRect.x + i * columnWidthPx, -panelBox.contentMargin.top, 0]}>
+          <CanvasItemGroup
+            key={i}
+            position={[treeTitleButtonX(i, contentRect.x, columnWidthPx, rect.w, solveNode.rtl), -panelBox.contentMargin.top, 0]}
+          >
             <StyleBoxQuad
               styleBox={titleButtonBox}
               color={tint.own}

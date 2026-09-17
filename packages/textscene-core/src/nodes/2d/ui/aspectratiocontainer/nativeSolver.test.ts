@@ -184,3 +184,34 @@ describe('aspectRatioContainerLayout', () => {
     expect(rects.has('t1')).toBe(true);
   });
 });
+
+describe('aspectRatioContainerLayout under RTL', () => {
+  it('mirrors the aligned rect against the container width (aspect_ratio_container.cpp:164-168)', () => {
+    // `if (rtl) fit_child_in_rect(c, Rect2(Vector2(size.x - offset.x - child_size.x, offset.y), child_size))`.
+    // STRETCH_FIT, ratio 1, size 100x40 -> scale_factor = min(100/1, 40/1) = 40,
+    // child_size = (40, 40). ALIGNMENT_BEGIN horizontally -> offset.x = 0, so the
+    // RTL x is 100 - 0 - 40 = 60; vertical CENTER keeps offset.y = (40-40)*0.5 = 0.
+    const child = leaf('c1');
+    const a = { ...aspect({ stretchMode: 2, ratio: 1, alignmentHorizontal: 0 }, [child]), rtl: true };
+    const rects = asMap(
+      aspectRatioContainerLayout(a, childEntries([child]), { x: 0, y: 0, w: 100, h: 40 }, ctx())
+    );
+    expect(rects.get('c1')).toEqual({ x: 60, y: 0, w: 40, h: 40 });
+  });
+
+  it("hands its own rtl to fit_child_in_rect, so a SHRINK_END child sits at the mirrored rect's left edge (container.cpp:99,105)", () => {
+    // `r.position.x += rtl ? 0 : (p_rect.size.width - minsize.width)`.
+    // STRETCH_FIT ratio 1 on 100x40 gives the aspect rect (60, 0, 40, 40) as
+    // above; SIZE_SHRINK_END (8) without SIZE_FILL adds nothing under RTL.
+    const child = leaf('c1', {
+      customMinimumSize: { x: 10, y: 10 },
+      sizeFlagsHorizontal: 8,
+      sizeFlagsVertical: 8,
+    });
+    const a = { ...aspect({ stretchMode: 2, ratio: 1, alignmentHorizontal: 0 }, [child]), rtl: true };
+    const rects = asMap(
+      aspectRatioContainerLayout(a, childEntries([child]), { x: 0, y: 0, w: 100, h: 40 }, ctx())
+    );
+    expect(rects.get('c1')).toEqual({ x: 60, y: 30, w: 10, h: 10 });
+  });
+});

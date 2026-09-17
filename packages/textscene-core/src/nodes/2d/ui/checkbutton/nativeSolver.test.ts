@@ -109,21 +109,21 @@ describe('checkButtonTextTheme', () => {
   });
 });
 
-describe('resolveCheckButtonIconKey (check_button.cpp:112-142)', () => {
+describe('resolveCheckButtonIconKey (check_button.cpp:105-127)', () => {
   it('unchecked, not disabled -> unchecked', () => {
-    expect(resolveCheckButtonIconKey({} as CheckButtonProperties)).toBe('unchecked');
+    expect(resolveCheckButtonIconKey({} as CheckButtonProperties, false)).toBe('unchecked');
   });
 
   it('checked, not disabled -> checked', () => {
-    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties)).toBe('checked');
+    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, false)).toBe('checked');
   });
 
   it('unchecked, disabled -> uncheckedDisabled', () => {
-    expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties)).toBe('uncheckedDisabled');
+    expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties, false)).toBe('uncheckedDisabled');
   });
 
   it('checked, disabled -> checkedDisabled (disabled wins over checked for the icon variant)', () => {
-    expect(resolveCheckButtonIconKey({ buttonPressed: true, disabled: true } as CheckButtonProperties)).toBe(
+    expect(resolveCheckButtonIconKey({ buttonPressed: true, disabled: true } as CheckButtonProperties, false)).toBe(
       'checkedDisabled'
     );
   });
@@ -223,6 +223,7 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     hasText: true,
     textAlignment: 0,
     textNaturalSize: { x: 90, y: 26 },
+    rtl: false,
   };
 
   it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
@@ -244,6 +245,35 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     expect(textOffset!.x).toBe(12);
   });
 
+  it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
+    // textBoxWidth = 102, length 91: floor(11/2) = 5, not 5.5. x = 6 + 5.
+    const { textOffset } = layoutCheckButtonContent({
+      ...BASE,
+      textAlignment: 1,
+      textNaturalSize: { x: 91, y: 26 },
+    });
+    expect(textOffset!.x).toBe(11);
+  });
+
+  it('CENTER does not shift an OVERFLOWING label at all (text_paragraph.cpp:902)', () => {
+    const { textOffset } = layoutCheckButtonContent({
+      ...BASE,
+      textAlignment: 1,
+      textNaturalSize: { x: 200, y: 26 },
+    });
+    expect(textOffset!.x).toBe(6);
+  });
+
+  it('RIGHT hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
+    // rect 150.5 -> textBoxWidth 102.5 -> text_buf_width 103; 103 - 90 = 13.
+    const { textOffset } = layoutCheckButtonContent({
+      ...BASE,
+      rectSize: { x: 150.5, y: 28 },
+      textAlignment: 2,
+    });
+    expect(textOffset!.x).toBeCloseTo(19, 10);
+  });
+
   it('RIGHT-aligned text sits flush against the reserved icon gap', () => {
     const { textOffset } = layoutCheckButtonContent({ ...BASE, textAlignment: 2 });
     // shift = 102-90=12; x=6+12=18.
@@ -259,5 +289,84 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   it('check_v_offset shifts the icon vertically', () => {
     const { iconRect } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
     expect(iconRect.y).toBe(9);
+  });
+});
+
+/**
+ * `CheckButton::_notification`'s RTL arms. The toggle changes side —
+ *
+ *     if (rtl) { ofs.x = theme_cache.normal_style->get_margin(SIDE_LEFT); }   // check_button.cpp:135
+ *
+ * — the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT
+ * (`:98-104`), and the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:174`)
+ * becomes RIGHT through `Button::_notification`'s swap
+ * (`button.cpp:271-275`).
+ */
+describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
+  const BASE = {
+    rectSize: { x: 150, y: 28 },
+    marginX: 6,
+    marginY: 4,
+    iconSize: { x: 32, y: 16 },
+    checkVOffset: 0,
+    hSeparation: 4,
+    hasText: true,
+    textAlignment: 0,
+    textNaturalSize: { x: 90, y: 26 },
+    rtl: true,
+  };
+
+  it('draws the toggle at the left content margin, vertically unchanged', () => {
+    const { iconRect } = layoutCheckButtonContent(BASE);
+    expect(iconRect).toEqual({ x: 6, y: 6, w: 32, h: 16 });
+  });
+
+  it('lays LEFT-aligned text out at the far end of the box right of the toggle', () => {
+    const { textOffset } = layoutCheckButtonContent(BASE);
+    // reserved = 32+4 = 36; drawable = 150-12-36 = 102; RIGHT shift = 102-90 = 12.
+    expect(textOffset!.x).toBe(6 + 36 + 12);
+    expect(textOffset!.y).toBe(1);
+  });
+
+  it('leaves CENTER alone and swaps RIGHT to flush against the toggle', () => {
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).textOffset!.x).toBe(6 + 36 + 6);
+    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).textOffset!.x).toBe(6 + 36);
+  });
+});
+
+/**
+ * `CheckButton::_notification` and `get_icon_size` both read the
+ * `*_mirrored` icon pair under RTL (`check_button.cpp:39-46`, `:109-120`) —
+ * four separate Theme entries the default theme fills with the
+ * `toggle_*_mirrored` SVGs (`default_theme.cpp:332-335`), not a flip of the
+ * plain ones.
+ */
+describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () => {
+  it('picks the mirrored twin of whichever state is showing', () => {
+    expect(resolveCheckButtonIconKey({} as CheckButtonProperties, true)).toBe('uncheckedMirrored');
+    expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, true)).toBe('checkedMirrored');
+    expect(resolveCheckButtonIconKey({ disabled: true } as CheckButtonProperties, true)).toBe(
+      'uncheckedDisabledMirrored'
+    );
+    expect(
+      resolveCheckButtonIconKey({ buttonPressed: true, disabled: true } as CheckButtonProperties, true)
+    ).toBe('checkedDisabledMirrored');
+  });
+
+  it('keeps the plain variants under LTR', () => {
+    expect(resolveCheckButtonIconKey({} as CheckButtonProperties, false)).toBe('unchecked');
+  });
+});
+
+describe('checkButtonMinimumSize — RTL sizes off the mirrored icon pair', () => {
+  it('widens on a themed unchecked_mirrored, and ignores it under LTR', () => {
+    const slots = { textureSlots: { unchecked_mirrored: { x: 40, y: 20 } } };
+    expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: true }, ctx())).toEqual({ x: 52, y: 28 });
+    expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: false }, ctx())).toEqual({ x: 44, y: 24 });
+  });
+
+  it('ignores a themed plain unchecked under RTL', () => {
+    const slots = { textureSlots: { unchecked: { x: 40, y: 20 } } };
+    expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: true }, ctx())).toEqual({ x: 44, y: 24 });
   });
 });

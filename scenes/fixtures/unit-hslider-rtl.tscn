@@ -1,0 +1,34 @@
+; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower HSlider.
+;
+; Under RTL, `Slider::_notification`'s horizontal arm reverses the ratio before
+; it truncates (slider.cpp:331-339,363): the `grabber_area` fills from the
+; RIGHT edge inward and the grabber icon travels from the right. The track and
+; the ticks stay put. `unit-hslider` and `unit-vslider` are both LTR, and no
+; other scene draws a Slider under a layout direction at all.
+;
+; Both rows are 120 wide at `value = 30`, so the grabber travel (120 - 16) is
+; 104 and BOTH sides land on a fractional product (31.2 and 72.8). A render
+; that mirrored the LTR rect instead of reversing the ratio lands one pixel out
+; on each, which a round travel would hide.
+
+[gd_scene format=3 uid="uid://unithsliderrtl"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="HSlider" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 184.0
+offset_bottom = 64.0
+value = 30.0
+
+[node name="Rtl" type="HSlider" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 96.0
+offset_right = 184.0
+offset_bottom = 112.0
+value = 30.0

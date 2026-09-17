@@ -1,0 +1,33 @@
+; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower ProgressBar.
+;
+; Under RTL, ProgressBar swaps which of the two horizontal fill modes counts as
+; right-to-left (progress_bar.cpp:121), so the default FILL_BEGIN_TO_END fills
+; from the right edge instead of the left. The percentage label is centred by
+; its own arithmetic and must NOT move. `unit-progress-bar` is a vertical,
+; indeterminate bar, so neither the horizontal fill nor the label is under a
+; layout direction anywhere else.
+;
+; `value = 30` keeps the filled band clearly shorter than the track, so which
+; end it grows from reads at a glance rather than from a pixel of chrome.
+
+[gd_scene format=3 uid="uid://unitprogressbarrtl"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="ProgressBar" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 264.0
+offset_bottom = 80.0
+value = 30.0
+
+[node name="Rtl" type="ProgressBar" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 96.0
+offset_right = 264.0
+offset_bottom = 128.0
+value = 30.0

@@ -154,8 +154,13 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   return (
     <>
+      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
+          doc), so a box drawn at an offset INSIDE this control needs that
+          offset from the group around it. */}
       {drawsPanel && (
-        <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+        <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
+          <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
+        </CanvasItemGroup>
       )}
       <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebarBand.rect} renderOrder={renderOrder} />
 

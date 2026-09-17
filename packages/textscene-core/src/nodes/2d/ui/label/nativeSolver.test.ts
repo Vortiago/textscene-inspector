@@ -26,6 +26,7 @@ import { panelContainerLayout, panelContainerMinimumSize } from '../panelcontain
 import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/boxContainerSolver';
 import type { LabelProperties } from './types';
 import { shapeText, AutowrapMode, type TextLayoutResult, type TextLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
 import {
   labelMinimumSize,
   labelShapingWidthPx,
@@ -1007,5 +1008,85 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
     const truncated = minSize(node({ text: 'AB', autowrapMode: 0, visibleCharacters: 1 }), ctx());
     // 'A' alone: ceil(1354*16/2048) = 11, narrower than 'AB's 22.
     expect(truncated.x).toBeCloseTo(11, 6);
+  });
+});
+
+describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
+  const FONT_SIZE = 16;
+
+  function lineOfWidth(widthPx: number) {
+    const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
+    return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
+  }
+
+  function originAt(alignment: number, rtl: boolean): number {
+    return layoutLabelLines(lineOfWidth(70), 200, 100, alignment, undefined, undefined, FONT_SIZE, { rtl })[0]!.x;
+  }
+
+  it('H_LEFT takes the trailing edge under RTL (:481-486)', () => {
+    // `offset.x = int(size.width - style->get_margin(SIDE_RIGHT) - line_size.width)`,
+    // the margin being 0 for Label's StyleBoxEmpty — the SAME value LTR H_RIGHT gets.
+    expect(originAt(0, true)).toBe(130);
+    expect(originAt(0, false)).toBe(0);
+  });
+
+  it('H_RIGHT takes style->get_offset().x — zero — under RTL (:493-497)', () => {
+    expect(originAt(2, true)).toBe(0);
+    expect(originAt(2, false)).toBe(130);
+  });
+
+  it('H_CENTER carries no RTL arm (:488-490)', () => {
+    expect(originAt(1, true)).toBe(originAt(1, false));
+  });
+
+  // A line the jst_flags skip keeps its own width, so FILL's own arm is the
+  // only thing that could move it. WORD_BOUND|SKIP_LAST_LINE without
+  // DO_NOT_SKIP_SINGLE_LINE leaves this single line unstretched.
+  const UNJUSTIFIED_FLAGS = JustificationFlag.WORD_BOUND | JustificationFlag.SKIP_LAST_LINE;
+
+  it('H_FILL keeps every line at x 0 under RTL — its own arm reads the PARAGRAPH direction (:472-478)', () => {
+    // `if (rtl && autowrap_mode != AUTOWRAP_OFF)`, where `rtl` is
+    // `shaped_text_get_inferred_direction` (:470), not `rtl_layout` (:471).
+    // `text_direction` decides that, and its default is TEXT_DIRECTION_AUTO
+    // (`label.h:70`) — NOT INHERITED — so `:179` hands the TextServer
+    // DIRECTION_AUTO and a Latin paragraph infers LTR
+    // (`text_server_adv.cpp:7241-7247`).
+    const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
+      rtl: true,
+    });
+    expect(placements[0]!.x).toBe(0);
+  });
+});
+
+describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
+  it('VC_GLYPHS_AUTO reveals from the BACK under RTL layout', () => {
+    // `trim_glyphs_rtl = ... || ((behavior == VC_GLYPHS_AUTO) && rtl_layout)` —
+    // AUTO resolves to the layout's own direction, so the SAME budget hides the
+    // opposite end from the LTR case.
+    const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_AUTO,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+      rtl: true,
+    });
+    expect(l1!.glyphs.length).toBe(0);
+    expect(l2!.glyphs.length).toBe(4);
+  });
+
+  it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
+    const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_LTR,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+      rtl: true,
+    });
+    expect(ltr[0]!.glyphs.length).toBe(4);
+    const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
+      behavior: VC_GLYPHS_RTL,
+      visibleChars: undefined,
+      visibleRatio: 0.5,
+      rtl: false,
+    });
+    expect(rtlBehavior[0]!.glyphs.length).toBe(0);
   });
 });

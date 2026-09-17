@@ -48,3 +48,10 @@ Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignm
 `flat` and `expand_icon` become `false` for any value that does not read as `true`, with
 no warning. The three alignments go through `parseOptionalInt`, so a malformed value
 becomes `undefined` and the render default applies.
+
+## Known limitations
+
+- **Approximated** The label's paragraph direction is not applied, so under
+  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
+  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  icon and the chrome sit on does follow the layout direction.

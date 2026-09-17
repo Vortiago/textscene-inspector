@@ -212,3 +212,20 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
     expect(solved.get('Panel/Child')?.rect).toEqual({ x: 10, y: 6, w: 180, h: 88 });
   });
 });
+
+describe('panelContainerLayout under RTL', () => {
+  it('hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the content rect trailing edge (container.cpp:99,109)', () => {
+    // PanelContainer has no RTL branch of its own (`panel_container.cpp` calls
+    // `is_layout_rtl()` nowhere); the flag reaches the child through
+    // `Container::fit_child_in_rect`.
+    const child = solveNode('Panel/Child', {
+      customMinimumSize: { x: 40, y: 20 },
+      sizeFlagsHorizontal: 0,
+      sizeFlagsVertical: 0,
+    });
+    const n = { ...solveNode('Panel', {}, [child], { panel: styleBox() }), rtl: true };
+    const children = [{ node: child, minSize: { x: 40, y: 20 } }];
+    const out = rects(panelContainerLayout(n, children, { x: 0, y: 0, w: 200, h: 100 }, ctx()));
+    expect(out.get('Panel/Child')).toEqual({ x: 160, y: 0, w: 40, h: 20 });
+  });
+});

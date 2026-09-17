@@ -284,8 +284,15 @@ function rectIntersection(a: Rect2, b: Rect2): Rect2 {
  * — the setter refuses the write), so it draws as `FILL_BEGIN_TO_END`. `null`
  * only for a zero-area result — a `draw_style_box` at a zero-size rect draws
  * nothing observable.
+ *
+ * `rtl` swaps which of the two horizontal modes counts as right-to-left
+ * (`:82`), so each takes the other's band rather than the band being mirrored.
  */
-export function progressBarIndeterminateFillRect(size: Vec2, fillMode: number | undefined): Rect2 | null {
+export function progressBarIndeterminateFillRect(
+  size: Vec2,
+  fillMode: number | undefined,
+  rtl: boolean
+): Rect2 | null {
   const mode = normalizeProgressBarFillMode(fillMode);
   const fillSize = Math.min(size.x, size.y) * 2;
   // `:75` — the "centre it" value, recomputed fresh every draw in this
@@ -297,8 +304,7 @@ export function progressBarIndeterminateFillRect(size: Vec2, fillMode: number | 
   switch (mode) {
     case FILL_BEGIN_TO_END:
     case FILL_END_TO_BEGIN: {
-      // `is_layout_rtl()` is always false in this previewer (LTR-only).
-      const rightToLeft = mode === FILL_END_TO_BEGIN;
+      const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
       if (ifp > size.x + fillSize) ifp = rightToLeft ? -fillSize : 0;
       const x = rightToLeft ? size.x - ifp : ifp - fillSize;
       return clampToZeroArea(rectIntersection({ x, y: 0, w: fillSize, h: size.y }, full));
@@ -327,12 +333,16 @@ function clampToZeroArea(rect: Rect2): Rect2 | null {
  * reaches `mode` as-is. `fillMinimumSize` is
  * `theme_cache.fill_style->get_minimum_size()` on the FILL axis only —
  * `contentMarginSize(fillStyleBox)`'s `.x`/`.y`.
+ *
+ * `rtl` swaps which of the two horizontal modes counts as right-to-left
+ * (`:121`); the two vertical modes read no layout direction at all.
  */
 export function progressBarFillRect(
   size: Vec2,
   fillMode: number | undefined,
   ratio: number,
-  fillMinimumSize: Vec2
+  fillMinimumSize: Vec2,
+  rtl: boolean
 ): Rect2 | null {
   const mode = normalizeProgressBarFillMode(fillMode);
   switch (mode) {
@@ -340,8 +350,7 @@ export function progressBarFillRect(
     case FILL_END_TO_BEGIN: {
       const mp = fillMinimumSize.x;
       const p = Math.round(ratio * (size.x - mp));
-      // `is_layout_rtl()` is always false in this previewer (LTR-only).
-      const rightToLeft = mode === FILL_END_TO_BEGIN;
+      const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
       if (p <= 0) return null;
       if (rightToLeft) {
         const pRemaining = Math.round((1 - ratio) * (size.x - mp));

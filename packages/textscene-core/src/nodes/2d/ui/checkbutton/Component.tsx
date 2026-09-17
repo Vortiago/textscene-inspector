@@ -1,7 +1,8 @@
 /**
  * `<CheckButton>` — the native (WebGL canvas) painter for `CheckButton`: a
- * toggle-switch icon (always drawn, flush against the RIGHT content margin —
- * unlike CheckBox's LEFT-anchored check glyph) followed by the label text —
+ * toggle-switch icon (always drawn, flush against the content margin on the
+ * side layout direction puts it — opposite CheckBox's check glyph) beside the
+ * label text —
  * NO StyleBox chrome mesh at all, CheckButton's own StyleBoxes all being the
  * SAME `StyleBoxEmpty` (`nativeSolver.ts`'s own doc). Draws the vendored
  * theme icons (`themeIcons.ts`'s `CHECK_BUTTON_ICONS`).
@@ -60,10 +61,14 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const clippingPlanes = useControlClipPlanes();
 
   // --- Icon: always drawn, on/off per button_pressed + disabled -----------
-  const iconKey = resolveCheckButtonIconKey(props);
+  const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
   const iconTexture = useNodeIcon(solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]], CHECK_BUTTON_ICONS[iconKey]);
   const iconSize = useMemo(
-    () => fitIconSize(checkButtonIconNaturalSize(solveNode, props.disabled === true), checkButtonIconMaxWidth(solveNode.constants)),
+    () =>
+      fitIconSize(
+        checkButtonIconNaturalSize(solveNode, props.disabled === true, solveNode.rtl),
+        checkButtonIconMaxWidth(solveNode.constants)
+      ),
     [solveNode, props.disabled]
   );
 
@@ -97,11 +102,12 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
         hasText,
         textAlignment: props.alignment ?? CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
+        rtl: solveNode.rtl,
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
       }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment]
+    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
 
   return (

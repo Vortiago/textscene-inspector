@@ -19,7 +19,9 @@
  * All-float (`Size2`, not `Size2i`) — unlike GridContainer/FlowContainer,
  * nothing here truncates.
  *
- * RTL out of scope (`native/controlRectSolver.ts`'s own note).
+ * RTL mirrors the aligned rect against the container's own width
+ * (`aspect_ratio_container.cpp:164-168`) and reaches `fit_child_in_rect`'s own
+ * RTL arm (`container.cpp:99,105,109`).
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -100,6 +102,7 @@ controlSolverRegistry.registerMinimumSize('AspectRatioContainer', aspectRatioCon
  */
 export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const p = props(n);
+  const rtl = n.rtl;
   const ratio = p.ratio ?? 1.0;
   const stretchMode = p.stretchMode ?? STRETCH_FIT;
   const alignH = p.alignmentHorizontal ?? ALIGNMENT_CENTER; // aspect_ratio_container.h:59
@@ -147,9 +150,13 @@ export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, conte
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 
+    // `aspect_ratio_container.cpp:164-168` — the aligned x is measured from the
+    // trailing edge instead, the whole container width away.
+    const x = rtl ? size.x - offsetX - childW : offsetX;
+
     out.set(
       child.path,
-      fitChildInRect({ x: offsetX, y: offsetY, w: childW, h: childH }, minSize, hFlags, vFlags)
+      fitChildInRect({ x, y: offsetY, w: childW, h: childH }, minSize, hFlags, vFlags, rtl)
     );
   }
   return out;

@@ -101,6 +101,28 @@ describe('spinBoxLayout', () => {
     const layout = spinBoxLayout({ x: 100.9, y: 29.9 }, 16);
     expect(layout.fieldRect.h).toBe(29);
   });
+
+  it('puts the buttons block on the LEFT under RTL layout (spin_box.cpp:403,409)', () => {
+    // `buttons_left = is_layout_rtl() ? 0 : size.width - buttons_width` (:403) and
+    // `field_and_buttons_separator_left = is_layout_rtl() ? buttons_width : size.width -
+    // buttons_block_width` (:409). Same widths as the LTR case above, mirrored ends.
+    const layout = spinBoxLayout({ x: 100, y: 30 }, 16, true);
+    expect(layout.upRect).toEqual({ x: 0, y: 0, w: 16, h: 15 });
+    expect(layout.downRect).toEqual({ x: 0, y: 15, w: 16, h: 15 });
+    expect(layout.fieldAndButtonsSeparatorRect).toEqual({ x: 16, y: 0, w: 2, h: 30 });
+  });
+
+  it('mirrors the internal field rect under RTL layout (spin_box.cpp:394-395, control.cpp:1785-1787)', () => {
+    // The field is the internal LineEdit's full-rect preset at offsets [0, -block]
+    // (:394-395), so its own `_size_changed` mirror moves it to
+    // `parent_width - x - w` — the far side of the buttons block.
+    const layout = spinBoxLayout({ x: 100, y: 30 }, 16, true);
+    expect(layout.fieldRect).toEqual({ x: 18, y: 0, w: 82, h: 30 });
+  });
+
+  it('leaves the field rect empty and pinned to the right edge when the rect is narrower than the buttons block under RTL (error path)', () => {
+    expect(spinBoxLayout({ x: 10, y: 30 }, 16, true).fieldRect).toEqual({ x: 10, y: 0, w: 0, h: 30 });
+  });
 });
 
 describe('rangeStepDecimals', () => {

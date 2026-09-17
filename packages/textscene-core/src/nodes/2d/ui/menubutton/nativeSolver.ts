@@ -77,13 +77,13 @@ export function menuButtonTextTheme(
 /**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`) — the
  * IDENTICAL math `button/nativeSolver.ts`'s `buttonMinimumSize` ports, minus
- * `align_to_largest_stylebox` and RTL/clip/autowrap sizing (same omissions,
- * same reasons — see that module's own doc).
+ * `align_to_largest_stylebox` and autowrap sizing (same omissions, same
+ * reasons — see that module's own doc).
  */
 export const menuButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as MenuButtonProperties;
   const state = resolveButtonDrawState(props.disabled);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const text = props.text ?? '';

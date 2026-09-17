@@ -185,9 +185,19 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
         props.horizontalAlignment,
         props.verticalAlignment,
         effectiveJustificationFlags,
-        textTheme.fontSizePx
+        textTheme.fontSizePx,
+        { rtl: solveNode.rtl }
       ),
-    [layout, rect.w, rect.h, props.horizontalAlignment, props.verticalAlignment, effectiveJustificationFlags, textTheme.fontSizePx]
+    [
+      layout,
+      rect.w,
+      rect.h,
+      props.horizontalAlignment,
+      props.verticalAlignment,
+      effectiveJustificationFlags,
+      textTheme.fontSizePx,
+      solveNode.rtl,
+    ]
   );
 
   // label.cpp:302-332 (autowrap OFF): every line is overrun-trimmed at the
@@ -225,10 +235,11 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
         behavior: props.visibleCharactersBehavior ?? VC_CHARS_BEFORE_SHAPING,
         visibleChars: props.visibleCharacters,
         visibleRatio: props.visibleRatio,
+        rtl: solveNode.rtl,
       }
     );
     return trimmedPlacements.map((placement, index) => ({ ...placement, line: revealed[index]! }));
-  }, [trimmedPlacements, props.visibleCharactersBehavior, props.visibleCharacters, props.visibleRatio]);
+  }, [trimmedPlacements, props.visibleCharactersBehavior, props.visibleCharacters, props.visibleRatio, solveNode.rtl]);
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 

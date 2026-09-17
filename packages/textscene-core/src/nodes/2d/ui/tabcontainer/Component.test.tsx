@@ -128,3 +128,42 @@ describe('<TabContainer> (isolated painter contract)', () => {
     expect(stripMesh(front.scene).renderOrder).toBe(5);
   });
 });
+
+describe('<TabContainer> panel band', () => {
+  /** Lopsided overrides, so a band drawn at the wrong offset cannot hide behind a symmetric one. */
+  const STYLE_BOXES: SolveNode['styleBoxes'] = {
+    panel: { ...THEME.widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+    tabbar_background: { ...THEME.widgets.panel, contentMargin: { left: 4, top: 6, right: 28, bottom: 2 } },
+  };
+
+  // `tab_selected`/`tab_unselected` carry a 4px top and bottom content margin
+  // each (`default_theme.cpp:974,977`) and this harness shapes no text, so the
+  // strip's own minimum height is 8; `tabbar_background` adds its own 6 and 2
+  // (`tab_container.cpp:51-58`).
+  const HEADER_HEIGHT = 16;
+
+  async function chromeYs(properties: Partial<TabContainerProperties>) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={{ ...solveNode({ currentTab: 0, ...properties }, [page('Only')]), styleBoxes: STYLE_BOXES }}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    return findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+  }
+
+  it('starts the panel below the header band, never at the top of the container (tab_container.cpp:264)', async () => {
+    const [panelY, headerY] = await chromeYs({ tabsPosition: 0 });
+    expect(panelY).toBe(-HEADER_HEIGHT);
+    expect(headerY).toBe(0);
+  });
+
+  it('puts the header band at the bottom and the panel at the top for POSITION_BOTTOM (tab_container.cpp:258-264)', async () => {
+    const [panelY, headerY] = await chromeYs({ tabsPosition: 1 });
+    expect(panelY).toBe(0);
+    expect(headerY).toBe(-(RECT.h - HEADER_HEIGHT));
+  });
+});

@@ -12,8 +12,11 @@ renders_as: a collapsible titled panel (accordion)
 FoldableContainer is a titled panel that expands or collapses its children like an
 accordion section. The previewer draws the title bar (its StyleBox, fold-state arrow
 icon and title text) and, only while unfolded, a content panel behind the children and
-their solved rects below (or above) it; while folded, the children solve to a zero-size
-rect and draw nothing.
+their solved rects below (or above) it. Sorting writes each direct child's own
+`visible`, so folding hides the children and unfolding shows them whatever the file
+authored. A right-to-left `layout_direction` moves the arrow to the right
+of the title bar, puts the title text at the left margin with its `title_alignment`
+swapped, and insets the content from the panel style's right margin.
 
 ## Linting
 
@@ -46,3 +49,8 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 unread. A malformed `folded` becomes `false`; a malformed `title_alignment`/
 `title_position`/`title_text_overrun_behavior` becomes `undefined` and the render
 default (LEFT / TOP / no trimming) applies.
+
+## Known limitations
+
+- **Approximated** A right-to-left title keeps its glyphs in the written order; the
+  previewer shapes no bidirectional text, so `title_text_direction` changes nothing.

@@ -77,6 +77,8 @@ import {
   textEditWrapWidthPx,
   shapeTextEditLines,
   layoutTextEditDrawBand,
+  textEditCurrentLineXPx,
+  textEditRowOriginXPx,
   textEditRowStartIndices,
   textEditRowColorRuns,
   textEditColorRunLine,
@@ -193,7 +195,11 @@ export function TextEditBody({
 
   const tintedCurrentLineColor = useMemo(() => multiplyModulate(tint.own, CURRENT_LINE_COLOR), [tint.own]);
 
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(rect);
+  // LOCAL, not `rect`: `useWorldClipPlanes` composes its argument with the
+  // anchor's own world matrix, so feeding it a rect that already carries the
+  // control's offset clips the text at twice that offset.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
 
   const tabIcon = useNodeIcon(solveNode.icons.tab, TEXT_EDIT_GLYPH_ICONS.tab);
   const spaceIcon = useNodeIcon(solveNode.icons.space, TEXT_EDIT_GLYPH_ICONS.space);
@@ -202,13 +208,15 @@ export function TextEditBody({
     <CanvasItemGroup ref={anchorRef}>
       <StyleBoxQuad styleBox={styleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {props.highlightCurrentLine && (
-        <ControlQuad
-          width={band.xMarginEndPx}
-          height={rowHeightPx}
-          color={godotColorToLinear(tintedCurrentLineColor)}
-          opacity={tintedCurrentLineColor.a}
-          renderOrder={renderOrder}
-        />
+        <CanvasItemGroup position={[textEditCurrentLineXPx(band.xMarginEndPx, rect.w, solveNode.rtl), 0, 0]}>
+          <ControlQuad
+            width={band.xMarginEndPx}
+            height={rowHeightPx}
+            color={godotColorToLinear(tintedCurrentLineColor)}
+            opacity={tintedCurrentLineColor.a}
+            renderOrder={renderOrder}
+          />
+        </CanvasItemGroup>
       )}
       {lineLayouts.map(({ layout, startRow }, lineIndex) => {
         const spans = lineColorSpans?.[lineIndex];
@@ -219,7 +227,10 @@ export function TextEditBody({
           const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
           const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor);
           return (
-            <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[band.xMarginBeginPx, -rowTopPx, 0]}>
+            <CanvasItemGroup
+              key={`${lineIndex}-${rowInLine}`}
+              position={[textEditRowOriginXPx(band.xMarginBeginPx, rect.w, line.widthPx, solveNode.rtl), -rowTopPx, 0]}
+            >
               {runs.map((run, runIndex) => (
                 <TextRun
                   key={runIndex}

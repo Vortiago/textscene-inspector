@@ -526,6 +526,28 @@ describe('<LineEdit> — clear_button_enabled', () => {
     expect(quads.some((m) => (m.material as THREE.MeshBasicMaterial).map != null)).toBe(true);
   });
 
+  it('puts the clear icon at the LEFT margin under RTL (line_edit.cpp:1455-1460)', async () => {
+    // `icon_pos = Point2(width - icon_w - margin_right, …); if (rtl) icon_pos.x =
+    // style->get_margin(SIDE_LEFT);` — the RTL arm replaces the x outright.
+    const iconXFor = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <LineEdit
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ text: 'Hi', clearButtonEnabled: true }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      const icon = findControlQuadMeshes(renderer.scene).find((m) => (m.material as THREE.MeshBasicMaterial).map != null)!;
+      return icon.getWorldPosition(new THREE.Vector3()).x;
+    };
+    const ltrX = await iconXFor(false);
+    const rtlX = await iconXFor(true);
+    expect(rtlX).toBeLessThan(ltrX);
+    expect(rtlX).toBeLessThan(RECT.w / 2);
+    expect(ltrX).toBeGreaterThan(RECT.w / 2);
+  });
+
   it('draws no clear icon once editable=false, even with text', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit

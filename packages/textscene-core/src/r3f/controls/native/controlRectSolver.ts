@@ -57,18 +57,18 @@ export interface SolvedControl {
 // --- Anchors ---------------------------------------------------------------
 
 /**
- * `Control::_size_changed` (`control.cpp:1760-1771`), the non-RTL branch:
+ * `Control::_size_changed` (`control.cpp:1760-1771`), its anchor arm:
  *
  *     edge_pos[i] = offset[i] + anchor[i] * area;  // area alternates parent w/h
  *     pos = (edge_pos[0], edge_pos[1]);
  *     size = (edge_pos[2], edge_pos[3]) - pos;
  *
  * `parentRect` here is `Control::get_parent_anchorable_rect()`'s SIZE only —
- * its own position never enters the non-RTL formula, and `get_anchorable_rect`
+ * its own position never enters the anchor formula, and `get_anchorable_rect`
  * (`:1563-1566`) always returns `Rect2(Point2(), size)` for a Control parent,
  * i.e. every rect this solver produces is relative to its immediate parent's
- * top-left, not an absolute viewport position. RTL is out of scope (no
- * `layout_direction` is modelled).
+ * top-left, not an absolute viewport position. The RTL arm is
+ * {@link mirrorRectRtl}, applied after the minimum-size floor.
  */
 function computeAnchoredRect(anchors: [number, number, number, number], offsets: [number, number, number, number], parentRect: Rect2): Rect2 {
   const [al, at, ar, ab] = anchors;
@@ -126,6 +126,26 @@ function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, 
   }
 
   return { x, y, w, h };
+}
+
+/**
+ * `Control::_size_changed`'s RTL arm (`control.cpp:1785-1787`):
+ *
+ *     new_pos_cache.x = parent_rect.size.x + 2 * parent_rect.position.x
+ *                       - new_pos_cache.x - new_size_cache.x;
+ *
+ * Only the parent's WIDTH appears: `get_anchorable_rect` is
+ * `Rect2(Point2(), get_size())` (`control.cpp:1563-1566`) and a root's
+ * `get_visible_rect()` starts at the origin too, so the position term is
+ * always zero — and `parentRect.x` here is this node's parent's own offset in
+ * ITS parent, which is not the anchorable rect's position at all.
+ *
+ * Runs after the floor rather than between its two axes: the C++ sits between
+ * the width and height arms (`:1775-1797`), and the height arm touches neither
+ * `x` nor `w`.
+ */
+function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
+  return { ...rect, x: parentWidth - rect.x - rect.w };
 }
 
 /**
@@ -369,12 +389,14 @@ function solveFree(
     rect = canvasBoundaryRect(origin.x, origin.y, viewport);
   } else {
     const layout = resolveNodeLayout(n, ctx, controlLayoutOrder(n));
+    const anchorable = parentAnchorableRect(n, parentRect);
     rect = floorAtMinimumSize(
-      computeAnchoredRect(layout.anchors, layout.offsets, parentAnchorableRect(n, parentRect)),
+      computeAnchoredRect(layout.anchors, layout.offsets, anchorable),
       minSize,
       layout.growHorizontal,
       layout.growVertical
     );
+    if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
   record(n, rect, minSize, out, ctx.minimumSizeMeta?.(n));
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
@@ -458,7 +480,13 @@ function dispatchChildren(
       childRect = canvasBoundaryRect(origin.x, origin.y, viewport);
     } else {
       const childLayout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
-      childRect = floorAtMinimumSize(assigned, minSize, childLayout.growHorizontal, childLayout.growVertical);
+      // `fit_child_in_rect` ends at `set_rect`, whose `_compute_offsets`
+      // un-mirrors the x it was handed (`control.cpp:906-909`) so that the
+      // mirror above puts a fitting child straight back. Only a child that
+      // outgrows its cell moves, and then its grow direction is mirrored too.
+      const unmirrored = child.rtl ? mirrorRectRtl(assigned, rect.w) : assigned;
+      const floored = floorAtMinimumSize(unmirrored, minSize, childLayout.growHorizontal, childLayout.growVertical);
+      childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
     record(child, childRect, minSize, out, meta);
     dispatchChildren(

@@ -21,15 +21,26 @@ describe('snapControlsToPixelsEnabled', () => {
     expect(snapControlsToPixelsEnabled({})).toBe(true);
   });
 
-  it('is off only for the literal `false` Godot writes', () => {
+  it('is off for the literal `false` Godot writes', () => {
     expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: 'false' })).toBe(false);
     expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '  false  ' })).toBe(false);
+  });
+
+  it('is off for a ZERO too — `bool snap_controls = GLOBAL_GET(…)` booleanizes (main.cpp:4577, variant_op.cpp:1114-1122)', () => {
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '0' })).toBe(false);
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '0.0' })).toBe(false);
+  });
+
+  it('is on for any non-zero number — `booleanize` is `!is_zero()`, not a test against 1', () => {
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '1' })).toBe(true);
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '2' })).toBe(true);
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '-1' })).toBe(true);
   });
 
   it('keeps the default for `true`, an empty value, and anything unrecognised', () => {
     expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: 'true' })).toBe(true);
     expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '' })).toBe(true);
-    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: '0' })).toBe(true);
+    expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: 'maybe' })).toBe(true);
   });
 
   it('reads the key under the name `parseProjectSettings` produces, section prefix and all', () => {

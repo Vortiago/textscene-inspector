@@ -36,8 +36,8 @@ export function VSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
 
   const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
   const trackRect = sliderTrackRect(true, size, theme);
-  const fillRect = sliderGrabberAreaRect(true, size, ratio, theme, grabberIconSize);
-  const grabberRect = sliderGrabberRect(true, size, ratio, grabberIconSize);
+  const fillRect = sliderGrabberAreaRect(true, size, ratio, theme, grabberIconSize, solveNode.rtl);
+  const grabberRect = sliderGrabberRect(true, size, ratio, grabberIconSize, solveNode.rtl);
   const tickIndices = sliderTickIndices(props);
   const tickRects = sliderTickRects(true, size, tickIndices, props.tickCount ?? 0, theme, grabberIconSize);
 

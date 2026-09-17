@@ -45,8 +45,11 @@ export const hasFlag = (flags: number, bit: number): boolean => (flags & bit) !=
  * child's minimum when the child does not stretch — so a child with `EXPAND` but
  * no `FILL` has its reserved space clawed back to its minimum here.
  *
- * `rtl` mirrors the horizontal begin/end edges (`layout_direction`). Only the box
- * containers thread it today; the rest pass the default.
+ * `rtl` is the CONTAINER's own `is_layout_rtl()` (`SolveNode.rtl`), which
+ * mirrors the horizontal begin/end edges. Godot reads it inside
+ * `fit_child_in_rect` itself, so every container has to hand its own flag
+ * down; a caller that passes the default is asserting that its container is
+ * never laid out RTL.
  */
 export function fitChildInRect(
   rect: Rect2,

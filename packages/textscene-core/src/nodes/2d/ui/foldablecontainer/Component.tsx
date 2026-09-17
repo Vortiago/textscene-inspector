@@ -70,7 +70,16 @@ const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
   expandedMirrored: FOLDABLE_CONTAINER_ICONS.expandedArrowMirrored,
   folded: FOLDABLE_CONTAINER_ICONS.foldedArrow,
+  foldedMirrored: FOLDABLE_CONTAINER_ICONS.foldedArrowMirrored,
 };
+
+/** `FoldableContainer::_get_actual_alignment` (`foldable_container.cpp:503-511`): RTL swaps LEFT and RIGHT and leaves every other value alone. */
+function actualTitleAlignment(alignment: number, rtl: boolean): number {
+  if (!rtl) return alignment;
+  if (alignment === HORIZONTAL_ALIGNMENT_RIGHT) return HORIZONTAL_ALIGNMENT_LEFT;
+  if (alignment === HORIZONTAL_ALIGNMENT_LEFT) return HORIZONTAL_ALIGNMENT_RIGHT;
+  return alignment;
+}
 
 export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
   const props = painterView<FoldableContainerProperties>(solveNode);
@@ -110,7 +119,13 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
   const textTopExtra = Math.max((title.size.y - titleMarginSize.y - textHeight) * 0.5, 0);
   const iconTopExtra = Math.max((title.size.y - titleMarginSize.y - arrowSize.y) * 0.5, 0);
 
-  const iconPos = { x: titleMargin.left, y: iconTopExtra + titleStyleOfs };
+  const rtl = solveNode.rtl;
+  // foldable_container.cpp:293-300 — the arrow hugs the reading direction's
+  // leading edge, which RTL measures from the style's own RIGHT margin.
+  const iconPos = {
+    x: rtl ? rect.w - titleMargin.right - arrowSize.x : titleMargin.left,
+    y: iconTopExtra + titleStyleOfs,
+  };
   const titleTextWidth = rect.w - titleMarginSize.x - arrowSize.x - hSeparation;
 
   // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`)
@@ -131,11 +146,10 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
   }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
-  // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`);
-  // `_get_actual_alignment`'s RTL LEFT/RIGHT swap is not modelled (module doc).
+  // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`).
   const shapedWidth = trimmedLayout ? shapedTextSizeWidthPx(trimmedLayout.widthPx) : 0;
   const extraSpace = Math.max(titleTextWidth - shapedWidth, 0);
-  const alignment = props.titleAlignment ?? HORIZONTAL_ALIGNMENT_LEFT;
+  const alignment = actualTitleAlignment(props.titleAlignment ?? HORIZONTAL_ALIGNMENT_LEFT, rtl);
   const alignmentShift =
     alignment === HORIZONTAL_ALIGNMENT_RIGHT
       ? extraSpace
@@ -144,7 +158,9 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
         : 0;
 
   const textPos = {
-    x: titleMargin.left + arrowSize.x + hSeparation + alignmentShift,
+    // `title_text_pos.x += rtl ? title_controls_width : icon width + h_sep`
+    // (`:296-301`); `title_controls` is never serialised, so RTL adds nothing.
+    x: titleMargin.left + (rtl ? 0 : arrowSize.x + hSeparation) + alignmentShift,
     y: titleStyleOfs + textTopExtra,
   };
 
@@ -157,7 +173,13 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
 
   return (
     <>
-      <StyleBoxQuad styleBox={title.titleStyle} color={tint.own} rect={titleRect} renderOrder={renderOrder} />
+      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
+          doc), so a box drawn at an offset INSIDE this control needs that
+          offset from the group around it — the arrow and the title text below
+          already reach theirs the same way. */}
+      <CanvasItemGroup position={[titleRect.x, -titleRect.y, 0]}>
+        <StyleBoxQuad styleBox={title.titleStyle} color={tint.own} rect={titleRect} renderOrder={renderOrder} />
+      </CanvasItemGroup>
       <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
         <ControlQuad
           renderOrder={renderOrder}
@@ -180,7 +202,9 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, m
         </CanvasItemGroup>
       )}
       {!title.folded && (
-        <StyleBoxQuad styleBox={title.panelStyle} color={tint.own} rect={panelRect} renderOrder={renderOrder} />
+        <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]}>
+          <StyleBoxQuad styleBox={title.panelStyle} color={tint.own} rect={panelRect} renderOrder={renderOrder} />
+        </CanvasItemGroup>
       )}
     </>
   );

@@ -13,7 +13,9 @@ ItemList is a scrollable list of selectable rows, each an optional icon and a la
 one or more columns. The previewer draws the panel and every row's icon and text, packed
 by `max_columns`/`same_column_width`/`fixed_column_width`/`icon_mode`, with a disabled
 row's icon and text dimmed, plus a row/column guide line at every packed separator
-outside TOP icon mode. No row is ever drawn selected, hovered, or under a cursor
+outside TOP icon mode. A right-to-left list mirrors each row's icon inside the list's own
+width and re-derives its label's pen, which lands a different distance from the icon than
+the left-to-right pen does. No row is ever drawn selected, hovered, or under a cursor
 highlight: `selected`, the current index, and a live hover/focus state are never part of
 a `.tscn` in the first place.
 
@@ -91,6 +93,22 @@ yields no rows, matching Godot's own `ERR_FAIL_COND_V` before `clear()` runs.
 - **Approximated** `max_text_lines` sizes a row's reserved text height but does not cap the
   number of wrapped lines actually drawn — a paragraph that wraps past it keeps every line
   instead of the tail collapsing into an enforced ellipsis on the last visible one.
+- **Approximated** Right-to-left SHAPING. `_shape_text` hands `is_layout_rtl()` to the
+  TextServer as each item's paragraph direction (`item_list.cpp:41-45`), and this
+  previewer has no bidi pass, so a right-to-left script draws in logical order. Every
+  LAYOUT branch of the flag is ported.
+- **Not drawn** Both scrollbars. A right-to-left list moves the vertical one to the
+  leading edge, which shifts every row guide line by its width
+  (`item_list.cpp:1454-1458`) and takes the same width off the packing `fit_size`
+  (`:1862-1864`); with no scrollbar drawn, neither applies.
+- **Approximated** A TOP-mode line WIDER than its own box. Godot's CENTER alignment falls
+  back to `width - line_width` once the paragraph direction is right-to-left
+  (`text_paragraph.cpp:907-914`), pulling the line to the trailing edge, where this
+  previewer leaves it at the box origin. Only the word-break bullet above reaches that
+  case, and it already makes such a line's width wrong.
+- **Needs runtime** Godot's right-to-left arms of `get_item_at_position`
+  (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
+  hits under a live cursor, which a static preview has none of.
 - **Approximated** `text_overrun_behavior` trims each row against the SAME width the
   minimum-size pass shaped at (`fixed_column_width`, or unconstrained when unset) — the
   same "shape once" scope this sheet's `same_column_width`/dynamically-fit-column bullet

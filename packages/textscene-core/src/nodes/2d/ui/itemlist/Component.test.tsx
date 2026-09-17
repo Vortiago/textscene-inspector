@@ -10,12 +10,15 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { ItemList } from './Component';
+import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 import type { ItemListProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
@@ -27,14 +30,14 @@ const SCOPE = {
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function solveNode(properties: Partial<ItemListProperties>): SolveNode {
+function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlots = {}): SolveNode {
   const node: TscnNode = {
     name: 'MyItemList',
     type: 'ItemList',
     children: [],
     properties: { name: 'MyItemList', items: [], ...properties } as ItemListProperties,
   };
-  return { ...emptySolveNode(), path: 'MyItemList', node, resources: SCOPE };
+  return { ...emptySolveNode(), path: 'MyItemList', node, resources: SCOPE, rtl, textureSlots: iconSlots };
 }
 
 /** A `<StyleBoxQuad>` mesh — the only kind carrying a `color` vertex attribute. */
@@ -67,16 +70,35 @@ function fakeTexture(w: number, h: number): THREE.Texture {
   return tex;
 }
 
-async function renderWithIconLoaded(properties: Partial<ItemListProperties>) {
+async function renderWithIconLoaded(properties: Partial<ItemListProperties>, rtl = false) {
   const fake = createFakeResourceLoader();
   fake.textures.seed(ICON_PATH, fakeTexture(16, 16));
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-        <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={RECT} renderOrder={0} />
+        <ItemList
+          {...painterEnv()}
+          solveNode={solveNode(properties, rtl, { item_0: { x: 16, y: 16 } })}
+          rect={RECT}
+          renderOrder={0}
+        />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+/** Sums `position.x` up the parent chain — the control-relative x a mesh actually lands at. */
+function absoluteX(object: THREE.Object3D): number {
+  let x = 0;
+  for (let node: THREE.Object3D | null = object; node; node = node.parent) x += node.position.x;
+  return x;
+}
+
+/** The same, down the y axis — negated back into Godot's own downward-y. */
+function absoluteY(object: THREE.Object3D): number {
+  let y = 0;
+  for (let node: THREE.Object3D | null = object; node; node = node.parent) y += node.position.y;
+  return -y;
 }
 
 describe('<ItemList> — panel + rows', () => {
@@ -170,5 +192,66 @@ describe('<ItemList> — row packing', () => {
       />
     );
     expect(findTextMeshes(renderer.scene).length).toBe(2);
+  });
+});
+
+describe('<ItemList> — RTL', () => {
+  // rect.w 200, panel margin 4, h_separation/icon_margin 4, a 16x16 icon and
+  // fixed_column_width 100 (so rect_cache.size.width is 100 + h_separation).
+  const RTL_ITEMS: Partial<ItemListProperties> = {
+    items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
+    fixedColumnWidth: 100,
+  };
+
+  // item_list.cpp:1582-1584 — the icon draws at 4 + h_separation/2 = 6 under
+  // LTR, mirrored to `200 - 6 - 16` under RTL.
+  it('mirrors the row icon inside the control own width', async () => {
+    const ltr = await renderWithIconLoaded(RTL_ITEMS);
+    const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
+    // `<ControlQuad>`'s own mesh is centred on its quad, so 16/2 sits on top.
+    expect(absoluteX(findIconMeshes(ltr.scene)[0]!)).toBeCloseTo(6 + 8, 5);
+    expect(absoluteX(findIconMeshes(rtl.scene)[0]!)).toBeCloseTo(178 + 8, 5);
+  });
+
+  // item_list.cpp:1664-1668 — the LTR pen is 4 + (16 + 4) + 2 = 26; the RTL
+  // pen is `200 - 104 + 16 - 26 + 4` = 90, and the line is then right-aligned
+  // inside its own `104 - 22` wide box (text_paragraph.cpp:916-921).
+  it('moves the row label to Godot own RTL pen, right-aligned in its box', async () => {
+    const node = solveNode(RTL_ITEMS, false, { item_0: { x: 16, y: 16 } });
+    const shaped = shapeItemListText({
+      text: 'Sword',
+      fontSizePx: nativeTheme(1).fontSize,
+      fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
+      iconMode: ICON_MODE_LEFT,
+      maxTextLines: 1,
+      fixedColumnWidth: 100,
+    })!;
+    const ltr = await renderWithIconLoaded(RTL_ITEMS);
+    const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
+    expect(absoluteX(findTextMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
+    expect(absoluteX(findTextMeshes(rtl.scene)[0]!)).toBeCloseTo(90 + (82 - shaped.widthPx), 5);
+  });
+});
+
+describe('<ItemList> — row-relative vertical placement', () => {
+  // item_list.cpp:1556 centres the icon against the row's own HEIGHT. An
+  // icon-only row is `16 + v_separation` tall, so the icon sits 2px down from
+  // the row top and 4 + 0 + 2 from the list's own top.
+  it('centres a row icon against the row height, not its y position', async () => {
+    const renderer = await renderWithIconLoaded({
+      items: [{ icon: 'ExtResource("1")' }],
+      fixedIconSize: { x: 16, y: 16 },
+    });
+    expect(absoluteY(findIconMeshes(renderer.scene)[0]!)).toBeCloseTo(6 + 8, 5);
+  });
+
+  // item_list.cpp:1649 centres the label against the same height. A text-only
+  // row is `text height + v_separation` tall, so the pen sits exactly
+  // `v_separation / 2` down whatever the font measures.
+  it('centres a row label against the row height, not its y position', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode({ items: [{ text: 'Sword' }] })} rect={RECT} renderOrder={0} />
+    );
+    expect(absoluteY(findTextMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
   });
 });

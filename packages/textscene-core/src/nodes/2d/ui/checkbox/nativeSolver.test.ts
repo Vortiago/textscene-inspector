@@ -249,6 +249,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
     hSeparation: 4,
     hasText: true,
     textNaturalSize: { x: 90, y: 26 },
+    rtl: false,
   };
 
   it('icon sits at (margin, vertically centred + check_v_offset)', () => {
@@ -290,6 +291,58 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
       textNaturalSize: { x: 90, y: 23 },
     });
     expect(textOffset!.y).toBe(4);
+  });
+});
+
+/**
+ * `CheckBox::_notification`'s RTL arms:
+ *
+ *     ofs.x = get_size().x - theme_cache.normal_style->get_margin(SIDE_RIGHT) - get_icon_size().width;   // check_box.cpp:129
+ *
+ * and, from the same notification's layout-direction arm (`:98-100`),
+ * `_set_internal_margin(SIDE_LEFT, 0)` / `_set_internal_margin(SIDE_RIGHT,
+ * icon width)` — the reservation trades sides. CheckBox's constructor sets
+ * `HORIZONTAL_ALIGNMENT_LEFT` (`:174`), which `Button::_notification`'s swap
+ * (`button.cpp:271-275`) turns into RIGHT, so the label hugs the far end of
+ * what is left.
+ */
+describe('layoutCheckBoxContent — RTL puts the check on the right and the label against it', () => {
+  const BASE = {
+    rectSize: { x: 150, y: 28 },
+    margin: 4,
+    iconSize: { x: 16, y: 16 },
+    checkVOffset: 0,
+    hSeparation: 4,
+    hasText: true,
+    textNaturalSize: { x: 90, y: 26 },
+    rtl: true,
+  };
+
+  it('draws the check at the right content margin', () => {
+    const { iconRect } = layoutCheckBoxContent(BASE);
+    // x = 150 - 4 - 16 = 130; y is direction-independent: floor((28-16)/2) = 6.
+    expect(iconRect).toEqual({ x: 130, y: 6, w: 16, h: 16 });
+  });
+
+  it('lays the label out flush against the check', () => {
+    const { textOffset } = layoutCheckBoxContent(BASE);
+    // drawable = 150 - 4 - 4 - (16 + 4) = 122; text_ofs.x = style margin 4
+    // (the left internal margin is now 0) + RIGHT shift (122 - 90) = 36.
+    expect(textOffset!.x).toBe(36);
+    expect(textOffset!.y).toBeCloseTo(1, 10);
+  });
+
+  it('hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
+    // rect 150.5 -> drawable 122.5 -> text_buf_width 123; 123 - 90 = 33; + margin 4.
+    const { textOffset } = layoutCheckBoxContent({ ...BASE, rectSize: { x: 150.5, y: 28 } });
+    expect(textOffset!.x).toBeCloseTo(37, 10);
+  });
+
+  it('keeps check_v_offset and the no-text case direction-independent', () => {
+    expect(layoutCheckBoxContent({ ...BASE, checkVOffset: 3 }).iconRect.y).toBe(9);
+    const { textOffset, iconRect } = layoutCheckBoxContent({ ...BASE, hasText: false });
+    expect(textOffset).toBeNull();
+    expect(iconRect.x).toBe(130);
   });
 });
 

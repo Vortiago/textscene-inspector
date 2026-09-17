@@ -21,10 +21,12 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { FoldableContainerProperties } from './types';
 import {
+  foldableContainerChildVisibility,
   foldableContainerMinimumSize,
   foldableContainerLayout,
   foldableContainerHSeparation,
   foldableContainerArrowSize,
+  foldableContainerTitleMetrics,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -180,5 +182,78 @@ describe('foldableContainerHSeparation / foldableContainerArrowSize (default_the
   it('both move with a non-1 theme scale', () => {
     expect(foldableContainerHSeparation(nativeTheme(1.5))).toBe(3);
     expect(foldableContainerArrowSize(nativeTheme(1.5))).toEqual({ x: 24, y: 24 });
+  });
+});
+
+describe('FoldableContainer under RTL', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
+
+  /** The default panel StyleBox with asymmetric horizontal margins, so a left/right swap is visible. */
+  function lopsidedPanel(container: SolveNode) {
+    const base = foldableContainerTitleMetrics(
+      container,
+      container.node.properties as FoldableContainerProperties,
+      ctx(),
+      true
+    ).panelStyle;
+    return { ...base, contentMargin: { ...base.contentMargin, left: 2, right: 9 } };
+  }
+
+  it('picks folded_arrow_mirrored when folded (foldable_container.cpp:428-435)', () => {
+    // `} else if (is_layout_rtl()) { return theme_cache.folded_arrow_mirrored; }`
+    const container = { ...node({ folded: true }), rtl: true };
+    const title = foldableContainerTitleMetrics(
+      container,
+      container.node.properties as FoldableContainerProperties,
+      ctx(),
+      true
+    );
+    expect(title.arrow).toBe('foldedMirrored');
+  });
+
+  it('keeps the expanded arrow unmirrored — the RTL branch is folded-only (foldable_container.cpp:428-435)', () => {
+    const container = { ...node({ folded: false }), rtl: true };
+    const title = foldableContainerTitleMetrics(
+      container,
+      container.node.properties as FoldableContainerProperties,
+      ctx(),
+      true
+    );
+    expect(title.arrow).toBe('expanded');
+  });
+
+  it("insets the content from the panel style's RIGHT margin instead of its left (foldable_container.cpp:365-367)", () => {
+    // `inner_rect.position.x = rtl ? panel_style->get_margin(SIDE_RIGHT)
+    //                              : panel_style->get_margin(SIDE_LEFT)`;
+    // the WIDTH subtracts both margins either way.
+    const container = { ...node({ folded: false, title: 'A' }), rtl: true };
+    const withPanel = { ...container, styleBoxes: { panel: lopsidedPanel(container) } };
+    const child = node({}, [], 'Child');
+    const rects = layoutRects(withPanel, [{ node: child, minSize: { x: 10, y: 10 } }], RECT, ctx());
+    const rect = rects.get('Child')!;
+    expect(rect.x).toBe(9);
+    expect(rect.w).toBe(100 - 2 - 9);
+  });
+
+  it('hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the inner rect trailing edge (container.cpp:99,109)', () => {
+    const container = { ...node({ folded: false, title: 'A' }), rtl: true };
+    const child = node({ sizeFlagsHorizontal: 0 } as Partial<FoldableContainerProperties>, [], 'Child');
+    const rects = layoutRects(container, [{ node: child, minSize: { x: 10, y: 10 } }], RECT, ctx());
+    // The inner rect is (4, ..., 92, ...); a 10-wide child lands at 4 + 92 - 10.
+    expect(rects.get('Child')!.x).toBe(86);
+  });
+});
+
+describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldable_container.cpp:381)', () => {
+  it('clears the children of a folded container', () => {
+    expect(foldableContainerChildVisibility(node({ folded: true }).node)).toBe(false);
+  });
+
+  it('sets the children of an unfolded container, rather than leaving them alone', () => {
+    expect(foldableContainerChildVisibility(node({ folded: false }).node)).toBe(true);
+  });
+
+  it('treats an absent/malformed `folded` as the property default, false', () => {
+    expect(foldableContainerChildVisibility(node({}).node)).toBe(true);
   });
 });

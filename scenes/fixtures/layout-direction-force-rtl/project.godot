@@ -1,0 +1,17 @@
+; A res:// root of its own, because
+; `internationalization/rendering/force_right_to_left_layout_direction` is a
+; PROJECT setting and no .tscn can carry one. Kept in a subdirectory rather
+; than at scenes/fixtures — a project.godot there would silently apply to every
+; other fixture in the flat bag.
+
+config_version=5
+
+[application]
+
+config/name="Forced right-to-left layout"
+run/main_scene="res://unit-control-layout-direction-force.tscn"
+config/features=PackedStringArray("4.6")
+
+[internationalization]
+
+rendering/force_right_to_left_layout_direction=true

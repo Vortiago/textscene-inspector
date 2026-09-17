@@ -1,0 +1,81 @@
+; The ONE variable: `layout_direction = 3` on a GridContainer. Godot restarts
+; every row at the container's trailing edge and walks the columns back the
+; other way (grid_container.cpp:190-194,220-228). The three cells have
+; different widths so a reversal cannot be mistaken for a mirror of equal
+; blocks, and the LTR grid above holds the unmirrored order beside it. No
+; other fixture pairs a grid with a direction, so a regression in the column
+; walk is invisible everywhere else.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="GridContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 440.0
+offset_bottom = 160.0
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 12
+
+[node name="A" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 40)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 40)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(180, 40)
+color = Color(0.2, 0.4, 0.9, 1)
+
+[node name="D" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 24)
+color = Color(0.9, 0.7, 0.2, 1)
+
+[node name="Rtl" type="GridContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 440.0
+offset_bottom = 320.0
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 12
+
+[node name="A" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 40)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 40)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(180, 40)
+color = Color(0.2, 0.4, 0.9, 1)
+
+[node name="D" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 24)
+color = Color(0.9, 0.7, 0.2, 1)

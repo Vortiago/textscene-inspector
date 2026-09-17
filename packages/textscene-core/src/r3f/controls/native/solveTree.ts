@@ -119,6 +119,16 @@ export interface SolveNode {
    */
   skippedAncestors: SkippedAncestors | null;
   /**
+   * `Control::is_layout_rtl()` (`scene/gui/control.cpp:3551-3620`), resolved on
+   * the walk rather than in the solver: an INHERITED node climbs to the nearest
+   * drawn ancestor Control, stepping over every other node type, and the
+   * Control-only solve tree can no longer see those.
+   *
+   * Read by the rect solve (the mirror at `control.cpp:1785-1787`) and by every
+   * container and painter Godot branches on `is_layout_rtl()` in.
+   */
+  rtl: boolean;
+  /**
    * This node's resolved StyleBoxes, keyed by the SAME names Godot's own
    * `get_theme_stylebox(name, type)` uses (`normal`/`hover`/`panel`/…):
    * `theme_override_styles/*` first (wins unconditionally once declared,

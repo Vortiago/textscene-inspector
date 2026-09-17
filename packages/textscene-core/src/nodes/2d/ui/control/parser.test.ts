@@ -138,3 +138,28 @@ describe('parseControl', () => {
     });
   });
 });
+
+describe('parseControl — layout_direction', () => {
+  it('reads each LayoutDirection value', () => {
+    // `Control::LayoutDirection` (`scene/gui/control.h:155-160`).
+    for (const value of [0, 1, 2, 3, 4]) {
+      const p = parseControl(heading('Control', { name: 'C' }), {
+        layout_direction: String(value),
+      });
+      expect(p.layoutDirection).toBe(value);
+    }
+  });
+
+  it('defaults to INHERITED when the scene says nothing', () => {
+    // `LayoutDirection layout_dir = LAYOUT_DIRECTION_INHERITED;` (`control.h:289`).
+    expect(parseControl(heading('Control', { name: 'C' }), {}).layoutDirection).toBe(0);
+  });
+
+  it('truncates a float literal the way the INT slot does', () => {
+    // `_to_int` runs before the setter (`core/variant/variant.h:360-377`), so
+    // `set_layout_direction` never sees the fraction.
+    expect(
+      parseControl(heading('Control', { name: 'C' }), { layout_direction: '2.9' }).layoutDirection
+    ).toBe(2);
+  });
+});

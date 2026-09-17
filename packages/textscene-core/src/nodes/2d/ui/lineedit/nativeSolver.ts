@@ -325,6 +325,8 @@ export interface LineEditContentInput {
   hasIcon?: boolean;
   /** The active icon's own resolved (`lineEditRightIconSize`) width — meaningless while `hasIcon` is false. Defaults `0`. */
   iconWidthPx?: number;
+  /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
+  rtl?: boolean;
 }
 
 export interface LineEditContentLayout {
@@ -341,9 +343,15 @@ export interface LineEditContentLayout {
  * plus the icon inset at `:1444-1485`): the horizontal `switch (alignment)`
  * picking `x_ofs`, the vertical `y_area`/`y_ofs` centring, and — when
  * `hasIcon` — the inset an active `right_icon`/clear button carves out of the
- * right edge. RTL and `scroll_offset` (always `0` in a static preview with no
- * caret/scroll state) are not modelled, matching every other LineEdit feature
- * this solver does not model.
+ * leading edge. `scroll_offset` is always `0` in a static preview with no
+ * caret/scroll state and is not modelled.
+ *
+ * `rtl` is the node's own `is_layout_rtl()` (`SolveNode.rtl`). It swaps the
+ * LEFT/FILL and RIGHT arms (`:1397-1421`), moves the icon to the left margin
+ * so the text is floored PAST it instead of pulled back from the right edge
+ * (`:1473-1474`), shifts CENTER by the icon width rather than leaving it in
+ * place (`:1469-1471`), and leaves `ofs_max` at the right margin, since the
+ * icon is subtracted from it only when `!rtl` (`:1481-1483`).
  *
  * The icon block is NOT a plain "subtract `iconWidthPx`" — for LEFT/RIGHT/FILL
  * it re-derives `x_ofs` from the ALIGNMENT-ONLY value by subtracting BOTH the
@@ -357,7 +365,10 @@ export interface LineEditContentLayout {
  * not JavaScript's default).
  */
 export function layoutLineEditContent(input: LineEditContentInput): LineEditContentLayout {
-  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, hasIcon = false, iconWidthPx = 0 } = input;
+  const { rectSize, styleMargin, alignment, textWidthPx, textHeightPx, hasIcon = false, iconWidthPx = 0, rtl = false } = input;
+
+  /** The two arms LEFT/FILL and RIGHT swap between (`:1399-1403,1415-1419`). */
+  const trailingEdgeX = Math.max(styleMargin.left, Math.trunc(rectSize.x - Math.ceil(styleMargin.right + textWidthPx)));
 
   let xOfs: number;
   switch (alignment) {
@@ -369,20 +380,28 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
       xOfs = styleMargin.left + Math.max(0, centered);
       break;
     }
-    case HORIZONTAL_ALIGNMENT_RIGHT: {
-      const candidate = Math.trunc(rectSize.x - Math.ceil(styleMargin.right + textWidthPx));
-      const base = Math.max(styleMargin.left, candidate);
-      xOfs = hasIcon ? Math.max(styleMargin.left, Math.trunc(base - iconWidthPx - styleMargin.right)) : base;
+    case HORIZONTAL_ALIGNMENT_RIGHT:
+      xOfs = rtl ? styleMargin.left : trailingEdgeX;
       break;
-    }
     case HORIZONTAL_ALIGNMENT_LEFT:
     case HORIZONTAL_ALIGNMENT_FILL:
     default:
-      // The icon block's own re-derive clamps straight back to `styleMargin.left`
-      // here too (`MAX(margin_left, margin_left - iconWidth - margin_right)`), so
-      // this branch is a no-op whether or not an icon is present.
-      xOfs = styleMargin.left;
+      xOfs = rtl ? trailingEdgeX : styleMargin.left;
       break;
+  }
+
+  // The icon re-derive (`:1466-1480`). Under LTR on LEFT/FILL it clamps straight
+  // back to `styleMargin.left`, which is why it used to be folded into the RIGHT
+  // arm alone; under RTL that arm carries the right-aligned value and the floor
+  // bites.
+  if (hasIcon) {
+    if (alignment === HORIZONTAL_ALIGNMENT_CENTER) {
+      if (rtl) xOfs += iconWidthPx;
+    } else {
+      xOfs = rtl
+        ? Math.max(styleMargin.left + iconWidthPx, xOfs)
+        : Math.max(styleMargin.left, Math.trunc(xOfs - iconWidthPx - styleMargin.right));
+    }
   }
 
   // int y_area = height - style->get_minimum_size().height; (line_edit.cpp:1426) — `height`
@@ -398,13 +417,17 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
   const yOfs = Math.trunc(styleMargin.top + (yArea - textHeightPx) / 2);
 
   // int ofs_max = width - style->get_margin(SIDE_RIGHT); ofs_max -= right_icon_size.width;
-  // (line_edit.cpp:1420,1482) — both truncate on assignment to `int ofs_max`.
-  const ofsMaxPx = Math.trunc(rectSize.x - styleMargin.right - (hasIcon ? iconWidthPx : 0));
+  // (line_edit.cpp:1420,1482) — both truncate on assignment to `int ofs_max`, and the
+  // icon term is guarded by `if (!rtl)` (:1481).
+  const ofsMaxPx = Math.trunc(rectSize.x - styleMargin.right - (hasIcon && !rtl ? iconWidthPx : 0));
 
+  // The drawn band is [x_ofs, ofs_max] (:1541); under RTL the icon sits at the LEFT
+  // margin (:1455-1458), so the band starts past it instead of stopping short of it.
+  const bandLeft = styleMargin.left + (hasIcon && rtl ? iconWidthPx : 0);
   const contentRect: Rect2 = {
-    x: styleMargin.left,
+    x: bandLeft,
     y: styleMargin.top,
-    w: Math.max(0, ofsMaxPx - styleMargin.left),
+    w: Math.max(0, ofsMaxPx - bandLeft),
     h: Math.max(0, yArea),
   };
 
@@ -425,7 +448,8 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
  * - Placeholder/empty (`isPlaceholder`, `:1552-1585` — gated on
  *   `using_placeholder`, i.e. authored `text` being empty, REGARDLESS of
  *   whether a placeholder string is actually shown): the alignment-specific
- *   fallback. CENTER reads `right_icon`'s own RAW, unscaled width
+ *   fallback, whose LEFT/FILL and RIGHT arms swap under RTL (`:1560-1584`).
+ *   CENTER reads `right_icon`'s own RAW, unscaled width
  *   (`right_icon->get_width()`, `:1570`) — NOT the resolved/expand-mode icon
  *   size, and NEVER the clear button. RIGHT sits at `ofs_max` exactly.
  *
@@ -446,11 +470,13 @@ export function lineEditCaretRect(input: {
   textPenX: number;
   /** `right_icon`'s RAW natural width, `0` when absent — the fallback CENTER arm only. */
   rightIconRawWidthPx: number;
-  /** `ofs_max` — the fallback RIGHT arm only. */
+  /** `ofs_max` — LTR's own fallback RIGHT arm, and RTL's LEFT/FILL arm. */
   ofsMaxPx: number;
   caretWidthPx: number;
+  /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
+  rtl?: boolean;
 }): Rect2 {
-  const { rectSize, styleMargin, alignment, fontHeightPx, isPlaceholder, textPenX, rightIconRawWidthPx, ofsMaxPx, caretWidthPx } = input;
+  const { rectSize, styleMargin, alignment, fontHeightPx, isPlaceholder, textPenX, rightIconRawWidthPx, ofsMaxPx, caretWidthPx, rtl = false } = input;
 
   const yArea = Math.trunc(rectSize.y - styleMargin.top - styleMargin.bottom);
   const y = Math.trunc(styleMargin.top + (yArea - fontHeightPx) / 2);
@@ -467,12 +493,13 @@ export function lineEditCaretRect(input: {
         break;
       }
       case HORIZONTAL_ALIGNMENT_RIGHT:
-        x = ofsMaxPx;
+        // RTL puts it at `x_ofs`, which the caller already resolved as `textPenX` (:1578-1584).
+        x = rtl ? textPenX : ofsMaxPx;
         break;
       case HORIZONTAL_ALIGNMENT_LEFT:
       case HORIZONTAL_ALIGNMENT_FILL:
       default:
-        x = styleMargin.left;
+        x = rtl ? ofsMaxPx : styleMargin.left;
         break;
     }
   }

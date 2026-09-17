@@ -11,7 +11,9 @@ renders_as: two children split at a computed offset, along the `vertical`-chosen
 
 SplitContainer is the base that arranges two children with a draggable split between
 them, with the dragger's band between them. HSplitContainer and VSplitContainer fix the
-axis; this type reads `vertical` itself to pick it.
+axis; this type reads `vertical` itself to pick it. A right-to-left `layout_direction`
+mirrors a horizontal split — the first child takes the right band — and leaves a vertical
+one stacked the same way.
 
 ## Linting
 

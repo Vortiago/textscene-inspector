@@ -1,0 +1,52 @@
+; The ONE variable: `layout_direction = 3` on an AspectRatioContainer. Godot
+; measures the aligned child from the trailing edge instead
+; (aspect_ratio_container.cpp:164-168), so `alignment_horizontal = 0` (Begin)
+; lands the child against the RIGHT edge. `stretch_mode = 2` (Fit) leaves the
+; child narrower than the container, which is what makes the alignment
+; visible at all; the LTR container above holds the unmirrored position.
+; unit-aspect-ratio-container.tscn moves ratio/stretch/alignment at direction
+; LTR, so a regression in this mirror is invisible there.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="AspectRatioContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 100.0
+ratio = 1.0
+stretch_mode = 2
+alignment_horizontal = 0
+alignment_vertical = 1
+
+[node name="Content" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Rtl" type="AspectRatioContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 120.0
+offset_right = 240.0
+offset_bottom = 180.0
+ratio = 1.0
+stretch_mode = 2
+alignment_horizontal = 0
+alignment_vertical = 1
+
+[node name="Content" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+color = Color(0.2, 0.7, 0.3, 1)

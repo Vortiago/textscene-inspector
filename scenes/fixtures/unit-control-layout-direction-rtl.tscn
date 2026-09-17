@@ -1,0 +1,50 @@
+; The ONE variable: `layout_direction = 3` (RTL). `Control::is_layout_rtl`
+; resolves an explicit RTL with no locale and no TextServer lookup, and
+; `BoxContainer::_resort` reads it (box_container.cpp:48) to lay its children
+; out from the opposite edge. The three bars have different widths so a
+; reversal cannot be mistaken for a mirror of equal blocks, and the LTR row
+; above holds the unmirrored order beside it.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrllayoutrtl"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="HBoxContainer" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 464.0
+offset_bottom = 128.0
+
+[node name="A" type="ColorRect" parent="Ltr"]
+custom_minimum_size = Vector2(60, 0)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Ltr"]
+custom_minimum_size = Vector2(120, 0)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Ltr"]
+custom_minimum_size = Vector2(180, 0)
+color = Color(0.2, 0.4, 0.9, 1)
+
+[node name="Rtl" type="HBoxContainer" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 176.0
+offset_right = 464.0
+offset_bottom = 256.0
+
+[node name="A" type="ColorRect" parent="Rtl"]
+custom_minimum_size = Vector2(60, 0)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Rtl"]
+custom_minimum_size = Vector2(120, 0)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Rtl"]
+custom_minimum_size = Vector2(180, 0)
+color = Color(0.2, 0.4, 0.9, 1)

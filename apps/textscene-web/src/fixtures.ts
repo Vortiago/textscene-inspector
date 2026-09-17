@@ -188,6 +188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Aspect Ratio Container Rtl",
+    "file": "unit-aspect-ratio-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Aspect Ratio Container",
     "file": "unit-aspect-ratio-container.tscn",
     "category": "Other"
@@ -248,8 +253,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Button Rtl",
+    "file": "unit-check-button-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Check Button",
     "file": "unit-check-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Rtl",
+    "file": "unit-code-edit-rtl.tscn",
     "category": "Other"
   },
   {
@@ -270,6 +285,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Color Picker Button",
     "file": "unit-color-picker-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker Rtl",
+    "file": "unit-color-picker-rtl.tscn",
     "category": "Other"
   },
   {
@@ -398,6 +418,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Flow Container Rtl Reverse Fill",
+    "file": "unit-flow-container-rtl-reverse-fill.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Flow Container Rtl",
+    "file": "unit-flow-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Flow Container",
     "file": "unit-flow-container.tscn",
     "category": "Other"
@@ -405,6 +435,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Foldable Container Rtl",
+    "file": "unit-foldable-container-rtl.tscn",
     "category": "Other"
   },
   {
@@ -633,6 +668,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Hslider Rtl",
+    "file": "unit-hslider-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Hslider",
     "file": "unit-hslider.tscn",
     "category": "Other"
@@ -673,6 +713,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List Rtl Icon Top",
+    "file": "unit-item-list-rtl-icon-top.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List Rtl",
+    "file": "unit-item-list-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List",
     "file": "unit-item-list.tscn",
     "category": "Other"
@@ -695,6 +745,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Outline",
     "file": "unit-label-outline.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Alignment",
+    "file": "unit-label-rtl-alignment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Fill Autowrap",
+    "file": "unit-label-rtl-fill-autowrap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Visible Chars Auto",
+    "file": "unit-label-rtl-visible-chars-auto.tscn",
     "category": "Other"
   },
   {
@@ -803,6 +868,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Line Edit Rtl",
+    "file": "unit-line-edit-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lineedit Clear Button",
     "file": "unit-lineedit-clear-button.tscn",
     "category": "Other"
@@ -828,6 +898,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Link Button Rtl",
+    "file": "unit-link-button-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Link Button",
     "file": "unit-link-button.tscn",
     "category": "Other"
@@ -840,6 +915,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Bar Rtl",
+    "file": "unit-menu-bar-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1068,6 +1148,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Rtl",
+    "file": "unit-progress-bar-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar",
     "file": "unit-progress-bar.tscn",
     "category": "Other"
@@ -1218,6 +1303,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Spin Box Rtl",
+    "file": "unit-spin-box-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spin Box",
     "file": "unit-spin-box.tscn",
     "category": "Other"
@@ -1225,6 +1315,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spline Ik 3d",
     "file": "unit-spline-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container Rtl",
+    "file": "unit-split-container-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1323,13 +1418,33 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Bar Rtl Scroll",
+    "file": "unit-tab-bar-rtl-scroll.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Bar Rtl",
+    "file": "unit-tab-bar-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Bar",
     "file": "unit-tab-bar.tscn",
     "category": "Other"
   },
   {
+    "name": "Tab Container Rtl",
+    "file": "unit-tab-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Container",
     "file": "unit-tab-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Rtl",
+    "file": "unit-text-edit-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1370,6 +1485,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Touch Screen Button",
     "file": "unit-touch-screen-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tree Rtl",
+    "file": "unit-tree-rtl.tscn",
     "category": "Other"
   },
   {
@@ -2023,6 +2143,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Button Rtl",
+    "file": "unit-button-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button States",
     "file": "unit-button-states.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2050,6 +2175,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Checkbox Icon Magnified",
     "file": "unit-checkbox-icon-magnified.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Checkbox Rtl",
+    "file": "unit-checkbox-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -2118,6 +2248,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Layout Direction Inherit",
+    "file": "unit-control-layout-direction-inherit.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Layout Direction Rtl",
+    "file": "unit-control-layout-direction-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Nested Children",
     "file": "unit-control-nested-children.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2178,6 +2318,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Grid Container Rtl",
+    "file": "unit-grid-container-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Grid Container",
     "file": "unit-grid-container.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2218,8 +2363,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Margin Container Rtl",
+    "file": "unit-margin-container-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Margin Container",
     "file": "unit-margin-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Optionbutton Rtl",
+    "file": "unit-optionbutton-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -2248,6 +2403,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Center Overflow",
+    "file": "unit-rich-text-label-center-overflow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Fractional Box",
+    "file": "unit-rich-text-label-fractional-box.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Rtl",
+    "file": "unit-rich-text-label-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label",
     "file": "unit-rich-text-label.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2265,6 +2435,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Scroll Container Clip",
     "file": "unit-scroll-container-clip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Rtl",
+    "file": "unit-scroll-container-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

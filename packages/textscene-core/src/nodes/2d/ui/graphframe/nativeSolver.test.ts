@@ -104,3 +104,19 @@ describe('graphFrameLayout (graph_frame.cpp:145-169)', () => {
     expect(rects.get('a')).toEqual({ x: 18, y: 51, w: 10, h: 10 });
   });
 });
+
+describe('graphFrameLayout under RTL', () => {
+  it('hands the container rtl to fit_child_in_rect (container.cpp:99,109)', () => {
+    // `graph_frame.cpp` calls `is_layout_rtl()` nowhere; the flag reaches a
+    // child only through `Container::fit_child_in_rect`. The panel StyleBox is
+    // `make_flat_stylebox(..., 18, 12, 18, 12, ...)` (`default_theme.cpp:830`),
+    // so the content rect is x 18, width 200 - 18 - 18 = 164, and a 10-wide
+    // child lands at 18 + 164 - 10.
+    const a = leaf('a', { customMinimumSize: { x: 10, y: 10 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
+    const n = { ...graphFrame('F', { title: '' }, [a]), rtl: true };
+    const rects = asMap(
+      graphFrameLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], { x: 0, y: 0, w: 200, h: 150 }, ctx())
+    );
+    expect(rects.get('a')).toEqual({ x: 172, y: 51, w: 10, h: 10 });
+  });
+});

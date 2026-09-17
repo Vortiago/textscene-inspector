@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 import {
   computeTabBarDrawLayout,
   isCloseButtonVisible,
+  layoutScrollArrows,
+  layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
   tabBarMinimumSize,
   tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabContentWidth,
+  tabDrawX,
   tabWidthStyleMinWidth,
 } from './nativeSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -297,5 +300,112 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     const themedSize = 'x' in themed ? themed : themed.size;
     expect(themedSize.x).toBeGreaterThan(untetheredSize.x);
     expect(themedSize.y).toBeGreaterThan(untetheredSize.y);
+  });
+});
+
+describe('tabDrawX', () => {
+  it('draws a tab at its own ofs_cache under LTR (tab_bar.cpp:552,1931)', () => {
+    expect(tabDrawX(40, 100, 300, false)).toBe(40);
+  });
+
+  it('mirrors the tab inside the bar under RTL: size.width - ofs_cache - size_cache (tab_bar.cpp:552,1929)', () => {
+    expect(tabDrawX(40, 100, 300, true)).toBe(160);
+  });
+
+  it('puts the FIRST tab against the right edge under RTL', () => {
+    expect(tabDrawX(0, 120, 300, true)).toBe(180);
+  });
+});
+
+describe('layoutTabContent under RTL', () => {
+  const style = {
+    ...tabBarStyleBoxes(1).selected,
+    contentMargin: { left: 20, top: 4, right: 6, bottom: 4 },
+  };
+  const base = {
+    barHeightPx: 40,
+    style,
+    tabWidthPx: 200,
+    iconSize: { x: 16, y: 16 },
+    hasText: true,
+    textNaturalHeightPx: 18,
+    textAdvanceWidthPx: 50,
+    hSeparation: 4,
+    closeVisible: true,
+    closeIconSize: { x: 12, y: 12 },
+    buttonHlMargin: { left: 3, top: 2, right: 3, bottom: 2 },
+  };
+
+  it('flows icon, text and close right to left from the tab width minus the style LEFT margin (tab_bar.cpp:660,668,676,721)', () => {
+    const out = layoutTabContent({ ...base, rtl: true });
+    // p_x = size_cache - margin(SIDE_LEFT) = 200 - 20 = 180 — Godot measures the
+    // LEFT margin from the right edge here, never the right margin.
+    expect(out.icon?.rect.x).toBe(180 - 16);
+    // p_x = 180 - 16 - 4 = 160; text at p_x - size_text.
+    expect(out.text?.offset.x).toBe(160 - 50);
+    // p_x = 160 - 50 - 4 = 106; close rect at p_x - cb width (3 + 12 + 3 = 18).
+    expect(out.close?.rect.x).toBe(106 - 18);
+    expect(out.close?.iconOffset.x).toBe(106 - 18 + 3);
+  });
+
+  it('leaves the LTR flow untouched', () => {
+    const out = layoutTabContent({ ...base, rtl: false });
+    expect(out.icon?.rect.x).toBe(20);
+    expect(out.text?.offset.x).toBe(40);
+    expect(out.close?.rect.x).toBe(94);
+  });
+
+  it('centres every element vertically the same way in both directions (tab_bar.cpp:668,677,722)', () => {
+    const ltr = layoutTabContent({ ...base, rtl: false });
+    const rtl = layoutTabContent({ ...base, rtl: true });
+    expect(rtl.icon?.rect.y).toBe(ltr.icon?.rect.y);
+    expect(rtl.text?.offset.y).toBe(ltr.text?.offset.y);
+    expect(rtl.close?.rect.y).toBe(ltr.close?.rect.y);
+  });
+});
+
+describe('layoutScrollArrows', () => {
+  const base = {
+    barWidthPx: 300,
+    barHeightPx: 33,
+    incrementIconSize: { x: 16, y: 16 },
+    decrementIconSize: { x: 10, y: 10 },
+    missingRight: true,
+  };
+
+  it('puts both arrows against the RIGHT edge under LTR, decrement first (tab_bar.cpp:581,587)', () => {
+    const out = layoutScrollArrows({ ...base, rtl: false });
+    expect(out.decrement.x).toBe(300 - 16 - 10);
+    expect(out.increment.x).toBe(300 - 16 - 10 + 10);
+  });
+
+  it('puts both arrows against the LEFT edge under RTL, decrement first, increment offset by the INCREMENT width (tab_bar.cpp:569,575)', () => {
+    const out = layoutScrollArrows({ ...base, rtl: true });
+    expect(out.decrement.x).toBe(0);
+    expect(out.increment.x).toBe(16);
+  });
+
+  it('swaps which arrow missing_right lights up (tab_bar.cpp:569,575 vs :581,587)', () => {
+    const ltr = layoutScrollArrows({ ...base, rtl: false });
+    expect(ltr.decrement.dim).toBe(true);
+    expect(ltr.increment.dim).toBe(false);
+    const rtl = layoutScrollArrows({ ...base, rtl: true });
+    expect(rtl.decrement.dim).toBe(false);
+    expect(rtl.increment.dim).toBe(true);
+  });
+
+  it('dims both arrows once nothing is clipped off the end', () => {
+    for (const rtl of [false, true]) {
+      const out = layoutScrollArrows({ ...base, missingRight: false, rtl });
+      expect(out.decrement.dim).toBe(true);
+      expect(out.increment.dim).toBe(true);
+    }
+  });
+
+  it('measures vofs off the INCREMENT icon and truncates it to an int (tab_bar.cpp:565)', () => {
+    const out = layoutScrollArrows({ ...base, rtl: false });
+    // int vofs = (33 - 16) / 2 = 8, not 8.5 and not (33 - 10) / 2.
+    expect(out.decrement.y).toBe(8);
+    expect(out.increment.y).toBe(8);
   });
 });

@@ -266,7 +266,7 @@ describe('flowContainerLayout', () => {
     expect(rects.get('c3')).toEqual({ x: 0, y: 75, w: 20, h: 10 });
   });
 
-  it('reverse_fill flips the CROSS axis position — X for vertical, with rtl hardcoded false (flow_container.cpp:248-250)', () => {
+  it('reverse_fill flips the CROSS axis position — X for vertical, at direction LTR (flow_container.cpp:248-250)', () => {
     const children = [
       leaf('c1', { customMinimumSize: { x: 10, y: 20 } }),
       leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
@@ -285,5 +285,67 @@ describe('flowContainerLayout', () => {
     const f = flow('FlowContainer', {}, []);
     const rects = flowContainerLayout(f, [], { x: 0, y: 0, w: 100, h: 40 }, ctx()) as ReadonlyMap<string, Rect2>;
     expect(rects.size).toBe(0);
+  });
+});
+
+describe('flowContainerLayout under RTL', () => {
+  it('mirrors X on a horizontal flow, leaving the wrap order and Y alone (flow_container.cpp:51,248-250)', () => {
+    // `if ((rtl && !vertical) || ...) child_rect.position.x = get_rect().size.x
+    // - child_rect.position.x - child_rect.size.width`. Same wrap as the
+    // reverse_fill case: LTR x's are 0, 30, 0 in a 55-wide box, so 55 - x - 20.
+    const children = [
+      leaf('c1', { customMinimumSize: { x: 20, y: 10 } }),
+      leaf('c2', { customMinimumSize: { x: 20, y: 10 } }),
+      leaf('c3', { customMinimumSize: { x: 20, y: 10 } }),
+    ];
+    const f = { ...flow('FlowContainer', { hSep: 10, vSep: 5 }, children), rtl: true };
+    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 55, h: 100 }, ctx()) as ReadonlyMap<
+      string,
+      Rect2
+    >;
+    expect(rects.get('c1')).toEqual({ x: 35, y: 0, w: 20, h: 10 });
+    expect(rects.get('c2')).toEqual({ x: 5, y: 0, w: 20, h: 10 });
+    expect(rects.get('c3')).toEqual({ x: 35, y: 15, w: 20, h: 10 });
+  });
+
+  it('mirrors the column X on a vertical flow when rtl and reverse_fill differ (flow_container.cpp:248-250)', () => {
+    const children = [
+      leaf('c1', { customMinimumSize: { x: 10, y: 20 } }),
+      leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
+    ];
+    const f = { ...flow('VFlowContainer', { hSep: 0, vSep: 5 }, children), rtl: true };
+    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 50, h: 100 }, ctx()) as ReadonlyMap<
+      string,
+      Rect2
+    >;
+    expect(rects.get('c1')).toEqual({ x: 40, y: 0, w: 10, h: 20 });
+    expect(rects.get('c2')).toEqual({ x: 40, y: 25, w: 10, h: 20 });
+  });
+
+  it('leaves the column X alone on a vertical flow when rtl and reverse_fill agree (flow_container.cpp:248-250)', () => {
+    // `(rtl != reverse_fill) && vertical` is an XOR: two flips cancel.
+    const children = [
+      leaf('c1', { customMinimumSize: { x: 10, y: 20 } }),
+      leaf('c2', { customMinimumSize: { x: 10, y: 20 } }),
+    ];
+    const f = { ...flow('VFlowContainer', { hSep: 0, vSep: 5, reverseFill: true }, children), rtl: true };
+    const rects = flowContainerLayout(f, childEntries(children), { x: 0, y: 0, w: 50, h: 100 }, ctx()) as ReadonlyMap<
+      string,
+      Rect2
+    >;
+    expect(rects.get('c1')).toEqual({ x: 0, y: 0, w: 10, h: 20 });
+    expect(rects.get('c2')).toEqual({ x: 0, y: 25, w: 10, h: 20 });
+  });
+
+  it('hands its own rtl to fit_child_in_rect, so an EXPAND-without-FILL child shrinks to the trailing edge (container.cpp:99,109)', () => {
+    // The stretched rect is (0, 0, 100, 10); `fit_child_in_rect` then drops the
+    // width back to the child's own 20 and, under RTL, offsets by 100 - 20.
+    const child = leaf('c1', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 2 });
+    const f = { ...flow('HFlowContainer', { hSep: 0, vSep: 0 }, [child]), rtl: true };
+    const rects = flowContainerLayout(f, childEntries([child]), { x: 0, y: 0, w: 100, h: 100 }, ctx()) as ReadonlyMap<
+      string,
+      Rect2
+    >;
+    expect(rects.get('c1')).toEqual({ x: 80, y: 0, w: 20, h: 10 });
   });
 });

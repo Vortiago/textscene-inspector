@@ -105,10 +105,10 @@ describe('sliderTrackRect — the `slider` StyleBox draw rect', () => {
   });
 });
 
-describe('sliderGrabberAreaRect — the `grabber_area` fill (LTR only, no RTL)', () => {
+describe('sliderGrabberAreaRect — the `grabber_area` fill', () => {
   it('spans to the grabber CENTRE at value=min, so the stub still shows half the grabber (slider.cpp:334-338)', () => {
     // areasize = 300 - 16 = 284; p = 284*0 + 16/2 = 8.
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, theme, grabberOf(theme))).toEqual({ x: 0, y: 16, w: 8, h: 8 });
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, theme, grabberOf(theme), false)).toEqual({ x: 0, y: 16, w: 8, h: 8 });
   });
 
   it('floors the half-grabber term — `grabber->get_width() / 2` is INTEGER division (slider.cpp:334)', () => {
@@ -117,18 +117,18 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill (LTR only, no RTL)',
     // whose grabber is odd. p = areasize*0 + trunc(grabber/2).
     const odd = nativeTheme(1);
     const oddTheme = { ...odd, sliderGrabberSize: 15 };
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, oddTheme, grabberOf(oddTheme)).w).toBe(7);
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, oddTheme, grabberOf(oddTheme), false).w).toBe(7);
   });
 
   it('grows with the ratio on a HORIZONTAL slider, keeping the half-grabber term', () => {
     // p = 284*0.5 + 8 = 150.
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, theme, grabberOf(theme))).toEqual({ x: 0, y: 16, w: 150, h: 8 });
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, theme, grabberOf(theme), false)).toEqual({ x: 0, y: 16, w: 150, h: 8 });
   });
 
   it('is pinned to the BOTTOM on a VERTICAL slider, matching origin+height (slider.cpp:302)', () => {
     // areasize = 300 - 16 = 284; y = round(300 - 284*0.5 - 8) = round(150) = 150;
     // h = round(284*0.5 + 8) = round(150) = 150.
-    const rect = sliderGrabberAreaRect(true, { x: 40, y: 300 }, 0.5, theme, grabberOf(theme));
+    const rect = sliderGrabberAreaRect(true, { x: 40, y: 300 }, 0.5, theme, grabberOf(theme), false);
     expect(rect).toEqual({ x: 16, y: 150, w: 8, h: 150 });
   });
 });
@@ -136,30 +136,80 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill (LTR only, no RTL)',
 describe('sliderGrabberRect — the `grabber` icon box, a value at min/max pins its END positions', () => {
   it('puts a HORIZONTAL grabber flush LEFT at value=min_value (slider.cpp:363)', () => {
     // x = 0 * areasize = 0; y = trunc(40/2 - 16/2) = 12.
-    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0, grabberOf(theme))).toEqual({ x: 0, y: 12, w: 16, h: 16 });
+    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0, grabberOf(theme), false)).toEqual({ x: 0, y: 12, w: 16, h: 16 });
   });
 
   it('puts a HORIZONTAL grabber flush RIGHT at value=max_value — right edge === size.width', () => {
     // areasize = 300 - 16 = 284; x = 1 * 284 = 284; 284 + 16(grabber width) = 300 = size.width.
-    const rect = sliderGrabberRect(false, { x: 300, y: 40 }, 1, grabberOf(theme));
+    const rect = sliderGrabberRect(false, { x: 300, y: 40 }, 1, grabberOf(theme), false);
     expect(rect).toEqual({ x: 284, y: 12, w: 16, h: 16 });
     expect(rect.x + rect.w).toBe(300);
   });
 
   it('puts a VERTICAL grabber flush BOTTOM at value=min_value — bottom edge === size.height (slider.cpp:326)', () => {
     // y = 300 - 0*areasize - 16 = 284; 284 + 16 = 300 = size.height.
-    const rect = sliderGrabberRect(true, { x: 40, y: 300 }, 0, grabberOf(theme));
+    const rect = sliderGrabberRect(true, { x: 40, y: 300 }, 0, grabberOf(theme), false);
     expect(rect).toEqual({ x: 12, y: 284, w: 16, h: 16 });
     expect(rect.y + rect.h).toBe(300);
   });
 
   it('puts a VERTICAL grabber flush TOP at value=max_value', () => {
     // areasize = 284; y = 300 - 1*284 - 16 = 0.
-    expect(sliderGrabberRect(true, { x: 40, y: 300 }, 1, grabberOf(theme))).toEqual({ x: 12, y: 0, w: 16, h: 16 });
+    expect(sliderGrabberRect(true, { x: 40, y: 300 }, 1, grabberOf(theme), false)).toEqual({ x: 12, y: 0, w: 16, h: 16 });
   });
 
   it('scales the grabber box with default_theme_scale', () => {
-    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0, grabberOf(theme2x))).toEqual({ x: 0, y: 4, w: 32, h: 32 });
+    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0, grabberOf(theme2x), false)).toEqual({ x: 0, y: 4, w: 32, h: 32 });
+  });
+});
+
+describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp:331)', () => {
+  // areasize = 120 - 16 = 104, so `areasize * ratio` is fractional at 0.3 on
+  // BOTH sides — the only inputs that separate Godot's own arithmetic from
+  // mirroring the LTR rect, which every wrong implementation of this reduces to.
+  const size = { x: 120, y: 24 };
+  const grabber = grabberOf(theme);
+
+  it('fills the `grabber_area` from the RIGHT edge inward, at its OWN truncated p (slider.cpp:335-337)', () => {
+    // p = int(104 * (1 - 0.3) + 16/2) = int(80.8) = 80;
+    // Rect2i(Point2i(p, (24-8)/2), Size2i(size.width - p, 8)).
+    expect(sliderGrabberAreaRect(false, size, 0.3, theme, grabber, true)).toEqual({
+      x: 80,
+      y: 8,
+      w: 40,
+      h: 8,
+    });
+  });
+
+  it('is NOT the LTR fill mirrored — each direction truncates its own product (slider.cpp:335)', () => {
+    // LTR p = int(104 * 0.3 + 8) = int(39.2) = 39, and 120 - 39 = 81, one px
+    // past the 80 the RTL branch computes.
+    expect(sliderGrabberAreaRect(false, size, 0.3, theme, grabber, false)).toEqual({
+      x: 0,
+      y: 8,
+      w: 39,
+      h: 8,
+    });
+  });
+
+  it('draws the `grabber` icon from the opposite end of the SAME travel (slider.cpp:363)', () => {
+    // x = int((1 - 0.3) * 104) = int(72.8) = 72; y = 24/2 - 16/2 = 4.
+    expect(sliderGrabberRect(false, size, 0.3, grabber, true)).toEqual({ x: 72, y: 4, w: 16, h: 16 });
+  });
+
+  it('is NOT the LTR grabber mirrored either', () => {
+    // LTR x = int(0.3 * 104) = 31, whose mirror is 120 - 16 - 31 = 73.
+    expect(sliderGrabberRect(false, size, 0.3, grabber, false)).toEqual({ x: 31, y: 4, w: 16, h: 16 });
+  });
+
+  it('leaves a VERTICAL slider alone — slider.cpp:297-326 contains no is_layout_rtl() call', () => {
+    const vSize = { x: 24, y: 120 };
+    expect(sliderGrabberAreaRect(true, vSize, 0.3, theme, grabber, true)).toEqual(
+      sliderGrabberAreaRect(true, vSize, 0.3, theme, grabber, false)
+    );
+    expect(sliderGrabberRect(true, vSize, 0.3, grabber, true)).toEqual(
+      sliderGrabberRect(true, vSize, 0.3, grabber, false)
+    );
   });
 });
 
@@ -225,10 +275,10 @@ describe('sliderGrabberRect — the two separate integer divisions', () => {
   it('centres a 15px grabber in a 40px-tall slider at y=13, not 12', () => {
     expect(odd.sliderGrabberSize).toBe(15);
     // 40 / 2 = 20; 15 / 2 = 7; 20 - 7 = 13. Fusing them gives trunc(12.5) = 12.
-    expect(sliderGrabberRect(false, { x: 200, y: 40 }, 0, grabberOf(odd)).y).toBe(13);
+    expect(sliderGrabberRect(false, { x: 200, y: 40 }, 0, grabberOf(odd), false).y).toBe(13);
   });
 
   it('mirrors it on the vertical axis', () => {
-    expect(sliderGrabberRect(true, { x: 40, y: 200 }, 0, grabberOf(odd)).x).toBe(13);
+    expect(sliderGrabberRect(true, { x: 40, y: 200 }, 0, grabberOf(odd), false).x).toBe(13);
   });
 });

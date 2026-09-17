@@ -377,6 +377,27 @@ export function layoutTextEditDrawBand(
   return { xMarginBeginPx, xMarginEndPx, rowHeightPx };
 }
 
+/**
+ * One drawn row's own left edge — `char_margin` (`text_edit.cpp:1490-1494`).
+ * LTR keeps the band's start; RTL mirrors it about the control and steps back
+ * by the ROW's own shaped width, so a row is placed by its own extent rather
+ * than by one band value. `wrap_indent` is 0 here: `indent_wrapped_lines` is
+ * not modelled (`comparison.md`).
+ */
+export function textEditRowOriginXPx(xMarginBeginPx: number, rectWidthPx: number, rowWidthPx: number, rtl: boolean): number {
+  if (!rtl) return xMarginBeginPx;
+  return rectWidthPx - xMarginBeginPx - shapedTextSizeWidthPx(rowWidthPx);
+}
+
+/**
+ * The current-line highlight quad's own left edge (`text_edit.cpp:1404-1409`).
+ * Its WIDTH is `xmargin_end` in both arms; only the origin moves, so the band
+ * runs from the control's leading edge to `xmargin_end` either way.
+ */
+export function textEditCurrentLineXPx(xMarginEndPx: number, rectWidthPx: number, rtl: boolean): number {
+  return rtl ? rectWidthPx - xMarginEndPx : 0;
+}
+
 // --- Syntax-highlighter colour runs ------------------------------------
 
 /**

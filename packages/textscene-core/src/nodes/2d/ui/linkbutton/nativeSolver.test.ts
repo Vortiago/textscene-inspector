@@ -25,6 +25,7 @@ import {
   shouldUnderline,
   linkButtonUnderlineSpacing,
   linkButtonUnderlineGeometry,
+  linkButtonTextPlacement,
   LINKBUTTON_DEFAULT_FONT_COLOR,
   LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
   LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
@@ -174,5 +175,34 @@ describe('linkButtonMinimumSize — with text', () => {
   it('overrun_behavior === 0 (NO_TRIMMING, the default) keeps the full shaped width', () => {
     const result = size(linkButtonMinimumSize(node({ text: 'A', overrunBehavior: 0 }), ctx()));
     expect(result.x).toBe(11);
+  });
+});
+
+/**
+ * `LinkButton::_notification` (`link_button.cpp:289-314`):
+ *
+ *     int width = text_buf->get_line_width();
+ *     if (is_layout_rtl()) { text_buf->draw(ci, Vector2(size.width - width, 0), color); }
+ *     else                 { text_buf->draw(ci, Vector2(0, 0), color); }
+ *
+ * and the underline runs `(size.width - width) .. size.width` on the RTL arm,
+ * `0 .. width` on the LTR one. `width` is `TextParagraph::get_line_width`
+ * (`scene/resources/text_paragraph.cpp:810`) narrowed to `int` — that
+ * accessor is `TS->shaped_text_get_width`, already
+ * `Math::ceil(sd->width)` (`text_server_adv.cpp:7569`), so the narrowing
+ * never removes a fraction and the line width is the CEILED pen extent.
+ */
+describe('linkButtonTextPlacement', () => {
+  it('ceils the pen extent to Godot\'s own int line width', () => {
+    expect(linkButtonTextPlacement(200, 63.4, false).lineWidthPx).toBe(64);
+    expect(linkButtonTextPlacement(200, 64, false).lineWidthPx).toBe(64);
+  });
+
+  it('draws from the left edge under LTR', () => {
+    expect(linkButtonTextPlacement(200, 63.4, false).originX).toBe(0);
+  });
+
+  it('draws flush against the right edge under RTL', () => {
+    expect(linkButtonTextPlacement(200, 63.4, true).originX).toBe(136);
   });
 });

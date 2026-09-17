@@ -10,8 +10,12 @@
  *  - `center_grabber` / `grabber_offset` / `tick_offset` — all 0 for both HSlider
  *    and VSlider in the default theme (`default_theme.cpp:594-596,609-611`); every
  *    formula below already has their (zero) contribution dropped.
- *  - `is_layout_rtl()` — this previewer has no notion of layout direction
- *    anywhere else either, so every rect below is the LTR branch.
+ *  - the `gui_input` and gamepad-repeat arms that read `is_layout_rtl()`
+ *    (`slider.cpp:77,116,144,160,216,224`) — drag, arrow-key and joypad
+ *    stepping, none of which a static previewer reaches. The DRAW branch
+ *    (`:331`) is ported: it reaches the `grabber_area` fill and the `grabber`
+ *    icon only, since the track (`:333`) spans the full width either way and
+ *    the tick loop (`:341-359`) marches over the same symmetric travel.
  *  - `ticks_position` (`Slider::TickPosition`) — `shared/slider.ts` parses only
  *    `tick_count`/`ticks_on_borders`/`editable`, so every tick here draws at
  *    Godot's own default, `TICK_POSITION_BOTTOM_RIGHT` (below an HSlider's
@@ -131,11 +135,13 @@ export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeT
 }
 
 /**
- * The `grabber_area` fill rect (LTR only — the RTL branch is not modelled).
+ * The `grabber_area` fill rect.
  *
- *     HORIZONTAL (slider.cpp:334,338): areasize = size.width - grabber.width;
- *       int p = areasize * ratio + grabber.width / 2;
- *       Rect2i(Point2i(0, (size.height - widget_height) / 2), Size2i(p, widget_height))
+ *     HORIZONTAL (slider.cpp:331-339): areasize = size.width - grabber.width;
+ *       bool rtl = is_layout_rtl();
+ *       int p = areasize * (rtl ? 1 - ratio : ratio) + grabber.width / 2;
+ *       rtl ? Rect2i(Point2i(p, (size.height - widget_height) / 2), Size2i(size.width - p, widget_height))
+ *           : Rect2i(Point2i(0, (size.height - widget_height) / 2), Size2i(p, widget_height))
  *     VERTICAL (slider.cpp:299,302): areasize = size.height - grabber.height;
  *       Rect2i(Point2i((size.width - widget_width) / 2,
  *                      Math::round(size.height - areasize * ratio - grabber.height / 2)),
@@ -144,13 +150,18 @@ export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeT
  * The horizontal branch truncates via `int p` (assignment truncation); the
  * vertical branch calls `Math::round` explicitly on BOTH its origin and its
  * size — that asymmetry is Godot's own, not an inconsistency introduced here.
+ *
+ * `rtl` reverses the RATIO before that truncation, so the result is not the
+ * LTR rect mirrored: each direction truncates its own product.
  */
 export function sliderGrabberAreaRect(
   vertical: boolean,
   rawSize: Vec2,
   ratio: number,
   theme: NativeTheme,
-  grabber: Vec2
+  grabber: Vec2,
+  /** `Control::is_layout_rtl()`; the vertical arm has no such branch in the source. */
+  rtl: boolean
 ): Rect2 {
   const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;
@@ -165,10 +176,11 @@ export function sliderGrabberAreaRect(
     return { x, y, w: thickness, h };
   }
   const areasize = size.x - grabber.x;
-  // `grabber->get_width() / 2` — same integer division (`slider.cpp:334`).
+  // `grabber->get_width() / 2` — same integer division (`slider.cpp:335`).
   const halfGrabber = Math.trunc(grabber.x / 2);
-  const p = Math.trunc(areasize * ratio + halfGrabber);
-  return { x: 0, y: Math.trunc((size.y - thickness) / 2), w: p, h: thickness };
+  const p = Math.trunc(areasize * (rtl ? 1 - ratio : ratio) + halfGrabber);
+  const y = Math.trunc((size.y - thickness) / 2);
+  return rtl ? { x: p, y, w: size.x - p, h: thickness } : { x: 0, y, w: p, h: thickness };
 }
 
 /**
@@ -176,8 +188,8 @@ export function sliderGrabberAreaRect(
  * texture at (Godot draws the texture at its OWN natural size from this
  * top-left, `Texture2D::draw`):
  *
- *     HORIZONTAL (slider.cpp:334,363): areasize = size.width - grabber.width;
- *       Point2i(ratio * areasize, size.height / 2 - grabber.height / 2)
+ *     HORIZONTAL (slider.cpp:332,363): areasize = size.width - grabber.width;
+ *       Point2i((rtl ? 1 - ratio : ratio) * areasize, size.height / 2 - grabber.height / 2)
  *     VERTICAL (slider.cpp:299,326): areasize = size.height - grabber.height;
  *       Point2i(size.width / 2 - grabber.width / 2, size.height - ratio * areasize - grabber.height)
  *
@@ -188,7 +200,14 @@ export function sliderGrabberAreaRect(
  * off-by-a-grabber-width error is invisible at
  * `ratio = 0` and wrong everywhere else.
  */
-export function sliderGrabberRect(vertical: boolean, rawSize: Vec2, ratio: number, grabber: Vec2): Rect2 {
+export function sliderGrabberRect(
+  vertical: boolean,
+  rawSize: Vec2,
+  ratio: number,
+  grabber: Vec2,
+  /** `Control::is_layout_rtl()`; the vertical arm has no such branch in the source. */
+  rtl: boolean
+): Rect2 {
   const size = size2i(rawSize);
   if (vertical) {
     const areasize = size.y - grabber.y;
@@ -197,7 +216,7 @@ export function sliderGrabberRect(vertical: boolean, rawSize: Vec2, ratio: numbe
     return { x, y, w: grabber.x, h: grabber.y };
   }
   const areasize = size.x - grabber.x;
-  const x = Math.trunc(ratio * areasize);
+  const x = Math.trunc((rtl ? 1 - ratio : ratio) * areasize);
   // Two SEPARATE integer divisions (`slider.cpp:363`), as the vertical branch above.
   const y = Math.trunc(size.y / 2) - Math.trunc(grabber.y / 2);
   return { x, y, w: grabber.x, h: grabber.y };

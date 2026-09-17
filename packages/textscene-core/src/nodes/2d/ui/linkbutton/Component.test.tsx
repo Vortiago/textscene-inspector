@@ -170,4 +170,23 @@ describe('<LinkButton> (isolated painter contract)', () => {
     const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
     expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
   });
+
+  // `link_button.cpp:311`: under RTL the underline runs
+  // `(size.width - width) .. size.width`, so its far end is flush with the
+  // control's own right edge; `:313`'s LTR arm starts at 0 instead.
+  it('ends the underline at the control\'s right edge under RTL, and starts it at 0 under LTR', async () => {
+    const span = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <LinkButton {...painterEnv()} solveNode={{ ...solveNode({ text: 'Visit' }), rtl }} rect={RECT} renderOrder={0} />
+      );
+      const mesh = findUnderlineMesh(renderer.scene)!;
+      const width = (mesh.geometry as unknown as { parameters: { width: number } }).parameters.width;
+      const start = mesh.parent!.position.x;
+      return { start, end: start + width };
+    };
+    expect(await span(false)).toEqual({ start: 0, end: (await span(false)).end });
+    expect((await span(true)).end).toBe(RECT.w);
+    expect((await span(true)).start).toBe(RECT.w - (await span(false)).end);
+  });
+
 });

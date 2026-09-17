@@ -11,7 +11,8 @@ renders_as: children flowed along one axis and wrapped into lines
 
 FlowContainer lays its children out along one axis, wraps to a new line when the
 current one runs out of room, and aligns each line per `alignment`. It draws nothing
-itself.
+itself. A right-to-left `layout_direction` mirrors each line horizontally; on a vertical
+flow that mirror and `reverse_fill` land on the same axis, so setting both cancels out.
 
 ## Linting
 

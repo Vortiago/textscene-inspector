@@ -77,7 +77,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state);
+  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state, solveNode.rtl);
 
   const clippingPlanes = useControlClipPlanes();
 
@@ -141,6 +141,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
         expandIcon: props.expandIcon === true,
         iconNaturalSize,
         hasText,
+        rtl: solveNode.rtl,
         // Godot's draw path reads the same ceiled `text_buf->get_size()` its
         // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
         // shift is computed against the ceiled width, not the raw pen advance.
@@ -164,6 +165,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
       hasText,
       layout,
       theme.separation,
+      solveNode.rtl,
     ]
   );
 

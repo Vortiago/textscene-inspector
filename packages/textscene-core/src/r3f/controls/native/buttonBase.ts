@@ -51,12 +51,29 @@ export function resolveButtonDrawState(disabled: boolean | undefined): ButtonDra
   return disabled ? 'disabled' : 'normal';
 }
 
-/** `overrides[state]` (a resolved `theme_override_styles/<state>`) wins; otherwise the default-theme struct for that same state. */
+/**
+ * `overrides[state]` (a resolved `theme_override_styles/<state>`) wins;
+ * otherwise the default-theme struct for that same state.
+ *
+ * Under `rtl`, `<state>_mirrored` is tried first — `Button::_get_current_stylebox`
+ * (`button.cpp:100-148`) opens every draw-state arm with
+ * `rtl && has_theme_stylebox("<state>_mirrored")`. No `defaults` twin exists
+ * because the only builtin registering the mirrored keys is OptionButton, whose
+ * four are constructed from the same colours and the same
+ * `2 * default_margin, default_margin` margins as their plain siblings
+ * (`default_theme.cpp:215-233`); a mirrored box that differs can only arrive
+ * through a scene's own override or Theme.
+ */
 export function pickButtonStyleBox(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
   defaults: Readonly<Record<ButtonDrawState, StyleBoxFlatData>>,
-  state: ButtonDrawState
+  state: ButtonDrawState,
+  rtl = false
 ): StyleBoxFlatData {
+  if (rtl) {
+    const mirrored = overrides[`${state}_mirrored`];
+    if (mirrored) return mirrored;
+  }
   return overrides[state] ?? defaults[state];
 }
 
@@ -157,6 +174,8 @@ export interface ButtonContentInput {
   hasText: boolean;
   /** The shaped text's own natural (unwrapped) size — `(0, 0)` when `hasText` is false. */
   textNaturalSize: Vec2;
+  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — swaps the icon and text alignment SIDES. */
+  rtl: boolean;
 }
 
 export interface ButtonIconLayout {
@@ -183,11 +202,19 @@ const V_BOTTOM = VERTICAL_ALIGNMENT_BOTTOM;
 
 /**
  * `Button::_notification`'s `NOTIFICATION_DRAW` icon/text placement
- * (`button.cpp:233-456`). RTL and `clip_text`/`overrun_behavior`/
- * `autowrap_mode` are out of scope — this codebase never models layout
- * direction, and `ButtonProperties` parses none of the three text-fitting
- * properties, so every RTL/clip branch in the source collapses to its
- * non-RTL, non-clipped case.
+ * (`button.cpp:233-456`). `clip_text`/`overrun_behavior`/`autowrap_mode` are
+ * out of scope here — sizing reads them, this placement does not — so every
+ * clip branch in the source collapses to its non-clipped case.
+ *
+ * `rtl` swaps the icon and text alignment SIDES once, up front
+ * (`:262-276`), and everything after reads only the swapped values. CENTER is
+ * absent from both swap ladders and never moves. The paragraph DIRECTION the
+ * same notification sets (`:565`) is bidi reordering inside the shaped run,
+ * which this engine's shaper does not model, and is not a placement concern —
+ * with one placement consequence left out with it: `TextParagraph::draw`'s
+ * CENTER arm falls back to a right-hug when the line OVERFLOWS its box and
+ * the paragraph's inferred direction is RTL (`text_paragraph.cpp:908`), a
+ * direction this shaper never infers.
  *
  * Godot's OWN `text_ofs.x`/`text_ofs.y` there are the shaped paragraph's BOX
  * top-left, with the REAL horizontal alignment (`text_buf->set_alignment`)
@@ -213,8 +240,12 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     iconNaturalSize,
     hasText,
     textNaturalSize,
+    rtl,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
+  // `button.cpp:262-276`.
+  const iconAlign = rtl ? swapAlignmentSide(iconAlignment) : iconAlignment;
+  const textAlign = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
 
   // Button itself never sets `_internal_margin` (that is an OptionButton/
   // CheckBox concern), so the box after
@@ -233,7 +264,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     if (expandIcon) {
       let w = customElementSize.x;
       let h = customElementSize.y;
-      if (iconAlignment !== H_CENTER && textNaturalSize.x > 0) {
+      if (iconAlign !== H_CENTER && textNaturalSize.x > 0) {
         w -= textNaturalSize.x + hSeparation;
       }
       if (verticalIconAlignment !== V_CENTER) {
@@ -255,7 +286,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   let iconLayout: ButtonIconLayout | null = null;
   if (iconSize) {
     let iconX: number;
-    switch (iconAlignment) {
+    switch (iconAlign) {
       case H_CENTER:
         iconX = styleMargin.left + (customElementSize.x - iconSize.x) / 2;
         break;
@@ -286,7 +317,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     // text to lay out — matching `if (!xl_text.is_empty())`'s gate in the
     // source around this same subtraction.
     if (hasText) {
-      if (iconAlignment !== H_CENTER) drawableWidth -= iconSize.x + hSeparation;
+      if (iconAlign !== H_CENTER) drawableWidth -= iconSize.x + hSeparation;
       if (verticalIconAlignment !== V_CENTER) drawableHeight -= iconSize.y;
     }
 
@@ -296,13 +327,13 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
     let textOffsetX = styleMargin.left;
-    if (iconLayout && iconAlignment === H_LEFT) {
+    if (iconLayout && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes text right past it; a RIGHT or CENTER icon's
       // reservation already narrowed `drawableWidth`, and the alignment
       // shift below operates within that narrower box directly.
       textOffsetX += customElementSize.x - drawableWidth;
     }
-    textOffsetX += horizontalAlignShift(textNaturalSize.x, drawableWidth, textAlignment);
+    textOffsetX += buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
     if (iconLayout && verticalIconAlignment === V_TOP) {
@@ -314,12 +345,48 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   return { icon: iconLayout, text: textLayout };
 }
 
-function horizontalAlignShift(contentWidthPx: number, boxWidthPx: number, alignment: number): number {
+/** `button.cpp:266-275` — LEFT and RIGHT trade places under RTL; CENTER (and any other value) is left alone. */
+function swapAlignmentSide(alignment: number): number {
+  if (alignment === H_RIGHT) return H_LEFT;
+  if (alignment === H_LEFT) return H_RIGHT;
+  return alignment;
+}
+
+/**
+ * The horizontal shift a Button-family label picks up inside its drawable box —
+ * `button.cpp:437-441` plus the alignment the TextServer then applies itself
+ * (`text_paragraph.cpp:887-922`, the block `TextParagraph::draw` runs).
+ *
+ * Godot never aligns against the drawable width. It sets the paragraph's own
+ * width to `Math::ceil(MAX(1.0f, drawable_size_remained.width))` (`:437`) and
+ * every arm measures against THAT; CENTER alone also carries the offset that
+ * ceiling leaves, `(drawable - text_buf_width) / 2` (`:439`), and floors its
+ * own half (`text_paragraph.cpp:904`). CENTER contributes nothing further once
+ * the line is wider than the box (`:902`): the fallback there right-hugs only
+ * an RTL INFERRED direction, which this shaper never produces (it models no
+ * bidi), so the arm collapses to the box offset alone.
+ *
+ * `contentWidthPx` is `shaped_text_get_width`, which is itself ceiled
+ * (`text_server_adv.cpp:7561-7570`) — `shapedTextSizeWidthPx`.
+ *
+ * Shared by every Button subclass that lays its own label out
+ * (`checkbox`/`checkbutton`/`optionbutton` each reserve their fixed element
+ * differently, but all four reach this same arithmetic).
+ */
+export function buttonTextAlignShiftPx(
+  contentWidthPx: number,
+  drawableWidthPx: number,
+  alignment: number
+): number {
+  const textBufWidthPx = Math.ceil(Math.max(1, drawableWidthPx));
   switch (alignment) {
-    case H_CENTER:
-      return (boxWidthPx - contentWidthPx) / 2;
+    case H_CENTER: {
+      const boxOffsetPx = (drawableWidthPx - textBufWidthPx) / 2;
+      if (contentWidthPx > textBufWidthPx) return boxOffsetPx;
+      return boxOffsetPx + Math.floor((textBufWidthPx - contentWidthPx) / 2);
+    }
     case H_RIGHT:
-      return boxWidthPx - contentWidthPx;
+      return textBufWidthPx - contentWidthPx;
     case H_LEFT:
     default:
       return 0;

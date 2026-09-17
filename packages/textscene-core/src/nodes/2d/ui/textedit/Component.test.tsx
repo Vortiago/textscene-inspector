@@ -310,3 +310,49 @@ describe('<TextEdit> — syntax_highlighter', () => {
     expect(findTextMeshes(renderer.scene)).toHaveLength(1);
   });
 });
+
+describe('<TextEdit> — RTL layout', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('places each row by its OWN width from the trailing edge (text_edit.cpp:1490-1494)', async () => {
+    // The two rows differ in length, so a single mirrored band value cannot
+    // produce both — each must step back by its own shaped width.
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={{ ...solveNode({ text: 'Wave rift over quiet stone\nAmber' }), rtl: true }} rect={RECT} renderOrder={0} />
+    );
+    const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
+    expect(xs.length).toBe(2);
+    expect(xs[0]).toBeLessThan(xs[1]!);
+    expect(xs[1]).toBeLessThan(RECT.w);
+  });
+
+  it('stacks every row flush at the band start under LTR', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'Wave rift over quiet stone\nAmber' })} rect={RECT} renderOrder={0} />
+    );
+    const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
+    expect(xs[0]).toBeCloseTo(xs[1]!, 5);
+  });
+});
+
+describe('<TextEdit> — text clip band', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  it('clips the text to the control itself, wherever the control sits', async () => {
+    // `useWorldClipPlanes` composes its argument with the anchor's own world
+    // matrix, so the band must be control-LOCAL: a rect carrying the control's
+    // offset would clip at twice that offset and hide the text outright.
+    const planesOf = async (rect: Rect2) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'Wave rift' })} rect={rect} renderOrder={0} />
+      );
+      const mesh = findTextMeshes(renderer.scene)[0]!;
+      return ((mesh.material as THREE.ShaderMaterial).clippingPlanes ?? []).map((p) => p.constant);
+    };
+    expect(await planesOf({ x: 0, y: 200, w: 300, h: 100 })).toEqual(await planesOf({ x: 0, y: 0, w: 300, h: 100 }));
+  });
+});

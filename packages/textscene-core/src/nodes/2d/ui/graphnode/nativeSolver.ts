@@ -289,7 +289,8 @@ export const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx
     const margin = panel.contentMargin.left + (eff.drawStylebox ? slot.contentMargin.left : 0);
     const finalWidth = width - (eff.drawStylebox ? slot.contentMargin.left + slot.contentMargin.right : 0);
     const rawRect: Rect2 = { x: margin, y: fromY, w: finalWidth, h: height };
-    rects.set(entry.path, fitChildInRect(rawRect, entry.minSize, entry.hFlags, entry.vFlags));
+    // `graph_node.cpp` has no RTL branch; `fit_child_in_rect` reads the flag itself.
+    rects.set(entry.path, fitChildInRect(rawRect, entry.minSize, entry.hFlags, entry.vFlags, n.rtl));
     ofsY = toY;
   });
 

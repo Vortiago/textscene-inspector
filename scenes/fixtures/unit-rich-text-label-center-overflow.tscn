@@ -1,0 +1,31 @@
+; The ONE variable: a [center] line WIDER than its own box. RichTextLabel draws
+; its lines through its own alignment switch (rich_text_label.cpp:999-1014),
+; whose CENTER arm is unguarded — unlike TextParagraph::draw's, which no-ops
+; once the line overflows (text_paragraph.cpp:1004). The two disagree only on an
+; overflowing line, so no other RichTextLabel fixture can tell which one this
+; previewer transcribes. autowrap is OFF so the line cannot wrap out of the
+; overflow. The box is 200 wide and centred, so its OWN rect mirror
+; (control.cpp:1785) is the identity.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="CenterOverflow" type="RichTextLabel" parent="."]
+layout_mode = 1
+offset_left = 476.0
+offset_right = 676.0
+offset_top = 40.0
+offset_bottom = 120.0
+bbcode_enabled = true
+autowrap_mode = 0
+text = "[center]Wave rift over quiet stone and amber[/center]"

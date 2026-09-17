@@ -59,8 +59,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
 
   const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode);
   const layout = useMemo(
-    () => spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth),
-    [rect.w, rect.h, widestIconWidth]
+    () => spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth, solveNode.rtl),
+    [rect.w, rect.h, widestIconWidth, solveNode.rtl]
   );
 
   // --- Field chrome + text ---------------------------------------------------
@@ -87,11 +87,18 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
         alignment: props.alignment ?? HORIZONTAL_ALIGNMENT_LEFT,
         textWidthPx: textLayout.widthPx,
         textHeightPx: textLayout.heightPx,
+        rtl: solveNode.rtl,
       }),
-    [layout.fieldRect.w, layout.fieldRect.h, fieldBox.contentMargin, props.alignment, textLayout]
+    [layout.fieldRect.w, layout.fieldRect.h, fieldBox.contentMargin, props.alignment, textLayout, solveNode.rtl]
   );
 
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(content.contentRect);
+  // `content` is field-LOCAL; the field itself only sits at the control origin
+  // while the layout is LTR (`spinBoxLayout`'s own doc).
+  const clipRect = useMemo(
+    () => ({ ...content.contentRect, x: content.contentRect.x + layout.fieldRect.x }),
+    [content.contentRect, layout.fieldRect.x]
+  );
+  const { anchorRef, clippingPlanes } = useWorldClipPlanes(clipRect);
 
   // --- Stepper arrows ---------------------------------------------------------
   const upState = spinBoxUpButtonState(props, resolvedValue);
@@ -132,23 +139,25 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
 
   return (
     <CanvasItemGroup ref={anchorRef}>
-      <StyleBoxQuad
-        styleBox={fieldBox}
-        color={tint.own}
-        rect={{ x: 0, y: 0, w: layout.fieldRect.w, h: layout.fieldRect.h }}
-        renderOrder={renderOrder}
-      />
-      {textLayout.lines.length > 0 && text.length > 0 && (
-        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <TextRun
-            layout={textLayout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
+      <CanvasItemGroup position={[layout.fieldRect.x, -layout.fieldRect.y, 0]}>
+        <StyleBoxQuad
+          styleBox={fieldBox}
+          color={tint.own}
+          rect={{ x: 0, y: 0, w: layout.fieldRect.w, h: layout.fieldRect.h }}
+          renderOrder={renderOrder}
+        />
+        {textLayout.lines.length > 0 && text.length > 0 && (
+          <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
+            <TextRun
+              layout={textLayout}
+              fontSizePx={fontSizePx}
+              tint={tintedFontColor}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+            />
+          </CanvasItemGroup>
+        )}
+      </CanvasItemGroup>
       {fieldSeparatorBox && (
         <CanvasItemGroup position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}>
           <StyleBoxQuad

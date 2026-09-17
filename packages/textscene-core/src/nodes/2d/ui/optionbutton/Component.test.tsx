@@ -260,4 +260,25 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
+
+  // `option_button.cpp:126`: the arrow sits `arrow_margin` in from the LEADING
+  // edge under RTL, against `:128`'s `size.width - arrow width - arrow_margin`.
+  // `arrow_margin` is 4 and the vendored chevron is 12 wide, so the LTR arm is
+  // 150 - 12 - 4 = 134.
+  it('draws the arrow at arrow_margin from the LEFT edge under RTL', async () => {
+    const arrowX = async (rtl: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <OptionButton
+          {...painterEnv()}
+          solveNode={{ ...solveNode({ items: ITEMS, selected: 1 }), rtl }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return findArrowMesh(renderer.scene)!.parent!.position.x;
+    };
+    expect(await arrowX(false)).toBe(134);
+    expect(await arrowX(true)).toBe(4);
+  });
+
 });

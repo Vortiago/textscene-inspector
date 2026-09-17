@@ -429,6 +429,26 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   };
 };
 
+/**
+ * One column mirrored inside the row it was laid out in. `color_picker.cpp`
+ * never calls `is_layout_rtl()`: ColorPicker builds its whole widget tree from
+ * ordinary containers in its constructor, and each one mirrors its own row.
+ * `BoxContainer::_resort` walks an RTL horizontal box's children in REVERSE
+ * and places them left to right (`box_container.cpp:184-192`), and
+ * `GridContainer` starts `col_ofs` at the grid's right edge and walks left
+ * (`grid_container.cpp:193-197,218-223`). Both come out as this reflection
+ * wherever the columns tile their row exactly, which every row below does.
+ *
+ * `Container::fit_child_in_rect` (`container.cpp:95-128`) is not a second
+ * mirror: `Control::set_rect` pre-mirrors through `_compute_offsets`
+ * (`control.cpp:904-915`) exactly as much as `_size_changed` mirrors back
+ * (`:1785-1787`), so a child lands where its container put it either way.
+ */
+function mirroredColumn(column: Rect2, row: Rect2, rtl: boolean): Rect2 {
+  if (!rtl) return column;
+  return { ...column, x: row.x + row.w - (column.x - row.x) - column.w };
+}
+
 export interface ShapeRowSplit {
   svSquare: Rect2;
   hueSlider: Rect2;
@@ -441,13 +461,13 @@ export interface ShapeRowSplit {
  * `sv_square` takes everything else (`SIZE_EXPAND_FILL`,
  * `color_picker_shape.cpp:438`), separated by the row's own `separation`.
  */
-export function svAndHueRects(shape: Rect2, theme: Pick<NativeTheme, 'separation' | 'scale'>): ShapeRowSplit {
+export function svAndHueRects(shape: Rect2, theme: Pick<NativeTheme, 'separation' | 'scale'>, rtl = false): ShapeRowSplit {
   const scale = colorPickerScale(theme);
   const hueWidth = Math.round(COLOR_PICKER_HUE_WIDTH * scale);
   const svWidth = shape.w - theme.separation - hueWidth;
   return {
-    svSquare: { x: shape.x, y: shape.y, w: svWidth, h: shape.h },
-    hueSlider: { x: shape.x + svWidth + theme.separation, y: shape.y, w: hueWidth, h: shape.h },
+    svSquare: mirroredColumn({ x: shape.x, y: shape.y, w: svWidth, h: shape.h }, shape, rtl),
+    hueSlider: mirroredColumn({ x: shape.x + svWidth + theme.separation, y: shape.y, w: hueWidth, h: shape.h }, shape, rtl),
   };
 }
 
@@ -510,7 +530,8 @@ export function sliderGridRowRects(
   rowCount: number,
   theme: NativeTheme,
   labelWidth: number,
-  valueWidth: number
+  valueWidth: number,
+  rtl = false
 ): SliderGridRowColumns[] {
   const sliderWidth = Math.max(0, sliders.w - labelWidth - valueWidth - 2 * theme.separation);
   const rowHeight = rowCount > 0 ? (sliders.h - (rowCount - 1) * theme.separation) / rowCount : 0;
@@ -522,9 +543,9 @@ export function sliderGridRowRects(
     const sliderX = labelX + labelWidth + theme.separation;
     const valueX = sliderX + sliderWidth + theme.separation;
     rows.push({
-      label: { x: labelX, y, w: labelWidth, h: rowHeight },
-      slider: { x: sliderX, y, w: sliderWidth, h: rowHeight },
-      value: { x: valueX, y, w: valueWidth, h: rowHeight },
+      label: mirroredColumn({ x: labelX, y, w: labelWidth, h: rowHeight }, sliders, rtl),
+      slider: mirroredColumn({ x: sliderX, y, w: sliderWidth, h: rowHeight }, sliders, rtl),
+      value: mirroredColumn({ x: valueX, y, w: valueWidth, h: rowHeight }, sliders, rtl),
     });
   }
   return rows;
@@ -537,15 +558,15 @@ export interface HexRowColumns {
 }
 
 /** `hex_hbc`'s own 3-column split (`color_picker.cpp:2191-2222`). */
-export function hexRowColumns(hex: Rect2, theme: NativeTheme): HexRowColumns {
+export function hexRowColumns(hex: Rect2, theme: NativeTheme, rtl = false): HexRowColumns {
   const scale = colorPickerScale(theme);
   const labelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
   const fieldX = hex.x + labelWidth + theme.separation + textTypeWidth + theme.separation;
   return {
-    label: { x: hex.x, y: hex.y, w: labelWidth, h: hex.h },
-    textType: { x: hex.x + labelWidth + theme.separation, y: hex.y, w: textTypeWidth, h: hex.h },
-    field: { x: fieldX, y: hex.y, w: Math.max(0, hex.x + hex.w - fieldX), h: hex.h },
+    label: mirroredColumn({ x: hex.x, y: hex.y, w: labelWidth, h: hex.h }, hex, rtl),
+    textType: mirroredColumn({ x: hex.x + labelWidth + theme.separation, y: hex.y, w: textTypeWidth, h: hex.h }, hex, rtl),
+    field: mirroredColumn({ x: fieldX, y: hex.y, w: Math.max(0, hex.x + hex.w - fieldX), h: hex.h }, hex, rtl),
   };
 }
 
@@ -560,7 +581,7 @@ export interface ModeRowButtons {
  * other size flag distinguishes them), then the fixed-width `btn_mode`
  * dropdown.
  */
-export function modeRowButtonRects(mode: Rect2, theme: NativeTheme): ModeRowButtons {
+export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false): ModeRowButtons {
   const scale = colorPickerScale(theme);
   const dropdownWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
   const buttonsWidth = Math.max(0, mode.w - dropdownWidth - theme.separation - (MODE_BUTTON_COUNT - 1) * theme.separation);
@@ -568,10 +589,10 @@ export function modeRowButtonRects(mode: Rect2, theme: NativeTheme): ModeRowButt
 
   const buttons: Rect2[] = [];
   for (let i = 0; i < MODE_BUTTON_COUNT; i++) {
-    buttons.push({ x: mode.x + i * (buttonWidth + theme.separation), y: mode.y, w: buttonWidth, h: mode.h });
+    buttons.push(mirroredColumn({ x: mode.x + i * (buttonWidth + theme.separation), y: mode.y, w: buttonWidth, h: mode.h }, mode, rtl));
   }
   const dropdownX = mode.x + buttonsWidth + MODE_BUTTON_COUNT * theme.separation;
-  return { buttons, dropdown: { x: dropdownX, y: mode.y, w: dropdownWidth, h: mode.h } };
+  return { buttons, dropdown: mirroredColumn({ x: dropdownX, y: mode.y, w: dropdownWidth, h: mode.h }, mode, rtl) };
 }
 
 /**
@@ -599,20 +620,24 @@ export interface SampleRowColumns {
  * (fixed width, hidden at `SHAPE_NONE` — `btn_shape->set_visible(current_shape
  * != SHAPE_NONE)`, `:321`).
  */
-export function sampleRowColumns(sample: Rect2, theme: NativeTheme, pickerShape: number | undefined): SampleRowColumns {
+export function sampleRowColumns(sample: Rect2, theme: NativeTheme, pickerShape: number | undefined, rtl = false): SampleRowColumns {
   const scale = colorPickerScale(theme);
   const btnWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
   const showShapeBtn = (pickerShape ?? SHAPE_HSV_RECTANGLE) !== 4; // SHAPE_NONE
   const shapeBtnSpace = showShapeBtn ? btnWidth + theme.separation : 0;
   return {
-    pick: { x: sample.x, y: sample.y, w: btnWidth, h: sample.h },
-    sample: {
-      x: sample.x + btnWidth + theme.separation,
-      y: sample.y,
-      w: Math.max(0, sample.w - btnWidth - theme.separation - shapeBtnSpace),
-      h: sample.h,
-    },
-    shape: showShapeBtn ? { x: sample.x + sample.w - btnWidth, y: sample.y, w: btnWidth, h: sample.h } : null,
+    pick: mirroredColumn({ x: sample.x, y: sample.y, w: btnWidth, h: sample.h }, sample, rtl),
+    sample: mirroredColumn(
+      {
+        x: sample.x + btnWidth + theme.separation,
+        y: sample.y,
+        w: Math.max(0, sample.w - btnWidth - theme.separation - shapeBtnSpace),
+        h: sample.h,
+      },
+      sample,
+      rtl
+    ),
+    shape: showShapeBtn ? mirroredColumn({ x: sample.x + sample.w - btnWidth, y: sample.y, w: btnWidth, h: sample.h }, sample, rtl) : null,
   };
 }
 
@@ -629,14 +654,20 @@ export interface SwatchesRowRects {
  * `recent_preset_hbc` stay collapsed at load (`comparison.md`'s own doc for
  * why: presets only ever arrive through `add_preset()` at runtime).
  */
-export function swatchesRowRects(swatches: Rect2, theme: NativeTheme): SwatchesRowRects {
+export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = false): SwatchesRowRects {
   const menuButtonWidth = colorPickerMenuButtonSize(theme).x;
   // Both rows share the label's own text height, so the block splits evenly
   // around the one `theme.separation` gap between them.
   const rowHeight = (swatches.h - theme.separation) / 2;
+  // `btn_recent_preset` is the VBox's own full-width child, so its mirror is
+  // the identity — only `palette_box`'s two columns swap.
   return {
-    swatchesButton: { x: swatches.x, y: swatches.y, w: Math.max(0, swatches.w - theme.separation - menuButtonWidth), h: rowHeight },
-    menuButton: { x: swatches.x + swatches.w - menuButtonWidth, y: swatches.y, w: menuButtonWidth, h: rowHeight },
+    swatchesButton: mirroredColumn(
+      { x: swatches.x, y: swatches.y, w: Math.max(0, swatches.w - theme.separation - menuButtonWidth), h: rowHeight },
+      swatches,
+      rtl
+    ),
+    menuButton: mirroredColumn({ x: swatches.x + swatches.w - menuButtonWidth, y: swatches.y, w: menuButtonWidth, h: rowHeight }, swatches, rtl),
     recentColorsButton: { x: swatches.x, y: swatches.y + rowHeight + theme.separation, w: swatches.w, h: rowHeight },
   };
 }
@@ -681,11 +712,11 @@ export const COLOR_PICKER_SLIDER_GRABBER_OFFSET = 8;
  * `Point2i`'s cast truncates the whole `x`/`y` expression once, not each
  * term separately — unlike `grabber_offset`'s own separate int addition.
  */
-export function colorPickerChannelGrabberRect(sliderBoxSize: Vec2, ratio: number, grabber: Vec2, grabberOffsetPx: number): Rect2 {
+export function colorPickerChannelGrabberRect(sliderBoxSize: Vec2, ratio: number, grabber: Vec2, grabberOffsetPx: number, rtl = false): Rect2 {
   const size = { x: Math.trunc(sliderBoxSize.x), y: Math.trunc(sliderBoxSize.y) };
   const areasize = size.x;
   const grabberShift = -Math.trunc(grabber.x / 2);
-  const x = Math.trunc(ratio * areasize + grabberShift);
+  const x = Math.trunc((rtl ? 1 - ratio : ratio) * areasize + grabberShift);
   const y = Math.trunc(size.y / 2) - Math.trunc(grabber.y / 2) + grabberOffsetPx;
   return { x, y, w: grabber.x, h: grabber.y };
 }

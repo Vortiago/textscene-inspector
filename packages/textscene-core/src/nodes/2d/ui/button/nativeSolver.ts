@@ -114,9 +114,13 @@ export function buttonTextTheme(
 /**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`), minus
  * `align_to_largest_stylebox` (Button's own default theme sets it to `0` /
- * disabled, `:174`, and this codebase never overrides it) and RTL/clip/
- * autowrap sizing (not modelled — see `buttonBase.ts`'s
- * `layoutButtonContent` doc for why).
+ * disabled, `:174`, and this codebase never overrides it) and autowrap sizing
+ * (not modelled — see `buttonBase.ts`'s `layoutButtonContent` doc for why).
+ *
+ * `n.rtl` reaches only the stylebox pick (`:525` sizes off
+ * `_get_current_stylebox()`, whose arms prefer `<state>_mirrored`); the icon
+ * and text terms read `horizontal_icon_alignment` UNSWAPPED here, and only
+ * test it against CENTER, so the side swap cannot move a minimum size.
  *
  * `n.textureSize` is `null` until the icon texture resolves — treated as "no
  * icon contribution yet", the same convention `texturerect/nativeSolver.ts`'s
@@ -143,7 +147,7 @@ export function buttonTextTheme(
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
   const state = resolveButtonDrawState(props.disabled);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const text = props.text ?? '';

@@ -24,6 +24,9 @@
  * cannot quietly become a settings grab-bag.
  */
 
+import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
+import { parseOptionalInt } from './valueParsers.js';
+
 /**
  * A `key=value` line. The key admits `/` (Godot's subsection separator) and `.`
  * — a feature-tagged override like `renderer/rendering_method.mobile` is a real
@@ -155,4 +158,46 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
     width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
     height: axis('display/window/size/viewport_height', DEFAULT_VIEWPORT_HEIGHT),
   };
+}
+
+/**
+ * The `internationalization/*` settings `Control::is_layout_rtl()` reads,
+ * reduced to the four booleans its branches produce
+ * ({@link LayoutDirectionEnv}).
+ *
+ * Two of the three inputs are in the file. `force_right_to_left_layout_direction`
+ * and `root_node_layout_direction` are plain settings
+ * (`core/config/project_settings.cpp:1797-1798`), and the RTL locale table is a
+ * fixed seven-code list rather than an ICU query
+ * (`modules/text_server_adv/text_server_adv.cpp:534-541`). The third is not:
+ * `_get_locale()` ends at `TranslationServer::get_locale()`, seeded from
+ * `internationalization/locale/test` when the project sets one and from the OS
+ * locale otherwise (`core/string/translation_server.cpp:592-599`). So the test
+ * locale answers both application-locale arms exactly, while the system-locale
+ * arm — and an application arm with no test locale — has no answer the scene
+ * files contain, and stays left-to-right.
+ */
+export function projectLayoutDirectionEnv(settings: ProjectSettings | null): LayoutDirectionEnv {
+  // `GLOBAL_GET_CACHED(bool, …)` booleanizes whatever the ConfigFile holds, so
+  // `1` reads as true exactly like `true` does.
+  const forceRtl =
+    boolSlotValue(settings?.['internationalization/rendering/force_right_to_left_layout_direction']) === true;
+  const testLocale = settings?.['internationalization/locale/test']?.trim() ?? '';
+  const applicationLocaleRtl = testLocale !== '' && isLocaleRightToLeft(testLocale);
+  // The host's locale, which no scene file states.
+  const systemLocaleRtl = false;
+
+  const rootDirection = parseOptionalInt(
+    settings?.['internationalization/rendering/root_node_layout_direction']
+  );
+  const rootRtl =
+    rootDirection === 1
+      ? false
+      : rootDirection === 2
+        ? true
+        : rootDirection === 3
+          ? systemLocaleRtl
+          : applicationLocaleRtl;
+
+  return { forceRtl, rootRtl, applicationLocaleRtl, systemLocaleRtl };
 }

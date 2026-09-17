@@ -384,3 +384,51 @@ describe('wired through the registry + full solve, against the real fixture numb
     }
   });
 });
+
+describe('ScrollContainer under RTL', () => {
+  const OWN_RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+  it('puts the vertical bar on the leading (left) edge and shortens the horizontal bar from the left (scroll_container.cpp:297-305, control.cpp:1785-1787)', () => {
+    // Both bars are anchored children, so `Control::_size_changed` mirrors each
+    // one's rect against the container width. LTR the v bar spans
+    // [300-8, 300] and the h bar [0, 300-8]; RTL is the mirror of both.
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 500, y: 500 } });
+    const n = { ...scrollContainer({}, [child]), rtl: true };
+    const out = scrollContainerScrollBars(n, ctx(), OWN_RECT);
+    expect(out.vertical.visible).toBe(true);
+    expect(out.horizontal.visible).toBe(true);
+    expect(out.vertical.rect).toEqual({ x: 0, y: 0, w: THICKNESS, h: 200 - THICKNESS });
+    expect(out.horizontal.rect).toEqual({ x: THICKNESS, y: 200 - THICKNESS, w: 300 - THICKNESS, h: THICKNESS });
+  });
+
+  it('offsets the content past the reserved vertical strip (scroll_container.cpp:350,357-363)', () => {
+    // `if (reserve_vscroll) { size.x -= width; if (rtl) ofs.x += width; }`,
+    // then `r.position += ofs`. The child is not mirrored again: Godot reaches
+    // it through `fit_child_in_rect`/`set_rect`, whose `_compute_offsets`
+    // un-mirrors exactly what `_size_changed` mirrors back.
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 100, y: 500 } });
+    const n = { ...scrollContainer({}, [child]), rtl: true };
+    const out = layoutRects(n, [{ node: child, minSize: { x: 100, y: 500 } }], OWN_RECT, ctx());
+    expect(out.get('Scroll/Child')).toEqual({ x: THICKNESS, y: 0, w: 100, h: 500 });
+  });
+
+  it('leaves the content at the origin when no vertical strip is reserved (scroll_container.cpp:357)', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 500, y: 100 } });
+    const n = { ...scrollContainer({}, [child]), rtl: true };
+    const out = layoutRects(n, [{ node: child, minSize: { x: 500, y: 100 } }], OWN_RECT, ctx());
+    expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 500, h: 100 });
+  });
+
+  it("hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the content strip's trailing edge (container.cpp:99,109)", () => {
+    const child = leaf('Scroll/Child', {
+      customMinimumSize: { x: 40, y: 20 },
+      sizeFlagsHorizontal: 2, // EXPAND without FILL
+      sizeFlagsVertical: 0,
+    });
+    const n = { ...scrollContainer({}, [child]), rtl: true };
+    const out = layoutRects(n, [{ node: child, minSize: { x: 40, y: 20 } }], OWN_RECT, ctx());
+    // EXPAND stretches the rect to the 300-wide content viewport (no bar
+    // shows), then fit_child_in_rect drops it back to 40 at 300 - 40.
+    expect(out.get('Scroll/Child')).toEqual({ x: 260, y: 0, w: 40, h: 20 });
+  });
+});
