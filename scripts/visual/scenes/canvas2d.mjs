@@ -526,6 +526,11 @@ export const CANVAS_2D_SCENES = [
   { name: 'tab-bar-rtl-scroll', file: 'unit-tab-bar-rtl-scroll.tscn', mode: '2d' },
   { name: 'tab-container-rtl', file: 'unit-tab-container-rtl.tscn', mode: '2d' },
   { name: 'menu-bar-rtl', file: 'unit-menu-bar-rtl.tscn', mode: '2d' },
+  // A font-size override is the one theme item a TabBar shapes every tab
+  // against, and the shaped buffer sizes the strip as well as the glyphs, so
+  // the TabContainer half also moves its content band. Every other tab scene
+  // resolves the default, where a strip measured at the wrong rung looks right.
+  { name: 'tab-font-size-override', file: 'unit-tab-font-size-override.tscn', mode: '2d' },
   // The button family mirrors an icon side and a stylebox key, not a rect, so
   // each type needs its own scene: CheckBox and CheckButton swap which edge the
   // check sits on, OptionButton its arrow, LinkButton its text origin.

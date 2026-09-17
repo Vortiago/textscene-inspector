@@ -51,6 +51,11 @@ hidden` override map, keyed by whatever index the file names — TabContainer's 
 
 ## Known limitations
 
+- **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
+  StyleBox are not distinguished from the unselected ones, so the current tab
+  reads as the same colour and box as its neighbours. Its position, width and
+  the underline above it are exact; this is the whole of the residual any tab
+  fixture still measures against Godot.
 - **Approximated** A tab title's paragraph direction is not applied, so under
   `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
   Where the strip and each tab in it sit does follow the layout direction.

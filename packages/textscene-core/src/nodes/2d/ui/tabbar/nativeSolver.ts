@@ -30,7 +30,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext, TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -39,8 +39,7 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { AutowrapMode, isTextLayoutResult, shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { resolveTextTheme, type ResolvedTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
+import { resolveNodeFontMetrics, resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
 import type { ControlColor } from '../control/types';
@@ -201,11 +200,14 @@ export function tabWidthStyleMinWidth(
 
 export const TAB_BAR_THEME_FONT_KEY = 'font';
 
-/** `default_theme.cpp:1041-1047`: ONE `font_size` key for every state; a DIFFERENT colour key per state. */
-export const TAB_BAR_THEME_KEYS: Record<TabDrawState, TextThemeKeys> = {
-  selected: { sizeKey: 'font_size', colorKey: 'font_selected_color' },
-  unselected: { sizeKey: 'font_size', colorKey: 'font_unselected_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
+/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`) — ONE size item for every state, `default_theme.cpp:1041`. */
+export const TAB_BAR_THEME_FONT_SIZE_KEY = 'font_size';
+
+/** `default_theme.cpp:1044-1047`: a DIFFERENT colour key per state, unlike the single size key above. */
+const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
+  selected: 'font_selected_color',
+  unselected: 'font_unselected_color',
+  disabled: 'font_disabled_color',
 };
 
 /** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`) — `font_selected_color`'s own default (`:1044`). */
@@ -221,17 +223,35 @@ const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, ControlColor> = {
   disabled: TAB_BAR_DISABLED_FONT_COLOR,
 };
 
-/** Resolves TabBar's own theme font size/colour for `state` (`resolveTextTheme`'s own doc). */
-export function tabBarTextTheme(
+/**
+ * The size every tab's own `text_buf` is shaped at — `TabBar::_shape`'s
+ * `theme_cache.font_size` (`tab_bar.cpp:365`), resolved through
+ * `Control::get_theme_font_size` so a node-local
+ * `theme_override_font_sizes/font_size` wins over the theme chain
+ * (`control.cpp:3113-3129`). State-independent: Godot binds one size item for
+ * the whole widget.
+ *
+ * The solver AND the painter both call this. Godot shapes ONCE per tab and
+ * reads that one buffer for both the minimum size (`:82`) and the draw pass
+ * (`:677`), so a bar whose height and whose glyphs came from two different
+ * sizes is a shape Godot cannot produce.
+ */
+export function tabBarFontSizePx(
   n: SolveNode,
   props: Pick<TabBarProperties, 'themeOverrideFontSizes'>,
-  state: TabDrawState,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  return resolveTextTheme(n, props, TAB_BAR_THEME_KEYS[state], {
-    fontSizePx: ctx.theme.fontSize,
-    color: TAB_BAR_FONT_DEFAULTS[state],
-  });
+  theme: Pick<NativeTheme, 'fontSize'>
+): number {
+  return resolveNodeFontSizePx(
+    n,
+    TAB_BAR_THEME_FONT_SIZE_KEY,
+    props.themeOverrideFontSizes?.[TAB_BAR_THEME_FONT_SIZE_KEY],
+    theme.fontSize
+  );
+}
+
+/** This tab state's own font colour — the resolved `font_<state>_color` (`n.colors`), else the default theme's own literal. */
+export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
+  return colors[TAB_BAR_FONT_COLOR_KEYS[state]] ?? TAB_BAR_FONT_DEFAULTS[state];
 }
 
 const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
@@ -328,15 +348,6 @@ export function shapeTabLabel(text: string, fontSizePx: number, fontMetrics: Par
 
 export { isTextLayoutResult };
 
-/** This node's own registered `MinimumSizeFn` meta — one shaped layout per tab, `undefined` where a tab has no text or text was not shaped (no measurer yet). */
-export interface TabBarMinimumSizeMeta {
-  layouts: readonly (TextLayoutResult | null)[];
-}
-
-export function isTabBarMinimumSizeMeta(value: unknown): value is TabBarMinimumSizeMeta {
-  return typeof value === 'object' && value !== null && Array.isArray((value as TabBarMinimumSizeMeta).layouts);
-}
-
 // --- get_minimum_size -----------------------------------------------------------
 
 /**
@@ -350,7 +361,7 @@ export function isTabBarMinimumSizeMeta(value: unknown): value is TabBarMinimumS
  * `max_tab_width` PROPERTY, which this function never reads (only
  * `_update_cache`'s draw-time truncation does).
  */
-export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
+export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
   const props = n.node.properties as TabBarProperties;
   const tabs = props.tabs ?? [];
   const currentTab = props.currentTab ?? -1;
@@ -376,7 +387,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   );
 
   const fontMetrics = resolveNodeFontMetrics(n, TAB_BAR_THEME_FONT_KEY);
-  const layouts: (TextLayoutResult | null)[] = [];
+  const fontSizePx = tabBarFontSizePx(n, props, ctx.theme);
   const closeIconSize = tabBarThemeIconSize(n, 'close');
 
   let width = 0;
@@ -384,10 +395,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxSingleTabWidth = 0;
 
   tabs.forEach((tab, i) => {
-    if (tab.hidden) {
-      layouts.push(null);
-      return;
-    }
+    if (tab.hidden) return;
     const state = resolveTabDrawState(tab, i, currentTab);
     const style = pickTabStyleBox(overrides, defaults, state);
     const styleMinWidth = style.contentMargin.left + style.contentMargin.right;
@@ -400,8 +408,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `text_buf->get_size().y` (`:82`) folds into height UNCONDITIONALLY —
     // even an empty title still shapes one line at the font's own metrics —
     // while the width contribution below is gated on `!is_empty()`.
-    const layout = ctx.measureText ? shapeTabLabel(tab.title, ctx.theme.fontSize, fontMetrics) : null;
-    layouts.push(layout);
+    const layout = ctx.measureText ? shapeTabLabel(tab.title, fontSizePx, fontMetrics) : null;
     const textWidth = layout ? shapedTextSizeWidthPx(layout.widthPx) : 0;
     height = Math.max(height, (layout?.heightPx ?? 0) + yMargin);
 
@@ -431,7 +438,7 @@ export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = maxSingleTabWidth + scrollButtonsWidth;
   }
 
-  return { size: { x: width, y: height }, meta: { layouts } satisfies TabBarMinimumSizeMeta };
+  return { x: width, y: height };
 };
 
 controlSolverRegistry.registerMinimumSize('TabBar', tabBarMinimumSize);

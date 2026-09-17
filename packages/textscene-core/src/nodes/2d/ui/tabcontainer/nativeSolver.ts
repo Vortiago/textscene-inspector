@@ -58,9 +58,15 @@ import {
   TAB_ALIGNMENT_CENTER,
   TAB_ALIGNMENT_LEFT,
   TAB_ALIGNMENT_RIGHT,
+  TAB_BAR_THEME_FONT_KEY,
+  TAB_BAR_THEME_FONT_SIZE_KEY,
   reconstructThemeScale,
   tabBarMinimumSize,
 } from '../tabbar/nativeSolver';
+import {
+  resolveNodeFont,
+  resolveNodeFontSizePx,
+} from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 
@@ -147,6 +153,11 @@ export const tabContainerTextureSlots: TextureSlotsFn = (node) => {
   return requests;
 };
 
+/** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_FONT, TabContainer, tab_font, "font")` (`tab_container.cpp:1264`) — TabContainer's own item name for the strip's font. */
+const TAB_CONTAINER_FONT_KEY = 'font';
+/** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_FONT_SIZE, TabContainer, tab_font_size, "font_size")` (`tab_container.cpp:1265`) — its size twin. */
+const TAB_CONTAINER_FONT_SIZE_KEY = 'font_size';
+
 /**
  * The internal TabBar's own theme constants — `_on_theme_changed`
  * (`tab_container.cpp:341-343`): `h_separation` comes from TabContainer's
@@ -184,10 +195,18 @@ export function buildInternalTabBarNode(
     clipTabs: props.clipTabs,
     maxTabWidth: 0,
     tabCloseDisplayPolicy: 0,
-    // Font SIZE still resolves the OLD way — a local override read straight
-    // off `node.properties` (`resolveNodeFontSizePx`'s own contract, never
-    // folded into a `SolveNode` bag the way colour/constant/stylebox are).
-    themeOverrideFontSizes: props.themeOverrideFontSizes,
+    // `tab_bar->add_theme_font_size_override(font_size, theme_cache.
+    // tab_font_size)` (`:339`) — resolved on the CONTAINER, whose own type
+    // chain answers it, then pushed as the bar's own override so the bar
+    // never re-resolves it under `TabBar`.
+    themeOverrideFontSizes: {
+      [TAB_BAR_THEME_FONT_SIZE_KEY]: resolveNodeFontSizePx(
+        n,
+        TAB_CONTAINER_FONT_SIZE_KEY,
+        props.themeOverrideFontSizes?.[TAB_CONTAINER_FONT_SIZE_KEY],
+        theme.fontSize
+      ),
+    },
   };
   return {
     ...n,
@@ -198,12 +217,17 @@ export function buildInternalTabBarNode(
     // verbatim copy; `colors`/`styleBoxes` (already on `n` via the spread
     // above) read under the SAME key names either way, so no remap needed.
     constants: internalTabBarThemeConstants(n.constants, theme),
+    // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
+    // the font twin of the size push above.
+    fontOverrides: {
+      ...n.fontOverrides,
+      [TAB_BAR_THEME_FONT_KEY]: resolveNodeFont(n, TAB_CONTAINER_FONT_KEY),
+    },
   };
 }
 
 function tabBarHeight(synthetic: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measureText'>): number {
-  const result = tabBarMinimumSize(synthetic, ctx as SolveContext);
-  return 'size' in result ? result.size.y : result.y;
+  return tabBarMinimumSize(synthetic, ctx as SolveContext).y;
 }
 
 export interface StyleMargins {
@@ -296,8 +320,7 @@ export const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (tabsVisible) {
     const derivedTabs = deriveTabContainerTabs(n, props.tabOverrides);
     const synthetic = buildInternalTabBarNode(n, derivedTabs, props, ctx.theme);
-    const barResult = tabBarMinimumSize(synthetic, ctx);
-    const barSize = 'size' in barResult ? barResult.size : barResult;
+    const barSize = tabBarMinimumSize(synthetic, ctx);
     const tabbarMargin = tabbarStyleMargins(n.styleBoxes);
     width += barSize.x + tabbarMargin.left + tabbarMargin.right;
     height += barSize.y + tabbarMargin.top + tabbarMargin.bottom;

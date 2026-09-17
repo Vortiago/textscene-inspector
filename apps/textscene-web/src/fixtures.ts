@@ -1448,6 +1448,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Font Size Override",
+    "file": "unit-tab-font-size-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Text Edit Rtl",
     "file": "unit-text-edit-rtl.tscn",
     "category": "Other"

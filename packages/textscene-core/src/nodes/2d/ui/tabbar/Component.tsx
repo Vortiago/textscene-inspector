@@ -51,16 +51,16 @@ import {
   computeTabBarDrawLayout,
   fitTabIconSize,
   isCloseButtonVisible,
-  isTabBarMinimumSizeMeta,
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
   reconstructThemeScale,
   resolveTabDrawState,
   shapeTabLabel,
+  tabBarFontColor,
+  tabBarFontSizePx,
   tabBarIconColor,
   tabBarStyleBoxes,
-  tabBarTextTheme,
   tabBarThemeIconSize,
   tabContentWidth,
   tabDrawX,
@@ -81,7 +81,7 @@ interface ComputedTab {
   layout: TextLayoutResult;
 }
 
-export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
   const currentTab = props.currentTab ?? -1;
@@ -102,8 +102,9 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
   const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement');
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
-  const cachedLayouts = meta && isTabBarMinimumSizeMeta(meta) ? meta.layouts : null;
-  const fontSizePx = tabBarTextTheme(solveNode, props, 'unselected', { theme }).fontSizePx;
+  // Shaped here rather than carried over from the solver, so the internal bar
+  // a TabContainer paints (never in the solve tree) takes the same arm.
+  const fontSizePx = tabBarFontSizePx(solveNode, props, theme);
 
   const computed: ComputedTab[] = useMemo(
     () =>
@@ -111,11 +112,10 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
         const state = resolveTabDrawState(tab, i, currentTab);
         const iconNatural = tabIconNaturalSize(solveNode, i);
         const iconSize = iconNatural ? fitTabIconSize(iconNatural, iconMaxWidth) : null;
-        const cached = cachedLayouts?.[i] ?? null;
-        const layout = cached ?? shapeTabLabel(tab.title, fontSizePx, fontMetrics);
+        const layout = shapeTabLabel(tab.title, fontSizePx, fontMetrics);
         return { tab, state, iconSize, layout };
       }),
-    [tabs, currentTab, iconMaxWidth, fontSizePx, fontMetrics, cachedLayouts, solveNode]
+    [tabs, currentTab, iconMaxWidth, fontSizePx, fontMetrics, solveNode]
   );
 
   const drawInputs: TabLayoutInput[] = useMemo(
@@ -167,7 +167,6 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nati
     solveNode,
     overrides,
     defaults,
-    theme,
     tint,
     renderOrder,
     barHeight: rect.h,
@@ -213,7 +212,6 @@ interface TabBarTabChromeProps {
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
   defaults: ReturnType<typeof tabBarStyleBoxes>;
-  theme: NativeControlComponentProps['theme'];
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;
@@ -236,7 +234,6 @@ function TabBarTabChrome({
   solveNode,
   overrides,
   defaults,
-  theme,
   tint,
   renderOrder,
   barHeight,
@@ -258,7 +255,7 @@ function TabBarTabChrome({
   const { texture: iconSource } = useTexture2D(tab.icon, externalResources, internalResources);
   const iconTexture = useCanvas2DTexture(iconSource);
 
-  const fontColor = tabBarTextTheme(solveNode, props, state, { theme }).color;
+  const fontColor = tabBarFontColor(solveNode.colors, state);
   const tintedFontColor = tintColor(fontColor, tint.own);
   const baseIconColor = tabBarIconColor(solveNode.colors, state);
   const tintedIconColor = tintColor(baseIconColor, tint.own);

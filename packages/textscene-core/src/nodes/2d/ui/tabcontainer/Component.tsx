@@ -73,8 +73,7 @@ export function TabContainer({
   );
 
   const barCtx: Pick<SolveContext, 'theme' | 'measureText'> = { theme, measureText };
-  const barResult = tabBarMinimumSize(syntheticBar, barCtx as SolveContext);
-  const barMinHeight = 'size' in barResult ? barResult.size.y : barResult.y;
+  const barMinHeight = tabBarMinimumSize(syntheticBar, barCtx as SolveContext).y;
 
   const tabbarMargin = tabbarStyleMargins(solveNode.styleBoxes);
   const showsStrip = tabsVisible && derivedTabs.length > 0;

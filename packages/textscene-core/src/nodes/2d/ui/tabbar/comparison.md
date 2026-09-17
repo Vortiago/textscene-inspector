@@ -56,6 +56,11 @@ OptionButton's `item_<idx>/*` walk is. The two `linter.ts` advisories compare a
 
 ## Known limitations
 
+- **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
+  StyleBox are not distinguished from the unselected ones, so the current tab
+  reads as the same colour and box as its neighbours. Its position, width and
+  the underline above it are exact; this is the whole of the residual any tab
+  fixture still measures against Godot.
 - **Approximated** A tab title's paragraph direction is not applied, so under
   `layout_direction = 3` a right-to-left script, or a title ending in punctuation,
   keeps left-to-right glyph order. Where each tab sits in the strip, and where its

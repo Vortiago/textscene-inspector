@@ -9,9 +9,11 @@ import {
   tabBarMinimumSize,
   tabBarStyleBoxes,
   tabBarThemeIconSize,
+  tabBarFontSizePx,
   tabContentWidth,
   tabDrawX,
   tabWidthStyleMinWidth,
+  shapeTabLabel,
 } from './nativeSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -286,20 +288,121 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
   }
 
   it('floors on the vendored 16x16 close icon when untethered', () => {
-    const result = tabBarMinimumSize(node(), ctx());
-    const size = 'x' in result ? result : result.size;
+    const size = tabBarMinimumSize(node(), ctx());
     // styleMinWidth(0, no styleboxes resolved) + closeButtonMarginLeft(0, no button style resolved) + close(16).
     expect(size.x).toBeGreaterThanOrEqual(16);
     expect(size.y).toBeGreaterThanOrEqual(16);
   });
 
   it('widens on a themed "close" icon bigger than the vendored default', () => {
-    const untethered = tabBarMinimumSize(node(), ctx());
-    const themed = tabBarMinimumSize(node({ textureSlots: { close: { x: 40, y: 32 } } }), ctx());
-    const untetheredSize = 'x' in untethered ? untethered : untethered.size;
-    const themedSize = 'x' in themed ? themed : themed.size;
+    const untetheredSize = tabBarMinimumSize(node(), ctx());
+    const themedSize = tabBarMinimumSize(node({ textureSlots: { close: { x: 40, y: 32 } } }), ctx());
     expect(themedSize.x).toBeGreaterThan(untetheredSize.x);
     expect(themedSize.y).toBeGreaterThan(untetheredSize.y);
+  });
+});
+
+describe('tabBarFontSizePx', () => {
+  // `theme_cache.font_size` (`tab_bar.cpp:365`) is a bound theme ITEM
+  // (`tab_bar.cpp:2179`), so `Control::get_theme_font_size` answers it: a
+  // node-local override wins, but only while it is POSITIVE
+  // (`control.cpp:3113-3117`).
+  const THEME = nativeTheme(1);
+  const bar = (): SolveNode => ({
+    ...solveNode(),
+    path: 'T',
+    node: { name: 'T', type: 'TabBar', children: [], properties: { name: 'T' } as TabBarProperties },
+  });
+
+  it('answers the theme default when the node overrides nothing', () => {
+    expect(tabBarFontSizePx(bar(), {}, THEME)).toBe(THEME.fontSize);
+  });
+
+  it('a positive theme_override_font_sizes/font_size wins', () => {
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 28 } }, THEME)).toBe(28);
+  });
+
+  it('an override of 0 falls through (control.cpp:3115 requires > 0)', () => {
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 0 } }, THEME)).toBe(THEME.fontSize);
+  });
+
+  it('ignores a DIFFERENT size key', () => {
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } }, THEME)).toBe(THEME.fontSize);
+  });
+});
+
+describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_size', () => {
+  // `TabBar::_shape` shapes every tab at `theme_cache.font_size`
+  // (tab_bar.cpp:365), which is a theme ITEM (tab_bar.cpp:2179), so a
+  // node-local `theme_override_font_sizes/font_size` wins over every theme in
+  // the chain (control.cpp:3113-3117). `ms.height` floors on that same buffer
+  // (tab_bar.cpp:82) and `ms.width` on its advance (tab_bar.cpp:80).
+  function ctx(): SolveContext {
+    return {
+      theme: nativeTheme(1),
+      measureText: () => ({ x: 0, y: 0 }),
+      combinedMinimumSize: () => ({ x: 0, y: 0 }),
+    };
+  }
+
+  function node(props: Partial<TabBarProperties> = {}): SolveNode {
+    const properties: TabBarProperties = {
+      name: 'T',
+      tabs: [{ title: 'Map', tooltip: '', disabled: false }],
+      ...props,
+    };
+    return { ...solveNode(), path: 'T', node: { name: 'T', type: 'TabBar', children: [], properties } };
+  }
+
+  function sizeOf(n: SolveNode) {
+    return tabBarMinimumSize(n, ctx());
+  }
+
+  it('an override above the theme default raises and widens the bar', () => {
+    const overridden = sizeOf(node({ themeOverrideFontSizes: { font_size: 32 } }));
+    const plain = sizeOf(node());
+    expect(overridden.y).toBeGreaterThan(plain.y);
+    expect(overridden.x).toBeGreaterThan(plain.x);
+  });
+
+  it('an override below the theme default lowers and narrows it', () => {
+    const overridden = sizeOf(node({ themeOverrideFontSizes: { font_size: 8 } }));
+    const plain = sizeOf(node());
+    expect(overridden.y).toBeLessThan(plain.y);
+    expect(overridden.x).toBeLessThan(plain.x);
+  });
+
+  it('an override of 0 falls through to the theme default (control.cpp:3115)', () => {
+    expect(sizeOf(node({ themeOverrideFontSizes: { font_size: 0 } }))).toEqual(sizeOf(node()));
+  });
+
+  // `_draw_tab` centres the buffer as `get_margin(SIDE_TOP) + ((sb_rect.size.y
+  // - sb_ms.y) - text_buf->get_size().y) / 2` (tab_bar.cpp:677) against the
+  // rect `get_minimum_size` floored at `text_buf->get_size().y + y_margin`
+  // (tab_bar.cpp:82). ONE buffer feeds both, so that term cannot go negative —
+  // it only can where the height and the glyphs came from two different sizes.
+  it('the bar the solver sizes contains the buffer the painter shapes, at any font size', () => {
+    const style = pickTabStyleBox({}, tabBarStyleBoxes(1), 'unselected');
+    for (const fontSize of [8, 16, 28, 32]) {
+      const n = node({ themeOverrideFontSizes: { font_size: fontSize } });
+      const props = n.node.properties as TabBarProperties;
+      const layout = shapeTabLabel('Map', tabBarFontSizePx(n, props, nativeTheme(1)), undefined);
+      const content = layoutTabContent({
+        barHeightPx: sizeOf(n).y,
+        style,
+        tabWidthPx: 400,
+        iconSize: null,
+        hasText: true,
+        textNaturalHeightPx: layout.heightPx,
+        textAdvanceWidthPx: layout.widthPx,
+        hSeparation: 4,
+        closeVisible: false,
+        closeIconSize: { x: 16, y: 16 },
+        buttonHlMargin: { left: 0, top: 0, right: 0, bottom: 0 },
+        rtl: false,
+      });
+      expect(content.text?.offset.y).toBe(style.contentMargin.top);
+    }
   });
 });
 

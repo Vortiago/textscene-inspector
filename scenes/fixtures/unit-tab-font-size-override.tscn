@@ -1,0 +1,106 @@
+; ONE VARIABLE: `theme_override_font_sizes/font_size = 28` on the right-hand
+; TabBar and the right-hand TabContainer; their left-hand twins author none
+; and resolve the default 16.
+;
+; `TabBar::_shape` shapes every tab at `theme_cache.font_size`
+; (tab_bar.cpp:365), which is a theme ITEM (tab_bar.cpp:2179), so a node-local
+; override reaches it (control.cpp:3113-3117). The ONE shaped buffer then feeds
+; both `get_minimum_size` (tab_bar.cpp:82) and the draw pass (tab_bar.cpp:677),
+; so the override has to move the glyphs AND the strip's own height together.
+; TabContainer binds the same item name onto its own `tab_font_size`
+; (tab_container.cpp:1265) and pushes it onto its internal bar
+; (tab_container.cpp:339), where the strip height also sets the content band's
+; offset — the TabBar twin cannot show that, since its own rect is authored.
+;
+; No other TabBar or TabContainer scene authors a font-size override, so in
+; every one of them the override rung and the default rung resolve to the same
+; number and a strip measured at the wrong one is invisible.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.18, 1)
+
+[node name="BarDefault" type="TabBar" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 32.0
+offset_right = 380.0
+offset_bottom = 88.0
+current_tab = 1
+tab_alignment = 0
+clip_tabs = false
+tab_count = 3
+tab_0/title = "Inventory"
+tab_1/title = "Map"
+tab_2/title = "Journal"
+
+[node name="BarOverride" type="TabBar" parent="."]
+layout_mode = 1
+offset_left = 440.0
+offset_top = 32.0
+offset_right = 780.0
+offset_bottom = 88.0
+theme_override_font_sizes/font_size = 28
+current_tab = 1
+tab_alignment = 0
+clip_tabs = false
+tab_count = 3
+tab_0/title = "Inventory"
+tab_1/title = "Map"
+tab_2/title = "Journal"
+
+[node name="ContainerDefault" type="TabContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 128.0
+offset_right = 380.0
+offset_bottom = 288.0
+tab_alignment = 0
+current_tab = 1
+clip_tabs = false
+
+[node name="General" type="Control" parent="ContainerDefault"]
+visible = false
+layout_mode = 2
+
+[node name="Advanced" type="Control" parent="ContainerDefault"]
+layout_mode = 2
+
+[node name="Page" type="ColorRect" parent="ContainerDefault/Advanced"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.45, 0.35, 1)
+
+[node name="ContainerOverride" type="TabContainer" parent="."]
+layout_mode = 1
+offset_left = 440.0
+offset_top = 128.0
+offset_right = 780.0
+offset_bottom = 288.0
+theme_override_font_sizes/font_size = 28
+tab_alignment = 0
+current_tab = 1
+clip_tabs = false
+
+[node name="General" type="Control" parent="ContainerOverride"]
+visible = false
+layout_mode = 2
+
+[node name="Advanced" type="Control" parent="ContainerOverride"]
+layout_mode = 2
+
+[node name="Page" type="ColorRect" parent="ContainerOverride/Advanced"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.45, 0.35, 1)

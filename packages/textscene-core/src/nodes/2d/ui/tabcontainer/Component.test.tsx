@@ -167,3 +167,40 @@ describe('<TabContainer> panel band', () => {
     expect(headerY).toBe(-(RECT.h - HEADER_HEIGHT));
   });
 });
+
+describe('<TabContainer> internal strip at a font-size override', () => {
+  // TabContainer binds its own `tab_font_size` under the item name "font_size"
+  // (tab_container.cpp:1265) and pushes it onto the internal bar as that bar's
+  // own `font_size` override (tab_container.cpp:339). `_get_tab_height`
+  // (tab_container.cpp:51-58) then turns the bar's minimum size into the
+  // header band the current page is offset by, so the shaped buffer sets the
+  // band AND the glyphs in it.
+  const measured = { measureText: () => ({ x: 0, y: 0 }) };
+
+  async function strip(properties: Partial<TabContainerProperties>) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        {...measured}
+        solveNode={solveNode({ currentTab: 0, ...properties }, [page('General')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const chrome = findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    const text = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    return { headerHeight: -chrome[0]!, tabTop: chrome[1]!, textTop: text[0]! };
+  }
+
+  it('a font_size override deepens the header band the page is offset by', async () => {
+    const plain = await strip({});
+    const overridden = await strip({ themeOverrideFontSizes: { font_size: 28 } });
+    expect(overridden.headerHeight).toBeGreaterThan(plain.headerHeight);
+  });
+
+  it('the strip the container sizes still contains the glyphs that strip draws (tab_bar.cpp:82,677)', async () => {
+    const overridden = await strip({ themeOverrideFontSizes: { font_size: 28 } });
+    expect(overridden.textTop).toBeLessThanOrEqual(overridden.tabTop);
+  });
+});

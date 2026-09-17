@@ -151,6 +151,20 @@ describe('<TabBar> (isolated painter contract)', () => {
     expect(alwaysIconMeshes.length).toBeGreaterThan(neverIconMeshes.length);
   });
 
+  it('shapes a tab title at theme_override_font_sizes/font_size, not the theme default (tab_bar.cpp:365,2179)', async () => {
+    const tabs = [{ title: 'Inventory', tooltip: '', disabled: false }];
+    const glyphHeight = async (properties: Partial<TabBarProperties>) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TabBar {...painterEnv()} solveNode={solveNode({ tabs, currentTab: 0, ...properties })} rect={RECT} theme={THEME} renderOrder={0} />
+      );
+      const geometry = findTextMeshes(renderer.scene)[0]!.geometry as THREE.BufferGeometry;
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox!;
+      return box.max.y - box.min.y;
+    };
+    expect(await glyphHeight({ themeOverrideFontSizes: { font_size: 28 } })).toBeGreaterThan(await glyphHeight({}));
+  });
+
   it('draws the scroll arrows once the tabs overflow a clipped bar', async () => {
     const narrowRect: Rect2 = { x: 0, y: 0, w: 60, h: 32 };
     const renderer = await ReactThreeTestRenderer.create(

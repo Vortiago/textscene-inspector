@@ -25,12 +25,14 @@
  * see each widget's own `nativeSolver.ts` for the citation attached to ITS
  * pair).
  *
- * Two functions rather than each widget re-deriving `n.node.type`/
+ * Three functions rather than each widget re-deriving `n.node.type`/
  * `controlProps(n).themeTypeVariation` inline: one seam a test can mock to
  * inject a distinguishable `FontMetrics` without depending on
  * `sceneFontLoader.ts`'s real (DOM-gated, silently-short-circuited-under-
- * vitest — that module's own doc) async pipeline, and a second, pure one for
- * the size walk that has no such DOM dependency at all.
+ * vitest — that module's own doc) async pipeline, a second, pure one for
+ * the size walk that has no such DOM dependency at all, and
+ * `resolveNodeFont` — the first one's font half without the metrics peek,
+ * for a caller pushing one node's resolved font onto another
  *
  * Both share `scopeFor` below, which caches the node's `ThemeResolutionScope`
  * (the type-dependency chain + theme search order — the part of the walk that
@@ -47,6 +49,7 @@ import {
 } from '../../../../resources/styles/theme/lookup';
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import type { FontMetrics } from './fontMetrics';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 
 /**
  * `themeResolutionScope`'s own doc: the type-dependency chain and theme
@@ -93,8 +96,19 @@ function scopeFor(n: SolveNode): ThemeResolutionScope {
  * own doc for why the paint-time read has to stay live.
  */
 export function resolveNodeFontMetrics(n: SolveNode, themeKey: string): FontMetrics {
-  const fontResource = resolveThemeFontIn(scopeFor(n), themeKey, n.fontOverrides[themeKey]);
-  return peekSceneFontMetrics(fontResource, n.path);
+  return peekSceneFontMetrics(resolveNodeFont(n, themeKey), n.path);
+}
+
+/**
+ * The FONT `themeKey` resolves to on `n` — `resolveNodeFontMetrics`'s own
+ * first half, without the metrics peek. Exposed for the one caller that must
+ * hand a node's resolved font to a DIFFERENT node: TabContainer pushes its own
+ * `tab_font` onto its internal TabBar as that bar's own override
+ * (`scene/gui/tab_container.cpp:338`), so the bar resolves against
+ * TabContainer's type chain the way Godot does, not its own.
+ */
+export function resolveNodeFont(n: SolveNode, themeKey: string): FontResource | null {
+  return resolveThemeFontIn(scopeFor(n), themeKey, n.fontOverrides[themeKey]);
 }
 
 /**
