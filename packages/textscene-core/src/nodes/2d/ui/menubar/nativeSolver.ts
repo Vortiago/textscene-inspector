@@ -1,9 +1,9 @@
 /**
  * MenuBar's native (WebGL canvas) rect solver — `MenuBar::get_minimum_size`
  * (`scene/gui/menu_bar.cpp:865-886`) plus the per-title shaping `shape()`
- * does (`:520-527`), computed once here and handed to the painter as `meta`
- * so drawing never re-shapes the same strings (`Component.tsx`'s own doc has
- * the fallback story).
+ * does (`:520-527`), the latter as {@link menuBarTitleShapes} — the one
+ * computation `Component.tsx` calls too, so drawing never re-shapes the same
+ * strings against a second measurement.
  *
  * A MenuBar's titles come from its PopupMenu children — a `Window`
  * subclass, never a Control, so a PopupMenu never reaches `SolveNode.children`
@@ -36,6 +36,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -70,7 +71,7 @@ export interface MenuBarTitle {
 type RawChild = SolveNode['node']['children'][number];
 
 /** `MenuBar::_get_popups` (`menu_bar.cpp:585-594`): direct `PopupMenu` children, in scene order. */
-function popupChildren(n: SolveNode): readonly RawChild[] {
+function popupChildren(n: ShareNode): readonly RawChild[] {
   return n.node.children.filter((child) => child.type === 'PopupMenu');
 }
 
@@ -95,7 +96,7 @@ function menuTitleText(child: RawChild): string {
  * since a MenuBar title is not a Button-family label.
  */
 export function menuBarTitles(
-  n: SolveNode,
+  n: ShareNode,
   fontSizePx: number,
   fontMetrics: FontMetrics,
   marginSize: Vec2
@@ -120,16 +121,40 @@ export function menuBarTitles(
 }
 
 /**
+ * Every title bar item, shaped — the **solve handoff** share
+ * (`r3f/controls/native/solveHandoff.ts`) `menuBarMinimumSize` and
+ * `Component.tsx` both call, so the bar's width and its glyphs come from one
+ * measurement.
+ *
+ * Reads `n.node.children` (the RAW child list, which `sortableView` never
+ * rewrites) rather than `n.children`: a MenuBar's titles come from its
+ * `PopupMenu` children, which are Windows and so never Controls in the solve
+ * tree at all.
+ *
+ * `_get_menu_item_rect`/`get_minimum_size` both measure `theme_cache.normal`
+ * (`menu_bar.cpp:412,869`), never the mirrored box — only the drawn quad
+ * takes that — so this picks the unmirrored StyleBox.
+ */
+export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n, theme) => {
+  const props = n.node.properties as MenuBarProperties;
+  const marginSize = contentMarginSize(pickButtonStyleBox(n.styleBoxes, theme.widgets.button, 'normal'));
+  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS, {
+    fontSizePx: theme.fontSize,
+    color: BUTTON_DEFAULT_FONT_COLOR,
+  });
+  return menuBarTitles(n, fontSizePx, resolveNodeFontMetrics(n, MENU_BAR_THEME_FONT_KEY), marginSize);
+});
+
+/**
  * `MenuBar::get_minimum_size` (`menu_bar.cpp:865-886`): every visible title's
  * own width summed, `h_separation` BETWEEN titles only (never a trailing
  * one), height the max of every title's own height.
  */
 export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as MenuBarProperties;
   const style = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, 'normal');
   const marginSize = contentMarginSize(style);
   const popups = popupChildren(n);
-  if (popups.length === 0) return { size: { x: 0, y: 0 } };
+  if (popups.length === 0) return { x: 0, y: 0 };
 
   const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
 
@@ -140,15 +165,10 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   // with zero text extent, rather than the whole minimum size collapsing.
   if (!ctx.measureText) {
     const width = marginSize.x * popups.length + hSeparation * Math.max(0, popups.length - 1);
-    return { size: { x: width, y: marginSize.y } };
+    return { x: width, y: marginSize.y };
   }
 
-  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS, {
-    fontSizePx: ctx.theme.fontSize,
-    color: BUTTON_DEFAULT_FONT_COLOR,
-  });
-  const fontMetrics = resolveNodeFontMetrics(n, MENU_BAR_THEME_FONT_KEY);
-  const titles = menuBarTitles(n, fontSizePx, fontMetrics, marginSize);
+  const titles = menuBarTitleShapes(n, ctx.theme);
 
   let width = 0;
   let height = 0;
@@ -157,7 +177,7 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     width += title.size.x;
   }
   if (titles.length > 1) width += hSeparation * (titles.length - 1);
-  return { size: { x: width, y: height }, meta: titles };
+  return { x: width, y: height };
 };
 
 export interface MenuBarItemPlacement {

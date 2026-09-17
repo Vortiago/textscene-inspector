@@ -14,6 +14,7 @@ import type { SkippedAncestors, SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
+import { defineChannel } from './solveHandoff';
 import { solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -656,12 +657,14 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
   });
 });
 
-describe('solveControlTree — MinimumSizeFn/ContainerLayoutFn meta side-channel', () => {
+describe('solveControlTree — the ContainerLayoutFn solve handoff', () => {
+  const channel = defineChannel<{ draggerPos: number }>('test');
+
   afterEach(() => {
     controlSolverRegistry.clear();
   });
 
-  it('a MinimumSizeFn returning a bare Vec2 (the old contract) leaves SolvedControl.meta undefined', () => {
+  it('a MinimumSizeFn produces no handoff at all — everything one could hand over is a share', () => {
     const TYPE = 'TestBareVec2MinimumSize';
     controlSolverRegistry.registerMinimumSize(TYPE, () => ({ x: 10, y: 20 }));
 
@@ -672,30 +675,7 @@ describe('solveControlTree — MinimumSizeFn/ContainerLayoutFn meta side-channel
     expect(solved.get('Leaf')?.meta).toBeUndefined();
   });
 
-  it('a MinimumSizeFn returning { size, meta } floors `size` as before and surfaces `meta` on SolvedControl', () => {
-    const TYPE = 'TestMetaMinimumSize';
-    const layout = { widthPx: 42 };
-    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ size: { x: 10, y: 20 }, meta: layout }));
-
-    const root = node('Leaf', TYPE, {});
-    const solved = solveControlTree([root], VIEWPORT, ctx());
-
-    expect(solved.get('Leaf')?.minSize).toEqual({ x: 10, y: 20 });
-    expect(solved.get('Leaf')?.meta).toBe(layout);
-  });
-
-  it('{ size, meta }\'s `size` still floors to custom_minimum_size exactly like a bare Vec2', () => {
-    const TYPE = 'TestMetaMinimumSizeFloored';
-    controlSolverRegistry.registerMinimumSize(TYPE, () => ({ size: { x: 5, y: 5 }, meta: 'x' }));
-
-    const root = node('Leaf', TYPE, { customMinimumSize: { x: 50, y: 5 } });
-    const solved = solveControlTree([root], VIEWPORT, ctx());
-
-    expect(solved.get('Leaf')?.minSize).toEqual({ x: 50, y: 5 });
-    expect(solved.get('Leaf')?.meta).toBe('x');
-  });
-
-  it('a ContainerLayoutFn returning a bare Map (the old contract) leaves the container\'s own SolvedControl.meta undefined', () => {
+  it('a ContainerLayoutFn returning a bare Map (the common case) leaves the container\'s own SolvedControl.meta undefined', () => {
     const TYPE = 'TestBareMapContainer';
     controlSolverRegistry.registerContainerLayout(TYPE, (_n, children) => {
       const out = new Map<string, Rect2>();
@@ -711,40 +691,22 @@ describe('solveControlTree — MinimumSizeFn/ContainerLayoutFn meta side-channel
     expect(solved.get('Root/Child')?.rect).toEqual({ x: 0, y: 0, w: 10, h: 10 });
   });
 
-  it("a ContainerLayoutFn returning { rects, meta } surfaces `meta` on the CONTAINER's own SolvedControl, not its children's", () => {
+  it("a ContainerLayoutFn's sealed value reaches the CONTAINER's own SolvedControl, not its children's", () => {
     const TYPE = 'TestMetaContainer';
-    const layoutMeta = { draggerPos: 77 };
+    const boundary = { draggerPos: 77 };
     controlSolverRegistry.registerContainerLayout(TYPE, (_n, children) => {
       const rects = new Map<string, Rect2>();
       for (const c of children) rects.set(c.node.path, { x: 0, y: 0, w: 10, h: 10 });
-      return { rects, meta: layoutMeta };
+      return { rects, meta: channel.seal(boundary) };
     });
 
     const child = node('Root/Child', 'Control', {});
     const root = node('Root', TYPE, { anchorsPreset: 15 }, [child]);
     const solved = solveControlTree([root], VIEWPORT, ctx());
 
-    expect(solved.get('Root')?.meta).toBe(layoutMeta);
+    expect(channel.open(solved.get('Root')?.meta)).toBe(boundary);
     expect(solved.get('Root/Child')?.rect).toEqual({ x: 0, y: 0, w: 10, h: 10 });
     expect(solved.get('Root/Child')?.meta).toBeUndefined();
-  });
-
-  it("a child's own MinimumSizeFn meta survives being laid out by a container (the two metas don't collide)", () => {
-    const CONTAINER = 'TestMetaContainerParent';
-    const LEAF = 'TestMetaLeafChild';
-    controlSolverRegistry.registerContainerLayout(CONTAINER, (_n, children) => {
-      const rects = new Map<string, Rect2>();
-      for (const c of children) rects.set(c.node.path, { x: 0, y: 0, w: 10, h: 10 });
-      return { rects, meta: 'container-meta' };
-    });
-    controlSolverRegistry.registerMinimumSize(LEAF, () => ({ size: { x: 1, y: 1 }, meta: 'leaf-meta' }));
-
-    const child = node('Root/Child', LEAF, {});
-    const root = node('Root', CONTAINER, { anchorsPreset: 15 }, [child]);
-    const solved = solveControlTree([root], VIEWPORT, ctx());
-
-    expect(solved.get('Root')?.meta).toBe('container-meta');
-    expect(solved.get('Root/Child')?.meta).toBe('leaf-meta');
   });
 });
 

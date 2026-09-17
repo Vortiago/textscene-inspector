@@ -1,7 +1,7 @@
 /**
  * `<SplitContainer>` — the native (WebGL canvas) painter for the base
  * `SplitContainer` type. Identical reasoning to `hsplitcontainer/Component.tsx`
- * (read its module doc first, including the `meta`/fallback split), except
+ * (read its module doc first, including the sealed-boundary channel), except
  * `vertical` is read from THIS node's own properties at runtime
  * (`types.ts`'s doc) rather than being fixed by type the way
  * HSplitContainer/VSplitContainer's own painters are.
@@ -19,7 +19,7 @@ import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
-  isSplitContainerLayoutMeta,
+  splitContainerBoundaryChannel,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
@@ -58,7 +58,7 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
     grabberExtent: vertical ? iconSize.y : iconSize.x,
   });
   const [first, second] = sortable as [SolveNode, SolveNode];
-  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const cachedDraggerPos = splitContainerBoundaryChannel.open(meta)?.draggerPos;
   const draggerPos =
     cachedDraggerPos ??
     computeSplitDraggerPosition(

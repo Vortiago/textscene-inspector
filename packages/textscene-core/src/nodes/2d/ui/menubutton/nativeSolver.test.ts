@@ -9,7 +9,6 @@
  * `control_font_disabled_color` (`:161`).
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -41,10 +40,7 @@ function ctx(): SolveContext {
   };
 }
 
-function minSize(...args: Parameters<typeof menuButtonMinimumSize>): Vec2 {
-  const result = menuButtonMinimumSize(...args);
-  return 'size' in result ? result.size : result;
-}
+const minSize = menuButtonMinimumSize;
 
 describe('menuButtonMinimumSize', () => {
   it('is exactly the default-theme button margin for empty text (8, 8)', () => {

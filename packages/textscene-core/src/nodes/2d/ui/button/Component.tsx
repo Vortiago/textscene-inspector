@@ -24,16 +24,10 @@
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  *
- * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `buttonMinimumSize` — see
- * its own doc) instead of shaping `text` itself. That function already shapes
- * the SAME string at the SAME literal parameters this painter would
- * (`boxWidthPx: 0`, `autowrapMode: OFF`, `lineSpacingPx: 0` — Button never
- * wraps) every time the solve runs, so re-shaping here was pure duplicate
- * work, unconditional on every mount/text/font change. Falls back to shaping
- * locally only when `meta` is not a usable `TextLayoutResult` (a hand-built
- * test props object, or a solve whose measurer was unavailable) — the SAME
- * numbers either way, so the fallback carries no divergence risk the way
- * `HSplitContainer`'s custom-minimum-size fallback does.
+ * TEXT LAYOUT: calls `nativeSolver.ts`'s `buttonLabelShape`, the **solve
+ * handoff** share the minimum-size solver calls too, so one shaping computes
+ * both the box and the glyphs. There is no second spelling of the parameters
+ * here to drift from, and no fallback arm a test could exercise instead.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -47,7 +41,6 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
-  isTextLayoutResult,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
@@ -58,14 +51,13 @@ import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
-  shapeButtonLabel,
   tintColor,
   layoutButtonContent,
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
 } from '../../../../r3f/controls/native/buttonBase';
-import { BUTTON_THEME_FONT_KEY, buttonTextTheme, buttonIconColor } from './nativeSolver';
+import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 
 interface IconImageLike {
@@ -73,7 +65,7 @@ interface IconImageLike {
   height?: number;
 }
 
-export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
@@ -90,15 +82,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme, meta }: Nati
     [baseFontColor, tint.own]
   );
 
-  const cachedLayout = isTextLayoutResult(meta) ? meta : null;
-  // See Label's own Component.tsx for why this reads INSIDE the render body
-  // rather than inside the `useMemo` below.
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null = useMemo(() => {
-    if (!hasText) return null;
-    if (cachedLayout) return cachedLayout;
-    return shapeButtonLabel(text, fontSizePx, fontMetrics);
-  }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
+  const layout: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
   // --- Icon: resolve + load the referenced texture -------------------------
   // The node's OWN scope, not the ambient provider's: a Button that arrived

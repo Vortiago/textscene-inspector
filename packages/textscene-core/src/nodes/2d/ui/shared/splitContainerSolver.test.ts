@@ -27,6 +27,7 @@ import {
   computeSplitDraggerPosition,
   isSplitGrabberVisible,
   makeSplitContainerLayout,
+  splitContainerBoundaryChannel,
   makeSplitContainerMinimumSize,
   resolveSplitSeparation,
   resortSplitContainer,
@@ -413,7 +414,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     // ContainerLayoutFn actually computed (ITEM A: a painter can read this
     // back instead of recomputing it from a narrower subset of the inputs)
     // — exactly where RatioLeft's rect ends, 294.
-    expect(solved.get('Split')?.meta).toEqual({ draggerPos: 294 });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: 294 });
   });
 
   it('widens on a themed "grabber" wider than the vendored default (_get_separation: MAX(theme separation, grabber width))', () => {
@@ -439,7 +440,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     expect(ctx.combinedMinimumSize(root)).toEqual({ x: 140, y: 20 });
   });
 
-  it('meta.draggerPos is undefined with fewer than two sortable children — nothing to report', () => {
+  it('the sealed boundary reports no draggerPos with fewer than two sortable children', () => {
     controlSolverRegistry.registerContainerLayout('HSplitContainer', makeSplitContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HSplitContainer', makeSplitContainerMinimumSize(false));
 
@@ -453,7 +454,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
 
-    expect(solved.get('Split')?.meta).toEqual({ draggerPos: undefined });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: undefined });
   });
 
   it('skips a hidden child and a third child alike, mirroring the DOM path\'s two-sortable-child cap', () => {
@@ -725,6 +726,6 @@ describe('makeSplitContainerLayout under RTL — registered end-to-end', () => {
     expect(solved.get('Split/RatioLeft')?.rect).toEqual({ x: 106, y: 0, w: 294, h: 60 });
     expect(solved.get('Split/RatioRight')?.rect).toEqual({ x: 0, y: 0, w: 94, h: 60 });
     // The grabber band sits at the INVERTED position, 400 - 294 - 12.
-    expect(solved.get('Split')?.meta).toEqual({ draggerPos: 94 });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: 94 });
   });
 });

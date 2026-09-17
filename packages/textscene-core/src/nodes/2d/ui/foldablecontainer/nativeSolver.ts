@@ -37,6 +37,7 @@
  */
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
   ChildVisibilityFn,
@@ -200,21 +201,24 @@ export interface FoldableContainerTitleMetrics {
 /**
  * `FoldableContainer::_update_title_min_size` (`foldable_container.cpp:441-478`),
  * plus the StyleBox/icon/font resolution `_get_title_style`/`_get_title_icon`/
- * `_shape` (`:421-435,481-501`) that feeds it — computed once here and reused
- * by `foldableContainerMinimumSize`, `foldableContainerLayout` and (via
- * `meta`) `Component.tsx`, so all three agree on the SAME title bar.
+ * `_shape` (`:421-435,481-501`) that feeds it.
+ *
+ * The `shapeTitle = true` result is {@link foldableContainerTitleShape}, the
+ * **solve handoff** share both solver entry points and `Component.tsx` call,
+ * so all three agree on the SAME title bar. The `false` variant stays a plain
+ * call: it exists only for the solve's own not-ready-yet arm, and memoising
+ * it would let an unshaped title outlive the readiness gate.
  */
 export function foldableContainerTitleMetrics(
-  n: SolveNode,
+  n: ShareNode,
   props: FoldableContainerProperties,
   ctx: Pick<SolveContext, 'theme'>,
   /**
    * Whether to shape the title's text now. `false` only from the SOLVE step
    * when `ctx.measureText` is a readiness gate that has not fired yet (the
    * same "an absent measurer means text contributes nothing" contract every
-   * other `MinimumSizeFn` here honours) — `Component.tsx`'s own fallback
-   * always passes `true`, since by paint time the font metrics are available
-   * (`buttonMinimumSize`'s own doc explains the same split for Button).
+   * other `MinimumSizeFn` here honours). The painter never passes it: it goes
+   * through the share, which always shapes.
    */
   shapeTitle: boolean
 ): FoldableContainerTitleMetrics {
@@ -264,6 +268,16 @@ export function foldableContainerTitleMetrics(
 }
 
 /**
+ * The title bar, shaped — {@link foldableContainerTitleMetrics} with
+ * `shapeTitle = true`, memoised as the **solve handoff** share
+ * (`r3f/controls/native/solveHandoff.ts`) that `foldableContainerMinimumSize`,
+ * `foldableContainerLayout` and `Component.tsx` all call.
+ */
+export const foldableContainerTitleShape = defineShare<FoldableContainerTitleMetrics>((n, theme) =>
+  foldableContainerTitleMetrics(n, n.node.properties as FoldableContainerProperties, { theme }, true)
+);
+
+/**
  * `NOTIFICATION_SORT_CHILDREN`'s `c->set_visible(!folded)`
  * (`foldable_container.cpp:376-386`) — a runtime WRITE to each direct sortable
  * Control child's own `visible`, so it overrides the authored flag in both
@@ -278,18 +292,25 @@ export const foldableContainerChildVisibility: ChildVisibilityFn = (node) =>
   (node.properties as FoldableContainerProperties).folded !== true;
 
 /**
+ * The title bar as the SOLVE sees it: the share once text can be measured,
+ * and the unshaped variant until then. `ctx.measureText` is the readiness
+ * gate both solver entry points apply.
+ */
+function foldableContainerTitle(n: SolveNode, ctx: SolveContext): FoldableContainerTitleMetrics {
+  if (ctx.measureText) return foldableContainerTitleShape(n, ctx.theme);
+  return foldableContainerTitleMetrics(n, n.node.properties as FoldableContainerProperties, ctx, false);
+}
+
+/**
  * `FoldableContainer::get_minimum_size` (`foldable_container.cpp:36-51`):
  * folded, the title bar's own minimum size IS the container's; unfolded, the
  * per-axis max of every visible child's combined minimum size, plus the
  * panel style's margins, floored against the title bar's own width.
  */
 export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as FoldableContainerProperties;
-  const title = foldableContainerTitleMetrics(n, props, ctx, Boolean(ctx.measureText));
+  const title = foldableContainerTitle(n, ctx);
 
-  if (title.folded) {
-    return { size: title.size, meta: title };
-  }
+  if (title.folded) return title.size;
 
   let width = 0;
   let height = 0;
@@ -303,10 +324,7 @@ export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   width += panelMargin.x;
   height += panelMargin.y;
 
-  return {
-    size: { x: Math.max(width, title.size.x), y: height + title.size.y },
-    meta: title,
-  };
+  return { x: Math.max(width, title.size.x), y: height + title.size.y };
 };
 
 /**
@@ -318,8 +336,7 @@ export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
  * cleared their `visible`, which is what makes an absent rect unobservable.
  */
 export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
-  const props = n.node.properties as FoldableContainerProperties;
-  const title = foldableContainerTitleMetrics(n, props, ctx, Boolean(ctx.measureText));
+  const title = foldableContainerTitle(n, ctx);
   const out = new Map<string, Rect2>();
   if (title.folded) return out;
 

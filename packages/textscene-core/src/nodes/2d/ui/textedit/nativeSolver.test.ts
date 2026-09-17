@@ -137,22 +137,19 @@ describe('textEditContentSize', () => {
 describe('textEditMinimumSize', () => {
   it('is exactly the active stylebox minimum size when neither fit_content flag is set', () => {
     const n = node({ text: 'hello world this is a long line' });
-    const size = textEditMinimumSize(n, ctx());
-    const v = 'size' in size ? size.size : size;
+    const v = textEditMinimumSize(n, ctx());
     const styleMin = THEME.widgets.lineEdit.normal.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });
   it('grows with fit_content_height on the first pass (no tentativeRect) using the unwrapped height', () => {
     const n = node({ text: 'a\nb\nc', fitContentHeight: true });
-    const size = textEditMinimumSize(n, ctx());
-    const v = 'size' in size ? size.size : size;
+    const v = textEditMinimumSize(n, ctx());
     const styleMin = THEME.widgets.lineEdit.normal.contentMargin;
     expect(v.y).toBeGreaterThan(styleMin.top + styleMin.bottom);
   });
   it('floors the read_only stylebox, not the normal one, when editable is false', () => {
     const n = node({ editable: false });
-    const size = textEditMinimumSize(n, ctx());
-    const v = 'size' in size ? size.size : size;
+    const v = textEditMinimumSize(n, ctx());
     const styleMin = THEME.widgets.lineEdit.readOnly.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });

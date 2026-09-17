@@ -11,9 +11,8 @@
  * (ceiled) width = 22.
  */
 import { describe, expect, it } from 'vitest';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { CheckButtonProperties } from './types';
@@ -51,10 +50,6 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
-}
-
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -184,7 +179,7 @@ describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
 
 describe('checkButtonMinimumSize — with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
-    const result = size(checkButtonMinimumSize(node({ text: 'AB' }), ctx()));
+    const result = checkButtonMinimumSize(node({ text: 'AB' }), ctx());
     // width = 12 (2*marginX) + 22 (shaped text) + 4 (h_separation) + 32 (icon) = 70.
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
     // height = 8 (2*marginY) + max(23, 16) = 31.
@@ -196,16 +191,16 @@ describe('checkButtonMinimumSize — with text', () => {
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
-    const result = size(
+    const result = 
       checkButtonMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 10 } }), ctx())
-    );
+    ;
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 10 + 32);
   });
 
   it('icon_max_width theme_override_constants clamps the (32x16) icon before it contributes', () => {
-    const result = size(
+    const result = 
       checkButtonMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx())
-    );
+    ;
     // fitIconSize(32x16, 8) = (8, 4).
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 8);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 4 < 23, text still floors height

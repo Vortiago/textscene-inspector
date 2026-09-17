@@ -9,21 +9,21 @@
  * ever draws the (usually invisible — see below) icon between them.
  *
  * The icon's own position depends on where the two children's boundary
- * landed. This reads `meta` (`ContainerLayoutResult.meta`, from this type's
- * registered `ContainerLayoutFn` — `shared/splitContainerSolver.ts`'s
- * `makeSplitContainerLayout`, `SplitContainerLayoutMeta`) — the EXACT
- * `computed_split_offset` the solver already computed from each sortable
- * child's full recursive `combined_minimum_size`, not a recomputation from a
- * narrower subset of the inputs.
+ * landed, which is a **solve handoff** channel
+ * (`shared/splitContainerSolver.ts`'s `splitContainerBoundaryChannel`): the
+ * EXACT `computed_split_offset` the registered `ContainerLayoutFn` computed
+ * from each sortable child's full recursive `combined_minimum_size`, which
+ * no painter can reach. Opening it compares the channel by reference, so a
+ * value of the right shape from anywhere else does not pass.
  *
  * Falls back to recomputing via the SAME `computeSplitDraggerPosition` the
  * solver calls, fed by each sortable child's OWN `custom_minimum_size`
- * rather than the full `combined_minimum_size`, ONLY when `meta` is not a
- * usable `SplitContainerLayoutMeta` (a hand-built test props object). That
- * gap is real but bounded, and today invisible everywhere:
- * `isSplitGrabberVisible` is false for every scene that does not override
- * `theme_override_constants/autohide` to `0` (its own doc — verified against
- * `pnpm ref:godot` on a probe scene: the gap between every
+ * rather than the full `combined_minimum_size`, only when no sealed boundary
+ * arrives — which in a real solve never happens, since the layout seals one
+ * unconditionally. That gap is real but bounded, and today invisible
+ * everywhere: `isSplitGrabberVisible` is false for every scene that does not
+ * override `theme_override_constants/autohide` to `0` (its own doc —
+ * verified against `pnpm ref:godot` on a probe scene: the gap between every
  * row's two ColorRects reads back the plain backdrop colour, never the
  * grabber's gray). So the only pixels the FALLBACK could ever mis-place are
  * the (already invisible by default) icon's own — the two ACTUAL child
@@ -43,7 +43,7 @@ import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
-  isSplitContainerLayoutMeta,
+  splitContainerBoundaryChannel,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
@@ -84,7 +84,7 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
     grabberExtent: iconSize.x,
   });
   const [first, second] = sortable as [SolveNode, SolveNode];
-  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const cachedDraggerPos = splitContainerBoundaryChannel.open(meta)?.draggerPos;
   const draggerPos =
     cachedDraggerPos ??
     computeSplitDraggerPosition(

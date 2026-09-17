@@ -11,7 +11,7 @@ import { AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { ItemListProperties } from './types';
 import {
@@ -40,10 +40,6 @@ import {
   packItemListRows,
   shapeItemListText,
 } from './nativeSolver';
-
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
-}
 
 function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
@@ -340,13 +336,13 @@ describe('itemListGuideColor', () => {
 
 describe('itemListMinimumSize', () => {
   it('is (0, 0) when neither auto_width nor auto_height is set (happy path)', () => {
-    const result = size(itemListMinimumSize(node({ items: [{ text: 'Sword' }] }), ctx()));
+    const result = itemListMinimumSize(node({ items: [{ text: 'Sword' }] }), ctx());
     expect(result).toEqual({ x: 0, y: 0 });
   });
 
   it('floors auto_width against the packed content width plus the panel margin (error path)', () => {
     const n = node({ autoWidth: true, maxColumns: 1, items: [{ text: 'Sword' }] });
-    const result = size(itemListMinimumSize(n, ctx()));
+    const result = itemListMinimumSize(n, ctx());
     expect(result.x).toBeGreaterThan(0);
     expect(result.y).toBe(0);
   });

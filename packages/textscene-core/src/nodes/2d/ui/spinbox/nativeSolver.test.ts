@@ -13,8 +13,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -37,10 +36,6 @@ import {
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23;
-
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
-}
 
 function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
   return {
@@ -219,19 +214,19 @@ describe('spinBoxFieldTextTheme', () => {
 
 describe('spinBoxMinimumSize', () => {
   it('floors LineEdit\'s own minimum size plus the buttons block width (happy path)', () => {
-    const result = size(spinBoxMinimumSize(node(), ctx()));
+    const result = spinBoxMinimumSize(node(), ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 18, 5);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('contributes zero em-width when no measurer is wired (error path)', () => {
-    const result = size(spinBoxMinimumSize(node(), ctx(false)));
+    const result = spinBoxMinimumSize(node(), ctx(false));
     expect(result.x).toBe(8 + 18);
   });
 
   it('widens the buttons block on a themed "down" icon wider than the vendored 16 (spin_box.cpp:82-86,382-397)', () => {
     const n = { ...node(), textureSlots: { down: { x: 40, y: 8 } } };
-    const result = size(spinBoxMinimumSize(n, ctx(false)));
+    const result = spinBoxMinimumSize(n, ctx(false));
     // blockWidth = max(18, 40+2) = 42, vs the untethered 18.
     expect(result.x).toBe(8 + 42);
   });

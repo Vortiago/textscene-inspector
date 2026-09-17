@@ -12,6 +12,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -32,9 +33,9 @@ export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey:
  * Label's own theme font key — `SceneStringName(font)` = `"font"`,
  * `scene/theme/default_theme.cpp:381`:
  * `theme->set_font(SceneStringName(font), "Label", Ref<Font>());`. Fed to
- * `resolveNodeFontMetrics` by both this module (the solve pass) and
- * `Component.tsx` (the autowrap-ON re-shape, which does not reuse `meta`) so
- * the two agree on which font this Label is in.
+ * `resolveNodeFontMetrics` by {@link labelUnwrappedShape} and by
+ * `Component.tsx`'s autowrap-ON re-shape, so the two agree on which font this
+ * Label is in.
  */
 export const LABEL_THEME_FONT_KEY = 'font';
 
@@ -70,7 +71,7 @@ export const LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 }
 
 /** Resolves this Label's own theme font size/colour (overrides, else the ancestor Theme chain / theme default / Label's own white — `resolveTextTheme`'s own doc). */
 export function labelTextTheme(
-  n: SolveNode,
+  n: ShareNode,
   props: LabelProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
@@ -379,21 +380,60 @@ export function applyVisibleCharsReveal(lines: readonly TextLineLayout[], budget
  * The shaping width goes through `labelShapingWidthPx` (its own doc), the one
  * spelling of `_shape`'s `int width` this slice has.
  *
- * Shapes via `shapeText` DIRECTLY rather than through `ctx.measureText`
- * (still the presence GATE — an absent measurer still means "text
- * contributes nothing", exactly as before) so this function can attach the
- * shaped `TextLayoutResult` as `meta` when autowrap is OFF: `shapeText`
- * forces `effectiveWidth = 0` whenever `autowrapMode === OFF` regardless of
- * `boxWidthPx`, so THIS shape (unconstrained, `lineSpacingPx` = Label's own
- * 3px) is the IDENTICAL layout `Label`'s painter (`Component.tsx`) would
- * compute for the OFF case (its own default) — reused instead of re-shaped.
- * The autowrap-ON branch never attaches meta: its shape is taken at whatever
- * width the PREVIOUS pass resolved, and this pass may still move that width
- * (its own corrected height grows an ancestor container, and a split or a
- * scrollbar appearing inside one narrows what is below it) — so the painter
- * re-shapes at the rect it is actually handed rather than reuse a layout that
- * is only usually the same one.
+ * The autowrap-OFF shape is {@link labelUnwrappedShape}, which
+ * `Component.tsx` calls too. `ctx.measureText` stays the presence GATE (an
+ * absent measurer means "text contributes nothing"). The autowrap-ON branch
+ * shapes here instead: its width is whatever the PREVIOUS pass resolved, and
+ * this pass may still move it (its own corrected height grows an ancestor
+ * container, and a split or a scrollbar appearing inside one narrows what is
+ * below it) — so the painter re-shapes at the rect it is actually handed.
  */
+/**
+ * Label's shaped, line-windowed text when autowrap is OFF — the **solve
+ * handoff** share (`r3f/controls/native/solveHandoff.ts`) `labelMinimumSize`
+ * and `Component.tsx` both call. `null` for empty text, the one case that
+ * shapes nothing.
+ *
+ * OFF only, because only that case is pure in `(n, theme)`: `shapeText`
+ * forces `effectiveWidth = 0` whenever `autowrapMode === OFF` regardless of
+ * `boxWidthPx`, so no rect enters it. The autowrap-ON shape is taken at
+ * whatever width the current pass resolved and is solve output in the
+ * ordinary sense — both sides shape it themselves, against the width they
+ * actually have.
+ *
+ * Windows to `lines_skipped`/`max_lines_visible` here
+ * (`_update_visible` does it REGARDLESS of autowrap), so a caller must not
+ * window the result a second time.
+ */
+export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, theme) => {
+  const props = n.node.properties as LabelProperties;
+  const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
+  if (text.length === 0) return null;
+  const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
+  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(labelTextTheme(n, props, { theme }), settings);
+  const layout = shapeText(text, {
+    fontSizePx,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.OFF,
+    lineSpacingPx,
+    uppercase: props.uppercase,
+    fontMetrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY),
+    paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+    tabStopsPx: props.tabStopsPx,
+    autowrapTrimFlags: props.autowrapTrimFlags,
+  });
+  return windowLabelLines(layout, labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible));
+});
+
+/**
+ * `minsize.height` (`label.cpp:246-262`): the windowed extent minus the
+ * trailing `line_spacing` Label's own spacing never adds, floored at one
+ * font line pitch.
+ */
+function labelMinimumHeightPx(windowed: TextLayoutResult, lineSpacingPx: number, fontHeightPx: number): number {
+  return Math.max(Math.max(0, windowed.heightPx - lineSpacingPx), fontHeightPx);
+}
+
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
@@ -420,34 +460,30 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (!ctx.measureText) return { x: 0, y: 0 };
 
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // This control's own resolved width, or `undefined` on the first pass, where
-  // no rect exists yet.
-  const shapedWidthPx =
-    autowrapMode === AutowrapMode.OFF ? undefined : ctx.tentativeRect?.(n)?.w;
-  const layout = shapeText(text, {
-    fontSizePx,
-    boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
-    autowrapMode: shapedWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
-    lineSpacingPx,
-    uppercase: props.uppercase,
-    fontMetrics,
-    paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
-    tabStopsPx: props.tabStopsPx,
-    autowrapTrimFlags: props.autowrapTrimFlags,
-  });
-  // `_update_visible` windows to `lines_skipped`/`max_lines_visible`
-  // REGARDLESS of autowrap (its own doc) — Label's own `line_spacing`
-  // separates lines without adding a trailing gap, which the `-
-  // lineSpacingPx` below guarantees, so nothing is added back for a single
-  // line.
-  const range = labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-  const windowed = windowLabelLines(layout, range);
-  const measuredY = Math.max(0, windowed.heightPx - lineSpacingPx);
-  const height = Math.max(measuredY, fontHeightPx);
-
   if (autowrapMode !== AutowrapMode.OFF) {
-    return { size: { x: 1, y: height } };
+    // This control's own resolved width, or `undefined` on the first pass,
+    // where no rect exists yet — then this shapes unwrapped, exactly as the
+    // OFF branch does, and the second pass corrects it.
+    const shapedWidthPx = ctx.tentativeRect?.(n)?.w;
+    const wrapped = shapeText(text, {
+      fontSizePx,
+      boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
+      autowrapMode: shapedWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
+      lineSpacingPx,
+      uppercase: props.uppercase,
+      fontMetrics,
+      paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+      tabStopsPx: props.tabStopsPx,
+      autowrapTrimFlags: props.autowrapTrimFlags,
+    });
+    const range = labelVisibleLineRange(wrapped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
+    return { x: 1, y: labelMinimumHeightPx(windowLabelLines(wrapped, range), lineSpacingPx, fontHeightPx) };
   }
+
+  // Non-null: the empty-text case already returned above, and that is the
+  // share's only `null`.
+  const windowed = labelUnwrappedShape(n, ctx.theme)!;
+  const height = labelMinimumHeightPx(windowed, lineSpacingPx, fontHeightPx);
   // `minsize.width` is the widest line's `shaped_text_get_size(...).x`
   // (`label.cpp:252-257`), i.e. the CEILED extent, not the pen advance —
   // `max` over per-line ceils and the ceil of the max agree, so the widest
@@ -462,7 +498,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
   const widthPx =
     props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING ? 1 : shapedTextSizeWidthPx(windowed.widthPx);
-  return { size: { x: widthPx, y: height }, meta: windowed };
+  return { x: widthPx, y: height };
 };
 
 // --- Draw-time layout: per-line placement + the vertical-origin reconciliation ---

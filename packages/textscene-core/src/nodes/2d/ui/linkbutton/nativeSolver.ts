@@ -20,6 +20,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import {
@@ -80,7 +81,7 @@ const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
 
 /** Resolves LinkButton's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / LinkButton's own literal — `resolveTextTheme`'s own doc). */
 export function linkButtonTextTheme(
-  n: SolveNode,
+  n: ShareNode,
   props: LinkButtonProperties,
   state: LinkButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -182,6 +183,21 @@ export function linkButtonTextPlacement(
 const OVERRUN_NO_TRIMMING = 0;
 
 /**
+ * LinkButton's shaped label — the **solve handoff** share
+ * (`r3f/controls/native/solveHandoff.ts`) `linkButtonMinimumSize` and
+ * `Component.tsx` both call. `null` for empty text. The overrun trimming the
+ * painter applies on top is NOT part of it: that reads the solved rect.
+ */
+export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
+  const props = n.node.properties as LinkButtonProperties;
+  const text = props.text ?? '';
+  if (text.length === 0) return null;
+  const state = resolveLinkButtonDrawState(props);
+  const { fontSizePx } = linkButtonTextTheme(n, props, state, { theme });
+  return shapeButtonLabel(text, fontSizePx, resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY));
+});
+
+/**
  * `LinkButton::get_minimum_size` (`link_button.cpp:193-200`):
  * `text_buf->get_size()` — the shaped paragraph's own CEILED extent — with
  * the width zeroed whenever `overrun_behavior` is anything but
@@ -191,13 +207,7 @@ const OVERRUN_NO_TRIMMING = 0;
  */
 export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LinkButtonProperties;
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const state = resolveLinkButtonDrawState(props);
-  const { fontSizePx } = linkButtonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null =
-    hasText && ctx.measureText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null;
+  const layout: TextLayoutResult | null = ctx.measureText ? linkButtonLabelShape(n, ctx.theme) : null;
 
   const width =
     layout && (props.overrunBehavior ?? OVERRUN_NO_TRIMMING) === OVERRUN_NO_TRIMMING
@@ -205,5 +215,5 @@ export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       : 0;
   const height = layout ? layout.heightPx : 0;
 
-  return { size: { x: width, y: height }, meta: layout ?? undefined };
+  return { x: width, y: height };
 };

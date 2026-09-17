@@ -26,17 +26,15 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { shapeButtonLabel, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  isTextLayoutResult,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior, overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
+  linkButtonLabelShape,
   linkButtonTextPlacement,
   linkButtonTextTheme,
   linkButtonUnderlineGeometry,
@@ -47,27 +45,21 @@ import {
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
 
-export function LinkButton({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
   const state = resolveLinkButtonDrawState(props);
 
   const clippingPlanes = useControlClipPlanes();
 
   // --- Text: theme resolution + shaping ------------------------------------
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // See Label's own Component.tsx for why this reads INSIDE the render body
-  // rather than inside the `useMemo` below.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINKBUTTON_THEME_FONT_KEY);
-  const cachedLayout = isTextLayoutResult(meta) ? meta : null;
-  const unshapedOrCachedLayout: TextLayoutResult | null = useMemo(() => {
-    if (!hasText) return null;
-    if (cachedLayout) return cachedLayout;
-    return shapeButtonLabel(text, fontSizePx, fontMetrics);
-  }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
+  // The solve handoff share — the SAME shaping `linkButtonMinimumSize` sized
+  // this control from. The trimming below is this painter's own, since it
+  // reads the solved rect.
+  const unshapedLayout: TextLayoutResult | null = linkButtonLabelShape(solveNode, theme);
 
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` once
   // `overrun_behavior` is anything but NO_TRIMMING -- the control's own
@@ -77,14 +69,14 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
     [props.overrunBehavior]
   );
   const layout: TextLayoutResult | null = useMemo(() => {
-    if (!unshapedOrCachedLayout || !overrunFlags.trim) return unshapedOrCachedLayout;
-    const trimmedLine = trimLineToWidth(unshapedOrCachedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
+    if (!unshapedLayout || !overrunFlags.trim) return unshapedLayout;
+    const trimmedLine = trimLineToWidth(unshapedLayout.lines[0]!, Math.max(1, rect.w), overrunFlags, {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
     });
-    return soloLineLayout(trimmedLine, unshapedOrCachedLayout);
-  }, [unshapedOrCachedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
+    return soloLineLayout(trimmedLine, unshapedLayout);
+  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
   // `link_button.cpp:289-303` — the paragraph's own origin, which RTL moves
   // to the far edge; the underline below starts from the same x.

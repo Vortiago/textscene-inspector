@@ -25,11 +25,9 @@
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  *
- * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `foldableContainerMinimumSize`)
- * when it is a usable `FoldableContainerTitleMetrics`, falling back to a local
- * recompute only when it is not (a hand-built test props object, or a solve
- * whose measurer was unavailable) — the SAME contract every other native
- * painter here documents.
+ * TEXT LAYOUT: calls `nativeSolver.ts`'s `foldableContainerTitleShape`, the
+ * **solve handoff** share both solver entry points call too, so the title
+ * bar this paints is the one the solve sized the container from.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -52,19 +50,12 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   foldableContainerHSeparation,
-  foldableContainerTitleMetrics,
+  foldableContainerTitleShape,
   FOLDABLE_CONTAINER_ARROW_THEME_NAME,
   type FoldableContainerArrow,
-  type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
-
-function isFoldableContainerTitleMetrics(meta: unknown): meta is FoldableContainerTitleMetrics {
-  if (typeof meta !== 'object' || meta === null) return false;
-  const m = meta as Partial<FoldableContainerTitleMetrics>;
-  return typeof m.folded === 'boolean' && typeof m.arrow === 'string' && m.size !== undefined;
-}
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
@@ -81,15 +72,9 @@ function actualTitleAlignment(alignment: number, rtl: boolean): number {
   return alignment;
 }
 
-export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<FoldableContainerProperties>(solveNode);
-  const title = useMemo(
-    () =>
-      isFoldableContainerTitleMetrics(meta)
-        ? meta
-        : foldableContainerTitleMetrics(solveNode, props, { theme }, true),
-    [meta, solveNode, props, theme]
-  );
+  const title = foldableContainerTitleShape(solveNode, theme);
 
   const clippingPlanes = useControlClipPlanes();
   const iconTexture = useNodeIcon(

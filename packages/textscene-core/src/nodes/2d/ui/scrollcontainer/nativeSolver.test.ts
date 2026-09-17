@@ -28,7 +28,7 @@ import {
   scrollContainerMinimumSize,
   scrollContainerLayout,
   scrollContainerScrollBars,
-  isScrollContainerLayout,
+  scrollContainerLayoutChannel,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -306,10 +306,10 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
   });
 });
 
-describe('scrollContainerLayout — meta carries the FULL ScrollContainerLayout (ITEM A: no fresh SolveContext in the painter)', () => {
+describe('scrollContainerLayout — the sealed solve handoff carries the FULL ScrollContainerLayout', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
-  it('meta is the SAME object scrollContainerScrollBars would compute for this node/ctx/rect — not a re-derivation', () => {
+  it('seals the SAME object scrollContainerScrollBars would compute for this node/ctx/rect — not a re-derivation', () => {
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 120, y: 500 } });
     const n = scrollContainer({}, [child]);
     const children = [{ node: child, minSize: { x: 120, y: 500 } }];
@@ -321,8 +321,7 @@ describe('scrollContainerLayout — meta carries the FULL ScrollContainerLayout 
     expect(result).not.toBeInstanceOf(Map);
     // `'rects' in result`, not `instanceof Map`: see `layoutRects`'s own doc for why.
     if (!('rects' in result)) throw new Error('unreachable');
-    expect(isScrollContainerLayout(result.meta)).toBe(true);
-    expect(result.meta).toEqual(expected);
+    expect(scrollContainerLayoutChannel.open(result.meta)).toEqual(expected);
   });
 });
 

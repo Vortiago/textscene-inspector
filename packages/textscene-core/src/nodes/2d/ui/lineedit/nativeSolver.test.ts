@@ -16,8 +16,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -44,11 +43,6 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
-
-/** `lineEditMinimumSize` is a `MinimumSizeFn`, so it's typed to allow the `MinimumSizeResult` shape even though this implementation only ever returns a bare `Vec2` — narrow to the size for the tests that read `.x`/`.y`. */
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
-}
 
 function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, StyleBoxFlatData> = {}): SolveNode {
   return {
@@ -93,7 +87,7 @@ function flatStyleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatDa
 
 describe('lineEditMinimumSize — StyleBox content margins + minimum_character_width*W-advance + font height', () => {
   it('is exactly minimum_character_width(4)*W-advance + margin(8), and fontHeight(23) + margin(8), by default', () => {
-    const result = size(lineEditMinimumSize(node({}), ctx()));
+    const result = lineEditMinimumSize(node({}), ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
@@ -105,7 +99,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
 
   it('reads a resolved theme_override_styles/normal content margin instead of the default theme', () => {
     const wide = flatStyleBox({ contentMargin: { left: 14, top: 6, right: 14, bottom: 6 } });
-    const result = size(lineEditMinimumSize(node({}, { normal: wide }), ctx()));
+    const result = lineEditMinimumSize(node({}, { normal: wide }), ctx());
     expect(result.x).toBeCloseTo(28 + 4 * W_ADVANCE, 6);
     expect(result.y).toBe(12 + FONT_HEIGHT);
   });
@@ -116,7 +110,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
     () => {
       const wideReadOnly = flatStyleBox({ contentMargin: { left: 20, top: 10, right: 20, bottom: 10 } });
       // editable defaults true (uses "normal" for DRAWING), but min-size still floors against read_only's wider box.
-      const result = size(lineEditMinimumSize(node({}, { read_only: wideReadOnly }), ctx()));
+      const result = lineEditMinimumSize(node({}, { read_only: wideReadOnly }), ctx());
       expect(result.x).toBeCloseTo(40 + 4 * W_ADVANCE, 6);
       expect(result.y).toBe(20 + FONT_HEIGHT);
     }
@@ -129,7 +123,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
   });
 
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
-    const result = size(lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx()));
+    const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx());
     // 'W' hmtx advance 1936 design units quantizes to 1936/64 = 30.25 at size
     // 32, but 32 is above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so the
     // engine reports a WHOLE-pixel advance — `_font_get_glyph_advance`'s own
@@ -150,30 +144,30 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
   const SIX_W_WIDTH = 91;
 
   it('floors width on ceil(shaped display text) + caret_width once it exceeds the 4-char floor', () => {
-    const result = size(
+    const result = 
       lineEditMinimumSize(node({ text: 'WWWWWW', expandToTextLength: true }), ctx())
-    );
+    ;
     // caret_width theme constant defaults to 1 (default_theme.cpp:434); 8+91+1=100.
     expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('sizes to the PLACEHOLDER when text is empty — _shape() shapes whichever string using_placeholder selects', () => {
-    const result = size(
+    const result = 
       lineEditMinimumSize(node({ placeholderText: 'WWWWWW', expandToTextLength: true }), ctx())
-    );
+    ;
     expect(result.x).toBe(8 + SIX_W_WIDTH + 1);
   });
 
   it('a caret_width theme override changes the added margin', () => {
     const n = { ...node({ text: 'WWWWWW', expandToTextLength: true }), constants: { caret_width: 3 } };
-    const result = size(lineEditMinimumSize(n, ctx()));
+    const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBe(8 + SIX_W_WIDTH + 3);
   });
 
   it('leaves width at the 4-char floor for a short string (the floor still wins the MAX)', () => {
-    const withShort = size(lineEditMinimumSize(node({ text: 'W', expandToTextLength: true }), ctx()));
-    const withoutFlag = size(lineEditMinimumSize(node({ text: 'W' }), ctx()));
+    const withShort = lineEditMinimumSize(node({ text: 'W', expandToTextLength: true }), ctx());
+    const withoutFlag = lineEditMinimumSize(node({ text: 'W' }), ctx());
     expect(withShort).toEqual(withoutFlag);
   });
 
@@ -186,25 +180,25 @@ describe('lineEditMinimumSize — expand_to_text_length (line_edit.cpp:2454-2457
 describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution (line_edit.cpp:2459-2472)', () => {
   it('adds a right_icon\'s ORIGINAL_SIZE natural width, and floors height at it when taller than the font', () => {
     const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 40 } } };
-    const result = size(lineEditMinimumSize(n, ctx()));
+    const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 32, 6);
     expect(result.y).toBe(8 + 40); // icon height (40) beats FONT_HEIGHT (23)
   });
 
   it('a shorter icon does not shrink the font-height floor', () => {
     const n = { ...node({}), textureSlots: { right_icon: { x: 32, y: 16 } } };
-    const result = size(lineEditMinimumSize(n, ctx()));
+    const result = lineEditMinimumSize(n, ctx());
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
   it('clear_button_enabled contributes the vendored 16x16 clear icon even with NO text at all', () => {
-    const result = size(lineEditMinimumSize(node({ clearButtonEnabled: true }), ctx()));
+    const result = lineEditMinimumSize(node({ clearButtonEnabled: true }), ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
   });
 
   it('a themed "clear" icon overrides the vendored 16x16 natural size', () => {
     const n = { ...node({ clearButtonEnabled: true }), textureSlots: { clear: { x: 24, y: 24 } } };
-    const result = size(lineEditMinimumSize(n, ctx()));
+    const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 24, 6);
   });
 
@@ -213,7 +207,7 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
       ...node({ clearButtonEnabled: true }),
       textureSlots: { right_icon: { x: 10, y: 10 }, clear: { x: 16, y: 16 } },
     };
-    const result = size(lineEditMinimumSize(n, ctx()));
+    const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
   });
 
@@ -225,7 +219,7 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
         ...node({ iconExpandMode: 2 }),
         textureSlots: { right_icon: { x: 32, y: 16 } },
       };
-      const result = size(lineEditMinimumSize(n, ctx()));
+      const result = lineEditMinimumSize(n, ctx());
       expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
       expect(result.y).toBe(8 + FONT_HEIGHT);
     }
@@ -237,7 +231,7 @@ describe('lineEditMinimumSize — right_icon / clear_button_enabled contribution
       textureSlots: { right_icon: { x: 32, y: 16 } },
     };
     const c = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 100, h: 30 }) };
-    const result = size(lineEditMinimumSize(n, c));
+    const result = lineEditMinimumSize(n, c);
     // iconWidth = 32*30/16 = 60 (<=100, no clamp); iconHeight = 30.
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 60, 6);
     expect(result.y).toBe(8 + 30);

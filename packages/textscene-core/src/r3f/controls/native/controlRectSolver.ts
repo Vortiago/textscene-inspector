@@ -25,33 +25,27 @@ import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
   type ContainerLayoutResult,
-  type MinimumSizeResult,
   type SolveContext,
   type TextMeasurer,
 } from './solverRegistry';
+import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
 
 export interface SolvedControl {
   rect: Rect2;
   minSize: Vec2;
-  /**
-   * This node's own intermediate, if its registered `MinimumSizeFn`/
-   * `ContainerLayoutFn` attached one (`MinimumSizeResult.meta` /
-   * `ContainerLayoutResult.meta` — see either's own doc). A
-   * `ContainerLayoutFn`'s meta describes what THIS node computed while
-   * laying out its CHILDREN (a split's dragger position, a scroll
-   * container's bar geometry) and wins over a `MinimumSizeFn`'s meta for the
-   * SAME node when both are present — no registered type needs both today
-   * (a container's painter cares about its own layout output, not its
-   * floor-computation intermediate), so one slot is enough; a type that
-   * genuinely needed both would be the first to widen this.
+/**
+   * The **solve handoff** this node's registered `ContainerLayoutFn` sealed
+   * while laying out its CHILDREN (`ContainerLayoutResult.meta` — a split's
+   * dragger position, a scroll container's bar geometry), or `undefined`.
+   * Opaque here and at `NativeControlComponentProps.meta`, which is the same
+   * value: only the producing slice's own channel can open it.
    *
-   * `unknown` at this boundary since its shape is entirely the producing
-   * type's own — `NativeControlComponentProps.meta` is the same value, and a
-   * painter casts it exactly like it already casts
-   * `solveNode.node.properties`.
+   * A `MinimumSizeFn` produces none. Everything one could hand over is pure
+   * in `(n, theme)`, so it is a share both sides call instead
+   * (`solveHandoff.ts`).
    */
-  meta?: unknown;
+  meta?: SealedHandoff;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -192,12 +186,6 @@ function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
 
 // --- Phase 1: combined minimum size ------------------------------------------
 
-/** A `MinimumSizeFn`'s normalised result — see `MinimumSizeResult`'s own doc for why a bare `Vec2` and this shape both need to be accepted. A `MinimumSizeResult` never carries an `x`/`y` of its own, so `'size' in result` cleanly tells the two apart. */
-function normalizeMinimumSizeResult(result: Vec2 | MinimumSizeResult): { size: Vec2; meta: unknown } {
-  if ('size' in result) return { size: result.size, meta: result.meta };
-  return { size: result, meta: undefined };
-}
-
 /**
  * A `ContainerLayoutFn`'s normalised result — see `ContainerLayoutResult`'s
  * own doc. `'rects' in result` rather than `result instanceof Map`: a plain
@@ -210,23 +198,9 @@ function normalizeMinimumSizeResult(result: Vec2 | MinimumSizeResult): { size: V
  */
 function normalizeContainerLayoutResult(
   result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
-): { rects: ReadonlyMap<string, Rect2>; meta: unknown } {
+): { rects: ReadonlyMap<string, Rect2>; meta: SealedHandoff | undefined } {
   if ('rects' in result) return { rects: result.rects, meta: result.meta };
   return { rects: result, meta: undefined };
-}
-
-/**
- * `Control::get_combined_minimum_size` (`control.cpp:1744-1758`) PLUS this
- * type's own meta, if its registered `MinimumSizeFn` attached one — the
- * pairing `createSolveContext`'s cache actually stores; `combinedMinimumSize`
- * below returns only the `Vec2` half, unchanged from before `meta` existed.
- */
-function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: Vec2; meta: unknown } {
-  const typeFn = controlSolverRegistry.minimumSize(n.node.type);
-  const raw = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
-  const { size: typeMin, meta } = normalizeMinimumSizeResult(raw);
-  const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
-  return { size: { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) }, meta };
 }
 
 /**
@@ -235,7 +209,10 @@ function combinedMinimumSizeWithMeta(n: SolveNode, ctx: SolveContext): { size: V
  * registered type's own contribution (`(0, 0)` for an unregistered/leaf type).
  */
 export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
-  return combinedMinimumSizeWithMeta(n, ctx).size;
+  const typeFn = controlSolverRegistry.minimumSize(n.node.type);
+  const typeMin = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
+  const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
+  return { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) };
 }
 
 /**
@@ -277,7 +254,7 @@ function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
     node: { ...n.node, children: [], properties: { name: n.node.name } },
     children: [],
   };
-  return normalizeMinimumSizeResult(typeFn(bare, ctx)).size;
+  return typeFn(bare, ctx);
 }
 
 /**
@@ -296,37 +273,30 @@ function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
  * quadratic. The cache lives on the context, so it spans both phases of one
  * solve and is discarded with it.
  *
- * The SAME cache backs `minimumSizeMeta`: both read the ONE
- * `combinedMinimumSizeWithMeta` call per path, so asking for a node's meta
- * after (or before) its size costs nothing beyond the lookup already paid
- * for by the memoisation above.
- *
  * `tentativeRect`, when given, becomes this context's own — `solveFree`'s
- * (transitively, `combinedMinimumSizeWithMeta`'s) reference to `ctx` inside
- * this closure must resolve to the object this field actually lives on, so
+ * (transitively, `combinedMinimumSize`'s) reference to `ctx` inside this
+ * closure must resolve to the object this field actually lives on, so
  * `solveControlTree`'s own second pass cannot build one via `{
  * ...createSolveContext(...), tentativeRect }`: that spread would copy the
- * `combinedMinimumSize`/`minimumSizeMeta` CLOSURES from the ORIGINAL object,
- * which still call back into an inner `ctx` that never gained the field.
+ * `combinedMinimumSize` CLOSURE from the ORIGINAL object, which still calls
+ * back into an inner `ctx` that never gained the field.
  */
 export function createSolveContext(
   theme: NativeTheme,
   measureText: TextMeasurer | null = null,
   tentativeRect?: (n: SolveNode) => Rect2 | undefined
 ): SolveContext {
-  const cache = new Map<string, { size: Vec2; meta: unknown }>();
-  const resolve = (n: SolveNode): { size: Vec2; meta: unknown } => {
-    const hit = cache.get(n.path);
-    if (hit) return hit;
-    const value = combinedMinimumSizeWithMeta(n, ctx);
-    cache.set(n.path, value);
-    return value;
-  };
+  const cache = new Map<string, Vec2>();
   const ctx: SolveContext = {
     theme,
     measureText,
-    combinedMinimumSize: (n) => resolve(n).size,
-    minimumSizeMeta: (n) => resolve(n).meta,
+    combinedMinimumSize: (n) => {
+      const hit = cache.get(n.path);
+      if (hit) return hit;
+      const value = combinedMinimumSize(n, ctx);
+      cache.set(n.path, value);
+      return value;
+    },
     tentativeRect,
   };
   return ctx;
@@ -360,14 +330,9 @@ function record(
   n: SolveNode,
   rect: Rect2,
   minSize: Vec2,
-  out: Map<string, SolvedControl>,
-  meta?: unknown
+  out: Map<string, SolvedControl>
 ): void {
-  out.set(n.path, {
-    rect,
-    minSize,
-    meta,
-  });
+  out.set(n.path, { rect, minSize });
 }
 
 /**
@@ -398,7 +363,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out, ctx.minimumSizeMeta?.(n));
+  record(n, rect, minSize, out);
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -441,7 +406,6 @@ function dispatchChildren(
   const childEntries = n.children.filter((child) => !isPromotedControl(child)).map((child) => ({
     node: child,
     minSize: ctx.combinedMinimumSize(child),
-    meta: ctx.minimumSizeMeta?.(child),
   }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
@@ -451,16 +415,14 @@ function dispatchChildren(
 
   // `n`'s own record already happened in the caller (`solveFree`, or this
   // same function one level up for a non-root container) BEFORE this
-  // function ran — patch its meta in now that the container layout that
-  // just ran has computed one. Wins over any `MinimumSizeFn`-sourced meta
-  // already on the entry (see `SolvedControl.meta`'s own doc for why that
-  // never collides with a real type today).
+  // function ran — patch the sealed handoff in now that the container layout
+  // that just ran has produced one.
   if (containerMeta !== undefined) {
     const existing = out.get(n.path);
     if (existing) out.set(n.path, { ...existing, meta: containerMeta });
   }
 
-  for (const { node: child, minSize, meta } of childEntries) {
+  for (const { node: child, minSize } of childEntries) {
     const assigned = childRects.get(child.path) ?? { x: 0, y: 0, w: 0, h: 0 };
     // `Container::fit_child_in_rect` ends by calling `Control::set_rect`, so
     // `Control::_size_changed` (control.cpp:1531-1541,1760-1797) re-floors the
@@ -488,7 +450,7 @@ function dispatchChildren(
       const floored = floorAtMinimumSize(unmirrored, minSize, childLayout.growHorizontal, childLayout.growVertical);
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out, meta);
+    record(child, childRect, minSize, out);
     dispatchChildren(
       child,
       childRect,

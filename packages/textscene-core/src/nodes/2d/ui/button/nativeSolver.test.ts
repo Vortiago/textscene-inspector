@@ -19,7 +19,6 @@
  * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -36,20 +35,11 @@ import {
   BUTTON_DEFAULT_DISABLED_FONT_COLOR,
   BUTTON_DEFAULT_FONT_COLOR,
   BUTTON_THEME_FONT_KEY,
+  buttonLabelShape,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/** `buttonMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
-function minSize(...args: Parameters<typeof buttonMinimumSize>): Vec2 {
-  const result = buttonMinimumSize(...args);
-  return 'size' in result ? result.size : result;
-}
-
-/** `buttonMinimumSize`'s `meta` half — the shaped `TextLayoutResult`, or `undefined` for empty text / no measurer. */
-function minMeta(...args: Parameters<typeof buttonMinimumSize>): unknown {
-  const result = buttonMinimumSize(...args);
-  return 'meta' in result ? result.meta : undefined;
-}
+const minSize = buttonMinimumSize;
 
 // 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
 // glyph, so 'AB's width is their SUM (the two only coincided at the OLD
@@ -262,29 +252,33 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 });
 
-describe('buttonMinimumSize — meta carries the shaped TextLayoutResult (ITEM C: no re-shape in the painter)', () => {
-  it('attaches the shaped layout as meta when there is text and a measurer', () => {
-    const meta = minMeta(node({ text: 'AB' }), ctx()) as TextLayoutResult;
-    expect(meta.widthPx).toBeCloseTo(AB_WIDTH, 6);
-    expect(meta.lines).toHaveLength(1);
-    expect(meta.lines[0]?.text).toBe('AB');
+describe('buttonLabelShape — the one shaping the solver and the painter share', () => {
+  const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
+    buttonLabelShape(node(props), ctx().theme);
+
+  it('shapes the label', () => {
+    const layout = shape({ text: 'AB' })!;
+    expect(layout.widthPx).toBeCloseTo(AB_WIDTH, 6);
+    expect(layout.lines).toHaveLength(1);
+    expect(layout.lines[0]?.text).toBe('AB');
   });
 
-  it('is undefined for empty text', () => {
-    expect(minMeta(node({}), ctx())).toBeUndefined();
+  it('is null for empty text — the one case neither side draws', () => {
+    expect(shape({})).toBeNull();
   });
 
-  it('is undefined when no measurer is available, matching the size half\'s own "no measurer" gate', () => {
-    expect(minMeta(node({ text: 'AB' }), ctx(false))).toBeUndefined();
-  });
-
-  it('is shaped at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0 — the SAME literal parameters Button\'s own painter shapes with', () => {
-    const meta = minMeta(node({ text: 'AB' }), ctx()) as TextLayoutResult;
+  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0 — Button never wraps', () => {
     // Single line ('AB' has no hard break), so widthPx/heightPx alone prove
     // this: an autowrap-constrained shape of 'AB' at a 0-width box would
     // have broken onto multiple lines instead.
-    expect(meta.lines).toHaveLength(1);
-    expect(meta.heightPx).toBe(FONT_HEIGHT);
+    const layout = shape({ text: 'AB' })!;
+    expect(layout.lines).toHaveLength(1);
+    expect(layout.heightPx).toBe(FONT_HEIGHT);
+  });
+
+  it('ignores the readiness gate — that lives in the solver, and the painter shapes unconditionally', () => {
+    expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
+    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme)).not.toBeNull();
   });
 });
 

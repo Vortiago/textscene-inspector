@@ -36,11 +36,11 @@
  *
  * Both share `scopeFor` below, which caches the node's `ThemeResolutionScope`
  * (the type-dependency chain + theme search order — the part of the walk that
- * does NOT depend on which item is being looked up) per `SolveNode` object, so
+ * does NOT depend on which item is being looked up) per node object, so
  * a node resolved from both the solve pass and the paint pass, for both its
  * font and its font size, builds that chain once instead of up to four times.
  */
-import { controlProps, type SolveNode } from '../solveTree';
+import { controlProps, type ShareNode } from '../solveTree';
 import {
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
@@ -71,9 +71,9 @@ import type { FontResource } from '../../../../resources/fonts/font/types';
  * `SolveNode` objects must never share a cache slot merely because their
  * contents currently agree.
  */
-const scopeCache = new WeakMap<SolveNode, ThemeResolutionScope>();
+const scopeCache = new WeakMap<ShareNode, ThemeResolutionScope>();
 
-function scopeFor(n: SolveNode): ThemeResolutionScope {
+function scopeFor(n: ShareNode): ThemeResolutionScope {
   const cached = scopeCache.get(n);
   if (cached) return cached;
   const scope = themeResolutionScope(n.node.type, controlProps(n).themeTypeVariation, n.themeChain, n.projectTheme);
@@ -95,7 +95,7 @@ function scopeFor(n: SolveNode): ThemeResolutionScope {
  * and the paint pass), and the caller relies on that: see `label/Component.tsx`'s
  * own doc for why the paint-time read has to stay live.
  */
-export function resolveNodeFontMetrics(n: SolveNode, themeKey: string): FontMetrics {
+export function resolveNodeFontMetrics(n: ShareNode, themeKey: string): FontMetrics {
   return peekSceneFontMetrics(resolveNodeFont(n, themeKey), n.path);
 }
 
@@ -107,7 +107,7 @@ export function resolveNodeFontMetrics(n: SolveNode, themeKey: string): FontMetr
  * (`scene/gui/tab_container.cpp:338`), so the bar resolves against
  * TabContainer's type chain the way Godot does, not its own.
  */
-export function resolveNodeFont(n: SolveNode, themeKey: string): FontResource | null {
+export function resolveNodeFont(n: ShareNode, themeKey: string): FontResource | null {
   return resolveThemeFontIn(scopeFor(n), themeKey, n.fontOverrides[themeKey]);
 }
 
@@ -124,7 +124,7 @@ export function resolveNodeFont(n: SolveNode, themeKey: string): FontResource | 
  * `ThemeDB::get_fallback_font_size()`.
  */
 export function resolveNodeFontSizePx(
-  n: SolveNode,
+  n: ShareNode,
   sizeKey: string,
   overridePx: number | undefined,
   builtInDefaultPx: number

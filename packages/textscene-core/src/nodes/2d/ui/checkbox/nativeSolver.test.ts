@@ -26,9 +26,8 @@
  * 0.5) blended over the 76,76,76 clear colour: `0.5*223 + 0.5*76 = 149.5`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -70,11 +69,6 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
-}
-
-/** `checkBoxMinimumSize`'s `size` half only — see `MinimumSizeResult`'s own doc for why the union is here at all. */
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -180,7 +174,7 @@ describe('checkBoxMinimumSize (check_box.cpp:64-79) — no text', () => {
 
 describe('checkBoxMinimumSize — with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
-    const result = size(checkBoxMinimumSize(node({ text: 'AB' }), ctx()));
+    const result = checkBoxMinimumSize(node({ text: 'AB' }), ctx());
     // width = 8 (2*margin) + 21.125 (text) + 4 (h_separation) + 16 (icon) = 49.125.
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 16, 6);
     // height = 8 + max(23, 16) = 31.
@@ -193,14 +187,14 @@ describe('checkBoxMinimumSize — with text', () => {
   });
 
   it('h_separation theme_override_constants wins over the theme default', () => {
-    const result = size(checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }), ctx()));
+    const result = checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { h_separation: 12 } }), ctx());
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 12 + 16, 6);
   });
 
   it('icon_max_width theme_override_constants clamps the (16x16) icon before it contributes', () => {
-    const result = size(
+    const result = 
       checkBoxMinimumSize(node({ text: 'AB', themeOverrideConstants: { icon_max_width: 8 } }), ctx())
-    );
+    ;
     // fitIconSize(16x16, 8) = 8x8.
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 8, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 8 < 23, text still floors height
@@ -236,7 +230,7 @@ describe('checkBoxMinimumSize — a themed icon widens the minimum size (check_b
     // No text: content_size is the icon alone (check_box.cpp:66-79), then
     // `_get_largest_stylebox_size()` (cbx_empty's uniform content margin,
     // 4px at scale 1) is added back on every side: 24 + 2*4 = 32.
-    expect(size(checkBoxMinimumSize(n, ctx()))).toEqual({ x: 32, y: 32 });
+    expect(checkBoxMinimumSize(n, ctx())).toEqual({ x: 32, y: 32 });
   });
 });
 
@@ -392,12 +386,12 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
  */
 describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("'Transcribe squad chatter' reaches Godot's own whole-pixel minimum width 222", () => {
-    expect(size(checkBoxMinimumSize(node({ text: 'Transcribe squad chatter' }), ctx())).x).toBe(222);
+    expect(checkBoxMinimumSize(node({ text: 'Transcribe squad chatter' }), ctx()).x).toBe(222);
   });
 
   it('keeps the icon and separation OUT of the ceil — an empty CheckBox is unchanged by it', () => {
-    expect(size(checkBoxMinimumSize(node({}), ctx())).x).toBe(
-      size(checkBoxMinimumSize(node({ text: '' }), ctx())).x
+    expect(checkBoxMinimumSize(node({}), ctx()).x).toBe(
+      checkBoxMinimumSize(node({ text: '' }), ctx()).x
     );
   });
 });

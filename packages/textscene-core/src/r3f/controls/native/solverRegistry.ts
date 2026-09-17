@@ -15,6 +15,7 @@ import type { Rect2, Vec2 } from './rect';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
+import type { SealedHandoff } from './solveHandoff';
 
 /**
  * Measures a run of text at a given font size. `null` where no text engine is
@@ -64,22 +65,6 @@ export interface SolveContext {
    */
   combinedMinimumSize(n: SolveNode): Vec2;
   /**
-   * The type-specific metadata a registered `MinimumSizeFn` attached
-   * alongside its minimum size (`MinimumSizeResult.meta`), or `undefined` if
-   * it returned a bare `Vec2` or attached none. Reads the SAME memoised
-   * computation `combinedMinimumSize` already ran for `n` — calling this
-   * costs nothing beyond a cache lookup once `combinedMinimumSize(n)` (or
-   * this) has run once for `n`'s path.
-   *
-   * Optional on the interface (unlike `combinedMinimumSize`) so the dozen
-   * hand-rolled `SolveContext` literals every `nativeSolver.test.ts` builds
-   * to unit-test a single `MinimumSizeFn` in isolation keep type-checking —
-   * only `controlRectSolver.ts`'s own `record`/`dispatchChildren` (which
-   * always run through `createSolveContext`, never a hand-rolled literal)
-   * call this.
-   */
-  minimumSizeMeta?(n: SolveNode): unknown;
-  /**
    * The FINAL resolved rect a PRIOR solve pass gave `n`, or `undefined`
    * before any pass has run (or when the current solve never needed a second
    * pass — see `controlRectSolver.ts`'s `solveControlTree`). The one
@@ -97,46 +82,33 @@ export interface SolveContext {
   tentativeRect?(n: SolveNode): Rect2 | undefined;
 }
 
-/** A `MinimumSizeFn`'s result when it also needs to hand its OWN painter a computed intermediate (e.g. a shaped text layout) — see `MinimumSizeFn`'s own doc. */
-export interface MinimumSizeResult {
-  /** This type's own minimum-size contribution — `MinimumSizeFn`'s old, bare-`Vec2` return. */
-  size: Vec2;
-  /**
-   * An intermediate this computation produced that the SAME node's native
-   * painter would otherwise have to recompute from a narrower subset of the
-   * inputs (risking divergence from the solver's own answer) — a shaped
-   * `TextLayoutResult` (Button/Label) is the motivating case. Surfaces on
-   * `SolvedControl.meta` / `NativeControlComponentProps.meta`, `unknown` at
-   * the contract boundary since its shape is entirely this TYPE's own — the
-   * painter that reads it back is the same slice that produced it, and casts
-   * it the same way a painter already casts `solveNode.node.properties`.
-   */
-  meta?: unknown;
-}
-
 /**
  * `Control::get_minimum_size` for a registered type — the type's OWN
- * contribution, before the `custom_minimum_size` floor. May return a bare
- * `Vec2` (the common case) or a `MinimumSizeResult` when this node's own
- * painter needs an intermediate this computation already produced (see
- * `MinimumSizeResult`'s own doc) — `controlRectSolver.ts` normalises either
- * shape, so an existing implementation returning a bare `Vec2` needs no
- * change to keep working.
+ * contribution, before the `custom_minimum_size` floor.
+ *
+ * A computation a type's own painter also needs does NOT travel from here.
+ * Whatever is pure in `(n, theme)` — every shaped label in this codebase —
+ * is a **share** the solver and the painter both call (`solveHandoff.ts`),
+ * so there is nothing to hand over; `ctx.measureText` stays the READINESS
+ * gate around the call. What genuinely is solve output leaves through a
+ * container's `ContainerLayoutResult.meta` instead.
  */
-export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vec2 | MinimumSizeResult;
+export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vec2;
 
-/** A `ContainerLayoutFn`'s result when it also needs to hand its OWN painter a computed intermediate — see `ContainerLayoutFn`'s own doc. */
+/** A `ContainerLayoutFn`'s result when it also seals a **solve handoff** for its OWN painter — see `ContainerLayoutFn`'s own doc. */
 export interface ContainerLayoutResult {
   /** Every child's rect — `ContainerLayoutFn`'s old, bare-`Map`-only return. */
   rects: ReadonlyMap<string, Rect2>;
   /**
-   * An intermediate THIS container's layout produced that its OWN painter
-   * would otherwise have to recompute from a narrower subset of the inputs
-   * (e.g. a split's `computed_split_offset`, a scroll container's full
-   * scrollbar geometry) — see `MinimumSizeResult.meta`'s own doc for why this
-   * is `unknown` at the contract boundary and how a painter reads it back.
+   * What THIS container's layout computed that its own painter cannot reach
+   * (a split's `computed_split_offset`, a scroll container's full scrollbar
+   * geometry — both read `ctx.combinedMinimumSize`, so both are genuinely
+   * solve output). Sealed by a module-level channel the painter also imports
+   * (`solveHandoff.ts`), so opening it proves the value's PROVENANCE rather
+   * than its shape. Surfaces unchanged on `SolvedControl.meta` and
+   * `NativeControlComponentProps.meta`.
    */
-  meta?: unknown;
+  meta?: SealedHandoff;
 }
 
 /**
@@ -147,10 +119,10 @@ export interface ContainerLayoutResult {
  * container with chrome must add its own inset back in.
  *
  * May return a bare `ReadonlyMap<string, Rect2>` (the common case) or a
- * `ContainerLayoutResult` when this container's own painter needs an
- * intermediate the layout already computed (see `ContainerLayoutResult`'s
- * own doc) — `controlRectSolver.ts` normalises either shape, so an existing
- * implementation returning a bare `Map` needs no change to keep working.
+ * `ContainerLayoutResult` when this container's own painter needs a value
+ * this layout computed from `ctx` (see `ContainerLayoutResult`'s own doc) —
+ * `controlRectSolver.ts` normalises either shape, so an implementation
+ * returning a bare `Map` needs no change to keep working.
  */
 export type ContainerLayoutFn = (
   n: SolveNode,

@@ -37,9 +37,9 @@ function node(properties: Record<string, unknown>): SolveNode {
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 
-/** `colorPickerMinimumSize` only ever returns a bare `Vec2` (no `meta`) — narrows the `MinimumSizeFn` union for the tests below. */
+/** Every assertion below is on the height alone. */
 function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
-  return 'y' in result ? result.y : result.size.y;
+  return result.y;
 }
 
 describe('hsvToRgb', () => {

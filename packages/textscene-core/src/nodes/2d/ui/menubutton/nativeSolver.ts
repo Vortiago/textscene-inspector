@@ -29,7 +29,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -62,7 +62,7 @@ export const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 1, g: 
 
 /** Resolves MenuButton's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / MenuButton's own literal). */
 export function menuButtonTextTheme(
-  n: SolveNode,
+  n: ShareNode,
   props: MenuButtonProperties,
   state: ButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -73,6 +73,20 @@ export function menuButtonTextTheme(
   };
   return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
+
+/**
+ * MenuButton's shaped label — the **solve handoff** share
+ * (`r3f/controls/native/solveHandoff.ts`) `menuButtonMinimumSize` and
+ * `Component.tsx` both call. `null` for empty text.
+ */
+export const menuButtonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
+  const props = n.node.properties as MenuButtonProperties;
+  const text = props.text ?? '';
+  if (text.length === 0) return null;
+  const state = resolveButtonDrawState(props.disabled);
+  const { fontSizePx } = menuButtonTextTheme(n, props, state, { theme });
+  return shapeButtonLabel(text, fontSizePx, resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY));
+});
 
 /**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`) — the
@@ -86,12 +100,8 @@ export const menuButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const { fontSizePx } = menuButtonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null =
-    hasText && ctx.measureText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null;
+  const hasText = (props.text ?? '').length > 0;
+  const layout: TextLayoutResult | null = ctx.measureText ? menuButtonLabelShape(n, ctx.theme) : null;
   const textSize = layout
     ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
     : { x: 0, y: 0 };
@@ -129,5 +139,5 @@ export const menuButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
   }
 
-  return { size: { x: marginX + width, y: marginY + height }, meta: layout ?? undefined };
+  return { x: marginX + width, y: marginY + height };
 };

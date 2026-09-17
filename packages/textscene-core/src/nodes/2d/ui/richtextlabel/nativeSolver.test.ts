@@ -14,9 +14,8 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, AutowrapMode, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -64,11 +63,6 @@ function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveN
   };
 }
 
-/** `richTextLabelMinimumSize`'s `size` half only — see `MinimumSizeResult`'s own doc for why the union is here at all. */
-function size(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'x' in result ? result : result.size;
-}
-
 function ctx(withMeasurer = true): SolveContext {
   return {
     theme: nativeTheme(1),
@@ -114,25 +108,25 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('fit_content + autowrap OFF: width is the natural line width, height is ONE line at 23px (not 26 — no line_separation)', () => {
-    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx()));
+    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB', autowrapMode: 0 }), ctx());
     expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
     expect(result.y).toBe(OWN_LINE_PITCH);
   });
 
   it('fit_content + autowrap OFF + explicit hard break: height is N*23 with NO trailing subtraction (2*23=46, not Label\'s 2*26-3=49)', () => {
-    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB', autowrapMode: 0 }), ctx()));
+    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
     expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
   });
 
   it('fit_content + default autowrap (WORD_SMART): width still floors to 1 (Size2(1, height) substitution), height still the natural single-line 23px', () => {
-    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB' }), ctx()));
+    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB' }), ctx());
     expect(result.x).toBe(1);
     expect(result.y).toBe(OWN_LINE_PITCH);
   });
 
   it('fit_content + default autowrap + explicit hard break: height still counts both natural lines (2*23=46)', () => {
-    const result = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB' }), ctx()));
+    const result = richTextLabelMinimumSize(node({ fitContent: true, text: 'A\nAB' }), ctx());
     expect(result.x).toBe(1);
     expect(result.y).toBe(2 * OWN_LINE_PITCH);
   });
@@ -145,12 +139,12 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
     // one — the same width self-reference Label closes through
     // `SolveContext.tentativeRect`. 'AB AB' at 22px of shaped width per 'AB'
     // wraps to two lines in a 30px box.
-    const wrapped = size(
+    const wrapped = 
       richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), {
         ...ctx(),
         tentativeRect: () => ({ x: 0, y: 0, w: 30, h: 400 }),
       })
-    );
+    ;
     expect(wrapped.y).toBe(2 * OWN_LINE_PITCH);
     expect(wrapped.x).toBe(1);
   });
@@ -158,7 +152,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   it('fit_content + autowrap ON: the FIRST pass, with no resolved width yet, reports the unwrapped height', () => {
     // No `tentativeRect` answer means no completed pass — exactly Godot's own
     // pre-resize state, and what keeps the exchange non-circular.
-    const first = size(richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), ctx()));
+    const first = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), ctx());
     expect(first.y).toBe(OWN_LINE_PITCH);
   });
 
@@ -179,7 +173,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('reads theme_override_font_sizes/normal_font_size, not the theme default, when present', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({
           fitContent: true,
@@ -189,13 +183,13 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         }),
         ctx()
       )
-    );
+    ;
     // At size 32: ascentPx=ceil(2189*32/2048)=35, descentPx=ceil(600*32/2048)=10 -> ownLinePitch=45.
     expect(result.y).toBe(45);
   });
 
   it('a [b] span with no bold_font_size override measures at the FALLBACK size (16), not normal_font_size — the same font-size resolution styledTextRuns pins', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({
           fitContent: true,
@@ -206,7 +200,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         }),
         ctx()
       )
-    );
+    ;
     // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. Plain 'A' at
     // 32px + bold 'A' at the 16px fallback: 1354*32/2048 + 1354*16/2048 =
     // 21.15625 + 10.578125 = 31.734375 of pen advance, reported as the ceiled
@@ -215,7 +209,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('a [b] span whose bold_font_size ALSO matches normal_font_size measures as if uniformly shaped (the positive control this fix closes)', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({
           fitContent: true,
@@ -226,7 +220,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         }),
         ctx()
       )
-    );
+    ;
     // Both 'A's now shape at 32px. 32 is above
     // SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance is rounded to a
     // whole pixel with the remainder carried (text_server_adv.cpp:7079-7084):
@@ -239,12 +233,12 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('an [img]-only paragraph floors get_minimum_size to the image\'s OWN box — width the (ceiled) advance, height its own centred ascent+descent', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img=10x40]a.png[/img]' }),
         ctx()
       )
-    );
+    ;
     // A solo image's own decorated advance is exact (10, shapedTextSizeWidthPx
     // ceils a whole number to itself); centre/centre alignment on an
     // image-only line (textAscent=textDescent=0) splits the 40px height
@@ -253,7 +247,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('the SAME box, for an UNAUTHORED [img] whose 10x40 comes from SolveNode.textureSlots instead of the value form', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node(
           { fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img]a.png[/img]' },
@@ -261,17 +255,17 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         ),
         ctx()
       )
-    );
+    ;
     expect(result).toEqual({ x: 10, y: 40 });
   });
 
   it('floors to (0, 0) for an unauthored [img] whose textureSlots has not resolved yet', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({ fitContent: true, autowrapMode: 0, bbcodeEnabled: true, text: '[img]a.png[/img]' }),
         ctx()
       )
-    );
+    ;
     expect(result).toEqual({ x: 0, y: 0 });
   });
 });
@@ -1202,19 +1196,19 @@ describe('underlineRectPx', () => {
  */
 describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("reports Godot's own whole-pixel 116 for a fit_content, non-wrapping 'Master volume'", () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(
         node({ fitContent: true, text: 'Master volume', autowrapMode: 0 }),
         ctx()
       )
-    );
+    ;
     expect(result.x).toBe(116);
   });
 
   it('leaves the 1px autowrap width floor alone — that branch never reads a shaped size', () => {
-    const result = size(
+    const result = 
       richTextLabelMinimumSize(node({ fitContent: true, text: 'Master volume', autowrapMode: 2 }), ctx())
-    );
+    ;
     expect(result.x).toBe(1);
   });
 });

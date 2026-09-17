@@ -26,17 +26,11 @@
  * supplies that; a bare `<group>` here resets it to zero
  * (`r3f/canvasPaintOrder.ts`).
  *
- * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `labelMinimumSize` — see its
- * own doc) when autowrap is OFF (Label's default), instead of re-shaping —
- * that function already shapes the SAME text at the SAME effective
- * parameters (`shapeText` forces `effectiveWidth = 0` whenever
- * `autowrapMode === OFF` regardless of `boxWidthPx`, so `rect.w` never
- * mattered for this case anyway). Autowrap ON always re-shapes locally: the
- * solver's own minimum size substitutes an UNWRAPPED height for that case
- * (see `labelMinimumSize`'s own doc), so its shape is not the box-constrained
- * one this painter needs — reusing it there would be a silent wrong picture,
- * not a shortcut, so this component only ever reads `meta` for the ONE case
- * it is provably identical.
+ * TEXT LAYOUT: calls `nativeSolver.ts`'s `labelUnwrappedShape` — the **solve
+ * handoff** share `labelMinimumSize` calls too — when autowrap is OFF
+ * (Label's default), instead of re-shaping. The branch is on
+ * `autowrap_mode` itself, not on whether a shape happens to be available:
+ * autowrap ON shapes locally against `rect.w`, which no share can know.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -48,7 +42,6 @@ import {
   AutowrapMode,
   clampAutowrapMode,
   shapeText,
-  isTextLayoutResult,
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -68,6 +61,7 @@ import {
   labelShadowTheme,
   labelShapingWidthPx,
   labelTextTheme,
+  labelUnwrappedShape,
   labelVisibleLineRange,
   layoutLabelLines,
   resolveNodeLabelSettings,
@@ -90,7 +84,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
   );
 }
 
-export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
   const labelSettings = useMemo(
@@ -126,10 +120,9 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // `labelMinimumSize` already windows its OWN `meta` to lines_skipped/
-  // max_lines_visible (`nativeSolver.ts`'s own doc), so reusing it here must
-  // NOT window a second time.
-  const cachedLayout = autowrapMode === AutowrapMode.OFF && isTextLayoutResult(meta) ? meta : null;
+  // The share windows to lines_skipped/max_lines_visible itself
+  // (`nativeSolver.ts`'s own doc), so this must NOT window it a second time.
+  const sharedLayout = autowrapMode === AutowrapMode.OFF ? labelUnwrappedShape(solveNode, theme) : null;
   // Read INSIDE the render body, not the `useMemo` below: `peekSceneFontMetrics`
   // (`resolveNodeFontMetrics`'s own doc) answers synchronously from a WeakMap
   // cache that a later async load mutates in place, so this must re-run every
@@ -139,7 +132,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
   // scene font), not every render.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
   const layout = useMemo(() => {
-    if (cachedLayout) return cachedLayout;
+    if (sharedLayout) return sharedLayout;
     const shaped = shapeText(text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w),
@@ -154,7 +147,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme, meta }: Nativ
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
     return windowLabelLines(shaped, range);
   }, [
-    cachedLayout,
+    sharedLayout,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,

@@ -1,7 +1,7 @@
 /**
  * `<VSplitContainer>` — the native (WebGL canvas) painter for
  * VSplitContainer. Identical reasoning to `hsplitcontainer/Component.tsx`
- * (read its module doc first, including the `meta`/fallback split) at
+ * (read its module doc first, including the sealed-boundary channel) at
  * `vertical = true`: reads `sizeFlagsVertical`/`customMinimumSize.y` for the
  * split axis, and draws the `vsplitter` icon (48px along the container's
  * width, 8px along the split axis) instead of `hsplitter`.
@@ -16,7 +16,7 @@ import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
   computeSplitDraggerPosition,
-  isSplitContainerLayoutMeta,
+  splitContainerBoundaryChannel,
   isSplitGrabberVisible,
   resolveSplitSeparation,
   splitGrabberIconRect,
@@ -48,7 +48,7 @@ export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
     grabberExtent: iconSize.y,
   });
   const [first, second] = sortable as [SolveNode, SolveNode];
-  const cachedDraggerPos = isSplitContainerLayoutMeta(meta) ? meta.draggerPos : undefined;
+  const cachedDraggerPos = splitContainerBoundaryChannel.open(meta)?.draggerPos;
   const draggerPos =
     cachedDraggerPos ??
     computeSplitDraggerPosition(

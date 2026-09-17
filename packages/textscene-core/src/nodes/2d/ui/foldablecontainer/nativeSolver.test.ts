@@ -27,6 +27,7 @@ import {
   foldableContainerHSeparation,
   foldableContainerArrowSize,
   foldableContainerTitleMetrics,
+  foldableContainerTitleShape,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -63,19 +64,16 @@ function ctx(): SolveContext {
   };
 }
 
-function minSize(...args: Parameters<typeof foldableContainerMinimumSize>): Vec2 {
-  const result = foldableContainerMinimumSize(...args);
-  return 'size' in result ? result.size : result;
-}
+const minSize = foldableContainerMinimumSize;
 
 function layoutRects(...args: Parameters<typeof foldableContainerLayout>): ReadonlyMap<string, Rect2> {
   const result = foldableContainerLayout(...args);
   return 'rects' in result ? result.rects : result;
 }
 
-function minMeta(...args: Parameters<typeof foldableContainerMinimumSize>): FoldableContainerTitleMetrics {
-  const result = foldableContainerMinimumSize(...args);
-  return ('meta' in result ? result.meta : undefined) as FoldableContainerTitleMetrics;
+/** The share both solver entry points and the painter call. */
+function titleShape(n: SolveNode): FoldableContainerTitleMetrics {
+  return foldableContainerTitleShape(n, nativeTheme(1));
 }
 
 describe('foldableContainerMinimumSize', () => {
@@ -100,13 +98,13 @@ describe('foldableContainerMinimumSize', () => {
   });
 
   it('unfolded with a title adds the h_separation + text width/height (OVERRUN_NO_TRIMMING default)', () => {
-    const meta = minMeta(node({ folded: false, title: 'A' }), ctx());
-    expect(meta.size).toEqual({ x: MARGIN + ARROW + H_SEP + A_WIDTH, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
+    const title = titleShape(node({ folded: false, title: 'A' }));
+    expect(title.size).toEqual({ x: MARGIN + ARROW + H_SEP + A_WIDTH, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
   });
 
   it('a non-zero title_text_overrun_behavior drops the text WIDTH but keeps its height', () => {
-    const meta = minMeta(node({ folded: false, title: 'A', titleTextOverrunBehavior: 3 }), ctx());
-    expect(meta.size).toEqual({ x: MARGIN + ARROW + H_SEP, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
+    const title = titleShape(node({ folded: false, title: 'A', titleTextOverrunBehavior: 3 }));
+    expect(title.size).toEqual({ x: MARGIN + ARROW + H_SEP, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
   });
 
   it('unfolded with no children floors to the title bar width and adds the panel margin height', () => {

@@ -20,10 +20,9 @@
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  *
- * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `menuButtonMinimumSize`)
- * instead of shaping `text` itself, falling back to local shaping only when
- * `meta` is not a usable `TextLayoutResult` — the SAME contract Button's own
- * painter documents.
+ * TEXT LAYOUT: calls `nativeSolver.ts`'s `menuButtonLabelShape`, the **solve
+ * handoff** share its minimum-size solver calls too — the SAME contract
+ * Button's own painter documents.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -37,23 +36,20 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
-  isTextLayoutResult,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
-  shapeButtonLabel,
   tintColor,
   layoutButtonContent,
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
 } from '../../../../r3f/controls/native/buttonBase';
-import { BUTTON_THEME_FONT_KEY, buttonIconColor, menuButtonTextTheme } from './nativeSolver';
+import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 interface IconImageLike {
@@ -61,7 +57,7 @@ interface IconImageLike {
   height?: number;
 }
 
-export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: NativeControlComponentProps) {
+export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<MenuButtonProperties>(solveNode);
   const state = resolveButtonDrawState(props.disabled);
 
@@ -78,13 +74,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme, meta }: 
     [baseFontColor, tint.own]
   );
 
-  const cachedLayout = isTextLayoutResult(meta) ? meta : null;
-  const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null = useMemo(() => {
-    if (!hasText) return null;
-    if (cachedLayout) return cachedLayout;
-    return shapeButtonLabel(text, fontSizePx, fontMetrics);
-  }, [hasText, cachedLayout, text, fontSizePx, fontMetrics]);
+  const layout: TextLayoutResult | null = menuButtonLabelShape(solveNode, theme);
 
   // --- Icon: resolve + load the referenced texture -------------------------
   const { externalResources, internalResources } = solveNode.resources;

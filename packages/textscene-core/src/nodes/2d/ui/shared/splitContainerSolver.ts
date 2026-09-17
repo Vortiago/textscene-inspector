@@ -51,6 +51,7 @@
 
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
@@ -388,17 +389,20 @@ function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
  * (`ctx.combinedMinimumSize`), not the narrower `custom_minimum_size` alone
  * a painter is limited to without this channel.
  */
-export interface SplitContainerLayoutMeta {
+export interface SplitContainerBoundary {
   /** `computed_split_offset` — this container's own local-space position where the separation band starts (under a horizontal RTL, already inverted, so a painter draws the grabber straight at it). `undefined` with fewer than two sortable children (no boundary to report). */
   draggerPos: number | undefined;
 }
 
-/** A runtime shape check for `NativeControlComponentProps.meta` — see `isTextLayoutResult`'s own doc for why this is worth four property reads at a painter's contract boundary. */
-export function isSplitContainerLayoutMeta(value: unknown): value is SplitContainerLayoutMeta {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<SplitContainerLayoutMeta>;
-  return 'draggerPos' in v && (typeof v.draggerPos === 'number' || v.draggerPos === undefined);
-}
+/**
+ * The **solve handoff** channel (`r3f/controls/native/solveHandoff.ts`) every
+ * split axis seals and all three split painters open.
+ *
+ * A channel rather than a share: the boundary is computed from both sortable
+ * children's full recursive `combined_minimum_size` (`ctx`), which no painter
+ * can reach.
+ */
+export const splitContainerBoundaryChannel = defineChannel<SplitContainerBoundary>('SplitContainer.boundary');
 
 /**
  * Builds the `ContainerLayoutFn` for a split axis. Like `boxContainerSolver.ts`'s
@@ -453,7 +457,7 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
           )
         : undefined;
 
-    return { rects: out, meta: { draggerPos } satisfies SplitContainerLayoutMeta };
+    return { rects: out, meta: splitContainerBoundaryChannel.seal({ draggerPos }) };
   };
 }
 

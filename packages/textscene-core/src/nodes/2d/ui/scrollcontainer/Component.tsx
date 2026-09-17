@@ -26,18 +26,19 @@
  * rect's own position is whole and its size is not, which is exactly the pair
  * the scissor's separate roundings consume.
  *
- * SCROLLBAR GEOMETRY. Reads `meta` (`ContainerLayoutResult.meta`, from this
- * type's registered `ContainerLayoutFn` — `nativeSolver.ts`'s
- * `scrollContainerLayout`) — the FULL `ScrollContainerLayout`
+ * SCROLLBAR GEOMETRY. Opens the **solve handoff** channel
+ * (`nativeSolver.ts`'s `scrollContainerLayoutChannel`, sealed by this type's
+ * registered `ContainerLayoutFn`) — the FULL `ScrollContainerLayout`
  * `scrollContainerScrollBars` already computed during the REAL solve, whose
  * `SolveContext` cache had every descendant's `combinedMinimumSize` already
  * memoised. Falls back to building a FRESH `SolveContext` (the same
  * `nativeTheme`/`measureText` the real solve uses, via `createSolveContext`)
- * and re-invoking `scrollContainerScrollBars` itself ONLY when `meta` is not
- * a usable `ScrollContainerLayout` (a hand-built test props object) — never
- * to a narrower input (e.g. child `custom_minimum_size` alone), so the
- * fallback and the cached path can never disagree about overflow/grabber
- * geometry, only about how much redundant work they cost. `ScrollBar`'s own
+ * and re-invoking `scrollContainerScrollBars` itself only when no sealed
+ * layout arrives — which in a real solve never happens, since the layout
+ * seals one unconditionally — never to a narrower input (e.g. child
+ * `custom_minimum_size` alone), so the fallback and the sealed path can
+ * never disagree about overflow/grabber geometry, only about how much
+ * redundant work they cost. `ScrollBar`'s own
  * grabber has no `autohide`/pointer-state gate in `scene/gui/scroll_bar.cpp`
  * (unlike `SplitContainer`'s split-bar background) — it always draws once
  * its enclosing bar is visible, so this painter never needs interactive
@@ -90,7 +91,7 @@ import { type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollContainerScrollBars,
-  isScrollContainerLayout,
+  scrollContainerLayoutChannel,
   type ScrollBarPlacement,
 } from './nativeSolver';
 
@@ -197,7 +198,7 @@ export function ScrollContainer({
   children,
   meta,
 }: NativeControlComponentProps) {
-  const cachedLayout = isScrollContainerLayout(meta) ? meta : null;
+  const cachedLayout = scrollContainerLayoutChannel.open(meta) ?? null;
   // FALLBACK ONLY (`cachedLayout` absent, `layout` below): a FRESH
   // SolveContext, built from the exact same theme/measurer the real solve
   // uses — not a second, narrower approximation of one. Rebuilt whenever

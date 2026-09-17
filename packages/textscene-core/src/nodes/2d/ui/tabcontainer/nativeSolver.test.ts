@@ -32,10 +32,6 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
   return 'rects' in result ? result.rects : result;
 }
 
-function asVec2(result: ReturnType<typeof tabContainerMinimumSize>): { x: number; y: number } {
-  return 'size' in result ? result.size : result;
-}
-
 function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return { ...solveNode(), path: name, node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties } };
 }
@@ -153,7 +149,7 @@ describe('tabContainerMinimumSize', () => {
     const wide = page('Wide', { customMinimumSize: { x: 300, y: 10 } });
     const narrow = page('Narrow', { visible: false, customMinimumSize: { x: 10, y: 10 } });
     const n = tabContainer('T', { tabsVisible: false }, [narrow, wide]);
-    const size = asVec2(tabContainerMinimumSize(n, ctx()));
+    const size = tabContainerMinimumSize(n, ctx());
     // tabsVisible: false, so the ENTIRE header contribution is skipped —
     // only the visible page's own minimum (`Wide`'s customMinimumSize) floors it.
     expect(size).toEqual({ x: 300, y: 10 });
@@ -163,14 +159,14 @@ describe('tabContainerMinimumSize', () => {
     const wide = page('Wide', { visible: false, customMinimumSize: { x: 300, y: 10 } });
     const narrow = page('Narrow', { customMinimumSize: { x: 10, y: 10 } });
     const n = tabContainer('T', { tabsVisible: false, useHiddenTabsForMinSize: true }, [narrow, wide]);
-    const size = asVec2(tabContainerMinimumSize(n, ctx()));
+    const size = tabContainerMinimumSize(n, ctx());
     expect(size.x).toBe(300);
   });
 
   it('adds the internal tab bar height on top of the tallest page when tabs_visible', () => {
     const p = page('Only', { customMinimumSize: { x: 10, y: 10 } });
     const n = tabContainer('T', { tabsVisible: true }, [p]);
-    const size = asVec2(tabContainerMinimumSize(n, ctx()));
+    const size = tabContainerMinimumSize(n, ctx());
     // The bar's own minimum height comes from its tab_selected/unselected
     // style margins (tabbar/nativeSolver.test.ts covers the exact numbers);
     // here only the ORDERING matters: taller than the bare page minimum.
@@ -179,8 +175,8 @@ describe('tabContainerMinimumSize', () => {
 
   it('never widens for tab_alignment CENTER (side_margin only applies to LEFT/RIGHT, tab_container.cpp:1039)', () => {
     const p = page('Only');
-    const centered = asVec2(tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]), ctx()));
-    const left = asVec2(tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT }, [p]), ctx()));
+    const centered = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]), ctx());
+    const left = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT }, [p]), ctx());
     expect(left.x).toBeGreaterThan(centered.x);
   });
 });
@@ -295,10 +291,10 @@ describe('tabBarRect with an authored tabbar_background margin', () => {
 describe('the tabbar style margins reach the minimum size and the page band', () => {
   it("adds all four of the tabbar style's margins to the minimum size (tab_container.cpp:1032-1033)", () => {
     const p = page('Only', { customMinimumSize: { x: 10, y: 10 } });
-    const bare = asVec2(tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p]), ctx()));
-    const margined = asVec2(
+    const bare = tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p]), ctx());
+    const margined = 
       tabContainerMinimumSize(tabContainer('T', { tabsVisible: true }, [p], tabbarBackgroundStyleBoxes()), ctx())
-    );
+    ;
     expect(margined.x - bare.x).toBe(TABBAR_MARGIN.left + TABBAR_MARGIN.right);
     expect(margined.y - bare.y).toBe(TABBAR_MARGIN.top + TABBAR_MARGIN.bottom);
   });

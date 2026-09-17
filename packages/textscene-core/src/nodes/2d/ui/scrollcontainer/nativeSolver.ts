@@ -73,6 +73,7 @@
 
 import type { ControlProperties } from '../control/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
@@ -319,15 +320,15 @@ export function scrollContainerScrollBars(
  * axis) and whose POSITION is the negative authored scroll offset, then
  * passed through the shared `Container::fit_child_in_rect`.
  *
- * Returns the FULL `ScrollContainerLayout` `scrollContainerScrollBars`
- * already computed as `meta` (`ContainerLayoutResult.meta` —
- * `solverRegistry.ts`'s own doc), not only the `contentSize` this function
- * itself needs — `horizontal`/`vertical` (each bar's visibility and rect,
- * its grabber's rect) are exactly what `Component.tsx`'s painter needs to
- * draw the scrollbars, computed here from the REAL solve's `ctx` (whose
- * `combinedMinimumSize` cache already has every descendant's minimum size
- * memoised) rather than discarded and later rebuilt by the painter from a
- * FRESH, empty-cache `SolveContext` that re-walks the whole subtree.
+ * Seals the FULL `ScrollContainerLayout` `scrollContainerScrollBars` already
+ * computed onto {@link scrollContainerLayoutChannel}, not only the
+ * `contentSize` this function itself needs — `horizontal`/`vertical` (each
+ * bar's visibility and rect, its grabber's rect) are exactly what
+ * `Component.tsx`'s painter needs to draw the scrollbars, computed here from
+ * the REAL solve's `ctx` (whose `combinedMinimumSize` cache already has every
+ * descendant's minimum size memoised) rather than discarded and later rebuilt
+ * by the painter from a FRESH, empty-cache `SolveContext` that re-walks the
+ * whole subtree.
  */
 export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const layout = scrollContainerScrollBars(n, ctx, rect);
@@ -353,21 +354,15 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
 
     out.set(child.path, fitChildInRect(r, minSize, hFlags, vFlags, n.rtl));
   }
-  return { rects: out, meta: layout };
+  return { rects: out, meta: scrollContainerLayoutChannel.seal(layout) };
 };
 
-/** A runtime shape check for `NativeControlComponentProps.meta` — see `text/textLayout.ts`'s `isTextLayoutResult` for why this is worth a few property reads at a painter's contract boundary. */
-export function isScrollContainerLayout(value: unknown): value is ScrollContainerLayout {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<ScrollContainerLayout>;
-  return (
-    typeof v.contentSize === 'object' &&
-    v.contentSize !== null &&
-    typeof v.scroll === 'object' &&
-    v.scroll !== null &&
-    typeof v.horizontal === 'object' &&
-    v.horizontal !== null &&
-    typeof v.vertical === 'object' &&
-    v.vertical !== null
-  );
-}
+/**
+ * The **solve handoff** channel (`r3f/controls/native/solveHandoff.ts`)
+ * `scrollContainerLayout` seals and `Component.tsx` opens.
+ *
+ * A channel rather than a share: `scrollContainerScrollBars` reads
+ * `ctx.combinedMinimumSize` for the whole content subtree, so it genuinely is
+ * solve output and cannot be recomputed from the node and the theme alone.
+ */
+export const scrollContainerLayoutChannel = defineChannel<ScrollContainerLayout>('ScrollContainer.layout');

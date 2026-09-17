@@ -28,8 +28,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
@@ -75,11 +74,6 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
-}
-
-/** `optionButtonMinimumSize`'s `size` half only — see `button/nativeSolver.test.ts`'s own `minSize` for why the union is here at all. */
-function minSize(result: Vec2 | MinimumSizeResult): Vec2 {
-  return 'size' in result ? result.size : result;
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -144,14 +138,14 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
       { text: 'A', id: 0 }, // 10.578125 wide
       { text: 'AB', id: 1 }, // 21.125 wide — the widest
     ];
-    const result = minSize(optionButtonMinimumSize(node({ items, selected: 0 }), ctx()));
+    const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
     // width = 16 (margin) + 21.125 (widest item) + 12 (arrow) + 4 (h_separation).
     expect(result.x).toBeCloseTo(16 + AB_SHAPED_WIDTH + 12 + 4, 6);
   });
 
   it('height is 8 (marginY) + max(tallest item text height, arrow height 12) — the 23px font height wins', () => {
     const items = [{ text: 'AB', id: 0 }];
-    const result = minSize(optionButtonMinimumSize(node({ items, selected: 0 }), ctx()));
+    const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
@@ -163,9 +157,9 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
   it('h_separation theme_override_constants wins over the theme default', () => {
     const items = [{ text: 'A', id: 0 }];
-    const result = minSize(
+    const result = 
       optionButtonMinimumSize(node({ items, selected: 0, themeOverrideConstants: { h_separation: 10 } }), ctx())
-    );
+    ;
     expect(result.x).toBe(16 + Math.ceil(A_ADVANCE) + 12 + 10);
   });
 
@@ -339,6 +333,6 @@ describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_ser
         { text: 'Blackout', id: 2 },
       ],
     });
-    expect(minSize(optionButtonMinimumSize(n, ctx())).x).toBe(103);
+    expect(optionButtonMinimumSize(n, ctx()).x).toBe(103);
   });
 });

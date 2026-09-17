@@ -16,7 +16,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
@@ -30,6 +30,7 @@ import { JustificationFlag } from '../../../../r3f/controls/native/text/textJust
 import {
   labelMinimumSize,
   labelShapingWidthPx,
+  labelUnwrappedShape,
   LABEL_THEME_KEYS,
   LABEL_THEME_FONT_KEY,
   LABEL_DEFAULT_FONT_COLOR,
@@ -53,17 +54,7 @@ import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/tes
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 
-/** `labelMinimumSize`'s `size` half only — every test below except the dedicated `meta` describe cares only about this, exactly like before `{ size, meta }` existed. */
-function minSize(...args: Parameters<typeof labelMinimumSize>): Vec2 {
-  const result = labelMinimumSize(...args);
-  return 'size' in result ? result.size : result;
-}
-
-/** `labelMinimumSize`'s `meta` half — the shaped `TextLayoutResult` (autowrap OFF only), or `undefined`. */
-function minMeta(...args: Parameters<typeof labelMinimumSize>): unknown {
-  const result = labelMinimumSize(...args);
-  return 'meta' in result ? result.meta : undefined;
-}
+const minSize = labelMinimumSize;
 
 function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
@@ -213,13 +204,8 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
     expect(minSize(node({ text: SUBTITLE, autowrapMode: 2 }), ctxAt(640)).x).toBe(1);
   });
 
-  it('still attaches NO meta on the second pass — the tentative width is not necessarily the final one', () => {
-    expect(minMeta(node({ text: SUBTITLE, autowrapMode: 2 }), ctxAt(640))).toBeUndefined();
-  });
-
   it('autowrap OFF ignores tentativeRect entirely — its own width floor is the unwrapped line, on every pass', () => {
-    const off = labelMinimumSize(node({ text: 'AB', autowrapMode: 0 }), ctxAt(4));
-    expect('size' in off ? off.size.y : off.y).toBe(23);
+    expect(labelMinimumSize(node({ text: 'AB', autowrapMode: 0 }), ctxAt(4)).y).toBe(23);
   });
 
   it('shapes at a TRUNCATED width (label.cpp:581 `int width = get_size().width - ...`), so a fractional box does not fit a word its whole-pixel width cannot', () => {
@@ -392,26 +378,27 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
   });
 });
 
-describe('labelMinimumSize — meta carries the shaped TextLayoutResult when autowrap is OFF (ITEM C: no re-shape in the painter)', () => {
-  it('attaches the shaped layout as meta when autowrap is OFF and there is text', () => {
-    const meta = minMeta(node({ text: 'AB', autowrapMode: 0 }), ctx()) as TextLayoutResult;
-    expect(meta.widthPx).toBeCloseTo(AB_WIDTH, 6);
-    expect(meta.lines).toHaveLength(1);
+describe('labelUnwrappedShape — the one shaping the solver and the painter share when autowrap is OFF', () => {
+  const shape = (props: Partial<LabelProperties>): TextLayoutResult | null =>
+    labelUnwrappedShape(node(props), nativeTheme(1));
+
+  it('shapes the text unwrapped', () => {
+    const layout = shape({ text: 'AB' })!;
+    expect(layout.widthPx).toBeCloseTo(AB_WIDTH, 6);
+    expect(layout.lines).toHaveLength(1);
   });
 
-  it('the meta layout is uppercase-transformed exactly like the size half', () => {
-    const meta = minMeta(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx()) as TextLayoutResult;
+  it('is uppercase-transformed exactly like the minimum size', () => {
     // Trailing ZWSP is Label's own per-paragraph terminator (`label.cpp:164`).
-    expect(meta.lines[0]?.text).toBe(`AB${'\u200b'}`);
+    expect(shape({ text: 'ab', uppercase: true })!.lines[0]?.text).toBe(`AB${'\u200b'}`);
   });
 
-  it('attaches NO meta when autowrap is ON — the unwrapped shape behind the height substitute is not what a box-constrained painter needs', () => {
-    expect(minMeta(node({ text: 'AB', autowrapMode: 2 }), ctx())).toBeUndefined();
+  it('is null for empty text', () => {
+    expect(shape({})).toBeNull();
   });
 
-  it('attaches no meta for empty text or an absent measurer', () => {
-    expect(minMeta(node({}), ctx())).toBeUndefined();
-    expect(minMeta(node({ text: 'AB', autowrapMode: 0 }), ctx(false))).toBeUndefined();
+  it('windows to lines_skipped/max_lines_visible, so a caller must not window it again', () => {
+    expect(shape({ text: 'A\nB\nC', maxLinesVisible: 2 })!.lines).toHaveLength(2);
   });
 });
 

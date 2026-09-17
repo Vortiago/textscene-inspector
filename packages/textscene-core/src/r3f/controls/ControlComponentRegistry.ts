@@ -12,6 +12,7 @@ import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from './native/rect';
 import type { SolveNode } from './native/solveTree';
 import type { ControlOwnTint } from './native/controlTint';
+import type { SealedHandoff } from './native/solveHandoff';
 
 /**
  * Props a Control painter receives from `ControlCanvasWalker`. A painter
@@ -151,21 +152,15 @@ export interface NativeControlComponentProps {
    */
   effectiveZ: number;
   /**
-   * This Control's own intermediate, if its registered `MinimumSizeFn`/
-   * `ContainerLayoutFn` attached one (`native/controlRectSolver.ts`'s
-   * `SolvedControl.meta` — see that field's own doc for which of the two
-   * sources wins when a type registers both). `unknown` at this boundary:
-   * its shape is entirely the producing slice's OWN, so a painter casts it —
-   * the one cast left to it, its properties now arriving narrowed through
-   * `painterView` — e.g.
-   * `HSplitContainer`'s painter reading back its `ContainerLayoutFn`'s own
-   * `computed_split_offset` instead of recomputing the split boundary from a
-   * narrower subset of the inputs (`custom_minimum_size` alone, which
-   * disagrees with the solver's full recursive `combined_minimum_size` the
-   * moment either sortable child is itself a container or carries shaped
-   * text) — the exact divergence hazard `childRects` above already exists to
-   * close for solved RECTS; this closes the same hazard for whatever a
-   * registered solver computed and would otherwise be forced to discard.
+   * The **solve handoff** this Control's registered `ContainerLayoutFn`
+   * sealed (`native/controlRectSolver.ts`'s `SolvedControl.meta`), or
+   * `undefined`.
+   *
+   * Opaque: the producing slice's own channel object is the only thing that
+   * can open it (`native/solveHandoff.ts`), so a painter cannot mistake
+   * another slice's value — or a props literal of the same shape — for its
+   * own. A painter whose computation is pure in `(node, theme)` reads nothing
+   * here: it calls the same share its solver calls.
    *
    * REQUIRED even though most painters never read it, for the same reason
    * `subtreeChromeRenderOrder`/`effectiveZ` are: an optional field would let
@@ -174,7 +169,7 @@ export interface NativeControlComponentProps {
    * type error marking the gap. `painterEnv()` (`native/testing/
    * painterProps.ts`) exists so widening this contract stays one edit.
    */
-  meta: unknown;
+  meta: SealedHandoff | undefined;
   /**
    * Rendered ONLY for a passthrough host that draws no chrome of its own but
    * must still wrap its descendants in fresh context — `CanvasLayer`'s native

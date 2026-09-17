@@ -320,6 +320,19 @@ export function isPromotedControl(n: SolveNode): boolean {
  * Returns `n` itself when nothing is promoted, the overwhelmingly common tree,
  * so no caller sees a fresh object per call.
  */
+/**
+ * A `SolveNode` minus the sortable child list — what a **solve handoff**
+ * share's callback may see (`solveHandoff.ts`, which re-exports this as part
+ * of that API).
+ *
+ * `sortableView` below hands the SOLVER a copy with promoted children
+ * filtered out, so a computation both the solver and the painter call must
+ * not read `children` or the two would answer differently. A real `SolveNode`
+ * is assignable, and `n.node.children` — the raw list, which `sortableView`
+ * does not touch — stays reachable.
+ */
+export type ShareNode = Omit<SolveNode, 'children'>;
+
 export function sortableView(n: SolveNode): SolveNode {
   if (!n.children.some(isPromotedControl)) return n;
   return { ...n, children: n.children.filter((child) => !isPromotedControl(child)) };
@@ -333,7 +346,7 @@ export function sortableView(n: SolveNode): SolveNode {
  * the slice knows which shape it authored. Duplicating the one-liner per slice
  * is how a second, subtly different cast eventually appears.
  */
-export function controlProps(n: SolveNode): ControlProperties {
+export function controlProps(n: ShareNode): ControlProperties {
   return n.node.properties as ControlProperties;
 }
 

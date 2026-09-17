@@ -16,11 +16,10 @@
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  *
- * TEXT LAYOUT: reads `meta` (`nativeSolver.ts`'s `menuBarMinimumSize`) when it
- * is a usable `MenuBarTitle[]` — the SAME shaping the solve already ran,
- * avoiding a duplicate `shapeText` pass every render. Falls back to shaping
- * locally (same inputs, same function) only when `meta` is not that shape —
- * a hand-built test props object, or a solve whose measurer was unavailable.
+ * TEXT LAYOUT: calls `nativeSolver.ts`'s `menuBarTitleShapes`, the **solve
+ * handoff** share `menuBarMinimumSize` calls too, so the bar's width and its
+ * glyphs come from one measurement rather than a duplicate `shapeText` pass
+ * every render.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -29,40 +28,19 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { isTextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { pickButtonStyleBox, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { resolveTextTheme } from '../../../../r3f/controls/native/textTheme';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   MENU_BAR_TEXT_THEME_KEYS,
-  MENU_BAR_THEME_FONT_KEY,
   layoutMenuBarItems,
-  menuBarTitles,
-  type MenuBarTitle,
+  menuBarTitleShapes,
 } from './nativeSolver';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
 
-function isMenuBarTitleArray(meta: unknown): meta is MenuBarTitle[] {
-  if (!Array.isArray(meta)) return false;
-  if (meta.length === 0) return true;
-  const first: unknown = meta[0];
-  return (
-    typeof first === 'object' &&
-    first !== null &&
-    typeof (first as Partial<MenuBarTitle>).name === 'string' &&
-    isTextLayoutResult((first as Partial<MenuBarTitle>).layout)
-  );
-}
-
-export function MenuBar({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
+export function MenuBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<MenuBarProperties>(solveNode);
   const style = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal', solveNode.rtl);
-  // `_get_menu_item_rect`/`get_minimum_size` measure `theme_cache.normal`
-  // (`menu_bar.cpp:412,869`); only the drawn quad takes the mirrored box.
-  const measuringStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
-  const marginSize = contentMarginSize(measuringStyle);
 
   const { fontSizePx, color: baseFontColor } = resolveTextTheme(
     solveNode,
@@ -71,12 +49,8 @@ export function MenuBar({ solveNode, tint, rect, theme, renderOrder, meta }: Nat
     { fontSizePx: theme.fontSize, color: BUTTON_DEFAULT_FONT_COLOR }
   );
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
-  const fontMetrics = resolveNodeFontMetrics(solveNode, MENU_BAR_THEME_FONT_KEY);
 
-  const titles = useMemo(() => {
-    if (isMenuBarTitleArray(meta)) return meta;
-    return menuBarTitles(solveNode, fontSizePx, fontMetrics, marginSize);
-  }, [meta, solveNode, fontSizePx, fontMetrics, marginSize]);
+  const titles = menuBarTitleShapes(solveNode, theme);
 
   const clippingPlanes = useControlClipPlanes();
   // menu_bar.cpp:194: `Math::round(4 * scale)`, MenuBar's own theme constant —

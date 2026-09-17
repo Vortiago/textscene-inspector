@@ -17,13 +17,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuBarProperties } from './types';
-import { layoutMenuBarItems, menuBarMinimumSize, type MenuBarTitle } from './nativeSolver';
+import { layoutMenuBarItems, menuBarMinimumSize, menuBarTitleShapes, type MenuBarTitle } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -62,15 +61,7 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-function minSize(...args: Parameters<typeof menuBarMinimumSize>): Vec2 {
-  const result = menuBarMinimumSize(...args);
-  return 'size' in result ? result.size : result;
-}
-
-function minMeta(...args: Parameters<typeof menuBarMinimumSize>): MenuBarTitle[] | undefined {
-  const result = menuBarMinimumSize(...args);
-  return 'meta' in result ? (result.meta as MenuBarTitle[] | undefined) : undefined;
-}
+const minSize = menuBarMinimumSize;
 
 describe('menuBarMinimumSize', () => {
   it('sizes a single title from its own name, no h_separation added for one item', () => {
@@ -85,8 +76,8 @@ describe('menuBarMinimumSize', () => {
   });
 
   it('prefers the PopupMenu child\'s own `title` over its node name', () => {
-    const meta = minMeta(node([popup('SomeInternalName', 'A')]), ctx());
-    expect(meta?.[0]?.layout.widthPx).toBeCloseTo(1354 * (16 / 2048), 6);
+    const titles = menuBarTitleShapes(node([popup('SomeInternalName', 'A')]), nativeTheme(1));
+    expect(titles[0]?.layout.widthPx).toBeCloseTo(1354 * (16 / 2048), 6);
   });
 
   it('ignores a non-PopupMenu child entirely', () => {

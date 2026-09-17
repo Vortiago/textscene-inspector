@@ -46,8 +46,7 @@ function ctx(): SolveContext {
 }
 
 function minSize(props: Partial<ProgressBarProperties>, styleBoxes?: Record<string, StyleBoxFlatData>) {
-  const result = progressBarMinimumSize(node(props, styleBoxes), ctx());
-  return 'size' in result ? result.size : result;
+  return progressBarMinimumSize(node(props, styleBoxes), ctx());
 }
 
 describe('progressBarMinimumSize (progress_bar.cpp:37-48)', () => {

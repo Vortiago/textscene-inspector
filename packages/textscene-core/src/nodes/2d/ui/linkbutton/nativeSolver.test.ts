@@ -14,7 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { SolveContext, MinimumSizeResult } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { LinkButtonProperties } from './types';
@@ -147,33 +147,29 @@ describe('linkButtonUnderlineGeometry (link_button.cpp:306-308)', () => {
   });
 });
 
-function size(result: { x: number; y: number } | MinimumSizeResult): { x: number; y: number } {
-  return 'x' in result ? result : result.size;
-}
-
 describe('linkButtonMinimumSize (link_button.cpp:193-200) — no text', () => {
   it('is (0, 0) with no text at all', () => {
-    expect(size(linkButtonMinimumSize(node({}), ctx()))).toEqual({ x: 0, y: 0 });
+    expect(linkButtonMinimumSize(node({}), ctx())).toEqual({ x: 0, y: 0 });
   });
 
   it('treats an absent measurer as "text contributes nothing"', () => {
-    expect(size(linkButtonMinimumSize(node({ text: 'A' }), ctx(false)))).toEqual({ x: 0, y: 0 });
+    expect(linkButtonMinimumSize(node({ text: 'A' }), ctx(false))).toEqual({ x: 0, y: 0 });
   });
 });
 
 describe('linkButtonMinimumSize — with text', () => {
   it("is the shaped, ceiled text extent — 'A' is (11, 23)", () => {
-    const result = size(linkButtonMinimumSize(node({ text: 'A' }), ctx()));
+    const result = linkButtonMinimumSize(node({ text: 'A' }), ctx());
     expect(result).toEqual({ x: 11, y: 23 });
   });
 
   it('zeroes the width when overrun_behavior is anything but NO_TRIMMING (0), height unaffected', () => {
-    const result = size(linkButtonMinimumSize(node({ text: 'A', overrunBehavior: 3 }), ctx()));
+    const result = linkButtonMinimumSize(node({ text: 'A', overrunBehavior: 3 }), ctx());
     expect(result).toEqual({ x: 0, y: 23 });
   });
 
   it('overrun_behavior === 0 (NO_TRIMMING, the default) keeps the full shaped width', () => {
-    const result = size(linkButtonMinimumSize(node({ text: 'A', overrunBehavior: 0 }), ctx()));
+    const result = linkButtonMinimumSize(node({ text: 'A', overrunBehavior: 0 }), ctx());
     expect(result.x).toBe(11);
   });
 });

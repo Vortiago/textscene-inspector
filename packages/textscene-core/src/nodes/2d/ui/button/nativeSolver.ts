@@ -17,6 +17,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -46,10 +47,9 @@ import type { ButtonProperties } from './types';
  * Button's own theme font key — `SceneStringName(font)` = `"font"`,
  * `scene/theme/default_theme.cpp:152`:
  * `theme->set_font(SceneStringName(font), "Button", Ref<Font>());`. Fed to
- * `resolveNodeFontMetrics` by both this module and `Component.tsx`'s own
- * fallback shape (the path taken when `meta` is not a usable
- * `TextLayoutResult` — see that component's own doc) so the two agree on
- * which font this Button is in.
+ * `resolveNodeFontMetrics` inside {@link buttonLabelShape}, the one shaping
+ * computation both this module and `Component.tsx` call, so the two cannot
+ * disagree about which font this Button is in.
  */
 export const BUTTON_THEME_FONT_KEY = 'font';
 
@@ -99,7 +99,7 @@ export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawSt
 
 /** Resolves this Button's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / Button's own literal — `resolveTextTheme`'s own doc). */
 export function buttonTextTheme(
-  n: SolveNode,
+  n: ShareNode,
   props: ButtonProperties,
   state: ButtonDrawState,
   ctx: Pick<SolveContext, 'theme'>
@@ -110,6 +110,33 @@ export function buttonTextTheme(
   };
   return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
+
+/**
+ * Button's shaped label — the **solve handoff** share
+ * (`r3f/controls/native/solveHandoff.ts`) `buttonMinimumSize` and
+ * `Component.tsx` both call, so one shape serves the minimum size and the
+ * pixels.
+ *
+ * `null` for empty text, which is the ONE case neither side draws.
+ * `ctx.measureText` is not consulted here: it is a readiness GATE, and the
+ * gate belongs to the solver (`buttonMinimumSize`) — the painter shapes
+ * unconditionally, so a share that honoured the gate would answer differently
+ * for the two callers.
+ *
+ * Shapes via `shapeButtonLabel` DIRECTLY (`boxWidthPx: 0`, `autowrapMode:
+ * OFF`, `lineSpacingPx: 0` — Button never wraps and reads no `line_spacing`
+ * theme key at all, unlike Label) rather than through `ctx.measureText`,
+ * whose `Vec2`-only return would discard the `TextLayoutResult` the painter
+ * needs.
+ */
+export const buttonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
+  const props = n.node.properties as ButtonProperties;
+  const text = props.text ?? '';
+  if (text.length === 0) return null;
+  const state = resolveButtonDrawState(props.disabled);
+  const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
+  return shapeButtonLabel(text, fontSizePx, resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY));
+});
 
 /**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`), minus
@@ -130,19 +157,10 @@ export function buttonTextTheme(
  * contract) — margin and icon still contribute, since neither depends on
  * text measurement.
  *
- * Shapes via `shapeText` DIRECTLY (`boxWidthPx: 0`, `autowrapMode: OFF`,
- * `lineSpacingPx: 0` — Button never wraps and reads no `line_spacing` theme
- * key at all, unlike Label) rather than through `ctx.measureText`, whose own
- * `Vec2`-only return would discard the shaped `TextLayoutResult` this
- * function attaches as `meta` — `Button`'s painter (`Component.tsx`) reads it
- * back instead of re-shaping the SAME text with the SAME literal parameters
- * on every render (`comparison.md`'s own "Native (WebGL canvas) painter"
- * section has the measured cost). `ctx.measureText` is still the presence
- * GATE (`!ctx.measureText` still means "text contributes nothing", exactly
- * as before this — a null measurer never reaches `shapeText` at all), so the
- * `TextMeasurer` abstraction still decides whether text shaping runs; only
- * the ACTUAL computation moved to the function this codebase's own painters
- * already call directly for the SAME parameters.
+ * The shaping itself is {@link buttonLabelShape}, which `Component.tsx` calls
+ * too. `ctx.measureText` stays the presence GATE here (`!ctx.measureText`
+ * means "text contributes nothing"), so the `TextMeasurer` abstraction still
+ * decides whether text shaping runs during a solve.
  */
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
@@ -150,14 +168,8 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const { fontSizePx } = buttonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null =
-    hasText && ctx.measureText
-      ? shapeButtonLabel(text, fontSizePx, fontMetrics)
-      : null;
+  const hasText = (props.text ?? '').length > 0;
+  const layout: TextLayoutResult | null = ctx.measureText ? buttonLabelShape(n, ctx.theme) : null;
   // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`)
   // — the CEILED extent, not the raw pen advance.
@@ -206,5 +218,5 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
   }
 
-  return { size: { x: marginX + width, y: marginY + height }, meta: layout ?? undefined };
+  return { x: marginX + width, y: marginY + height };
 };

@@ -22,7 +22,7 @@
  * falling back to `defaults.color` only once nothing anywhere resolves it.
  */
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import type { SolveNode } from './solveTree';
+import type { ShareNode } from './solveTree';
 import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
 
 export interface TextThemeKeys {
@@ -56,7 +56,7 @@ export interface ResolvedTextTheme {
  * the other still defaults.
  */
 export function resolveTextTheme(
-  n: SolveNode,
+  n: ShareNode,
   props: TextThemeProps,
   keys: TextThemeKeys,
   defaults: TextThemeDefaults
