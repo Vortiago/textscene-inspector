@@ -26,7 +26,11 @@ export interface TabContainerTabOverride {
 export interface TabContainerProperties extends ControlProperties {
   /** `tab_<idx>/*` overrides, keyed by the raw index the file names. */
   tabOverrides?: Readonly<Record<number, TabContainerTabOverride>>;
-  /** `tab_container.h`, default -1 (no tab selected) — resolved through `setup_current_tab` while outside the tree. */
+  /**
+   * `tab_container.h`, default -1 (no tab selected) — but a LOADED scene with
+   * pages never keeps that: see `nativeSolver.ts`'s `tabContainerCurrentTab`,
+   * which is what every reader of the selection goes through.
+   */
   currentTab?: number;
   /** `TabBar::AlignmentMode` (`tab_bar.h:43-47`): 0 LEFT, 1 CENTER, 2 RIGHT. Default 0. */
   tabAlignment?: number;
@@ -48,6 +52,6 @@ export interface TabContainerProperties extends ControlProperties {
   useHiddenTabsForMinSize?: boolean;
   /** `Control::FocusMode` restricted to the hint's 3 labels (`tab_container.cpp:1218`): 0 None, 1 Click, 2 All. Default 2 (All). Interaction only. */
   tabFocusMode?: number;
-  /** Default true. Interaction only. */
+  /** `TabBar::deselect_enabled` (`tab_bar.h:121`), default FALSE — one of the two conditions under which `current_tab = -1` survives the load (`tabContainerCurrentTab`). */
   deselectEnabled?: boolean;
 }

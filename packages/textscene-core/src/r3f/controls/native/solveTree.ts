@@ -57,14 +57,37 @@ export interface Affine2D {
 /**
  * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
  * Control was walked past, as one value because one break resets all of it.
+ *
+ * The facets are exactly the ones `_render_canvas_item_tree` re-seeds for a
+ * canvas ROOT — the canvas transform, `Color(1, 1, 1, 1)` and `p_z = 0`
+ * (`renderer_canvas_cull.cpp:70-83`). Two more belong in that list and are not
+ * here yet: the material owner, once a native Control painter reads
+ * `CanvasItemMaterialContext` at all, and the texture sampler, once
+ * `Node2DProperties` parses `texture_filter`/`texture_repeat` — a skipped
+ * ancestor that names one is a real divergence today, not a settled shape.
+ * Visibility is the one facet that is deliberately NOT here: it follows the
+ * scene tree rather than the canvas parenting, so it lives on
+ * `SolveNode.parentVisibleInTree` instead.
  */
 export interface SkippedAncestors {
   /** Composed `Transform2D`, outermost first (`transform_2d.cpp:198-217`). */
   transform: Affine2D;
-  /** `is_visible_in_tree()` for the chain: every skipped ancestor's own `visible`, ANDed (`canvas_item.cpp:62-64`). */
-  visible: boolean;
   /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
   modulate: ControlColor;
+  /**
+   * Each skipped ancestor's own `z_index`/`z_as_relative`, outermost first —
+   * an ordered LIST, not a sum: `p_z = CLAMP(p_z + ci->z_index, …)` clamps at
+   * every step and `z_relative == false` restarts from the item's own value
+   * (`renderer_canvas_cull.cpp:430-434`), neither of which survives being
+   * pre-added. Folded step by step onto the ambient z by the walker.
+   */
+  z: readonly CanvasItemZStep[];
+}
+
+/** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
+export interface CanvasItemZStep {
+  zIndex: number;
+  zAsRelative: boolean;
 }
 
 export interface SolveNode {
@@ -104,13 +127,21 @@ export interface SolveNode {
    * (`buildSolveTree.ts`'s module doc) contributes to it — `null` when there
    * is none, the common case.
    *
-   * The three facets travel together because ONE engine fact decides all
-   * three at once: `CanvasItem::get_parent_item()` casts only the DIRECT
-   * parent (`scene/main/canvas_item.cpp:565-571`), and `parent_visible_in_tree`
-   * is read from that same direct parent (`canvas_item.cpp:313-350`). A
-   * non-`CanvasItem` link (a plain `Node`, a `Node3D`, a `CanvasLayer`) BREAKS
-   * the chain rather than being skipped over, so `null` past one of those too,
-   * never the identity of everything below it.
+   * The facets travel together because ONE engine fact decides all of them at
+   * once: `CanvasItem::get_parent_item()` casts only the DIRECT parent and
+   * returns nullptr before that cast when the item is `top_level`
+   * (`scene/main/canvas_item.cpp:565-571`). Transform, tint and z all
+   * accumulate down THAT pointer's chain and are all re-seeded together for a
+   * canvas root (`renderer_canvas_cull.cpp:70-83`). A non-`CanvasItem` link (a
+   * plain `Node`, a `Node3D`, a `CanvasLayer`) BREAKS the chain rather than
+   * being skipped over, so `null` past one of those too, never the identity of
+   * everything below it.
+   *
+   * Visibility is the one CanvasItem facet that is NOT here: it is read off
+   * the direct parent by `NOTIFICATION_ENTER_TREE` with no `top_level` test
+   * (`canvas_item.cpp:311-316`) and propagated into top_level children anyway
+   * (`canvas_item.cpp:103-108`), so it crosses breaks this value resets at.
+   * {@link SolveNode.parentVisibleInTree} carries it.
    *
    * Non-null is also what tells the solver this node's `data.parent_canvas_item`
    * is NOT a Control (`isPromotedControl`). The broken case needs no value of
@@ -118,6 +149,26 @@ export interface SolveNode {
    * is already the parent rect.
    */
   skippedAncestors: SkippedAncestors | null;
+  /**
+   * `CanvasItem::parent_visible_in_tree` — the other half of
+   * `is_visible_in_tree()` (`visible && parent_visible_in_tree`,
+   * `canvas_item.cpp:62-64`).
+   *
+   * A SCENE-tree conjunction, not a canvas-parenting one:
+   * `NOTIFICATION_ENTER_TREE` casts the direct parent to `CanvasItem` and
+   * takes its `is_visible_in_tree()` (`canvas_item.cpp:311-316`) — with no
+   * `top_level` short-circuit — and `_handle_visibility_change` propagates
+   * into every CanvasItem child, top_level ones included
+   * (`canvas_item.cpp:103-108`). So it reaches a Control this walk hoisted or
+   * promoted, which its own React nesting no longer would.
+   *
+   * It does RESET, twice: a `CanvasLayer` parent contributes its OWN
+   * `is_visible()` alone (`canvas_item.cpp:325-329`), and any other
+   * non-CanvasItem parent falls back to the enclosing `Window`'s visibility,
+   * or to plain `true` inside a `SubViewport` (`canvas_item.cpp:330-350`) —
+   * which is why a Control under a hidden Node3D-broken chain still draws.
+   */
+  parentVisibleInTree: boolean;
   /**
    * `Control::is_layout_rtl()` (`scene/gui/control.cpp:3551-3620`), resolved on
    * the walk rather than in the solver: an INHERITED node climbs to the nearest

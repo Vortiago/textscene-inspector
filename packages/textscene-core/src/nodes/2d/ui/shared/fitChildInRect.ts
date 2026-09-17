@@ -48,15 +48,18 @@ export const hasFlag = (flags: number, bit: number): boolean => (flags & bit) !=
  * `rtl` is the CONTAINER's own `is_layout_rtl()` (`SolveNode.rtl`), which
  * mirrors the horizontal begin/end edges. Godot reads it inside
  * `fit_child_in_rect` itself, so every container has to hand its own flag
- * down; a caller that passes the default is asserting that its container is
- * never laid out RTL.
+ * down. Required, with no default: the only value a default could carry is a
+ * CLAIM about the calling container — that it is never laid out RTL — which
+ * no shared function is in a position to make, and which `CenterContainer`
+ * (whose cell always equals the child's minimum size, so every mirror term
+ * below is zero) satisfied by accident rather than by rule.
  */
 export function fitChildInRect(
   rect: Rect2,
   minSize: Vec2,
   hFlags: number,
   vFlags: number,
-  rtl = false
+  rtl: boolean
 ): Rect2 {
   let { x, y, w, h } = rect;
 
@@ -88,9 +91,11 @@ export function fitChildInRect(
  * Whether a container counts this child when arranging — `Container::as_sortable_control`
  * skips an invisible child's slot entirely rather than laying out an empty one.
  *
- * Approximates Godot's `is_visible_in_tree()` with this node's own `visible`
- * flag: a `SolveNode` carries no parent pointer, and an invisible ancestor's
- * whole subtree is skipped upstream anyway, so the two agree in practice.
+ * This node's OWN `visible`, and deliberately not `is_visible_in_tree()`:
+ * `as_sortable_control`'s default mode is `VISIBLE`, whose test is
+ * `!c->is_visible()` (`container.cpp:148-150`). The `VISIBLE_IN_TREE` mode
+ * beside it is a different question the callers here do not ask, so
+ * `SolveNode.parentVisibleInTree` must not be folded in.
  *
  * `hidden` is the scene-tree eye toggle, which stands in for clearing `visible`
  * in the editor and so has to reach the same rule.

@@ -67,6 +67,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { round as godotRound } from '../../../godot/math';
 import * as THREE from 'three';
 import type { Rect2 } from './rect';
 
@@ -195,16 +196,6 @@ export function intersectClipRects(a: Rect2, b: Rect2): Rect2 {
   return { x, y, w: right - x, h: bottom - y };
 }
 
-/**
- * `Vector2::round` (`core/math/vector2.cpp:108-110`) is `Math::round`, which is
- * `std::round` (`core/math/math_funcs.h:625-630`) — half away from ZERO, unlike
- * JavaScript's half-up `Math.round`. The two differ on every negative half, and
- * a clip rect reaches negative coordinates whenever a Control hangs off the top
- * or left of the canvas.
- */
-function roundHalfAwayFromZero(value: number): number {
-  return value < 0 ? -Math.round(-value) : Math.round(value);
-}
 
 /**
  * Godot's whole-pixel clip rect — `renderer_canvas_cull.cpp:422-423`, position
@@ -213,10 +204,10 @@ function roundHalfAwayFromZero(value: number): number {
  */
 export function quantizeClipRect(rect: Rect2): Rect2 {
   return {
-    x: roundHalfAwayFromZero(rect.x),
-    y: roundHalfAwayFromZero(rect.y),
-    w: roundHalfAwayFromZero(rect.w),
-    h: roundHalfAwayFromZero(rect.h),
+    x: godotRound(rect.x),
+    y: godotRound(rect.y),
+    w: godotRound(rect.w),
+    h: godotRound(rect.h),
   };
 }
 

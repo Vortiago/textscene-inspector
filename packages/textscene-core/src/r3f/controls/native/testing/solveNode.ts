@@ -65,6 +65,7 @@ export function solveNode(): Pick<
   | 'textureSize'
   | 'textureSlots'
   | 'hidden'
+  | 'parentVisibleInTree'
   | 'fontOverrides'
   | 'themeChain'
   | 'projectTheme'
@@ -83,6 +84,10 @@ export function solveNode(): Pick<
     textureSize: null,
     textureSlots: NO_TEXTURE_SLOTS,
     hidden: false,
+    // Nothing above this node hides it — `CanvasItem::parent_visible_in_tree`
+    // for a scene root, and what every ancestor that is itself visible passes
+    // down.
+    parentVisibleInTree: true,
     fontOverrides: NO_FONT_OVERRIDES,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,

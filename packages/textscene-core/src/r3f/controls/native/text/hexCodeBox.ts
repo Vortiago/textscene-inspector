@@ -18,16 +18,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Vec2 } from '../rect';
-
-/**
- * `Math::round` (`core/math/math_funcs.h`) — half away from zero, unlike
- * JS's `Math.round`. A leaf copy: `textLayout.ts` has the same one-liner
- * (also exported, as `godotRound`) and imports THIS file, so importing back
- * would cycle.
- */
-function godotRound(value: number): number {
-  return Math.sign(value) * Math.round(Math.abs(value));
-}
+import { round as godotRound } from '../../../../godot/math';
 
 export interface HexCodeBoxRect {
   x: number;

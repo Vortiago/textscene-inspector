@@ -14,13 +14,18 @@ anchors against its rect. One separated from it by another node anchors against 
 node instead. Where that node is not a canvas item the Control is a canvas root: it
 anchors against the viewport, and draws after everything under the root it hangs in.
 `top_level` makes it one wherever it sits, and nothing above it composes onto it — no
-transform, no tint, no rect to anchor against, and no container lays it out.
+transform, no tint, no z, no rect to anchor against, and no container lays it out.
+Visibility is the exception: it follows the scene tree rather than the canvas parenting,
+so a hidden ancestor still hides a `top_level` Control, while a non-canvas-item ancestor
+between them releases it again.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
-the value alone; INHERITED climbs to the nearest ancestor Control, and at the top of the
-tree falls back to `internationalization/rendering/root_node_layout_direction` and the
-project's test locale. A right-to-left Control is mirrored inside its parent, and an
-HBoxContainer also reverses its children.
+the value alone; INHERITED climbs to the nearest ancestor Control or Window, stepping
+over every other node type — a `SubViewport` included, so the Controls inside one inherit
+the direction of the Control that encloses the viewport — and at the top of the tree falls
+back to `internationalization/rendering/root_node_layout_direction` and the project's test
+locale. A right-to-left Control is mirrored inside its parent, and an HBoxContainer also
+reverses its children.
 
 ## Linting
 

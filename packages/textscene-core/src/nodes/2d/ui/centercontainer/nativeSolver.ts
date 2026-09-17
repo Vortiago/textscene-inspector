@@ -99,7 +99,13 @@ export const centerContainerLayout: ContainerLayoutFn = (n, children, contentRec
     // `Rect2(ofs, minsize)` — the rect fit_child_in_rect receives already IS
     // the child's own minimum size (center_container.cpp:84), which is what
     // makes the FILL branch a no-op (see module doc).
-    out.set(child.path, fitChildInRect({ x: ofsX, y: ofsY, w: minSize.x, h: minSize.y }, minSize, hFlags, vFlags));
+    out.set(
+      child.path,
+      // Every mirror term inside is zero at this cell — it IS the child's
+      // minimum size — but the container's own flag is what Godot reads there,
+      // so it is what gets handed down.
+      fitChildInRect({ x: ofsX, y: ofsY, w: minSize.x, h: minSize.y }, minSize, hFlags, vFlags, n.rtl)
+    );
   }
   return out;
 };

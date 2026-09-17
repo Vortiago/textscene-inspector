@@ -74,6 +74,7 @@
  */
 
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
+import { round as godotRound } from '../../../../godot/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import {
   fontUsesSubpixelPositioning,
@@ -474,10 +475,6 @@ function isSpaceSeparator(cp: number): boolean {
   );
 }
 
-/** `Math::round` (`core/math/math_funcs.h`) — half away from zero, unlike JS's `Math.round`, which breaks ties toward positive infinity. */
-export function godotRound(value: number): number {
-  return Math.sign(value) * Math.round(Math.abs(value));
-}
 
 /** `metrics.getKerningAdjustmentUnits`, design units, scaled to `fontSizePx` via `fontMetrics.ts`'s shared `getFontKerningAdjustmentPx`. */
 function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {

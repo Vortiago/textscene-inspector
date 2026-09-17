@@ -56,6 +56,8 @@
  */
 
 import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
+// The min branch is tested first, so the inverted range this replay builds returns the MAX.
+import { clamp } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
 /**
@@ -85,11 +87,6 @@ export interface GraphEditLoadState {
   zoomMinusDisabled: boolean;
   /** `zoom_plus_button->is_disabled()`. */
   zoomPlusDisabled: boolean;
-}
-
-/** `CLAMP` (`core/typedefs.h:139-141`) — the min branch is tested first, so an inverted range returns the MAX. */
-function clamp(value: number, min: number, max: number): number {
-  return value < min ? min : value > max ? max : value;
 }
 
 interface ReplayState {

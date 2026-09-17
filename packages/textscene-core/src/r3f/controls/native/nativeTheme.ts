@@ -28,6 +28,7 @@
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
+import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
 import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
@@ -51,9 +52,6 @@ export interface NativeThemeStyleFill {
   progress: ControlColor;
 }
 
-/** `StyleBoxFlat`'s own default, unset by any `make_flat_stylebox` call (`style_box_flat.h:40`). */
-const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
@@ -71,28 +69,7 @@ function flatStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: cornerRadius,
-      topRight: cornerRadius,
-      bottomRight: cornerRadius,
-      bottomLeft: cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
-    contentMargin,
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
 }
 
 /**

@@ -87,6 +87,14 @@ interface ViewportSurfaceNativeProps {
   internalResources: readonly TscnInternalResource[];
   /** The container's own painter tint, shared by every nested viewport's composited quad. */
   tint: NativeControlComponentProps['tint'];
+  /**
+   * The CONTAINER's own `is_layout_rtl()`. The climb casts each ancestor to
+   * `Control`, then to `Window`, then takes `get_parent()`
+   * (`control.cpp:3584-3598`); a `SubViewport` is a `Viewport` and neither, so
+   * it is stepped over and this container is what the viewport's own Controls
+   * inherit from.
+   */
+  rtl: boolean;
 }
 
 /**
@@ -111,6 +119,7 @@ function ViewportSurfaceNative({
   externalResources,
   internalResources,
   tint,
+  rtl,
 }: ViewportSurfaceNativeProps) {
   const props = viewport.properties as SubViewportProperties;
   const authoredSize = props.size ?? { x: 512, y: 512 };
@@ -160,7 +169,7 @@ function ViewportSurfaceNative({
   const renderedHeight = shrinking ? forcedSize.y : height;
 
   const contentKind = useViewportContentKind(viewport);
-  const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources);
+  const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources, rtl);
   const controlsViewport: Rect2 = useMemo(
     () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
     [renderedWidth, renderedHeight]
@@ -180,9 +189,16 @@ function ViewportSurfaceNative({
       paintSequence: WHOLE_CANVAS_RANGE.base,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
+      // A Viewport is neither a CanvasItem nor a CanvasLayer, so the climb
+      // that reads `parent_visible_in_tree` runs past it to the enclosing
+      // viewport and answers `true` (`canvas_item.cpp:330-350`) — an ancestor
+      // Control's `visible = false` never reaches inside one.
+      parentVisibleInTree: true,
       // A Viewport is neither a Control nor a Window, so it states no layout
-      // direction of its own.
-      rtl: false,
+      // direction of its own — which means the climb passes straight through
+      // it to this container (`control.cpp:3584-3598`), never that it answers
+      // left-to-right.
+      rtl,
       styleBoxes: {},
       textureSize: null,
       textureSlots: {},
@@ -200,7 +216,7 @@ function ViewportSurfaceNative({
       // child of this node, so its refs name the same pools.
       resources: { externalResources, internalResources },
     }),
-    [path, viewport, externalResources, internalResources]
+    [path, viewport, rtl, externalResources, internalResources]
   );
 
   const scale = shrinking ? shrink : 1;
@@ -316,6 +332,7 @@ export function SubViewportContainer({
           measureText={measureText}
           externalResources={externalResources}
           internalResources={internalResources}
+          rtl={solveNode.rtl}
         />
       ))}
     </>

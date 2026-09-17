@@ -350,8 +350,8 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
       }),
       skippedAncestors: {
         transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        visible: true,
         modulate: { r: 1, g: 1, b: 1, a: 1 },
+        z: [],
       },
     };
     const root = solveNode('MyHBoxContainer', 'HBoxContainer', {

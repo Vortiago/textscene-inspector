@@ -34,6 +34,7 @@ import { resolveSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
+import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from './rect';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
@@ -515,7 +516,7 @@ function node2D(
   });
 }
 
-describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2D ancestors’ transform, visibility and modulate', () => {
+describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2D ancestors’ transform, modulate and z', () => {
   it('translation only', async () => {
     // core/math/transform_2d.h:249-254, rotation=0 scale=(1,1): a=1,b=0,c=0,d=1.
     const nodes = [node2D('N', { position: { x: 100, y: 50 } }, { children: [label('L')] })];
@@ -626,42 +627,6 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     expect(t.ty).toBe(0);
   });
 
-  it("ANDs a skipped Node2D ancestor's own `visible` into what it promotes — `is_visible_in_tree`, canvas_item.cpp:62-64", async () => {
-    const nodes = [node2D('N', {}, { children: [label('L')], properties: { visible: false } })];
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(false);
-  });
-
-  it('ANDs two chained Node2D ancestors — a hidden OUTER hides through a visible inner', async () => {
-    const outer = node2D('Outer', {}, {
-      properties: { visible: false },
-      children: [node2D('Inner', {}, { children: [label('L')] })],
-    });
-    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(false);
-  });
-
-  it('a visible Node2D ancestor promotes `visible: true` rather than leaving the facet unset', async () => {
-    const nodes = [node2D('N', { position: { x: 5, y: 5 } }, { children: [label('L')] })];
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.visible).toBe(true);
-  });
-
-  it('a HIDDEN Node2D broken from the Control by a plain `Node` promotes nothing — the Control draws', async () => {
-    // `parent_visible_in_tree` is read off the DIRECT parent only
-    // (canvas_item.cpp:313-350); a plain `Node` fails the `CanvasItem` cast, so
-    // the fallback climbs to the enclosing window (canvas_item.cpp:340-348) and
-    // the Node2D's `visible = false` never reaches the Control below it.
-    const nodes = [
-      node2D('N', {}, {
-        properties: { visible: false },
-        children: [node('Group', 'Node', { children: [label('L')] })],
-      }),
-    ];
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
-  });
-
   it("multiplies a skipped Node2D ancestor's `modulate` componentwise — `_cull_canvas_item`, renderer_canvas_cull.cpp", async () => {
     const outer = node2D('Outer', {}, {
       properties: { modulate: { r: 0.5, g: 1, b: 1, a: 0.5 } },
@@ -687,9 +652,131 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
+  it("collects each skipped ancestor's z STEP, outermost first — `p_z` clamps per item (renderer_canvas_cull.cpp:430-434)", async () => {
+    const outer = node2D('Outer', {}, {
+      properties: { z_index: 5 },
+      children: [
+        node2D('Inner', {}, { properties: { z_index: 3, z_as_relative: false }, children: [label('L')] }),
+      ],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([
+      { zIndex: 5, zAsRelative: true },
+      { zIndex: 3, zAsRelative: false },
+    ]);
+  });
+
+  it('records a step for an ancestor that authored no z at all, so the chain length matches the walk', async () => {
+    const nodes = [node2D('N', { position: { x: 5, y: 5 } }, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([{ zIndex: 0, zAsRelative: true }]);
+  });
+
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
     const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+  });
+});
+
+describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree, not the canvas parenting', () => {
+  // `NOTIFICATION_ENTER_TREE` casts the DIRECT parent to `CanvasItem` and takes
+  // `ci->is_visible_in_tree()` (canvas_item.cpp:311-316) — with no `top_level`
+  // test, unlike `get_parent_item()` (canvas_item.cpp:565-571) — and
+  // `_handle_visibility_change` walks `get_child(i)` into every CanvasItem
+  // child, top_level ones included (canvas_item.cpp:103-108, "Should the
+  // top_levels stop propagation? I think so, but..."). So this ONE facet
+  // crosses breaks that reset the transform and the tint.
+
+  it("ANDs a skipped Node2D ancestor's own `visible` — `is_visible_in_tree`, canvas_item.cpp:62-64", () => {
+    const nodes = [node2D('N', {}, { children: [label('L')], properties: { visible: false } })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.parentVisibleInTree).toBe(false);
+  });
+
+  it('ANDs two chained Node2D ancestors — a hidden OUTER hides through a visible inner', () => {
+    const outer = node2D('Outer', {}, {
+      properties: { visible: false },
+      children: [node2D('Inner', {}, { children: [label('L')] })],
+    });
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    expect(result.current.tree[0]!.parentVisibleInTree).toBe(false);
+  });
+
+  it('ANDs a hidden CONTROL ancestor the same way — the conjunction is over CanvasItems, not Node2Ds', () => {
+    const nodes = [control('Outer', { visible: false }, [label('L')])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.children[0]!.parentVisibleInTree).toBe(false);
+  });
+
+  it('reaches a `top_level` Control, which `get_parent_item()` would have cut off', () => {
+    // `get_parent_item()` opens `if (top_level) return nullptr;`
+    // (canvas_item.cpp:565-571), so transform and modulate reset — but
+    // ENTER_TREE's cast runs with no such test (canvas_item.cpp:311-316), and
+    // the propagation loop steps into a top_level child anyway
+    // (canvas_item.cpp:103-108).
+    const nodes = [
+      control('Root', {}, [
+        node2D('N', {}, {
+          properties: { visible: false },
+          children: [label('Floating', { topLevel: true })],
+        }),
+      ]),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const floating = result.current.tree.find((n) => n.path === 'Root/N/Floating')!;
+    expect(floating.skippedAncestors).toBeNull();
+    expect(floating.parentVisibleInTree).toBe(false);
+  });
+
+  it('reaches a `top_level` Control directly under a hidden Control', () => {
+    const nodes = [control('Root', { visible: false }, [label('Floating', { topLevel: true })])];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const floating = result.current.tree.find((n) => n.path === 'Root/Floating')!;
+    expect(floating.parentVisibleInTree).toBe(false);
+  });
+
+  it('RESETS to true at a non-CanvasItem parent — the Window fallback, canvas_item.cpp:330-350', () => {
+    // A plain `Node`/`Node3D` parent fails both the `CanvasItem` and the
+    // `CanvasLayer` cast, so the walk climbs to the enclosing `Viewport`: the
+    // root `Window`'s own `is_visible()` (true), or plain `true` inside a
+    // `SubViewport`. The hidden ancestor above the break never reaches down.
+    const nodes = [
+      control('Root', { visible: false }, [node('Group', 'Node3D', { children: [label('L')] })]),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const hoisted = result.current.tree.find((n) => n.path === 'Root/Group/L')!;
+    expect(hoisted.parentVisibleInTree).toBe(true);
+  });
+
+  it("takes a CanvasLayer's OWN `visible`, not its in-tree one — `cl->is_visible()`, canvas_item.cpp:325-329", () => {
+    const nodes = [
+      control('Root', { visible: false }, [
+        node('Layer', 'CanvasLayer', { properties: { name: 'Layer' }, children: [label('L')] }),
+      ]),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const layer = result.current.tree[0]!.children[0]!;
+    expect(layer.children[0]!.parentVisibleInTree).toBe(true);
+  });
+
+  it('a scene root has nothing above it', () => {
+    const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
+    expect(result.current.tree[0]!.parentVisibleInTree).toBe(true);
+  });
+
+  it("reads the `visible` a container WROTE, not the authored one", () => {
+    // `FoldableContainer::_notification`'s `c->set_visible(!folded)`
+    // (foldable_container.cpp:376-386) runs before anything reads the flag, so
+    // the page's own subtree inherits the written value.
+    const nodes = [
+      node('FC', 'FoldableContainer', {
+        properties: { name: 'FC', folded: true, title: 'T' } as Record<string, unknown>,
+        children: [control('Page', {}, [label('Deep')])],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const page = result.current.tree[0]!.children[0]!;
+    expect(page.children[0]!.parentVisibleInTree).toBe(false);
   });
 });
 
@@ -869,8 +956,8 @@ function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
   };
 }
 
-function control(name: string, extra: Record<string, unknown> = {}): TscnNode {
-  return node(name, 'Control', { properties: { name, ...extra } as Record<string, unknown> });
+function control(name: string, extra: Record<string, unknown> = {}, children: TscnNode[] = []): TscnNode {
+  return node(name, 'Control', { properties: { name, ...extra } as Record<string, unknown>, children });
 }
 
 describe('useBuildSolveTree — theme resolution', () => {
@@ -1780,6 +1867,36 @@ describe('useBuildSolveTree — layout direction', () => {
 
     expect(result.current.tree[0]!.rtl).toBe(true);
   });
+
+  it('starts the forest from an INHERITED direction the caller climbed to for it', () => {
+    // The climb casts each ancestor to `Control`, then to `Window`, then keeps
+    // going (`control.cpp:3584-3598`). A `SubViewport` is a `Viewport` and
+    // neither, so it is STEPPED OVER and the container above it decides — a
+    // forest this walk cannot see the top of, so its caller states it.
+    const nodes = [
+      node('Box', 'HBoxContainer', {
+        properties: { name: 'Box' } as Record<string, unknown>,
+        children: [label('Inherited')],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], [], true));
+    expect(result.current.tree[0]!.rtl).toBe(true);
+    expect(result.current.tree[0]!.children[0]!.rtl).toBe(true);
+  });
+
+  it('lets an explicit direction below the inherited one still win', () => {
+    // `data.layout_dir != LAYOUT_DIRECTION_INHERITED` never reaches the climb
+    // at all (`control.cpp:3555`).
+    const nodes = [
+      node('Ltr', 'Control', {
+        properties: { name: 'Ltr', layoutDirection: 2 } as Record<string, unknown>,
+        children: [label('UnderLtr')],
+      }),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], [], true));
+    expect(result.current.tree[0]!.rtl).toBe(false);
+    expect(result.current.tree[0]!.children[0]!.rtl).toBe(false);
+  });
 });
 
 describe('useBuildSolveTree — a container that writes its children’s `visible`', () => {
@@ -1842,6 +1959,75 @@ describe('useBuildSolveTree — a container that writes its children’s `visibl
       ),
     });
     expect(result.current.tree[0]!.children[0]!.hidden).toBe(true);
+  });
+
+  describe('TabContainer shows the current page and HIDES every other', () => {
+    // `_repaint` runs `c->show()` on `i == current` and `c->hide()` on the
+    // rest (`tab_container.cpp:377-399`); `add_child_notify` has already
+    // hidden every page as it was added (`:651`). An editor-saved scene writes
+    // `visible = false` on the non-current pages itself, so only a hand-edited
+    // one exposes this.
+    function tabs(properties: Record<string, unknown>, pages: TscnNode[]): TscnNode {
+      return node('TC', 'TabContainer', {
+        properties: { name: 'TC', ...properties } as Record<string, unknown>,
+        children: pages,
+      });
+    }
+    const visibleOf = (tree: readonly SolveNode[]) =>
+      tree[0]!.children.map((c) => (c.node.properties as { visible?: boolean }).visible);
+
+    it('selects page 0 when the file authors no `current_tab` — `add_tab` sets it (tab_bar.cpp:1324-1331)', () => {
+      const nodes = [tabs({}, [label('First'), label('Second')])];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([true, false]);
+    });
+
+    it('honours an authored `current_tab`', () => {
+      const nodes = [tabs({ currentTab: 1 }, [label('First'), label('Second')])];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([false, true]);
+    });
+
+    it('leaves page 0 selected when `current_tab` is past the last page (tab_bar.cpp:800-804)', () => {
+      const nodes = [tabs({ currentTab: 5 }, [label('First'), label('Second')])];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([true, false]);
+    });
+
+    it('refuses `current_tab = -1` while deselection is off (tab_bar.cpp:796-798, 1862-1873)', () => {
+      const nodes = [tabs({ currentTab: -1 }, [label('First'), label('Second')])];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([true, false]);
+    });
+
+    it('accepts `current_tab = -1` with `deselect_enabled`, hiding every page', () => {
+      const nodes = [tabs({ currentTab: -1, deselectEnabled: true }, [label('First'), label('Second')])];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([false, false]);
+    });
+
+    it('accepts it too when every tab is disabled or hidden, with deselection still off', () => {
+      const nodes = [
+        tabs({ currentTab: -1, tabOverrides: { 0: { disabled: true }, 1: { hidden: true } } }, [
+          label('First'),
+          label('Second'),
+        ]),
+      ];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      expect(visibleOf(result.current.tree)).toEqual([false, false]);
+    });
+
+    it('numbers the pages past a `top_level` child, which is no page at all (container.cpp:143-146)', () => {
+      const nodes = [
+        tabs({ currentTab: 1 }, [label('Floating', { topLevel: true }), label('First'), label('Second')]),
+      ];
+      const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+      const pages = result.current.tree[0]!.children;
+      expect(pages.map((c) => c.node.name)).toEqual(['First', 'Second']);
+      expect(pages.map((c) => (c.node.properties as { visible?: boolean }).visible)).toEqual([false, true]);
+      const floating = result.current.tree.find((n) => n.path === 'TC/Floating')!;
+      expect((floating.node.properties as { visible?: boolean }).visible).toBeUndefined();
+    });
   });
 
   // The consequence the property write exists for: `isSortableControl` reads

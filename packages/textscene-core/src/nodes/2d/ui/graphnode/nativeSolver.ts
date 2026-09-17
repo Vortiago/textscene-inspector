@@ -32,6 +32,7 @@
  */
 
 import type { ControlColor } from '../control/types';
+import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -66,23 +67,7 @@ function flatBox(
   margin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
-    borderWidth: ZERO_MARGIN,
-    cornerRadius: { topLeft: cornerRadius, topRight: cornerRadius, bottomRight: cornerRadius, bottomLeft: cornerRadius },
-    expandMargin: ZERO_MARGIN,
-    contentMargin: margin,
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius });
 }
 
 /**

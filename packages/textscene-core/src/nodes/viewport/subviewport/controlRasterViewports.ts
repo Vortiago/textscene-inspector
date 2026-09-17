@@ -30,6 +30,9 @@
  */
 
 import type { TscnNode } from '../../../parser/types.js';
+import type { ControlProperties } from '../../2d/ui/control/types.js';
+import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
@@ -56,6 +59,19 @@ export interface ControlRasterViewport extends SceneScope {
   size: { x: number; y: number };
   /** `transparent_bg` — false means the target clears to Godot's default clear colour. */
   transparentBg: boolean;
+  /**
+   * `Control::is_layout_rtl()` for the nearest ancestor Control of this
+   * sub-viewport, or `null` where there is none.
+   *
+   * The climb casts each ancestor to `Control`, then to `Window`, then takes
+   * `get_parent()` (`control.cpp:3584-3598`). A `SubViewport` is a `Viewport`
+   * and neither, so the climb steps straight over it — every Control inside
+   * one inherits the direction of the Control that encloses the viewport,
+   * typically its own `SubViewportContainer`. The raster pass walks only the
+   * viewport's children and so cannot see that Control itself; this carries
+   * it, the way `size` carries the rect they lay out against.
+   */
+  inheritedRtl: boolean | null;
 }
 
 /** Godot's `SubViewport.size` default, `Vector2i(512, 512)`. */
@@ -75,7 +91,8 @@ const MAX_DEPTH = 100;
 export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sceneCache: SceneScopeSource,
-  scope: SceneScope
+  scope: SceneScope,
+  layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
 
@@ -83,7 +100,9 @@ export function collectControlRasterViewports(
     nodes: readonly TscnNode[],
     parentPath: string,
     current: SceneScope,
-    depth: number
+    depth: number,
+    /** What the rtl climb would find above `nodes` — see `ControlRasterViewport.inheritedRtl`. */
+    inheritedRtl: boolean | null
   ): void => {
     if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
@@ -120,19 +139,33 @@ export function collectControlRasterViewports(
             y: Math.max(1, Math.round(properties.size?.y ?? DEFAULT_SIZE)),
           },
           transparentBg: properties.transparent_bg === true,
+          inheritedRtl,
           ...effectiveScope,
         });
       }
+
+      // `TWO_D_UI_TYPES` is this codebase's mirror of "genuinely Control-ish"
+      // (`buildSolveTree.ts` reads the same set). `CanvasLayer` is in it
+      // without being a Control, and states no direction of its own — which
+      // costs nothing here, since an unset `layout_direction` is INHERITED and
+      // relays what it was given (`control.cpp:3555`).
+      const childRtl = TWO_D_UI_TYPES.has(effective.type)
+        ? resolveLayoutRtl(
+            (effective.properties as ControlProperties).layoutDirection,
+            inheritedRtl,
+            layoutDirectionEnv
+          )
+        : inheritedRtl;
 
       // Every group descends in ITS OWN scope: the sub-scene's for
       // `merged`/`subscene`, the outer one for `inline`/`glb`. A found
       // sub-viewport is still descended into (see module doc).
       for (const group of groups) {
-        walk(group.children, path, group.scope, depth + 1);
+        walk(group.children, path, group.scope, depth + 1, childRtl);
       }
     }
   };
 
-  walk(roots, '', scope, 0);
+  walk(roots, '', scope, 0, null);
   return found;
 }

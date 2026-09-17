@@ -245,15 +245,30 @@ describe('FoldableContainer under RTL', () => {
 });
 
 describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldable_container.cpp:381)', () => {
+  /** Godot's loop writes the same value to every child, so the per-child arguments are inert here. */
+  const answerFor = (properties: Partial<FoldableContainerProperties>) => {
+    const container = node(properties).node;
+    return foldableContainerChildVisibility(container, container, 0, 1);
+  };
+
   it('clears the children of a folded container', () => {
-    expect(foldableContainerChildVisibility(node({ folded: true }).node)).toBe(false);
+    expect(answerFor({ folded: true })).toBe(false);
   });
 
   it('sets the children of an unfolded container, rather than leaving them alone', () => {
-    expect(foldableContainerChildVisibility(node({ folded: false }).node)).toBe(true);
+    expect(answerFor({ folded: false })).toBe(true);
   });
 
   it('treats an absent/malformed `folded` as the property default, false', () => {
-    expect(foldableContainerChildVisibility(node({}).node)).toBe(true);
+    expect(answerFor({})).toBe(true);
+  });
+
+  it('answers the same for every child index, unlike TabContainer’s own writer', () => {
+    const container = node({ folded: true }).node;
+    expect([0, 1, 2].map((i) => foldableContainerChildVisibility(container, container, i, 3))).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 });

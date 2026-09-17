@@ -98,7 +98,7 @@ function createRasterTarget(width: number, height: number, name: string): THREE.
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, transparentBg, internalResources, externalResources } = viewport;
+  const { path, node, transparentBg, inheritedRtl, internalResources, externalResources } = viewport;
 
   // Mirrors `<SubViewport>`'s own forced-rect handling: a STRETCHING
   // `SubViewportContainer` resizes its sub-viewport to its own rect divided
@@ -127,7 +127,15 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   }, [camera, width, height]);
 
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  const { tree, generation } = useBuildSolveTree(node.children, externalResources, internalResources);
+  // The rtl climb steps straight over a `SubViewport` (`control.cpp:3584-3598`,
+  // and `ControlRasterViewport.inheritedRtl`), so this forest starts from the
+  // direction of the Control that encloses the viewport, not from scratch.
+  const { tree, generation } = useBuildSolveTree(
+    node.children,
+    externalResources,
+    internalResources,
+    inheritedRtl
+  );
   const solveViewport: Rect2 = useMemo(() => ({ x: 0, y: 0, w: width, h: height }), [width, height]);
 
   const renderPass = useCallback(() => {

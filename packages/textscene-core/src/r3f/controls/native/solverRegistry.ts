@@ -216,16 +216,31 @@ export type TextureSlotsFn = (
 ) => readonly TextureSlotRequest[];
 
 /**
- * The `visible` a container WRITES onto each of its direct sortable Control
- * children while sorting them — `FoldableContainer`'s `c->set_visible(!folded)`
- * (`scene/gui/foldable_container.cpp:376-386`) is the one such type today.
- * `undefined` leaves the authored flag alone.
+ * The `visible` a container WRITES onto ONE of its direct sortable Control
+ * children while sorting them. `undefined` leaves that child's authored flag
+ * alone.
  *
- * Takes the container's own live node, since the answer is a property of the
- * PARENT, and answers for every child at once: Godot's loop writes the same
- * value to all of them.
+ * Per child, not per container, because Godot's two writers disagree about
+ * that: `FoldableContainer` writes `c->set_visible(!folded)` to every child
+ * alike (`scene/gui/foldable_container.cpp:376-386`), while `TabContainer`
+ * writes `c->show()` to the current page and `c->hide()` to each of the others
+ * (`scene/gui/tab_container.cpp:377-399`, and the same split at `:290-293`).
+ * A registrant that answers for the whole container simply ignores the three
+ * per-child arguments.
+ *
+ * `index` and `count` describe the child's place among the container's
+ * SORTABLE Control children — `Container::as_sortable_control(get_child(i),
+ * IGNORE)`, which is `TabContainer::get_tab_count()`'s own population
+ * (`tab_container.cpp:469-481`). They are the container's numbering, not the
+ * scene's: a Control promoted past a Node2D and a `top_level` one both fail
+ * the cast (`container.cpp:143-146`) and are neither counted nor asked about.
  */
-export type ChildVisibilityFn = (node: TscnNode) => boolean | undefined;
+export type ChildVisibilityFn = (
+  container: TscnNode,
+  child: TscnNode,
+  index: number,
+  count: number
+) => boolean | undefined;
 
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
@@ -293,9 +308,14 @@ class ControlSolverRegistry {
     this.childVisibilityFns.register(typeName, fn);
   }
 
-  /** The `visible` `node` writes onto its direct sortable Control children, or `undefined` for every type that writes none. */
-  childVisibility(node: TscnNode): boolean | undefined {
-    return this.childVisibilityFns.get(node.type)?.(node);
+  /**
+   * This type's own `ChildVisibilityFn`, or `undefined` for a type that writes
+   * none. Returned rather than invoked: the caller has to enumerate the
+   * container's sortable children before it can ask, and only a registered
+   * type is worth that walk.
+   */
+  childVisibility(typeName: string): ChildVisibilityFn | undefined {
+    return this.childVisibilityFns.get(typeName);
   }
 
   /** This type's own `TextureSlotsFn`, or `undefined` for a type that keeps the generic single-slot fallback (see `TextureSlotsFn`'s own doc). */

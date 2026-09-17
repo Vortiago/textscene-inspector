@@ -9,8 +9,8 @@
 ; sources the brief calls out. Every non-current page is authored
 ; visible = false, exactly as the Godot editor itself saves a TabContainer
 ; scene (TabContainer::add_child_notify hides every page but the current one
-; on add) — the previewer's own container layout relies on that authored
-; flag rather than any runtime "only show the current tab" mechanism.
+; on add), so this scene cannot tell whether the container writes that flag
+; itself — unit-tab-container-current-page.tscn authors none and does.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

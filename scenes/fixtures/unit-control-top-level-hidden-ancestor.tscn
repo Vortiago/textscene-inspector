@@ -1,0 +1,43 @@
+; The ONE variable: `visible = false` on the Node2D ABOVE a `top_level`
+; Control. Visibility is a SCENE-tree rule, not a canvas-parenting one:
+; NOTIFICATION_ENTER_TREE casts the direct parent to CanvasItem and takes
+; `ci->is_visible_in_tree()` with NO top_level test (canvas_item.cpp:311-316),
+; unlike `get_parent_item()`, which returns nullptr before its own cast
+; (canvas_item.cpp:565-571) — and `_handle_visibility_change` propagates into
+; every CanvasItem child, top_level ones included (canvas_item.cpp:103-108,
+; "Should the top_levels stop propagation? I think so, but..."). So the flag
+; still reaches a Control whose transform and tint it no longer does.
+; `unit-control-top-level.tscn` moves the flag with every ancestor visible, so
+; it cannot see this; every other hidden-ancestor fixture leaves `top_level`
+; unset, where the same rule is indistinguishable from plain nesting.
+; The lower bar's ancestor is visible and holds the contrast.
+
+[gd_scene format=3 uid="uid://unitctrltlhidden"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Hidden" type="Node2D" parent="."]
+visible = false
+position = Vector2(300, 200)
+
+[node name="HiddenFloating" type="ColorRect" parent="Hidden"]
+top_level = true
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 224.0
+offset_bottom = 128.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Shown" type="Node2D" parent="."]
+position = Vector2(300, 200)
+
+[node name="ShownFloating" type="ColorRect" parent="Shown"]
+top_level = true
+offset_left = 64.0
+offset_top = 176.0
+offset_right = 224.0
+offset_bottom = 256.0
+color = Color(0.2, 0.4, 0.9, 1)

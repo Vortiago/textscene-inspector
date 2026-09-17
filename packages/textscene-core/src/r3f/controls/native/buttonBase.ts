@@ -346,7 +346,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 }
 
 /** `button.cpp:266-275` — LEFT and RIGHT trade places under RTL; CENTER (and any other value) is left alone. */
-function swapAlignmentSide(alignment: number): number {
+export function swapAlignmentSide(alignment: number): number {
   if (alignment === H_RIGHT) return H_LEFT;
   if (alignment === H_LEFT) return H_RIGHT;
   return alignment;

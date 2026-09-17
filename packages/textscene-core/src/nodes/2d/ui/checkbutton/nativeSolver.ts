@@ -48,6 +48,7 @@ import {
   buttonTextAlignShiftPx,
   centredTextTopPx,
   fitIconSize,
+  swapAlignmentSide,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
@@ -232,7 +233,7 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
 
 /** CheckButton's own default text alignment is LEFT (`CheckButton::CheckButton()`, `check_button.cpp:169`: `set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)`), overriding Button's CENTER default — a scene's own `alignment` override still wins. */
 export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
-const ALIGNMENT_RIGHT = 2;
+
 
 // --- Minimum size --------------------------------------------------------------
 
@@ -352,9 +353,3 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
   return { iconRect, textOffset };
 }
 
-/** `button.cpp:271-275` — LEFT and RIGHT trade places under RTL; CENTER is left alone. */
-function swapAlignmentSide(alignment: number): number {
-  if (alignment === ALIGNMENT_RIGHT) return CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT;
-  if (alignment === CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT) return ALIGNMENT_RIGHT;
-  return alignment;
-}

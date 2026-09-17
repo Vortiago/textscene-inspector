@@ -36,6 +36,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
   ChildVisibilityFn,
@@ -85,10 +86,6 @@ const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThe
   folded: { sizeKey: 'font_size', colorKey: 'collapsed_font_color' },
 };
 
-/** `StyleBoxFlat`'s own default, unset by `make_flat_stylebox` (`style_box_flat.h:40`) — mirrors `nativeTheme.ts`'s own unexported constant of the same name. */
-const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-
 type CornerRadius = StyleBoxFlatData['cornerRadius'];
 
 /**
@@ -102,23 +99,7 @@ function flatStyleBox(
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: CornerRadius
 ): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius,
-    expandMargin: ZERO_SIDES,
-    contentMargin,
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
 }
 
 /**
@@ -288,6 +269,10 @@ export function foldableContainerTitleMetrics(
  * Control child's own `visible`, so it overrides the authored flag in both
  * directions: folded hides a child that authored nothing, and unfolding shows
  * one that authored `visible = false`.
+ *
+ * Godot's loop writes the same value to every child here, so the per-child
+ * arguments {@link ChildVisibilityFn} carries for TabContainer's sake go
+ * unread.
  */
 export const foldableContainerChildVisibility: ChildVisibilityFn = (node) =>
   (node.properties as FoldableContainerProperties).folded !== true;

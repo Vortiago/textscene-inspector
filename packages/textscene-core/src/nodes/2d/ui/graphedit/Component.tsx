@@ -353,6 +353,7 @@ export function GraphEdit({
             tint={tint}
             text={toolbarText}
             shape={shape}
+            rtl={solveNode.rtl}
             renderOrder={subtreeChromeRenderOrder + 0.5}
           />
         )}

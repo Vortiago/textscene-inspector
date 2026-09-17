@@ -136,20 +136,17 @@ describe('<ControlCanvasWalker>', () => {
     expect(namedGroup(renderer.scene, 'TestType:Shown')!.visible).toBe(true);
   });
 
-  it("honours a HIDDEN skipped Node2D ancestor — the Control's own `visible` is only half of `is_visible_in_tree`", async () => {
-    // `visible && parent_visible_in_tree` (canvas_item.cpp:62-64). A skipped
-    // Node2D contributes no group of its own, so without the solve's
-    // `skippedAncestors.visible` a Control under a hidden Node2D would draw.
-    const identity = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-    const white = { r: 1, g: 1, b: 1, a: 1 };
+  it("honours `parent_visible_in_tree` — the Control's own `visible` is only half of `is_visible_in_tree`", async () => {
+    // `visible && parent_visible_in_tree` (canvas_item.cpp:62-64). A node this
+    // walk emits at the TOP of the forest — promoted past a skipped Node2D
+    // that mounts no group, or hoisted out of the ancestor whose flag still
+    // reaches it (canvas_item.cpp:103-108, 311-316) — has no enclosing group
+    // to inherit the flag from, so the solve's own value is the only carrier.
     const promoted: SolveNode = {
       ...solveNode('Promoted', 'TestType', { anchorsPreset: 15 }),
-      skippedAncestors: { transform: identity, visible: false, modulate: white },
+      parentVisibleInTree: false,
     };
-    const shown: SolveNode = {
-      ...solveNode('Shown', 'TestType', { anchorsPreset: 15 }),
-      skippedAncestors: { transform: identity, visible: true, modulate: white },
-    };
+    const shown = solveNode('Shown', 'TestType', { anchorsPreset: 15 });
 
     const renderer = await ReactThreeTestRenderer.create(
       <ControlCanvasWalker tree={[promoted, shown]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
@@ -239,7 +236,7 @@ describe('<ControlCanvasWalker>', () => {
         offsetBottom: 20,
         rotation: Math.PI / 2,
       }),
-      skippedAncestors: { transform: ancestorTransform, visible: true, modulate: { r: 1, g: 1, b: 1, a: 1 } },
+      skippedAncestors: { transform: ancestorTransform, modulate: { r: 1, g: 1, b: 1, a: 1 }, z: [] },
     };
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -536,6 +533,56 @@ describe('<ControlCanvasWalker>', () => {
         <ControlCanvasWalker tree={[low]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
       );
       expect(zProbeReading(lowRenderer)).toBe(CANVAS_ITEM_Z_MIN);
+    });
+
+    it('folds a SKIPPED Node2D ancestor\u2019s own z_index in — `p_z` accumulates down the SAME chain as modulate', async () => {
+      // `p_z = CLAMP(p_z + ci->z_index, \u2026)` for every item the cull walk
+      // descends through (`renderer_canvas_cull.cpp:430-434`), and a skipped
+      // Node2D IS one of them: it mounts no group in this walk, so without
+      // `skippedAncestors.z` a Control promoted past it reads the ambient z.
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const promoted: SolveNode = {
+        ...solveNode('N/Promoted', 'TestType', { anchorsPreset: 15, zIndex: 2 }, [
+          solveNode('N/Promoted/Probe', 'ZProbe', {}),
+        ]),
+        skippedAncestors: {
+          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+          modulate: { r: 1, g: 1, b: 1, a: 1 },
+          z: [{ zIndex: 5, zAsRelative: true }],
+        },
+      };
+
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[promoted]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+
+      expect(zProbeReading(renderer)).toBe(7);
+    });
+
+    it('folds a chain of skipped ancestors one STEP at a time, so an absolute z restarts it', async () => {
+      // `z_relative == false` takes `p_z = ci->z_index` outright
+      // (`renderer_canvas_cull.cpp:433`), which a pre-summed total could not
+      // express.
+      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      const promoted: SolveNode = {
+        ...solveNode('N/Promoted', 'TestType', { anchorsPreset: 15 }, [
+          solveNode('N/Promoted/Probe', 'ZProbe', {}),
+        ]),
+        skippedAncestors: {
+          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+          modulate: { r: 1, g: 1, b: 1, a: 1 },
+          z: [
+            { zIndex: 50, zAsRelative: true },
+            { zIndex: 3, zAsRelative: false },
+          ],
+        },
+      };
+
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[promoted]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+
+      expect(zProbeReading(renderer)).toBe(3);
     });
 
     it("hands a painter its OWN z_final by prop, where the ambient context is its parent's", async () => {

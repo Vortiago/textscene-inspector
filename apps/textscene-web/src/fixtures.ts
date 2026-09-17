@@ -1433,6 +1433,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Container Current Page",
+    "file": "unit-tab-container-current-page.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Container Rtl",
     "file": "unit-tab-container-rtl.tscn",
     "category": "Other"
@@ -2278,6 +2283,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Promoted Ancestor Z",
+    "file": "unit-control-promoted-ancestor-z.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Scene Font Magnified",
     "file": "unit-control-scene-font-magnified.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2305,6 +2315,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Themed Icon",
     "file": "unit-control-themed-icon.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Top Level Hidden Ancestor",
+    "file": "unit-control-top-level-hidden-ancestor.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -2800,6 +2815,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Control Texture",
     "file": "unit-sub-viewport-control-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Inherited Rtl",
+    "file": "unit-sub-viewport-inherited-rtl.tscn",
     "category": "Unit - Viewports"
   },
   {

@@ -54,10 +54,6 @@ hidden` override map, keyed by whatever index the file names — TabContainer's 
 - **Approximated** A tab title's paragraph direction is not applied, so under
   `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
   Where the strip and each tab in it sit does follow the layout direction.
-- **Approximated** A page's visibility comes from its own authored `visible` property,
-  matching how the Godot editor itself always saves a TabContainer scene (every
-  non-current page `visible = false`). A hand-authored file that leaves several pages
-  `visible = true` shows them stacked, where Godot would show only the current one.
 - **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`
   gutter when its own tabs overflow and scroll, a narrow case Godot's own
   `_update_margins` special-cases.

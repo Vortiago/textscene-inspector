@@ -380,8 +380,8 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
   // a Node2D — the `skippedAncestors` case — anchors against nothing at all.
   const NODE2D_PARENT: SkippedAncestors = {
     transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-    visible: true,
     modulate: { r: 1, g: 1, b: 1, a: 1 },
+    z: [],
   };
 
   function promoted(path: string, properties: Props, children: SolveNode[] = []): SolveNode {

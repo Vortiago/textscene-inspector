@@ -65,6 +65,62 @@ export interface StyleBoxFlatData {
   shadowOffset: Vec2;
 }
 
+type Sides = { left: number; top: number; right: number; bottom: number };
+
+const NO_SIDES: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
+
+/** Every field `make_flat_stylebox` (`default_theme.cpp:57-70`) leaves at `StyleBoxFlat`'s own default. */
+export interface FlatStyleBoxOptions {
+  contentMargin?: Sides;
+  cornerRadius?: number | StyleBoxFlatData['cornerRadius'];
+  borderWidth?: number | Sides;
+  borderColor?: ControlColor;
+  expandMargin?: Sides;
+}
+
+/**
+ * `make_flat_stylebox` (`default_theme.cpp:57-70`), restricted to what
+ * `StyleBoxFlatData` models. Every option left out keeps `StyleBoxFlat`'s own
+ * constructed default, which is what the theme builder relies on: it assigns
+ * only a colour, the four margins and a corner radius, and never touches
+ * `border_blend`, `anti_aliased`, `aa_size`, `corner_detail` or the shadow.
+ */
+export function flatStyleBox(
+  bgColor: ControlColor,
+  options: FlatStyleBoxOptions = {}
+): StyleBoxFlatData {
+  const { contentMargin = NO_SIDES, cornerRadius = 0, borderWidth = 0 } = options;
+  const corners =
+    typeof cornerRadius === 'number'
+      ? {
+          topLeft: cornerRadius,
+          topRight: cornerRadius,
+          bottomRight: cornerRadius,
+          bottomLeft: cornerRadius,
+        }
+      : cornerRadius;
+  return {
+    bgColor,
+    borderColor: options.borderColor ?? { r: 0.8, g: 0.8, b: 0.8, a: 1 },
+    borderWidth:
+      typeof borderWidth === 'number'
+        ? { left: borderWidth, top: borderWidth, right: borderWidth, bottom: borderWidth }
+        : borderWidth,
+    cornerRadius: corners,
+    expandMargin: options.expandMargin ?? NO_SIDES,
+    contentMargin,
+    drawCenter: true,
+    borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
+    cornerDetail: 8,
+    skew: { x: 0, y: 0 },
+    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+    shadowSize: 0,
+    shadowOffset: { x: 0, y: 0 },
+  };
+}
+
 /**
  * The total space a StyleBox's content margins take from a rect — the amount
  * every `get_minimum_size` adds on top of its content, and the amount every

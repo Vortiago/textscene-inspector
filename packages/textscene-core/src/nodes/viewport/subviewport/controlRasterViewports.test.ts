@@ -334,4 +334,52 @@ text = "hi"
 
     expect(collect(scene, cache({ [PANEL_SCENE]: world }))).toHaveLength(0);
   });
+
+  // `Control::is_layout_rtl()`'s climb casts each ancestor to `Control`, then
+  // to `Window`, then takes `get_parent()` (`control.cpp:3584-3598`). A
+  // `SubViewport` is a `Viewport` and neither, so the climb STEPS OVER it onto
+  // the `SubViewportContainer`, which is a Control — the sub-viewport's own
+  // Controls inherit that container's direction rather than starting fresh.
+  it('carries the direction of the nearest Control ABOVE the sub-viewport', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="SVC" type="SubViewportContainer" parent="."]
+layout_direction = 3
+
+[node name="SubViewport" type="SubViewport" parent="SVC"]
+size = Vector2i(320, 240)
+
+[node name="Panel" type="Panel" parent="SVC/SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBe(true);
+  });
+
+  it('steps over every non-Control ancestor on the way, exactly as the climb does', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_direction = 3
+
+[node name="Mid" type="Node2D" parent="."]
+
+[node name="SubViewport" type="SubViewport" parent="Mid"]
+
+[node name="Panel" type="Panel" parent="Mid/SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBe(true);
+  });
+
+  it('reports no inherited direction when the climb runs off the top of the tree', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+
+[node name="Panel" type="Panel" parent="SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBeNull();
+  });
 });

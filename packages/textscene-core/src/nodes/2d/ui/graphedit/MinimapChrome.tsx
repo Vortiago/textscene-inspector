@@ -23,6 +23,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useEffect, useMemo } from 'react';
+import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -55,36 +56,13 @@ const MINIMAP_LINE_WIDTH = 0.5;
 /** `GraphEditMinimap`'s `resizer_color` (`default_theme.cpp:1350`). */
 const RESIZER_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.85 };
 
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-
 function flatBox(
   bgColor: ControlColor,
   cornerRadius: number,
   borderWidth: number,
   borderColor: ControlColor
 ): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor,
-    borderWidth: { left: borderWidth, top: borderWidth, right: borderWidth, bottom: borderWidth },
-    cornerRadius: {
-      topLeft: cornerRadius,
-      topRight: cornerRadius,
-      bottomRight: cornerRadius,
-      bottomLeft: cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
-    contentMargin: ZERO_SIDES,
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+  return makeFlatStyleBox(bgColor, { cornerRadius, borderWidth, borderColor });
 }
 
 interface MinimapConnectionsProps {

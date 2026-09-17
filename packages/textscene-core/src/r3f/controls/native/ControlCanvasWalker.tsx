@@ -16,7 +16,9 @@
  * A Control whose `CanvasItem` chain BROKE needs no branch here: `buildSolveTree`
  * hoists it to the canvas it really parents to, so it arrives as a sibling of
  * the ancestor rather than a descendant, and no ancestor group, modulate
- * provider or `EffectiveZProvider` encloses it in the first place.
+ * provider or `EffectiveZProvider` encloses it in the first place. Its
+ * VISIBILITY still comes from the solve, because Godot's own conjunction
+ * crosses breaks this nesting does not (`SolveNode.parentVisibleInTree`).
  *
  * That emitted origin is SNAPPED to whole pixels (`controlPixelSnap.ts`, the
  * port of `Control::_update_canvas_item_transform`) while the solved rect it
@@ -46,7 +48,9 @@
  * culling can reach them. Each node accumulates its OWN `z_index` onto the
  * ambient it read (`accumulateCanvasItemZ` — the ONE accumulation rule this
  * codebase has, shared with `CanvasItem2D.tsx`'s Node2D path and
- * `canvaslayer/Component.tsx`'s reset to 0), never the other way around.
+ * `canvaslayer/Component.tsx`'s reset to 0), never the other way around —
+ * preceded by one step per skipped ancestor, which mounts no group of its own
+ * to publish from (`SkippedAncestors.z`).
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -193,10 +197,13 @@ function ControlNodeGroup({
   // SOLVE already consulted it (`buildSolveTree.ts`), and two reads of one
   // toggle could disagree about which node the container laid out.
   // `CanvasItem::is_visible_in_tree()` is `visible && parent_visible_in_tree`
-  // (`canvas_item.cpp:62-64`); a skipped Node2D ancestor contributes no group
-  // of its own, so its half of that conjunction arrives through the solve.
-  const isVisible =
-    !solveNode.hidden && props.visible !== false && (solveNode.skippedAncestors?.visible ?? true);
+  // (`canvas_item.cpp:62-64`). The second half arrives through the solve
+  // rather than through this walk's own group nesting, because the two
+  // disagree wherever Godot's conjunction crosses a break the nesting does
+  // not: a skipped Node2D mounts no group, and a `top_level` or chain-broken
+  // Control is emitted as a SIBLING of the ancestor whose flag still reaches
+  // it (`SolveNode.parentVisibleInTree`).
+  const isVisible = !solveNode.hidden && props.visible !== false && solveNode.parentVisibleInTree;
 
   // Structurally guaranteed present (the solve walks this exact tree); the
   // fallback only guards a mismatched tree/solved pair from ever crashing.
@@ -221,7 +228,14 @@ function ControlNodeGroup({
   // its behind-children and front-children loops with the SAME `p_z` — the
   // flag reorders draw order, not z accumulation.
   const parentEffectiveZ = useEffectiveZ();
-  const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, { z_index: props.zIndex ?? 0 });
+  // Every skipped Node2D ancestor is an item the cull walk descends through
+  // too, so its own step runs first — one `accumulateCanvasItemZ` per step,
+  // outermost first, never a pre-summed total (`SkippedAncestors.z`).
+  const ancestorZ = (solveNode.skippedAncestors?.z ?? []).reduce(
+    (z, step) => accumulateCanvasItemZ(z, { z_index: step.zIndex, z_as_relative: step.zAsRelative }),
+    parentEffectiveZ
+  );
+  const effectiveZ = accumulateCanvasItemZ(ancestorZ, { z_index: props.zIndex ?? 0 });
 
   // This Control's place in the canvas — the SAME key, from the same function,
   // that every Node2D canvas item takes (`canvasPaintOrder.ts`). Its sequence

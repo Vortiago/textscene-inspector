@@ -65,6 +65,8 @@ export interface GraphEditToolbarProps {
   /** `snapping_distance_spinbox`'s displayed value and the zoom label's text, already formatted. */
   text: { zoomLabel: string; snappingDistance: string };
   shape: (text: string) => TextLayoutResult;
+  /** `SpinBox`'s buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
+  rtl: boolean;
   renderOrder: number;
 }
 
@@ -125,7 +127,7 @@ function ToolbarText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrd
   );
 }
 
-export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shape, renderOrder }: GraphEditToolbarProps) {
+export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shape, rtl, renderOrder }: GraphEditToolbarProps) {
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_FONT_COLOR), [tint.own]);
@@ -199,7 +201,7 @@ export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shap
 
         // `SpinBox::_compute_sizes` (`spin_box.cpp:382-410`): the field box and
         // the up/down buttons block share the item's own rect.
-        const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x);
+        const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x, rtl);
         const fieldRect = { x: item.rect.x, y: item.rect.y, w: layout.fieldRect.w, h: layout.fieldRect.h };
         const upPos = {
           x: item.rect.x + layout.upRect.x + (layout.upRect.w - SPIN_BOX_ARROW_ICON_SIZE.x) / 2,

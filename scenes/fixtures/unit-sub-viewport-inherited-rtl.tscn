@@ -1,0 +1,45 @@
+; The ONE variable: `layout_direction = 3` (RTL) on the SubViewportContainer,
+; read by a container INSIDE the sub-viewport. `Control::is_layout_rtl`'s climb
+; casts each ancestor to `Control`, then to `Window`, then takes `get_parent()`
+; (control.cpp:3584-3598); a SubViewport is a `Viewport` and neither, so the
+; climb steps over it onto the container and `BoxContainer::_resort` lays the
+; bars out from the opposite edge (box_container.cpp:48). Every other RTL
+; fixture puts the flag on an ancestor in the SAME canvas, where no viewport
+; boundary is crossed, so a climb that stopped at one would still pass them.
+; The three bars have different widths so a reversal cannot be mistaken for a
+; mirror of equal blocks.
+
+[gd_scene format=3 uid="uid://unitsvpinheritrtl"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 424.0
+offset_bottom = 168.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(360, 120)
+render_target_update_mode = 4
+
+[node name="Bars" type="HBoxContainer" parent="Booth/SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="A" type="ColorRect" parent="Booth/SubViewport/Bars"]
+custom_minimum_size = Vector2(60, 0)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="B" type="ColorRect" parent="Booth/SubViewport/Bars"]
+custom_minimum_size = Vector2(120, 0)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="C" type="ColorRect" parent="Booth/SubViewport/Bars"]
+custom_minimum_size = Vector2(180, 0)
+color = Color(0.2, 0.4, 0.9, 1)

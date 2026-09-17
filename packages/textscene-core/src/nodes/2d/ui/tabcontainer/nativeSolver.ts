@@ -26,11 +26,11 @@
  * Every page — current or not — resolves to the SAME content rect: Godot's
  * own `_repaint` (`:377-399`) only applies the tab-height/panel-margin inset
  * inside the `i == current` branch and calls `hide()` on every other page,
- * leaving its rect stale/irrelevant; this previewer has no equivalent of
- * `hide()` on a `ContainerLayoutFn`'s per-child rect (only the AUTHORED
- * `visible` property the walker itself reads), so every page gets the one
- * rect that matters — the invisible ones never draw regardless of what rect
- * they hold. `Container::fit_child_in_rect` is NOT used here: `_repaint`
+ * leaving its rect stale/irrelevant. That `hide()` is ported as
+ * {@link tabContainerChildVisibility} — a write to the child's own `visible`,
+ * the mechanism Godot itself uses — so every page still gets the one rect that
+ * matters and the hidden ones never draw regardless of what rect they hold.
+ * `Container::fit_child_in_rect` is NOT used here: `_repaint`
  * sets `PRESET_FULL_RECT` + explicit pixel offsets directly, never routing
  * through size flags — the universal re-floor `controlRectSolver.ts`'s
  * `dispatchChildren` already applies to every container's returned rect is
@@ -42,6 +42,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type {
+  ChildVisibilityFn,
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
@@ -62,6 +63,46 @@ import {
 } from '../tabbar/nativeSolver';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
+
+/**
+ * `TabContainer::get_current_tab()` for a LOADED scene — which is NOT the
+ * `-1` the property's own default advertises.
+ *
+ * Every page reaches the internal `TabBar` through `add_child_notify`
+ * (`tab_container.cpp:640-655`), and the FIRST `add_tab` sets `current = 0`
+ * unless deselection is enabled (`tab_bar.cpp:1324-1331`). An authored
+ * `current_tab` is held in `setup_current_tab` while the node is outside the
+ * tree (`tab_container.cpp:743-746`) and applied at `NOTIFICATION_ENTER_TREE`
+ * (`:222-225`), where `TabBar::set_current_tab` can refuse it and leave that
+ * `0` standing (`tab_bar.cpp:795-805`): an index past the last page is queued
+ * rather than applied (the bar's own ENTER_TREE has not run, so `initialized`
+ * is still false, and nothing later consumes the queue), and `-1` hits
+ * `ERR_FAIL_COND_MSG(!_can_deselect())` unless `deselect_enabled` is on or
+ * every tab is disabled/hidden (`tab_bar.cpp:1862-1873`).
+ */
+export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
+  if (tabCount === 0) return -1;
+  const authored = props.currentTab;
+  if (authored === undefined || authored >= tabCount) return 0;
+  if (authored >= 0) return authored;
+  const overrides = props.tabOverrides;
+  const everyTabUnselectable = Array.from(
+    { length: tabCount },
+    (_unused, i) => overrides?.[i]
+  ).every((o) => o?.disabled === true || o?.hidden === true);
+  return props.deselectEnabled === true || everyTabUnselectable ? -1 : 0;
+}
+
+/**
+ * `TabContainer::_repaint`'s own visibility half: `c->show()` on the current
+ * page and `c->hide()` on every other (`tab_container.cpp:377-399`), the same
+ * split `NOTIFICATION_VISIBILITY_CHANGED` writes as
+ * `controls[i]->set_visible(i == current)` (`:290-293`). `add_child_notify`
+ * has already hidden every page as it was added (`:651`), so a file that
+ * authors nothing still shows exactly one.
+ */
+export const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index, count) =>
+  index === tabContainerCurrentTab(container.properties as TabContainerProperties, count);
 
 /** `TabContainer::TabPosition` (`tab_container.h`): 0 TOP, 1 BOTTOM. */
 export const TABS_POSITION_TOP = 0;
@@ -138,7 +179,7 @@ export function buildInternalTabBarNode(
   const barProps: TabBarProperties = {
     name: n.node.name,
     tabs: derivedTabs,
-    currentTab: props.currentTab,
+    currentTab: tabContainerCurrentTab(props, derivedTabs.length),
     tabAlignment: props.tabAlignment,
     clipTabs: props.clipTabs,
     maxTabWidth: 0,
@@ -291,6 +332,7 @@ export const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('TabContainer', tabContainerMinimumSize);
+controlSolverRegistry.registerChildVisibility('TabContainer', tabContainerChildVisibility);
 controlSolverRegistry.registerTextureSlots('TabContainer', tabContainerTextureSlots);
 
 // --- NOTIFICATION_SORT_CHILDREN --------------------------------------------------
