@@ -117,8 +117,12 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 - **Approximated** Text is always shaped left-to-right. Every widget places its runs on
   the resolved direction, but the runs themselves are never reordered, so a `Label`,
   `Button` title or `ItemList` row holding right-to-left script draws its characters in
-  code-point order. The bundled atlas carries no right-to-left script, so nothing in the
-  shipped corpus reaches it.
+  code-point order. The bundled atlas carries no right-to-left script, and neither does
+  Godot's own: its default theme ships the same `OpenSans_SemiBold.woff2` this repo
+  vendors, and reaches right-to-left glyphs through the host machine's fonts
+  (`Font.allow_system_fallback`, default true, `scene/resources/font.h`). An atlas baked
+  at build time has no equivalent of that, so the gap is a platform difference rather
+  than a bundling shortcut.
 - **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO
   rather than INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
   `rich_text_label.h:615`), so every engine branch that consults the PARAGRAPH direction
