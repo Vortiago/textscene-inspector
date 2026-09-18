@@ -2,7 +2,6 @@
  * Strict-verification harness (group I) — 9 assertions covering
  * WorldEnvironment background, ambient lighting, and fog.
  *
- * Assertions: 81–89 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';

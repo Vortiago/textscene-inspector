@@ -2,17 +2,13 @@
 
 The TextScene Inspector VS Code extension turns `.tscn` files into a live 3D preview alongside the source text. Open a `.tscn` file in any text editor, run **TextScene: Open Preview to the Side** from the command palette (F1) or the editor-title bar button, and a webview panel renders the scene in a second editor group. The preview uses the shared Split Dock shell (ADR-0007): a scene-tree panel on top (search box, expand/collapse, per-node visibility toggles) and a tabbed detail panel below with **Inspector** (type, path, transform, mesh and material information), **Resources** (missing/uploaded resource files) and **Cameras** (switch the viewport to a scene camera) tabs. Edit the source file, save, and the preview hot-reloads in place — the camera angle is preserved across content-only edits.
 
-This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds a screenshot of that flow, and is honest about what works today and what does not. Each section also links to the corresponding **strict-verification checklist** under `docs/archive/strict-checklists/`, which records the exact observed-vs-expected values for every concrete property.
+This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds a screenshot of that flow, and is honest about what works today and what does not.
 
 **Source of verification:** verified against the current code, 2026-09-18. `node scripts/showcase/vscode/capture.mjs` regenerates every screenshot below. It starts VS Code 1.133.0 with `--extensionDevelopmentPath`, opens a throwaway copy of `scenes/fixtures` as the workspace, and drives the workbench into each flow's state before it shoots the window. A shot and the paragraph beside it therefore describe one build.
-
-**Strict-verification tally:** 103 of 108 rows PASS across the 7 VS Code strict checklists (95.4%). The 5 CANT-VERIFY rows are all rooted in two harness limitations — VS Code Outline view virtualization (4 rows) and cross-origin webview iframe inaccessibility for inside-canvas reads (1 row). No FAIL. See `docs/archive/strict-checklists/VSCODE-*.md` for per-row evidence.
 
 ---
 
 ## Opening the preview — VSCODE-01
-
-**Status:** PASS (15/16 rows; 1 CANT-VERIFY). Strict checklist: [`docs/archive/strict-checklists/VSCODE-01-preview-opens.md`](archive/strict-checklists/VSCODE-01-preview-opens.md)
 
 Open a `.tscn` file from the explorer (single-click or Ctrl-P to quick-open by name), then run **TextScene: Open Preview to the Side** from the command palette (F1) or use the editor-title bar's open-preview button. A new tab labeled `Preview: <filename>.tscn` opens in a side editor group. The webview mounts and the scene-tree panel populates with the parsed root node.
 
@@ -26,8 +22,6 @@ The preview panel is only shown when the active editor is a `.tscn` file — the
 
 ## Hot reload on save — VSCODE-02
 
-**Status:** PASS (18/18 rows). Strict checklist: [`docs/archive/strict-checklists/VSCODE-02-hot-reload.md`](archive/strict-checklists/VSCODE-02-hot-reload.md)
-
 Edit the source `.tscn` file in the text editor and save (or rely on VS Code's auto-save). The extension host listens with `vscode.workspace.onDidSaveTextDocument` and calls `panel.update(...)` on the matching preview when the saved document is the previewed `.tscn`; a separate `createFileSystemWatcher('**/*.{tres,png,jpg,jpeg,svg,tscn}')` updates all panels when a dependent resource (texture, material, external scene) changes on disk. The webview re-parses the content and updates the rendered scene without disposing the preview tab. Update latency is well under one second on a development machine.
 
 ![Before edit — Box at origin](screenshots/vscode/vscode-02-a.png)
@@ -39,8 +33,6 @@ The capture changed the `Box` MeshInstance3D's transform translation from `(0, 0
 ---
 
 ## Two preview panels — VSCODE-03
-
-**Status:** PASS (14/14 rows). Strict checklist: [`docs/archive/strict-checklists/VSCODE-03-multi-panel-isolation.md`](archive/strict-checklists/VSCODE-03-multi-panel-isolation.md)
 
 You can open more than one preview panel at once, one per `.tscn` file. Each panel renders its own scene independently and maintains its own selection state. Clicking a node in one panel does not affect the other.
 
@@ -54,8 +46,6 @@ Above, `unit-box-mesh.tscn` and `unit-sphere-mesh.tscn` each have a preview in t
 
 ## Ctrl-click `res://` paths — VSCODE-04
 
-**Status:** Works. `TscnDocumentLinkProvider` turns a `res://` path into a clickable link, resolved from the Godot project root.
-
 Two providers answer a click on a `.tscn` source line, and they answer different tokens. `TscnDocumentLinkProvider` scans for `res://` references and returns each as a document link, so Ctrl-clicking one opens that file. The target is resolved project-root-relative: `findGodotProjectRoot` walks up from the document's own directory looking for `project.godot` and falls back to the workspace root, which is Godot's own `res://` rule and the same resolution the preview panel uses for the resources it loads. `TscnDefinitionProvider` answers the other token — `SubResource("id")` and `ExtResource("id")` call sites — navigating from a usage to the matching `[sub_resource ... id="..."]` or `[ext_resource ... id="..."]` heading **inside the same file**. A token that is neither is inert.
 
 ![unit-external-material.tscn with the caret on its res:// path](screenshots/vscode/vscode-04-a.png)
@@ -65,8 +55,6 @@ Two providers answer a click on a `.tscn` source line, and they answer different
 ---
 
 ## Outline panel — VSCODE-05
-
-**Status:** PARTIAL PASS (8/12 rows; 4 CANT-VERIFY due to VS Code Outline view virtualization). Strict checklist: [`docs/archive/strict-checklists/VSCODE-05-outline.md`](archive/strict-checklists/VSCODE-05-outline.md)
 
 The Outline view (View → Outline, or the section below the Files Explorer when enabled) lists the scene-tree hierarchy of the currently open `.tscn` file. Clicking an outline entry jumps the editor to the matching `[node name="..."]` declaration in the source.
 
@@ -83,8 +71,6 @@ Names match the source `[node name="..."]` declarations. The `TscnDocumentSymbol
 
 ## Click-to-select in the webview — VSCODE-06
 
-**Status:** PASS (19/19 rows — strict-verified across 3 distinct tree clicks). Strict checklist: [`docs/archive/strict-checklists/VSCODE-06-click-to-select.md`](archive/strict-checklists/VSCODE-06-click-to-select.md)
-
 Clicking a node in the webview's scene-tree panel selects it and populates the details panel with the node's type, path, parent and (for MeshInstance3D) its mesh sub-resource, material override, position, rotation and scale.
 
 ![CenterCube selected via tree click — details panel shows its properties](screenshots/vscode/vscode-06-a.png)
@@ -97,8 +83,6 @@ The screenshot shows `integration-three-cubes.tscn` with the `CenterCube` Node3D
 
 ## Missing-texture meshes — VSCODE-07
 
-**Status:** PASS (15/15 rows — magenta placeholder strict-verified, pairwise-distinct from VSCODE-01's tan box). Strict checklist: [`docs/archive/strict-checklists/VSCODE-07-missing-texture.md`](archive/strict-checklists/VSCODE-07-missing-texture.md)
-
 When you open a scene that references an external texture file the workspace cannot resolve, the affected mesh renders as a clearly magenta placeholder so you immediately know something is missing. The `useResource` hook walks the full SubResource → StandardMaterial3D → ExtResource Texture2D chain, identifies the unresolvable `res://` path, and substitutes a magenta placeholder material on the consuming `MeshInstance3D`.
 
 ![test-missing-texture.tscn preview — TestMesh renders as a magenta placeholder cube](screenshots/vscode/vscode-07-a.png)
@@ -108,8 +92,6 @@ The fixture references `res://textures/test-upload.png` (intentionally absent). 
 ---
 
 ## Camera survives save — VSCODE-08
-
-**Status:** PASS (14/14 rows — panel-identity refs byte-exact before/after edit). Strict checklist: [`docs/archive/strict-checklists/VSCODE-08-camera-survives-save.md`](archive/strict-checklists/VSCODE-08-camera-survives-save.md)
 
 The PRD wants the camera's orbit position to survive a save when only the file's content changed (no path change). This is the VS Code-specific reason `useResource`'s late-arrival contract matters — saves should be content-only updates that React reconciles, not full panel remounts.
 
@@ -122,8 +104,6 @@ The capture edited the Box transform translation to X=1.5 and saved. The preview
 ---
 
 ## Integration scene — BOTH-01
-
-**Status:** PASS
 
 `integration-all-primitives.tscn` is the canonical integration fixture, exercised in both web and VS Code. The webview's scene-tree panel lists every expected child:
 
@@ -144,8 +124,6 @@ Torus and Prism are non-MVS mesh types; they appear as `MeshInstance3D` nodes in
 
 ## Every primitive renders — BOTH-02
 
-**Status:** PASS
-
 Each MVS mesh primitive renders in its own preview panel without console errors. Cross-reference VSCODE-01 for the rendering pipeline.
 
 - `unit-box-mesh.tscn` — `docs/screenshots/vscode/both-02-a.png`
@@ -159,8 +137,6 @@ Each fixture opens its own preview tab and renders its Root Node3D plus the Mesh
 ---
 
 ## Lights and gizmos — BOTH-03
-
-**Status:** PASS (architectural / partial coverage)
 
 `integration-lights-all-types.tscn` contains DirectionalLight3D, OmniLight3D and SpotLight3D — all three MVS light types. The fixture loads in the preview without errors.
 
@@ -176,8 +152,6 @@ Each fixture opens its own preview tab and renders its Root Node3D plus the Mesh
 
 ## WorldEnvironment changes atmosphere — BOTH-04
 
-**Status:** PASS (architectural / partial coverage)
-
 Two fixtures with different `WorldEnvironment` configurations load cleanly and parse the embedded `Environment` sub-resource.
 
 ![unit-world-environment-basic.tscn loaded](screenshots/vscode/both-04-a.png)
@@ -190,10 +164,10 @@ Both fixtures contain `[node name="WorldEnvironment" type="WorldEnvironment"]` w
 
 ## Known limitations (triage list)
 
-The following gaps were surfaced during Phase 2 verification and are scheduled for fix or follow-up. They are listed in priority order.
+Behaviour a reader is likely to meet, in priority order.
 
 1. **Two providers answer a click, and they answer different tokens.** `TscnDefinitionProvider` handles `SubResource("id")` and `ExtResource("id")`, jumping within the same file to the matching definition heading. `TscnDocumentLinkProvider` turns a `res://` path into a link that opens the file, resolved from the Godot project root. A path that resolves to neither is inert. (Flow affected: VSCODE-04.)
 
-2. **Viewport pixel-level verification not exercised on the VS Code side.** The PRD flows that compare canvas pixel colors before/after a state change (camera survival, gizmo shapes, WorldEnvironment background, missing-file label text) require reading R3F-rendered pixels inside the webview iframe. The VS Code verification harness can drive UI interactions (click, type, screenshot) but cannot reach the webview's `globalThis` or canvas image data from the workbench frame across the iframe origin boundary. Architectural prerequisites for these flows are in place in the code, and the matching component code paths were directly pixel-verified on the web previewer side (where the canvas is reachable from the top frame). (Flows affected: VSCODE-06 viewport-click direction, VSCODE-07 floating-text label, VSCODE-08 camera coords, BOTH-03 gizmo shapes, BOTH-04 background colors.)
+2. **Clicking a mesh in the viewport is not covered by an automated check.** Selecting from the rendered side is implemented and shares the `SelectionContext` a tree click uses, but no gate drives a click at canvas coordinates. The canvas itself is reachable: `pnpm test:vscode:csp` reads it back over CDP inside the real webview, which is how the text pipeline is gated.
 
 3. **Profile-extension console noise.** Launching the Extension Development Host with `--extensions-dir=<empty>` keeps the textscene extension's own development extension loadable but does NOT prevent the user's installed extensions in `%USERPROFILE%\.vscode\extensions\` from being scanned at startup. This produces 5-10 console errors for extensions that require a newer VS Code version (Copilot, Pylance, Cosmos, SSH, etc.). These are unrelated to textscene-inspector and do not affect its operation. For a fully isolated profile, point `HOME` (Linux/Mac) or pass `--extensions-dir` to a fully-fresh directory before launch — but neither is required for normal extension use.

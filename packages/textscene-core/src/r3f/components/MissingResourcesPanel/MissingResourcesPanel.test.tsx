@@ -190,9 +190,7 @@ describe('<MissingResourcesPanel>', () => {
   });
 
   it('renders both uploaded and missing rows simultaneously, uploaded first', async () => {
-    // Mirrors main's `test-multiple-meshes-shared-texture.tscn`
-    // "uploaded one, still missing the other" snapshot in
-    // docs/archive/MAIN-FEATURE-INVENTORY.md.
+    // One path uploaded while another is still missing: both rows show.
     render(
       <MissingResourcesProvider>
         <ReportMissingOnMount path="res://textures/different.png" />

@@ -38,7 +38,7 @@ Scenario: [Descriptive scenario name]
 ```
 
 **C. Store Test Plans**
-- Save test plans in `docs/test-plans/` (historical plans live in `docs/archive/test-plans/`)
+- Save test plans in `docs/test-plans/`
 - Use descriptive filenames: `docs/test-plans/[feature-name]-test-plan.md`
 - Include metadata: creation date, feature version, related work items
 - Group related scenarios logically
@@ -67,7 +67,7 @@ Scenario: Rendering a basic MeshInstance3D with BoxMesh
 When executing test plans:
 
 **A. Locate Relevant Test Plans**
-- Search `docs/test-plans/` (and `docs/archive/test-plans/`) for plans matching the feature; for static rendering checks prefer the golden-image harness (`pnpm test:visual`, scripts/visual/)
+- Search `docs/test-plans/` for plans matching the feature; for static rendering checks prefer the golden-image harness (`pnpm test:visual`, scripts/visual/)
 - If multiple plans exist, determine which scenarios are affected by recent changes
 - Report which test plans will be executed and why
 

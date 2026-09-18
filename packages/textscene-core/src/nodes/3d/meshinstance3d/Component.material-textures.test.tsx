@@ -4,7 +4,6 @@
  * "did the loaded THREE.Texture actually land on the corresponding map
  * property of <meshStandardMaterial>?".
  *
- * Assertions: 32–39 of `docs/archive/STRICT-VERIFICATION.md`.
  *
  * UV-applies-to-all-maps lives in `Component.material-uv.test.tsx`.
  */

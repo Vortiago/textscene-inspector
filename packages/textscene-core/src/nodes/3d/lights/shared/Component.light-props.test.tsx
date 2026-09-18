@@ -2,7 +2,6 @@
  * Strict-verification harness (group H) — 14 assertions covering
  * the three light components (DirectionalLight3D, OmniLight3D, SpotLight3D).
  *
- * Assertions: 67–80 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';

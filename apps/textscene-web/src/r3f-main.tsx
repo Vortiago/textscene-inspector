@@ -5,8 +5,8 @@
  * components can call `useResource()` to load textures and other
  * external resources. Missing-resource uploads are driven by the
  * shell's `<MissingResourcesPanel>` (one row per missing path,
- * per-row file input) instead of a global filename-guessing input
- * (see `docs/archive/UX-REGRESSIONS.md` §3). The toolbar carries
+ * per-row file input) instead of a global filename-guessing input.
+ * The toolbar carries
  * three top-level app-shell entry points: scene-fixture dropdown,
  * "Upload TSCN File" for user-supplied .tscn content, and
  * "Reset Camera" to frame the orbit controls back to default.

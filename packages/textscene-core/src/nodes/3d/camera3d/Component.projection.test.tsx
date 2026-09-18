@@ -2,7 +2,6 @@
  * Strict-verification harness (group G) — 7 assertions covering
  * Camera3D projection-related properties.
  *
- * Assertions: 60–66 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';

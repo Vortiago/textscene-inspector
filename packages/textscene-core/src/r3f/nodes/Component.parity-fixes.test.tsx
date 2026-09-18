@@ -1,21 +1,17 @@
 /**
- * Tests for Tier-1 parity-audit silent drops.
+ * Properties a node once parsed and then silently dropped before it reached
+ * THREE. Each test pins one of them to its expected value on the primitive.
+ * Co-located rather than per-node, so the whole set reads as one block:
  *
- * Each test exercises ONE of the 8 HIGH-severity feature drops surfaced
- * by `docs/PARITY-AUDIT.md` and pins the property to its expected
- * value on the THREE primitive. Co-located here (rather than per-node)
- * so the closure of the audit's Tier-1 list reads as a single block.
- *
- * Audit slot numbers from STRICT-VERIFICATION.md Section 1:
- *   14a — surface_material_override slot N>0 → mesh.material[N]
- *   16a — cast_shadow=2 → the depth pass draws both faces
- *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
- *   38a — ao_texture → material.aoMap is a THREE.Texture
- *   59a — PrismMesh rotateY(π/6) aligns triangular face with +X
- *   60  — PlaneMesh flip_faces=true → mirrored geometry (negative scale on X axis)
- *   66a — Camera3D h_offset → position shifted along local X
- *   66b — Camera3D v_offset → position shifted along local Y
- *   93a — Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
+ *   surface_material_override slot N>0 → mesh.material[N]
+ *   cast_shadow=2 → the depth pass draws both faces
+ *   cast_shadow=3 → castShadow === true, colour write suppressed
+ *   ao_texture → material.aoMap is a THREE.Texture
+ *   PrismMesh rotateY(π/6) aligns the triangular face with +X
+ *   PlaneMesh flip_faces=true → mirrored geometry (negative scale on X)
+ *   Camera3D h_offset → position shifted along local X
+ *   Camera3D v_offset → position shifted along local Y
+ *   Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

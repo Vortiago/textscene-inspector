@@ -3,7 +3,6 @@
  * MeshInstance3D's structural flags: mesh resolution, material override
  * precedence, visibility, shadow casting.
  *
- * Assertions: 11–17 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';
