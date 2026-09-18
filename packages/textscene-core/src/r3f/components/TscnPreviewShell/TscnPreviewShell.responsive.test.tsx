@@ -14,9 +14,9 @@
  * assert the CSS source itself contains the expected media block and
  * declarations — that is the load-bearing property: as long as the
  * `@media (max-width: 768px)` block exists with `flex-direction:
- * column` on `.columns` and full-width, height-capped docks, real
- * browsers will apply it. The CSS module file is shipped to the host
- * (Vite / esbuild) verbatim.
+ * column` on `.columns` and a full-width dock holding a definite share
+ * of the stack, real browsers will apply it. The CSS module file is
+ * shipped to the host (Vite / esbuild) verbatim.
  *
  * Sister test: a render-time smoke check that the shell still mounts
  * its body element so the responsive container exists.
@@ -55,15 +55,20 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     expect(mediaBlock!).toMatch(/\.columns\s*\{[^}]*flex-direction:\s*column/);
   });
 
-  it('makes the dock full-width and height-capped inside the narrow block', () => {
+  it('gives the dock a definite share of the stack inside the narrow block', () => {
     const mediaBlock = extractMediaBlock(CSS_SOURCE, 768);
     expect(mediaBlock).not.toBeNull();
     // The dock stays visible (NOT display:none) — it stacks under the viewport.
     expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*display:\s*none/);
-    // The dock fills the width and is height-capped so the viewport keeps
-    // a usable share. (ADR-0007: a single right Split Dock, not two columns.)
     expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*width:\s*100%/);
-    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*max-height:\s*45vh/);
+    // A DEFINITE basis, which a `max-height` cap over `flex-basis: auto` is
+    // not: measured in a real browser at 700px the dock resolved to 8px,
+    // because `auto` measures its `flex-basis: 0` panes while the viewport's
+    // flex-grow took the whole column. The cap can only ever shrink a height
+    // the dock never had. (ADR-0007: a single right Split Dock, not two
+    // columns.)
+    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*flex-basis:\s*45%/);
+    expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*flex-basis:\s*auto/);
   });
 
   it('preserves the side-by-side desktop layout outside the media query', () => {

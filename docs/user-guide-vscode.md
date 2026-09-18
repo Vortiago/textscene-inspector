@@ -2,9 +2,9 @@
 
 The TextScene Inspector VS Code extension turns `.tscn` files into a live 3D preview alongside the source text. Open a `.tscn` file in any text editor, run **TextScene: Open Preview to the Side** from the command palette (F1) or the editor-title bar button, and a webview panel renders the scene in a second editor group. The preview uses the shared Split Dock shell (ADR-0007): a scene-tree panel on top (search box, expand/collapse, per-node visibility toggles) and a tabbed detail panel below with **Inspector** (type, path, transform, mesh and material information), **Resources** (missing/uploaded resource files) and **Cameras** (switch the viewport to a scene camera) tabs. Edit the source file, save, and the preview hot-reloads in place — the camera angle is preserved across content-only edits.
 
-This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds the screenshot the verifier took, and is honest about what works today and what does not. Each section also links to the corresponding **strict-verification checklist** under `docs/archive/strict-checklists/`, which records the exact observed-vs-expected values for every concrete property.
+This guide walks through every user-visible feature against the verification scenarios in `docs/user-flows.md`. Each section captures one flow, embeds a screenshot of that flow, and is honest about what works today and what does not. Each section also links to the corresponding **strict-verification checklist** under `docs/archive/strict-checklists/`, which records the exact observed-vs-expected values for every concrete property.
 
-**Source of verification:** verified against the current code, 2026-06-10. The original screenshot run used VS Code stable 1.106.3 launched with `--extensionDevelopmentPath` against this repo as the workspace; some screenshots predate the Split Dock detail tabs, and the prose describes the current behavior.
+**Source of verification:** verified against the current code, 2026-09-18. `node scripts/showcase/vscode/capture.mjs` regenerates every screenshot below. It starts VS Code 1.133.0 with `--extensionDevelopmentPath`, opens a throwaway copy of `scenes/fixtures` as the workspace, and drives the workbench into each flow's state before it shoots the window. A shot and the paragraph beside it therefore describe one build.
 
 **Strict-verification tally:** 103 of 108 rows PASS across the 7 VS Code strict checklists (95.4%). The 5 CANT-VERIFY rows are all rooted in two harness limitations — VS Code Outline view virtualization (4 rows) and cross-origin webview iframe inaccessibility for inside-canvas reads (1 row). No FAIL. See `docs/archive/strict-checklists/VSCODE-*.md` for per-row evidence.
 
@@ -34,7 +34,7 @@ Edit the source `.tscn` file in the text editor and save (or rely on VS Code's a
 
 ![After edit — Box translated, details panel shows Position X: 3.000](screenshots/vscode/vscode-02-b.png)
 
-The verifier changed the `Box` MeshInstance3D's transform translation from `(0, 0, 0)` to `(3, 0, 0)` and saved. The preview hot-reloaded; the details panel for the selected `Box` node updated to `Position X: 3.000`, `Y: 0.000`, `Z: 0.000`. The webview canvas redrew in place and the scene-tree panel's expansion state was preserved.
+The capture changed the `Box` MeshInstance3D's transform translation from `(0, 0, 0)` to `(3, 0, 0)` and saved. The preview hot-reloaded; the details panel for the selected `Box` node updated to `Position X: 3.000`, `Y: 0.000`, `Z: 0.000`. The webview canvas redrew in place and the scene-tree panel's expansion state was preserved.
 
 ---
 
@@ -44,11 +44,11 @@ The verifier changed the `Box` MeshInstance3D's transform translation from `(0, 
 
 You can open more than one preview panel at once, one per `.tscn` file. Each panel renders its own scene independently and maintains its own selection state. Clicking a node in one panel does not affect the other.
 
-![Two preview panels side-by-side, each showing a different fixture](screenshots/vscode/vscode-03-a.png)
+![Two preview panels side by side, each showing a different fixture](screenshots/vscode/vscode-03-a.png)
 
 ![Independent selection: Box in left panel, Sphere in right panel](screenshots/vscode/vscode-03-b.png)
 
-The verifier opened `unit-box-mesh.tscn` and `unit-sphere-mesh.tscn` in separate editor groups, then selected `Box` in the first panel and `Sphere` in the second. The two details panels read "Box" and "Sphere" headings respectively — the SelectionContext is scoped per-panel as designed in WI-R3F-4. Editing one fixture would also only update its own preview.
+Above, `unit-box-mesh.tscn` and `unit-sphere-mesh.tscn` each have a preview in their own editor group, with both `.tscn` sources closed so the two panels own the window. `Box` is selected in the first and `Sphere` in the second. The two details panels read "Box" and "Sphere" headings respectively — the SelectionContext is scoped per-panel as designed in WI-R3F-4. Editing one fixture would also only update its own preview.
 
 ---
 
@@ -56,13 +56,11 @@ The verifier opened `unit-box-mesh.tscn` and `unit-sphere-mesh.tscn` in separate
 
 **Status:** Works. `TscnDocumentLinkProvider` turns a `res://` path into a clickable link, resolved from the Godot project root.
 
-The verification flow asks for Ctrl-clicking a `res://` path in a `.tscn` source line to open the referenced file. The current `TscnDefinitionProvider` does **not** implement this. It handles only `SubResource("id")` and `ExtResource("id")` reference call sites, navigating from a usage inside the file to the matching `[sub_resource ... id="..."]` or `[ext_resource ... id="..."]` definition heading **inside the same file**.
+Two providers answer a click on a `.tscn` source line, and they answer different tokens. `TscnDocumentLinkProvider` scans for `res://` references and returns each as a document link, so Ctrl-clicking one opens that file. The target is resolved project-root-relative: `findGodotProjectRoot` walks up from the document's own directory looking for `project.godot` and falls back to the workspace root, which is Godot's own `res://` rule and the same resolution the preview panel uses for the resources it loads. `TscnDefinitionProvider` answers the other token — `SubResource("id")` and `ExtResource("id")` call sites — navigating from a usage to the matching `[sub_resource ... id="..."]` or `[ext_resource ... id="..."]` heading **inside the same file**. A token that is neither is inert.
 
-![unit-external-material.tscn open with cursor on the res:// path](screenshots/vscode/vscode-04-a.png)
+![unit-external-material.tscn with the caret on its res:// path](screenshots/vscode/vscode-04-a.png)
 
-![After F12 — editor unchanged, no jump to scenes/fixtures/materials/metal.tres](screenshots/vscode/vscode-04-b.png)
-
-**Known issue:** The PRD's US-9 ("Cmd/Ctrl-clicking a `res://` path in a `.tscn` file to navigate to that resource") needs a new code path in `TscnDefinitionProvider` that recognises `res://` path tokens, resolves them workspace-relative, and returns a `Location` pointing at the on-disk file. This is a small extension to the existing provider but it has not been implemented. The salvaged provider's existing behavior (jumping from a usage to its definition heading **within the same file**) is unchanged from before the R3F migration.
+![After Ctrl-click — materials/metal.tres opens beside the source](screenshots/vscode/vscode-04-b.png)
 
 ---
 
@@ -105,7 +103,7 @@ When you open a scene that references an external texture file the workspace can
 
 ![test-missing-texture.tscn preview — TestMesh renders as a magenta placeholder cube](screenshots/vscode/vscode-07-a.png)
 
-The fixture references `res://textures/test-upload.png` (intentionally absent). The webview's scene-tree shows `World → Camera, TestMesh`. TestMesh renders in the canvas as a vivid magenta cube — the documented PRD US-5a placeholder color. A floating drei `<Text>` label naming the missing `res://` path is rendered alongside the placeholder in the same React component; that text lives in the WebGL canvas, so it does not appear in the accessibility tree, but it was directly verified through the same component code path during WEB-03 on the web previewer (where the canvas is reachable from the top frame).
+The fixture references `res://textures/test-upload.png` (intentionally absent). The webview's scene-tree shows `World → TestMesh, Camera`. TestMesh renders in the canvas as a vivid magenta cube — the documented PRD US-5a placeholder color. A floating drei `<Text>` label naming the missing `res://` path is rendered alongside the placeholder in the same React component; that text lives in the WebGL canvas, so it does not appear in the accessibility tree, but it was directly verified through the same component code path during WEB-03 on the web previewer (where the canvas is reachable from the top frame).
 
 ---
 
@@ -119,7 +117,7 @@ The PRD wants the camera's orbit position to survive a save when only the file's
 
 ![Preview after edit (transform X 0 → 1.5) — same panel instance, scene re-rendered](screenshots/vscode/vscode-08-b.png)
 
-The verifier edited the Box transform translation to X=1.5 and saved. The preview tab remained the same instance — no panel disposal, no re-mount — and the scene re-rendered with the new transform. The architectural prerequisites for camera-survival are present in the code: the webview's React tree is reconciled (not re-mounted) on content updates, the camera pose lives on the THREE camera and the navigation handle rather than in React state, and the `TscnPreviewShell` does not carry a `key` prop that varies on content. The PRD's strict "camera position matches within 0.001 tolerance" cannot be measured from outside the cross-origin webview iframe, but the component-identity prerequisite is in place.
+The capture edited the Box transform translation to X=1.5 and saved. The preview tab remained the same instance — no panel disposal, no re-mount — and the scene re-rendered with the new transform. The architectural prerequisites for camera-survival are present in the code: the webview's React tree is reconciled (not re-mounted) on content updates, the camera pose lives on the THREE camera and the navigation handle rather than in React state, and the `TscnPreviewShell` does not carry a `key` prop that varies on content. The PRD's strict "camera position matches within 0.001 tolerance" cannot be measured from outside the cross-origin webview iframe, but the component-identity prerequisite is in place.
 
 ---
 
