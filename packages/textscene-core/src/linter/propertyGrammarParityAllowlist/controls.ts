@@ -92,14 +92,15 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // three need an interaction to have any effect.
       'follow_focus', 'scroll_deadzone',
       'scroll_horizontal_custom_step', 'scroll_vertical_custom_step',
+      // Picks STRETCH_TILE over STRETCH_SCALE on the two hint TextureRects
+      // (scroll_container.cpp:751-752), and nothing else. Both hint icons are
+      // gradients UNIFORM along the axis they would tile on, while the rect
+      // matches the texture's own extent across it — so the two stretch modes
+      // are the same pixels. Confirmed byte-identical on both axes through
+      // `pnpm ref:godot`.
+      'tile_scroll_hint',
     ],
-    renderGap: [
-      // A scene saved mid-scroll renders unscrolled here.
-      // Both drive set_visible() on the hint nodes (scroll_container.cpp:623),
-      // and the focus border is drawn outright.
-      'draw_focus_border', 'scroll_hint_mode', 'tile_scroll_hint',
-    ],
-    reason: 'Deadzone, wheel step and follow-focus need an interaction to matter; the scroll offsets, the scroll hints and the focus border are all drawn by Godot in a static frame and are not implemented yet.',
+    reason: 'Deadzone, wheel step and follow-focus need an interaction to matter, and tiling the scroll hint cannot change a gradient that is uniform along the tiled axis.',
   },
 
   // Both bases are scene types in their own right and carry a parser, which
@@ -111,11 +112,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'drag_area_margin_begin', 'drag_area_margin_end', 'drag_area_offset',
       'drag_area_highlight_in_editor',
     ],
-    renderGap: [
-      // A multi-child split really does place its children differently.
-      'split_offsets',
-    ],
-    reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows; `split_offsets` moves the children and is not implemented yet.',
+    reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows.',
   },
 
   // Like the container bases, BaseButton has no parser.ts, so one entry covers
@@ -167,16 +164,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
     ],
     renderGap: [
-      // An unfocused caret draws nothing, but the `editable = false` variant a
-      // static frame does show.
-      'caret_draw_when_editable_disabled',
-      // The extra indent a wrapped row takes from the row it continues.
-      'indent_wrapped_lines',
       // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'text_direction',
     ],
-    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; the unfocused caret, the wrapped-row indent and BiDi all change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; BiDi changes the frame and is not implemented yet.',
   },
 
   CodeEdit: {
@@ -189,13 +181,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Symbol lookup needs a pointer.
       'symbol_lookup_on_click', 'symbol_tooltip_on_hover',
     ],
-    renderGap: [
-      // Delimiter tables drive the comment/string colouring a highlighter paints.
-      'delimiter_comments', 'delimiter_strings',
-      // Vertical rules drawn at fixed columns.
-      'line_length_guidelines',
-    ],
-    reason: 'Completion, auto-indent and symbol lookup are all typing or pointer affordances; the delimiter tables and the column guidelines change the frame and are not implemented yet. Every key it shares with TextEdit is recorded there.',
+    reason: 'Completion, auto-indent and symbol lookup are all typing or pointer affordances. Every key it shares with TextEdit is recorded there.',
   },
 
   Tree: {
@@ -321,14 +307,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Button: {
     linterOnly: [],
     renderGap: [
-      // Wrapping and BiDi each move the label's glyphs, and our own shaper
-      // never wraps a Button's label (a separate gap from trimming, which is
-      // implemented).
-      'autowrap_mode', 'autowrap_trim_flags',
+      // BiDi and locale: our shaper runs left-to-right only.
       'text_direction', 'language',
     ],
     reason:
-      "Wrapping and BiDi change where the label's glyphs land; this renderer shapes the text itself and never wraps a Button's label, and reads no BiDi yet.",
+      "BiDi changes where the label's glyphs land, and this renderer's own shaper reads none of it yet.",
   },
 
   LinkButton: {

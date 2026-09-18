@@ -12,6 +12,7 @@ import {
   codeEditGutterCellTextTopPx,
   codeEditGutterBand,
   CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT,
+  codeEditGuidelines,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 
@@ -64,7 +65,7 @@ describe('codeEditGutterBand', () => {
     expect(band.mainDrawn).toBe(false);
     expect(band.lineNumbersDrawn).toBe(false);
     expect(band.foldDrawn).toBe(false);
-    expect(band.totalWidthPx).toBe(0);
+    expect(band.totalWidthPx).toBe(2);
   });
 
   it('the main gutter draws (and costs one row height) if ANY of bookmarks/breakpoints/executing is set', () => {
@@ -93,7 +94,13 @@ describe('codeEditGutterBand', () => {
     expect(band.foldWidthPx).toBeCloseTo(rowHeightPx / 1.2, 6);
   });
 
-  it('adds a 2px gutter_padding once ANY gutter is drawn, and none when all are off', () => {
+  it('carries gutter_padding even with every gutter off — the latch never opens (text_edit.cpp:8969-8971)', () => {
+    // `_update_gutter_width` only ever SETS `gutter_padding = 2`; it has no
+    // `else` that clears it. `GutterInfo::draw` defaults TRUE
+    // (`text_edit.h:129`) and `add_gutter` runs the update straight away
+    // (`:6709-6718`), so each of CodeEdit's three constructor gutters latches
+    // the padding on before `set_gutter_draw(idx, false)` turns it off
+    // (`code_edit.cpp:3931-3953`) — and the padding stays for the node's life.
     const withGutter = codeEditGutterBand(
       { gutterDrawLineNumbers: true } as CodeEditProperties,
       rowHeightPx,
@@ -102,7 +109,7 @@ describe('codeEditGutterBand', () => {
     );
     const without = codeEditGutterBand({} as CodeEditProperties, rowHeightPx, charWidth0Px, 1);
     expect(withGutter.totalWidthPx).toBe(withGutter.lineNumberWidthPx + 2);
-    expect(without.totalWidthPx).toBe(0);
+    expect(without.totalWidthPx).toBe(2);
   });
 });
 
@@ -123,5 +130,66 @@ describe('codeEditLineNumberTextXPx (text_edit.cpp:1471-1476, code_edit.cpp:1583
 
   it('measures the number at its CEILED shaped size, as shaped_text_get_size does (edge case)', () => {
     expect(codeEditLineNumberTextXPx(26, 40, 300, 17.25, true)).toBe(256);
+  });
+});
+
+/**
+ * `CodeEdit::_draw_guidelines` (`code_edit.cpp:288-313`).
+ *
+ *   column_pos = font->get_string_size(String("0").repeat(column)).x
+ *   xoffset    = xmargin_beg + column_pos - get_h_scroll()
+ *   if (xoffset > xmargin_beg && xoffset < xmargin_end)  -> draw
+ *   color      = (i == 0) ? line_length_guideline_color
+ *                         : line_length_guideline_color * Color(1, 1, 1, 0.5)
+ *   line from (xoffset, 0) to (xoffset, size.height)     // RTL: size.width - xoffset
+ *
+ * Both bounds are STRICT, so column 0 — whose `column_pos` is 0 and whose
+ * `xoffset` therefore equals `xmargin_beg` — draws nothing, and neither does
+ * a column past the text band. `get_h_scroll()` is 0 here (`../textedit/
+ * nativeSolver.ts`'s SCROLL IS INERT doc).
+ */
+describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
+  // A stubbed 8px-per-'0' measurement, so a font-metric change can never read
+  // as a guideline-placement change.
+  const width = (column: number) => column * 8;
+
+  it('places each column at xmargin_beg plus its own measured width', () => {
+    // `xoffset` is 26 + 32 and 26 + 80; the drawn column is one left of each
+    // (the thin-line tie-break, this function's own doc).
+    expect(codeEditGuidelines([4, 10], width, 26, 300, 320, false)).toEqual([
+      { xPx: 57, dimmed: false },
+      { xPx: 105, dimmed: true },
+    ]);
+  });
+
+  it('dims every guideline after the first (code_edit.cpp:305)', () => {
+    expect(codeEditGuidelines([2, 4, 6], width, 26, 300, 320, false).map((g) => g.dimmed)).toEqual([
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('drops column 0, whose xoffset lands exactly on the strict lower bound', () => {
+    expect(codeEditGuidelines([0], width, 26, 300, 320, false)).toEqual([]);
+  });
+
+  it('drops a column past the text band, strictly (code_edit.cpp:304)', () => {
+    // xmargin_end is 300, so 8 * 34 + 26 = 298 draws and 8 * 35 + 26 = 306 does not.
+    expect(codeEditGuidelines([34], width, 26, 300, 320, false)).toHaveLength(1);
+    expect(codeEditGuidelines([35], width, 26, 300, 320, false)).toEqual([]);
+  });
+
+  it('keeps an out-of-band column from renumbering the ones that draw', () => {
+    // The dim rule reads the AUTHORED index `i`, not the drawn one.
+    expect(codeEditGuidelines([0, 4], width, 26, 300, 320, false)).toEqual([{ xPx: 57, dimmed: true }]);
+  });
+
+  it('mirrors each guideline about the control under RTL (code_edit.cpp:307)', () => {
+    expect(codeEditGuidelines([4], width, 26, 300, 320, true)).toEqual([{ xPx: 320 - 58 - 1, dimmed: false }]);
+  });
+
+  it('draws nothing for an empty array (code_edit.cpp:289-291)', () => {
+    expect(codeEditGuidelines([], width, 26, 300, 320, false)).toEqual([]);
   });
 });

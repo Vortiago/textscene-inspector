@@ -7,5 +7,9 @@ import { buttonMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'Button', Component: Button });
 controlSolverRegistry.registerMinimumSize('Button', buttonMinimumSize);
+// `autowrap_mode` makes the label's HEIGHT depend on this node's own width, so
+// the minimum reads `SolveContext.tentativeRect` — `nativeSolver.ts`'s own doc
+// and `solverRegistry.ts`'s `tentativeRect`.
+controlSolverRegistry.registerSizeDependentMinimum('Button');
 
 export { Button };

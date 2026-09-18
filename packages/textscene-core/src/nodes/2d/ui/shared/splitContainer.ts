@@ -17,6 +17,8 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { ruleInt } from '../../../../godot/int.js';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 
@@ -44,12 +46,58 @@ export const GRABBER_EXTENT = 8;
 const DRAGGER_HIDDEN_COLLAPSED = 2;
 
 export interface SplitContainerProperties extends ControlProperties {
-  /** Pixels the split is displaced from its computed rest position (Godot default 0). */
+  /**
+   * Pixels each dragger is displaced from its computed rest position, one
+   * entry per dragger (Godot default `[0]` — the constructor pushes a single
+   * zero, `split_container.cpp:1336`). Already carries whatever the deprecated
+   * scalar `split_offset` wrote into entry 0.
+   */
+  splitOffsets?: number[];
+  /** The deprecated scalar spelling alone (`split_container.cpp:1330`), for a reader that wants the authored key rather than the resolved array. */
   splitOffset?: number;
   /** True pins the split at its rest position — `split_offset` is not read at all. */
   collapsed?: boolean;
   /** 0=VISIBLE, 1=HIDDEN, 2=HIDDEN_COLLAPSED. Only 2 removes the separation. */
   draggerVisibility?: number;
+}
+
+/** All three spellings a PACKED_INT32_ARRAY slot converts (`godot/variantParser.ts`). */
+const SPLIT_OFFSETS_FORMS = packedArrayForms('PackedInt32Array');
+
+/**
+ * `split_offsets` and the deprecated scalar `split_offset`, resolved the way
+ * the engine resolves them: the constructor seeds `[0]`
+ * (`split_container.cpp:1336`), `set_split_offsets` REPLACES the whole array
+ * (`:1071-1077`) and `set_split_offset` writes ENTRY 0 alone
+ * (`:1056-1064`, reached from the compat property at `:1330`). Both are
+ * stored, and the saver writes `split_offsets` first (`:1295`), so file order
+ * is what decides — which is why this reads the property bag in order rather
+ * than the two keys by name.
+ *
+ * `set_split_offset`'s `ERR_FAIL_INDEX(0, split_offsets.size())` is why an
+ * explicitly EMPTY array swallows the scalar: there is no entry 0 to write.
+ */
+function parseSplitOffsets(properties: Record<string, string>): number[] | undefined {
+  let offsets: number[] | undefined;
+  for (const key of Object.keys(properties)) {
+    if (key === 'split_offsets') {
+      const matched = packedArrayBody(SPLIT_OFFSETS_FORMS, properties['split_offsets']!);
+      if (!matched) continue;
+      offsets = matched.body
+        .split(',')
+        .map((element) => element.trim())
+        .filter((element) => element.length > 0)
+        .map((element) => ruleInt(element) ?? 0);
+    } else if (key === 'split_offset') {
+      const scalar = parseOptionalInt(properties['split_offset']);
+      if (scalar === undefined) continue;
+      const base = offsets ?? [0];
+      if (base.length === 0) continue;
+      offsets = [...base];
+      offsets[0] = scalar;
+    }
+  }
+  return offsets;
 }
 
 export function parseSplitContainer(
@@ -58,9 +106,15 @@ export function parseSplitContainer(
 ): SplitContainerProperties {
   const result: SplitContainerProperties = { ...parseControl(heading, properties) };
   result.splitOffset = parseOptionalInt(properties.split_offset);
+  result.splitOffsets = parseSplitOffsets(properties);
   result.collapsed = parseOptionalBool(properties.collapsed);
   result.draggerVisibility = parseOptionalInt(properties.dragger_visibility);
   return result;
+}
+
+/** This container's authored offsets, or the constructor's own single zero (`split_container.cpp:1336`). */
+export function splitOffsetsOf(props: SplitContainerProperties): readonly number[] {
+  return props.splitOffsets ?? [props.splitOffset ?? 0];
 }
 
 /**

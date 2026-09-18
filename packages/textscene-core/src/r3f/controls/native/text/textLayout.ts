@@ -120,6 +120,14 @@ export interface ShapeTextOptions {
   fontSizePx: number;
   /** Wrap width, px. `<= 0` means unconstrained — no soft wrap, only hard breaks. */
   boxWidthPx: number;
+  /**
+   * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062`) — measure
+   * the leading run of tabs and spaces once, cap it at `0.6 * boxWidthPx`, and
+   * break every row that starts past that run at `boxWidthPx - indent`
+   * instead. `TextEdit.indent_wrapped_lines` is the only property that sets it
+   * (`text_edit.cpp:285-287`); every other caller leaves it off.
+   */
+  trimIndent?: boolean;
   autowrapMode: AutowrapMode;
   /** `Label.uppercase` — shapes `text.toUpperCase()`, not the source casing. */
   uppercase?: boolean;
@@ -426,6 +434,8 @@ interface BreakGlyph {
   advance: number;
   isSpace: boolean;
   isHardBreak: boolean;
+  /** `GRAPHEME_IS_TAB` — a separate flag from `GRAPHEME_IS_SPACE` in Godot, and `BREAK_TRIM_INDENT` reads both (`text_server.cpp:1051`). */
+  isTab: boolean;
   /** The codepoint this glyph draws as a hex-code box instead of shaping normally — only set when `preserveControl` kept a control character alive (`toBreakGlyphs`'s own doc). */
   controlCodepoint?: number;
 }
@@ -538,6 +548,7 @@ function toBreakGlyphs(
       advance,
       isSpace: isWhitespace(cp),
       isHardBreak: hardBreak,
+      isTab: isTabChar(ch),
       controlCodepoint,
     });
   }
@@ -560,7 +571,7 @@ function toBreakGlyphs(
     glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizeI, metrics);
   }
   roundAdvancesToWholePixels(glyphs, text, sizeAt);
-  glyphs.push({ start: text.length, end: text.length + 1, advance: 0, isSpace: true, isHardBreak: false });
+  glyphs.push({ start: text.length, end: text.length + 1, advance: 0, isSpace: true, isHardBreak: false, isTab: false });
   return glyphs;
 }
 
@@ -615,10 +626,32 @@ function shapedTextGetLineBreaks(
   glyphs: BreakGlyph[],
   width: number,
   flags: BreakFlags,
-  trim: { start: boolean; end: boolean }
+  trim: { start: boolean; end: boolean },
+  trimIndent = false
 ): Array<[number, number]> {
   const lSize = glyphs.length;
   const rangeEnd = lSize > 0 ? glyphs[lSize - 1]!.end : 0;
+
+  // BREAK_TRIM_INDENT (`text_server.cpp:1048-1062`): the leading tab/space run,
+  // restarted whenever it alone would overrun the box, then capped at 0.6 of it.
+  let indent = 0;
+  let indentEnd = 0;
+  if (trimIndent) {
+    for (let i = 0; i < lSize; i++) {
+      const g = glyphs[i]!;
+      if (!g.isTab && !g.isSpace) break;
+      if (indent + g.advance > width) indent = 0;
+      indent += g.advance;
+      indentEnd = g.end;
+    }
+    indent = Math.min(indent, 0.6 * width);
+  }
+  // `l_width` (`:1064`) — `width` until a row past the indent starts, then the
+  // narrowed one. Each emitted line re-evaluates it, exactly as the source does.
+  let lWidth = width;
+  const narrowAfterBreak = (i: number): void => {
+    if (width > indent && i > indentEnd) lWidth = width - indent;
+  };
 
   const lines: Array<[number, number]> = [];
   let width_ = 0;
@@ -638,7 +671,7 @@ function shapedTextGetLineBreaks(
     // Overflow check: would adding this glyph exceed the line width, with a
     // recorded safe break to fall back to? `width <= 0` disables this whole
     // branch (AUTOWRAP_OFF's unconstrained width), leaving only hard breaks.
-    if (width > 0 && width_ + adv > width && lastSafeBreak >= 0) {
+    if (lWidth > 0 && width_ + adv > lWidth && lastSafeBreak >= 0) {
       const curSafeBrk = lastSafeBreak;
 
       // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES (Label's
@@ -649,6 +682,7 @@ function shapedTextGetLineBreaks(
       while (trim.end && startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
       if (lastEnd <= glyphs[startPos]!.start && glyphs[startPos]!.start !== glyphs[endPos]!.end) {
         lines.push([glyphs[startPos]!.start, glyphs[endPos]!.end]);
+        narrowAfterBreak(i);
         lastEnd = glyphs[endPos]!.end;
       }
       trimNext = true;
@@ -673,6 +707,7 @@ function shapedTextGetLineBreaks(
       while (trim.end && startPos <= endPos && endPos > 0 && isSpaceOrBreak(endPos)) endPos -= 1;
       if (lastEnd <= glyphs[startPos]!.start && glyphs[startPos]!.start !== glyphs[endPos]!.end) {
         lines.push([glyphs[startPos]!.start, glyphs[endPos]!.end]);
+        narrowAfterBreak(i);
         lastEnd = glyphs[i]!.end;
       }
       trimNext = true;
@@ -685,7 +720,9 @@ function shapedTextGetLineBreaks(
       continue;
     }
 
-    if (flags.wordBound && g.isSpace) {
+    // `i >= indent_end` (`text_server.cpp:1169`): a soft break inside the
+    // leading indent is not a candidate, so the indent never becomes a row.
+    if (flags.wordBound && g.isSpace && i >= indentEnd) {
       lastSafeBreak = i;
       wordCount++;
     }
@@ -763,6 +800,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     tabStopsPx,
     autowrapTrimFlags,
+    trimIndent = false,
     preserveControl = false,
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
@@ -807,7 +845,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
       for (let i = 0; i < aligned.length; i++) breakGlyphs[i]!.advance = aligned[i]!;
     }
-    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags, trim)) {
+    for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags, trim, trimIndent)) {
       const clampedEnd = Math.min(end, paraText.length);
       // Per-line tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc, second
       // pass) -- restarts the tab-stop cycle at THIS line's own pen origin,

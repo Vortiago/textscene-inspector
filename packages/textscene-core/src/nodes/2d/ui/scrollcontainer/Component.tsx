@@ -77,6 +77,7 @@
  * ordering between them is not load-bearing.
  */
 import { useMemo } from 'react';
+import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
@@ -87,13 +88,95 @@ import {
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
+import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollContainerScrollBars,
   scrollContainerLayoutChannel,
   type ScrollBarPlacement,
+  type ScrollHintPlacement,
 } from './nativeSolver';
+
+/**
+ * `scroll_hint_vertical_color` / `scroll_hint_horizontal_color`, both
+ * `Color(0, 0, 0)` in the default theme (`default_theme.cpp:669-670`) and set
+ * as the hint TextureRect's `modulate` (`scroll_container.cpp:622,631,640,650`).
+ * Black multiplies the gradient's white down to nothing, leaving the texture's
+ * own alpha ramp as the whole of what is drawn.
+ */
+const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
+
+/**
+ * Where the hints sit in the chrome run: above every descendant (the content
+ * they fade over) and below both scrollbars. That is the engine's own order —
+ * all four helper nodes are `INTERNAL_MODE_BACK`, so they follow the content
+ * children, and the two hints are added BEFORE `h_scroll`/`v_scroll`
+ * (`scroll_container.cpp:905-924`). A bare `chromeRenderOrder` would TIE with
+ * the topmost descendant, which three resolves by insertion order rather than
+ * by anything this painter controls, so the fade lands under an opaque child.
+ */
+const SCROLL_HINT_RENDER_ORDER_OFFSET = 0.125;
+
+/**
+ * One visible `scroll_hint_*` TextureRect.
+ *
+ * `set_expand_mode(EXPAND_IGNORE_SIZE)` with the default `STRETCH_SCALE`
+ * (`scroll_container.cpp:905-912`) stretches the icon across the whole rect,
+ * which is one quad. `tile_scroll_hint`'s `STRETCH_TILE` (`:751-752`) needs no
+ * second path: both icons are gradients uniform along the axis they would tile
+ * on, so tiled and stretched are the same pixels.
+ *
+ * `set_flip_h`/`set_flip_v` (`:629-630,647-648`) reverse the fade so it is
+ * densest against the edge the content continues past, as a negative UV
+ * repeat — `TextureRect`'s own `applyFlip` spelling. `useOptionalIconTexture`
+ * memoises PER HOOK INSTANCE, so the texture flipped here is this hint's alone
+ * and the two hints never share one.
+ */
+function ScrollHintChrome({
+  hint,
+  color,
+  opacity,
+  chromeRenderOrder,
+}: {
+  hint: ScrollHintPlacement | null;
+  color: THREE.Color;
+  opacity: number;
+  chromeRenderOrder: number;
+}) {
+  const loaded = useOptionalIconTexture(
+    hint === null ? null : hint.vertical ? SCROLL_HINT_ICONS.vertical : SCROLL_HINT_ICONS.horizontal
+  );
+  const flipH = hint?.flipH === true;
+  const flipV = hint?.flipV === true;
+  // In a memo, not an effect: the material is built from this texture during
+  // the same render, and three only refreshes a material's `mapTransform`
+  // uniform when the material itself changes — a flip applied after mount
+  // would never reach the GPU.
+  const texture = useMemo(() => {
+    if (!loaded) return null;
+    loaded.repeat.set(flipH ? -1 : 1, flipV ? -1 : 1);
+    loaded.offset.set(flipH ? 1 : 0, flipV ? 1 : 0);
+    return loaded;
+  }, [loaded, flipH, flipV]);
+
+  if (!hint || !texture) return null;
+  const renderOrder = chromeRenderOrder + SCROLL_HINT_RENDER_ORDER_OFFSET;
+  return (
+    <CanvasItemGroup position={[hint.rect.x, -hint.rect.y, 0]} renderOrder={renderOrder}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={hint.rect.w}
+        height={hint.rect.h}
+        color={color}
+        opacity={opacity}
+        map={texture}
+      />
+    </CanvasItemGroup>
+  );
+}
 
 
 /**
@@ -179,9 +262,12 @@ function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapTo
   // handed and applies the Godot→three y flip itself, so a caller supplies the
   // offset through a group and nothing else.
   return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
+    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={chromeRenderOrder + 0.25}>
       <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}>
+      <CanvasItemGroup
+        position={[bar.grabberRect.x, -bar.grabberRect.y, 0]}
+        renderOrder={chromeRenderOrder + 0.5}
+      >
         <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={chromeRenderOrder + 0.5} />
       </CanvasItemGroup>
     </CanvasItemGroup>
@@ -225,9 +311,25 @@ export function ScrollContainer({
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
+  // The hint's own `modulate` composed onto the walker's tint, the same order
+  // `<StyleBoxQuad>`'s `color` prop composes a stylebox fill.
+  const hintColor = useMemo(() => tint.color.clone().multiply(SCROLL_HINT_MODULATE), [tint.color]);
+
   return (
     <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>
+        <ScrollHintChrome
+          hint={layout.hints.topLeft}
+          color={hintColor}
+          opacity={tint.opacity}
+          chromeRenderOrder={subtreeChromeRenderOrder}
+        />
+        <ScrollHintChrome
+          hint={layout.hints.bottomRight}
+          color={hintColor}
+          opacity={tint.opacity}
+          chromeRenderOrder={subtreeChromeRenderOrder}
+        />
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}

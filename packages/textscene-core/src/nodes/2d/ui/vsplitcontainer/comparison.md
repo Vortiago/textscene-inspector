@@ -9,8 +9,8 @@ renders_as: two children stacked, split at a computed offset
 
 # VSplitContainer
 
-VSplitContainer stacks two children, split where `split_offset` puts the boundary, with
-the dragger's band between them.
+VSplitContainer stacks its children, split where each entry of `split_offsets` puts that
+boundary, with the dragger's band between them.
 
 ## Linting
 

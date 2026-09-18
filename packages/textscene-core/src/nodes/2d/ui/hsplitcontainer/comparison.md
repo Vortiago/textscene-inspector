@@ -9,9 +9,9 @@ renders_as: two children side by side, split at a computed offset
 
 # HSplitContainer
 
-HSplitContainer places two children side by side, split where `split_offset` puts the
-boundary, with the dragger's band between them. A right-to-left `layout_direction` puts
-the first child on the right and mirrors the boundary.
+HSplitContainer places its children side by side, split where each entry of
+`split_offsets` puts that boundary, with the dragger's band between them. A right-to-left
+`layout_direction` puts the first child on the right and mirrors every boundary.
 
 ## Linting
 

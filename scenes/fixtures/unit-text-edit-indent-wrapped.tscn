@@ -1,0 +1,46 @@
+; The ONE variable: `indent_wrapped_lines` on a wrapping TextEdit.
+;
+; The flag does two things and this fixture shows both. On the BREAK side it
+; sets `BREAK_TRIM_INDENT` on the line's paragraph (`text_edit.cpp:285-287`),
+; which subtracts the leading indent's width from every row after the one it
+; ends in (`text_server.cpp:1048-1062`), so a wrapping line gains rows. On the
+; DRAW side each of those rows starts one `indent_ofs` further in
+; (`:1488-1494`), where `indent_ofs` is that same width capped at 60% of the
+; wrap column (`:1363`).
+;
+; Both nodes carry the same two lines: one indented with twelve spaces and one
+; with a tab, each long enough to wrap inside a 180px box at `wrap_mode = 1`.
+; They differ ONLY in the flag. The left column draws four rows, all flush at
+; the text margin; the right draws FIVE — the narrowed break costs the space
+; line an extra one — and every continuation row of it is stepped in. A
+; half-port that moved the rows without narrowing the break loses the fifth
+; row; one that narrowed without moving them loses the step.
+;
+; No other TextEdit or CodeEdit fixture sets `indent_wrapped_lines`, and a
+; buffer line without leading whitespace cannot show it at all.
+
+[gd_scene format=3 uid="uid://unit_text_edit_indent_wrapped"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Flush" type="TextEdit" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 196.0
+offset_bottom = 176.0
+text = "            alpha bravo charlie delta echo\n\techo foxtrot golf hotel india"
+wrap_mode = 1
+
+[node name="Stepped" type="TextEdit" parent="."]
+layout_mode = 1
+offset_left = 212.0
+offset_top = 16.0
+offset_right = 392.0
+offset_bottom = 176.0
+text = "            alpha bravo charlie delta echo\n\techo foxtrot golf hotel india"
+wrap_mode = 1
+indent_wrapped_lines = true

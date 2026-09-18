@@ -11,8 +11,10 @@ renders_as: a multi-line text box
 
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
 draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
-`wrap_mode`/`autowrap_mode`, `highlight_current_line`'s row band, and the `draw_tabs`/
-`draw_spaces` control-character glyphs — a still frame with no caret, selection or IME.
+`wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
+and the `draw_tabs`/`draw_spaces` control-character glyphs — a still frame with no
+selection or IME. The one caret a still frame can carry is the
+`caret_draw_when_editable_disabled` one, which draws without focus.
 
 ## Linting
 
@@ -105,10 +107,12 @@ always shapes at the class default of 4.
 
 ## Known limitations
 
-- **Not drawn** No caret, selection, IME composition, brace-match underline,
+- **Not drawn** No selection, IME composition, brace-match underline,
   word-highlight box, search-result box, minimap or scrollbars — every one needs
   interaction state a static `.tscn` cannot carry, or (scrollbars) a Control type
-  that cannot itself appear in a `.tscn`.
+  that cannot itself appear in a `.tscn`. The caret draws only under
+  `caret_draw_when_editable_disabled`, which is the one path that survives an
+  unfocused frame.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
@@ -117,9 +121,8 @@ always shapes at the class default of 4.
   empty-line caret (:1781) and the end-of-line selection rect (:1517). Each row's
   own trailing-edge origin (:1490-1494) and the current-line highlight's side
   (:1404-1409) draw.
-- **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286), the
-  per-line background rect's (:1396-1400) and `_get_wrap_indent_offset`'s
-  (:1363,1490): none of those three features is drawn at all.
+- **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
+  per-line background rect's (:1396-1400): neither feature is drawn at all.
 - **Not drawn** `shaped_text_set_direction` at :3340,3396,3732,3761: it takes
   `is_layout_rtl()` only while `text_direction` is INHERITED, and the default is
   `TEXT_DIRECTION_AUTO` (text_edit.h:327).

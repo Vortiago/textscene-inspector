@@ -17,13 +17,7 @@ export interface CodeEditProperties extends TextEditProperties {
   gutterDrawExecutingLines?: boolean;
   /** Reserves the fold gutter's own column. Godot default false. */
   gutterDrawFoldGutter?: boolean;
-  /**
-   * Enables line folding. Godot default false. Parsed for completeness but
-   * inert to what this slice draws: `can_fold_line` depends on this AND on
-   * indentation/delimiter analysis this previewer does not perform (its own
-   * gap is recorded in `comparison.md`), so the fold gutter's column is drawn
-   * blank whether or not folding is enabled.
-   */
+  /** Enables line folding, which is what lets the fold gutter draw an arrow at all (`can_fold_line`, `code_edit.cpp:1664`). Godot default false. */
   lineFolding?: boolean;
   /**
    * The tab stop width, in characters. Godot default 4.
@@ -33,4 +27,10 @@ export interface CodeEditProperties extends TextEditProperties {
    * `textEditTabStopsPx`) — a real rendered-width effect.
    */
   indentSize?: number;
+  /** The columns `_draw_guidelines` rules the whole control at (`code_edit.cpp:288-313`). Godot default empty. */
+  lineLengthGuidelines?: number[];
+  /** `"<start>[ <end>]"` per entry (`code_edit.cpp:3490-3508`) — the comment regions `can_fold_line` reads. Godot default empty. */
+  delimiterComments?: string[];
+  /** The string regions, same spelling. `undefined` keeps the constructor's own `"` and `'` (`code_edit.cpp:3920-3922`). */
+  delimiterStrings?: string[];
 }

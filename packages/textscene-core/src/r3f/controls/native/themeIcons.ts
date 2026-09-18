@@ -55,6 +55,12 @@
  *    never picks the RTL-only `folded_arrow_mirrored` in this codebase, but
  *    `expanded_arrow_mirrored` IS reachable through `title_position` alone,
  *    so the pair is vended together.
+ *  - CodeEdit (`default_theme.cpp:496,498`), the fold-gutter arrows
+ *    `can_fold_line` decides between:
+ *      set_icon("can_fold",             "CodeEdit", icons["arrow_down"])
+ *      set_icon("can_fold_code_region", "CodeEdit", icons["region_unfolded"])
+ *    Their `folded`/`folded_code_region` twins (`:497,499`) are not vended:
+ *    nothing in a `.tscn` folds a line, so neither can be reached.
  *  - TextEdit / CodeEdit (`default_theme.cpp:457-458,491-492`), the
  *    `draw_tabs`/`draw_spaces` visual-whitespace glyphs — both classes bind
  *    the identical two keys to the identical two icons:
@@ -62,6 +68,10 @@
  *      set_icon("space", "TextEdit", icons["text_edit_space"])
  *      set_icon("tab",   "CodeEdit", icons["text_edit_tab"])
  *      set_icon("space", "CodeEdit", icons["text_edit_space"])
+ *  - ScrollContainer (`default_theme.cpp:667-668`), the edge fades
+ *    `_update_scroll_hints` shows when the content continues past an edge:
+ *      set_icon("scroll_hint_vertical",   "ScrollContainer", icons["scroll_hint_vertical"])
+ *      set_icon("scroll_hint_horizontal", "ScrollContainer", icons["scroll_hint_horizontal"])
  *  - TabBar (`default_theme.cpp:1034,1036,1039`), the tab-strip icons —
  *    `TabContainer` reuses TabBar's own painter rather than a second copy:
  *      set_icon("increment", "TabBar", icons["scroll_button_right"])
@@ -320,6 +330,27 @@ export const FOLDABLE_CONTAINER_ICONS: FoldableContainerIcons = {
   foldedArrowMirrored: svgDataUrl(ARROW_LEFT_B64),
 };
 
+/** `scene/theme/icons/region_unfolded.svg` (12x12) — CodeEdit's `can_fold_code_region`. */
+const REGION_UNFOLDED_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEwIDNhMSAxIDAgMCAwLTEtMUgzYTEgMSAwIDAgMC0xIDF2NmExIDEgMCAwIDAgMSAxaDZhMSAxIDAgMCAwIDEtMXpNMyA1Ljc1YTEgMSAwIDAgMSAxLjQxNC0xLjQxNEw2IDUuOTIybDEuNTg2LTEuNTg2QTEgMSAwIDAgMSA5IDUuNzVMNi43MDcgOC4wNDNhMSAxIDAgMCAxLTEuNDE0IDB6Ii8+PC9zdmc+Cg==';
+
+/**
+ * CodeEdit's fold-gutter icons — `default_theme.cpp:496-499`. Only the two a
+ * STILL frame can reach are vended: nothing in a `.tscn` folds a line, so
+ * `folded`/`folded_code_region` never draw (`can_fold_line`'s own doc in
+ * `nodes/2d/ui/codeedit/lineFolding.ts`). `can_fold` is `arrow_down.svg`
+ * again, the same asset FoldableContainer's `expanded_arrow` is.
+ */
+export interface CodeEditFoldIcons {
+  canFold: string;
+  canFoldCodeRegion: string;
+}
+
+export const CODE_EDIT_FOLD_ICONS: CodeEditFoldIcons = {
+  canFold: svgDataUrl(ARROW_DOWN_B64),
+  canFoldCodeRegion: svgDataUrl(REGION_UNFOLDED_B64),
+};
+
 /** `scene/theme/icons/text_edit_tab.svg` (8x8) — TextEdit/CodeEdit's `tab`. */
 const TEXT_EDIT_TAB_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxwYXRoIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNNiAwdjhoMlYwek0xIDBhMSAxIDAgMCAwLS42OTMgMS43MDVMMi42IDMuOTk4LjMwNyA2LjI5MUExIDEgMCAwIDAgMS43MiA3LjcwNWwzLTNhMSAxIDAgMCAwIDAtMS40MTRsLTMtM0ExIDEgMCAwIDAgMSAweiIvPjwvc3ZnPgo=';
@@ -337,6 +368,25 @@ export interface TextEditGlyphIcons {
 export const TEXT_EDIT_GLYPH_ICONS: TextEditGlyphIcons = {
   tab: svgDataUrl(TEXT_EDIT_TAB_B64),
   space: svgDataUrl(TEXT_EDIT_SPACE_B64),
+};
+
+/** `scene/theme/icons/scroll_hint_vertical.svg` (32x24) — ScrollContainer's `scroll_hint_vertical`: a white gradient from alpha 0.3 at the top edge to 0 at the bottom, uniform across its width. */
+const SCROLL_HINT_VERTICAL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMzIiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCA4LjQ2NyA2LjM1Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIuMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgeGxpbms6aHJlZj0iI2EiIGlkPSJiIiB4MT0iNC4yMzMiIHgyPSI0LjIzMyIgeTE9IjAiIHkyPSI2LjM1IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIvPjwvZGVmcz48cGF0aCBmaWxsPSJ1cmwoI2IpIiBkPSJNMCAwSDguNDY3VjYuMzVIMHoiIHBhaW50LW9yZGVyPSJmaWxsIG1hcmtlcnMgc3Ryb2tlIi8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/scroll_hint_horizontal.svg` (24x32) — ScrollContainer's `scroll_hint_horizontal`: the same gradient rotated, so it is uniform down its height. */
+const SCROLL_HINT_HORIZONTAL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjQiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCA2LjM1IDguNDY3Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIuMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgeGxpbms6aHJlZj0iI2EiIGlkPSJiIiB4MT0iNC4yMzMiIHgyPSI0LjIzMyIgeTE9IjAiIHkyPSI2LjM1IiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKC04LjQ2NykiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIi8+PC9kZWZzPjxwYXRoIGZpbGw9InVybCgjYikiIGQ9Ik0tOC40NjcgMEgwVjYuMzVILTguNDY3eiIgcGFpbnQtb3JkZXI9ImZpbGwgbWFya2VycyBzdHJva2UiIHRyYW5zZm9ybT0icm90YXRlKC05MCkiLz48L3N2Zz4K';
+
+/** ScrollContainer's two edge-fade hints — `default_theme.cpp:667-668`. */
+export interface ScrollHintIcons {
+  vertical: string;
+  horizontal: string;
+}
+
+export const SCROLL_HINT_ICONS: ScrollHintIcons = {
+  vertical: svgDataUrl(SCROLL_HINT_VERTICAL_B64),
+  horizontal: svgDataUrl(SCROLL_HINT_HORIZONTAL_B64),
 };
 
 /** `scene/theme/icons/close.svg` (16x16) — TabBar's `close`. */

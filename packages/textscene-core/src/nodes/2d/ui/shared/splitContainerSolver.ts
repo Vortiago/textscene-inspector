@@ -6,33 +6,20 @@
  * `_get_valid_range`, `_resort`, `get_minimum_size`) plus the shared
  * `Container::fit_child_in_rect` every placed child still goes through.
  *
- * SCOPE: two children only (a deliberate boundary — the modern engine
- * supports N children and N-1 draggers via `split_offsets`/`valid_children`, ported
- * here only for the two-child case every fixture and the deprecated single
- * `split_offset` property already commit to). With exactly two children,
- * `_update_default_dragger_positions` collapses to a closed form:
+ * SCOPE: dragging is the one explicit non-goal (`dragging_area_controls`,
+ * `set_split_offset` at runtime, the mouse/keyboard `gui_input` branches) —
+ * this module renders only the AUTHORED `split_offsets`, exactly like every
+ * other native solver in this codebase renders one authored frame, never an
+ * interaction. That is also why `_update_dragger_positions` is ported at
+ * `p_clamp_index === -1` alone (`:658-670`): the other arm prioritises the
+ * dragger under the pointer.
  *
- *  - both children EXPAND on the split axis (with `stretch_ratio > 0`): the historic
- *    `#ifndef DISABLE_DEPRECATED` fast path (`split_container.cpp:557-563`) —
- *    `wished = size * ratio - sep * 0.5`, `ratio = ratio0 / (ratio0 + ratio1)`,
- *    ignoring both minimums entirely (a deliberate engine behaviour, not an
- *    omission — see the `else` branches of `_update_default_dragger_positions`'s
- *    final loop, `:600-618`, which this file's own module doc walks through).
- *  - only the FIRST expands: `wished = size - sep` (child 0 claims everything
- *    up to the reserved separation, `:611-613`'s "after all expand flags" branch).
- *  - the second alone expands, or neither does: `wished = 0` (`:609-610`'s
- *    "before all expand flags" branch) — the boundary sits at `split_offset` alone.
- *
- * `_update_dragger_positions` (`:621-708`) then clamps `wished + split_offset`
- * (or, `collapsed`, just `wished`) against `_get_valid_range` (`:318-338`):
- * `[first.min_size, size - sep - second.min_size]`, using Godot's own CLAMP
- * semantics (test the LOW bound first) rather than `Math.min`/`Math.max`, which
- * disagree the moment the range is inverted (an oversized pair of minimums).
- *
- * Dragging is an explicit non-goal (`dragging_area_controls`, `set_split_offset`
- * at runtime, the mouse/keyboard `gui_input` branches) — this module renders only
- * the AUTHORED `split_offset`, exactly like every other native solver in this
- * codebase renders one authored frame, never an interaction.
+ * `split_offset_pending` (`:1076`) is deliberately absent. It gates
+ * `_get_desired_sizes` while children are being added, moved or removed
+ * (`:912,981,1022`) and nothing else — `_update_dragger_positions` reads
+ * `split_offsets` whatever it says, so an array whose length disagrees with
+ * the child count still places the children (short: zero-filled at `:632-634`;
+ * long: the tail is never indexed).
  *
  * RTL applies to the HORIZONTAL axis only. `_update_dragger_positions` ends by
  * inverting each position against the axis size (`:641-646` collapsed,
@@ -60,7 +47,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
-import type { SplitContainerProperties } from './splitContainer';
+import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
 import {
   fitChildInRect,
   hasFlag,
@@ -111,14 +98,167 @@ function godotClamp(x: number, lo: number, hi: number): number {
 }
 
 /**
- * `SplitContainer::_update_default_dragger_positions` + `_update_dragger_positions`,
- * specialised to exactly two children (see module doc for the closed form and
- * its citations). Returns `computed_split_offset` — the split axis position,
- * relative to this container's own top-left, where the separation band starts.
+ * `SplitContainer::_update_default_dragger_positions` (`split_container.cpp:517-618`):
+ * where each dragger would sit with every offset at zero.
  *
- * `rtl` is already AXIS-SCOPED: this function only ever sees one axis, and
- * Godot's inversion is guarded on `!vertical` (`split_container.cpp:703`), so
- * a caller that handles both axes passes `rtl && !vertical`.
+ * Three stages. The stretch pass hands every `SIZE_EXPAND` child a share of
+ * the space the fixed children leave, retrying without any child whose share
+ * fell below its own minimum (`:570-596`) and carrying the sub-pixel
+ * remainder forward a pixel at a time (`:589-593`). The deprecated two-expand
+ * pair short-circuits that entirely and ignores both minimums (`:557-563`).
+ * The placement loop then reports the running sum — except that every dragger
+ * BEFORE the first expanding child collapses to 0 and every dragger after the
+ * last one to `size - sep` (`:605-617`), which is how a fixed-size child pair
+ * ends up pinned to one end.
+ */
+export function computeDefaultDraggerPositions(
+  size: number,
+  separation: number,
+  children: readonly SplitAxisChild[]
+): number[] {
+  if (children.length <= 1) return [];
+
+  // `real_t final_size`, narrowed with `(int)` only where the source does.
+  const finalSize = children.map((c) => Math.trunc(c.minSize));
+  const willStretch = children.map((c) => c.expands);
+  const expandCount = children.filter((c) => c.expands).length;
+
+  let stretchableSpace = size - separation * (children.length - 1);
+  let stretchTotal = 0;
+  children.forEach((c, i) => {
+    if (c.expands) stretchTotal += c.stretchRatio;
+    else stretchableSpace -= finalSize[i]!;
+  });
+
+  if (expandCount === 2 && children.length === 2) {
+    // `#ifndef DISABLE_DEPRECATED` (`:557-563`): two expanding children ignore
+    // both minimums. `(int)` truncates toward zero, unlike `Math.floor`.
+    const total = children[0]!.stretchRatio + children[1]!.stretchRatio;
+    const ratio = total > 0 ? children[0]!.stretchRatio / total : 0.5;
+    return [Math.trunc(size * ratio - separation * 0.5)];
+  }
+
+  while (stretchTotal > 0 && stretchableSpace > 0) {
+    let refitSuccessful = true;
+    let error = 0;
+    for (let i = 0; i < children.length; i++) {
+      if (!willStretch[i]) continue;
+      const desired = (children[i]!.stretchRatio / stretchTotal) * stretchableSpace;
+      error += desired - Math.trunc(desired);
+      if (desired < children[i]!.minSize) {
+        stretchTotal -= children[i]!.stretchRatio;
+        stretchableSpace -= children[i]!.minSize;
+        willStretch[i] = false;
+        finalSize[i] = Math.trunc(children[i]!.minSize);
+        refitSuccessful = false;
+        break;
+      }
+      finalSize[i] = Math.trunc(desired);
+      if (error >= 1) {
+        finalSize[i]! += 1;
+        error -= 1;
+      }
+    }
+    if (refitSuccessful) break;
+  }
+
+  const positions: number[] = [];
+  let pos = 0;
+  let expandsSeen = 0;
+  for (let i = 0; i < children.length - 1; i++) {
+    pos += finalSize[i]!;
+    if (children[i]!.expands) expandsSeen += 1;
+    if (expandsSeen === 0) positions.push(0);
+    else if (expandsSeen >= expandCount) positions.push(size - separation);
+    else positions.push(pos);
+    pos += separation;
+  }
+  return positions;
+}
+
+/**
+ * `SplitContainer::_get_valid_range` (`split_container.cpp:318-337`): how far
+ * dragger `index` can travel before some child on either side of it would be
+ * pushed under its own minimum. Every child up to and including `index`
+ * raises the low bound, every child past it lowers the high one, and the
+ * separations on each side are charged to the same ends.
+ */
+export function splitDraggerValidRange(
+  index: number,
+  size: number,
+  separation: number,
+  children: readonly SplitAxisChild[]
+): { min: number; max: number } {
+  const draggerCount = children.length - 1;
+  let min = separation * index;
+  let max = Math.trunc(size) - separation * (draggerCount - index);
+  children.forEach((c, i) => {
+    if (i <= index) min += Math.trunc(c.minSize);
+    else max -= Math.trunc(c.minSize);
+  });
+  return { min, max };
+}
+
+/**
+ * `SplitContainer::_update_dragger_positions` (`split_container.cpp:621-707`)
+ * at `p_clamp_index === -1` — the layout pass, not the drag pass.
+ *
+ * `offsets` is the authored `split_offsets` verbatim: shorter than the dragger
+ * count it is zero-filled without disturbing the entries it does have
+ * (`resize_initialized`, `:632-634`), longer and the tail is never indexed.
+ *
+ * `rtl` is already AXIS-SCOPED: the inversion at `:701-707` is guarded on
+ * `!vertical`, so a caller handling both axes passes `rtl && !vertical`.
+ */
+export function computeSplitDraggerPositions(
+  size: number,
+  separation: number,
+  children: readonly SplitAxisChild[],
+  offsets: readonly number[],
+  collapsed: boolean,
+  rtl = false
+): number[] {
+  // `const int size = (int)get_size()[axis]` (`:628`): every formula below
+  // reads the already-narrowed extent, so the truncation happens once here.
+  const axisSize = Math.trunc(size);
+  const defaults = computeDefaultDraggerPositions(axisSize, separation, children);
+  const invert = (p: number) => (rtl ? axisSize - p - separation : p);
+
+  if (collapsed) {
+    return defaults.map((d, i) => {
+      const range = splitDraggerValidRange(i, axisSize, separation, children);
+      return invert(godotClamp(d, range.min, range.max));
+    });
+  }
+
+  const positions = defaults.map((d, i) => {
+    const range = splitDraggerValidRange(i, axisSize, separation, children);
+    return godotClamp(d + (offsets[i] ?? 0), range.min, range.max);
+  });
+
+  // Prevent overlaps (`:658-670`): each dragger pushes the NEXT one far enough
+  // right to leave the child between them its own minimum, then re-clamps
+  // ITSELF — index `i`, not `i + 1`, which is what the source does.
+  for (let i = 0; i < positions.length - 1; i++) {
+    const pushPos = positions[i]! + separation + Math.trunc(children[i + 1]!.minSize);
+    if (positions[i + 1]! < pushPos) {
+      positions[i + 1] = pushPos;
+      const range = splitDraggerValidRange(i, axisSize, separation, children);
+      positions[i] = godotClamp(positions[i]!, range.min, range.max);
+    }
+  }
+
+  return positions.map(invert);
+}
+
+/**
+ * The two-child case of {@link computeSplitDraggerPositions}, kept as its own
+ * name because that is the shape a painter has: one boundary, two children,
+ * the deprecated singular `split_offset`. Returns `computed_split_offset` —
+ * the split axis position, relative to this container's own top-left, where
+ * the separation band starts.
+ *
+ * `rtl` is already AXIS-SCOPED, as on the N-child function.
  */
 export function computeSplitDraggerPosition(
   size: number,
@@ -129,55 +269,14 @@ export function computeSplitDraggerPosition(
   collapsed: boolean,
   rtl = false
 ): number {
-  // `const int size = (int)get_size()[axis]` (`split_container.cpp:527`, and the
-  // same line in `_update_dragger_positions` and `_get_valid_range`): every
-  // formula below reads the ALREADY-narrowed extent, so the truncation happens
-  // once here rather than at each use.
-  const axisSize = Math.trunc(size);
-
-  let wished: number;
-  if (first.expands && second.expands) {
-    const total = first.stretchRatio + second.stretchRatio;
-    const ratio = total > 0 ? first.stretchRatio / total : 0.5;
-    // `(int)` truncates toward zero (`split_container.cpp:561`) — not `Math.floor`,
-    // which would differ on a negative result.
-    wished = Math.trunc(axisSize * ratio - separation * 0.5);
-  } else if (first.expands) {
-    // "After all expand flags" (`split_container.cpp:613`).
-    wished = axisSize - separation;
-  } else {
-    wished = 0;
-  }
-
-  // `_get_valid_range` narrows both minimums with `(int)` too.
-  const lo = Math.trunc(first.minSize);
-  const hi = axisSize - separation - Math.trunc(second.minSize);
-  const raw = collapsed ? wished : wished + splitOffset;
-  const clamped = godotClamp(raw, lo, hi);
-  // `size - dragger_positions[i] - sep` (`split_container.cpp:644-645,703-707`)
-  // — the caller supplies the split axis, so `!vertical` is implicit here.
-  return rtl ? axisSize - clamped - separation : clamped;
+  return computeSplitDraggerPositions(size, separation, [first, second], [splitOffset], collapsed, rtl)[0]!;
 }
 
-/**
- * `SplitContainer::_resort` (`split_container.cpp:710-782`), restricted to
- * exactly two children (see module doc): fits each child into the rect
- * `computeSplitDraggerPosition` derives, in the SAME order as `children`.
- *
- * - 0 children: nothing to place.
- * - 1 child: fit to the WHOLE container rect (`:714-719`) — a SplitContainer
- *   with one child is an ordinary single-child wrapper.
- * - 2 children: the split.
- *
- * More than two is out of scope (see module doc); callers pass
- * at most two (the registry adapter below slices to the first two sortable
- * children, mirroring the DOM `SplitContainerComponent.tsx`).
- */
 /**
  * A `SplitChildInput`'s split-AXIS subset — `SplitAxisChild`, selecting the
  * split-axis component of `minSize`/`sizeFlags`. Exported (not just a local
  * closure inside `resortSplitContainer`) so `makeSplitContainerLayout` can
- * derive the SAME `draggerPos` its own `ContainerLayoutFn` meta reports —
+ * derive the SAME dragger positions its own `ContainerLayoutFn` meta reports —
  * one implementation, not two that could drift apart the moment the
  * axis-selection rule changes.
  */
@@ -190,11 +289,24 @@ export function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAx
   };
 }
 
+/**
+ * `SplitContainer::_resort` (`split_container.cpp:710-756`): fits every child
+ * into the band between the draggers on either side of it.
+ *
+ * - 0 children: nothing to place.
+ * - 1 child: fit to the WHOLE container rect (`:714-719`) — a SplitContainer
+ *   with one child is an ordinary single-child wrapper.
+ * - 2 or more: one band per child, `:736-755`.
+ *
+ * `offsets` is the authored `split_offsets` array; the RTL arm reads the
+ * children back from the opposite end (`:741-744`) against the already
+ * inverted positions.
+ */
 export function resortSplitContainer(
   vertical: boolean,
   containerSize: { width: number; height: number },
   separation: number,
-  splitOffset: number,
+  offsets: readonly number[],
   collapsed: boolean,
   children: readonly SplitChildInput[],
   rtl = false
@@ -208,50 +320,41 @@ export function resortSplitContainer(
     return [fitChildInRect(whole, only.minSize, only.hSizeFlags, only.vSizeFlags, rtl)];
   }
 
-  const [c0, c1] = children as readonly [SplitChildInput, SplitChildInput];
-  // `const Size2i new_size = get_size()` (`split_container.cpp`); the one-child
-  // branch above stays full-precision, as Godot's does.
+  // `const Size2i new_size = get_size()` (`:738`); the one-child branch above
+  // stays full-precision, as Godot's does.
   const size = Math.trunc(vertical ? containerSize.height : containerSize.width);
   const crossSize = Math.trunc(vertical ? containerSize.width : containerSize.height);
   const horizontalRtl = rtl && !vertical;
 
-  const draggerPos = computeSplitDraggerPosition(
+  const draggers = computeSplitDraggerPositions(
     size,
     separation,
-    toSplitAxisChild(vertical, c0),
-    toSplitAxisChild(vertical, c1),
-    splitOffset,
+    children.map((c) => toSplitAxisChild(vertical, c)),
+    offsets,
     collapsed,
     horizontalRtl
   );
 
-  // `split_container.cpp:738-751` — under a horizontal RTL the first child
-  // takes the band ABOVE the (already inverted) dragger and the second the
-  // band below it, which is the mirror of the LTR pair.
-  const firstStart = horizontalRtl ? draggerPos + separation : 0;
-  const firstEnd = horizontalRtl ? size : draggerPos;
-  const secondStart = horizontalRtl ? 0 : draggerPos + separation;
-  const secondEnd = horizontalRtl ? draggerPos : size;
-
-  const rect0: Rect2 = vertical
-    ? { x: 0, y: firstStart, w: crossSize, h: firstEnd - firstStart }
-    : { x: firstStart, y: 0, w: firstEnd - firstStart, h: crossSize };
-  const rect1: Rect2 = vertical
-    ? { x: 0, y: secondStart, w: crossSize, h: secondEnd - secondStart }
-    : { x: secondStart, y: 0, w: secondEnd - secondStart, h: crossSize };
-
-  return [
-    fitChildInRect(rect0, c0.minSize, c0.hSizeFlags, c0.vSizeFlags, rtl),
-    fitChildInRect(rect1, c1.minSize, c1.hSizeFlags, c1.vSizeFlags, rtl),
-  ];
+  return children.map((c, i) => {
+    const startPos = horizontalRtl
+      ? (i >= draggers.length ? 0 : draggers[i]! + separation)
+      : (i === 0 ? 0 : draggers[i - 1]! + separation);
+    const endPos = horizontalRtl
+      ? (i === 0 ? size : draggers[i - 1]!)
+      : (i >= draggers.length ? size : draggers[i]!);
+    const band: Rect2 = vertical
+      ? { x: 0, y: startPos, w: crossSize, h: endPos - startPos }
+      : { x: startPos, y: 0, w: endPos - startPos, h: crossSize };
+    return fitChildInRect(band, c.minSize, c.hSizeFlags, c.vSizeFlags, rtl);
+  });
 }
 
 /**
  * `SplitContainer::get_minimum_size` (`split_container.cpp:820-838`): main
- * axis sums every child's minimum plus ONE separation, but ONLY when there
- * are two (or more) children (`:827-829`) — a lone child contributes no
- * separation, matching `resortSplitContainer`'s own one-child fit-to-whole
- * rect. Cross axis is the largest child.
+ * axis sums every child's minimum plus one separation PER DRAGGER, and only
+ * when there are two (or more) children (`:827-829`) — a lone child
+ * contributes no separation, matching `resortSplitContainer`'s own one-child
+ * fit-to-whole rect. Cross axis is the largest child.
  */
 export function splitContainerMinimumSize(
   vertical: boolean,
@@ -271,7 +374,7 @@ export function splitContainerMinimumSize(
       mainAxis += Math.trunc(size.x);
     }
   }
-  if (childMinSizes.length >= 2) mainAxis += separation;
+  if (childMinSizes.length >= 2) mainAxis += separation * (childMinSizes.length - 1);
 
   return vertical ? { x: crossAxis, y: mainAxis } : { x: mainAxis, y: crossAxis };
 }
@@ -384,22 +487,22 @@ function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
  * (`ContainerLayoutResult.meta` — `solverRegistry.ts`'s own doc) — the ONE
  * intermediate their painter (`hsplitcontainer/Component.tsx`,
  * `vsplitcontainer/Component.tsx`) needs and cannot otherwise reach: the
- * split boundary this layout ACTUALLY computed, from the full recursive
- * `combined_minimum_size` of both sortable children
+ * split boundaries this layout ACTUALLY computed, from the full recursive
+ * `combined_minimum_size` of every sortable child
  * (`ctx.combinedMinimumSize`), not the narrower `custom_minimum_size` alone
  * a painter is limited to without this channel.
  */
 export interface SplitContainerBoundary {
-  /** `computed_split_offset` — this container's own local-space position where the separation band starts (under a horizontal RTL, already inverted, so a painter draws the grabber straight at it). `undefined` with fewer than two sortable children (no boundary to report). */
-  draggerPos: number | undefined;
+  /** One entry per dragger — this container's own local-space position where each separation band starts (under a horizontal RTL, already inverted, so a painter draws each grabber straight at it). Empty with fewer than two sortable children. */
+  draggerPositions: readonly number[];
 }
 
 /**
  * The **solve handoff** channel (`r3f/controls/native/solveHandoff.ts`) every
  * split axis seals and all three split painters open.
  *
- * A channel rather than a share: the boundary is computed from both sortable
- * children's full recursive `combined_minimum_size` (`ctx`), which no painter
+ * A channel rather than a share: each boundary is computed from every sortable
+ * child's full recursive `combined_minimum_size` (`ctx`), which no painter
  * can reach.
  */
 export const splitContainerBoundaryChannel = defineChannel<SplitContainerBoundary>('SplitContainer.boundary');
@@ -411,24 +514,23 @@ export const splitContainerBoundaryChannel = defineChannel<SplitContainerBoundar
  * `x`/`y` describe this node's own parent-relative offset and must not leak
  * into a child's (locally-relative) rect.
  *
- * Only the first two SORTABLE children are placed (`Container::as_sortable_control`,
- * `isSortableControl` — an invisible child is skipped entirely, same as every
- * other container solver in this codebase); a third+ sortable child is simply
- * absent from the returned map, which `controlRectSolver.ts` floors to a
- * zero rect — the deliberate two-child scope (see module doc).
+ * Every SORTABLE child is placed (`Container::as_sortable_control`,
+ * `isSortableControl` — an invisible child is skipped entirely, matching
+ * `_add_valid_child`'s own `child->is_visible()` gate, `:966-968`).
  */
 export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
   return (n, children, contentRect, ctx) => {
     const props = n.node.properties as SplitContainerProperties;
-    const sortable = children.filter(({ node }) => isSortableControl(node)).slice(0, 2);
+    const sortable = children.filter(({ node }) => isSortableControl(node));
     const separation = separationOf(n, ctx, vertical);
     const inputs = sortable.map(({ node, minSize }) => toChildInput(node, minSize));
+    const offsets = splitOffsetsOf(props);
 
     const rects = resortSplitContainer(
       vertical,
       { width: contentRect.w, height: contentRect.h },
       separation,
-      props.splitOffset ?? 0,
+      offsets,
       props.collapsed === true,
       inputs,
       n.rtl
@@ -437,35 +539,32 @@ export function makeSplitContainerLayout(vertical: boolean): ContainerLayoutFn {
     const out = new Map<string, Rect2>();
     sortable.forEach(({ node: child }, i) => out.set(child.path, rects[i]!));
 
-    // `computeSplitDraggerPosition` — the SAME function `resortSplitContainer`
-    // calls internally for exactly this pair — re-invoked here (not
-    // extracted from `resortSplitContainer`'s own return) since it is O(1)
-    // arithmetic on inputs already in hand: cheap enough that duplicating
-    // the CALL costs nothing, while `toSplitAxisChild` (not duplicated —
-    // exported and shared) keeps the axis-selection RULE itself one
-    // implementation.
-    const draggerPos =
-      inputs.length === 2
-        ? computeSplitDraggerPosition(
+    // `computeSplitDraggerPositions` — the SAME function `resortSplitContainer`
+    // calls internally — re-invoked here (not extracted from its return) since
+    // it is cheap arithmetic on inputs already in hand, while
+    // `toSplitAxisChild` (not duplicated — exported and shared) keeps the
+    // axis-selection RULE itself one implementation.
+    const draggerPositions =
+      inputs.length >= 2
+        ? computeSplitDraggerPositions(
             vertical ? contentRect.h : contentRect.w,
             separation,
-            toSplitAxisChild(vertical, inputs[0]!),
-            toSplitAxisChild(vertical, inputs[1]!),
-            props.splitOffset ?? 0,
+            inputs.map((c) => toSplitAxisChild(vertical, c)),
+            offsets,
             props.collapsed === true,
             n.rtl && !vertical
           )
-        : undefined;
+        : [];
 
-    return { rects: out, meta: splitContainerBoundaryChannel.seal({ draggerPos }) };
+    return { rects: out, meta: splitContainerBoundaryChannel.seal({ draggerPositions }) };
   };
 }
 
-/** Builds the `MinimumSizeFn` for a split axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. Same two-sortable-child cap as the layout above. */
+/** Builds the `MinimumSizeFn` for a split axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. */
 export function makeSplitContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
     const separation = separationOf(n, ctx, vertical);
-    const sortable = n.children.filter(isSortableControl).slice(0, 2);
+    const sortable = n.children.filter(isSortableControl);
     const childMinSizes = sortable.map((child) => ctx.combinedMinimumSize(child));
     return splitContainerMinimumSize(vertical, separation, childMinSizes);
   };

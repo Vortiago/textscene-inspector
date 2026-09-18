@@ -399,3 +399,73 @@ describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_ad
     expect(withText - empty).toBe(44);
   });
 });
+
+/**
+ * `autowrap_mode` / `autowrap_trim_flags` (`button.cpp:332,428-432,493,546-561`).
+ *
+ * `Button::_shape` maps the mode to the same break flags Label's does and ORs
+ * `autowrap_flags_trim` on top (`:546-561`), and the draw path shapes the
+ * paragraph at `Math::ceil(MAX(1.0f, drawable_size_remained.width))`
+ * (`:428-432`). `get_minimum_size_for_text_and_icon` then drops the TEXT's own
+ * width contribution entirely (`:493`, the same `is_clipped` trigger
+ * `clip_text` and a trimming overrun behaviour already pull), because a
+ * narrower box simply wraps instead of overflowing.
+ */
+describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
+  const LONG = 'alpha bravo charlie delta';
+
+  function minSize(props: Partial<ButtonProperties>, tentativeWidthPx?: number) {
+    const context: SolveContext = {
+      ...ctx(),
+      ...(tentativeWidthPx === undefined
+        ? {}
+        : { tentativeRect: () => ({ x: 0, y: 0, w: tentativeWidthPx, h: 40 }) }),
+    };
+    return buttonMinimumSize(node(props), context);
+  }
+
+  it('keeps the text width with autowrap off', () => {
+    expect(minSize({ text: LONG }).x).toBeGreaterThan(100);
+  });
+
+  it('drops the text width contribution once autowrap is on (button.cpp:493)', () => {
+    // Only the stylebox margins remain.
+    const wrapped = minSize({ text: LONG, autowrapMode: 2 });
+    const empty = minSize({ text: '' });
+    expect(wrapped.x).toBe(empty.x);
+  });
+
+  it('reports a TALLER minimum once a tentative rect narrows it to several rows', () => {
+    const oneRow = minSize({ text: LONG, autowrapMode: 2 });
+    const wrapped = minSize({ text: LONG, autowrapMode: 2 }, 80);
+    expect(wrapped.y).toBeGreaterThan(oneRow.y);
+  });
+
+  it('never wraps at AUTOWRAP_OFF, whatever the tentative rect says', () => {
+    expect(minSize({ text: LONG }, 80).y).toBe(minSize({ text: LONG }).y);
+  });
+});
+
+describe('buttonLabelShape — the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
+  function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
+    return (buttonLabelShape(node(props), nativeTheme(1), boxWidthPx)?.lines ?? []).map((l) => l.text);
+  }
+
+  it('keeps one row at AUTOWRAP_OFF however narrow the box', () => {
+    expect(rows({ text: 'alpha bravo' }, 20)).toEqual(['alpha bravo']);
+  });
+
+  it('breaks on a word boundary at AUTOWRAP_WORD', () => {
+    expect(rows({ text: 'alpha bravo', autowrapMode: 2 }, 50)).toEqual(['alpha', 'bravo']);
+  });
+
+  it('breaks mid-word at AUTOWRAP_ARBITRARY', () => {
+    expect(rows({ text: 'alphabravo', autowrapMode: 1 }, 50).length).toBeGreaterThan(1);
+  });
+
+  it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
+    // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128;
+    // authoring 0 keeps both edges.
+    expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual(['alpha ', 'bravo']);
+  });
+});

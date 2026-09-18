@@ -34,7 +34,7 @@
  * inherited `modulate`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -42,7 +42,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
-  computeSplitDraggerPosition,
+  computeSplitDraggerPositions,
   splitContainerBoundaryChannel,
   isSplitGrabberVisible,
   resolveSplitSeparation,
@@ -50,7 +50,7 @@ import {
   splitGrabberIconSize,
   splitGrabberThemeKey,
 } from '../shared/splitContainerSolver';
-import type { SplitContainerProperties } from '../shared/splitContainer';
+import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitContainer';
 
 export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
@@ -64,9 +64,9 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   // return cannot skip the load. `autohide` defaults true, which makes the
   // grabber invisible in the common scene — decoding its image and holding a
   // GPU texture for a quad that never draws.
-  const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
+  const sortable = solveNode.children.filter(isSortableControl);
   const drawsGrabber =
-    sortable.length === 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, false);
   const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? SPLIT_CONTAINER_ICONS.hsplitter : null);
 
@@ -83,31 +83,41 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
     ...theme.widgets.splitContainer,
     grabberExtent: iconSize.x,
   });
-  const [first, second] = sortable as [SolveNode, SolveNode];
-  const cachedDraggerPos = splitContainerBoundaryChannel.open(meta)?.draggerPos;
-  const draggerPos =
-    cachedDraggerPos ??
-    computeSplitDraggerPosition(
+  const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
+  const draggerPositions =
+    cached ??
+    computeSplitDraggerPositions(
       rect.w,
       separation,
-      axisChildFromCustomMinimumSize(first, false),
-      axisChildFromCustomMinimumSize(second, false),
-      props.splitOffset ?? 0,
+      sortable.map((c) => axisChildFromCustomMinimumSize(c, false)),
+      splitOffsetsOf(props),
       props.collapsed === true,
       solveNode.rtl
     );
-  const iconRect = splitGrabberIconRect(false, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 
   return (
-    <CanvasItemGroup position={[iconRect.x, -iconRect.y, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={iconRect.w}
-        height={iconRect.h}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-      />
-    </CanvasItemGroup>
+    <>
+      {draggerPositions.map((draggerPos, i) => {
+        const iconRect = splitGrabberIconRect(
+          false,
+          { width: rect.w, height: rect.h },
+          draggerPos,
+          separation,
+          iconSize
+        );
+        return (
+          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
+            <ControlQuad
+              renderOrder={renderOrder}
+              width={iconRect.w}
+              height={iconRect.h}
+              color={tint.color}
+              opacity={tint.opacity}
+              map={texture}
+            />
+          </CanvasItemGroup>
+        );
+      })}
+    </>
   );
 }

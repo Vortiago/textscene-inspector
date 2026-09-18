@@ -17,7 +17,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
+import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -37,7 +37,11 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import {
+  AutowrapMode,
+  clampAutowrapMode,
+  shapedTextSizeWidthPx,
+} from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import type { ControlColor } from '../control/types';
@@ -123,20 +127,53 @@ export function buttonTextTheme(
  * unconditionally, so a share that honoured the gate would answer differently
  * for the two callers.
  *
- * Shapes via `shapeButtonLabel` DIRECTLY (`boxWidthPx: 0`, `autowrapMode:
- * OFF`, `lineSpacingPx: 0` — Button never wraps and reads no `line_spacing`
- * theme key at all, unlike Label) rather than through `ctx.measureText`,
- * whose `Vec2`-only return would discard the `TextLayoutResult` the painter
- * needs.
+ * Shapes via `shapeButtonLabel` DIRECTLY rather than through
+ * `ctx.measureText`, whose `Vec2`-only return would discard the
+ * `TextLayoutResult` the painter needs.
+ *
+ * A plain function rather than a `defineShare` memo: `boxWidthPx` is a THIRD
+ * input, and the memo's `(node, theme)` key cannot express it — a wrapping
+ * Button shaped once at the solver's tentative width would then answer the
+ * painter with the wrong rows.
  */
-export const buttonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
+export function buttonLabelShape(
+  n: ShareNode,
+  theme: SolveContext['theme'],
+  boxWidthPx = 0
+): TextLayoutResult | null {
   const props = n.node.properties as ButtonProperties;
   const text = props.text ?? '';
   if (text.length === 0) return null;
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
-  return shapeButtonLabel(text, fontSizePx, resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY));
-});
+  const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  return shapeButtonLabel(
+    text,
+    fontSizePx,
+    resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
+    mode === AutowrapMode.OFF ? 0 : boxWidthPx,
+    mode,
+    props.autowrapTrimFlags
+  );
+}
+
+/**
+ * The horizontal space the icon takes out of the label's own box —
+ * `drawable_size_remained.width`'s icon term (`button.cpp:332-352`,
+ * `layoutButtonContent`'s own `if (iconAlign !== H_CENTER)` branch). Only the
+ * wrap width needs it separately from `layoutButtonContent`, which cannot run
+ * before the text is shaped.
+ */
+function buttonIconReservationPx(
+  n: ShareNode,
+  props: ButtonProperties,
+  ctx: Pick<SolveContext, 'theme'> & { theme: SolveContext['theme'] }
+): number {
+  if (!n.textureSize || n.textureSize.x <= 0 || n.textureSize.y <= 0) return 0;
+  if ((props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT) === HORIZONTAL_ALIGNMENT_CENTER) return 0;
+  const iconSize = fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0);
+  return Math.round(iconSize.x) + Math.max(0, n.constants.h_separation ?? ctx.theme.separation);
+}
 
 /**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`), minus
@@ -169,7 +206,15 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;
-  const layout: TextLayoutResult | null = ctx.measureText ? buttonLabelShape(n, ctx.theme) : null;
+  // Pass 2 of the solve (`solverRegistry.ts`'s `tentativeRect`) knows this
+  // node's own width, which is what a wrapping label's HEIGHT depends on;
+  // pass 1 shapes unwrapped, exactly as `textedit/nativeSolver.ts` does.
+  // `is_clipped` is true whenever autowrap is on (`button.cpp:332`), so the
+  // icon's reservation never depends on the text and this is not circular.
+  const tentative = ctx.tentativeRect?.(n);
+  const wrapWidthPx =
+    tentative === undefined ? 0 : tentative.w - marginX - buttonIconReservationPx(n, props, ctx);
+  const layout: TextLayoutResult | null = ctx.measureText ? buttonLabelShape(n, ctx.theme, wrapWidthPx) : null;
   // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`)
   // — the CEILED extent, not the raw pen advance.
@@ -181,7 +226,8 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // below, is unaffected) — the box no longer needs to be wide enough for
   // the full label, since a narrower one just trims it.
   const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
-  if (props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING) {
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  if (props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING || autowrapMode !== AutowrapMode.OFF) {
     textSize.x = 0;
   }
 

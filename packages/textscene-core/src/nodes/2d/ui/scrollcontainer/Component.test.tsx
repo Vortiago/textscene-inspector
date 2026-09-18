@@ -415,3 +415,89 @@ describe('<ScrollContainer> — clip planes', () => {
     expect(captured.some((p) => p.distanceToPoint(innerDriven) < 0)).toBe(true);
   });
 });
+
+/**
+ * The `scroll_hint_*` TextureRects (`scroll_container.cpp:606-658,905-915`).
+ * Both are `INTERNAL_MODE_BACK` children added BEFORE the scrollbars, so they
+ * paint over the content and under the bars, modulated by
+ * `scroll_hint_vertical_color` / `scroll_hint_horizontal_color`, which the
+ * default theme sets to `Color(0, 0, 0)` (`default_theme.cpp:669-670`).
+ */
+describe('<ScrollContainer> — scroll hints', () => {
+  const HINT_RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+  async function mount(props: Partial<ScrollContainerProperties>, minSize: { x: number; y: number }) {
+    const content = leaf('Scroll/Content', { customMinimumSize: minSize });
+    return ReactThreeTestRenderer.create(
+      <ScrollContainer
+        {...painterEnv()}
+        solveNode={scrollNode(props, [content])}
+        rect={HINT_RECT}
+        renderOrder={10}
+      />
+    );
+  }
+
+  /** The hint quad is the only mesh whose material carries a `map`; the bars are StyleBox fills. */
+  function hintMeshes(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.Mesh[] {
+    return renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => (m.material as THREE.MeshBasicMaterial).map != null);
+  }
+
+  it('draws no hint quad at the default SCROLL_HINT_MODE_DISABLED', async () => {
+    expect(hintMeshes(await mount({}, { x: 100, y: 500 }))).toHaveLength(0);
+  });
+
+  it('draws one hint quad spanning the bottom 24px band when the content overflows downward', async () => {
+    const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));
+    expect(meshes).toHaveLength(1);
+    const box = worldBounds(meshes[0]!);
+    expect(box.min.x).toBeCloseTo(0, 3);
+    // SIDE_RIGHT anchors at ANCHOR_END + size.x (`scroll_container.cpp:625`),
+    // so the quad is twice the container wide and the clip cuts the overhang.
+    expect(box.max.x).toBeCloseTo(600, 3);
+    expect(box.max.y).toBeCloseTo(-176, 3);
+    expect(box.min.y).toBeCloseTo(-200, 3);
+  });
+
+  it('modulates the hint by scroll_hint_vertical_color — black (default_theme.cpp:669)', async () => {
+    const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));
+    const material = meshes[0]!.material as THREE.MeshBasicMaterial;
+    expect(material.color.getHex()).toBe(0x000000);
+  });
+
+  it('flips the bottom-right hint vertically so the fade is densest at the edge (scroll_container.cpp:630)', async () => {
+    const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));
+    const map = (meshes[0]!.material as THREE.MeshBasicMaterial).map!;
+    expect(map.repeat.y).toBe(-1);
+    expect(map.offset.y).toBe(1);
+  });
+
+  it('leaves the top-left hint unflipped (scroll_container.cpp:621-627)', async () => {
+    const meshes = hintMeshes(await mount({ scrollHintMode: 2, scrollVertical: 100 }, { x: 100, y: 500 }));
+    expect(meshes).toHaveLength(1);
+    const map = (meshes[0]!.material as THREE.MeshBasicMaterial).map!;
+    expect(map.repeat.y).toBe(1);
+    expect(map.offset.y).toBe(0);
+    expect(worldBounds(meshes[0]!).max.y).toBeCloseTo(0, 3);
+  });
+
+  it('carries the chrome key on the enclosing GROUP, which three consults before the mesh\'s own order', async () => {
+    // `projectObject` sorts by `groupOrder` — the nearest enclosing Group's
+    // `renderOrder` — first, so a hint whose group kept this node's own key
+    // paints behind the very content it fades, whatever the mesh asks for.
+    const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));
+    expect(nearestGroupOrder(meshes[0]!)).toBe(meshes[0]!.renderOrder);
+  });
+
+  it('draws the horizontal hint flipped on X at the trailing edge (scroll_container.cpp:647-655)', async () => {
+    const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 900, y: 50 }));
+    expect(meshes).toHaveLength(1);
+    const box = worldBounds(meshes[0]!);
+    expect(box.min.x).toBeCloseTo(276, 3);
+    expect(box.max.x).toBeCloseTo(300, 3);
+    expect((meshes[0]!.material as THREE.MeshBasicMaterial).map!.repeat.x).toBe(-1);
+  });
+});

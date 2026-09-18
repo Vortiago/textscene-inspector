@@ -263,6 +263,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Code Edit Delimiters",
+    "file": "unit-code-edit-delimiters.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Guidelines",
+    "file": "unit-code-edit-guidelines.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Rtl",
     "file": "unit-code-edit-rtl.tscn",
     "category": "Other"
@@ -1318,6 +1328,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Split Container Offsets",
+    "file": "unit-split-container-offsets.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Split Container Rtl",
     "file": "unit-split-container-rtl.tscn",
     "category": "Other"
@@ -1450,6 +1465,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tab Font Size Override",
     "file": "unit-tab-font-size-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Caret Readonly",
+    "file": "unit-text-edit-caret-readonly.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Indent Wrapped",
+    "file": "unit-text-edit-indent-wrapped.tscn",
     "category": "Other"
   },
   {
@@ -2148,6 +2173,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Audio"
   },
   {
+    "name": "Button Autowrap",
+    "file": "unit-button-autowrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button Icon Gradienttexture",
     "file": "unit-button-icon-gradienttexture.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2458,8 +2488,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Scroll Container Focus Border",
+    "file": "unit-scroll-container-focus-border.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Scroll Container Rtl",
     "file": "unit-scroll-container-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Scroll Hint",
+    "file": "unit-scroll-container-scroll-hint.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

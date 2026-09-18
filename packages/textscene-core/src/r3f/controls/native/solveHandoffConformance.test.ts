@@ -182,7 +182,12 @@ describe('solve handoff conformance', () => {
     const shares = HANDOFF_SOURCES.flatMap(({ file, source }) =>
       shareCallbacks(source).map(({ line }) => `${repoPath(file)}:${line}`)
     );
-    expect(shares.length).toBeGreaterThanOrEqual(6);
+    // Five, not six: Button's label shaping left `defineShare` when
+    // `autowrap_mode` gave it a THIRD input, the wrap width, which the memo's
+    // `(node, theme)` key cannot express (`button/nativeSolver.ts`'s own doc).
+    // It is still one function both its solver and its painter call — the
+    // invariant this file exists for — just not a memoised one.
+    expect(shares.length).toBeGreaterThanOrEqual(5);
   });
 
   it('opens `meta` only through a channel — no painter hand-rolls a shape guard', () => {

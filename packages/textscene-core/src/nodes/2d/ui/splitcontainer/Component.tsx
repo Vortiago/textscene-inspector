@@ -10,7 +10,7 @@
  * inherited `modulate`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -18,7 +18,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
 import {
   axisChildFromCustomMinimumSize,
-  computeSplitDraggerPosition,
+  computeSplitDraggerPositions,
   splitContainerBoundaryChannel,
   isSplitGrabberVisible,
   resolveSplitSeparation,
@@ -26,6 +26,7 @@ import {
   splitGrabberIconSize,
   splitGrabberThemeKey,
 } from '../shared/splitContainerSolver';
+import { splitOffsetsOf } from '../shared/splitContainer';
 import type { SplitContainerProperties } from './types';
 
 /** `SplitContainer::vertical` (`split_container.h:96`). Godot default `false`. */
@@ -41,9 +42,9 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
   // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`
   // are ever consulted — mirrored here rather than only in the layout, since
   // this painter has no rect to draw an icon between otherwise.
-  const sortable = solveNode.children.filter(isSortableControl).slice(0, 2);
+  const sortable = solveNode.children.filter(isSortableControl);
   const drawsGrabber =
-    sortable.length === 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
   const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
   const themeKey = splitGrabberThemeKey(solveNode.node.type, vertical);
   const texture = useNodeIcon(drawsGrabber ? solveNode.icons[themeKey] : undefined, drawsGrabber ? icon : null);
@@ -57,31 +58,41 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
     ...theme.widgets.splitContainer,
     grabberExtent: vertical ? iconSize.y : iconSize.x,
   });
-  const [first, second] = sortable as [SolveNode, SolveNode];
-  const cachedDraggerPos = splitContainerBoundaryChannel.open(meta)?.draggerPos;
-  const draggerPos =
-    cachedDraggerPos ??
-    computeSplitDraggerPosition(
+  const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
+  const draggerPositions =
+    cached ??
+    computeSplitDraggerPositions(
       vertical ? rect.h : rect.w,
       separation,
-      axisChildFromCustomMinimumSize(first, vertical),
-      axisChildFromCustomMinimumSize(second, vertical),
-      props.splitOffset ?? 0,
+      sortable.map((c) => axisChildFromCustomMinimumSize(c, vertical)),
+      splitOffsetsOf(props),
       props.collapsed === true,
       solveNode.rtl && !vertical
     );
-  const iconRect = splitGrabberIconRect(vertical, { width: rect.w, height: rect.h }, draggerPos, separation, iconSize);
 
   return (
-    <CanvasItemGroup position={[iconRect.x, -iconRect.y, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={iconRect.w}
-        height={iconRect.h}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-      />
-    </CanvasItemGroup>
+    <>
+      {draggerPositions.map((draggerPos, i) => {
+        const iconRect = splitGrabberIconRect(
+          vertical,
+          { width: rect.w, height: rect.h },
+          draggerPos,
+          separation,
+          iconSize
+        );
+        return (
+          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
+            <ControlQuad
+              renderOrder={renderOrder}
+              width={iconRect.w}
+              height={iconRect.h}
+              color={tint.color}
+              opacity={tint.opacity}
+              map={texture}
+            />
+          </CanvasItemGroup>
+        );
+      })}
+    </>
   );
 }

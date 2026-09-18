@@ -637,3 +637,73 @@ describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags,
     expect(layout.lines[1]!.text).toBe('   BBBB');
   });
 });
+
+/**
+ * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062,1090-1102,1169`).
+ *
+ * "Subtract first line indentation width from all lines after the first one"
+ * (`doc/classes/TextServer.xml`, the constant's own description): the leading
+ * run of tabs and spaces is measured once, capped at `0.6 * width`, and every
+ * row that starts past that run breaks at `width - indent` instead. The same
+ * `indent_end` also blocks a soft break INSIDE the indent (`:1169`).
+ *
+ * `TextEdit` is the only caller: `Text::_shape_line` sets the flag whenever
+ * `indent_wrapped_lines` is on (`text_edit.cpp:285-287`).
+ */
+describe('shapeText — BREAK_TRIM_INDENT (text_server.cpp:1048-1062,1090-1102)', () => {
+  const INDENT = '        ';
+  const INDENTED = `${INDENT}alpha bravo charlie`;
+
+  /** The unconstrained shaped width of `text`, to pick a wrap width from. */
+  function widthOf(text: string): number {
+    return shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 0,
+    }).widthPx;
+  }
+
+  function rowsAt(boxWidthPx: number, trimIndent: boolean): string[] {
+    return shapeText(INDENTED, {
+      fontSizePx: 16,
+      boxWidthPx,
+      autowrapMode: AutowrapMode.WORD,
+      lineSpacingPx: 0,
+      trimIndent,
+    }).lines.map((l) => l.text);
+  }
+
+  const WIDTH = widthOf('bravo charlie');
+
+  it('is the width that makes the flag observable at all', () => {
+    // Row 0 holds the indent and one word, and no more.
+    expect(widthOf(`${INDENT}alpha`)).toBeLessThanOrEqual(WIDTH);
+    expect(widthOf(`${INDENT}alpha bravo`)).toBeGreaterThan(WIDTH);
+    // The two remaining words fit the FULL width but not the narrowed one.
+    expect(WIDTH).toBeGreaterThan(WIDTH - widthOf(INDENT));
+    expect(widthOf('bravo charlie')).toBeGreaterThan(WIDTH - widthOf(INDENT));
+  });
+
+  it('leaves the rows alone with the flag off', () => {
+    expect(rowsAt(WIDTH, false)).toEqual([`${INDENT}alpha`, 'bravo charlie']);
+  });
+
+  it('narrows every row past the indent by the indent width', () => {
+    expect(rowsAt(WIDTH, true)).toEqual([`${INDENT}alpha`, 'bravo', 'charlie']);
+  });
+
+  it('never breaks inside the indent itself (text_server.cpp:1169)', () => {
+    expect(rowsAt(WIDTH, true)[0]).toBe(`${INDENT}alpha`);
+  });
+
+  it('caps the subtraction at 0.6 of the width, so a continuation row keeps 0.4 of it (text_server.cpp:1062)', () => {
+    // An indent WIDER than 60% of the box: uncapped it would leave a
+    // negative-to-nothing width and break every word apart.
+    const narrow = Math.ceil(widthOf(INDENT) / 0.8);
+    expect(widthOf(INDENT)).toBeGreaterThan(0.6 * narrow);
+    const rows = rowsAt(narrow, true);
+    expect(rows).toContain('bravo');
+    expect(rows).toContain('charlie');
+  });
+});

@@ -21,6 +21,10 @@ export interface TextEditProperties extends ControlProperties {
   drawControlChars?: boolean;
   /** Paints the caret's own line in `current_line_color`. Godot default false. */
   highlightCurrentLine?: boolean;
+  /** Draws the caret even unfocused, while `editable` is false (`text_edit.cpp:945-947`). Godot default false. */
+  caretDrawWhenEditableDisabled?: boolean;
+  /** Steps every wrapped row in by the line's own leading indent, and breaks it at the narrowed width (`text_edit.cpp:285-287,1488-1494`). Godot default false. */
+  indentWrappedLines?: boolean;
   /** Grows this Control's OWN minimum width to fit its widest (wrapped) row. Godot default false. */
   fitContentWidth?: boolean;
   /** Grows this Control's OWN minimum height to fit every (wrapped) row. Godot default false. */

@@ -1,0 +1,79 @@
+; The ONE variable: `split_offsets` with more than one entry, on a
+; SplitContainer holding more than two children.
+;
+; Two children need one dragger, and a single offset is all the deprecated
+; scalar `split_offset` could ever carry — which is what every other
+; SplitContainer fixture exercises. Three children need TWO draggers, and the
+; array is the only way to place them: `_update_dragger_positions`
+; (`split_container.cpp:651-656`) adds entry `i` to default dragger `i`, then
+; clamps it into `_get_valid_range(i)` (`:318-337`) on its own.
+;
+; The three children all carry `size_flags_horizontal = 3`, so
+; `_update_default_dragger_positions` (`:566-599`) hands each an equal share of
+; 400 - 12*2 = 376, which truncates to 125 apiece and puts the default draggers
+; at 125 and 262 (`:605-617`). The authored -30 and 20 move them to 95 and 282,
+; giving three DIFFERENT widths: 95, 175 and 106. An implementation that reads
+; only entry 0, or that applies one offset to every dragger, lands on a
+; different pair — and equal thirds would prove neither.
+;
+; `Below` is the same trio at the default offsets, so the two rows differ only
+; by the array and a regression cannot hide behind the layout being wrong for
+; both.
+
+[gd_scene format=3 uid="uid://unit_split_container_offsets"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="Offsets" type="HSplitContainer" parent="."]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 424.0
+offset_bottom = 84.0
+split_offsets = PackedInt32Array(-30, 20)
+
+[node name="OffsetsA" type="ColorRect" parent="Offsets"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.9, 0.3, 0.2, 1)
+
+[node name="OffsetsB" type="ColorRect" parent="Offsets"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.2, 0.8, 0.4, 1)
+
+[node name="OffsetsC" type="ColorRect" parent="Offsets"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.3, 0.5, 0.95, 1)
+
+[node name="Below" type="HSplitContainer" parent="."]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 104.0
+offset_right = 424.0
+offset_bottom = 164.0
+
+[node name="BelowA" type="ColorRect" parent="Below"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.9, 0.3, 0.2, 1)
+
+[node name="BelowB" type="ColorRect" parent="Below"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.2, 0.8, 0.4, 1)
+
+[node name="BelowC" type="ColorRect" parent="Below"]
+layout_mode = 2
+size_flags_horizontal = 3
+color = Color(0.3, 0.5, 0.95, 1)

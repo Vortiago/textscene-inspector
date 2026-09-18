@@ -38,6 +38,8 @@ export function parseTextEdit(
     drawSpaces: parseOptionalBool(properties.draw_spaces),
     drawControlChars: parseOptionalBool(properties.draw_control_chars),
     highlightCurrentLine: parseOptionalBool(properties.highlight_current_line),
+    caretDrawWhenEditableDisabled: parseOptionalBool(properties.caret_draw_when_editable_disabled),
+    indentWrappedLines: parseOptionalBool(properties.indent_wrapped_lines),
     fitContentWidth: parseOptionalBool(properties.scroll_fit_content_width),
     fitContentHeight: parseOptionalBool(properties.scroll_fit_content_height),
     minimapDraw: parseOptionalBool(properties.minimap_draw),

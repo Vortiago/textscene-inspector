@@ -431,3 +431,171 @@ describe('ScrollContainer under RTL', () => {
     expect(out.get('Scroll/Child')).toEqual({ x: 260, y: 0, w: 40, h: 20 });
   });
 });
+
+/**
+ * `draw_focus_border` reaches a STILL frame only through `_get_margins`.
+ * The focus PANEL itself is gated on focus
+ * (`scroll_container.cpp:474-475`: `focus_border_is_drawn = draw_focus_border
+ * && (has_focus(true) || child_has_focus())`), which no `.tscn` can author —
+ * but `_get_margins` (`:103-130`) raises each side to the `focus` StyleBox's
+ * own margin whenever the flag is set, and every layout formula reads it:
+ * `get_minimum_size` (`:74-75`), `_update_scrollbars` (`:583-585`),
+ * `_update_scrollbar_position` (`:289-306`) and `_reposition_children`
+ * (`:344-348`).
+ *
+ * Default theme: `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`),
+ * so every side starts at 0; `focus` is `make_flat_stylebox(style_focus_color)`
+ * (`:659`), whose `set_content_margin_individual(Math::round(4 * scale) …)`
+ * (`:60`, `default_margin = 4` at `:54`) gives 4 on all four sides at scale 1.
+ */
+describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+  it('insets the content rect by the focus style margin on all four sides (scroll_container.cpp:344-348)', () => {
+    const child = leaf('Scroll/Child', {
+      customMinimumSize: { x: 50, y: 50 },
+      sizeFlagsHorizontal: 3,
+      sizeFlagsVertical: 3,
+    });
+    const n = scrollContainer({ drawFocusBorder: true }, [child]);
+    const out = layoutRects(n, [{ node: child, minSize: { x: 50, y: 50 } }], RECT, ctx());
+    // ofs = margins.position = (4, 4); size = 300-8 by 200-8.
+    expect(out.get('Scroll/Child')).toEqual({ x: 4, y: 4, w: 292, h: 192 });
+  });
+
+  it('adds left+right and top+bottom to the minimum size unconditionally (scroll_container.cpp:74-75)', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 120, y: 60 } });
+    const n = scrollContainer({ drawFocusBorder: true, horizontalScrollMode: 0, verticalScrollMode: 0 }, [child]);
+    expect(scrollContainerMinimumSize(n, ctx())).toEqual({ x: 128, y: 68 });
+  });
+
+  it('insets both scrollbar rects by the same margins (scroll_container.cpp:296-306)', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 900, y: 900 } });
+    const n = scrollContainer({ drawFocusBorder: true }, [child]);
+    const out = scrollContainerScrollBars(n, ctx(), RECT);
+    expect(out.horizontal.rect).toEqual({ x: 4, y: 200 - 4 - THICKNESS, w: 300 - 8 - THICKNESS, h: THICKNESS });
+    expect(out.vertical.rect).toEqual({ x: 300 - 4 - THICKNESS, y: 4, w: THICKNESS, h: 200 - 8 - THICKNESS });
+  });
+
+  it('measures overflow against the margin-reduced size, so a child that only just fits now overflows (scroll_container.cpp:583-585)', () => {
+    // 296 wide content vs a 298-wide child: no bar without the flag, a bar with it.
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 298, y: 50 } });
+    const without = scrollContainer({}, [child]);
+    const with_ = scrollContainer({ drawFocusBorder: true }, [child]);
+    expect(scrollContainerScrollBars(without, ctx(), RECT).horizontal.visible).toBe(false);
+    expect(scrollContainerScrollBars(with_, ctx(), RECT).horizontal.visible).toBe(true);
+  });
+
+  it('leaves every margin at zero when the flag is absent (panel is StyleBoxEmpty, default_theme.cpp:655-657)', () => {
+    const child = leaf('Scroll/Child', {
+      customMinimumSize: { x: 50, y: 50 },
+      sizeFlagsHorizontal: 3,
+      sizeFlagsVertical: 3,
+    });
+    const n = scrollContainer({}, [child]);
+    const out = layoutRects(n, [{ node: child, minSize: { x: 50, y: 50 } }], RECT, ctx());
+    expect(out.get('Scroll/Child')).toEqual({ x: 0, y: 0, w: 300, h: 200 });
+  });
+});
+
+/**
+ * `_update_scroll_hints` (`scroll_container.cpp:606-658`) — the two
+ * `TextureRect` hints that fade the edge the content continues past.
+ *
+ * Both hint keys drive `set_visible()` on those nodes, and both conditions a
+ * STILL frame can satisfy are reachable from a `.tscn`: `v_scroll_below_max`
+ * holds at the default scroll offset whenever the content overflows by more
+ * than a pixel, and `v_scroll_value > 1` holds whenever `scroll_vertical` was
+ * authored. The one quirk worth pinning is the mutual exclusion — a container
+ * overflowing on BOTH axes draws no hint at all, because the vertical branch
+ * is gated on `!show_horizontal_hints` and the horizontal branch on
+ * `!show_vertical_hints` (`:623,633,641,651`).
+ *
+ * Icon extents are the vendored SVGs' own: `scroll_hint_vertical.svg` is
+ * 32x24 and `scroll_hint_horizontal.svg` 24x32 (`scene/theme/icons/`), and
+ * only the extent ACROSS the fade is read (`get_height()` at `:627,636`,
+ * `get_width()` at `:643,652`).
+ */
+describe('ScrollContainer.scroll_hint_mode (scroll_container.cpp::_update_scroll_hints)', () => {
+  const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+  function hints(props: Partial<ScrollContainerProperties>, minSize: { x: number; y: number }) {
+    const child = leaf('Scroll/Child', { customMinimumSize: minSize });
+    return scrollContainerScrollBars(scrollContainer(props, [child]), ctx(), RECT).hints;
+  }
+
+  it('shows the bottom-right vertical hint when the content overflows downward (scroll_container.cpp:633)', () => {
+    // v_scroll_below_max: 0 < 500 - 200 - 1. h stays within 300, so
+    // show_horizontal_hints is false and the vertical branch is not suppressed.
+    const out = hints({ scrollHintMode: 1 }, { x: 100, y: 500 });
+    expect(out.topLeft).toBeNull();
+    // Godot's own anchors: SIDE_RIGHT at ANCHOR_END + size.x (`:625`), so the
+    // rect is twice the container wide and the clip cuts the overhang.
+    expect(out.bottomRight).toEqual({
+      rect: { x: 0, y: 176, w: 600, h: 24 },
+      vertical: true,
+      flipH: false,
+      flipV: true,
+    });
+  });
+
+  it('shows the top-left vertical hint only once the authored offset passes 1 (scroll_container.cpp:623)', () => {
+    const out = hints({ scrollHintMode: 1, scrollVertical: 100 }, { x: 100, y: 500 });
+    expect(out.topLeft).toEqual({
+      rect: { x: 0, y: 0, w: 600, h: 24 },
+      vertical: true,
+      flipH: false,
+      flipV: false,
+    });
+  });
+
+  it('shows the bottom-right horizontal hint when only the width overflows (scroll_container.cpp:651)', () => {
+    const out = hints({ scrollHintMode: 1 }, { x: 900, y: 50 });
+    expect(out.topLeft).toBeNull();
+    expect(out.bottomRight).toEqual({
+      rect: { x: 276, y: 0, w: 24, h: 200 },
+      vertical: false,
+      flipH: true,
+      flipV: false,
+    });
+  });
+
+  it('draws no hint at all when both axes overflow (scroll_container.cpp:623,641)', () => {
+    const out = hints({ scrollHintMode: 1 }, { x: 900, y: 500 });
+    expect(out.topLeft).toBeNull();
+    expect(out.bottomRight).toBeNull();
+  });
+
+  it('SCROLL_HINT_MODE_TOP_AND_LEFT suppresses the bottom-right hint (scroll_container.cpp:633)', () => {
+    const out = hints({ scrollHintMode: 2 }, { x: 100, y: 500 });
+    expect(out.topLeft).toBeNull();
+    expect(out.bottomRight).toBeNull();
+  });
+
+  it('SCROLL_HINT_MODE_BOTTOM_AND_RIGHT keeps it (scroll_container.cpp:633)', () => {
+    expect(hints({ scrollHintMode: 3 }, { x: 100, y: 500 }).bottomRight).not.toBeNull();
+  });
+
+  it('draws nothing at the default SCROLL_HINT_MODE_DISABLED (scroll_container.h:91)', () => {
+    const out = hints({}, { x: 100, y: 500 });
+    expect(out.topLeft).toBeNull();
+    expect(out.bottomRight).toBeNull();
+  });
+
+  it('measures the overflow against the margin-reduced size, as _update_scroll_hints does (scroll_container.cpp:607-609)', () => {
+    // 200 - 8 = 192 of inner height against a 194-tall child: below max only
+    // once draw_focus_border has taken its four margins.
+    expect(hints({ scrollHintMode: 1 }, { x: 100, y: 194 }).bottomRight).toBeNull();
+    expect(
+      hints({ scrollHintMode: 1, drawFocusBorder: true }, { x: 100, y: 194 }).bottomRight
+    ).not.toBeNull();
+  });
+
+  it('swaps which end SCROLL_HINT_MODE_TOP_AND_LEFT names on the horizontal axis under RTL (scroll_container.cpp:641,651)', () => {
+    const child = leaf('Scroll/Child', { customMinimumSize: { x: 900, y: 50 } });
+    const n = { ...scrollContainer({ scrollHintMode: 2 }, [child]), rtl: true };
+    // TOP_AND_LEFT reads as "bottom and right" on an RTL horizontal axis, so
+    // the end the content continues past is hinted rather than the origin.
+    expect(scrollContainerScrollBars(n, ctx(), RECT).hints.bottomRight).not.toBeNull();
+  });
+});

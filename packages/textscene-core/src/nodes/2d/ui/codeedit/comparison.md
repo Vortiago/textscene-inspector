@@ -11,8 +11,8 @@ renders_as: a TextEdit with a line-number gutter
 
 CodeEdit is the source-code editor Control, a TextEdit with gutters, completion,
 indentation and folding. The previewer draws everything TextEdit's own painter draws,
-shifted right by this node's own gutter band, plus the line-numbers gutter — the one
-gutter of the three (main, line numbers, fold) whose content a `.tscn` can determine.
+shifted right by this node's own gutter band, plus the line-numbers gutter, the fold
+gutter's own arrows, and the `line_length_guidelines` rules.
 
 ## Linting
 
@@ -69,17 +69,15 @@ them changes this previewer's picture.
 
 ## Known limitations
 
-- **Not drawn** The main gutter (bookmark/breakpoint/executing-line icons) and the
-  fold gutter (fold arrows) both reserve their own column width but draw no
-  icons: every icon is keyed to per-line state (`set_line_as_bookmarked`,
-  `set_line_as_breakpoint`, `set_line_as_executing`, `can_fold_line`'s
-  delimiter/comment analysis) — all bound methods, never `ADD_PROPERTY`'d
-  (`code_edit.cpp:1419-1503`) — so a `.tscn` cannot serialise any of it. An
-  empty gutter of the right width is the whole truth of a scene file here.
-- **Not drawn** `_draw_guidelines`' RTL mirror (code_edit.cpp:295-312):
-  `line_length_guidelines` are not drawn at all. The line-number gutter's two RTL
-  shifts — the CUSTOM region mirroring about the control (text_edit.cpp:1471-1476)
-  and the number right-aligning inside it (code_edit.cpp:1583-1587) — draw.
+- **Not drawn** The main gutter (bookmark/breakpoint/executing-line icons) reserves
+  its own column width but draws no icons: each is keyed to per-line state
+  (`set_line_as_bookmarked`, `set_line_as_breakpoint`, `set_line_as_executing`) —
+  all bound methods, never `ADD_PROPERTY`'d (`code_edit.cpp:1419-1503`) — so a
+  `.tscn` cannot serialise any of it. An empty gutter of the right width is the
+  whole truth of a scene file here.
+- **Not drawn** The fold gutter's `folded`/`folded_code_region` icons: nothing in
+  a `.tscn` folds a line, so only the `can_fold`/`can_fold_code_region` pair is
+  ever reachable (`code_edit.cpp:1619-1650`).
 - **Not drawn** The completion popup's RTL arms (code_edit.cpp:75,236) and the
   fold-icon hit test's (:426,451,471): a popup needs `code_completion_active`, the
   hit test pointer state.

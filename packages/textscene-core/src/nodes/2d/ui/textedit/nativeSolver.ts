@@ -54,7 +54,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { Color } from '../../../../utils/colorParser';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import type { ControlColor } from '../control/types';
@@ -142,6 +142,10 @@ export interface TextEditLineLayout {
  * in one line never affects another's. `wrapMode === LINE_WRAPPING_BOUNDARY`
  * (1) is the only case that wraps at all (`_update_wrap_at_column`,
  * `text_edit.cpp:8536-8586`); NONE (0, the default) always shapes OFF.
+ *
+ * `indentWrappedLines` adds `BREAK_TRIM_INDENT` (`:285-287`), which narrows
+ * every row past the line's own leading whitespace. The matching DRAW-side
+ * step-in is {@link textEditWrapIndentPx}.
  */
 export function shapeTextEditLines(
   lines: readonly string[],
@@ -151,7 +155,8 @@ export function shapeTextEditLines(
   wrapWidthPx: number,
   fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'],
   tabStopsPx: number[] = [],
-  preserveControl = false
+  preserveControl = false,
+  indentWrappedLines = false
 ): TextEditLineLayout[] {
   const mode =
     wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
@@ -165,6 +170,9 @@ export function shapeTextEditLines(
       fontMetrics,
       tabStopsPx,
       preserveControl,
+      // `Text::_shape_line` sets `BREAK_TRIM_INDENT` from the same flag
+      // (`text_edit.cpp:285-287`).
+      trimIndent: indentWrappedLines,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -378,15 +386,133 @@ export function layoutTextEditDrawBand(
 }
 
 /**
- * One drawn row's own left edge — `char_margin` (`text_edit.cpp:1490-1494`).
- * LTR keeps the band's start; RTL mirrors it about the control and steps back
- * by the ROW's own shaped width, so a row is placed by its own extent rather
- * than by one band value. `wrap_indent` is 0 here: `indent_wrapped_lines` is
- * not modelled (`comparison.md`).
+ * One drawn row's own BAND top — `ofs_y` before the text is centred in it
+ * (`text_edit.cpp:1376-1378`):
+ *
+ *     ofs_y = style->get_margin(SIDE_TOP) + i * row_height + line_spacing / 2
+ *
+ * The scroll terms at `:1379-1380` are 0 here (`scroll_vertical` is inert —
+ * this module's own doc). This is the top of the band the per-line background
+ * and `highlight_current_line` fill, not of the text inside it.
  */
-export function textEditRowOriginXPx(xMarginBeginPx: number, rectWidthPx: number, rowWidthPx: number, rtl: boolean): number {
-  if (!rtl) return xMarginBeginPx;
-  return rectWidthPx - xMarginBeginPx - shapedTextSizeWidthPx(rowWidthPx);
+export function textEditRowBandTopPx(
+  row: number,
+  rowHeightPx: number,
+  styleMarginTopPx: number,
+  lineSpacingPx: number
+): number {
+  return styleMarginTopPx + row * rowHeightPx + lineSpacingPx / 2;
+}
+
+/**
+ * The row's TEXT top, inside the band — `ofs_y += (row_height - text_height) / 2`
+ * (`text_edit.cpp:1626`). The glyph baseline is one ascent below this, which is
+ * where `<TextRun>` anchors a line it is handed by its top edge.
+ */
+export function textEditRowTextTopPx(
+  bandTopPx: number,
+  rowHeightPx: number,
+  textHeightPx: number
+): number {
+  return bandTopPx + (rowHeightPx - textHeightPx) / 2;
+}
+
+/**
+ * The caret rect a STILL frame draws, or `null` for the frames that draw none
+ * — `text_edit.cpp:926-927,945-947,1858-1877`.
+ *
+ * `NOTIFICATION_DRAW` clears `draw_caret` for an unfocused node (`:926-927`),
+ * which is every frame this previewer renders, and then overwrites it from
+ * `is_drawing_caret_when_editable_disabled()` when `editable` is false
+ * (`:945-947`) — the one path that puts a caret in an unfocused frame. Both
+ * conditions come from the scene file, so both are reachable here.
+ *
+ * Geometry is the "normal caret" arm (`:1858-1877`), at caret 0's resting
+ * line 0 / column 0: `l_caret.position.x` is 0 there, so the bar sits on
+ * `xmargin_beg`, `caret_width` wide, spanning the row's own text box
+ * (`_shaped_text_get_carets` reports `-ascent` with height ascent+descent).
+ * `caret_type`/`overtype_mode` never reach their own arms — the first is
+ * validator-only for want of a focused frame and the second is runtime state.
+ */
+export function textEditCaretRect(
+  editable: boolean,
+  drawWhenEditableDisabled: boolean,
+  xMarginBeginPx: number,
+  bandTopPx: number,
+  rowHeightPx: number,
+  textHeightPx: number,
+  caretWidthPx: number
+): Rect2 | null {
+  if (editable || !drawWhenEditableDisabled) return null;
+  return {
+    x: xMarginBeginPx,
+    y: textEditRowTextTopPx(bandTopPx, rowHeightPx, textHeightPx),
+    w: caretWidthPx,
+    h: textHeightPx,
+  };
+}
+
+/**
+ * `Text::get_indent_offset` (`text_edit.cpp:190-217`), capped the way its one
+ * caller caps it (`:1363`, `MIN(..., wrap_at_column * 0.6)`).
+ *
+ * The leading run of tabs and spaces, measured at its OWN shaped advances —
+ * a tab is whatever `textEditTabStopsPx` made it, not `tab_size` characters.
+ * Counted over `line_length - 1` (`:196`), so a line that is nothing but
+ * whitespace never counts its last character.
+ *
+ * `row0` is the buffer line's FIRST row, which is where the run lives: the
+ * `BREAK_TRIM_INDENT` break gate (`text_server.cpp:1169`) refuses a soft
+ * break inside it.
+ */
+export function textEditWrapIndentPx(
+  row0: TextLineLayout,
+  lineText: string,
+  wrapWidthPx: number
+): number {
+  let indentPx = 0;
+  const countable = Math.min(lineText.length - 1, row0.glyphs.length);
+  for (let i = 0; i < countable; i++) {
+    const ch = lineText[i]!;
+    if (ch !== '\t' && ch !== ' ') break;
+    indentPx += row0.glyphs[i]!.advance;
+  }
+  return Math.min(indentPx, wrapWidthPx * 0.6);
+}
+
+/**
+ * `_get_wrapped_indent_level`'s `r_first_wrap` out-parameter
+ * (`text_edit.cpp:4107-4131`): how many wrap ranges the leading whitespace run
+ * spans. A row at or before it draws flush; a row past it steps in by
+ * {@link textEditWrapIndentPx} (`:1488`).
+ */
+export function textEditFirstIndentRow(lineText: string, rowStartIndices: readonly number[]): number {
+  let firstWrap = 0;
+  const countable = lineText.length - 1;
+  for (let i = 0; i < countable; i++) {
+    if (firstWrap + 1 < rowStartIndices.length && i >= rowStartIndices[firstWrap + 1]!) firstWrap++;
+    const ch = lineText[i]!;
+    if (ch !== '\t' && ch !== ' ') break;
+  }
+  return firstWrap;
+}
+
+/**
+ * One drawn row's own left edge — `char_margin` (`text_edit.cpp:1490-1494`).
+ * LTR keeps the band's start plus this row's `wrap_indent`; RTL mirrors the
+ * band start about the control and steps back by the ROW's own shaped width
+ * AND that same indent, so a row is placed by its own extent rather than by
+ * one band value.
+ */
+export function textEditRowOriginXPx(
+  xMarginBeginPx: number,
+  rectWidthPx: number,
+  rowWidthPx: number,
+  rtl: boolean,
+  wrapIndentPx = 0
+): number {
+  if (!rtl) return xMarginBeginPx + wrapIndentPx;
+  return rectWidthPx - xMarginBeginPx - shapedTextSizeWidthPx(rowWidthPx) - wrapIndentPx;
 }
 
 /**

@@ -1,0 +1,58 @@
+; The ONE variable: `scroll_hint_mode` on a ScrollContainer.
+;
+; `_update_scroll_hints` (`scroll_container.cpp:606-658`) drives `set_visible()`
+; on two TextureRects that fade the edge the content continues past. At the
+; default scroll offset only the BOTTOM-RIGHT one can show — the top-left needs
+; `v_scroll_value > 1` (`:623`) — and only while the OTHER axis does not also
+; overflow, since each branch is gated on the other's `show_*_hints` being
+; false (`:623,633,641,651`).
+;
+; `Vertical` therefore overflows on its height alone (a 200x420 child in a
+; 240x200 box) and `Horizontal` on its width alone (a 500x160 child), so the two exercise the
+; two different icons: `scroll_hint_vertical.svg` stretched across the bottom
+; 24px band, and `scroll_hint_horizontal.svg` down the trailing 24px column,
+; each flipped so the fade is densest against its own edge (`:630,647`). Both
+; are at `scroll_hint_mode = 1` (ALL); the two directional modes select a
+; subset of the same pair and add no icon of their own.
+;
+; Every other ScrollContainer fixture leaves the mode at DISABLED, which draws
+; neither node, so a regression in the fade is invisible in all of them.
+
+[gd_scene format=3 uid="uid://unit_scroll_container_scroll_hint"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.95, 0.95, 0.92, 1)
+
+[node name="Vertical" type="ScrollContainer" parent="."]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 264.0
+offset_bottom = 224.0
+scroll_hint_mode = 1
+
+[node name="Tall" type="ColorRect" parent="Vertical"]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 420)
+color = Color(0.98, 0.92, 0.72, 1)
+
+[node name="Horizontal" type="ScrollContainer" parent="."]
+layout_mode = 1
+offset_left = 300.0
+offset_top = 24.0
+offset_right = 540.0
+offset_bottom = 224.0
+scroll_hint_mode = 1
+
+[node name="Wide" type="ColorRect" parent="Horizontal"]
+layout_mode = 2
+custom_minimum_size = Vector2(500, 160)
+color = Color(0.98, 0.92, 0.72, 1)

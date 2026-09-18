@@ -194,18 +194,18 @@ describe('computeSplitDraggerPosition — CLAMP against synthetic custom_minimum
 
 describe('resortSplitContainer', () => {
   it('returns an empty array for zero children', () => {
-    expect(resortSplitContainer(false, { width: 400, height: 60 }, 12, 0, false, [])).toEqual([]);
+    expect(resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [])).toEqual([]);
   });
 
   it('a lone child fits the WHOLE container rect, both axes', () => {
-    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, 0, false, [
+    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [
       child({ minSize: { x: 10, y: 10 } }),
     ]);
     expect(rects).toEqual<Rect2[]>([{ x: 0, y: 0, w: 400, h: 60 }]);
   });
 
   it('HSplitContainer "Both" row: two FILL|EXPAND children, 400x60, sep 12', () => {
-    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, 0, false, [
+    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [
       child({ hSizeFlags: EXPAND_FILL }),
       child({ hSizeFlags: EXPAND_FILL }),
     ]);
@@ -216,7 +216,7 @@ describe('resortSplitContainer', () => {
   });
 
   it('VSplitContainer "Both" column: two FILL|EXPAND children on the vertical axis, 120x300, sep 12', () => {
-    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, 0, false, [
+    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, [0], false, [
       child({ vSizeFlags: EXPAND_FILL }),
       child({ vSizeFlags: EXPAND_FILL }),
     ]);
@@ -227,7 +227,7 @@ describe('resortSplitContainer', () => {
   });
 
   it('reading the wrong axis is a real bug the vertical fixture exists to catch: horizontal flags on a VSplitContainer take the "neither" branch', () => {
-    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, 0, false, [
+    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, [0], false, [
       child({ hSizeFlags: EXPAND_FILL }), // claims nothing — VSplit reads vSizeFlags
       child({ hSizeFlags: EXPAND_FILL }),
     ]);
@@ -414,7 +414,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     // ContainerLayoutFn actually computed (ITEM A: a painter can read this
     // back instead of recomputing it from a narrower subset of the inputs)
     // — exactly where RatioLeft's rect ends, 294.
-    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: 294 });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPositions: [294] });
   });
 
   it('widens on a themed "grabber" wider than the vendored default (_get_separation: MAX(theme separation, grabber width))', () => {
@@ -440,7 +440,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     expect(ctx.combinedMinimumSize(root)).toEqual({ x: 140, y: 20 });
   });
 
-  it('the sealed boundary reports no draggerPos with fewer than two sortable children', () => {
+  it('the sealed boundary reports no dragger position with fewer than two sortable children', () => {
     controlSolverRegistry.registerContainerLayout('HSplitContainer', makeSplitContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HSplitContainer', makeSplitContainerMinimumSize(false));
 
@@ -454,10 +454,10 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
 
-    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: undefined });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPositions: [] });
   });
 
-  it('skips a hidden child and a third child alike, mirroring the DOM path\'s two-sortable-child cap', () => {
+  it('skips a hidden child and places every remaining one (split_container.cpp:966-968)', () => {
     controlSolverRegistry.registerContainerLayout('HSplitContainer', makeSplitContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HSplitContainer', makeSplitContainerMinimumSize(false));
 
@@ -477,13 +477,14 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
 
-    // A and B are the first two SORTABLE children (Hidden is skipped); with
-    // neither expanding, A gets the "neither" rest position (0, floored to
-    // its own zero minimum) and B gets the rest.
+    // A, B and C are the three SORTABLE children (Hidden is skipped). With
+    // nothing expanding, `expands_seen` never leaves 0, so both default
+    // dragger positions are 0 (`split_container.cpp:609-610`) and each is
+    // clamped up to its own low bound — 0 and one separation. The last child
+    // takes the whole remainder.
     expect(solved.get('Split/A')?.rect).toEqual({ x: 0, y: 0, w: 0, h: 60 });
-    expect(solved.get('Split/B')?.rect).toEqual({ x: 12, y: 0, w: 388, h: 60 });
-    // C never got a rect from the container at all — floored to zero by controlRectSolver.
-    expect(solved.get('Split/C')?.rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+    expect(solved.get('Split/B')?.rect).toEqual({ x: 12, y: 0, w: 0, h: 60 });
+    expect(solved.get('Split/C')?.rect).toEqual({ x: 24, y: 0, w: 376, h: 60 });
   });
 
   it('reads the actual committed unit-split-container.tscn fixture end-to-end ("Both" row)', () => {
@@ -649,7 +650,7 @@ describe('resortSplitContainer under RTL', () => {
       false,
       { width: 400, height: 60 },
       12,
-      60,
+      [60],
       false,
       [child({ hSizeFlags: EXPAND_FILL }), child({ hSizeFlags: EXPAND_FILL })],
       true
@@ -665,7 +666,7 @@ describe('resortSplitContainer under RTL', () => {
       false,
       { width: 400, height: 60 },
       12,
-      0,
+      [0],
       false,
       [child({ minSize: { x: 40, y: 10 }, hSizeFlags: 0, vSizeFlags: 0 })],
       true
@@ -679,7 +680,7 @@ describe('resortSplitContainer under RTL', () => {
       true,
       { width: 120, height: 300 },
       12,
-      0,
+      [0],
       false,
       [child({ vSizeFlags: EXPAND_FILL }), child({ vSizeFlags: EXPAND_FILL })],
       true
@@ -726,6 +727,111 @@ describe('makeSplitContainerLayout under RTL — registered end-to-end', () => {
     expect(solved.get('Split/RatioLeft')?.rect).toEqual({ x: 106, y: 0, w: 294, h: 60 });
     expect(solved.get('Split/RatioRight')?.rect).toEqual({ x: 0, y: 0, w: 94, h: 60 });
     // The grabber band sits at the INVERTED position, 400 - 294 - 12.
-    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPos: 94 });
+    expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPositions: [94] });
+  });
+});
+
+/**
+ * N children and the `split_offsets` array
+ * (`split_container.cpp:517-618,621-707,710-756`).
+ *
+ * Every number below is hand-walked from those three functions for the stated
+ * inputs; none is read back from this module. The working scenario is three
+ * children, all `SIZE_EXPAND` at ratio 1, minimum 20 on the split axis, in a
+ * 300px box at the default separation 12:
+ *
+ *   stretchable_space = 300 - 12*2 = 276, stretch_total = 3, so each child's
+ *   `desired_stretch_size` is 92 exactly (`:583`), and the default dragger
+ *   positions are the running sum 92 and 92+12+92 = 196 (`:605-617`, the
+ *   middle branch, since `expands_seen` is neither 0 nor the full count).
+ *
+ *   `_get_valid_range(0)` = (20, 300 - 24 - 20 - 20) = (20, 236);
+ *   `_get_valid_range(1)` = (12 + 20 + 20, 300 - 12 - 20) = (52, 268)
+ *   (`:318-337`).
+ */
+describe('split_offsets — three children (split_container.cpp:517-618,621-707)', () => {
+  const EXPANDING = child({ minSize: { x: 20, y: 20 }, hSizeFlags: EXPAND_FILL });
+  const THREE = [EXPANDING, EXPANDING, EXPANDING];
+
+  function rects(offsets: readonly number[], children = THREE, collapsed = false, rtl = false) {
+    return resortSplitContainer(false, { width: 300, height: 40 }, 12, offsets, collapsed, children, rtl);
+  }
+
+  it('splits evenly at the default offsets', () => {
+    expect(rects([0, 0])).toEqual([
+      { x: 0, y: 0, w: 92, h: 40 },
+      { x: 104, y: 0, w: 92, h: 40 },
+      { x: 208, y: 0, w: 92, h: 40 },
+    ]);
+  });
+
+  it('moves each dragger by its OWN entry (split_container.cpp:654-655)', () => {
+    // CLAMP(92 - 30, 20, 236) = 62 and CLAMP(196 + 20, 52, 268) = 216.
+    expect(rects([-30, 20])).toEqual([
+      { x: 0, y: 0, w: 62, h: 40 },
+      { x: 74, y: 0, w: 142, h: 40 },
+      { x: 228, y: 0, w: 72, h: 40 },
+    ]);
+  });
+
+  it('zero-fills an array shorter than the dragger count (split_container.cpp:632-634)', () => {
+    // `resize_initialized` grows in place, so entry 0 survives and entry 1 is 0.
+    expect(rects([-30])).toEqual([
+      { x: 0, y: 0, w: 62, h: 40 },
+      { x: 74, y: 0, w: 122, h: 40 },
+      { x: 208, y: 0, w: 92, h: 40 },
+    ]);
+  });
+
+  it('ignores entries past the dragger count', () => {
+    expect(rects([-30, 20, 500, -500])).toEqual(rects([-30, 20]));
+  });
+
+  it('pushes an overlapping dragger right by the child between them (split_container.cpp:660-670)', () => {
+    // CLAMP(92+100) = 192 and CLAMP(196-100) = 96; 96 < 192 + 12 + 20 = 224,
+    // so the second dragger is pushed to 224 and the middle child is left at
+    // exactly its own minimum.
+    expect(rects([100, -100])).toEqual([
+      { x: 0, y: 0, w: 192, h: 40 },
+      { x: 204, y: 0, w: 20, h: 40 },
+      { x: 236, y: 0, w: 64, h: 40 },
+    ]);
+  });
+
+  it('ignores every offset while collapsed (split_container.cpp:636-647)', () => {
+    expect(rects([-30, 20], THREE, true)).toEqual(rects([0, 0]));
+  });
+
+  it('places a NON-expanding trio at its minimums, every dragger clamped up (split_container.cpp:609-610)', () => {
+    // No expand flag anywhere: `expands_seen` stays 0, so both defaults are 0
+    // and each is clamped up to the accumulated minimum + separation.
+    const fixed = (m: number) => child({ minSize: { x: m, y: m } });
+    expect(rects([0, 0], [fixed(40), fixed(50), fixed(60)])).toEqual([
+      { x: 0, y: 0, w: 40, h: 40 },
+      { x: 52, y: 0, w: 50, h: 40 },
+      { x: 114, y: 0, w: 186, h: 40 },
+    ]);
+  });
+
+  it('mirrors every dragger under a horizontal RTL (split_container.cpp:701-707,741-748)', () => {
+    // Each position inverts to `size - pos - sep`: 62 -> 226 and 216 -> 72,
+    // and `_resort`'s RTL arm reads the children back from the opposite end.
+    expect(rects([-30, 20], THREE, false, true)).toEqual([
+      { x: 238, y: 0, w: 62, h: 40 },
+      { x: 84, y: 0, w: 142, h: 40 },
+      { x: 0, y: 0, w: 72, h: 40 },
+    ]);
+  });
+});
+
+describe('splitContainerMinimumSize — one separation per dragger (split_container.cpp:827-829)', () => {
+  it('adds sep * (children - 1), not a single separation', () => {
+    expect(
+      splitContainerMinimumSize(false, 12, [
+        { x: 20, y: 5 },
+        { x: 30, y: 9 },
+        { x: 40, y: 7 },
+      ])
+    ).toEqual({ x: 20 + 30 + 40 + 24, y: 9 });
   });
 });

@@ -41,6 +41,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
+  AutowrapMode,
+  clampAutowrapMode,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
@@ -53,6 +55,8 @@ import {
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
+  buttonTextAlignShiftPx,
+  swapAlignmentSide,
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
@@ -83,7 +87,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
-  const layout: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
+  // Pass 1, unwrapped: what the icon's own reservation is measured against.
+  const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
   // --- Icon: resolve + load the referenced texture -------------------------
   // The node's OWN scope, not the ambient provider's: a Button that arrived
@@ -113,9 +118,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
   // --- Content layout: icon + text placement within the solved rect -------
-  const content = useMemo(
-    () =>
-      layoutButtonContent({
+  const contentInput = useMemo(
+    () => ({
         rectSize: { x: rect.w, y: rect.h },
         styleMargin: baseStyleBox.contentMargin,
         hSeparation: solveNode.constants.h_separation ?? theme.separation,
@@ -133,9 +137,6 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
         // Only the width needs it: `Size2::ceil()` ceils both components, but
         // the line pitch is already a sum of independently-ceiled ascent and
         // descent plus an integral theme spacing, so the height is integral.
-        textNaturalSize: layout
-          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-          : { x: 0, y: 0 },
       }),
     [
       rect.w,
@@ -148,10 +149,35 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
       props.expandIcon,
       iconNaturalSize,
       hasText,
-      layout,
       theme.separation,
       solveNode.rtl,
     ]
+  );
+
+  /** `textNaturalSize` as `layoutButtonContent` wants it — the CEILED shaped width Godot's own draw path reads (`button.cpp:343,349`). */
+  const naturalSize = (l: TextLayoutResult | null): Vec2 =>
+    l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
+
+  // `button.cpp:428-432`: a wrapping label is re-shaped at
+  // `Math::ceil(MAX(1.0f, drawable_size_remained.width))` — the box the
+  // unwrapped pass just measured, since `is_clipped` is true whenever autowrap
+  // is on (`:332`) and the icon's reservation therefore does not move with the
+  // text. Godot reaches the same state over two frames.
+  // `button.cpp:262-276` — the same RTL side swap `layoutButtonContent` makes internally.
+  const textAlignment = solveNode.rtl
+    ? swapAlignmentSide(props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER)
+    : (props.alignment ?? HORIZONTAL_ALIGNMENT_CENTER);
+  const wraps = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF) !== AutowrapMode.OFF;
+  const drawableWidthPx = layoutButtonContent({
+    ...contentInput,
+    textNaturalSize: naturalSize(unwrapped),
+  }).drawableSize.x;
+  const layout: TextLayoutResult | null = wraps
+    ? buttonLabelShape(solveNode, theme, Math.ceil(Math.max(1, drawableWidthPx)))
+    : unwrapped;
+  const content = useMemo(
+    () => layoutButtonContent({ ...contentInput, textNaturalSize: naturalSize(layout) }),
+    [contentInput, layout]
   );
 
   // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`
@@ -163,7 +189,9 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
     [props.overrunBehavior]
   );
   const trimmedLayout: TextLayoutResult | null = useMemo(() => {
-    if (!layout || !overrunFlags.trim) return layout;
+    // A wrapped buffer is trimmed per ROW by the TextServer; this single-line
+    // trim would collapse it to its first row, so it stands down there.
+    if (!layout || !overrunFlags.trim || layout.lines.length > 1) return layout;
     const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
     const iconReserve =
       content.icon && (props.iconAlignment ?? HORIZONTAL_ALIGNMENT_LEFT) !== HORIZONTAL_ALIGNMENT_CENTER
@@ -189,17 +217,37 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
           />
         </CanvasItemGroup>
       )}
-      {content.text && trimmedLayout && (
-        <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
-          <TextRun
-            layout={trimmedLayout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
+      {content.text !== null &&
+        trimmedLayout &&
+        trimmedLayout.lines.map((line, i) => (
+          // `TextParagraph::draw` aligns EVERY line inside the paragraph width
+          // on its own (`text_paragraph.cpp:887-922`), so a wrapped label's
+          // shorter rows re-centre rather than hanging off the widest one.
+          // `content.text.offset.x` already carries the widest row's shift, so
+          // it is backed out and each row's own put in its place.
+          <CanvasItemGroup
+            key={i}
+            position={[
+              content.text!.offset.x -
+                buttonTextAlignShiftPx(naturalSize(trimmedLayout).x, content.drawableSize.x, textAlignment) +
+                buttonTextAlignShiftPx(
+                  shapedTextSizeWidthPx(line.widthPx),
+                  content.drawableSize.x,
+                  textAlignment
+                ),
+              -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
+              0,
+            ]}
+          >
+            <TextRun
+              layout={soloLineLayout(line, trimmedLayout)}
+              fontSizePx={fontSizePx}
+              tint={tintedFontColor}
+              clippingPlanes={clippingPlanes}
+              renderOrder={renderOrder}
+            />
+          </CanvasItemGroup>
+        ))}
     </>
   );
 }

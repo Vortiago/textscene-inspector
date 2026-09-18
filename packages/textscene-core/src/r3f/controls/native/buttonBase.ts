@@ -106,20 +106,31 @@ export function fitIconSize(size: Vec2, maxWidth: number): Vec2 {
  * `line_spacing` on its `text_buf` (`button.cpp`, `check_box.cpp`,
  * `option_button.cpp` — none touches the key at all), and a widget whose
  * painter and solver disagree about it comes out with its label centred 3px
- * off rather than failing outright. `boxWidthPx: 0` + `AUTOWRAP_OFF` because
- * a Button never wraps.
+ * off rather than failing outright.
+ *
+ * `autowrapMode` and `boxWidthPx` are Button's own `autowrap_mode` and the
+ * width `Button::_notification` shapes at (`button.cpp:428-432`,
+ * `Math::ceil(MAX(1.0f, drawable_size_remained.width))`). `autowrapTrimFlags`
+ * is `autowrap_flags_trim`, ORed onto the mode's break flags at `:560`; left
+ * `undefined` it keeps the class default, both edge-space trims. Every
+ * caller that does not wrap — CheckBox, OptionButton, and a Button at
+ * `AUTOWRAP_OFF` — leaves the last three arguments alone.
  */
 export function shapeButtonLabel(
   text: string,
   fontSizePx: number,
-  fontMetrics: FontMetrics
+  fontMetrics: FontMetrics,
+  boxWidthPx = 0,
+  autowrapMode: AutowrapMode = AutowrapMode.OFF,
+  autowrapTrimFlags?: number
 ): TextLayoutResult {
   return shapeText(text, {
     fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    boxWidthPx,
+    autowrapMode,
     lineSpacingPx: 0,
     fontMetrics,
+    autowrapTrimFlags,
   });
 }
 
@@ -191,6 +202,8 @@ export interface ButtonTextLayout {
 export interface ButtonContentLayout {
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
+  /** `drawable_size_remained` (`button.cpp:332-352,428`) — the box left for the label after the stylebox margins and the icon's own reservation. A wrapping label is re-shaped at `Math::ceil(MAX(1, drawableSize.x))`. */
+  drawableSize: Vec2;
 }
 
 const H_CENTER = HORIZONTAL_ALIGNMENT_CENTER;
@@ -342,7 +355,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     textLayout = { offset: { x: textOffsetX, y: textOffsetY } };
   }
 
-  return { icon: iconLayout, text: textLayout };
+  return { icon: iconLayout, text: textLayout, drawableSize: { x: drawableWidth, y: drawableHeight } };
 }
 
 /** `button.cpp:266-275` — LEFT and RIGHT trade places under RTL; CENTER (and any other value) is left alone. */

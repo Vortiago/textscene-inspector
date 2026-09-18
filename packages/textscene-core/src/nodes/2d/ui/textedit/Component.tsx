@@ -6,12 +6,12 @@
  * `_notification(NOTIFICATION_DRAW)` (`text_edit.cpp:904-1942`) with every
  * interaction-only element removed:
  *
- * - NO CARET. `draw_caret` is gated on focus (`:926`) or on
- *   `caret_draw_when_editable_disabled` while `!editable` (`:945-947`, which
- *   can re-enable it independently of focus) — LineEdit's own painter draws
- *   no caret at all regardless of `caret_force_displayed`, and this stays
- *   consistent with that choice rather than special-casing the one property
- *   combination that would draw one here.
+ * - THE CARET, in the ONE frame that has one. `draw_caret` is cleared for an
+ *   unfocused node (`:926-927`) and then overwritten from
+ *   `caret_draw_when_editable_disabled` while `!editable` (`:945-947`), which
+ *   is the only path that puts a caret in a frame with no focus —
+ *   `nativeSolver.ts`'s `textEditCaretRect`. Caret 0 rests at line 0, column
+ *   0, which a `.tscn` cannot move (that module's own SCROLL IS INERT doc).
  * - NO SELECTION, brace-match underline, word-highlight, search-result box,
  *   IME composition, or minimap: every one of those needs interaction state
  *   (a selection range, a hovered search, a focused IME session) a static
@@ -53,7 +53,7 @@
  * This component never checks `props.visible`, never renders `children`, and
  * never applies a transform — all three are `ControlCanvasWalker`'s job.
  */
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -70,6 +70,11 @@ import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
 import { resolveLineColors, type CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import {
+  textEditCaretRect,
+  textEditWrapIndentPx,
+  textEditFirstIndentRow,
+  textEditRowBandTopPx,
+  textEditRowTextTopPx,
   pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
@@ -95,7 +100,28 @@ const GLYPH_ICON_SIZE_PX = 8;
 /** `default_theme.cpp:472` (TextEdit) / `:518` (CodeEdit) — the identical literal for both. */
 const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
 
+/** The stand-in row a buffer line with no shaped rows at all would have — an empty line measures no indent. */
+const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0 };
+
+/** `default_theme.cpp:481` (TextEdit) / `:527` (CodeEdit) — `caret_width`, the identical literal for both. Unscaled, like every other constant this slice reads. */
+const CARET_WIDTH_PX = 1;
+
+/**
+ * `caret_color` — `control_font_color` for both types (`default_theme.cpp:473`,
+ * `:526`). NOT the state-dependent font colour: a read-only TextEdit paints its
+ * text at `font_readonly_color` and its caret at this, unchanged.
+ */
+const CARET_COLOR = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+
 export interface TextEditBodyProps extends NativeControlComponentProps {
+  /**
+   * Drawn between the panel StyleBox and the row loop — `_draw_guidelines`'s
+   * own slot (`text_edit.cpp:1319-1322`), which is a `virtual` the base leaves
+   * empty and only `CodeEdit` overrides. Passed in rather than rendered by the
+   * caller around this component, because the order between the panel, this,
+   * the current-line band and the text is the whole point.
+   */
+  underlay?: ReactNode;
   /**
    * `gutters_width + gutter_padding` COMBINED — `CodeEdit`'s own gutters;
    * always `0` for a bare `TextEdit` (its own gutter mechanism is never
@@ -115,6 +141,7 @@ export function TextEditBody({
   theme,
   gutterBandWidthPx = 0,
   tabSize,
+  underlay,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
   const state = resolveTextEditStyleState(props.editable);
@@ -158,9 +185,20 @@ export function TextEditBody({
         wrapWidthPx,
         fontMetrics,
         tabStopsPx,
-        props.drawControlChars
+        props.drawControlChars,
+        props.indentWrappedLines
       ),
-    [lines, fontSizePx, props.wrapMode, props.autowrapMode, wrapWidthPx, fontMetrics, tabStopsPx, props.drawControlChars]
+    [
+      lines,
+      fontSizePx,
+      props.wrapMode,
+      props.autowrapMode,
+      wrapWidthPx,
+      fontMetrics,
+      tabStopsPx,
+      props.drawControlChars,
+      props.indentWrappedLines,
+    ]
   );
 
   // `syntax_highlighter` resolves in THIS node's own scope, never
@@ -194,6 +232,23 @@ export function TextEditBody({
   }, [highlighter, lines, baseFontColor]);
 
   const tintedCurrentLineColor = useMemo(() => multiplyModulate(tint.own, CURRENT_LINE_COLOR), [tint.own]);
+  const caretColor = solveNode.colors.caret_color ?? CARET_COLOR;
+  const tintedCaretColor = useMemo(() => multiplyModulate(tint.own, caretColor), [tint.own, caretColor]);
+
+  // `text_edit.cpp:1376-1378,1626` — every row starts below the stylebox's own
+  // top margin, and its text sits centred in the band that follows.
+  const textHeightPx = rowHeightPx - lineSpacingPx;
+  const rowBandTopPx = (row: number) =>
+    textEditRowBandTopPx(row, rowHeightPx, styleBox.contentMargin.top, lineSpacingPx);
+  const caretRect = textEditCaretRect(
+    props.editable !== false,
+    props.caretDrawWhenEditableDisabled === true,
+    band.xMarginBeginPx,
+    rowBandTopPx(0),
+    rowHeightPx,
+    textHeightPx,
+    CARET_WIDTH_PX
+  );
 
   // LOCAL, not `rect`: `useWorldClipPlanes` composes its argument with the
   // anchor's own world matrix, so feeding it a rect that already carries the
@@ -207,8 +262,11 @@ export function TextEditBody({
   return (
     <CanvasItemGroup ref={anchorRef}>
       <StyleBoxQuad styleBox={styleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {underlay}
       {props.highlightCurrentLine && (
-        <CanvasItemGroup position={[textEditCurrentLineXPx(band.xMarginEndPx, rect.w, solveNode.rtl), 0, 0]}>
+        <CanvasItemGroup
+          position={[textEditCurrentLineXPx(band.xMarginEndPx, rect.w, solveNode.rtl), -rowBandTopPx(0), 0]}
+        >
           <ControlQuad
             width={band.xMarginEndPx}
             height={rowHeightPx}
@@ -218,18 +276,49 @@ export function TextEditBody({
           />
         </CanvasItemGroup>
       )}
+      {caretRect && (
+        <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>
+          <ControlQuad
+            width={caretRect.w}
+            height={caretRect.h}
+            color={godotColorToLinear(tintedCaretColor)}
+            opacity={tintedCaretColor.a}
+            renderOrder={renderOrder}
+          />
+        </CanvasItemGroup>
+      )}
       {lineLayouts.map(({ layout, startRow }, lineIndex) => {
+        const lineText = lines[lineIndex] ?? '';
         const spans = lineColorSpans?.[lineIndex];
-        const rowStartIndices = spans ? textEditRowStartIndices(lines[lineIndex] ?? '', layout.lines) : undefined;
+        // Needed for the wrap indent too now, not only for the highlighter's
+        // per-character spans, so it is computed whenever EITHER wants it.
+        const rowStartIndices =
+          spans || props.indentWrappedLines ? textEditRowStartIndices(lineText, layout.lines) : undefined;
+        const wrapIndentPx = props.indentWrappedLines
+          ? textEditWrapIndentPx(layout.lines[0] ?? EMPTY_ROW, lineText, wrapWidthPx)
+          : 0;
+        const firstIndentRow = props.indentWrappedLines
+          ? textEditFirstIndentRow(lineText, rowStartIndices ?? [0])
+          : 0;
         return layout.lines.map((line, rowInLine) => {
           const row = startRow + rowInLine;
-          const rowTopPx = row * rowHeightPx;
+          const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
           const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
           const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor);
           return (
             <CanvasItemGroup
               key={`${lineIndex}-${rowInLine}`}
-              position={[textEditRowOriginXPx(band.xMarginBeginPx, rect.w, line.widthPx, solveNode.rtl), -rowTopPx, 0]}
+              position={[
+                textEditRowOriginXPx(
+                  band.xMarginBeginPx,
+                  rect.w,
+                  line.widthPx,
+                  solveNode.rtl,
+                  rowInLine > firstIndentRow ? wrapIndentPx : 0
+                ),
+                -rowTopPx,
+                0,
+              ]}
             >
               {runs.map((run, runIndex) => (
                 <TextRun

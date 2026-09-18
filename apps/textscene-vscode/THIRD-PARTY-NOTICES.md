@@ -90,6 +90,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/lineedit/nativeSolver.ts` | `scene/gui/line_edit.cpp` (`LineEdit::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` content-rect/alignment/colour selection and its `right_icon`/clear-button inset and caret-fallback math, `LineEdit::_get_right_icon_size`) and `scene/theme/default_theme.cpp` (LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_placeholder_color`/`font_uneditable_color`/`caret_color`/`clear_button_color` theme defaults and the `caret_width` constant) |
 | `packages/textscene-core/src/nodes/2d/ui/textedit/nativeSolver.ts` | `scene/gui/text_edit.cpp` (`TextEdit::get_minimum_size`, `_update_scrollbars`'s `content_size_cache`, `_update_wrap_at_column`, `get_line_height`, `TextEdit::Text::get_line_height`, `adjust_viewport_to_caret`/`_adjust_viewport_to_caret_horizontally`'s own always-(0,0) trace, `_notification`'s `NOTIFICATION_DRAW` `left_margin`/`xmargin_beg`/`xmargin_end` row band, `TextEdit::Text::invalidate_cache`/`invalidate_all_lines`'s tab-align vector) and `scene/theme/default_theme.cpp` (TextEdit's reuse of LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_readonly_color`/`current_line_color`, the scaled `line_spacing` constant and the bare `wrap_offset`/content-size-pad literals) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/nativeSolver.ts` | `scene/gui/code_edit.cpp` (`CodeEdit::CodeEdit()`'s fixed gutter construction order and each gutter's own width setter, `_update_draw_main_gutter`, `_text_changed`'s line-number digit count, `_line_number_draw_callback`, `_update_line_number_gutter_width`, `set_line_numbers_zero_padded`) and `scene/theme/default_theme.cpp` (CodeEdit's reuse of TextEdit's/LineEdit's styleboxes and its own `line_number_color`) |
+| `packages/textscene-core/src/nodes/2d/ui/codeedit/delimiterRegions.ts` | `scene/gui/code_edit.cpp` (`_set_delimiters`, `_add_delimiter`, `_update_delimiter_cache`, `_is_in_delimiter`, `get_delimiter_start_position`, `get_delimiter_end_position`, `_update_code_region_tags`) |
+| `packages/textscene-core/src/nodes/2d/ui/codeedit/lineFolding.ts` | `scene/gui/code_edit.cpp` (`can_fold_line`, `is_line_code_region_start`, `is_line_code_region_end`) and `scene/gui/text_edit.cpp` (`get_indent_level`) |
 | `packages/textscene-core/src/resources/styles/codehighlighter/decode.ts` | `scene/resources/syntax_highlighter.cpp` (`CodeHighlighter`'s `ADD_PROPERTY` declarations and `add_color_region`'s key-validation/insertion-order rules) |
 | `packages/textscene-core/src/resources/styles/codehighlighter/highlight.ts` | `scene/resources/syntax_highlighter.cpp` (`CodeHighlighter::_get_line_syntax_highlighting_impl`) and `core/string/char_utils.h` (`is_symbol`/`is_digit`/`is_hex_digit`/`is_ascii_alphabet_char`) |
 | `packages/textscene-core/src/nodes/2d/ui/tree/nativeSolver.ts` | `scene/gui/tree.cpp` (`Tree::_get_content_rect`, `Tree::_get_title_button_height`, `Tree::get_column_width`, `Tree::get_column_minimum_width`, restricted to the always-empty-of-items case a `.tscn` Tree is) and `scene/theme/default_theme.cpp` (Tree's `panel` and `title_button_normal` styleboxes) |
@@ -189,12 +191,15 @@ Godot 4.6.3's `scene/theme/icons/`:
 | `scene/theme/icons/toggle_on_disabled_mirrored.svg` | `CheckButton` / `"checked_disabled_mirrored"` |
 | `scene/theme/icons/toggle_off_mirrored.svg` | `CheckButton` / `"unchecked_mirrored"` |
 | `scene/theme/icons/toggle_off_disabled_mirrored.svg` | `CheckButton` / `"unchecked_disabled_mirrored"` |
-| `scene/theme/icons/arrow_down.svg` | `FoldableContainer` / `"expanded_arrow"` |
+| `scene/theme/icons/arrow_down.svg` | `FoldableContainer` / `"expanded_arrow"`, `CodeEdit` / `"can_fold"` |
 | `scene/theme/icons/arrow_up.svg` | `FoldableContainer` / `"expanded_arrow_mirrored"` |
 | `scene/theme/icons/arrow_right.svg` | `FoldableContainer` / `"folded_arrow"` |
 | `scene/theme/icons/arrow_left.svg` | `FoldableContainer` / `"folded_arrow_mirrored"` |
+| `scene/theme/icons/region_unfolded.svg` | `CodeEdit` / `"can_fold_code_region"` |
 | `scene/theme/icons/text_edit_tab.svg` | `TextEdit` / `"tab"`, `CodeEdit` / `"tab"` |
 | `scene/theme/icons/text_edit_space.svg` | `TextEdit` / `"space"`, `CodeEdit` / `"space"` |
+| `scene/theme/icons/scroll_hint_vertical.svg` | `ScrollContainer` / `"scroll_hint_vertical"` |
+| `scene/theme/icons/scroll_hint_horizontal.svg` | `ScrollContainer` / `"scroll_hint_horizontal"` |
 | `scene/theme/icons/close.svg` | `TabBar` / `"close"` |
 | `scene/theme/icons/scroll_button_right.svg` | `TabBar` / `"increment"` |
 | `scene/theme/icons/scroll_button_left.svg` | `TabBar` / `"decrement"` |

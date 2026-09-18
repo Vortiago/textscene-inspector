@@ -10,6 +10,7 @@ import {
   FOLDABLE_CONTAINER_ICONS,
   TEXT_EDIT_GLYPH_ICONS,
   TAB_BAR_ICONS,
+  SCROLL_HINT_ICONS,
   TAB_BAR_ICON_SIZE,
   MINI_CHECKERBOARD_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
@@ -291,5 +292,25 @@ describe('GraphEdit/GraphEditMinimap icons', () => {
   it('all eight are pairwise distinct data: URLs', () => {
     const values = [...ids.map((id) => GRAPH_EDIT_ICONS[id]), GRAPH_EDIT_MINIMAP_RESIZER_ICON];
     expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe('SCROLL_HINT_ICONS', () => {
+  // scene/theme/default_theme.cpp:667-668 — ScrollContainer registers exactly
+  // these two icon keys, each 1:1 with `scene/theme/icons/<key>.svg`.
+  it('vertical is the 32x24 fade `_update_scroll_hints` reads get_height() off (scroll_container.cpp:627)', () => {
+    expect(svgSize(decodeSvg(SCROLL_HINT_ICONS.vertical))).toEqual({ width: 32, height: 24 });
+  });
+
+  it('horizontal is the 24x32 fade it reads get_width() off (scroll_container.cpp:643)', () => {
+    expect(svgSize(decodeSvg(SCROLL_HINT_ICONS.horizontal))).toEqual({ width: 24, height: 32 });
+  });
+
+  it('both are gradients from white at alpha 0.3 to alpha 0, which is what makes the two stretch modes identical', () => {
+    for (const url of [SCROLL_HINT_ICONS.vertical, SCROLL_HINT_ICONS.horizontal]) {
+      const svg = decodeSvg(url);
+      expect(svg).toContain('stop-color="#fff" stop-opacity=".3"');
+      expect(svg).toContain('stop-color="#fff" stop-opacity="0"');
+    }
   });
 });

@@ -566,4 +566,28 @@ export const CANVAS_2D_SCENES = [
   // ceiled and raw line extents give the same offset, so it would prove nothing.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },
   { name: 'rich-text-label-fractional-box', file: 'unit-rich-text-label-fractional-box.tscn', mode: '2d' },
+  // The last render-gap keys that reach a still frame. Each moves ONE property
+  // that no other scene authors, so each is the only guard on its own feature:
+  // the focus StyleBox's margins (the border itself needs focus and cannot be
+  // authored), the overflow hint quads, an N-child split's own offsets, the
+  // caret an `editable = false` field still draws, a wrapped row's step-in, the
+  // column rules, the fold arrow the delimiter tables decide, and a Button
+  // label that wraps. Measured against Godot 4.6.3 at `--mode 2d` before their
+  // baselines were written: 0.005 to 0.342 of 255.
+  {
+    name: 'scroll-container-focus-border',
+    file: 'unit-scroll-container-focus-border.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'scroll-container-scroll-hint',
+    file: 'unit-scroll-container-scroll-hint.tscn',
+    mode: '2d',
+  },
+  { name: 'split-container-offsets', file: 'unit-split-container-offsets.tscn', mode: '2d' },
+  { name: 'text-edit-caret-readonly', file: 'unit-text-edit-caret-readonly.tscn', mode: '2d' },
+  { name: 'text-edit-indent-wrapped', file: 'unit-text-edit-indent-wrapped.tscn', mode: '2d' },
+  { name: 'code-edit-guidelines', file: 'unit-code-edit-guidelines.tscn', mode: '2d' },
+  { name: 'code-edit-delimiters', file: 'unit-code-edit-delimiters.tscn', mode: '2d' },
+  { name: 'button-autowrap', file: 'unit-button-autowrap.tscn', mode: '2d' },
 ];
