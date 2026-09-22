@@ -1,17 +1,18 @@
 ---
 type: TabBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-tab-bar.tscn
 # image: unit-tab-bar
-renders_as: invisible transform-only fallback
+renders_as: a row of per-tab StyleBox quads with icon/title/close-icon content
 ---
 
 # TabBar
 
 TabBar is the bare strip of tab headers, without the page switching a TabContainer adds.
-The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+The previewer draws each tab's own `tab_selected`/`tab_unselected`/`tab_disabled` StyleBox,
+its icon and title, the close icon where `tab_close_display_policy` calls for it, and the
+scroll arrows once the tabs overflow a clipped bar.
 
 ## Linting
 
@@ -41,16 +42,32 @@ Strict parsing format-checks these `TabBar` properties, plus 53 inherited from C
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-tabbar-properties` | `tabbar-current-tab-out-of-range` | error |
 |  | `tabbar-tab-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl` and reads only the Control layout keys, so
-every TabBar key is absent from the lenient tree rather than substituted. The two
-`linter.ts` advisories compare a `tab_<idx>/` index against `tab_count` and warn, since
-the engine drops the write.
+The lenient parser reads `current_tab`, `tab_alignment`, `tab_close_display_policy`,
+`max_tab_width`, `clip_tabs` and the rest of the scalars alongside a dense `tab_<idx>/*`
+walk (`title`/`tooltip`/`icon`/`disabled`), aligned to `tab_count` the same way
+OptionButton's `item_<idx>/*` walk is. The two `linter.ts` advisories compare a
+`tab_<idx>/` index against `tab_count` and warn, since the engine drops the write.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the row of tabs. The previewer draws nothing for this node.
+- **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
+  StyleBox are not distinguished from the unselected ones, so the current tab
+  reads as the same colour and box as its neighbours. Its position, width and
+  the underline above it are exact; this is the whole of the residual any tab
+  fixture still measures against Godot.
+- **Approximated** A tab title's paragraph direction is not applied, so under
+  `layout_direction = 3` a right-to-left script, or a title ending in punctuation,
+  keeps left-to-right glyph order. Where each tab sits in the strip, and where its
+  icon, title and close icon sit inside it, do follow the layout direction.
+- **Not drawn** The drag drop-mark and the hover and pressed chrome on a tab, its
+  close button and the scroll arrows all need a pointer, so none of them appears.
+- **Approximated** `max_tab_width` correctly caps a tab's on-screen width and
+  reserves the same pixel budget Godot does, but the glyphs inside that budget draw
+  unclipped rather than as Godot's own `OVERRUN_TRIM_ELLIPSIS` truncation with a
+  trailing "…".

@@ -1,5 +1,5 @@
 /**
- * Semantic rules for CPUParticles2D — the two settings whose result the
+ * Semantic rules for CPUParticles2D — the one setting whose result the
  * previewer's frozen pose cannot reproduce.
  *
  * Both are advisory: each is legal Godot that renders fine in the engine, and
@@ -73,7 +73,7 @@ const cpuParticles2DPreviewRule: LintRule = {
   meta: {
     name: 'valid-cpuparticles2d-preview',
     description:
-      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce: global-RNG emission shapes and fractional delta',
+      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce: global-RNG emission shapes',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
     emits: [

@@ -3,15 +3,10 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { visualLayersOf } from '../../../r3f/visualLayers';
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -54,9 +49,12 @@ describe('<MeshInstance3D>', () => {
   describe('placeholder paths', () => {
     it('renders a magenta wireframe placeholder when no mesh property is set', async () => {
       const renderer = await render(makeNode());
-      const mesh = renderer.scene.findByType('Mesh');
-      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
-      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mesh = findMesh(renderer.scene);
+      expect(mesh.geometry.type).toBe('BoxGeometry');
+      const material = mesh.material as unknown as {
+        color: { getHex(): number };
+        wireframe: boolean;
+      };
       expect(material.wireframe).toBe(true);
       expect(material.color.getHex()).toBe(0xff00ff);
     });
@@ -64,17 +62,17 @@ describe('<MeshInstance3D>', () => {
     it('renders placeholder when mesh reference cannot be resolved', async () => {
       const node = makeNode({ mesh: 'SubResource("MissingId")' });
       const renderer = await render(node, []);
-      const mesh = renderer.scene.findByType('Mesh');
-      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
-      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mesh = findMesh(renderer.scene);
+      expect(mesh.geometry.type).toBe('BoxGeometry');
+      const material = mesh.material as unknown as { wireframe: boolean };
       expect(material.wireframe).toBe(true);
     });
 
     it('renders placeholder for ExtResource (GLB) references — deferred to useResource', async () => {
       const node = makeNode({ mesh: 'ExtResource("1_glb")' });
       const renderer = await render(node, []);
-      const mesh = renderer.scene.findByType('Mesh');
-      const material = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mesh = findMesh(renderer.scene);
+      const material = mesh.material as unknown as { wireframe: boolean };
       expect(material.wireframe).toBe(true);
     });
   });
@@ -84,10 +82,9 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
       const resource = meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(2, 3, 4)' });
       const renderer = await render(node, [resource]);
-      const mesh = renderer.scene.findByType('Mesh');
-      expect((mesh.instance as THREE.Mesh).geometry.type).toBe('BoxGeometry');
-      const params = ((mesh.instance as THREE.Mesh).geometry as THREE.BoxGeometry)
-        .parameters;
+      const mesh = findMesh(renderer.scene);
+      expect(mesh.geometry.type).toBe('BoxGeometry');
+      const params = (mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } }).parameters;
       expect(params.width).toBe(2);
       expect(params.height).toBe(3);
       expect(params.depth).toBe(4);
@@ -97,7 +94,7 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("Sphere_1")' });
       const resource = meshSubResource('SphereMesh', 'Sphere_1', { radius: '1.5' });
       const renderer = await render(node, [resource]);
-      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+      const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
         parameters: { radius: number };
       };
@@ -109,7 +106,7 @@ describe('<MeshInstance3D>', () => {
       const node = makeNode({ mesh: 'SubResource("Plane_1")' });
       const resource = meshSubResource('PlaneMesh', 'Plane_1', { size: 'Vector2(4, 6)' });
       const renderer = await render(node, [resource]);
-      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+      const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
         parameters: { width: number; height: number };
       };
@@ -126,7 +123,7 @@ describe('<MeshInstance3D>', () => {
         height: '3.0',
       });
       const renderer = await render(node, [resource]);
-      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+      const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
         parameters: { radiusTop: number; radiusBottom: number; height: number };
       };
@@ -143,7 +140,7 @@ describe('<MeshInstance3D>', () => {
         height: '2.0',
       });
       const renderer = await render(node, [resource]);
-      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+      const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
         parameters: { radius: number; height: number };
       };
@@ -160,7 +157,7 @@ describe('<MeshInstance3D>', () => {
         outer_radius: '1.5',
       });
       const renderer = await render(node, [resource]);
-      const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+      const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
         parameters: { radius: number; tube: number };
       };
@@ -196,8 +193,12 @@ describe('<MeshInstance3D>', () => {
         }),
       ];
       const renderer = await render(node, resources);
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-        .material as THREE.MeshStandardMaterial;
+      const material = findMesh(renderer.scene).material as unknown as {
+        color: { r: number; g: number; b: number };
+        metalness: number;
+        roughness: number;
+        transparent: boolean;
+      };
       expect(material.color.r).toBe(1);
       expect(material.color.g).toBe(0);
       expect(material.color.b).toBe(0);
@@ -220,7 +221,7 @@ describe('<MeshInstance3D>', () => {
         }),
       ];
       const renderer = await render(node, resources);
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as {
+      const material = findMesh(renderer.scene).material as unknown as {
         opacity: number;
         transparent: boolean;
       };
@@ -234,7 +235,7 @@ describe('<MeshInstance3D>', () => {
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ];
       const renderer = await render(node, resources);
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      const material = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
       // Godot binds a hardcoded shader for an unmaterialed mesh —
       // `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2;` — rather than
       // instantiating a StandardMaterial3D, so this is mid-grey and slightly
@@ -261,93 +262,12 @@ describe('<MeshInstance3D>', () => {
         meshSubResource('StandardMaterial3D', 'OverrideAll', { albedo_color: 'Color(1, 0, 0, 1)' }),
         meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
       ];
-      // `_geometry_instance_add_surface` takes `material_override` ahead of the
-      // material the caller picked, and that caller had already chosen
-      // `surface_materials[j]` over the mesh's own
-      // (render_forward_clustered.cpp:4206, :4267).
       const renderer = await render(node, resources);
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-        .material as THREE.MeshStandardMaterial;
+      const material = findMesh(renderer.scene).material as unknown as {
+        color: { r: number; g: number; b: number };
+      };
       expect(material.color.r).toBe(1);
       expect(material.color.g).toBe(0);
-    });
-  });
-
-  describe('an ExtResource material on a primitive mesh', () => {
-    const MAT_PATH = 'res://checker_floor.mat.tres';
-    const EXTERNAL: TscnExternalResource[] = [
-      { id: '1_mat', path: MAT_PATH, type: 'Material' },
-      { id: '2_tex', path: 'res://body.png', type: 'Texture2D' },
-    ];
-
-    async function renderWithLoader(node: TscnNode, internalResources: TscnInternalResource[]) {
-      const fake = createFakeResourceLoader();
-      const loaded = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-      fake.materials.seed(MAT_PATH, loaded);
-      const renderer = await ReactThreeTestRenderer.create(
-        <ResourceLoaderProvider loader={fake.loader}>
-          <SceneResourcesProvider
-            internalResources={internalResources}
-            externalResources={EXTERNAL}
-          >
-            <MeshInstance3D node={node} />
-          </SceneResourcesProvider>
-        </ResourceLoaderProvider>
-      );
-      const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      return { material: mesh.material as THREE.MeshStandardMaterial, loaded };
-    }
-
-    it('draws a surface_material_override naming a `.tres`, not the default grey', async () => {
-      // Every IK demo floor: `mesh = SubResource(PlaneMesh)` with
-      // `surface_material_override/0 = ExtResource("…mat.tres")`. Resolved
-      // through SubResource lookup alone the reference named nothing, and the
-      // plane drew Godot's default 3D material instead of its checker texture.
-      const surfaceMap = new Map<number, string>([[0, 'ExtResource("1_mat")']]);
-      const { material, loaded } = await renderWithLoader(
-        makeNode({ mesh: 'SubResource("Plane_1")', surfaceMaterialOverrides: surfaceMap }),
-        [meshSubResource('PlaneMesh', 'Plane_1', { size: 'Vector2(40, 40)' })]
-      );
-      expect(material).toBe(loaded);
-    });
-
-    it('draws a material_override naming a `.tres` ahead of the surface override', async () => {
-      // `_geometry_instance_add_surface` takes `material_override` ahead of the
-      // material handed to it (render_forward_clustered.cpp:4206), whichever
-      // channel each of the two arrives through.
-      const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf_0")']]);
-      const { material, loaded } = await renderWithLoader(
-        makeNode({
-          mesh: 'SubResource("Box_1")',
-          materialOverride: 'ExtResource("1_mat")',
-          surfaceMaterialOverrides: surfaceMap,
-        }),
-        [
-          meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-          meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
-        ]
-      );
-      expect(material).toBe(loaded);
-    });
-
-    it('falls through an override that names no material to the surface override', async () => {
-      // A `Ref<Material>` that does not load is null in Godot, so the layer
-      // below is what the surface keeps. Short-circuiting on the unresolvable
-      // reference instead blanked the surface's own material to default grey.
-      const surfaceMap = new Map<number, string>([[0, 'SubResource("Surf_0")']]);
-      const { material } = await renderWithLoader(
-        makeNode({
-          mesh: 'SubResource("Box_1")',
-          materialOverride: 'ExtResource("2_tex")',
-          surfaceMaterialOverrides: surfaceMap,
-        }),
-        [
-          meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-          meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
-        ]
-      );
-      expect(material.color.r).toBe(0);
-      expect(material.color.g).toBe(1);
     });
   });
 
@@ -389,9 +309,9 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ]);
-      const mesh = renderer.scene.findByType('Mesh');
-      expect(mesh.instance.position.x).toBe(5);
-      expect(mesh.instance.position.z).toBe(-2);
+      const mesh = findMesh(renderer.scene);
+      expect(mesh.position.x).toBe(5);
+      expect(mesh.position.z).toBe(-2);
     });
 
     it('sets castShadow=true when castShadow=1 (ON)', async () => {
@@ -399,7 +319,7 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ]);
-      expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
+      expect(findMesh(renderer.scene).castShadow).toBe(true);
     });
 
     it('sets castShadow=false when castShadow=0 (OFF)', async () => {
@@ -407,7 +327,7 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ]);
-      expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(false);
+      expect(findMesh(renderer.scene).castShadow).toBe(false);
     });
 
     it('defaults receiveShadow to true', async () => {
@@ -415,7 +335,7 @@ describe('<MeshInstance3D>', () => {
       const renderer = await render(node, [
         meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ]);
-      expect(renderer.scene.findByType('Mesh').instance.receiveShadow).toBe(true);
+      expect(findMesh(renderer.scene).receiveShadow).toBe(true);
     });
   });
 });

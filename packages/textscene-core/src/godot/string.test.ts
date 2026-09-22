@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex } from './string.js';
+import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat, simplifyResPath} from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -96,6 +96,72 @@ describe('splitTopLevel', () => {
 
   it('keeps an empty trailing element, since a trailing comma is one', () => {
     expect(splitTopLevel('1,')).toEqual(['1', '']);
+  });
+});
+
+describe('simplifyResPath', () => {
+  /**
+   * Godot splits a `scheme://` drive off the front and rebuilds the remainder
+   * from its non-empty slash-separated parts, so every run of slashes after
+   * the scheme collapses to one (`core/string/ustring.cpp:4152-4210`).
+   * Measured against the engine: `res:///a/b.png`, `res:////a/b.png` and
+   * `res://a//b.png` all simplify to `res://a/b.png`.
+   *
+   * A real scene writes them — Maaack's menus template stores every `[img]`
+   * source as `res:///addons/...` — and a path we do not collapse resolves to
+   * nothing at all.
+   */
+  it('collapses a run of slashes after the scheme', () => {
+    expect(simplifyResPath('res:///a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res:////a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res://a//b.png')).toBe('res://a/b.png');
+  });
+
+  it('leaves an already-simple path exactly as it is', () => {
+    expect(simplifyResPath('res://a/b.png')).toBe('res://a/b.png');
+    expect(simplifyResPath('res://')).toBe('res://');
+  });
+
+  it('passes through text carrying no scheme', () => {
+    expect(simplifyResPath('a/b.png')).toBe('a/b.png');
+    expect(simplifyResPath('')).toBe('');
+  });
+
+  // `p > 0` and the all-alphanumeric check (`:4159-4167`): `://foo` has no
+  // drive, so nothing is split off it.
+  it('needs a non-empty alphanumeric scheme before the separator', () => {
+    expect(simplifyResPath('://a//b')).toBe('://a//b');
+    expect(simplifyResPath('re-s://a//b')).toBe('re-s://a//b');
+  });
+});
+
+describe('stringToFloat', () => {
+  it('reads an ordinary decimal', () => {
+    expect(stringToFloat('12.5')).toBe(12.5);
+    expect(stringToFloat('-3')).toBe(-3);
+  });
+
+  // `if (is_empty()) return 0` (`ustring.cpp:2681-2683`).
+  it('reads an empty string as zero', () => {
+    expect(stringToFloat('')).toBe(0);
+  });
+
+  // `built_in_strtod` takes the longest numeric prefix and stops; unlike the
+  // TSCN literal reader, trailing text is ignored rather than refused.
+  it('stops at the first character it cannot use', () => {
+    expect(stringToFloat('75abc')).toBe(75);
+    expect(stringToFloat('10%')).toBe(10);
+  });
+
+  it('reads text with no numeric prefix as zero', () => {
+    expect(stringToFloat('top')).toBe(0);
+    expect(stringToFloat('   ')).toBe(0);
+  });
+
+  // Godot's tokenizer has no `Infinity` spelling, so neither does this.
+  it('refuses JavaScript’s own infinity spellings', () => {
+    expect(stringToFloat('Infinity')).toBe(0);
+    expect(stringToFloat('-Infinity')).toBe(0);
   });
 });
 

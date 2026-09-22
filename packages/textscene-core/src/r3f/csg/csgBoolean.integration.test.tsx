@@ -92,6 +92,25 @@ const LONE_BOX = `[node name="Root" type="Node3D"]
 size = Vector3(2, 2, 2)
 `;
 
+/**
+ * A nested combiner carrying its own `operation`.
+ *
+ * csg_shape.cpp:472,481 — the parent calls `child->_get_brush()`, which folds the
+ * child's WHOLE subtree, then combines that one result by `child->get_operation()`.
+ */
+const NESTED_COMBINER_OP = `[node name="Root" type="Node3D"]
+
+[node name="Block" type="CSGBox3D" parent="."]
+size = Vector3(2, 2, 2)
+
+[node name="Cutter" type="CSGCombiner3D" parent="Block"]
+operation = 2
+
+[node name="Blade" type="CSGBox3D" parent="Block/Cutter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0.9, 0.9)
+size = Vector3(1.2, 1.2, 1.2)
+`;
+
 function meshes(renderer: Awaited<ReturnType<typeof render>>) {
   return renderer.scene.findAllByType('Mesh');
 }
@@ -199,5 +218,15 @@ radius = 0.5
 
     vi.doUnmock('three-bvh-csg');
     vi.resetModules();
+  });
+
+  it('applies a nested combiner\'s own operation to its whole fold', async () => {
+    // Block 2^3 = 8. The blade spans [0.3, 1.5]^3, so it overlaps the block in
+    // [0.3, 1]^3 = 0.343. Subtracting the combiner's fold leaves 8 - 0.343; unioning
+    // its child in at root level instead would give 8 + (1.728 - 0.343) = 9.385.
+    const drawn = drawnMeshes(await render(NESTED_COMBINER_OP));
+    const geometry = (drawn[0]!.instance as THREE.Mesh).geometry;
+
+    expect(volumeOf(geometry)).toBeCloseTo(7.657, 3);
   });
 });

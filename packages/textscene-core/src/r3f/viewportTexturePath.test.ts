@@ -207,7 +207,10 @@ unique_name_in_owner = true
 [node name="View" type="SubViewport"]
 `);
     const authored = host.nodes[0]!.children[0]!;
-    const merged = mergeInstanceRoot(authored, subScene, host.externalResources)!;
+    const merged = mergeInstanceRoot(authored, subScene, {
+      externalResources: host.externalResources,
+      internalResources: host.internalResources,
+    })!;
     expect(merged).not.toBe(authored);
     expect(merged.type).toBe('SubViewport');
 
@@ -233,7 +236,10 @@ unique_name_in_owner = true
 [node name="Body" type="Node2D" parent="."]
 `);
     const bike = host.nodes[0]!.children[0]!;
-    const merged = mergeInstanceRoot(bike, subScene, host.externalResources)!;
+    const merged = mergeInstanceRoot(bike, subScene, {
+      externalResources: host.externalResources,
+      internalResources: host.internalResources,
+    })!;
     const grafted = merged.children
       .find((child) => child.name === 'Body')!
       .children.find((child) => child.name === 'View')!;

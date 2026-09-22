@@ -1,0 +1,76 @@
+[gd_scene load_steps=5 format=3 uid="uid://unittexrectatlastex"]
+
+; ONE VARIABLE: a TextureRect whose `texture` is an INLINE AtlasTexture
+; sub-resource — a windowed cell of a sprite sheet — instead of a whole image.
+;
+; An AtlasTexture is a first-class Texture2D that Godot presents at the size of
+; its REGION (`AtlasTexture::get_width`/`get_height`), so the slot feeds TWO
+; things: the pixels drawn, and the node's minimum size. Each rect here shrinks
+; to that minimum (`size_flags_horizontal = 0`), so a wrong size shows as a
+; wrong RECT, and every sibling below moves — this scene reports a layout
+; regression as well as a paint one, in both axes.
+;
+; res://textures/atlas-quadrants.png is 128x128 in four flat 64x64 quadrants:
+; red top-left, green top-right, blue bottom-left, yellow bottom-right. So the
+; three cells are each unmistakable, and each fails differently:
+;   TopLeftCell  — 64x64 of flat RED. The whole sheet instead of the cell shows
+;                  all four colours; nothing at all shows the background.
+;   CentreCell   — 64x64 straddling the quadrant join: a 2x2 of red/green/blue/
+;                  yellow. Only the exact region origin (32, 32) produces it, so
+;                  an offset read at the wrong corner is visible immediately.
+;   MarginedCell — a 32x32 GREEN square inset 8 px into a 48x48 box, the rest of
+;                  the box transparent: `margin` widens what the texture reports
+;                  and moves where the region lands inside it, and those are
+;                  separate reads.
+;
+; Every other TextureRect fixture uses a whole ExtResource image or an inline
+; GradientTexture2D — neither goes near the sheet-windowing branch, and the only
+; other AtlasTextures in the fixture bag are SpriteFrames frames inside an
+; AnimatedSprite2D, which is a different consumer with no golden at all. So a
+; regression here is invisible in every other scene.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_sheet"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_topleft"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_centre"]
+atlas = ExtResource("1_sheet")
+region = Rect2(32, 32, 64, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_margined"]
+atlas = ExtResource("1_sheet")
+region = Rect2(96, 0, 32, 32)
+margin = Rect2(8, 8, 16, 16)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 60.0
+offset_right = 420.0
+offset_bottom = 600.0
+
+[node name="Above" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 24)
+color = Color(0.15, 0.6, 0.3, 1)
+
+[node name="TopLeftCell" type="TextureRect" parent="Column"]
+size_flags_horizontal = 0
+texture = SubResource("AtlasTexture_topleft")
+
+[node name="CentreCell" type="TextureRect" parent="Column"]
+size_flags_horizontal = 0
+texture = SubResource("AtlasTexture_centre")
+
+[node name="MarginedCell" type="TextureRect" parent="Column"]
+size_flags_horizontal = 0
+texture = SubResource("AtlasTexture_margined")
+
+[node name="Below" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 24)
+color = Color(0.95, 0.85, 0.1, 1)

@@ -35,7 +35,7 @@ This bundles `src/cli.ts` to `dist/cli.js`. The `tscn-lint` bin, and
 node apps/textscene-linter/dist/cli.js scenes/fixtures/unit-plane-mesh.tscn
 
 # Multiple files via shell glob
-node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/examples/*.tscn
+node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*.tscn
 
 # Directory argument — recurses into every .tscn file underneath
 node apps/textscene-linter/dist/cli.js scenes/

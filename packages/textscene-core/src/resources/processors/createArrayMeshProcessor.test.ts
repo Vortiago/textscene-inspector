@@ -42,6 +42,22 @@ const GOOD_THEN_UNREADABLE_TRES = WALL_TRES.replace(
 blend_shape_mode = 0`
 );
 
+/** The same pair the other way round, so the surviving surface is Godot's surface 1. */
+const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
+  '_surfaces = [{',
+  `_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}, {`
+);
+
 function mockFileBus() {
   const handlers = {
     loaded: new Set<(p: string, d: FileData) => void>(),
@@ -103,6 +119,31 @@ describe('createArrayMeshProcessor', () => {
     expect(resource.geometry.groups).toHaveLength(1);
     expect(resource.materialPaths).toHaveLength(1);
     expect(resource.geometry.groups[0]!.materialIndex).toBe(0);
+    // The draw group is Godot's surface 0 — the readable one is FIRST here, so
+    // the compaction has not moved it and this is the case the index agrees on.
+    expect(resource.surfaceIndices).toEqual([0]);
+  });
+
+  it("carries each draw group's ORIGINAL surface index", async () => {
+    // `surface_material_override/N` names the index in `_surfaces`, not the draw
+    // group, so a consumer needs the two spellings kept apart once a surface
+    // above has been dropped.
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createArrayMeshProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ArrayMeshResource>(
+      'arraymesh',
+      'loaded',
+      'res://shifted.tres',
+      1000
+    );
+    processor.request('res://shifted.tres');
+    file.emitLoaded('res://shifted.tres', UNREADABLE_THEN_GOOD_TRES);
+
+    const resource = await loaded;
+    expect(resource.materialPaths).toHaveLength(1);
+    expect(resource.surfaceIndices).toEqual([1]);
   });
 
   it('ignores binary data (only decodes text .tres)', () => {

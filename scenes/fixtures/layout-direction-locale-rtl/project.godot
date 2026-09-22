@@ -1,0 +1,16 @@
+; A res:// root of its own, because `internationalization/locale/test` is a
+; PROJECT setting and no .tscn can carry one. Kept in a subdirectory rather
+; than at scenes/fixtures — a project.godot there would silently apply to every
+; other fixture in the flat bag.
+
+config_version=5
+
+[application]
+
+config/name="Right-to-left test locale"
+run/main_scene="res://unit-control-layout-direction-locale.tscn"
+config/features=PackedStringArray("4.6")
+
+[internationalization]
+
+locale/test="he"

@@ -1,45 +1,353 @@
 /**
- * <TextureRect> render contract: the degraded path. In a non-DOM/decode test
- * (and outside a ResourceLoaderProvider) the texture never decodes, so the
- * component renders its placeholder — a dashed, layout-sized box titled with the
- * resolved texture path. The stretch/expand → CSS mapping (the loaded path) is
- * unit-tested in Component.fit.test.ts.
+ * `<TextureRect>` render contract. `nodes/2d/marker2d/Component.test.tsx`
+ * is the canonical `@react-three/test-renderer` shape this follows; the
+ * texture-loading rig mirrors `sprite2d/Component.parity.test.tsx`
+ * (`createFakeResourceLoader` + `ResourceLoaderProvider` +
+ * `SceneResourcesProvider`, since `useResource` needs a live provider to ever
+ * leave `pending`).
  */
 import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
-import { TextureRect } from './Component';
-import { parseTextureRect } from './parser';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import type { TscnNode } from '../../../../parser/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import type { TscnExternalResource, TscnNode } from '../../../../parser/types';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { parseTextureRect } from './parser';
+import { TextureRect } from './Component';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
+const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
+const THEME = nativeTheme(1);
+const TEX = 'res://portrait.png';
 const heading = { type: 'node', attributes: { type: 'TextureRect', name: 'Portrait' } };
 
-function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Portrait', type: 'TextureRect', children: [], properties: parseTextureRect(heading, raw) };
+function textureRectNode(raw: Record<string, string> = {}): TscnNode {
+  return {
+    name: 'Portrait',
+    type: 'TextureRect',
+    children: [],
+    properties: parseTextureRect(heading, { texture: 'ExtResource("1")', ...raw }),
+  };
 }
 
-function renderRect(raw: Record<string, string> = {}, externalResources: TscnExternalResource[] = []) {
-  const { container } = render(
-    <SceneResourcesProvider externalResources={externalResources}>
-      <TextureRect node={node(raw)} />
-    </SceneResourcesProvider>
+/** The scene scope a painter resolves its own refs in — id `1` is the sheet. */
+const SCOPE = {
+  externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
+  internalResources: [],
+};
+
+function solveNode(node: TscnNode): SolveNode {
+  return { ...emptySolveNode(), path: node.name, node, resources: SCOPE };
+}
+
+/** A 320x160 texture — the same non-square size `nativeSolver.test.ts` uses. */
+function fakeTexture(): THREE.Texture {
+  const tex = new THREE.Texture();
+  (tex as unknown as { image: { width: number; height: number } }).image = { width: 320, height: 160 };
+  return tex;
+}
+
+interface RenderOptions {
+  tint?: NativeControlComponentProps['tint'];
+}
+
+async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, options: RenderOptions = {}) {
+  const fake = createFakeResourceLoader();
+  fake.textures.seed(TEX, fakeTexture());
+  const node = textureRectNode(raw);
+
+  const tree = (
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+        <TextureRect
+          {...painterEnv()}
+          {...(options.tint ? { tint: options.tint } : {})}
+          solveNode={solveNode(node)}
+          rect={rect}
+          renderOrder={0}
+        />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
   );
-  return container.querySelector('[data-control-type="TextureRect"]') as HTMLElement;
+  return ReactThreeTestRenderer.create(tree);
 }
 
-describe('<TextureRect>', () => {
-  it('renders a dashed, layout-sized placeholder when the texture is unavailable', () => {
-    const div = renderRect();
-    expect(div.getAttribute('data-control-fallback')).toBe('true');
-    expect(div.style.outline).toContain('dashed');
-    expect(div.style.position).toBe('absolute'); // free-parent layout applied to the wrapper
+describe('<TextureRect> resolves its texture in its OWN scene scope', () => {
+  /**
+   * A node that arrived through an instanced sub-scene carries that scene's
+   * resource pools, not the host's — `buildSolveTree` already resolves each
+   * node's own scope, and the ambient `SceneResourcesProvider` holds the TOP
+   * scene's. Reading the ambient one resolves `ExtResource("1")` against the
+   * wrong pool, so the instance's texture silently never draws.
+   */
+  it('draws a texture the ambient provider does not carry', async () => {
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeTexture());
+    const node = textureRectNode();
+    const own = { ...solveNode(node), resources: {
+      externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
+      internalResources: [],
+    } };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+          <TextureRect
+            {...painterEnv()}
+            solveNode={own}
+            rect={{ x: 0, y: 0, w: 64, h: 32 }}
+            renderOrder={0}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(1);
+  });
+});
+
+describe('<TextureRect> (isolated painter contract)', () => {
+  it('draws nothing when no texture is referenced', async () => {
+    const renderer = await renderIsolated({ texture: '' }, { x: 0, y: 0, w: 64, h: 32 });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('titles the placeholder with the resolved texture path (or "no texture")', () => {
-    expect(renderRect().getAttribute('title')).toBe('no texture');
+  it('maps the loaded texture onto exactly one quad, cloned rather than the shared cached instance', async () => {
+    const fake = createFakeResourceLoader();
+    const cached = fakeTexture();
+    fake.textures.seed(TEX, cached);
+    const node = textureRectNode();
 
-    const ext: TscnExternalResource = { id: '1_abc', type: 'Texture2D', path: 'res://portrait.png' };
-    const withTex = renderRect({ texture: 'ExtResource("1_abc")' }, [ext]);
-    expect(withTex.getAttribute('title')).toBe('res://portrait.png');
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+          <TextureRect
+            {...painterEnv()}
+            solveNode={solveNode(node)}
+            rect={{ x: 0, y: 0, w: 300, h: 100 }}
+            renderOrder={0}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes).toHaveLength(1);
+    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map).not.toBeNull();
+    // Cloned, not the same cached instance `useResource` handed out — mutating
+    // filter/wrap/repeat/offset per-consumer must never bleed into siblings
+    // sharing the SAME cached texture (the reason `composeFrameTexture` clones).
+    expect(material.map).not.toBe(cached);
+  });
+
+  it('STRETCH_SCALE (default): the quad fills the FULL control rect', async () => {
+    const renderer = await renderIsolated({}, { x: 0, y: 0, w: 300, h: 100 });
+    const mesh = renderer.scene.findByType('Mesh');
+    const geometry = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geometry.parameters.width).toBe(300);
+    expect(geometry.parameters.height).toBe(100);
+  });
+
+  it("STRETCH_KEEP (2): the quad is the texture's OWN intrinsic size, top-left", async () => {
+    const renderer = await renderIsolated({ stretch_mode: '2' }, { x: 0, y: 0, w: 300, h: 100 });
+    const mesh = renderer.scene.findByType('Mesh');
+    const geometry = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geometry.parameters.width).toBe(320);
+    expect(geometry.parameters.height).toBe(160);
+    const group = renderer.scene.findByType('Group');
+    expect(group.instance.position.x).toBeCloseTo(0);
+    expect(group.instance.position.y).toBeCloseTo(0);
+  });
+
+  it('STRETCH_KEEP_CENTERED (3): the drawn-image offset positions an outer group (can go negative)', async () => {
+    const renderer = await renderIsolated({ stretch_mode: '3' }, { x: 0, y: 0, w: 300, h: 100 });
+    // offset = ((300,100)-(320,160))/2 = (-10,-30); three's Y negates once.
+    const group = renderer.scene.findByType('Group');
+    expect(group.instance.position.x).toBeCloseTo(-10);
+    expect(group.instance.position.y).toBeCloseTo(30);
+  });
+
+  it('maps texture_filter NEAREST (1) to THREE.NearestFilter', async () => {
+    const renderer = await renderIsolated({ texture_filter: '1' }, { x: 0, y: 0, w: 64, h: 32 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.magFilter).toBe(THREE.NearestFilter);
+    expect(material.map!.minFilter).toBe(THREE.NearestFilter);
+  });
+
+  it('an absent texture_filter (PARENT_NODE) resolves to LinearFilter, the CanvasItem root default', async () => {
+    const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.magFilter).toBe(THREE.LinearFilter);
+  });
+
+  it('maps texture_repeat ENABLED (2) to THREE.RepeatWrapping', async () => {
+    const renderer = await renderIsolated({ texture_repeat: '2' }, { x: 0, y: 0, w: 64, h: 32 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+  });
+
+  it('an absent texture_repeat (PARENT_NODE) resolves to ClampToEdgeWrapping, the CanvasItem root default', async () => {
+    const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.wrapS).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('flip_h mirrors the UV in place (negative repeat.x, offset shifted to compensate)', async () => {
+    const renderer = await renderIsolated({ flip_h: 'true' }, { x: 0, y: 0, w: 300, h: 100 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.repeat.x).toBeCloseTo(-1);
+    expect(material.map!.offset.x).toBeCloseTo(1);
+  });
+
+  it('STRETCH_TILE (1) composed with flip_h: repeat magnitude equals the tile count, mirrored', async () => {
+    const renderer = await renderIsolated(
+      { stretch_mode: '1', flip_h: 'true' },
+      { x: 0, y: 0, w: 300, h: 100 }
+    );
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    // tile repeat = 300/320 = 0.9375, mirrored: repeat -0.9375, offset 0.9375.
+    expect(material.map!.repeat.x).toBeCloseTo(-0.9375);
+    expect(material.map!.offset.x).toBeCloseTo(0.9375);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+  });
+
+  it(
+    'draws the walker-composed tint AS-IS — TextureRect has no base colour of its own to fold in',
+    async () => {
+      const renderer = await renderIsolated(
+        {},
+        { x: 0, y: 0, w: 10, h: 10 },
+        // The walker's own product: inherited(.5,.5,.5,.5) x self_modulate(1,.5,1,1).
+        { tint: painterTint({ r: 0.5, g: 0.25, b: 0.5, a: 0.5 }) }
+      );
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const expected = new THREE.Color().setRGB(0.5, 0.25, 0.5, THREE.SRGBColorSpace);
+      expect(material.color.r).toBeCloseTo(expected.r);
+      expect(material.color.g).toBeCloseTo(expected.g);
+      expect(material.color.b).toBeCloseTo(expected.b);
+      expect(material.opacity).toBeCloseTo(0.5);
+    }
+  );
+
+  it('is transparent, double-sided and does not write depth (2D canvas-item convention)', async () => {
+    const renderer = await renderIsolated({}, { x: 0, y: 0, w: 64, h: 32 });
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(material.side).toBe(THREE.DoubleSide);
+  });
+});
+
+describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
+  it('draws its quad through the real registry entry, at the walker-solved rect', async () => {
+    controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
+    controlSolverRegistry.clear();
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeTexture());
+
+    const nodeWithRect: TscnNode = {
+      ...textureRectNode(),
+      properties: {
+        ...textureRectNode().properties,
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 0,
+        offsetTop: 0,
+        offsetRight: 300,
+        offsetBottom: 100,
+      },
+    };
+    const root = solveNode(nodeWithRect);
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+          <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes).toHaveLength(1);
+    const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geometry.parameters.width).toBe(300);
+    expect(geometry.parameters.height).toBe(100);
+
+    controlComponentRegistry.clear();
+  });
+
+  it("inherits texture_filter from the nearest ancestor that names one, past a PARENT_NODE ancestor in between", async () => {
+    controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureRect });
+    controlSolverRegistry.clear();
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(TEX, fakeTexture());
+
+    // This TextureRect names NO texture_filter of its own (PARENT_NODE, the
+    // parsed default) — same leaf node reused under three different ancestors.
+    const leaf = textureRectNode();
+    function ancestorSolveNode(
+      path: string,
+      type: string,
+      properties: Record<string, unknown>,
+      children: SolveNode[]
+    ): SolveNode {
+      const name = path.split('/').pop()!;
+      const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+      return { ...emptySolveNode(), path, node: tscnNode, children };
+    }
+    function leafSolveNode(path: string): SolveNode {
+      return { ...emptySolveNode(), path, node: leaf, children: [], resources: SCOPE };
+    }
+    const fullRect = { anchorLeft: 0, anchorTop: 0, anchorRight: 1, anchorBottom: 1 };
+
+    // Grandparent NAMES NearestFilter (1) AND repeat ENABLED (2); the
+    // intermediate parent re-states PARENT_NODE (0) explicitly for both
+    // rather than omitting them, so a walk that stops at the immediate
+    // parent (instead of continuing past a non-naming one) would still fail
+    // this, for either property.
+    const parent = ancestorSolveNode(
+      'Grandparent/Parent',
+      'Control',
+      { ...fullRect, textureFilter: 0, textureRepeat: 0 },
+      [leafSolveNode('Grandparent/Parent/Leaf')]
+    );
+    const grandparent = ancestorSolveNode(
+      'Grandparent',
+      'Control',
+      { ...fullRect, textureFilter: 1, textureRepeat: 2 },
+      [parent]
+    );
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider internalResources={[]} externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}>
+          <ControlCanvasWalker
+            tree={[grandparent]}
+            generation={0}
+            viewport={VIEWPORT}
+            theme={THEME}
+            measurer={null}
+          />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(material.map!.magFilter).toBe(THREE.NearestFilter);
+    expect(material.map!.minFilter).toBe(THREE.NearestFilter);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+
+    controlComponentRegistry.clear();
   });
 });

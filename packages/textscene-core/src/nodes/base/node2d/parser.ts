@@ -60,6 +60,7 @@ export function parseNode2D(
     z_index: intOr(properties.z_index, 0),
     z_as_relative: properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
     show_behind_parent: boolSlotValue(properties.show_behind_parent) === true,
+    top_level: boolSlotValue(properties.top_level) === true,
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)
@@ -69,7 +70,7 @@ export function parseNode2D(
     y_sort_origin: properties.y_sort_origin !== undefined
       ? floatOr(properties.y_sort_origin, 0)
       : 0,
-    ...(properties.material !== undefined ? { material: properties.material } : {}),
+    ...(properties.material !== undefined ? { materialPath: properties.material } : {}),
     use_parent_material: boolSlotValue(properties.use_parent_material) === true,
   };
 }

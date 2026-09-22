@@ -553,6 +553,22 @@ const GOOD_THEN_BAD_TRES = WALL_TRES.replace(
 blend_shape_mode = 0`
 );
 
+/** The mirror image: the UNREADABLE surface first, so the survivor is Godot's surface 1. */
+const BAD_THEN_GOOD_TRES = WALL_TRES.replace(
+  '_surfaces = [{',
+  `_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 0),
+"format": 4097,
+"index_count": 3,
+"index_data": PackedByteArray("AAABAAIA"),
+"name": "truncated",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/")
+}, {`
+);
+
 describe('undecodable surfaces', () => {
   it('fails a mesh whose ONLY surface has vertex_data shorter than its format requires', () => {
     // Per-surface dropping is what keeps a mesh's readable surfaces; when nothing
@@ -599,6 +615,21 @@ describe('undecodable surfaces', () => {
     expect(mesh.surfaces[0]!.materialPath).toBe('res://stage/tile_material.tres');
     for (const p of mesh.surfaces[0]!.positions) expect(Number.isFinite(p)).toBe(true);
   });
+
+  it('reports each surface\u2019s ORIGINAL index, which a drop above it does not shift', () => {
+    // `surface_material_override/N` names the index in `_surfaces`, so a survivor
+    // that moved down the compacted list has to keep saying where it came from.
+    const mesh = decodeArrayMesh(BAD_THEN_GOOD_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces).toHaveLength(1);
+    expect(mesh.surfaces[0]!.surfaceIndex).toBe(1);
+  });
+
+  it('numbers surfaces from zero when nothing is dropped', () => {
+    const mesh = decodeArrayMesh(TWO_SURFACE_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces.map((s) => s.surfaceIndex)).toEqual([0, 1]);
+  });
 });
 
 const COLOR_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
@@ -624,6 +655,115 @@ describe('attribute_data layout', () => {
     const surface = decodeArrayMesh(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
+  });
+});
+
+/**
+ * ONE quad, saved twice: the same four vertices, normals, UVs and indices, once
+ * uncompressed (format 34359742487) and once with ARRAY_FLAG_COMPRESS_ATTRIBUTES
+ * (format 34896613399). The two blobs share nothing byte-for-byte, so the only
+ * thing that can make them agree is both layouts being read correctly.
+ *
+ * Godot itself treats the pair as interchangeable — the two encodings go through
+ * `_unpack_vertex_attributes`
+ * (`servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl`)
+ * and converge on the same vertex, normal and UV — so any divergence between
+ * them is ours.
+ */
+const SAME_QUAD_UNCOMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAIA/AACAPwAAgD8AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
+blend_shape_mode = 0
+`;
+
+const SAME_QUAD_COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1e-05),
+"attribute_data": PackedByteArray("AAD//////////wAAAAAAAA=="),
+"format": 34896613399,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAAAAAID//wAAAAAAgP////8AAACAAAD//wAAAID/f////3////9/////f///")
+}]
+blend_shape_mode = 0
+`;
+
+describe('one quad in both layouts', () => {
+  // Godot 4.6.3 `ArrayMesh.surface_get_arrays()` over these exact bytes.
+  const VERTEX = [-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1];
+  const TEX_UV = [0, 1, 1, 1, 1, 0, 0, 0];
+  const INDEX = [2, 0, 3, 2, 1, 0];
+
+  it('decodes the uncompressed layout to Godot’s own arrays', () => {
+    const surface = decodeArrayMesh(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(Array.from(surface.positions)).toEqual(VERTEX);
+    expect(Array.from(surface.uvs!)).toEqual(TEX_UV);
+    expect(Array.from(surface.indices)).toEqual(INDEX);
+    // ARRAY_NORMAL = (-0.000015, -0.000015, 1.0) per vertex: a "zero" octahedral
+    // component is stored as 32767, one step off the uint16 grid's midpoint.
+    for (let v = 0; v < 4; v++) {
+      expect(surface.normals![v * 3 + 0]).toBeCloseTo(-0.000015, 6);
+      expect(surface.normals![v * 3 + 1]).toBeCloseTo(-0.000015, 6);
+      expect(surface.normals![v * 3 + 2]).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('decodes the compressed layout to Godot’s own arrays', () => {
+    const surface = decodeArrayMesh(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    // Quantised positions land on the uint16 grid spanning the aabb, which for
+    // this aabb reproduces the corners exactly.
+    expect(Array.from(surface.positions).map((p) => Number(p.toFixed(6)))).toEqual([
+      -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1,
+    ]);
+    expect(Array.from(surface.uvs!)).toEqual(TEX_UV);
+    expect(Array.from(surface.indices)).toEqual(INDEX);
+    // ARRAY_NORMAL = (-0.000048, 0.0, 1.0) per vertex. It is NOT the octahedral
+    // pair in the normal region — that pair is the rotation axis (0, 1, 0), and
+    // reading it as a normal would give a quad facing +Y rather than +Z.
+    for (let v = 0; v < 4; v++) {
+      expect(surface.normals![v * 3 + 0]).toBeCloseTo(-0.000048, 6);
+      expect(surface.normals![v * 3 + 1]).toBeCloseTo(0, 6);
+      expect(surface.normals![v * 3 + 2]).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('decodes both layouts to the same surface', () => {
+    // The tolerance is the quantisation gap between the two encodings, not
+    // slack: a float32 position and a uint16 one over the same aabb differ by up
+    // to half a grid step, and the two normal encodings disagree in the 5th
+    // decimal for the same reason. Anything a shading difference could see —
+    // a flipped sign, an unnormalised vector, a wrong stride — is orders of
+    // magnitude larger.
+    const plain = decodeArrayMesh(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+    const packed = decodeArrayMesh(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(packed.vertexCount).toBe(plain.vertexCount);
+    for (let i = 0; i < plain.positions.length; i++) {
+      expect(packed.positions[i]).toBeCloseTo(plain.positions[i]!, 4);
+    }
+    for (let i = 0; i < plain.normals!.length; i++) {
+      expect(packed.normals![i]).toBeCloseTo(plain.normals![i]!, 4);
+    }
+    expect(Array.from(packed.uvs!)).toEqual(Array.from(plain.uvs!));
+    expect(Array.from(packed.indices)).toEqual(Array.from(plain.indices));
   });
 });
 

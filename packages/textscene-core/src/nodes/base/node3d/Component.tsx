@@ -15,6 +15,8 @@ export function Node3D({ node, children }: NodeComponentProps) {
     [props]
   );
   const visible = props.visible !== false;
+  // paint-order-safe: 3D content, which the canvas key never reaches — the
+  // 2D canvas is the only place `groupOrder` carries one.
   return (
     <group
       name={node.name}

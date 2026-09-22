@@ -1,0 +1,21 @@
+; LineEdit's max_length, shorter than the authored `text` — the ONE variable
+; this fixture moves. `set_max_length` re-runs `set_text`, so the OVER-LONG
+; authored string renders SHORTENED in Godot, not in full — no other LineEdit
+; fixture authors a max_length at all, so a regression that renders the whole
+; string (or reads max_length as a no-op) is invisible elsewhere.
+
+[gd_scene format=3 uid="uid://unitlineeditmaxlength"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Truncated" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 224.0
+offset_bottom = 48.0
+text = "This text is far longer than max_length allows"
+max_length = 10

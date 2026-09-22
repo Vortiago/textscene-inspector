@@ -7,6 +7,7 @@ import { CSGBox3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGBox3DProperties } from './types';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 function makeNode(
   props: Partial<CSGBox3DProperties>,
@@ -35,7 +36,7 @@ describe('<CSGBox3D>', () => {
   // boxGeometry.test.ts.
   it('builds a box of the requested size, centred on the origin', async () => {
     const renderer = await render(makeNode({ size: { x: 3, y: 0.2, z: 12 } }));
-    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geom = findMesh(renderer.scene).geometry;
     geom.computeBoundingBox();
     const b = geom.boundingBox!;
     expect(b.max.x - b.min.x).toBeCloseTo(3, 5);
@@ -51,7 +52,7 @@ describe('<CSGBox3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_floor")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_floor")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

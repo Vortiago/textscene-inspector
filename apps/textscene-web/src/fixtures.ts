@@ -18,6 +18,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Child_cube",
+    "file": "child_cube.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Child_sphere",
+    "file": "child_sphere.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Complex 2d Gui",
+    "file": "complex-2d-gui.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Nested Leaf Orange Sphere",
     "file": "nested-leaf-orange-sphere.tscn",
     "category": "Other"
@@ -173,6 +188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Aspect Ratio Container Rtl",
+    "file": "unit-aspect-ratio-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Aspect Ratio Container",
     "file": "unit-aspect-ratio-container.tscn",
     "category": "Other"
@@ -233,8 +253,33 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Check Button Rtl",
+    "file": "unit-check-button-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Check Button",
     "file": "unit-check-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Delimiters",
+    "file": "unit-code-edit-delimiters.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Guidelines",
+    "file": "unit-code-edit-guidelines.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Rtl",
+    "file": "unit-code-edit-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Code Edit Syntax Highlighter",
+    "file": "unit-code-edit-syntax-highlighter.tscn",
     "category": "Other"
   },
   {
@@ -250,6 +295,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Color Picker Button",
     "file": "unit-color-picker-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker Rtl",
+    "file": "unit-color-picker-rtl.tscn",
     "category": "Other"
   },
   {
@@ -313,8 +363,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Unpreprocessed",
+    "file": "unit-cpuparticles2d-unpreprocessed.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Unpreviewable",
     "file": "unit-cpuparticles2d-unpreviewable.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Cpuparticles2d Unseeded",
+    "file": "unit-cpuparticles2d-unseeded.tscn",
     "category": "Other"
   },
   {
@@ -330,6 +390,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Cull Mask",
     "file": "unit-decal-cull-mask.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Gradienttexture",
+    "file": "unit-decal-gradienttexture.tscn",
     "category": "Other"
   },
   {
@@ -363,6 +428,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Flow Container Rtl Reverse Fill",
+    "file": "unit-flow-container-rtl-reverse-fill.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Flow Container Rtl",
+    "file": "unit-flow-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Flow Container",
     "file": "unit-flow-container.tscn",
     "category": "Other"
@@ -370,6 +445,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Foldable Container Rtl",
+    "file": "unit-foldable-container-rtl.tscn",
     "category": "Other"
   },
   {
@@ -385,6 +465,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Surface Material Override",
+    "file": "unit-glb-surface-material-override.tscn",
     "category": "Other"
   },
   {
@@ -478,6 +563,66 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Arrange Button Hidden",
+    "file": "unit-graph-edit-arrange-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Grid Buttons Hidden",
+    "file": "unit-graph-edit-grid-buttons-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Menu Hidden",
+    "file": "unit-graph-edit-menu-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Button Hidden",
+    "file": "unit-graph-edit-minimap-button-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Connection",
+    "file": "unit-graph-edit-minimap-connection.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Disabled",
+    "file": "unit-graph-edit-minimap-disabled.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Opacity",
+    "file": "unit-graph-edit-minimap-opacity.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Minimap Size",
+    "file": "unit-graph-edit-minimap-size.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Scroll Offset Clamped",
+    "file": "unit-graph-edit-scroll-offset-clamped.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Bound Order",
+    "file": "unit-graph-edit-zoom-bound-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Buttons Hidden",
+    "file": "unit-graph-edit-zoom-buttons-hidden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Label",
+    "file": "unit-graph-edit-zoom-label.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit",
     "file": "unit-graph-edit.tscn",
     "category": "Other"
@@ -533,6 +678,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Hslider Rtl",
+    "file": "unit-hslider-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Hslider",
     "file": "unit-hslider.tscn",
     "category": "Other"
@@ -563,6 +713,26 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Item List Guide Lines",
+    "file": "unit-item-list-guide-lines.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List Legacy Items",
+    "file": "unit-item-list-legacy-items.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List Rtl Icon Top",
+    "file": "unit-item-list-rtl-icon-top.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Item List Rtl",
+    "file": "unit-item-list-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Item List",
     "file": "unit-item-list.tscn",
     "category": "Other"
@@ -570,6 +740,46 @@ export const fixtures: Fixture[] = [
   {
     "name": "Jacobian Ik 3d",
     "file": "unit-jacobian-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Autowrap In Container",
+    "file": "unit-label-autowrap-in-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Label Settings",
+    "file": "unit-label-label-settings.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Outline",
+    "file": "unit-label-outline.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Alignment",
+    "file": "unit-label-rtl-alignment.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Fill Autowrap",
+    "file": "unit-label-rtl-fill-autowrap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Rtl Visible Chars Auto",
+    "file": "unit-label-rtl-visible-chars-auto.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Visible Characters",
+    "file": "unit-label-visible-characters.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label3d Legible",
+    "file": "unit-label3d-legible.tscn",
     "category": "Other"
   },
   {
@@ -668,8 +878,38 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Line Edit Rtl",
+    "file": "unit-line-edit-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Clear Button",
+    "file": "unit-lineedit-clear-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Control Chars",
+    "file": "unit-lineedit-control-chars.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Max Length",
+    "file": "unit-lineedit-max-length.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lineedit Right Icon",
+    "file": "unit-lineedit-right-icon.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lineedit",
     "file": "unit-lineedit.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Link Button Rtl",
+    "file": "unit-link-button-rtl.tscn",
     "category": "Other"
   },
   {
@@ -685,6 +925,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Marker 3d",
     "file": "unit-marker-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Menu Bar Rtl",
+    "file": "unit-menu-bar-rtl.tscn",
     "category": "Other"
   },
   {
@@ -913,6 +1158,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Progress Bar Rtl",
+    "file": "unit-progress-bar-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar",
     "file": "unit-progress-bar.tscn",
     "category": "Other"
@@ -1063,6 +1313,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Spin Box Rtl",
+    "file": "unit-spin-box-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Spin Box",
     "file": "unit-spin-box.tscn",
     "category": "Other"
@@ -1070,6 +1325,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spline Ik 3d",
     "file": "unit-spline-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container Offsets",
+    "file": "unit-split-container-offsets.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Split Container Rtl",
+    "file": "unit-split-container-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1118,6 +1383,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Blended Pass",
+    "file": "unit-sprite3d-blended-pass.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Gradienttexture",
+    "file": "unit-sprite3d-gradienttexture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Nested Modulate",
+    "file": "unit-sprite3d-nested-modulate.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Region Oversized",
     "file": "unit-sprite3d-region-oversized.tscn",
     "category": "Other"
@@ -1153,13 +1433,53 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Bar Rtl Scroll",
+    "file": "unit-tab-bar-rtl-scroll.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Bar Rtl",
+    "file": "unit-tab-bar-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Bar",
     "file": "unit-tab-bar.tscn",
     "category": "Other"
   },
   {
+    "name": "Tab Container Current Page",
+    "file": "unit-tab-container-current-page.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Container Rtl",
+    "file": "unit-tab-container-rtl.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Container",
     "file": "unit-tab-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Font Size Override",
+    "file": "unit-tab-font-size-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Caret Readonly",
+    "file": "unit-text-edit-caret-readonly.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Indent Wrapped",
+    "file": "unit-text-edit-indent-wrapped.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Text Edit Rtl",
+    "file": "unit-text-edit-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1178,6 +1498,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Texturerect Atlastexture",
+    "file": "unit-texturerect-atlastexture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Texturerect Gradienttexture",
+    "file": "unit-texturerect-gradienttexture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Timer",
     "file": "unit-timer.tscn",
     "category": "Other"
@@ -1190,6 +1520,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Touch Screen Button",
     "file": "unit-touch-screen-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tree Rtl",
+    "file": "unit-tree-rtl.tscn",
     "category": "Other"
   },
   {
@@ -1483,21 +1818,6 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
-    "name": "Uv Scale Showcase",
-    "file": "example-uv-scale-showcase.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_cube",
-    "file": "child_cube.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Child_sphere",
-    "file": "child_sphere.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
     "name": "Dodge Player",
     "file": "example-dodge-player.tscn",
     "category": "Examples - Complex Scenes"
@@ -1543,64 +1863,29 @@ export const fixtures: Fixture[] = [
     "category": "Examples - Complex Scenes"
   },
   {
+    "name": "Uv Scale Showcase",
+    "file": "example-uv-scale-showcase.tscn",
+    "category": "Examples - Complex Scenes"
+  },
+  {
     "name": "All Meshes",
     "file": "integration-all-meshes.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "All Primitives",
     "file": "integration-all-primitives.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Only",
-    "file": "integration-external-only.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "External Separation",
-    "file": "integration-external-separation.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Lights All Types",
     "file": "integration-lights-all-types.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Material Reuse",
-    "file": "integration-material-reuse.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Mixed Nodes",
-    "file": "integration-mixed-nodes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Multiple Externals",
-    "file": "integration-multiple-externals.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Parent Child Scene",
-    "file": "integration-parent-child-scene.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Three Cubes",
-    "file": "integration-three-cubes.tscn",
-    "category": "Examples - Complex Scenes"
-  },
-  {
-    "name": "Unsupported Hierarchy",
-    "file": "integration-unsupported-hierarchy.tscn",
-    "category": "Examples - Complex Scenes"
+    "category": "Integration - Multi-Node"
   },
   {
     "name": "Material Features",
@@ -1608,9 +1893,49 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Material Reuse",
+    "file": "integration-material-reuse.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Mixed Nodes",
+    "file": "integration-mixed-nodes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Multiple Externals",
+    "file": "integration-multiple-externals.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Parent Child Scene",
+    "file": "integration-parent-child-scene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Plane Orientations",
     "file": "integration-plane-orientations.tscn",
     "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Three Cubes",
+    "file": "integration-three-cubes.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Unsupported Hierarchy",
+    "file": "integration-unsupported-hierarchy.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "External Only",
+    "file": "integration-external-only.tscn",
+    "category": "Integration - External Scenes"
+  },
+  {
+    "name": "External Separation",
+    "file": "integration-external-separation.tscn",
+    "category": "Integration - External Scenes"
   },
   {
     "name": "2d Geometry Parity",
@@ -1660,6 +1985,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Gradienttexture",
+    "file": "unit-sprite2d-gradienttexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Magnified",
+    "file": "unit-sprite2d-magnified.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -1728,6 +2063,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Surface Override",
+    "file": "unit-arraymesh-surface-override.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -1770,6 +2110,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Mesh Instance Scinotation Color",
     "file": "unit-mesh-instance-scinotation-color.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Meshinstance3d Material Overlay",
+    "file": "unit-meshinstance3d-material-overlay.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -1828,8 +2173,33 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Audio"
   },
   {
+    "name": "Button Autowrap",
+    "file": "unit-button-autowrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Icon Gradienttexture",
+    "file": "unit-button-icon-gradienttexture.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Rtl",
+    "file": "unit-button-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button States",
+    "file": "unit-button-states.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button",
     "file": "unit-button.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Modulate Scope",
+    "file": "unit-canvas-layer-modulate-scope.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1843,6 +2213,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Checkbox Icon Magnified",
+    "file": "unit-checkbox-icon-magnified.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Checkbox Rtl",
+    "file": "unit-checkbox-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Checkbox",
     "file": "unit-checkbox.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1853,6 +2233,26 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Anchor Parent Node2d",
+    "file": "unit-control-anchor-parent-node2d.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchor Parent Plain Node",
+    "file": "unit-control-anchor-parent-plain-node.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchors Preset Gate",
+    "file": "unit-control-anchors-preset-gate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Anchors Preset Offsets",
+    "file": "unit-control-anchors-preset-offsets.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Anchors Theme",
     "file": "unit-control-anchors-theme.tscn",
     "category": "Unit - 2D UI Controls"
@@ -1860,6 +2260,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Control Containers",
     "file": "unit-control-containers.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Detached Paint Order",
+    "file": "unit-control-detached-paint-order.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control In Parallax Background",
+    "file": "unit-control-in-parallax-background.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1878,8 +2288,53 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Layout Direction Inherit",
+    "file": "unit-control-layout-direction-inherit.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Layout Direction Rtl",
+    "file": "unit-control-layout-direction-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Nested Children",
     "file": "unit-control-nested-children.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Hidden",
+    "file": "unit-control-node2d-ancestor-hidden.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Modulate",
+    "file": "unit-control-node2d-ancestor-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Node2d Ancestor Transform",
+    "file": "unit-control-node2d-ancestor-transform.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Promoted Ancestor Z",
+    "file": "unit-control-promoted-ancestor-z.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Scene Font Magnified",
+    "file": "unit-control-scene-font-magnified.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Scene Font Theme",
+    "file": "unit-control-scene-font-theme.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Scene Font Woff2",
+    "file": "unit-control-scene-font-woff2.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1888,8 +2343,33 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Theme Stylebox Color",
+    "file": "unit-control-theme-stylebox-color.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Themed Icon",
+    "file": "unit-control-themed-icon.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Top Level Hidden Ancestor",
+    "file": "unit-control-top-level-hidden-ancestor.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Top Level",
+    "file": "unit-control-top-level.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Transform Modulate",
     "file": "unit-control-transform-modulate.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Grid Container Rtl",
+    "file": "unit-grid-container-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1898,8 +2378,33 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Hbox Container Stretch",
+    "file": "unit-hbox-container-stretch.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Hbox Container",
     "file": "unit-hbox-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Fill",
+    "file": "unit-label-2d-fill.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Trim",
+    "file": "unit-label-2d-trim.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Valign",
+    "file": "unit-label-2d-valign.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Label 2d Wrap",
+    "file": "unit-label-2d-wrap.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1908,8 +2413,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Margin Container Rtl",
+    "file": "unit-margin-container-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Margin Container",
     "file": "unit-margin-container.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Optionbutton Rtl",
+    "file": "unit-optionbutton-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1923,8 +2438,33 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Panel Stylebox Skew Shadow",
+    "file": "unit-panel-stylebox-skew-shadow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Panel Styleboxes",
+    "file": "unit-panel-styleboxes.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Panel",
     "file": "unit-panel.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Center Overflow",
+    "file": "unit-rich-text-label-center-overflow.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Fractional Box",
+    "file": "unit-rich-text-label-fractional-box.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Rtl",
+    "file": "unit-rich-text-label-rtl.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1933,13 +2473,53 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Scroll Container Bar Snap",
+    "file": "unit-scroll-container-bar-snap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Clip Quantize",
+    "file": "unit-scroll-container-clip-quantize.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Clip",
+    "file": "unit-scroll-container-clip.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Focus Border",
+    "file": "unit-scroll-container-focus-border.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Rtl",
+    "file": "unit-scroll-container-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Scroll Container Scroll Hint",
+    "file": "unit-scroll-container-scroll-hint.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Scroll Container",
     "file": "unit-scroll-container.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Texture Rect Filter Inherit",
+    "file": "unit-texture-rect-filter-inherit.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Texture Rect",
     "file": "unit-texture-rect.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Vbox Container Pitch",
+    "file": "unit-vbox-container-pitch.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -1960,6 +2540,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Empty Scene",
     "file": "unit-empty-scene.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node2d Detached Transform",
+    "file": "unit-node2d-detached-transform.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node2d Top Level",
+    "file": "unit-node2d-top-level.tscn",
     "category": "Unit - Basic Nodes"
   },
   {
@@ -1998,6 +2588,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Physics"
   },
   {
+    "name": "Csg Alternating Ops",
+    "file": "unit-csg-alternating-ops.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Boolean Ops",
     "file": "unit-csg-boolean-ops.tscn",
     "category": "Unit - CSG Primitives"
@@ -2028,6 +2623,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Invisible Contributor",
+    "file": "unit-csg-invisible-contributor.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Mesh",
     "file": "unit-csg-mesh.tscn",
     "category": "Unit - CSG Primitives"
@@ -2035,6 +2635,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Multi Material",
     "file": "unit-csg-multi-material.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Nested Combiner Op",
+    "file": "unit-csg-nested-combiner-op.tscn",
     "category": "Unit - CSG Primitives"
   },
   {
@@ -2070,6 +2675,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "External Cube",
     "file": "unit-external-cube.tscn",
+    "category": "Unit - External Resources"
+  },
+  {
+    "name": "External Material Roughness",
+    "file": "unit-external-material-roughness.tscn",
     "category": "Unit - External Resources"
   },
   {
@@ -2228,6 +2838,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container Centred",
+    "file": "unit-sub-viewport-container-centred.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch 2d Content",
     "file": "unit-sub-viewport-container-stretch-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -2245,6 +2860,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Control Texture",
     "file": "unit-sub-viewport-control-texture.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Inherited Rtl",
+    "file": "unit-sub-viewport-inherited-rtl.tscn",
     "category": "Unit - Viewports"
   },
   {

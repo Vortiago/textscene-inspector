@@ -18,9 +18,22 @@ import { decodeNavigationMesh } from '../../../resources/navigation/navigationme
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
+  NAV_EDGES_MATERIAL,
   NAV_OVERLAY_COLOR,
 } from '../../../r3f/navigationOverlay';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { NavigationRegion3DProperties } from './types';
+
+/** Literal-only, so the key is constant and the overlay never remounts. */
+const NAV_FACES_MATERIAL = materialProgramInputs({
+  props: {
+    color: NAV_OVERLAY_COLOR,
+    transparent: true,
+    opacity: 0.38,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  },
+});
 
 export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion3DProperties;
@@ -62,17 +75,11 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
         <>
           <mesh renderOrder={1}>
             <primitive object={overlay.faces} attach="geometry" />
-            <meshBasicMaterial
-              color={NAV_OVERLAY_COLOR}
-              transparent
-              opacity={0.38}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-            />
+            <meshBasicMaterial key={NAV_FACES_MATERIAL.key} {...NAV_FACES_MATERIAL.props} />
           </mesh>
           <lineSegments renderOrder={2}>
             <primitive object={overlay.edges} attach="geometry" />
-            <lineBasicMaterial color={NAV_OVERLAY_COLOR} transparent opacity={0.9} depthWrite={false} />
+            <lineBasicMaterial key={NAV_EDGES_MATERIAL.key} {...NAV_EDGES_MATERIAL.props} />
           </lineSegments>
         </>
       )}

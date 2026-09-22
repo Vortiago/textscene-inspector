@@ -32,6 +32,13 @@ describe('parseNode2D', () => {
     expect(p.light_mask).toBe(1);
   });
 
+  it('parses top_level, which detaches the item from its parent item', () => {
+    // `CanvasItem::get_parent_item()` short-circuits to nullptr on this flag
+    // (canvas_item.cpp:565-571), so the renderer needs it, not just the linter.
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { top_level: 'true' }).top_level).toBe(true);
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), {}).top_level).toBe(false);
+  });
+
   it('parses light_mask, the CanvasItem side of Godot 2D light culling', () => {
     // The isometric dungeon's painted shadow polygons carry 512, which shares no
     // bit with a torch's default range_item_cull_mask of 1.

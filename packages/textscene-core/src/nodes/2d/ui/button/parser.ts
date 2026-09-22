@@ -21,5 +21,9 @@ export function parseButton(
   result.iconAlignment = parseOptionalInt(properties.icon_alignment);
   result.verticalIconAlignment = parseOptionalInt(properties.vertical_icon_alignment);
   result.expandIcon = boolSlotValue(properties.expand_icon) === true;
+  result.overrunBehavior = parseOptionalInt(properties.text_overrun_behavior);
+  if (boolSlotValue(properties.clip_text) === true) result.clipText = true;
+  result.autowrapMode = parseOptionalInt(properties.autowrap_mode);
+  result.autowrapTrimFlags = parseOptionalInt(properties.autowrap_trim_flags, 'int64');
   return result;
 }

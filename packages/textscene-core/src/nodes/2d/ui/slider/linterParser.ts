@@ -1,13 +1,14 @@
 /**
  * Validators shared by every Slider-derived node.
  *
- * Registered under the abstract key 'Slider', which Godot cannot instantiate,
- * so it appears in no .tscn and owns no slice. It reaches HSlider and VSlider
- * through the NODE_BASE_TYPES base-walk, both of which bind no properties of
- * their own: doc/classes/HSlider.xml and VSlider.xml list zero members without
- * an `overrides=` attribute, and neither .cpp calls ADD_PROPERTY. Their whole
- * serialisable surface below Range is this set, which went unchecked until the
- * tier existed.
+ * Registered under the key 'Slider', which is never a node type of its own:
+ * `ClassDB.can_instantiate("Slider")` is false and a GDScript cannot inherit
+ * from it either, so no scene holds one. It exists here only to reach HSlider
+ * and VSlider through the NODE_BASE_TYPES base-walk, both of which bind no
+ * properties of their own: doc/classes/HSlider.xml and VSlider.xml list zero
+ * members without an `overrides=` attribute, and neither .cpp calls
+ * ADD_PROPERTY. Their whole serialisable surface below Range is this set,
+ * which went unchecked until the tier existed.
  *
  * The shared *parser* for the same class is `../shared/slider.ts`; this is its
  * strict-parser counterpart.

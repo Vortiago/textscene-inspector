@@ -1,17 +1,17 @@
 ---
 type: Button
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-button.tscn
 image: unit-button
-renders_as: a positioned HTML div
+renders_as: a StyleBox quad with a centred text run
 ---
 
 # Button
 
-Button is Godot's clickable text control. The previewer draws its NORMAL state as a
-positioned `<div>` with the `normal` StyleBox, or the default-theme chrome when none is
-set, and the label centred.
+Button is Godot's clickable text control. The previewer paints the StyleBox its state
+calls for and centres the label on it, wrapping it to the box where `autowrap_mode`
+asks for it.
 
 ## Linting
 
@@ -39,7 +39,8 @@ Strict parsing format-checks these `Button` properties, plus 10 inherited from B
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
@@ -51,5 +52,7 @@ becomes `undefined` and the render default applies.
 
 ## Known limitations
 
-- **Approximated** A disabled label is dimmed by opacity rather than the default theme's
-  disabled font colour, so it reads a little lighter than Godot's.
+- **Approximated** The label's paragraph direction is not applied, so under
+  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
+  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  icon and the chrome sit on does follow the layout direction.

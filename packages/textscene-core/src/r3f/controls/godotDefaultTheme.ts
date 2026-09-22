@@ -1,20 +1,20 @@
 /**
- * Godot 4.6 `default_theme` constants shared by the DOM-overlay Controls
- * (ADR-0003). Each value is transcribed from Godot's
- * `scene/theme/default_theme.cpp` and rendered to CSS so a Control's un-themed
- * chrome matches what the engine paints for the built-in dark UI theme, instead
- * of a hand-picked approximation that drifts from it.
+ * Godot 4.6 `default_theme` constants. Each value is transcribed from Godot's
+ * `scene/theme/default_theme.cpp` so a Control's un-themed chrome matches what
+ * the engine paints for the built-in dark UI theme, instead of a hand-picked
+ * approximation that drifts from it.
  *
  * The fills are the engine's SEMI-TRANSPARENT StyleBoxFlat colours (e.g.
  * `Color(0.1, 0.1, 0.1, 0.6)`) — kept translucent, not pre-composited — so they
- * blend over the overlay background exactly as Godot blends them over the 2D
+ * blend over the canvas background exactly as Godot blends them over the 2D
  * clear colour. Measured against real Godot renders: a `Color(0.1,0.1,0.1,0.6)`
  * fill over Godot's default `Color(0.3,0.3,0.3)` clear composites to
- * rgb(46,46,46), which the overlay reproduces because it shares that backdrop.
+ * rgb(46,46,46).
  *
  * Framework-free (plain strings/numbers, no React import) so both the
  * render-side components and any `.ts`-only consumer can read the constants;
- * each Control composes its own CSSProperties from them.
+ * `native/nativeTheme.ts` builds `NativeTheme` on top of `scaledGodotTheme`
+ * without re-transcribing any of them.
  */
 
 // --- Text (control_font_color / default_font_size) ---
@@ -27,20 +27,53 @@ export const DEFAULT_FONT_SIZE = 16;
 
 // --- StyleBoxFlat fills (button / dropdown / panel chrome), by draw state ---
 
-/** `style_normal_color` = Color(0.1, 0.1, 0.1, 0.6). Button/OptionButton/Panel "normal". */
-export const STYLE_NORMAL_FILL = 'rgba(26, 26, 26, 0.6)';
+/** A `Color` as `default_theme.cpp` writes it: linear-ish 0..1 channels. */
+export interface ThemeFill {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
 
-/** `style_hover_color` = Color(0.225, 0.225, 0.225, 0.6). */
-export const STYLE_HOVER_FILL = 'rgba(57, 57, 57, 0.6)';
+/**
+ * The default flat-stylebox fill per draw state, as Godot's own `Color`
+ * literals. These are the ground truth: the CSS strings below are formatted
+ * from them, and the native canvas renderer reads the same numbers to build a
+ * material colour. Two independent transcriptions of `default_theme.cpp` would
+ * let a corrected constant land on one renderer and not the other, which shows
+ * up as nothing failing and the two paths quietly disagreeing.
+ *
+ * Kept deliberately translucent rather than pre-composited: Godot blends these
+ * over whatever the 2D viewport cleared to, so the renderer must too.
+ */
+export const STYLE_FILL = {
+  /** `style_normal_color`. Button/OptionButton/Panel "normal". */
+  normal: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+  /** `style_hover_color`. */
+  hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
+  /** `style_pressed_color`. */
+  pressed: { r: 0, g: 0, b: 0, a: 0.6 },
+  /** `style_disabled_color`. */
+  disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+  /** `style_popup_color`. PopupMenu / dropdown-list panel. */
+  popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+  /** `style_progress_color`. */
+  progress: { r: 1, g: 1, b: 1, a: 0.4 },
+} as const satisfies Record<string, ThemeFill>;
 
-/** `style_pressed_color` = Color(0, 0, 0, 0.6). */
-export const STYLE_PRESSED_FILL = 'rgba(0, 0, 0, 0.6)';
+/**
+ * Formats a {@link ThemeFill} as CSS. A local three-liner on purpose: this
+ * module's contract is to stay importable by `.ts`-only consumers, so it never
+ * value-imports the colour/vector parsers a shared formatter would drag in.
+ */
+const fillCss = (c: ThemeFill): string =>
+  `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
 
-/** `style_disabled_color` = Color(0.1, 0.1, 0.1, 0.3). */
-export const STYLE_DISABLED_FILL = 'rgba(26, 26, 26, 0.3)';
-
-/** `style_popup_color` = Color(0.25, 0.25, 0.25, 1). PopupMenu / dropdown-list panel. */
-export const STYLE_POPUP_FILL = 'rgba(64, 64, 64, 1)';
+export const STYLE_NORMAL_FILL = fillCss(STYLE_FILL.normal);
+export const STYLE_HOVER_FILL = fillCss(STYLE_FILL.hover);
+export const STYLE_PRESSED_FILL = fillCss(STYLE_FILL.pressed);
+export const STYLE_DISABLED_FILL = fillCss(STYLE_FILL.disabled);
+export const STYLE_POPUP_FILL = fillCss(STYLE_FILL.popup);
 
 // --- Flat-stylebox geometry (make_flat_stylebox defaults) ---
 
@@ -138,14 +171,15 @@ export const SLIDER_GRABBER_FILL = 'rgba(254, 254, 254, 0.75)';
 export const SLIDER_GRABBER_DISABLED_FILL = 'rgba(254, 254, 254, 0.37)';
 
 /**
- * `hslider_tick` is a 4x16 texture whose visible bar is 2px wide, inset 1px,
- * running the full 16px (`vslider_tick` is its transpose). So a tick is a 2px
- * bar spanning 16px across the 8px track, centred in a 4px-wide texture box.
+ * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas (`width="4"
+ * height="8"` / `width="8" height="4"`); the path inside draws past that, but
+ * Godot's SVG rasteriser clips to the declared canvas — measured directly off
+ * real Godot 4.6.3 (`pnpm ref:godot`, a probe scene with `tick_count` set):
+ * the painted tick band is exactly 8px. So a tick is a 2px bar spanning 8px
+ * across the 8px track, centred in a 4px-wide texture box.
  */
 export const SLIDER_TICK_BOX = 4;
 export const SLIDER_TICK_THICKNESS = 2;
-export const SLIDER_TICK_LENGTH = 16;
-export const SLIDER_TICK_FILL = 'rgba(255, 255, 255, 0.25)';
 
 // --- Project theme scale (gui/theme/default_theme_scale) ---
 
@@ -155,6 +189,12 @@ export const SLIDER_TICK_FILL = 'rgba(255, 255, 255, 0.25)';
  * these instead.
  */
 export interface ScaledGodotTheme {
+  /**
+   * The raw project `gui/theme/default_theme_scale`, unrounded — for a slice
+   * whose own `default_theme.cpp` call site needs a `Math.round(x * scale)`
+   * term this struct does not already expose pre-rounded.
+   */
+  scale: number;
   /** `default_font_size` after scaling — the theme's default font size in px. */
   fontSize: number;
   /** Every default flat stylebox's corner radius, in px. */
@@ -179,8 +219,6 @@ export interface ScaledGodotTheme {
   sliderTickBox: number;
   /** The visible tick bar's thickness, in px. */
   sliderTickThickness: number;
-  /** The visible tick bar's length across the track, in px. */
-  sliderTickLength: number;
 }
 
 /**
@@ -215,6 +253,7 @@ export interface ScaledGodotTheme {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   const contentMargin = Math.round(DEFAULT_CONTENT_MARGIN * scale);
   return {
+    scale,
     fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
     cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
     contentMargin,
@@ -230,6 +269,5 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     sliderGrabberRadius: Math.round(SLIDER_GRABBER_RADIUS * scale),
     sliderTickBox: Math.round(SLIDER_TICK_BOX * scale),
     sliderTickThickness: Math.round(SLIDER_TICK_THICKNESS * scale),
-    sliderTickLength: Math.round(SLIDER_TICK_LENGTH * scale),
   };
 }

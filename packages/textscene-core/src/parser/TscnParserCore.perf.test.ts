@@ -19,7 +19,6 @@
 
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from './TscnParser';
-import type { LabelProperties } from '../nodes/2d/ui/label/types';
 
 /** Build a `.tscn` document whose Label `text` spans `lineCount` physical lines. */
 function buildMultilineScene(lineCount: number): string {
@@ -53,11 +52,10 @@ describe('multi-line value scanning performance', () => {
 
     // Sanity: still parses correctly (the multi-line value still rejoins and
     // parsing continues past it) — the perf fix must not change output.
-    const title = scene.nodes.find(n => n.name === 'Title')?.properties as
-      | LabelProperties
-      | undefined;
-    expect(title?.text).toContain('Line number 0 of a very long pathological label value.');
-    expect(title?.horizontalAlignment).toBe(1);
+    const title = scene.nodes.find(n => n.name === 'Title');
+    const titleProps = title?.properties as Record<string, unknown> | undefined;
+    expect(titleProps?.text).toContain('Line number 0 of a very long pathological label value.');
+    expect(titleProps?.horizontalAlignment).toBe(1);
 
     // O(L) target: comfortably under a second on any reasonable machine.
     // O(L^2) on the unfixed code took ~119s at this size — this bound is

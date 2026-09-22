@@ -33,6 +33,13 @@ export interface ControlProperties {
   growHorizontal?: number;
   growVertical?: number;
 
+  /**
+   * `Control::LayoutDirection` (`scene/gui/control.h:155-160`): 0 INHERITED,
+   * 1 APPLICATION_LOCALE, 2 LTR, 3 RTL, 4 SYSTEM_LOCALE. Resolved to a single
+   * boolean per node by the solve-tree walk (`SolveNode.rtl`).
+   */
+  layoutDirection?: number;
+
   /** Container child sizing bitmask (1=FILL, 2=EXPAND, 4=SHRINK_CENTER, 8=SHRINK_END). */
   sizeFlagsHorizontal?: number;
   sizeFlagsVertical?: number;
@@ -60,6 +67,50 @@ export interface ControlProperties {
    */
   pivotOffsetRatio?: { x: number; y: number };
 
+  /**
+   * CanvasItem draw-order index (`z_index`). Godot default `0`
+   * (`scene/main/canvas_item.h:101`). The hint range is `[-4096, 4096]`
+   * (`CANVAS_ITEM_Z_MIN`/`CANVAS_ITEM_Z_MAX`,
+   * `servers/rendering/rendering_server.h:103-104`) but that is only a
+   * `PROPERTY_HINT_RANGE` for the inspector slider, not a setter guard —
+   * `CanvasItem::set_z_index` never clamps or rejects an out-of-range value.
+   */
+  zIndex?: number;
+  /**
+   * CanvasItem `show_behind_parent` — when true this Control draws behind
+   * its parent instead of in front. Godot default `false`
+   * (`scene/main/canvas_item.h:113`, the backing `behind` field).
+   */
+  showBehindParent?: boolean;
+  /**
+   * CanvasItem `top_level`: the Control is a canvas root whatever sits above
+   * it — `Control`'s own `NOTIFICATION_ENTER_CANVAS` climb never starts
+   * (`control.cpp:3876`), and no Container lays it out
+   * (`container.cpp:143-146`).
+   */
+  topLevel?: boolean;
+  /**
+   * CanvasItem `light_mask`: which 2D lights may reach this Control (ANDed
+   * against a light's `range_item_cull_mask`). Godot default `1`
+   * (`scene/main/canvas_item.h:98`). Per-item, NOT inherited by children.
+   */
+  lightMask?: number;
+  /**
+   * CanvasItem `texture_filter` (`CanvasItem::TextureFilter`,
+   * `scene/main/canvas_item.h:52-60`). Godot default `0` =
+   * `TEXTURE_FILTER_PARENT_NODE` — inherit the ancestor's (eventually the
+   * viewport's) filter rather than naming one of its own
+   * (`scene/main/canvas_item.h:123`).
+   */
+  textureFilter?: number;
+  /**
+   * CanvasItem `texture_repeat` (`CanvasItem::TextureRepeat`,
+   * `scene/main/canvas_item.h:63-69`). Godot default `0` =
+   * `TEXTURE_REPEAT_PARENT_NODE` — inherit rather than name a repeat mode of
+   * its own (`scene/main/canvas_item.h:124`).
+   */
+  textureRepeat?: number;
+
   /** `theme_override_constants/<name>` → number (e.g. separation, margin_left). */
   themeOverrideConstants?: Record<string, number>;
   /** `theme_override_colors/<name>` → color (e.g. font_color). */
@@ -68,4 +119,23 @@ export interface ControlProperties {
   themeOverrideFontSizes?: Record<string, number>;
   /** `theme_override_styles/<name>` → resource ref (e.g. panel → StyleBox). */
   themeOverrideStyles?: Record<string, string>;
+  /** `theme_override_icons/<name>` → resource ref (e.g. checked → Texture2D). */
+  themeOverrideIcons?: Record<string, string>;
+  /** `theme_override_fonts/<name>` → resource ref (e.g. font → FontFile/FontVariation/SystemFont). */
+  themeOverrideFonts?: Record<string, string>;
+
+  /**
+   * `theme = ExtResource(...)` / `SubResource(...)` — this Control's own
+   * Theme resource, raw reference string (resolved downstream, the same way
+   * `themeOverrideStyles`' refs are). Undefined when unset — most Controls
+   * inherit their theme from an ancestor rather than carrying one.
+   */
+  theme?: string;
+  /**
+   * `theme_type_variation` — the StringName this Control's theme items are
+   * looked up under instead of its own class name (`Control::get_theme_type_variation`,
+   * `scene/gui/control.h`). Godot writes it as a StringName literal
+   * (`&"HeaderLabel"`); the parser strips the `&` and quotes.
+   */
+  themeTypeVariation?: string;
 }

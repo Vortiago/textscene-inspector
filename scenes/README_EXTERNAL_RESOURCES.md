@@ -1,98 +1,77 @@
 # External Resource Test Fixtures
 
-These fixtures verify the external resource loading system (WI-13) and scene instancing (WI-14).
+Scenes in `scenes/fixtures/` that exercise external-resource loading
+(`[ext_resource]`) and sub-scene instancing. Every path below is a real
+`res://` path resolved against `scenes/fixtures/` itself — the directory IS the
+namespace, so a reference resolves in Godot, in the web previewer's mirror of
+that directory, and in VS Code with that folder open, or in none of them.
 
-## 🎯 Obvious Test Fixtures (Start Here!)
+## Obvious pass/fail scenes (start here)
 
-### `external_only.tscn` ⭐ BEST TEST
-**What you should see:** ONE blue cube floating in space
-- Parent scene: NO geometry at all, just light + external scene reference
-- External scene: child_cube.tscn (blue cube)
-- **Test result:** If you see a blue cube, IT WORKS! If you see nothing, it doesn't work.
+### `integration-external-only.tscn`
+**What you should see:** ONE blue cube floating in space.
+- Parent scene: no geometry at all, just a light and an external scene reference
+- External scene: `res://child_cube.tscn`
+- **Result:** a blue cube = working; an empty viewport = external scenes not loading.
 
-### `obvious_separation.tscn` ⭐
-**What you should see:** Big red box on LEFT, small red sphere on RIGHT
-- Parent scene: Big red box (3x3x3) at position (-5, 1.5, 0)
-- External scene: child_sphere.tscn (red sphere) at position (5, 0.5, 0)
-- **Test result:** Both objects = working. Only left box = external scenes not loading.
+### `integration-external-separation.tscn`
+**What you should see:** a big red box on the LEFT, a small red sphere on the RIGHT.
+- Parent scene: the box, authored inline
+- External scene: `res://child_sphere.tscn`
+- **Result:** both = working; only the box = external scenes not instantiating.
 
-### `three_cubes.tscn` ⭐
-**What you should see:** THREE blue cubes in a horizontal row
-- Parent scene: NO geometry, just 3 external scene instances
-- External scene: child_cube.tscn loaded 3 times at different positions
-- **Test result:** Tests both instancing AND caching (same scene, 3 instances)
+### `integration-three-cubes.tscn`
+**What you should see:** THREE blue cubes in a horizontal row.
+- Parent scene: no geometry, three instances of `res://child_cube.tscn`
+- **Result:** exercises instancing AND caching (one scene, three instances).
 
-## Original Fixtures
+## Building blocks
 
-### `child_cube.tscn`
-A simple standalone scene with a blue cube. Can be loaded independently or referenced by parent scenes.
+### `child_cube.tscn` / `child_sphere.tscn`
+Standalone one-mesh scenes — loadable on their own, and the targets every
+instancing fixture above references.
 
-### `child_sphere.tscn`
-A simple standalone scene with a red sphere. Can be loaded independently or referenced by parent scenes.
+### `integration-parent-child-scene.tscn`
+A single external `PackedScene` reference plus locally authored geometry.
 
-### `parent_with_external.tscn`
-A parent scene that references `child_cube.tscn` as an external resource.
-- Tests: Single external PackedScene reference
-- Contains: Platform (green box) + reference to child cube + light
-- Expected: Should load and show the platform. Child cube placement defined but not yet rendered (requires WI-14).
+### `integration-multiple-externals.tscn`
+Three references, one of them a repeat of `res://child_cube.tscn` — pins that a
+scene referenced twice is loaded once and instanced twice.
 
-### `multiple_externals.tscn`
-A scene with multiple external resource references.
-- Tests: Multiple external PackedScene references (same scene referenced multiple times)
-- Contains: Center pole (yellow cylinder) + 3 external scene references + light
-- External refs:
-  - `child_cube.tscn` (id: 1_cube)
-  - `child_sphere.tscn` (id: 2_sphere)
-  - `child_cube.tscn` again (id: 3_cube2) - tests deduplication
-- Expected: Should load and show the center pole. Child instances not yet rendered (requires WI-14).
+### `integration-instanced-subscene.tscn`
+Two instances of `res://unit-instance-child.tscn`, whose roots collapse into the
+parent (ADR-0013). Carries a visual golden.
 
-### `external_texture.tscn`
-A scene that references an external texture file.
-- Tests: External Texture2D reference
-- Contains: Cube with material + reference to `res://textures/test_texture.png`
-- Expected: Should load the scene. Texture loading will fail (file doesn't exist) but should be gracefully handled.
-- Note: Texture application requires WI-16 (ShaderMaterial support) or texture property handling.
+## Deliberately missing references
 
-## Testing in Web App
+These scenes exist to show what an UNRESOLVABLE reference looks like, so their
+targets are kept out of every `res://` root — they live in
+`scenes/upload-payloads/` instead:
 
-1. Open the web previewer: `pnpm --filter @textscene/web-previewer dev`
-2. Look for "External Resources" category in fixture selector
-3. Load each fixture and check browser console for:
-   - Resource registry population
-   - Resource loading attempts
-   - Success/failure messages
-   - Path resolution
+| Scene | Reference it cannot resolve | Payload |
+| --- | --- | --- |
+| `test-missing-material.tscn` | `res://materials/test.tres` | `upload-payloads/test.tres` |
+| `test-missing-external-scene.tscn` | `res://subscenes/child.tscn` | `upload-payloads/child.tscn` |
+| `unit-external-texture.tscn` | `res://textures/test_texture.png` | none |
 
-## Expected Behavior
+`upload-payloads/test-bright-red.tres` and `test-bright-magenta.tres` are
+unreferenced by design: they are stand-in albedo materials to drop in when
+checking that a supplied material actually reaches the mesh.
 
-**Current (WI-13 complete, WI-14 not started):**
-- ✅ External resources parsed and registered in ResourceRegistry
-- ✅ Resource metadata tracked (type, path, id)
-- ✅ Console logs show resource loading attempts
-- ✅ Graceful error handling for missing files
-- ❌ External scenes NOT yet instantiated (requires WI-14)
-- ❌ Textures NOT yet applied to materials (requires WI-16+)
+## Testing in the web previewer
 
-**Future (WI-14 complete):**
-- ✅ External scenes will be instantiated and rendered
-- ✅ Child cubes and spheres will appear in parent scenes
-- ✅ Scene composition will work correctly
+1. `pnpm --filter @textscene/web-previewer dev`
+2. Pick a scene from the **Integration - External Scenes** or
+   **Integration - Multi-Node** category.
+3. For a missing-resource scene, drag the matching file from
+   `scenes/upload-payloads/` onto the previewer — files are matched to missing
+   `res://` paths by basename (`src/multiFileUpload.ts`), so the folder layout
+   there does not matter.
 
-## Console Output Example
+## Path resolution
 
-When loading `parent_with_external.tscn`, you should see:
-```
-[TSCN Parser] Registered resource: PackedScene at res://child_cube.tscn
-[ResourceRegistry] Loading resource: res://child_cube.tscn (PackedScene)
-[WebResourceProvider] Fetching: /fixtures/child_cube.tscn
-```
-
-## Path Resolution
-
-Godot paths are resolved as follows in the web app:
-- `res://child_cube.tscn` → `/fixtures/child_cube.tscn`
-- `res://textures/test_texture.png` → `/fixtures/textures/test_texture.png`
-
-In VS Code:
-- `res://child_cube.tscn` → `${workspaceRoot}/child_cube.tscn`
-- Relative to workspace root by default
+| Host | `res://child_cube.tscn` resolves to |
+| --- | --- |
+| Web previewer | `/fixtures/child_cube.tscn` (the mirror of `scenes/fixtures/`) |
+| VS Code | `<workspace root>/child_cube.tscn` |
+| `pnpm ref:godot` | `scenes/fixtures/child_cube.tscn` (staged as the project root) |

@@ -20,7 +20,7 @@ import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { workspaceForRoot } from '../../workspaceForScene.js';
 import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
-import { collapseLiveNode } from '../../liveSceneTree.js';
+import { collapseLiveNode, rootScope } from '../../liveSceneTree.js';
 
 export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { setMode } = useViewportMode();
@@ -31,7 +31,7 @@ export function WorkspaceAutoSelect({ sceneGraph }: { sceneGraph: SceneGraph | n
     const lt = liveTreeContext(sceneGraph, loader);
     const root = lt?.roots[0];
     if (!lt || !root) return null;
-    return workspaceForRoot(collapseLiveNode(root, lt.ctx.externalResources, lt.ctx.sceneCache));
+    return workspaceForRoot(collapseLiveNode(root, rootScope(lt.ctx), lt.ctx.sceneCache));
     // `version` is an intentional cache-buster: it increments each time a
     // resource finishes loading so the workspace claim re-derives once a
     // root instance's sub-scene lands. The value itself is not read in the callback.

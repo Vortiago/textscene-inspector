@@ -1,17 +1,18 @@
 ---
 type: GraphNode
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-graph-node.tscn
 # image: unit-graph-node
-renders_as: invisible transform-only fallback
+renders_as: a titled panel with slot rows and left/right port icons
 ---
 
 # GraphNode
 
 GraphNode is a titled container inside a GraphEdit whose children become slots with
-input and output ports. The previewer parses and validates it but does not draw it, so
-it renders as a transform-only fallback and its children still show.
+input and output ports. The previewer draws its panel/titlebar StyleBoxes, the title
+text, one left/right port icon per enabled slot side, each slot's own StyleBox when
+`draw_stylebox` is set, and the resize handle when `resizable` is set.
 
 ## Linting
 
@@ -30,15 +31,15 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-graph-element-selection` (type-family match) | `graph-element-selected-not-selectable` | error |
 <!-- lint:end -->
 
-GraphNode registers `parseControl` directly, which never reads `title`,
-`ignore_invalid_connection_type`, `slots_focus_mode` or any `slot/<index>/<leaf>` key. A
-malformed value rides along untyped in the raw property bag.
-
-## Known limitations
-
-- **Not drawn** Godot draws the title bar, the slots and their ports. The previewer
-  draws nothing for this node.
+The lenient parser reads `title`, `ignore_invalid_connection_type` and
+`slots_focus_mode` the same way the strict one does. `slot/<index>/<leaf>` is
+replayed in FILE ORDER, one leaf write at a time, exactly like
+`GraphNode::_set` — an unparseable leaf value is dropped rather than applied, and
+a slot authoring only `draw_stylebox = false` (every other leaf still at its
+class default) is erased outright, matching `GraphNode::set_slot`'s own erase
+condition.

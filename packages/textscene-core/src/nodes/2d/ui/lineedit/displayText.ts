@@ -17,6 +17,11 @@
  * for a string it does not have. There is no IME composition in a static
  * preview, so `ime_text` is always empty here.
  *
+ * `max_length` is applied to `text` first: `set_max_length` re-runs
+ * `set_text`, which truncates through `insert_text_at_caret`'s
+ * `available_chars` check (`line_edit.cpp:2409-2412`) — code points, not
+ * UTF-16 units. 0 (the Godot default) means unlimited.
+ *
  * Pure `.ts` — the Component only renders what this returns.
  */
 
@@ -32,8 +37,15 @@ export interface LineEditDisplayText {
   isPlaceholder: boolean;
 }
 
+/** `insert_text_at_caret`'s truncation (`line_edit.cpp:2409-2412`) — code points, not UTF-16 units; `maxLength <= 0` is unlimited. */
+function truncateToMaxLength(text: string, maxLength: number | undefined): string {
+  if (!maxLength || maxLength <= 0) return text;
+  const codePoints = [...text];
+  return codePoints.length > maxLength ? codePoints.slice(0, maxLength).join('') : text;
+}
+
 export function lineEditDisplayText(props: LineEditProperties): LineEditDisplayText {
-  const text = props.text ?? '';
+  const text = truncateToMaxLength(props.text ?? '', props.maxLength);
   if (text === '') return { text: props.placeholderText ?? '', isPlaceholder: true };
 
   if (props.secret) {

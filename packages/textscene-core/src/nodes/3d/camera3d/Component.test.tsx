@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const base: Camera3DProperties = {
@@ -51,7 +52,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ fov: 60 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as THREE.PerspectiveCamera).fov).toBe(60);
+    expect(instanceAs<THREE.PerspectiveCamera>(cam).fov).toBe(60);
   });
 
   it('clamps near to >= 0.001', async () => {
@@ -59,7 +60,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ near: 0 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    expect((cam.instance as THREE.PerspectiveCamera).near).toBeGreaterThanOrEqual(0.001);
+    expect(instanceAs<THREE.PerspectiveCamera>(cam).near).toBeGreaterThanOrEqual(0.001);
   });
 
   it('ensures far > near (adds 0.1 margin if needed)', async () => {
@@ -67,7 +68,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ near: 10, far: 5 })} />
     );
     const cam = renderer.scene.findByType('PerspectiveCamera');
-    const { near, far } = cam.instance as THREE.PerspectiveCamera;
+    const { near, far } = instanceAs<THREE.PerspectiveCamera>(cam);
     expect(far).toBeGreaterThan(near);
   });
 
@@ -84,7 +85,7 @@ describe('<Camera3D>', () => {
       <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
-    const o = cam.instance as THREE.OrthographicCamera;
+    const o = instanceAs<THREE.OrthographicCamera>(cam);
     // Godot `size` is the full frustum height → half-extent = size/2.
     expect(o.top).toBe(2);
     expect(o.bottom).toBe(-2);

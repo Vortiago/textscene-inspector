@@ -42,25 +42,27 @@ function uniforms(): CanvasItemLightingUniforms {
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: new THREE.Vector2(2, 2) },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
+    lightMode: { value: CanvasItemLightMode.NORMAL },
   };
 }
 
 function compile(lightMode: CanvasItemLightMode) {
   const shared = uniforms();
-  const props = canvasItemLightingProps({ uniforms: shared, lightMode });
+  shared.lightMode.value = lightMode;
+  const props = canvasItemLightingProps(shared);
   const shader = {
     vertexShader: '',
     fragmentShader: STOCK_FRAGMENT,
     uniforms: {} as Record<string, THREE.IUniform>,
   };
-  props.onBeforeCompile?.(shader);
+  props.injection.onBeforeCompile(shader);
   return { props, shader, shared };
 }
 
 describe('canvasItemLightingProps', () => {
   it('injects the light path for an ordinary item', () => {
     const { props, shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(props.onBeforeCompile).toBeTypeOf('function');
+    expect(props.injection.onBeforeCompile).toBeTypeOf('function');
     expect(shader.fragmentShader).toContain('uniform sampler2D uLightClass0;');
     expect(shader.fragmentShader).toContain('texture2D(uLightClass0,');
     // The lookup is screen-space: the accumulator is one buffer under the whole
@@ -105,7 +107,7 @@ describe('canvasItemLightingProps', () => {
     // S = seed + Σ (S_class − seed): with one class that is S_class, and with
     // several ADD/SUB classes it is their independent terms over one seed.
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('vec3 lightSeed = uCanvasModulate;');
+    expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
     expect(shader.fragmentShader).toContain('vec4 accum = vec4(lightSeed, 0.0);');
     expect(shader.fragmentShader).toContain('accum.rgb += lightClass.rgb - lightSeed;');
     expect(shader.fragmentShader).toContain('accum.a += lightClass.a;');
@@ -113,7 +115,7 @@ describe('canvasItemLightingProps', () => {
 
   it('recovers the albedo through a FLOORED divisor, so a black canvas tint still lights', () => {
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain(`max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}))`);
+    expect(shader.fragmentShader).toContain(`max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}))`);
     expect(CANVAS_MODULATE_FLOOR).toBeGreaterThan(0);
     // Below one 8-bit step, so the floor cannot show on screen.
     expect(CANVAS_MODULATE_FLOOR).toBeLessThanOrEqual(1 / 255);
@@ -129,49 +131,45 @@ describe('canvasItemLightingProps', () => {
     expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
   });
 
-  it('excludes an Unshaded item from the light pass entirely', () => {
-    const { props } = compile(CanvasItemLightMode.UNSHADED);
-    expect(props.onBeforeCompile).toBeUndefined();
-    expect(props.customProgramCacheKey).toBeUndefined();
+  it('declares the mode uniform, so a light_mode edit reaches the GPU', () => {
+    const { shader, shared } = compile(CanvasItemLightMode.NORMAL);
+    expect(shader.uniforms.uLightMode).toBe(shared.lightMode);
+    expect(shader.fragmentShader).toContain('uniform float uLightMode;');
+  });
+
+  it('leaves an Unshaded fragment untouched: no canvas tint, no light loop', () => {
+    // canvas.glsl:715, :719 — MODE_UNSHADED skips both.
+    const { shader } = compile(CanvasItemLightMode.UNSHADED);
+    const guard = shader.fragmentShader.indexOf('if (!unshaded) {');
+    expect(guard).toBeGreaterThan(-1);
+    // Every write the injection makes is inside that guard.
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = godotToLinear')).toBeGreaterThan(guard);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.a = clamp')).toBeGreaterThan(guard);
   });
 
   it('masks a Light Only item by the summed cookie coverage', () => {
     const { props, shader } = compile(CanvasItemLightMode.LIGHT_ONLY);
     expect(shader.fragmentShader).toContain('gl_FragColor.a = clamp(gl_FragColor.a * accum.a');
-    // The mask has to survive to the blend.
+    // Unconditional: `transparent` decides three's `OPAQUE` define.
     expect(props.transparent).toBe(true);
   });
 
   it('reads an unmodulated seed for a Light Only item, which skips the canvas tint', () => {
-    const lightOnly = compile(CanvasItemLightMode.LIGHT_ONLY).shader.fragmentShader;
-    const normal = compile(CanvasItemLightMode.NORMAL).shader.fragmentShader;
-    // Its albedo is the fragment as-is; only an ordinary item divides the tint out.
-    expect(lightOnly).toContain('vec3 lightSeed = vec3(1.0);');
-    expect(lightOnly).toContain('vec3 albedo = lit;');
-    expect(lightOnly).not.toContain('max(uCanvasModulate');
-    expect(normal).toContain('max(uCanvasModulate');
-    expect(normal).not.toContain('gl_FragColor.a * accum.a');
-  });
-
-  it('keeps the two lit modes on separate programs', () => {
-    const normal = compile(CanvasItemLightMode.NORMAL).props.customProgramCacheKey?.();
-    const lightOnly = compile(CanvasItemLightMode.LIGHT_ONLY).props.customProgramCacheKey?.();
-    expect(normal).toBeTruthy();
-    expect(lightOnly).toBeTruthy();
-    expect(normal).not.toBe(lightOnly);
+    const { shader } = compile(CanvasItemLightMode.LIGHT_ONLY);
+    // Both seeds live in the ONE program; `uLightMode` picks at runtime, and the
+    // divide-out is by the seed, so Light Only's 1.0 makes it a no-op.
+    expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
+    expect(shader.fragmentShader).toContain('godotToSrgb(gl_FragColor.rgb) / max(lightSeed');
   });
 
   it('leaves a shader with no colorspace hook untouched rather than throwing', () => {
-    const props = canvasItemLightingProps({
-      uniforms: uniforms(),
-      lightMode: CanvasItemLightMode.NORMAL,
-    });
+    const props = canvasItemLightingProps(uniforms());
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',
       uniforms: {} as Record<string, THREE.IUniform>,
     };
-    expect(() => props.onBeforeCompile?.(shader)).not.toThrow();
+    expect(() => props.injection.onBeforeCompile(shader)).not.toThrow();
     expect(shader.fragmentShader).toBe('void other() {}');
   });
 });

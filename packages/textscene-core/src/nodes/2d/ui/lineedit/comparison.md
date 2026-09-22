@@ -1,17 +1,18 @@
 ---
 type: LineEdit
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-lineedit.tscn
-# image: unit-lineedit
+image: unit-lineedit
 renders_as: a single-line text box
 ---
 
 # LineEdit
 
-LineEdit is a single-line text field. The previewer draws its stylebox and one clipped
-run of text, the string Godot's `_shape()` would paint in the colour its state calls
-for. It draws no caret, selection or clear button.
+LineEdit is a single-line text field. The previewer draws its stylebox, its `right_icon`
+or clear button, its caret while `caret_force_displayed` is set, and one clipped run of
+text (the string, or the placeholder) in the colour its state calls for. `max_length`
+truncates an over-long `text` the same way Godot does.
 
 ## Linting
 
@@ -62,7 +63,8 @@ Strict parsing format-checks these `LineEdit` properties, plus 53 inherited from
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 `secret_character`, `alignment` and `flat` have no strict counterpart. `alignment` goes
@@ -72,9 +74,10 @@ An empty `secret_character` falls back to the bullet, as Godot does.
 
 ## Known limitations
 
-- **Approximated** Glyphs are set in a system font rather than Godot's Open Sans
-  SemiBold, so letterforms, advances and the field's minimum width differ.
-- **Approximated** Field height follows the text's line box rather than Godot's font
-  height plus stylebox margins, so a field can sit a pixel or two off.
-- **Approximated** The minimum width substitutes `4em` for four times the font's `W`
-  advance, which runs a few percent wide on a field no container sizes.
+- **Not drawn** `_is_over_clear_button`'s RTL hit region (line_edit.cpp:1175) and
+  the direction-aware caret markers (:1590-1601): both need pointer or focus state.
+  The alignment swap, the clear button's side, the text's floor past it and
+  `ofs_max` (:1397-1421,1455-1483) all draw.
+- **Not drawn** `shaped_text_set_direction` at :3104: it takes `is_layout_rtl()`
+  only while `text_direction` is INHERITED, and the default is
+  `TEXT_DIRECTION_AUTO` (line_edit.h:144).

@@ -24,7 +24,7 @@
  *
  * so `intensity = energy * PI`. The physical statement is that a Lambertian
  * surface facing a white energy-1.0 light renders exactly its own albedo,
- * which `scenes/fixtures/unit-light-transport-direct.tscn` shows directly: an
+ * which a probe scene shows directly: an
  * unshaded patch of that albedo sits on the lit plane and disappears into it.
  *
  * Measured against a Godot 4.6.3 render of that fixture, the previous value of

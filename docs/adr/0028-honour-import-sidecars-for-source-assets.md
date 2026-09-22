@@ -1,11 +1,12 @@
-# Honour a two-parameter allowlist from Godot's `.import` sidecars
+# Honour a small allowlist from Godot's `.import` sidecars
 
 Godot never loads `scene.gltf` at runtime. Its importer turns the source asset plus
 the `.import` sidecar into a pre-baked PackedScene under `.godot/imported/`, and that
 artefact is what a running game loads. The artefact is gitignored, binary and
 hash-named, so it is not an input this previewer can have. We therefore perform an
 **asset re-import**: load the source asset and re-derive the scene, honouring
-`nodes/root_scale` and `nodes/apply_root_scale` from the sidecar and nothing else.
+`nodes/root_scale`, `nodes/apply_root_scale` and, from `_subresources`, the per-material
+`use_external` remaps and per-node `mesh_instance/layers` — and nothing else.
 
 ## Why this became necessary
 
@@ -19,7 +20,7 @@ inputs, so **both engines agreed**, and the parity harness reported a clean matc
 scene that matched neither Godot nor the real demo. Agreement between the two renderers
 is only evidence when they are fed the same inputs the engine has.
 
-## Why the allowlist is two keys
+## Why the allowlist is short
 
 All 25 scene `.import` files in the corpus were fetched and read. Exactly one parameter
 across all of them has a visual consequence: the tree's root scale. Every other
@@ -37,6 +38,13 @@ newly vendored demo needs a decision.
 
 ## Consequences
 
+- **A material remap belongs to the ASSET, not to a scene.** Godot calls
+  `m->set_surface_material(i, external_mat)` on the ImporterMesh before the scene is
+  serialised, so it is applied to the cached GLB template rather than per consumer — and
+  a `material_override` / `surface_material_override/N` then layers over it, in that
+  order, with no ambiguity about which write lands last. The uid form of the reference is
+  tried first and the `res://` fallback second; nothing here resolves `uid://`, so the
+  fallback is the branch that answers.
 - **`apply_root_scale` is not cosmetic.** When true, Godot applies the scale to the
   meshes and leaves the root node at scale 1, so nodes a `.tscn` parents to the
   instanced root are NOT scaled. The tree relies on this: its `CollisionShape3D` child

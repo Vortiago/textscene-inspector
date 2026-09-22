@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/roughness-split-bands.svg" id="1_rough"]
+
+[resource]
+albedo_color = Color(0.25, 0.25, 0.3, 1)
+metallic = 0.0
+roughness = 1.0
+roughness_texture = ExtResource("1_rough")

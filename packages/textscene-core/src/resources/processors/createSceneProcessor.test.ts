@@ -50,9 +50,12 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
     processor = createSceneProcessor({
       eventBus,
+      // The ResourceLoader's own rule, not a stand-in for it: an unregistered
+      // `res://` address is its own path and carries no declared type.
       resolveMetadata: (idOrPath) => {
         const m = metadataMap.get(idOrPath);
-        return m ? { path: m.path, type: m.type } : null;
+        if (m) return { path: m.path, type: m.type };
+        return idOrPath.startsWith('res://') ? { path: idOrPath, type: null } : null;
       },
       getProvider: () => provider,
     });
@@ -301,6 +304,49 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
       const [, error] = handler.mock.calls[0]!;
       expect(error.message).toContain('Not a PackedScene resource');
+    });
+
+    it('lets an address with no registered type through to the content checks', async () => {
+      // A raw `res://` path no `[ext_resource]` declares has no registered type
+      // to disagree with, so the pre-check must abstain rather than guess — but
+      // abstaining is not a bypass: the content is still what decides.
+      const handler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', handler);
+      mockProvider.loadResource = vi.fn().mockResolvedValue('[gd_resource type="Theme"]');
+
+      processor.request('res://not-a-scene.tres');
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(handler).toHaveBeenCalled();
+      const [, error] = handler.mock.calls[0]!;
+      expect(error.message).toContain('missing [gd_scene header');
+    });
+
+    it('abstains for a declared resource whose heading carried no type=', async () => {
+      // The lenient parser keeps an absent `type=` as `''`, which is the same
+      // "nothing declared one" the null case is — not a type that disagrees.
+      const loadedHandler = vi.fn();
+      eventBus.on<TscnScene>('scene', 'loaded', loadedHandler);
+      registerMetadata('1', { id: '1', path: 'res://scenes/typeless.tscn', type: '' });
+
+      processor.request('1');
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(loadedHandler).toHaveBeenCalled();
+    });
+
+    it('asks the provider for a scene even when nothing declared the type', async () => {
+      registerMetadata('1', { id: '1', path: 'res://scenes/typeless.tscn', type: '' });
+
+      processor.request('res://scenes/raw.tscn');
+      processor.request('1');
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(mockProvider.loadResource).toHaveBeenCalledWith('res://scenes/raw.tscn', 'PackedScene');
+      expect(mockProvider.loadResource).toHaveBeenCalledWith(
+        'res://scenes/typeless.tscn',
+        'PackedScene'
+      );
     });
   });
 

@@ -4,8 +4,7 @@
  * user has uploaded a file for. One row per path, uploaded rows first.
  *
  * Mirrors the pre-migration `updateResourceFilesList()` from
- * `apps/textscene-web/src/main.ts` (see
- * `docs/archive/MAIN-FEATURE-INVENTORY.md` "Missing-files-list" section).
+ * `apps/textscene-web/src/main.ts`.
  *
  * The component is host-agnostic: it only knows about paths. The host
  * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which

@@ -1,11 +1,11 @@
 /**
  * The Godot default-theme constants are transcribed from
  * `scene/theme/default_theme.cpp` — this pins each to the exact Godot 4.6 value
- * and, for the fills, ties the CSS string to `controlColorToCss` of the source
- * `Color(...)` literal so a wrong rounding/format can't slip through.
+ * and, for the fills, ties the CSS string to a local `controlColorToCss` of the
+ * source `Color(...)` literal so a wrong rounding/format can't slip through.
  */
 import { describe, expect, it } from 'vitest';
-import { controlColorToCss } from './styleBoxToCss';
+import type { ThemeFill } from './godotDefaultTheme';
 import {
   DEFAULT_CONTENT_MARGIN,
   DEFAULT_CORNER_RADIUS,
@@ -18,7 +18,6 @@ import {
   SLIDER_GRABBER_RADIUS,
   SLIDER_GRABBER_SIZE,
   SLIDER_TICK_BOX,
-  SLIDER_TICK_LENGTH,
   SLIDER_TICK_THICKNESS,
   SLIDER_TRACK_THICKNESS,
   STYLE_DISABLED_FILL,
@@ -28,6 +27,13 @@ import {
   STYLE_PRESSED_FILL,
   scaledGodotTheme,
 } from './godotDefaultTheme';
+
+/** Format an already-parsed {r,g,b,a} (0..1) color as a CSS rgba() string — an independent ground truth, not a re-derivation of `godotDefaultTheme.ts`'s own `fillCss`. */
+function controlColorToCss(c: ThemeFill): string {
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
+  const alpha = Math.max(0, Math.min(1, c.a));
+  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${alpha})`;
+}
 
 describe('godotDefaultTheme', () => {
   it('derives DEFAULT_FONT_COLOR from control_font_color = Color(0.875, 0.875, 0.875)', () => {
@@ -86,6 +92,7 @@ describe('scaledGodotTheme', () => {
     // The un-scaled path must stay byte-identical to the constants every
     // `.ts`-only consumer still imports.
     expect(scaledGodotTheme(1)).toEqual({
+      scale: 1,
       fontSize: DEFAULT_FONT_SIZE,
       cornerRadius: DEFAULT_CORNER_RADIUS,
       contentMargin: DEFAULT_CONTENT_MARGIN,
@@ -98,13 +105,13 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: SLIDER_GRABBER_RADIUS,
       sliderTickBox: SLIDER_TICK_BOX,
       sliderTickThickness: SLIDER_TICK_THICKNESS,
-      sliderTickLength: SLIDER_TICK_LENGTH,
     });
   });
 
   it('scales every metric at the demo project’s 2.0', () => {
     // scenes/demos/viewport/gui_in_3d/project.godot sets 2.0.
     expect(scaledGodotTheme(2)).toEqual({
+      scale: 2,
       fontSize: 32,
       cornerRadius: 6,
       contentMargin: 8,
@@ -120,7 +127,6 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: 14,
       sliderTickBox: 8,
       sliderTickThickness: 4,
-      sliderTickLength: 32,
     });
   });
 
@@ -144,6 +150,7 @@ describe('scaledGodotTheme', () => {
   it('shrinks at a scale below 1', () => {
     // Godot's minimum is 0.5: round(16·0.5) = 8, round(3·0.5) = 2 (half up).
     expect(scaledGodotTheme(0.5)).toEqual({
+      scale: 0.5,
       fontSize: 8,
       cornerRadius: 2,
       contentMargin: 2,
@@ -156,7 +163,6 @@ describe('scaledGodotTheme', () => {
       sliderGrabberRadius: 4,
       sliderTickBox: 2,
       sliderTickThickness: 1,
-      sliderTickLength: 8,
     });
   });
 });

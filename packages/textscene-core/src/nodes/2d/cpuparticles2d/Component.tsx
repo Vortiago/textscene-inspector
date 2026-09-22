@@ -17,8 +17,12 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
   canvasItemBlendState,
@@ -93,7 +97,12 @@ function ParticleField({
 }) {
   const { externalResources, internalResources } = useSceneResources();
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
-  const { texture, missing } = useTexture2D(props.texture, externalResources, internalResources);
+  const { texture: resolvedTexture, missing } = useTexture2D(
+    props.texture,
+    externalResources,
+    internalResources
+  );
+  const { texture, defines: decodeDefines } = useCanvas2DMap(resolvedTexture);
 
   // A callback ref (not useRef) so the emission-transform sample runs once the
   // container is actually in the tree — its world matrix does not exist before.
@@ -130,28 +139,48 @@ function ParticleField({
   );
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
+  // The field is drawn from the first frame, on a 1x1 quad, while the particle
+  // texture is still loading — so this material is compiled mapless unless a
+  // fresh one replaces it (`materialProgramInputs.ts`).
+  //
+  // Called from the drawing arm rather than derived above the branch: the group
+  // has to mount before a geometry can exist (`useEmissionTransform` samples its
+  // world matrix), so there is no early return to hang the merge off.
+  const particleMesh = (geom: THREE.BufferGeometry) => {
+    const program = materialProgramInputs({
+      props: {
+        map: texture,
+        color,
+        opacity,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        defines: decodeDefines,
+      },
+      // One mesh, N particles, each with its OWN vertex colour and alpha and each
+      // quad wound by the determinant of its own particle transform
+      // (`particleGeometry.ts`). Splitting that array by facing would composite
+      // overlapping particles out of emission order the moment a transform
+      // mirrors — `canvasItemFacing()` draws it once, in index order.
+      merge: [canvasItemFacing(), blend, lighting],
+    });
+    return (
+      <mesh geometry={geom}>
+        <meshBasicMaterial key={program.key} {...program.props} />
+      </mesh>
+    );
+  };
+
   return (
-    <group ref={setContainer} name={`${name}_Particles`}>
+    <CanvasItemGroup ref={setContainer} name={`${name}_Particles`}>
       {missing ? (
         // One marker for the emitter, not one per particle: the Resources tab
         // is where the path is named, and N overlapping magenta quads would
         // bury the scene rather than explain it.
         <MissingResourcePlaceholder shape="plane" name={name} />
       ) : geometry ? (
-        <mesh geometry={geometry}>
-          <meshBasicMaterial
-            map={texture}
-            color={color}
-            opacity={opacity}
-            vertexColors
-            transparent
-            depthWrite={false}
-            side={THREE.DoubleSide}
-            {...blend}
-            {...lighting}
-          />
-        </mesh>
+        particleMesh(geometry)
       ) : null}
-    </group>
+    </CanvasItemGroup>
   );
 }

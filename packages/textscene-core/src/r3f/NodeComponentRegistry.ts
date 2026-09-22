@@ -81,7 +81,14 @@ export interface YSortGroupDescription {
 
 export interface YSortGroupRegistration {
   describe: (node: TscnNode) => YSortGroupDescription;
-  Renderer: React.ComponentType<{ item: YSortItem; z: number; band: number; node: TscnNode }>;
+  Renderer: React.ComponentType<{
+    item: YSortItem;
+    /** The canvas this row draws on, as a rank (`canvasPaintOrder.ts`). */
+    layerRank: number;
+    /** The row's own draw sequence within its parent's run. */
+    sequence: number;
+    node: TscnNode;
+  }>;
 }
 
 /** Every pass takes the parsed roots and hands back the roots to build from. */

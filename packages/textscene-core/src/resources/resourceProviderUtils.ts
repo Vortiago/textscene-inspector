@@ -16,17 +16,16 @@ import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /**
- * Binary types no slice owns yet — audio and fonts, which this previewer
- * neither decodes nor renders. Kept verbatim from the list this
- * function used before the registry existed so a provider keeps fetching them
- * as bytes; each moves out of here when its slice lands.
+ * Binary types no slice owns yet — audio, which this previewer neither decodes
+ * nor renders. Kept verbatim from the list this function used before the
+ * registry existed so a provider keeps fetching them as bytes; each moves out
+ * of here when its slice lands.
  */
 const UNOWNED_BINARY_TYPES: readonly string[] = [
   'AudioStream',
   'AudioStreamWAV',
   'AudioStreamOggVorbis',
   'AudioStreamMP3',
-  'FontFile',
 ];
 
 /** Extensions of the same unowned binary formats. */

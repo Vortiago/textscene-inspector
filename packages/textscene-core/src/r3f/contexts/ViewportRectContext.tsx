@@ -1,6 +1,6 @@
 /**
  * Registry of the rects a `SubViewportContainer` FORCES onto its sub-viewport
- * children, keyed by scene-tree node path — the return leg of ADR-0030's seam.
+ * children, keyed by scene-tree node path — the return leg of ADR-0033's seam.
  *
  * `ViewportTextureRegistry` carries a target from a publisher inside the R3F
  * root to consumers in the DOM overlay. This carries a measurement the other

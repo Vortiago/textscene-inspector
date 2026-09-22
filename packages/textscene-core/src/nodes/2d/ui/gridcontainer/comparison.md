@@ -1,17 +1,18 @@
 ---
 type: GridContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-grid-container.tscn
 image: unit-grid-container
-renders_as: a CSS grid container
+renders_as: children packed into a fixed column count
 ---
 
 # GridContainer
 
-GridContainer lays its children into a fixed number of columns, wrapping to a new row.
-The previewer maps it to a `display: grid` div, with `columns` as the column template
-and the separation constants as the gaps.
+GridContainer lays its children into a fixed number of columns, wrapping to a new row. A
+right-to-left `layout_direction` starts each row at the opposite edge and fills it back
+the other way; the column widths and row heights are unchanged.
+Column widths and row heights come from the children's own minimum sizes.
 
 ## Linting
 
@@ -27,7 +28,8 @@ Strict parsing format-checks these `GridContainer` properties, plus 53 inherited
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 `columns` goes through `parseOptionalInt`, so an absent or unparseable value becomes

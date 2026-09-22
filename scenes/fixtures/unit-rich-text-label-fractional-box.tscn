@@ -1,0 +1,47 @@
+; The ONE variable: a FRACTIONAL control width under an aligned
+; RichTextLabel. `_draw_line` measures the line as `get_line_size(line).x`
+; (rich_text_label.cpp:984), the CEILED shaped extent
+; (text_server_adv.cpp:7524-7537), and aligns it against `int p_width`
+; (rich_text_label.h:672,678), truncated once from the control rect. Measuring
+; the raw pen advance instead is invisible at every whole box width, because
+; flooring the whole expression absorbs the fraction — so only a fractional
+; width can tell the two apart, and every other RichTextLabel fixture is a
+; whole number of pixels wide. "Threat level" at the default 16px measures
+; 91.03125 raw and 92 ceiled, so at a width of 201.5 the RIGHT arm lands on
+; 109 rather than 110 and the CENTER arm on 54 rather than 55. Both nodes move
+; the same one variable and differ only in which arm reads it. autowrap is OFF
+; so the line cannot wrap, and the box is tall enough that no scrollbar
+; narrows it.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="FractionalRight" type="RichTextLabel" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_right = 241.5
+offset_top = 40.0
+offset_bottom = 80.0
+autowrap_mode = 0
+horizontal_alignment = 2
+text = "Threat level"
+
+[node name="FractionalCenter" type="RichTextLabel" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_right = 241.5
+offset_top = 100.0
+offset_bottom = 140.0
+autowrap_mode = 0
+horizontal_alignment = 1
+text = "Threat level"

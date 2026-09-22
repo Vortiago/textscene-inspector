@@ -40,10 +40,10 @@ It produces an invented citation: an agent asked to ground a claim in a file it 
 open returns plausible, wrong line numbers. Check that the path resolves before
 trusting any `file:line`.
 
-`pnpm ref:godot` runs whatever `godot` is on PATH, which is 4.7.2 here, so a
-render or a headless probe answers for that release and the clone answers for the
-pin. Where the two disagree, the probe is evidence of a version difference, not of
-a defect. Read
+`pnpm ref:godot` runs whatever `godot` is on PATH. Check it with `godot --version`
+rather than assuming: when it matches the pinned clone, a probe and a citation
+answer for the same release, and when it does not, a disagreement between them is
+evidence of a version difference rather than of a defect. Read
 `doc/classes/<Type>.xml` for members, defaults, enum constants and the `inherits=`
 parent. Read the class `.cpp` for `ADD_PROPERTY` bounds. A member tagged
 `overrides="…"` is a default-value override, not a new property. A property flagged

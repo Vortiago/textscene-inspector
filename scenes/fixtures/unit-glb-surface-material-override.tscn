@@ -1,0 +1,33 @@
+[gd_scene load_steps=4 format=3]
+
+; ONE VARIABLE: whether `surface_material_override/0` authored as an inline
+; `[sub_resource]` reaches a mesh that lives INSIDE an instanced `.glb`.
+;
+; Godot models no difference between where an override material came from —
+; `MeshInstance3D::set_surface_override_material` takes a `Ref<Material>` — so a
+; GLB-internal mesh must honour a scene sub-resource exactly as it honours an
+; ExtResource `.tres`. Resolving only the path form drops this one silently.
+;
+; `unit-cube.glb` carries NO glTF material of its own, so the dropped-override
+; state is Godot's plain default 3D surface (mid-grey) and the applied state is
+; this scene's orange. The two cannot be confused, and neither can be mistaken
+; for a missing mesh: a dropped override still draws the cube.
+;
+; The override node is TYPE-LESS with `parent="Cube"` — Godot's form for
+; "override the node already at this path" — which is the shape that reaches the
+; GLB override path at all. A typed node here would add a NEW child instead and
+; would not test this.
+
+[ext_resource type="PackedScene" uid="uid://ctscnglbmatovr0" path="res://meshes/unit-cube.glb" id="1_glb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_paint"]
+albedo_color = Color(0.95, 0.45, 0.05, 1)
+roughness = 0.4
+metallic = 0.1
+
+[node name="GlbMaterialOverride" type="Node3D"]
+
+[node name="Cube" parent="." instance=ExtResource("1_glb")]
+
+[node name="Cube" parent="Cube" index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_paint")

@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { identityTransform3D } from '../../utils/transform';
 import { buildCsgPlan, CsgOperation } from './csgPlan';
+import type { CsgContribution, CsgPlan } from './csgPlan';
 import type { TscnNode } from '../../parser/types';
 
 const CSG_TYPES = new Set([
@@ -38,6 +39,18 @@ function node(
   return { name, type, children, properties: { name, ...properties } as never };
 }
 
+/** The fold's geometry-bearing nodes in pre-order — what the flat plan used to be. */
+function solids(plan: CsgPlan): CsgContribution[] {
+  const out: CsgContribution[] = [];
+  const walk = (c: CsgContribution | null): void => {
+    if (!c) return;
+    if (c.hasGeometry) out.push(c);
+    c.children.forEach(walk);
+  };
+  walk(plan.root);
+  return out;
+}
+
 function translated(x: number, y: number, z: number) {
   return { transform: { ...identityTransform3D(), origin: { x, y, z } } };
 }
@@ -53,8 +66,8 @@ describe('buildCsgPlan', () => {
       node('CSGSphere3D', 'B', { operation: CsgOperation.INTERSECTION }),
     ]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    expect(plan.contributions.map((c) => c.path)).toEqual(['Root', 'Root/A', 'Root/B']);
-    expect(plan.contributions.map((c) => c.operation)).toEqual([
+    expect(solids(plan).map((c) => c.path)).toEqual(['Root', 'Root/A', 'Root/B']);
+    expect(solids(plan).map((c) => c.operation)).toEqual([
       CsgOperation.UNION,
       CsgOperation.SUBTRACTION,
       CsgOperation.INTERSECTION,
@@ -69,7 +82,7 @@ describe('buildCsgPlan', () => {
       node('Node3D', 'Holder', {}, [node('CSGSphere3D', 'Deep')]),
     ]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    expect(plan.contributions.map((c) => c.path)).toEqual(['Root']);
+    expect(solids(plan).map((c) => c.path)).toEqual(['Root']);
     expect(plan.absorbedPaths.has('Root/Holder/Deep')).toBe(false);
   });
 
@@ -79,7 +92,7 @@ describe('buildCsgPlan', () => {
       node('CSGBox3D', 'Ledge'),
     ]);
     const plan = buildCsgPlan(root, 'Comb', OPTS)!;
-    expect(plan.contributions.map((c) => c.path)).toEqual(['Comb/Ground', 'Comb/Ledge']);
+    expect(solids(plan).map((c) => c.path)).toEqual(['Comb/Ground', 'Comb/Ledge']);
   });
 
   it('composes nested transforms into root-local space', () => {
@@ -89,7 +102,7 @@ describe('buildCsgPlan', () => {
       ]),
     ]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    const leaf = plan.contributions.find((c) => c.path === 'Root/Mid/Leaf')!;
+    const leaf = solids(plan).find((c) => c.path === 'Root/Mid/Leaf')!;
     const p = new THREE.Vector3().setFromMatrixPosition(leaf.matrix);
     expect(p.toArray()).toEqual([0, 2, 3]);
   });
@@ -98,13 +111,13 @@ describe('buildCsgPlan', () => {
     // Including it here would apply the root transform twice.
     const root = node('CSGBox3D', 'Root', translated(100, 0, 0));
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    expect(new THREE.Vector3().setFromMatrixPosition(plan.contributions[0]!.matrix).toArray()).toEqual([0, 0, 0]);
+    expect(new THREE.Vector3().setFromMatrixPosition(solids(plan)[0]!.matrix).toArray()).toEqual([0, 0, 0]);
   });
 
   it('ignores the root’s own operation, which has nothing to fold into', () => {
     const root = node('CSGBox3D', 'Root', { operation: CsgOperation.SUBTRACTION });
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    expect(plan.contributions[0]!.operation).toBe(CsgOperation.UNION);
+    expect(solids(plan)[0]!.operation).toBe(CsgOperation.UNION);
   });
 
   it('keeps a subtraction that is the FIRST child, which folds into nothing', () => {
@@ -115,8 +128,8 @@ describe('buildCsgPlan', () => {
       node('CSGBox3D', 'First', { operation: CsgOperation.SUBTRACTION }),
     ]);
     const plan = buildCsgPlan(root, 'Comb', OPTS)!;
-    expect(plan.contributions).toHaveLength(1);
-    expect(plan.contributions[0]!.operation).toBe(CsgOperation.SUBTRACTION);
+    expect(solids(plan)).toHaveLength(1);
+    expect(solids(plan)[0]!.operation).toBe(CsgOperation.SUBTRACTION);
   });
 
   describe('visibility', () => {
@@ -126,7 +139,7 @@ describe('buildCsgPlan', () => {
         node('CSGCombiner3D', 'Hidden', { visible: false }, [node('CSGSphere3D', 'Inner')]),
       ]);
       const plan = buildCsgPlan(root, 'Comb', OPTS)!;
-      expect(plan.contributions.map((c) => c.path)).toEqual(['Comb/Shown']);
+      expect(solids(plan).map((c) => c.path)).toEqual(['Comb/Shown']);
     });
 
     it('treats the scene-tree eye toggle exactly like visible = false', () => {
@@ -134,23 +147,100 @@ describe('buildCsgPlan', () => {
       // change the boolean result rather than just hiding a mesh.
       const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'Cut', { operation: 2 })]);
       const plan = buildCsgPlan(root, 'Root', { ...OPTS, hiddenPaths: new Set(['Root/Cut']) })!;
-      expect(plan.contributions.map((c) => c.path)).toEqual(['Root']);
+      expect(solids(plan).map((c) => c.path)).toEqual(['Root']);
+      expect([...plan.invisiblePaths]).toEqual(['Root/Cut']);
+    });
+
+    it('carries the eye toggle down the subtree, as the local flag does', () => {
+      // _get_brush() tests child->is_visible(), the LOCAL flag — hiding a node does not
+      // mark its descendants, the recursion simply never reaches them, so their
+      // node_aabb goes unwritten too. Same set either way.
+      const tree = () => [
+        node('CSGBox3D', 'Kept'),
+        node('CSGBox3D', 'Off', {}, [node('CSGSphere3D', 'Under')]),
+      ];
+      const eye = buildCsgPlan(node('CSGCombiner3D', 'Comb', {}, tree()), 'Comb', {
+        ...OPTS,
+        hiddenPaths: new Set(['Comb/Off']),
+      })!;
+      const flag = buildCsgPlan(
+        node('CSGCombiner3D', 'Comb', {}, [
+          node('CSGBox3D', 'Kept'),
+          node('CSGBox3D', 'Off', { visible: false }, [node('CSGSphere3D', 'Under')]),
+        ]),
+        'Comb',
+        OPTS
+      )!;
+
+      expect([...eye.invisiblePaths]).toEqual(['Comb/Off', 'Comb/Off/Under']);
+      expect([...eye.invisiblePaths]).toEqual([...flag.invisiblePaths]);
+      expect(solids(eye).map((c) => c.path)).toEqual(solids(flag).map((c) => c.path));
+    });
+
+    it('reports the skipped subtree, so each node can bound to a point', () => {
+      // _get_brush() never reaches them, so their node_aabb is never written.
+      const root = node('CSGCombiner3D', 'Comb', {}, [
+        node('CSGBox3D', 'Shown'),
+        node('CSGCombiner3D', 'Hidden', { visible: false }, [node('CSGSphere3D', 'Inner')]),
+      ]);
+      expect([...buildCsgPlan(root, 'Comb', OPTS)!.invisiblePaths]).toEqual([
+        'Comb/Hidden',
+        'Comb/Hidden/Inner',
+      ]);
+    });
+
+    it('leaves a CSG node under a non-CSG child of the skipped one alone', () => {
+      // parent_shape is set for a DIRECT CSG parent only, so it is its own root:
+      // its update_shape runs and it keeps a full box however its ancestors draw.
+      const root = node('CSGCombiner3D', 'Comb', {}, [
+        node('CSGBox3D', 'Hidden', { visible: false }, [
+          node('Node3D', 'Pivot', {}, [node('CSGSphere3D', 'Own')]),
+        ]),
+      ]);
+      expect([...buildCsgPlan(root, 'Comb', OPTS)!.invisiblePaths]).toEqual(['Comb/Hidden']);
+    });
+
+    it('never marks the root itself, whose own build runs regardless', () => {
+      // update_shape() is gated on is_root_shape() alone (csg_shape.cpp:568-570).
+      const root = node('CSGBox3D', 'Root', { visible: false });
+      expect([...buildCsgPlan(root, 'Root', OPTS)!.invisiblePaths]).toEqual([]);
+    });
+
+    it('resolves an INVISIBLE root\'s subtree exactly as a visible one\'s', () => {
+      // The root's own visibility never reaches _get_brush(): it recurses into the
+      // visible children and skips the invisible ones either way. Stopping the walk at
+      // an invisible root would leave its invisible children their full box.
+      const children = () => [
+        node('CSGBox3D', 'Kept'),
+        node('CSGBox3D', 'Hidden', { visible: false }, [node('CSGSphere3D', 'Inner')]),
+      ];
+      const shown = buildCsgPlan(node('CSGCombiner3D', 'Comb', {}, children()), 'Comb', OPTS)!;
+      const hidden = buildCsgPlan(
+        node('CSGCombiner3D', 'Comb', { visible: false }, children()),
+        'Comb',
+        OPTS
+      )!;
+
+      expect([...hidden.invisiblePaths]).toEqual(['Comb/Hidden', 'Comb/Hidden/Inner']);
+      expect([...hidden.invisiblePaths]).toEqual([...shown.invisiblePaths]);
+      expect(solids(hidden).map((c) => c.path)).toEqual(solids(shown).map((c) => c.path));
+      expect([...hidden.absorbedPaths]).toEqual([...shown.absorbedPaths]);
     });
   });
 
   describe('surfaces', () => {
     it('interns each distinct material once, in first-seen order', () => {
-      const root = node('CSGBox3D', 'Root', { material: 'SubResource("A")' }, [
-        node('CSGSphere3D', 'X', { material: 'SubResource("B")' }),
-        node('CSGSphere3D', 'Y', { material: 'SubResource("A")' }),
+      const root = node('CSGBox3D', 'Root', { materialPath: 'SubResource("A")' }, [
+        node('CSGSphere3D', 'X', { materialPath: 'SubResource("B")' }),
+        node('CSGSphere3D', 'Y', { materialPath: 'SubResource("A")' }),
       ]);
       const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(plan.surfaces).toEqual(['SubResource("A")', 'SubResource("B")']);
-      expect(plan.contributions.map((c) => c.surface)).toEqual([0, 1, 0]);
+      expect(solids(plan).map((c) => c.surface)).toEqual([0, 1, 0]);
     });
 
     it('gives "no material" its own surface slot', () => {
-      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'X', { material: 'SubResource("A")' })]);
+      const root = node('CSGBox3D', 'Root', {}, [node('CSGSphere3D', 'X', { materialPath: 'SubResource("A")' })]);
       const plan = buildCsgPlan(root, 'Root', OPTS)!;
       expect(plan.surfaces).toEqual([undefined, 'SubResource("A")']);
     });
@@ -201,13 +291,13 @@ describe('buildCsgPlan', () => {
       }),
     ]);
     const plan = buildCsgPlan(root, 'Root', OPTS)!;
-    expect(plan.contributions.map((c) => c.path)).toEqual(['Root']);
+    expect(solids(plan).map((c) => c.path)).toEqual(['Root']);
   });
 
   it('returns an empty-contribution plan rather than null for a combiner with no children', () => {
     // "This root legitimately draws nothing" is a different answer from "not a root".
     const plan = buildCsgPlan(node('CSGCombiner3D', 'Empty'), 'Empty', OPTS)!;
     expect(plan).not.toBeNull();
-    expect(plan.contributions).toHaveLength(0);
+    expect(solids(plan)).toHaveLength(0);
   });
 });

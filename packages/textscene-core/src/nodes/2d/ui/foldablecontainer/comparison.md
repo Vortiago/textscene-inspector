@@ -1,7 +1,7 @@
 ---
 type: FoldableContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-foldable-container.tscn
 # image: unit-foldable-container
 renders_as: a collapsible titled panel (accordion)
@@ -10,8 +10,13 @@ renders_as: a collapsible titled panel (accordion)
 # FoldableContainer
 
 FoldableContainer is a titled panel that expands or collapses its children like an
-accordion section. The previewer parses and validates it but does not draw it, so it
-renders as a transform-only fallback and its children still show.
+accordion section. The previewer draws the title bar (its StyleBox, fold-state arrow
+icon and title text) and, only while unfolded, a content panel behind the children and
+their solved rects below (or above) it. Sorting writes each direct child's own
+`visible`, so folding hides the children and unfolding shows them whatever the file
+authored. A right-to-left `layout_direction` moves the arrow to the right
+of the title bar, puts the title text at the left margin with its `title_alignment`
+swapped, and insets the content from the panel style's right margin.
 
 ## Linting
 
@@ -34,14 +39,18 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl` unchanged, which reads none of
-FoldableContainer's own keys. A bad `title_alignment` or an out-of-range
-`title_text_direction` is never read, so no fallback applies.
+`parser.ts` reads `folded`, `title`, `title_alignment`, `title_position` and
+`title_text_overrun_behavior` — the five own keys that change what draws.
+`foldable_group`/`title_text_direction`/`language` are behaviour, not pixels, and stay
+unread. A malformed `folded` becomes `false`; a malformed `title_alignment`/
+`title_position`/`title_text_overrun_behavior` becomes `undefined` and the render
+default (LEFT / TOP / no trimming) applies.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the title bar and hides the children while `folded`. The
-  previewer draws nothing for this node, and the children show regardless of `folded`.
+- **Approximated** A right-to-left title keeps its glyphs in the written order; the
+  previewer shapes no bidirectional text, so `title_text_direction` changes nothing.

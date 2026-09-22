@@ -1,13 +1,13 @@
 /**
  * Sprite3D component tests.
  *
- * 12 assertions covering texture loading, billboard persistence, quad
- * sizing, modulate, transparency, alpha_cut, spritesheet UV (the
- * load-bearing new logic), region cropping, render priority, and
- * transform application.
+ * Texture loading, billboard persistence, quad sizing, modulate,
+ * transparency, the alpha_cut arms, the derived sampler wrap mode,
+ * spritesheet UV, region cropping, render priority and transform
+ * application.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Sprite3D } from './Component';
@@ -16,7 +16,6 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type {
   TscnExternalResource,
-  TscnInternalResource,
   TscnNode,
 } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
@@ -24,7 +23,10 @@ import {
   AlphaCutMode,
   AxisMode,
   BillboardMode,
+  AlphaAntiAliasing,
+  TextureFilterMode,
 } from './types';
+import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -44,6 +46,14 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
   const props: Sprite3DProperties = {
     name: overrides.name ?? 'Sprite',
     billboard: BillboardMode.BILLBOARD_DISABLED,
+    shaded: false,
+    no_depth_test: false,
+    fixed_size: false,
+    alpha_scissor_threshold: 0.5,
+    alpha_hash_scale: 1.0,
+    alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    alpha_antialiasing_edge: 0.0,
+    texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,
@@ -52,14 +62,14 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     vframes: 1,
     frame: 0,
     offset: { x: 0, y: 0 },
+    region_enabled: false,
+    modulate: { r: 1, g: 1, b: 1, a: 1 },
+    render_priority: 0,
     centered: true,
     flip_h: false,
     flip_v: false,
     double_sided: true,
     transparent: true,
-    region_enabled: false,
-    modulate: { r: 1, g: 1, b: 1, a: 1 },
-    render_priority: 0,
     ...overrides,
   };
   return { name: props.name ?? 'Sprite', type: 'Sprite3D', children: [], properties: props };
@@ -72,7 +82,6 @@ function extRef(id: string, path: string): TscnExternalResource {
 async function render(opts: {
   node: TscnNode;
   externals?: TscnExternalResource[];
-  internals?: TscnInternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
 }) {
   const fake = createFakeResourceLoader();
@@ -81,10 +90,7 @@ async function render(opts: {
   }
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        externalResources={opts.externals ?? []}
-        internalResources={opts.internals ?? []}
-      >
+      <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <Sprite3D node={opts.node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
@@ -99,8 +105,8 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mesh = renderer.scene.findByType('Mesh');
-    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mesh = findMesh(renderer.scene);
+    const mat = mesh.material as THREE.MeshBasicMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
@@ -114,7 +120,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     // Placeholder uses a magenta meshBasicMaterial; search for it.
     const meshes = renderer.scene.findAllByType('Mesh');
     const placeholder = meshes.find((m) => {
-      const mat = (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const mat = instanceAs<THREE.Mesh>(m).material as THREE.MeshBasicMaterial;
       return mat.color.r === 1 && mat.color.g === 0 && mat.color.b === 1;
     });
     expect(group).toBeDefined();
@@ -132,8 +138,8 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mesh = renderer.scene.findByType('Mesh');
-    const userData = mesh.instance.userData as { billboardMode: number; billboardAxis: number };
+    const mesh = findMesh(renderer.scene);
+    const userData = mesh.userData as { billboardMode: number; billboardAxis: number };
     expect(userData.billboardMode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
     expect(userData.billboardAxis).toBe(AxisMode.AXIS_Z);
   });
@@ -145,7 +151,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as unknown as {
+    const geom = findMesh(renderer.scene).geometry as unknown as {
       parameters: { width: number; height: number };
     };
     // 200 px × 0.01 = 2 world units wide; 100 px × 0.01 = 1 world unit tall.
@@ -163,7 +169,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // Godot modulate is sRGB → converted to the linear working space: 1→1, 0→0,
     // 0.5→~0.214 (IEC 61966-2-1 inverse transfer).
     expect(mat.color.r).toBeCloseTo(1, 3);
@@ -171,7 +177,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.color.b).toBeCloseTo(0, 3);
   });
 
-  it('combines modulate.a and transparency into opacity (transparent=true when opacity<1)', async () => {
+  it('combines modulate.a and transparency into opacity', async () => {
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({
@@ -182,7 +188,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // opacity = clamp01(0.8 * (1 - 0.5)) = 0.4
     expect(mat.opacity).toBeCloseTo(0.4, 5);
     expect(mat.transparent).toBe(true);
@@ -200,15 +206,15 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mesh = renderer.scene.findByType('Mesh');
-    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mesh = findMesh(renderer.scene);
+    const mat = mesh.material as THREE.MeshBasicMaterial;
     expect(mat.map?.repeat.x).toBeCloseTo(0.5, 5);
     expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
     // Y-flip: offset.y = 1 - (25 + 50) / 100 = 0.25
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0.25, 5);
     // Quad sized to the sub-region.
-    const geom = (mesh.instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    const geom = mesh.geometry as unknown as { parameters: { width: number; height: number } };
     expect(geom.parameters.width).toBeCloseTo(0.5, 5);
     expect(geom.parameters.height).toBeCloseTo(0.5, 5);
   });
@@ -225,7 +231,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // repeat = (1/4, 1/2); offset for top-left = (0, 1 - 1/2) = (0, 0.5)
     expect(mat.map?.repeat.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
@@ -245,7 +251,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // frame=5 → col = 5%4 = 1, row = floor(5/4) = 1
     // offset = (1/4, 1 - (1+1)/2) = (0.25, 0)
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
@@ -265,7 +271,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // col=2, row=0 → offset = (2/3, 1 - 1/1) = (0.6667, 0)
     expect(mat.map?.offset.x).toBeCloseTo(2 / 3, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0, 5);
@@ -281,9 +287,152 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     expect(mat.alphaTest).toBeGreaterThan(0);
     expect(mat.depthWrite).toBe(true);
+  });
+
+  it('alpha_cut=DISCARD cuts at the authored alpha_scissor_threshold', async () => {
+    // `sprite_3d.cpp:281` feeds the node's own `alpha_scissor_threshold` to the
+    // material; the scissor compares against it (`scene_forward_clustered.glsl:1391`).
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_scissor_threshold: 0.25,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaTest).toBe(0.25);
+  });
+
+  it('alpha_cut=DISABLED blends at full modulate alpha', async () => {
+    // `sprite_3d.cpp:293` → TRANSPARENCY_ALPHA, which writes ALPHA in the
+    // generated shader (`material.cpp:1836`) and so raises the compile-time
+    // `uses_alpha` (`scene_shader_forward_clustered.cpp:123`). The alpha list is
+    // chosen from that flag alone (`scene_shader_forward_clustered.h:279-287`,
+    // `render_forward_clustered.cpp:4079-4090`) — no colour is read.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.opacity).toBe(1);
+    expect(mat.transparent).toBe(true);
+    // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
+    expect(mat.depthWrite).toBe(false);
+  });
+
+  it('alpha_cut=DISCARD paints opaque', async () => {
+    // `sprite_3d.cpp:287` → TRANSPARENCY_ALPHA_SCISSOR, whose fragment tail
+    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`), so the
+    // surface lands in the opaque list rather than the blended one.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.transparent).toBe(false);
+    expect(mat.alphaHash).toBe(false);
+  });
+
+  it('alpha_cut=OPAQUE_PREPASS keeps blending and still writes depth', async () => {
+    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass
+    // still blends, the depth pass cuts. The cut is the SCENE's
+    // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), never
+    // the node's own `alpha_scissor_threshold` — authoring one must not move it.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
+        alpha_scissor_threshold: 0.25,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.transparent).toBe(true);
+    expect(mat.depthWrite).toBe(true);
+    expect(mat.alphaHash).toBe(false);
+    expect(mat.alphaTest).not.toBe(0.25);
+  });
+
+  it('alpha_cut=HASH hashes rather than blends', async () => {
+    // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail
+    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`) — a
+    // dithered discard into the opaque pass, never a blend.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaHash).toBe(true);
+    expect(mat.alphaTest).toBe(0);
+    expect(mat.depthWrite).toBe(true);
+    expect(mat.transparent).toBe(false);
+  });
+
+  it('transparent=false disables hashing, as it disables the whole alpha-cut switch', async () => {
+    // `sprite_3d.cpp:286` gates every `mat_transparency` arm on FLAG_TRANSPARENT.
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        transparent: false,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.alphaHash).toBe(false);
+  });
+
+  it('clamps the sampler for a frame window inside [0, 1]', async () => {
+    // `sprite_3d.cpp:163` derives `texture_repeat` from the frame's UV corners,
+    // so the ordinary sprite is CLAMP and repeating it would smear a half-texel
+    // of the opposite edge across all four borders under linear filtering.
+    const tex = makeTexture(64, 64);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(mat.map?.wrapT).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('repeats the sampler only where the frame window overruns the texture', async () => {
+    const tex = makeTexture(64, 64);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        region_enabled: true,
+        region_rect: { x: 0, y: 0, width: 192, height: 128 },
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.wrapS).toBe(THREE.RepeatWrapping);
+    expect(mat.map?.wrapT).toBe(THREE.RepeatWrapping);
   });
 
   it('render_priority maps to mesh.renderOrder + transform origin propagates to mesh.position', async () => {
@@ -308,72 +457,42 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mesh.instance.position.x).toBe(3);
     expect(mesh.instance.position.z).toBe(-1);
   });
-});
 
-describe('<Sprite3D> texture sources through the shared seam', () => {
-  it('renders a procedural SubResource texture instead of the placeholder', async () => {
-    // A GradientTexture2D (and NoiseTexture2D, same machinery) is described
-    // entirely by the scene, so no file exists to load; the sprite must ride
-    // the shared procedural rasteriser exactly as Sprite2D does.
-    const internals: TscnInternalResource[] = [
-      {
-        id: 'Gradient_g',
-        type: 'Gradient',
-        data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' },
-      },
-      {
-        id: 'GradientTexture2D_t',
-        type: 'GradientTexture2D',
-        data: { gradient: 'SubResource("Gradient_g")', width: '8', height: '4' },
-      },
-    ];
-    const renderer = await render({
-      node: makeNode({ texture: 'SubResource("GradientTexture2D_t")' }),
-      internals,
-    });
-    const mesh = renderer.scene.findByType('Mesh');
-    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    expect((mat.map as Partial<THREE.DataTexture> | null)?.isDataTexture).toBe(true);
-  });
+  // The region/frame path CLONES the loaded texture so it can carry its own
+  // offset/repeat, and that clone belongs to this component. The source does
+  // not: it is the loader's cached entry, shared with every other node
+  // sampling the same file, so disposing it would blank them all.
+  describe('texture ownership on unmount', () => {
+    it('disposes the clone it made, and leaves the shared source alone', async () => {
+      const tex = makeTexture(64, 64);
+      const sourceDispose = vi.spyOn(tex, 'dispose');
+      const renderer = await render({
+        node: makeNode({ texture: 'ExtResource("1_tex")', hframes: 2, vframes: 2, frame: 1 }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        cached: [{ path: TEXTURE_PATH, texture: tex }],
+      });
+      const clone = (findMesh(renderer.scene).material as THREE.MeshBasicMaterial).map!;
+      expect(clone).not.toBe(tex);
+      const cloneDispose = vi.spyOn(clone, 'dispose');
 
-  it('windows an AtlasTexture reference to its cell', async () => {
-    // The atlas cell arrives as the source's region; the quad takes the cell
-    // size and the map is windowed to it. Before the seam, Sprite3D resolved
-    // the path only and drew the whole sheet.
-    const tex = makeTexture(100, 50);
-    const internals: TscnInternalResource[] = [
-      {
-        id: 'AtlasTexture_a',
-        type: 'AtlasTexture',
-        data: { atlas: 'ExtResource("1_tex")', region: 'Rect2(10, 5, 40, 20)' },
-      },
-    ];
-    const renderer = await render({
-      node: makeNode({ texture: 'SubResource("AtlasTexture_a")', pixel_size: 1 }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      internals,
-      cached: [{ path: TEXTURE_PATH, texture: tex }],
-    });
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const geom = mesh.geometry as THREE.PlaneGeometry;
-    expect(geom.parameters.width).toBeCloseTo(40, 5);
-    expect(geom.parameters.height).toBeCloseTo(20, 5);
-    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-    expect(map.repeat.x).toBeCloseTo(0.4, 5);
-  });
+      await renderer.unmount();
 
-  it('draws a whole-image, unflipped sprite with the shared texture itself, not a clone', async () => {
-    // Cloning marks needsUpdate on the shared Source, which forces a GPU
-    // re-upload of pixels the cache already paid for; with nothing to window
-    // the borrowed texture is drawn directly.
-    const tex = makeTexture(64, 64);
-    const renderer = await render({
-      node: makeNode({ texture: 'ExtResource("1_tex")' }),
-      externals: [extRef('1_tex', TEXTURE_PATH)],
-      cached: [{ path: TEXTURE_PATH, texture: tex }],
+      expect(cloneDispose).toHaveBeenCalled();
+      expect(sourceDispose).not.toHaveBeenCalled();
     });
-    const mesh = renderer.scene.findByType('Mesh');
-    const mat = (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    expect(mat.map).toBe(tex);
+
+    it('never disposes the shared source, region or no region', async () => {
+      const tex = makeTexture(64, 64);
+      const sourceDispose = vi.spyOn(tex, 'dispose');
+      const renderer = await render({
+        node: makeNode({ texture: 'ExtResource("1_tex")' }),
+        externals: [extRef('1_tex', TEXTURE_PATH)],
+        cached: [{ path: TEXTURE_PATH, texture: tex }],
+      });
+
+      await renderer.unmount();
+
+      expect(sourceDispose).not.toHaveBeenCalled();
+    });
   });
 });

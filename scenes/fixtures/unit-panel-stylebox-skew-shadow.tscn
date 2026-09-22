@@ -1,0 +1,109 @@
+; The one variable: WHICH stages `StyleBoxFlat::draw` runs — `skew` and the drop
+; shadow. Every other stylebox scene varies the ring it already draws (radii,
+; border widths, blend); neither field here changes a radius or a width, so a
+; regression in either is invisible in all of them. Four Panels, same 480x260
+; rect and fill, over a backdrop light enough to measure a fade against.
+;
+; SkewSharp — sharp corners, horizontal skew only. Ignore `skew` and you draw an
+; axis-aligned rectangle, so the whole silhouette moves. Also the only place a
+; golden exercises the second half of `aa_on`
+; (`rounded_corners || !skew.is_zero_approx()`): a sharp box that still feathers.
+; SkewRound — skew on both axes plus a border, proving every ring shears about
+; ONE centre; per-ring centres detach the border from the fill.
+; ShadowOffset — shadow down-right, no border, so shadow and box are separable
+; by eye. `shadow_size` 24 because a small fade reads as a feather.
+; ShadowHollow — shadow plus `draw_center = false`, so the shadow is a ring too
+; and the backdrop shows through both; offset UP-LEFT so a sign error fails one.
+;
+; Measured against Godot 4.6.3 at `--mode 2d`: whole-frame mean channel error
+; 0.19, nothing past 6 counts. Nearly all of the mean is one count of green on
+; the fill (0.3 x 255 = 76.5, the reference's ROP floor); the rest is SkewRound's
+; doubly-sheared edges.
+
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skew_sharp"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+skew = Vector2(0.35, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skew_round"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+border_width_left = 16
+border_width_top = 16
+border_width_right = 16
+border_width_bottom = 16
+border_color = Color(0.95, 0.75, 0.2, 1)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+skew = Vector2(0.2, 0.15)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shadow_offset"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0.1, 0.05, 0.3, 0.7)
+shadow_size = 24
+shadow_offset = Vector2(16, 12)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shadow_hollow"]
+bg_color = Color(0.15, 0.3, 0.5, 1)
+draw_center = false
+border_width_left = 12
+border_width_top = 12
+border_width_right = 12
+border_width_bottom = 12
+border_color = Color(0.8, 0.2, 0.35, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0.1, 0.05, 0.3, 0.7)
+shadow_size = 20
+shadow_offset = Vector2(-14, -10)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.85, 0.85, 0.82, 1)
+
+[node name="SkewSharp" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 544.0
+offset_bottom = 308.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skew_sharp")
+
+[node name="SkewRound" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 608.0
+offset_top = 48.0
+offset_right = 1088.0
+offset_bottom = 308.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_skew_round")
+
+[node name="ShadowOffset" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 64.0
+offset_top = 340.0
+offset_right = 544.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shadow_offset")
+
+[node name="ShadowHollow" type="Panel" parent="."]
+anchors_preset = 0
+offset_left = 608.0
+offset_top = 340.0
+offset_right = 1088.0
+offset_bottom = 600.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_shadow_hollow")

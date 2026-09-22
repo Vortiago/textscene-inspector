@@ -58,6 +58,12 @@ jobs:
       - name: Check Generated Comparison Gallery
         run: pnpm docs:gallery --check
 
+      # The committed font metrics + MSDF atlas are generated from the vendored
+      # woff2. Nothing else notices if they drift: eslint deliberately ignores
+      # the base64 modules, and no test re-derives them.
+      - name: Check Generated Font Artifacts
+        run: pnpm fonts:bake --check
+
       - name: Build Web Previewer
         run: pnpm --filter @textscene/web-previewer build
 
@@ -101,7 +107,7 @@ jobs:
           path: apps/textscene-linter/dist/cli.js
 
   visual-regression:
-    name: Visual Regression (goldens + 2D overlay + raster)
+    name: Visual Regression (goldens + raster)
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -117,6 +123,12 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+
+      # `assertWebBuildFresh` compares core's src against core's OWN dist before
+      # it will capture from a downloaded bundle, so the dist has to exist here
+      # even though nothing in this job bundles it.
+      - name: Build Core
+        run: pnpm --filter @textscene/core build
 
       # Reuse the dist built by the build job. run.mjs rebuilds by default —
       # locally that guards against capturing a stale dist that predates the
@@ -142,28 +154,6 @@ jobs:
         env:
           VISUAL_SKIP_BUILD: '1'
 
-      # The goldens are WebGL-canvas-only and happy-dom has no layout, so the
-      # 2D DOM overlay has no other gate (ADR-0024). Reuses the same downloaded
-      # dist via `vite preview`; bundled chromium, never system Chrome.
-      - name: Verify 2D Control overlay
-        run: |
-          pnpm --filter @textscene/web-previewer preview --port 4173 --strictPort &
-          for _ in $(seq 60); do curl -sf http://localhost:4173 >/dev/null && break; sleep 1; done
-          pnpm verify:2d
-
-      # The DERIVED raster of that overlay — the canvas a ViewportTexture
-      # samples — needs a real browser for the same reason (ADR-0003's
-      # 2026-07-29 amendment). Self-contained on its own port rather than
-      # reusing the server above, so a failure here is unambiguously the
-      # rasteriser's; the module is injected from core's dist, which this job
-      # downloads no artifact for.
-      - name: Verify Control-subtree rasteriser
-        run: |
-          pnpm --filter @textscene/core build
-          pnpm --filter @textscene/web-previewer preview --port 4174 --strictPort &
-          for _ in $(seq 60); do curl -sf http://localhost:4174 >/dev/null && break; sleep 1; done
-          SHOWCASE_URL=http://localhost:4174 pnpm verify:raster
-
       - name: Upload diff artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -171,13 +161,57 @@ jobs:
           name: visual-diffs
           path: scripts/visual/output/
 
-      - name: Upload 2D overlay captures
-        if: failure()
-        uses: actions/upload-artifact@v7
+  e2e-web:
+    name: E2E (web previewer app)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
         with:
-          name: verify-2d-and-raster
-          path: scripts/showcase/output/
-          if-no-files-found: ignore
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # `assertWebBuildFresh` compares core's src against core's OWN dist before
+      # it will capture from a downloaded bundle, so the dist has to exist here
+      # even though nothing in this job bundles it.
+      - name: Build Core
+        run: pnpm --filter @textscene/core build
+
+      # Same reuse-the-build-artifact rationale as the visual-regression job
+      # above: the artifact IS this commit's build, so VISUAL_SKIP_BUILD=1
+      # skips a redundant cold rebuild (which would also wipe this download
+      # via vite's emptyOutDir).
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-previewer
+          path: apps/textscene-web/dist/
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Outliner, inspector, camera-invariance and load-health gate
+        run: pnpm test:e2e:web
+        env:
+          VISUAL_SKIP_BUILD: '1'
+          # No system Chrome on the runner — use Playwright's own bundled
+          # Chromium (scripts/showcase/browser.mjs's launchShowcaseBrowser
+          # otherwise defaults to the 'chrome' channel, which this runner
+          # never installs).
+          SHOWCASE_CHANNEL: bundled
 
   integration-tests:
     name: Integration Tests (${{ matrix.os }})
@@ -210,6 +244,17 @@ jobs:
         if: runner.os != 'Linux'
         run: pnpm --filter textscene-inspector test:integration
 
+      # Proves text actually paints inside the webview, which the extension-host
+      # suite above cannot see into. It drives VS Code over CDP and so needs a
+      # display — the driver wraps its own launch in xvfb-run, hence no wrapper
+      # here — and connects to VS Code's own Chromium, so no `playwright install`
+      # is needed. Linux-only because the driver has only ever been exercised
+      # under Xvfb; the macOS/Windows window and binary layouts are unverified,
+      # and claiming them here would be claiming something untested.
+      - name: Webview CSP + glyph gate (Linux)
+        if: runner.os == 'Linux'
+        run: pnpm test:vscode:csp
+
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v7
@@ -218,6 +263,7 @@ jobs:
           path: |
             apps/textscene-vscode/.test-workspace/
             apps/textscene-vscode/out/
+            scripts/vscode/output/csp-gate/
 
   vsix-verification:
     name: VSIX Package Verification (${{ matrix.os }})

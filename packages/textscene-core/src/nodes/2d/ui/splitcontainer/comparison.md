@@ -1,18 +1,20 @@
 ---
 type: SplitContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-split-container.tscn
 # image: unit-split-container
-renders_as: invisible transform-only fallback
+renders_as: two children split at a computed offset, along the `vertical`-chosen axis
 ---
 
 # SplitContainer
 
-SplitContainer is the base that arranges two children with a draggable split between
-them. HSplitContainer and VSplitContainer fix the axis, while this type leaves it to
-`vertical`. The previewer parses and validates it but does not draw it, so it renders as
-a transform-only fallback and its children still show.
+SplitContainer is the base that arranges its children along one axis with a draggable
+split between each pair, and `split_offsets` displaces each of those splits from the rest
+position the children's expand flags give it. HSplitContainer and VSplitContainer fix the
+axis; this type reads `vertical` itself to pick it. A right-to-left `layout_direction`
+mirrors a horizontal split — the first child takes the right band — and leaves a vertical
+one stacked the same way.
 
 ## Linting
 
@@ -38,14 +40,16 @@ Strict parsing format-checks these `SplitContainer` properties, plus 53 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 Strict format-checks all eleven of SplitContainer's own members. `dragger_visibility` is
 the one enum, and it warns outside `0..2`, since the setter assigns unconditionally. No
-setter clamps, so strict and lenient agree on every value Godot itself writes.
+setter clamps, so strict and lenient agree on every value Godot itself writes. The
+lenient parser reads `split_offset`, `collapsed`, `dragger_visibility` and `vertical`
+beyond their scalar type only; an unparseable `split_offset` or `dragger_visibility`
+leaves the property `undefined` and Godot's default applies, an unparseable `collapsed`
+or `vertical` reads as `false` (a bool slot stores what it can, never unset), and an
+out-of-range `dragger_visibility` behaves as VISIBLE.
 
-## Known limitations
-
-- **Not drawn** Godot lays the two children out at the split. The previewer applies no
-  layout, so they stay at their authored offsets.

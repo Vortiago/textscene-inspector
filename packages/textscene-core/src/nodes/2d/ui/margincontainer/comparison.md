@@ -1,16 +1,16 @@
 ---
 type: MarginContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-margin-container.tscn
 image: unit-margin-container
-renders_as: a padded flex container
+renders_as: a child inset by four margin constants
 ---
 
 # MarginContainer
 
-MarginContainer insets its single child by four margin constants. The previewer maps it
-to a CSS flex box whose padding is those margins and draws nothing itself.
+MarginContainer insets its single child by four margin constants and draws nothing
+itself.
 
 ## Linting
 
@@ -22,7 +22,8 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 The four margins are collected as `theme_override_constants` through

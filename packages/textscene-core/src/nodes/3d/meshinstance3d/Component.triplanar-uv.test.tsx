@@ -15,6 +15,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 const FLOOR_TEX = 'res://floor.png';
 
@@ -47,7 +48,7 @@ async function renderFloor(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('MeshInstance3D — triplanar planar tiling (WI-HALL-5)', () => {

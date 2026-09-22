@@ -159,6 +159,9 @@
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 0;
+  /* The resizer writes the custom property, never `flex-basis` itself, so this
+     stylesheet keeps the declaration at every breakpoint. */
+  flex-basis: var(--tsi-dock-basis, 320px);
   min-width: 0;
   background: var(--tsi-bg-panel);
   border-left: 1px solid var(--tsi-border);
@@ -551,10 +554,13 @@
 
 /*
  * Narrow-viewport layout (≤768px): there isn't horizontal room for the
- * viewport + side dock, so stack them vertically. The center viewport keeps a
- * usable half-height; the dock goes full-width, height-capped, and scrolls
- * internally. The Splitter hides itself (see Splitter.module.css). `!important`
- * overrides the inline flex-basis the resizer sets on the dock.
+ * viewport + side dock, so stack them vertically and the Splitter hides itself
+ * (see Splitter.module.css).
+ *
+ * The dock's basis is a definite percentage of the stack. Content-measured
+ * (`auto`, with or without a `max-height` cap) resolves to 8px, because the
+ * dock's own children are `flex-basis: 0` panes and the viewport's flex-grow
+ * then takes the whole column.
  */
 @media (max-width: 768px) {
   .columns {
@@ -562,14 +568,13 @@
   }
 
   .center {
-    flex: 1 1 auto;
-    min-height: 50vh;
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   .dock {
-    flex-basis: auto !important;
+    flex-basis: 45%;
     width: 100%;
-    max-height: 45vh;
     border-left: none;
     border-top: 1px solid var(--tsi-border);
   }

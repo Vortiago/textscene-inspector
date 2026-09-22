@@ -27,7 +27,7 @@ const DETERMINISTIC = {
   use_fixed_seed: 'true',
   seed: '4242',
   fixed_fps: '30',
-  preprocess: '1.0',
+  preprocess: '0.95',
 };
 
 function node(raw: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
@@ -149,7 +149,7 @@ describe('<CPUParticles2D>', () => {
   it('tints every vertex from a Gradient `color_ramp` sub-resource', async () => {
     const gradient: TscnInternalResource = {
       type: 'Gradient',
-      id: 'ramp',
+      id: '1',
       data: {
         id: 'ramp',
         offsets: 'PackedFloat32Array(0, 1)',
@@ -169,7 +169,7 @@ describe('<CPUParticles2D>', () => {
   it('honours a `scale_amount_curve` Curve sub-resource', async () => {
     const curve: TscnInternalResource = {
       type: 'Curve',
-      id: 'shrink',
+      id: '1',
       data: {
         id: 'shrink',
         _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]',
@@ -182,14 +182,28 @@ describe('<CPUParticles2D>', () => {
     );
     const without = await render(node({ amount: '16' }));
 
-    const spread = (r: Rendered): number => {
-      const geometry = particleMesh(r)!.geometry;
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      return box.max.x - box.min.x;
+    // Measure the NARROWEST quad, not the pose's bounding box. The box is set
+    // by whichever particle reaches furthest, and the curve leaves the youngest
+    // one at full scale — so a box-width comparison only sees the curve when an
+    // old particle happens to sit at the edge, which is a property of the seed
+    // rather than of the curve.
+    const narrowestQuad = (r: Rendered): number => {
+      const position = particleMesh(r)!.geometry.getAttribute('position');
+      let narrowest = Infinity;
+      for (let quad = 0; quad * 4 < position.count; quad++) {
+        let min = Infinity;
+        let max = -Infinity;
+        for (let corner = 0; corner < 4; corner++) {
+          const x = position.getX(quad * 4 + corner);
+          min = Math.min(min, x);
+          max = Math.max(max, x);
+        }
+        narrowest = Math.min(narrowest, max - min);
+      }
+      return narrowest;
     };
-    // A shrinking curve narrows the oldest quads, so the pose is not the same.
-    expect(spread(withCurve)).not.toBeCloseTo(spread(without), 3);
+    // The curve runs 1 → 0 over a lifetime, so the oldest quad is a sliver.
+    expect(narrowestQuad(withCurve)).toBeLessThan(narrowestQuad(without) / 2);
   });
 
   it('cancels the node’s own scale under Godot’s default global coords', async () => {
@@ -227,7 +241,7 @@ describe('<CPUParticles2D>', () => {
     // renders as a row of eleven flames rather than one.
     const material: TscnInternalResource = {
       type: 'CanvasItemMaterial',
-      id: 'anim',
+      id: '1',
       data: {
         id: 'anim',
         particles_animation: 'true',

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { OmniLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { OmniLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { instanceAs } from '../../testing/reactThreeTestInstance';
 
 function makeNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
@@ -25,12 +26,31 @@ describe('<OmniLight3D>', () => {
     expect(renderer.scene.findAllByType('PointLight').length).toBe(1);
   });
 
+  it('converts shadow_bias at the shadow camera’s far plane', async () => {
+    // Godot's default 0.1 is a WORLD radial offset; at our 0.5 near and this
+    // light's range-5 far that is 0.1 * 0.5 / (5 * 4.5) of three's cube depth.
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    const light = renderer.scene.findByType('PointLight');
+    expect(instanceAs<THREE.PointLight>(light).shadow.bias).toBeCloseTo(-1 / 450, 12);
+  });
+
+  it('rescales shadow_bias with the light’s own range', async () => {
+    // 0.2 * 0.5 / (10 * 9.5).
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true, shadow_bias: 0.2, omni_range: 10 })} />
+    );
+    const light = renderer.scene.findByType('PointLight');
+    expect(instanceAs<THREE.PointLight>(light).shadow.bias).toBeCloseTo(-0.1 / 95, 12);
+  });
+
   it('maps omni_range to distance', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OmniLight3D node={makeNode({ omni_range: 12 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as THREE.PointLight).distance).toBe(12);
+    expect(instanceAs<THREE.PointLight>(light).distance).toBe(12);
   });
 
   it('maps omni_attenuation to decay', async () => {
@@ -38,7 +58,7 @@ describe('<OmniLight3D>', () => {
       <OmniLight3D node={makeNode({ omni_attenuation: 3 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as THREE.PointLight).decay).toBe(3);
+    expect(instanceAs<THREE.PointLight>(light).decay).toBe(3);
   });
 
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {
@@ -46,7 +66,7 @@ describe('<OmniLight3D>', () => {
       <OmniLight3D node={makeNode({ light_energy: 1.5 })} />
     );
     const light = renderer.scene.findByType('PointLight');
-    expect((light.instance as THREE.PointLight).intensity).toBe(1.5 * LIGHT_INTENSITY_SCALE);
+    expect(instanceAs<THREE.PointLight>(light).intensity).toBe(1.5 * LIGHT_INTENSITY_SCALE);
   });
 
   it('places light at the transform origin', async () => {

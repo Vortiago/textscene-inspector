@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+; Label's overrun trimming — `text_overrun_behavior` is the ONE variable, held
+; against the same box width and the same text every other Label fixture
+; shapes unclipped (unit-label-2d.tscn's own plain labels never overrun a box
+; narrow enough to trigger this, so nothing else in the corpus exercises the
+; cut-and-ellipsis path at all).
+;
+; The box is 80px wide, too narrow for the sentence at either font size, so
+; each Label's line is genuinely cut rather than merely close to the edge.
+; TrimChar has no ellipsis (a bare character cut); TrimWordEllipsis cuts back
+; to the nearest word boundary and appends one; ClipOnly sets `clip_text`
+; alone with `text_overrun_behavior` left at its default (NO_TRIMMING) — its
+; own minimum width still collapses to 1px, but the drawn glyphs are NOT cut,
+; which is what tells the three apart on screen: a regression that trimmed
+; ClipOnly's text too, or left TrimChar/TrimWordEllipsis un-cut, moves only
+; this scene.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TrimChar" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 100.0
+offset_bottom = 44.0
+text = "This sentence is much wider than its box"
+text_overrun_behavior = 1
+
+[node name="TrimWordEllipsis" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 100.0
+offset_bottom = 84.0
+text = "This sentence is much wider than its box"
+text_overrun_behavior = 4
+
+[node name="ClipOnly" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 100.0
+offset_bottom = 124.0
+text = "This sentence is much wider than its box"
+clip_text = true

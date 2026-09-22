@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps } from '../../../r3f/node2dTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { Camera2DAnchorMode } from '../camera2d/types';
 import type { Camera2DTag } from '../camera2d/cameraView';
 import { selectViewportCamera2D } from '../../viewport/subviewport/offscreenViewport';
@@ -150,16 +151,17 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // Written before the renderer builds its list, so the poses above and the
       // cut chain both take effect in THIS frame rather than the next.
       group.updateMatrixWorld(true);
-      if (props.layer !== 0) {
-        group.traverse((object) => {
-          if (object.renderOrder !== props.layer) object.renderOrder = props.layer;
-        });
-      }
     });
   }, [scene, storeCamera, props, canvasMatrix, layers]);
 
   return (
     <ParallaxScrollProvider value={registry}>
+      {/* paint-order-safe: `ParallaxBackground extends CanvasLayer`, so its
+          `layer` is a CANVAS, not a draw order within one — it reaches the key
+          as a layer RANK via `isCanvasLayerType` (`canvasPaintOrder.ts`), and
+          each canvas item inside carries its own key on its own wrapper. This
+          used to be a per-frame `traverse` writing `props.layer` onto every
+          object in the subtree, which flattened all of them onto one value. */}
       <group
         ref={groupRef}
         name={node.name}
@@ -167,7 +169,9 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
         matrixAutoUpdate={false}
         matrixWorldAutoUpdate={false}
       >
-        {children}
+        {/* The chain is cut here, so a canvas root inside must cancel nothing:
+            the accumulated CanvasItem transform restarts at this group. */}
+        <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
       </group>
     </ParallaxScrollProvider>
   );

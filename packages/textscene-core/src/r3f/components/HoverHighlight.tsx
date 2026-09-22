@@ -6,9 +6,8 @@
  * matching main's `HelperManager.showHoverEffect`) to the hovered
  * Object3D.
  *
- * Closes Gap 9 from docs/archive/UX-FLOW-GAPS.md: `hoveredNodePath` was being
- * populated by `TreeNode.tsx` mouseenter/mouseleave but no viewport
- * component consumed it — dead state.
+ * `hoveredNodePath` was populated by `TreeNode.tsx` mouseenter/mouseleave
+ * but no viewport component consumed it: dead state.
  *
  * Behavior matches main's HelperManager: the hover and selection
  * helpers live under independent keys, so hovering the already-selected

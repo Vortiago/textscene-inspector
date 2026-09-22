@@ -1,16 +1,17 @@
 ---
 type: HSplitContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-split-container.tscn
+image: unit-split-container
 renders_as: two children side by side, split at a computed offset
 ---
 
 # HSplitContainer
 
-HSplitContainer places two children side by side at a computed split. The previewer
-solves Godot's `_compute_split_offset` in closed form and lays the two rects out as a
-CSS grid, with the separation as the gap.
+HSplitContainer places its children side by side, split where each entry of
+`split_offsets` puts that boundary, with the dragger's band between them. A right-to-left
+`layout_direction` puts the first child on the right and mirrors every boundary.
 
 ## Linting
 
@@ -26,16 +27,11 @@ Strict parsing format-checks the inherited set (10 inherited from SplitContainer
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 Neither parser reads `split_offset`, `collapsed` or `dragger_visibility` beyond its
 scalar type, and an out-of-range `dragger_visibility` behaves as VISIBLE on both sides.
 A malformed value leaves the property `undefined` and Godot's default applies.
 
-## Known limitations
-
-- **Approximated** The clamp to the children's minimum sizes is not applied. A child
-  whose minimum exceeds its rect is clipped here, where Godot pushes the boundary.
-- **Approximated** `theme_override_icons/grabber` does not change the separation floor,
-  which stays at the default grabber's 8 px.

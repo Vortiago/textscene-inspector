@@ -36,26 +36,27 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(
-    // Every contribution is gated on `resourceExtname`, so VS Code hands the
-    // clicked file's URI — the explorer, the editor title and the tab context
-    // menus all address a file that need not be the one the active editor
-    // holds. The active editor is the fallback for the palette entry, which
-    // passes nothing.
-    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: vscode.Uri) => {
-      // `resource` is whatever VS Code hands the handler, which the signature
-      // describes rather than enforces: an argument that is not a Uri falls
-      // back to the active editor, the same path the palette entry takes,
-      // rather than throwing out of the command.
-      //
-      // `scheme` as well as `fsPath`, because the panel map is keyed on
-      // `toString()`: a bare `{ fsPath }` object passes an `fsPath`-only test
-      // and then stringifies to `'[object Object]'`, so every such value
-      // collides on ONE entry and the second preview steals the first's panel.
-      // `instanceof Uri` is not available here — the mocked namespace is a plain
-      // object, not a constructor — and keying on `fsPath` instead would merge
-      // `file:///a.tscn` with `git:/a.tscn`, which are distinct panels today.
-      const target = isUri(resource) ? resource : vscode.window.activeTextEditor?.document.uri;
-      if (target?.fsPath?.endsWith('.tscn')) {
+    // `resource` is what VS Code hands a menu contribution: the clicked file
+    // for `explorer/context`, the tab's file for `editor/title`. It is the
+    // authority whenever present, since the file the user clicked and the file
+    // that happens to be focused are routinely different — and an explorer
+    // click on a scene that was never opened has no active editor at all.
+    // Only the command palette invokes this bare, and there the active editor
+    // is the sole thing the user could have meant.
+    // `isUri`, not a truthiness test: a keybinding or a task can invoke this
+    // command with an argument that is not a Uri at all, and reading `.fsPath`
+    // off one would answer `undefined` while still counting as "handed a
+    // resource" — silently previewing nothing.
+    vscode.commands.registerCommand('textscene.openPreviewToSide', (resource?: unknown) => {
+      const clicked = isUri(resource) ? resource : undefined;
+      const activeEditor = vscode.window.activeTextEditor;
+      const target =
+        clicked?.fsPath?.endsWith('.tscn') ? clicked
+        : !clicked && activeEditor?.document.fileName.endsWith('.tscn') ?
+          activeEditor.document.uri
+        : undefined;
+
+      if (target) {
         getOrCreatePanel(target);
       } else {
         vscode.window.showInformationMessage('Open a .tscn file to preview it.');

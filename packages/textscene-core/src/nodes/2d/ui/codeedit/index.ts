@@ -1,17 +1,11 @@
-/**
- * CodeEdit registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
- */
+/** CodeEdit registration — parser. Render component wiring is `index.r3f.ts`'s job. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseCodeEdit } from './parser';
 
 const codeEditRegistration: NodeTypeRegistration = {
   typeName: 'CodeEdit',
-  parser: parseControl,
+  parser: parseCodeEdit,
 };
 
 nodeRegistry.register(codeEditRegistration);

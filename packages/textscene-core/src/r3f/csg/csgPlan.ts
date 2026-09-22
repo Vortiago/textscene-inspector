@@ -1,23 +1,12 @@
 /**
- * Describes what a CSG root's boolean result is made of, without evaluating anything.
+ * What a CSG root's boolean is made of, without evaluating anything. Pure and React-free;
+ * `evaluateCsgPlan` turns a plan into geometry.
  *
- * Pure and React-free so the semantics can be tested without a renderer and without
- * loading the CSG library at all. `evaluateCsgPlan` turns a plan into geometry.
+ * A tree, not a list, because Godot folds each node's whole subtree before its parent
+ * combines that one result by the child's own operation (`csg_shape.cpp:472,481`).
  *
- * Godot's rules, reproduced (`modules/csg/csg_shape.cpp`):
- *   - a CSG ROOT is a CSG node whose DIRECT parent is not one (`is_root_shape()`), and
- *     only the root draws;
- *   - contributions fold bottom-up in child order, each applying its own `operation`;
- *   - a CSGCombiner3D has no solid of its own: its subtree folds to one contribution,
- *     which then combines into ITS parent by its own operation;
- *   - invisible children are skipped entirely (`!child->is_visible()`);
- *   - a root's own `operation` is inert, since it has nothing to combine into.
- *
- * Descending ONLY into CSG-typed children is what makes root detection correct without a
- * flag: `CSGBox3D > Node3D > CSGSphere3D` leaves the sphere its own root, exactly as
- * Godot's `parent_shape` (set only for a direct CSG parent) does. A boolean
- * "inside a CSG subtree" flag would get that wrong and would need every non-CSG
- * component to reset it.
+ * Root detection descends only into CSG-typed children, matching `parent_shape` being set
+ * for a DIRECT CSG parent alone: `CSGBox3D > Node3D > CSGSphere3D` is two roots.
  */
 
 import * as THREE from 'three';
@@ -41,18 +30,31 @@ export interface CsgContribution {
   surface: number;
   /** The node, so the evaluator can call its registered geometry builder. */
   node: TscnNode;
+  /** False for a node with no solid of its own (CSGCombiner3D): it folds children only. */
+  hasGeometry: boolean;
+  /** Folded into THIS node's brush before it folds into its parent (csg_shape.cpp:472,481). */
+  children: CsgContribution[];
 }
 
 export interface CsgPlan {
   rootPath: string;
-  contributions: CsgContribution[];
+  /** The root of the fold, or null when nothing survives. */
+  root: CsgContribution | null;
+  /** How many nodes in that tree carry a solid — one is a lone root, more is a boolean. */
+  geometryCount: number;
   /**
-   * Distinct material references in first-seen order, with `undefined` for "no material".
+   * Distinct material paths in first-seen order, with `undefined` for "no material".
    * Godot interns materials per root the same way and emits one surface each.
    */
   surfaces: (string | undefined)[];
   /** Node paths the root absorbs, so those components render no mesh of their own. */
   absorbedPaths: Set<string>;
+  /**
+   * CSG paths skipped for invisibility, and their CSG descendants. `_get_brush()` never
+   * reaches them (`modules/csg/csg_shape.cpp:469`), so their `node_aabb` is never written
+   * and Godot frames a POINT at each origin rather than its solid.
+   */
+  invisiblePaths: Set<string>;
   /** Stable over everything the evaluation depends on. */
   cacheKey: string;
 }
@@ -81,6 +83,22 @@ function isVisible(node: TscnNode, path: string, hidden?: ReadonlySet<string>): 
   return !hidden?.has(path);
 }
 
+/**
+ * The CSG children of `node`, with their paths. Descending ONLY into CSG-typed children is
+ * the rule the header explains, so both walks below read it from here.
+ */
+function csgChildren(
+  node: TscnNode,
+  path: string,
+  lookup: BuildOptions['lookup']
+): [TscnNode, string][] {
+  const out: [TscnNode, string][] = [];
+  for (const child of node.children) {
+    if (lookup(child.type) !== null) out.push([child, joinPath(path, child.name)]);
+  }
+  return out;
+}
+
 /** NaN or Infinity anywhere in a matrix would propagate into the BVH builder. */
 function isFinite4(m: THREE.Matrix4): boolean {
   return m.elements.every((n) => Number.isFinite(n));
@@ -101,20 +119,38 @@ export function buildCsgPlan(
   const { lookup, hiddenPaths } = options;
   if (lookup(root.type) === null) return null;
 
-  const contributions: CsgContribution[] = [];
   const surfaces: (string | undefined)[] = [];
   const absorbedPaths = new Set<string>();
+  const invisiblePaths = new Set<string>();
+
+  /** The skipped node and every CSG node under it — the recursion stopped at all of them. */
+  const markInvisible = (node: TscnNode, path: string): void => {
+    invisiblePaths.add(path);
+    for (const [child, childPath] of csgChildren(node, path, lookup)) markInvisible(child, childPath);
+  };
   const keyParts: string[] = [`root:${root.type}`];
 
-  const surfaceIndex = (material: string | undefined): number => {
-    const existing = surfaces.indexOf(material);
+  const surfaceIndex = (materialPath: string | undefined): number => {
+    const existing = surfaces.indexOf(materialPath);
     if (existing !== -1) return existing;
-    surfaces.push(material);
+    surfaces.push(materialPath);
     return surfaces.length - 1;
   };
 
-  const visit = (node: TscnNode, path: string, parentMatrix: THREE.Matrix4, isRoot: boolean): void => {
-    if (!isVisible(node, path, hiddenPaths)) return;
+  let geometryCount = 0;
+
+  const visit = (
+    node: TscnNode,
+    path: string,
+    parentMatrix: THREE.Matrix4,
+    isRoot: boolean
+  ): CsgContribution | null => {
+    // A ROOT builds whatever its own visibility — update_shape() is gated on
+    // is_root_shape() alone (csg_shape.cpp:568-570) — so only a CHILD stops the walk.
+    if (!isRoot && !isVisible(node, path, hiddenPaths)) {
+      markInvisible(node, path);
+      return null;
+    }
 
     // The root's own transform is NOT baked in: the result mesh is mounted inside the
     // root's own transform group, so including it here would apply it twice.
@@ -122,48 +158,52 @@ export function buildCsgPlan(
 
     if (!isRoot) absorbedPaths.add(path);
 
+    const props = node.properties as Record<string, unknown>;
+    // A root's operation is inert; Godot has nothing to fold it into.
+    const operation = isRoot
+      ? CsgOperation.UNION
+      : typeof props.operation === 'number'
+        ? props.operation
+        : CsgOperation.UNION;
+
     const shape = lookup(node.type);
-    if (shape?.hasGeometry) {
-      if (!isFinite4(matrix)) {
-        keyParts.push(`${path}:nonfinite`);
-      } else {
-        const props = node.properties as Record<string, unknown>;
-        const material = typeof props.material === 'string' ? props.material : undefined;
-        // A root's operation is inert; Godot has nothing to fold it into.
-        const operation = isRoot
-          ? CsgOperation.UNION
-          : typeof props.operation === 'number'
-            ? props.operation
-            : CsgOperation.UNION;
-
-        contributions.push({
-          path,
-          type: node.type,
-          operation,
-          matrix,
-          surface: surfaceIndex(material),
-          node,
-        });
-        keyParts.push(
-          `${path}|${node.type}|${operation}|${shape.key(node)}|${material ?? ''}|` +
-            matrix.elements.map((n) => n.toFixed(6)).join(',')
-        );
-      }
+    let hasGeometry = shape?.hasGeometry === true;
+    let surface = 0;
+    if (hasGeometry && !isFinite4(matrix)) {
+      keyParts.push(`${path}:nonfinite`);
+      hasGeometry = false;
+    } else if (hasGeometry) {
+      const materialPath = typeof props.materialPath === 'string' ? props.materialPath : undefined;
+      surface = surfaceIndex(materialPath);
+      geometryCount++;
+      keyParts.push(
+        `${path}|${node.type}|${operation}|${shape!.key(node)}|${materialPath ?? ''}|` +
+          matrix.elements.map((n) => n.toFixed(6)).join(',')
+      );
+    } else {
+      // A combiner draws nothing, but its operation decides how its fold lands.
+      keyParts.push(`${path}|${node.type}|${operation}|fold`);
     }
 
-    for (const child of node.children) {
-      if (lookup(child.type) === null) continue;
-      visit(child, joinPath(path, child.name), matrix, false);
+    const children: CsgContribution[] = [];
+    for (const [child, childPath] of csgChildren(node, path, lookup)) {
+      const folded = visit(child, childPath, matrix, false);
+      if (folded) children.push(folded);
     }
+
+    if (!hasGeometry && children.length === 0) return null;
+    return { path, type: node.type, operation, matrix, surface, node, hasGeometry, children };
   };
 
-  visit(root, rootPath, new THREE.Matrix4(), true);
+  const tree = visit(root, rootPath, new THREE.Matrix4(), true);
 
   return {
     rootPath,
-    contributions,
+    root: tree,
+    geometryCount,
     surfaces,
     absorbedPaths,
+    invisiblePaths,
     cacheKey: keyParts.join('\n'),
   };
 }

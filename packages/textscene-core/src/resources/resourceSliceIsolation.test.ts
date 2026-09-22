@@ -77,11 +77,14 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   const PARSE_ALLOWED = new Set([
     'parser/parsedResource.test.ts',
     'resources/processors/createTresResourceProcessor.ts',
-    // The two slices whose decode consumes whole-file content by design:
-    // materials orchestrate sub-resource addressing, ArrayMesh reads the
-    // byte-payload dictionaries.
+    // The slices whose decode consumes whole-file content by design: materials
+    // orchestrate sub-resource addressing, ArrayMesh reads the byte-payload
+    // dictionaries, and fonts/themes both address a named `[sub_resource]`
+    // inside a shared `.tres` before their pure decode sees a property bag.
     'resources/materials/standardmaterial3d/loadMaterial.ts',
     'resources/meshes/arraymesh/decode.ts',
+    'resources/fonts/font/loadFont.ts',
+    'resources/styles/theme/loadTheme.ts',
   ]);
   const VALUE_IMPORT_RE =
     /import\s+(?!type\b)[^;]*?from\s+'[^']*parsedResource(?:\.js)?'|import\(\s*'[^']*parsedResource(?:\.js)?'\s*\)/;
@@ -105,9 +108,10 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   });
 
   const SNIFF_RE = /\.startsWith\(\s*['"](?:Color|Vector[23]i?|Rect2)\(/;
-  // bbcode's `[color=Color(…)]` tag VALUE check is bbcode grammar, not a
-  // resource property bag — the one legitimate survivor.
-  const SNIFF_ALLOWED = new Set(['nodes/2d/ui/richtextlabel/bbcode.tsx']);
+  // Empty: bbcode used to sniff `[color=Color(…)]`, and no longer does —
+  // `Color::from_string` (`color.cpp:450-456`) has no constructor-literal branch
+  // at all, so that string resolves to the fallback like any unrecognised name.
+  const SNIFF_ALLOWED = new Set<string>();
 
   it('nobody value-shape-sniffs a property bag', () => {
     const offenders: string[] = [];
@@ -118,9 +122,12 @@ describe('Godot-resource parsing stays in the loading layer', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the sniffing survivor is still there — the scan is not vacuous', () => {
-    expect(SNIFF_RE.test(readFileSync(join(srcRoot, 'nodes/2d/ui/richtextlabel/bbcode.tsx'), 'utf8'))).toBe(
-      true
-    );
+  it('the scan is not vacuous — the pattern still recognises a sniff', () => {
+    // Pinned against a sample rather than a file: with the allowlist empty there
+    // is no sniffing survivor left to point at, and a rule that matches nothing
+    // because its PATTERN broke would otherwise read exactly like a clean tree.
+    expect(SNIFF_RE.test("if (raw.startsWith('Color(')) return parseColor(raw);")).toBe(true);
+    expect(SNIFF_RE.test("if (raw.startsWith('Vector2(')) return parseVector2(raw);")).toBe(true);
+    expect(SNIFF_RE.test("if (raw.startsWith('res://')) return load(raw);")).toBe(false);
   });
 });

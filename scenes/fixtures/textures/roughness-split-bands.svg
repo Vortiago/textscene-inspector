@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Roughness map: a hard horizontal split, glossy over rough.
+       Sampled RAW (a non-colour map), so the byte IS the roughness:
+       0x1a = 0.102, 0xe6 = 0.902. The two bands are far enough apart that the
+       specular lobe's width differs unmistakably across the seam. -->
+  <rect width="256" height="128" x="0" y="0" fill="#1a1a1a"/>
+  <rect width="256" height="128" x="0" y="128" fill="#e6e6e6"/>
+</svg>

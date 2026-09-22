@@ -1,370 +1,334 @@
 /**
- * SubViewportContainer renders a **viewport surface** per the measured Godot
- * parity table (ADR-0030). Everything asserted here was verified against Godot
- * 4.6.3 with a 300x200 container at (100, 80) holding a 200x150 sub-viewport,
- * and cross-checked against `subviewport_container.cpp`.
- *
- * happy-dom has no layout, so these assert the INLINE styles and DOM structure
- * that produce the layout, never measured geometry (AGENTS.md). Whether it
- * actually looks right is `verify:2d`'s job (ADR-0024).
+ * `<SubViewportContainer>` — the native (WebGL canvas) painter for
+ * `SubViewportContainer` (Godot-parity table in
+ * `../../viewport/subviewport/comparison.md`). Samples the published
+ * `ViewportTextureEntry.texture` directly — every sub-viewport kind (3D,
+ * 2D-world, and the native Control-raster pass) publishes a WebGL texture,
+ * so there is exactly one consumption path.
  */
-
-import { afterEach, describe, expect, it } from 'vitest';
-import { act, cleanup, render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect, type ReactNode } from 'react';
+import * as THREE from 'three';
+
+const warnCalls: unknown[][] = [];
+vi.mock('../../../../logger.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../logger.js')>();
+  return {
+    ...actual,
+    warn: (...args: unknown[]) => {
+      warnCalls.push(args);
+    },
+  };
+});
+
+// `gui/common/snap_controls_to_pixels` is the ROOT window's setting; this
+// painter's Controls live in a SubViewport, which never receives it.
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+  themeScale: 1,
+}));
+
+vi.mock('../../../../r3f/contexts/ProjectSettingsContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../r3f/contexts/ProjectSettingsContext')>();
+  return { ...actual, useProjectSettings: () => projectSettingsMock };
+});
+
 import type { TscnNode } from '../../../../parser/types';
-import { ControlOverlay } from '../../../../r3f/controls/index';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import {
   ViewportTextureProvider,
   useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../../r3f/contexts/ViewportTextureContext';
 import {
+  ViewportPassProvider,
+  useRegisterViewportPass,
+} from '../../../../r3f/contexts/ViewportPassRegistryContext';
+import {
   ViewportRectProvider,
   useViewportRect,
   type ViewportRect,
 } from '../../../../r3f/contexts/ViewportRectContext';
+import { SubViewportContainer } from './Component';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+// Side-effect: the Control painters and the node registrations
+// `viewportContentKind` classifies against.
+import '../../../../r3f/controls/index';
+import '../../../../r3f/nodes/index';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
 }
 
-/** A container holding one sub-viewport with a Control inside it. */
-function tree(containerProps: object, viewportProps: object = {}): TscnNode[] {
-  return [
-    node('Booth', 'SubViewportContainer', containerProps, [
-      node(
-        'View',
-        'SubViewport',
-        { size: { x: 200, y: 150 }, transparent_bg: false, ...viewportProps },
-        [node('Inner', 'ColorRect', { color: 'Color(1, 0.6, 0, 1)' })]
-      ),
-    ]),
-  ];
+function containerSolveNode(
+  containerProps: object,
+  viewportProps: object = {},
+  viewportChildren: TscnNode[] = []
+): SolveNode {
+  const containerNode = node('Booth', 'SubViewportContainer', containerProps, [
+    node('View', 'SubViewport', { size: { x: 200, y: 150 }, transparent_bg: false, ...viewportProps }, viewportChildren),
+  ]);
+  return { ...solveNode(), path: 'Booth', node: containerNode };
 }
 
-function surfaces(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll('[data-viewport-surface]'));
+const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 150 };
+
+/** Publishes a texture entry at `path` for the lifetime of this component. */
+function Publisher({ path, entry }: { path: string; entry: ViewportTextureEntry }) {
+  const register = useRegisterViewportTexture();
+  useEffect(() => register(path, entry), [register, path, entry]);
+  return null;
 }
 
-/** The first viewport surface, narrowed — every case below renders at least one. */
-function firstSurface(container: HTMLElement): HTMLElement {
-  const [first] = surfaces(container);
-  if (!first) throw new Error('no viewport surface was rendered');
-  return first;
+/** Registers a raw pass (no real render work) so a cycle can be manufactured directly. */
+function PassRegistrar({ path, dependsOn }: { path: string; dependsOn: string[] }) {
+  const register = useRegisterViewportPass();
+  useEffect(() => register(path, { dependsOn, render: () => {} }), [register, path, dependsOn]);
+  return null;
+}
+
+function fakeEntry(): ViewportTextureEntry {
+  return { texture: new THREE.Texture(), size: { x: 200, y: 150 } };
+}
+
+async function mount(children: ReactNode) {
+  return ReactThreeTestRenderer.create(<ViewportTextureProvider>{children}</ViewportTextureProvider>);
 }
 
 describe('<SubViewportContainer>', () => {
-  it('renders the container itself', () => {
-    const { container } = render(<ControlOverlay nodes={tree({})} />);
-    expect(
-      container.querySelector('[data-control-type="SubViewportContainer"]')
-    ).toBeTruthy();
+  it('samples the published ViewportTextureRegistry texture directly on a textured quad', async () => {
+    const entry = fakeEntry();
+    const renderer = await mount(
+      <>
+        <Publisher path="Booth/View" entry={entry} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({})}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    const mesh = renderer.scene
+      .findAll(() => true)
+      .map((n) => n.instance as THREE.Mesh)
+      .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture);
+    expect(mesh).toBeDefined();
   });
 
-  describe('surface sizing (the measured parity table)', () => {
-    it('stretch = false: the surface takes the SUB-VIEWPORT’s size, not the container’s', () => {
-      const { container } = render(<ControlOverlay nodes={tree({ stretch: false })} />);
-      const surface = firstSurface(container);
-      expect(surface).toBeTruthy();
-      expect(surface.style.width).toBe('200px');
-      expect(surface.style.height).toBe('150px');
-    });
-
-    it('stretch = true: the surface fills the container’s own rect instead', () => {
-      const { container } = render(<ControlOverlay nodes={tree({ stretch: true })} />);
-      const surface = firstSurface(container);
-      expect(surface.style.width).toBe('100%');
-      expect(surface.style.height).toBe('100%');
-    });
-
-    it('stretch_shrink divides the content rect and scales it back up', () => {
-      const { container } = render(
-        <ControlOverlay nodes={tree({ stretch: true, stretch_shrink: 2 })} />
-      );
-      const surface = firstSurface(container);
-      // Content is laid out against rect/shrink, then scaled by shrink —
-      // `recalc_force_viewport_sizes` does `set_size_force(get_size() / shrink)`.
-      expect(surface.style.transform).toContain('scale(2)');
-      expect(surface.style.transformOrigin).toBe('top left');
-    });
-
-    it('ignores stretch_shrink when stretch is off — Godot returns early', () => {
-      const { container } = render(
-        <ControlOverlay nodes={tree({ stretch: false, stretch_shrink: 2 })} />
-      );
-      const surface = firstSurface(container);
-      expect(surface.style.transform).not.toContain('scale');
-      expect(surface.style.width).toBe('200px');
-    });
-  });
-
-  describe('forced rect publishing', () => {
-    it('a ResizeObserver pass with an unchanged measurement does not re-render rect consumers', () => {
-      // happy-dom has no ResizeObserver; a stub exposes the resize callback so
-      // the test can drive layout passes by hand.
-      const resizeCallbacks: (() => void)[] = [];
-      class ResizeObserverStub {
-        constructor(callback: () => void) {
-          resizeCallbacks.push(callback);
-        }
-        observe() {}
-        disconnect() {}
-      }
-      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
-      try {
-        let probeRenders = 0;
-        let seenRect: ViewportRect | null = null;
-        function Probe() {
-          probeRenders += 1;
-          seenRect = useViewportRect('Booth/View');
-          return null;
-        }
-        render(
-          <ViewportRectProvider>
-            <ControlOverlay nodes={tree({ stretch: true })} />
-            <Probe />
-          </ViewportRectProvider>
-        );
-        // happy-dom reports offsetWidth/Height 0, floored to the 1×1 minimum.
-        expect(seenRect).toEqual({ x: 1, y: 1 });
-        const rendersAfterMount = probeRenders;
-
-        act(() => {
-          for (const callback of resizeCallbacks) callback();
-          for (const callback of resizeCallbacks) callback();
-        });
-
-        expect(seenRect).toEqual({ x: 1, y: 1 });
-        expect(probeRenders).toBe(rendersAfterMount);
-      } finally {
-        delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
-      }
-    });
-  });
-
-  describe('clipping and clear colour', () => {
-    it('clips on the SURFACE, because the target is only `size` pixels', () => {
-      const { container } = render(<ControlOverlay nodes={tree({})} />);
-      expect(firstSurface(container).style.overflow).toBe('hidden');
-    });
-
-    it('does NOT clip on the container — Godot Controls clip only with clip_contents', () => {
-      const { container } = render(<ControlOverlay nodes={tree({})} />);
-      const el = container.querySelector(
-        '[data-control-type="SubViewportContainer"]'
-      ) as HTMLElement;
-      expect(el.style.overflow).not.toBe('hidden');
-    });
-
-    it('paints an opaque clear colour by default', () => {
-      const { container } = render(<ControlOverlay nodes={tree({})} />);
-      expect(firstSurface(container).style.backgroundColor).toBeTruthy();
-    });
-
-    it('paints no clear colour when the sub-viewport is transparent_bg', () => {
-      const { container } = render(
-        <ControlOverlay nodes={tree({}, { transparent_bg: true })} />
-      );
-      expect(firstSurface(container).style.backgroundColor).toBe('');
-    });
-  });
-
-  describe('children', () => {
-    it('renders the sub-viewport’s Control subtree INSIDE the surface', () => {
-      const { container } = render(<ControlOverlay nodes={tree({})} />);
-      const inner = container.querySelector('[data-node-name="Inner"]');
-      expect(inner).toBeTruthy();
-      expect(firstSurface(container).contains(inner)).toBe(true);
-    });
-
-    it('surfaces EVERY SubViewport child, stacked in tree order', () => {
-      // `NOTIFICATION_DRAW` loops all SubViewport children and draws each.
-      const two: TscnNode[] = [
-        node('Booth', 'SubViewportContainer', {}, [
-          node('A', 'SubViewport', { size: { x: 100, y: 80 } }, []),
-          node('B', 'SubViewport', { size: { x: 60, y: 40 } }, []),
-        ]),
-      ];
-      const { container } = render(<ControlOverlay nodes={two} />);
-      const found = surfaces(container);
-      expect(found).toHaveLength(2);
-      expect(found[0]!.style.width).toBe('100px');
-      expect(found[1]!.style.width).toBe('60px');
-    });
-
-    it('still renders non-SubViewport children normally', () => {
-      const mixed: TscnNode[] = [
-        node('Booth', 'SubViewportContainer', {}, [
-          node('View', 'SubViewport', { size: { x: 100, y: 80 } }, []),
-          node('Badge', 'ColorRect', { color: 'Color(0, 1, 0, 1)' }),
-        ]),
-      ];
-      const { container } = render(<ControlOverlay nodes={mixed} />);
-      const badge = container.querySelector('[data-node-name="Badge"]');
-      expect(badge).toBeTruthy();
-      expect(firstSurface(container).contains(badge)).toBe(false);
-    });
-
-    it('renders an empty surface when the container has no SubViewport child', () => {
-      const none: TscnNode[] = [node('Booth', 'SubViewportContainer', {}, [])];
-      const { container } = render(<ControlOverlay nodes={none} />);
-      expect(
-        container.querySelector('[data-control-type="SubViewportContainer"]')
-      ).toBeTruthy();
-      expect(surfaces(container)).toHaveLength(0);
-    });
+  it('renders nothing extra for a nested SubViewport with no published entry yet', async () => {
+    const renderer = await mount(
+      <SubViewportContainer
+        {...painterEnv()}
+        solveNode={containerSolveNode({})}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const textured = renderer.scene
+      .findAll(() => true)
+      .map((n) => n.instance as THREE.Mesh)
+      .filter((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map instanceof THREE.Texture);
+    expect(textured).toHaveLength(0);
   });
 
   /**
-   * The pixel arm: 2D-world and 3D content reach the surface as a target
-   * snapshot rather than as DOM. happy-dom has no rasteriser, so these pin the
-   * WIRING — that a target produces a canvas of the right size, in the right
-   * stacking position, painted with the right bytes at the right origin.
-   * Whether the result looks like Godot's render is `verify:2d`'s job.
+   * `scene/main/viewport.h` initialises `snap_controls_to_pixels` to `true` on
+   * every Viewport, and `main/main.cpp` hands the project setting to
+   * `sml->get_root()` alone — so a project that opts out leaves a
+   * SubViewport's own Controls snapped.
+   *
+   * Measured through Godot 4.6.3 on
+   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`
+   * (root window reporting `is_snap_controls_to_pixels_enabled() == false`,
+   * its SubViewport reporting `true`): a four-deep chain of 0.5 offsets draws
+   * its leaf at (102, 62) in the root window and at (104, 64) inside the
+   * sub-viewport.
    */
-  describe('the pixel arm', () => {
-    /** A checkerboard-free ramp: every row distinct, so a flip cannot hide. */
-    function rows(width: number, height: number): ImageData {
-      const data = new Uint8ClampedArray(width * height * 4);
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const i = (y * width + x) * 4;
-          data[i] = y;
-          data[i + 1] = 55;
-          data[i + 2] = 19;
-          data[i + 3] = 255;
-        }
-      }
-      return new ImageData(data, width, height);
+  it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
+    projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
+    try {
+      // MIXED, so this container's LIVE arm is the one under test — a
+      // Control-only viewport is drawn by `ControlRasterPass`, whose own suite
+      // asserts the same rule for that route.
+      const mesh = node('Mesh', 'MeshInstance3D', {});
+      const bar = node('Bar', 'ColorRect', {
+        anchorLeft: 0,
+        anchorTop: 0,
+        anchorRight: 0,
+        anchorBottom: 0,
+        offsetLeft: 100.5,
+        offsetTop: 60.5,
+        offsetRight: 140.5,
+        offsetBottom: 100.5,
+      });
+      const renderer = await mount(
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [mesh, bar])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      const group = renderer.scene
+        .findAll(() => true)
+        .map((n) => n.instance as THREE.Object3D)
+        .find((o) => o.name === 'ColorRect:Bar');
+
+      expect(group?.position.x).toBeCloseTo(101);
+      expect(group?.position.y).toBeCloseTo(-61);
+    } finally {
+      projectSettingsMock.settings = null;
+    }
+  });
+
+  describe('a cyclic pass', () => {
+    /**
+     * A registry state where "Booth/View" and "Other" depend on each other.
+     * "Other" registers FIRST so `orderViewportPasses`' DFS (which visits in
+     * registration order) reports "Booth/View" — the pass this test cares
+     * about — as the offending sampler; see `passOrder.ts`'s own tests for
+     * why registration order decides which of a cycle's two nodes that is.
+     */
+    function CyclicRegistration() {
+      return (
+        <>
+          <PassRegistrar path="Other" dependsOn={['Booth/View']} />
+          <PassRegistrar path="Booth/View" dependsOn={['Other']} />
+        </>
+      );
     }
 
-    /** Publishes `entry` at `path`, then renders the overlay underneath it. */
-    function Publisher({
-      path,
-      entry,
-      children,
-    }: {
-      path: string;
-      entry: ViewportTextureEntry;
-      children: ReactNode;
-    }) {
-      const register = useRegisterViewportTexture();
-      useEffect(() => register(path, entry), [register, path, entry]);
-      return <>{children}</>;
-    }
-
-    function mount(entry: ViewportTextureEntry | null, nodes = tree({})) {
-      return render(
+    it('renders the fallback surface instead of sampling the (unusable) texture', async () => {
+      const entry = fakeEntry();
+      const renderer = await ReactThreeTestRenderer.create(
         <ViewportTextureProvider>
-          {entry ? (
-            <Publisher path="Booth/View" entry={entry}>
-              <ControlOverlay nodes={nodes} />
-            </Publisher>
-          ) : (
-            <ControlOverlay nodes={nodes} />
-          )}
+          <ViewportPassProvider>
+            <CyclicRegistration />
+            <Publisher path="Booth/View" entry={entry} />
+            <SubViewportContainer
+              {...painterEnv()}
+              solveNode={containerSolveNode({})}
+              rect={RECT}
+              renderOrder={0}
+            />
+          </ViewportPassProvider>
         </ViewportTextureProvider>
       );
-    }
-
-    function fakeEntry(readPixels: () => ImageData | null): ViewportTextureEntry {
-      return {
-        texture: {} as ViewportTextureEntry['texture'],
-        size: { x: 200, y: 150 },
-        readPixels,
-      };
-    }
-
-    /** Captures `putImageData` for the duration of one test. */
-    function captureContext() {
-      const calls: { image: ImageData; x: number; y: number }[] = [];
-      const original = HTMLCanvasElement.prototype.getContext;
-      // Only `putImageData` is exercised, so this browser-API double deliberately
-      // stands in for the whole `getContext` overload set.
-      HTMLCanvasElement.prototype.getContext = function getContext() {
-        return {
-          putImageData: (image: ImageData, x: number, y: number) => calls.push({ image, x, y }),
-        };
-      } as unknown as typeof original;
-      return { calls, restore: () => (HTMLCanvasElement.prototype.getContext = original) };
-    }
-
-    afterEach(() => cleanup());
-
-    it('publishes no canvas at all when the sub-viewport published no target', () => {
-      const { container } = mount(null);
-      expect(firstSurface(container).querySelector('[data-viewport-pixels]')).toBeNull();
+      const textured = renderer.scene
+        .findAll(() => true)
+        .map((n) => n.instance as THREE.Mesh)
+        .filter((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture);
+      expect(textured).toHaveLength(0);
+      const outlines = renderer.scene.findAllByType('LineSegments');
+      expect(outlines.length).toBeGreaterThan(0);
     });
 
-    it('sizes the canvas to the TARGET, which is what the pixels are', () => {
-      const { container } = mount(fakeEntry(() => null));
-      const canvas = firstSurface(container).querySelector<HTMLCanvasElement>(
-        '[data-viewport-pixels]'
+    it('logs a warning naming the node path', async () => {
+      warnCalls.length = 0;
+      await ReactThreeTestRenderer.create(
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <CyclicRegistration />
+            <SubViewportContainer
+              {...painterEnv()}
+              solveNode={containerSolveNode({})}
+              rect={RECT}
+              renderOrder={0}
+            />
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
       );
-      expect(canvas).toBeTruthy();
-      expect(canvas?.getAttribute('width')).toBe('200');
-      expect(canvas?.getAttribute('height')).toBe('150');
+      const matched = warnCalls.filter((args) => String(args[0]).includes('Booth/View'));
+      expect(matched.length).toBeGreaterThan(0);
     });
+  });
+});
 
-    /**
-     * Godot composites a viewport's Controls into the same target as its
-     * CanvasItems, Controls last (tree order). The previewer splits them across
-     * two technologies, so the stacking has to be reproduced by DOM order.
-     */
-    it('stacks the canvas UNDER the Control arm', () => {
-      const { container } = mount(fakeEntry(() => null));
-      const surface = firstSurface(container);
-      const canvas = surface.querySelector('[data-viewport-pixels]');
-      const inner = surface.querySelector('[data-node-name="Inner"]');
-      expect(canvas && inner && canvas.compareDocumentPosition(inner)).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING
-      );
-    });
+/**
+ * A sub-viewport's Controls reach the canvas by exactly ONE route.
+ *
+ * `viewportContentKind` (`viewport/subviewport/viewportContent.ts`) already
+ * decides which rasterizer owns a target: a Control-only (`'dom'`) viewport is
+ * drawn by `ControlRasterPass` into the texture this quad samples, so drawing
+ * the same subtree live alongside it composites it twice — and only the quad
+ * copy carries the container's `self_modulate`. The live arm exists for a MIXED
+ * viewport, whose offscreen pass renders the non-Control half alone.
+ */
+describe('<SubViewportContainer> — one route per sub-viewport', () => {
+  /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
+  function groupNames(renderer: Awaited<ReturnType<typeof mount>>): string[] {
+    return renderer.scene
+      .findAll(() => true)
+      .map((n) => (n.instance as THREE.Object3D).name)
+      .filter((name) => name.length > 0);
+  }
 
-    it('paints nothing while the target has not rendered — null is not empty', async () => {
-      const capture = captureContext();
-      try {
-        mount(fakeEntry(() => null));
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 60));
-        });
-        expect(capture.calls).toHaveLength(0);
-      } finally {
-        capture.restore();
-      }
-    });
+  it('does not ALSO draw a Control-only sub-viewport live — the raster texture is the whole picture', async () => {
+    const renderer = await mount(
+      <>
+        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [node('Backdrop', 'ColorRect', {})])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(groupNames(renderer).filter((n) => n.includes('Backdrop'))).toEqual([]);
+  });
 
-    /**
-     * The orientation contract, stated where it is consumed: the row flip
-     * belongs to `targetPixelsToImageData` (GL's framebuffer origin is
-     * bottom-left, `ImageData` is top-down), so the blit must NOT flip again —
-     * it draws the snapshot at the origin, row 0 to row 0. Two flips are the
-     * identity, which is exactly why nothing else would catch a second one.
-     */
-    it('draws the snapshot at the origin, row for row, with no second flip', async () => {
-      const capture = captureContext();
-      try {
-        const snapshot = rows(4, 3);
-        mount(fakeEntry(() => snapshot));
-        await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 60));
-        });
-        expect(capture.calls.length).toBeGreaterThan(0);
-        const { image, x, y } = capture.calls[0]!;
-        expect([x, y]).toEqual([0, 0]);
-        // Row r of the snapshot is still row r — the red channel carried the
-        // row index in, and the encode is monotonic so the order survives it.
-        // The snapshot is 4x3, so rows 0..2 are all in range.
-        const red = (row: number) => image.data[row * 4 * 4]!;
-        expect(red(0)).toBeLessThan(red(1));
-        expect(red(1)).toBeLessThan(red(2));
-        // …and the encode did run: 55 → 128, 19 → 77 on every pixel.
-        expect(image.data[1]).toBe(128);
-        expect(image.data[2]).toBe(77);
-      } finally {
-        capture.restore();
-      }
-    });
+  it('still draws a MIXED viewport’s Controls live, over the pass that rendered its 3D half', async () => {
+    const renderer = await mount(
+      <>
+        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({}, {}, [
+            node('Mesh', 'MeshInstance3D', {}),
+            node('Backdrop', 'ColorRect', {}),
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(groupNames(renderer).filter((n) => n.includes('Backdrop')).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) hands
+ * `get_size() / shrink` to `set_size_force`, which takes a `Size2i` — and
+ * `Vector2::operator Vector2i` (`core/math/vector2.cpp:213`) truncates. A
+ * container 200 px wide at shrink 3 forces 66, not the 67 a round would give.
+ */
+describe('<SubViewportContainer> — the forced sub-viewport size truncates', () => {
+  function RectProbe({ path, onRect }: { path: string; onRect: (r: ViewportRect | null) => void }) {
+    const rect = useViewportRect(path);
+    useEffect(() => onRect(rect), [rect, onRect]);
+    return null;
+  }
+
+  it('truncates `get_size() / shrink` rather than rounding it', async () => {
+    let seen: ViewportRect | null = null;
+    await mount(
+      <ViewportRectProvider>
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({ stretch: true, stretch_shrink: 3 })}
+          rect={{ x: 0, y: 0, w: 200, h: 150 }}
+          renderOrder={0}
+        />
+        <RectProbe path="Booth/View" onRect={(r) => { seen = r; }} />
+      </ViewportRectProvider>
+    );
+    // 200/3 = 66.67 -> 66; 150/3 = 50 exactly.
+    expect(seen).toEqual({ x: 66, y: 50 });
   });
 });

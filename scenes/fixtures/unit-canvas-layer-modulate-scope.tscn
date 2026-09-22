@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+; Whether an ancestor's `modulate` crosses a CanvasLayer boundary is the ONE variable:
+; every square below is authored pure white, and each family's two squares differ only in
+; whether a CanvasLayer sits between the square and the tinted ancestor. In Godot both
+; layer squares render UNtinted white while both non-layer squares render at 0.25 grey —
+; CanvasLayer derives from Node, so `CanvasItem::get_parent_item()` returns null under it
+; and the child parents to the layer's own canvas, whose root items start at pure white.
+; Both families are here because the Control walk and the Node2D dispatch publish that
+; scope through separate code paths, and a leak in one is invisible in the other.
+; unit-canvas-layer.tscn tints nothing, so a leak there reads as plain white text; the
+; modulate-cascade fixtures carry no CanvasLayer at all, so a leak there cannot appear.
+; Colours are white and the tint is a hard 0.25, so a leak is a four-fold error, not a
+; shade nobody notices.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TintedControl" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+modulate = Color(0.25, 0.25, 0.25, 1)
+
+[node name="ControlOutside" type="ColorRect" parent="TintedControl"]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 200.0
+offset_bottom = 140.0
+color = Color(1, 1, 1, 1)
+
+[node name="ControlLayer" type="CanvasLayer" parent="TintedControl"]
+layer = 1
+
+[node name="ControlInLayer" type="ColorRect" parent="TintedControl/ControlLayer"]
+offset_left = 240.0
+offset_top = 40.0
+offset_right = 400.0
+offset_bottom = 140.0
+color = Color(1, 1, 1, 1)
+
+[node name="TintedNode2D" type="Node2D" parent="."]
+modulate = Color(0.25, 0.25, 0.25, 1)
+
+[node name="Node2DOutside" type="Polygon2D" parent="TintedNode2D"]
+position = Vector2(40, 200)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 100, 0, 100)
+color = Color(1, 1, 1, 1)
+
+[node name="Node2DLayer" type="CanvasLayer" parent="TintedNode2D"]
+layer = 1
+
+[node name="Node2DInLayer" type="Polygon2D" parent="TintedNode2D/Node2DLayer"]
+position = Vector2(240, 200)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 100, 0, 100)
+color = Color(1, 1, 1, 1)

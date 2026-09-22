@@ -1,17 +1,17 @@
 ---
 type: HFlowContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-h-flow-container.tscn
 # image: unit-h-flow-container
-renders_as: an invisible transform-only fallback
+renders_as: children flowed left to right, wrapping to a new row
 ---
 
 # HFlowContainer
 
-HFlowContainer is a FlowContainer fixed to the horizontal axis. The previewer parses and
-validates it but does not draw it, so it renders as a transform-only fallback and its
-children still show.
+HFlowContainer is a FlowContainer fixed to the horizontal axis: children flow left to
+right and wrap to a new row when the current one runs out of width. It draws nothing
+itself. A right-to-left `layout_direction` mirrors every row horizontally.
 
 ## Linting
 
@@ -27,14 +27,17 @@ Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-HFlowContainer declares no member of its own and removes `vertical`. The lenient parser
-reuses `parseControl` unchanged and never reads `vertical`, so a scene carrying it
-parses the same as one without. Only strict rejects the key.
+HFlowContainer declares no member of its own and removes `vertical`. `index.ts` reuses
+FlowContainer's parser directly, which never reads `vertical`, so a scene carrying it
+parses the same as one without — the solver reads this node's own TYPE, not the
+property, to fix its orientation horizontal. Only strict rejects the key.
 
 ## Known limitations
 
-- **Not drawn** Godot flows and wraps the children along the row. The previewer applies
-  no layout, so they stay at their authored offsets.
+- **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
+  flow is sized like any other child; Godot instead keeps its previous frame's size,
+  which a static render has no analogue for.

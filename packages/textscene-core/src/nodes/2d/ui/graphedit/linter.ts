@@ -1,5 +1,8 @@
 /**
- * Semantic rule for GraphEdit: `zoom_min` authored above `zoom_max`.
+ * Semantic rules for GraphEdit: an inverted zoom-limit pair, and a
+ * `scroll_offset` the load clamps away.
+ *
+ * ## `zoom_min` authored above `zoom_max`
  *
  * Error tier (ADR-0032): each value on its own is a perfectly ordinary float
  * that Godot's parser reads, and neither validator can see the other, but the
@@ -28,6 +31,22 @@
  * applied, so its outcome depends on the order the properties appear in the
  * file, and a rule that assumed one order would be wrong for the other.
  *
+ * ## `scroll_offset` discarded at load
+ *
+ * `engine-inert` (ADR-0032), so info. The property is `PROPERTY_HINT_NONE` with
+ * no bound at either end (graph_edit.cpp:3069) and `set_scroll_offset` refuses
+ * nothing. What makes the authored value inert is what the clamp at
+ * graph_edit.cpp:407 READS: `min_scroll_offset`/`max_scroll_offset`, two
+ * members only `_update_scrollbars` writes and which a load leaves measuring
+ * an empty child list. That is stale load state rather than a bound on this
+ * property, which is why the error and warning tiers do not reach it.
+ *
+ * `loadOrder.ts` replays the clamp — the renderer's own model of it, so the
+ * diagnostic and the picture cannot disagree — and the rule reports whenever
+ * what it returns differs from what the file wrote. The case worth naming is
+ * `Vector2(0, 0)`: writing the default explicitly stores `-size`, while
+ * omitting the line leaves the offset at `(0, 0)`.
+ *
  * Format validation lives in linterParser.ts.
  */
 
@@ -35,6 +54,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
+import { parseOptionalVector2 } from '../../../../parser/valueParsers.js';
+import { resolveGraphEditLoadState } from './loadOrder.js';
 
 function checkZoomLimits(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -67,11 +88,51 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
   ];
 }
 
-const graphEditZoomLimitsRule: LintRule = {
+/** `Vector2(x, y)`, the spelling a `.tscn` would carry. */
+function vector2Literal(value: { x: number; y: number }): string {
+  return `Vector2(${value.x}, ${value.y})`;
+}
+
+function checkScrollOffset(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  if (!isValidProperties(node.properties)) return [];
+
+  const props = node.properties as Record<string, string>;
+  const raw = props.scroll_offset;
+  if (raw === undefined) return [];
+
+  // The decoder the replay itself reads the key with, so a spelling either one
+  // refuses leaves both with nothing and this rule silent; judging the literal
+  // is the validator's job.
+  const authored = parseOptionalVector2(raw);
+  const stored = resolveGraphEditLoadState(props).scrollOffset;
+  if (!authored || !stored) return [];
+  if (stored.x === authored.x && stored.y === authored.y) return [];
+
+  const explicitDefault =
+    authored.x === 0 && authored.y === 0
+      ? ' Omitting the property is what leaves the offset at (0, 0); writing it explicitly does not.'
+      : '';
+
+  return [
+    {
+      severity: 'info',
+      message:
+        `GraphEdit 'scroll_offset = ${raw}' does not survive the load: set_scroll_offset clamps it against ` +
+        `min_scroll_offset and max_scroll_offset, which no laid-out child has widened yet, so Godot stores ` +
+        `${vector2Literal(stored)} instead.${explicitDefault}`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'graphedit-scroll-offset-discarded',
+    },
+  ];
+}
+
+const graphEditPropertiesRule: LintRule = {
   meta: {
-    name: 'valid-graphedit-zoom-limits',
+    name: 'valid-graphedit-properties',
     description:
-      "Flags a GraphEdit whose zoom_min is authored above zoom_max, because Godot's two setters guard against each other, so one of the limits never lands",
+      'Validates GraphEdit zoom-limit ordering and reports a scroll_offset the load clamps away',
     category: 'validation',
     applicableNodeTypes: ['GraphEdit'],
     emits: [
@@ -80,11 +141,20 @@ const graphEditZoomLimitsRule: LintRule = {
         severity: 'error',
         grounding: { kind: 'engine', at: 'graph_edit.cpp:2480' },
       },
+      {
+        ruleName: 'graphedit-scroll-offset-discarded',
+        severity: 'info',
+        grounding: {
+          kind: 'engine-inert',
+          at: 'graph_edit.cpp:407',
+          unused: 'the authored offset never becomes the stored scroll position',
+        },
+      },
     ],
   },
-  check: checkZoomLimits,
+  check: (context) => [...checkZoomLimits(context), ...checkScrollOffset(context)],
 };
 
-ruleRegistry.register(graphEditZoomLimitsRule);
+ruleRegistry.register(graphEditPropertiesRule);
 
-export { graphEditZoomLimitsRule };
+export { graphEditPropertiesRule };

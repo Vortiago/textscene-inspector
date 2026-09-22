@@ -17,6 +17,9 @@ export async function captureGodot(targets) {
         scene: godotScenePath(t.fixture),
         out: imgPath(t.image, 'godot'),
         sceneCamera: Boolean(t.camera),
+        // The editor animates particles; a paused reference draws frame 0. The
+        // sheet names the instant, so both sides are captured at it.
+        particles: t.particles,
       });
       if (mode) {
         modes.set(t.image, mode);

@@ -1,0 +1,32 @@
+; The ONE variable: where a detached Control sits in the canvas draw order.
+; `_enter_canvas` parents it at the viewport's own canvas and gives it a sort
+; index from `gui_get_canvas_sort_index()` (canvas_item.cpp:234-285), so it is
+; ordered against the OTHER canvas roots by the order it entered the tree —
+; after the scene root's whole subtree — rather than at the slot its position in
+; the file would give it. Red is authored FIRST and blue second, so a draw order
+; taken from file position puts blue on top and one taken from canvas-root entry
+; puts red on top. Every other detached-Control fixture keeps its box clear of
+; the others, and cannot see this at all.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrldetachpaint"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Holder" type="Node" parent="."]
+
+[node name="Detached" type="ColorRect" parent="Holder"]
+offset_left = 200.0
+offset_top = 200.0
+offset_right = 500.0
+offset_bottom = 400.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Later" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 300.0
+offset_right = 600.0
+offset_bottom = 500.0
+color = Color(0.2, 0.4, 0.9, 1)

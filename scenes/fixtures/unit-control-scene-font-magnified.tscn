@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3]
+
+; The ONE variable: a scene-authored (non-vendored) font's Label drawn
+; MAGNIFIED. `control-scene-font-theme.tscn`/`control-scene-font-woff2.tscn`
+; already exercise the scene-font resolution/loading path, but both draw their
+; Labels at natural (1x) scale, where the canvas raster's own anti-aliased
+; glyph edges never span more than a texel or two -- too narrow for a bilinear
+; magnification filter's colour-space order to leave a measurable mark, same
+; reasoning `checkbox-icon-magnified.tscn`'s own header gives for the vendored
+; theme icons. This fixture is the text-path sibling: `scale` widens that same
+; edge into a multi-pixel ramp, and unlike the icon (its own texture, its own
+; loader), a scene font's glyphs are rasterised by THIS engine's OWN canvas-2D
+; painter (`canvasTextPainter.ts`), which is a SEPARATE colour-space call site
+; from the icon loader, the sprite loader, and the vendored MSDF atlas.
+;
+; PINS A "NO CHANGE" DECISION, not a fix -- record this plainly rather than
+; deleting the fixture, because the negative result is itself load-bearing.
+; `TextRun.tsx`'s canvas-text texture stays `SRGBColorSpace`. `font_color` and
+; the Backdrop colour are both NEUTRAL GRAYS (equal R=G=B) so a single measured
+; row characterises the whole ramp.
+;
+; What was actually measured (Godot 4.6.3, `--mode 2d`, row y=350, MagnifiedGlyph's
+; left stem edge): Godot's OWN ramp climbs `76 -> 230` PERFECTLY MONOTONICALLY
+; over ~30px (x=408..437, +-6/px, no dip anywhere). This engine's CURRENT
+; (`SRGBColorSpace`) render is also monotonic (`77 -> 230` over x=417..427,
+; narrower -- an ALREADY-DOCUMENTED, separate AA-kernel-width gap, this text
+; engine being canvas-2D-rasterised vs. Godot's FreeType, same slack
+; `unit-control-scene-font-theme.tscn`'s own header names). Retagging the SAME
+; texture `NoColorSpace` (the general 2D-canvas rule every OTHER 2D-canvas
+; texture gets, `canvas2DTextureDecode.ts`) instead produces a DIP to 72 at
+; x=418 -- 5/255 BELOW the 77 backdrop plateau -- that is NOT present in
+; Godot's own render of this exact scene. Total |Godot - ours| over x=400..440
+; is LOWER for the kept `SRGBColorSpace` tag (877) than for the retag (944).
+;
+; Why: Godot's own glyph texture is not a baked-colour RGBA texture the way an
+; icon/sprite PNG is. `modules/text_server_adv/text_server_adv.cpp`
+; (`rasterize_bitmap`, `FT_PIXEL_MODE_GRAY` branch) allocates an
+; `Image::FORMAT_LA8` texture and writes `wr[ofs+0] = 255` (the "colour"
+; channel) UNCONDITIONALLY wherever FreeType wrote any coverage, and only
+; `wr[ofs+1]` (alpha -- never sRGB-encoded, on either side of any pipeline)
+; carries the antialiasing gradient. There is no genuinely-differing RGB pair
+; for a bilinear filter to blend in the wrong order, so the byte-vs-decoded-
+; first question this fixture's SIBLING fix (`72ab8896`, the vendored-icon
+; retag) exists to answer is, for Godot's own text rendering, never open. This
+; engine's canvas-2D `fillText` raster bakes the ink COLOUR into RGB instead
+; (Canvas 2D's non-premultiplied-pixel guarantee) with a genuine `(R=0,A=0)`
+; texel immediately beside the ink at 3x supersample resolution -- the
+; textbook "two genuinely different values" shape the general rule targets --
+; so retagging it reproduces a fringe Godot's reference never has.
+; `TextRun.tsx`'s own doc carries the full citation and derivation;
+; `nodes/2d/ui/label/comparison.md` has this measurement in the node's own
+; parity sheet.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-extra-bold.otf" id="1"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.3, 0.3, 0.3, 1)
+
+[node name="MagnifiedGlyph" type="Label" parent="."]
+layout_mode = 0
+offset_left = 400.0
+offset_top = 120.0
+offset_right = 460.0
+offset_bottom = 180.0
+scale = Vector2(15, 15)
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+text = "I"

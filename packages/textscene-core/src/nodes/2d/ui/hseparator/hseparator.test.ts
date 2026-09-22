@@ -1,9 +1,10 @@
 /**
- * HSeparator registration — parsed and validated, not yet rendered.
+ * HSeparator registration — the parser half only.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * `nodeComponentRegistry` is the 3D-node registry (`r3f/nodes/`); a 2D-UI
+ * Control never registers there, drawn or not — see `index.r3f.test.ts` for
+ * the native (WebGL canvas) painter this type DOES register, into
+ * `ControlComponentRegistry` instead.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,7 +20,7 @@ describe('HSeparator registration', () => {
     expect(registration!.parser).toBe(parseControl);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
+  it('registers nothing in the 3D-node registry — a Control renders through ControlComponentRegistry instead', () => {
     expect(nodeComponentRegistry.get('HSeparator')).toBeUndefined();
   });
 });

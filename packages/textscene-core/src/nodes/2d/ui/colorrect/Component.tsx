@@ -1,22 +1,35 @@
-/** <ColorRect> — a positioned <div> filled with the node's `color`. */
-
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { colorToCss } from '../../../../r3f/controls/styleBoxToCss';
+/**
+ * `<ColorRect>` — the native (WebGL canvas) painter for ColorRect: one
+ * `<ControlQuad>` sized to the solved rect, filled with the parsed `color`.
+ *
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. The parsed fill `color` is multiplied into `tint.own`
+ * while both are still sRGB, so the single sRGB→linear conversion happens once,
+ * on the product.
+ */
+import { useMemo } from 'react';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { parseColor } from '../../../../utils/colorParser';
 import type { ColorRectProperties } from './types';
 
-export function ColorRect({ node, children }: ControlComponentProps) {
-  const props = node.properties as ColorRectProperties;
-  const parentKind = useControlParent();
-  const background = props.color ? colorToCss(props.color) : undefined;
-  const style = {
-    ...controlLayoutStyle(props, parentKind),
-    backgroundColor: background ?? 'transparent',
-  };
+export function ColorRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
+  const props = painterView<ColorRectProperties>(solveNode);
+  const fill = useMemo(() => parseColor(props.color), [props.color]);
+
+  const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
+  const color = useGodotLinearColor(filled);
+
   return (
-    <div data-control-type="ColorRect" data-node-name={node.name} style={style}>
-      {children}
-    </div>
+    <ControlQuad
+      width={rect.w}
+      height={rect.h}
+      color={color}
+      opacity={filled.a}
+      renderOrder={renderOrder}
+    />
   );
 }

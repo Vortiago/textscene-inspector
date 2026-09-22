@@ -10,6 +10,8 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
+import { GODOT_ANISOTROPY_MAX } from '../../../resources/textures/godotTextureFilter';
 
 const heading = { type: 'node', attributes: { type: 'Sprite3D', name: 'S' } };
 const TEX = 'res://sprite.png';
@@ -60,13 +62,13 @@ describe('Sprite3D parser parity', () => {
 describe('Sprite3D render parity', () => {
   it('flip_h mirrors the texture horizontally (negative repeat.x)', async () => {
     const r = await render({ flip_h: 'true' });
-    const map = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map!;
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.x).toBeLessThan(0);
   });
 
   it('flip_v mirrors the texture vertically (negative repeat.y) (#18)', async () => {
     const r = await render({ flip_v: 'true' });
-    const map = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map!;
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.y).toBeLessThan(0);
   });
 
@@ -74,7 +76,7 @@ describe('Sprite3D render parity', () => {
     // image 100×50, pixel_size 0.01, offset (50, 20) → geometry center at
     // +offset.x*pixel_size = 0.5, -offset.y*pixel_size = -0.2.
     const r = await render({ offset: 'Vector2(50, 20)' });
-    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geom = findMesh(r.scene).geometry;
     geom.computeBoundingBox();
     const c = geom.boundingBox!.getCenter(new THREE.Vector3());
     expect(c.x).toBeCloseTo(0.5, 5);
@@ -83,7 +85,7 @@ describe('Sprite3D render parity', () => {
 
   it('modulate is converted sRGB→linear before the material (#6 parity with Sprite2D)', async () => {
     const r = await render({ modulate: 'Color(0.5, 0.5, 0.5, 1)' });
-    const color = ((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
+    const color = (findMesh(r.scene).material as THREE.MeshBasicMaterial).color;
     expect(color.r).toBeCloseTo(srgbToLinear(0.5), 4); // ≈ 0.214, not 0.5
   });
 
@@ -95,10 +97,10 @@ describe('Sprite3D render parity', () => {
       region_rect: 'Rect2(0, 0, 40, 20)',
       hframes: '2',
     });
-    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = findMesh(r.scene);
     const map = (mesh.material as THREE.MeshBasicMaterial).map!;
     expect(map.repeat.x).toBeCloseTo(0.2, 5);
-    const geom = mesh.geometry as THREE.BufferGeometry;
+    const geom = mesh.geometry;
     geom.computeBoundingBox();
     const size = geom.boundingBox!.getSize(new THREE.Vector3());
     expect(size.x).toBeCloseTo(0.2, 5);
@@ -106,24 +108,24 @@ describe('Sprite3D render parity', () => {
 
   it('double_sided=false → FrontSide material', async () => {
     const r = await render({ double_sided: 'false' });
-    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(THREE.FrontSide);
+    expect((findMesh(r.scene).material as THREE.Material).side).toBe(THREE.FrontSide);
   });
 
   it('transparent=false → material.transparent === false', async () => {
     const r = await render({ transparent: 'false' });
-    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).transparent).toBe(false);
+    expect((findMesh(r.scene).material as THREE.Material).transparent).toBe(false);
   });
 
   it('opaque sprite (transparent=false, alpha_cut DISABLED) writes depth', async () => {
     // An opaque quad must write depth so it sorts/occludes correctly against
     // other opaque geometry — the DISABLED alpha-cut otherwise leaves it false.
     const r = await render({ transparent: 'false' });
-    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthWrite).toBe(true);
+    expect((findMesh(r.scene).material as THREE.Material).depthWrite).toBe(true);
   });
 
   it('default (transparent) sprite keeps depthWrite=false on the blended path', async () => {
-    const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' }); // opacity < 1 → blended
-    expect(((r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthWrite).toBe(false);
+    const r = await render({ modulate: 'Color(1, 1, 1, 0.5)' });
+    expect((findMesh(r.scene).material as THREE.Material).depthWrite).toBe(false);
   });
 
   it('centered=false shifts the quad by half its size (offset origin top-left)', async () => {
@@ -131,10 +133,71 @@ describe('Sprite3D render parity', () => {
     // +width/2, -height/2 translate into the geometry so the node origin sits at
     // the quad's top-left corner.
     const r = await render({ centered: 'false' });
-    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geom = findMesh(r.scene).geometry;
     geom.computeBoundingBox();
     const center = geom.boundingBox!.getCenter(new THREE.Vector3());
     expect(center.x).toBeCloseTo(0.5, 5);
     expect(center.y).toBeCloseTo(-0.25, 5);
+  });
+});
+
+/**
+ * `get_material_for_2d` (`material.cpp:3021`) builds the sprite's whole
+ * material from node properties; these are the ones that reach three.
+ */
+describe('Sprite3D material-property parity', () => {
+  it('no_depth_test disables depth testing', async () => {
+    // `set_flag(FLAG_DISABLE_DEPTH_TEST, p_no_depth)` (`material.cpp:3051`)
+    // emits `render_mode depth_test_disabled` (`material.cpp:863-864`).
+    const r = await render({ no_depth_test: 'true' });
+    expect((findMesh(r.scene).material as THREE.Material).depthTest).toBe(false);
+  });
+
+  it('keeps depth testing on by default', async () => {
+    const r = await render();
+    expect((findMesh(r.scene).material as THREE.Material).depthTest).toBe(true);
+  });
+
+  it('is unlit by default — FLAG_SHADED starts false', async () => {
+    const r = await render();
+    const material = findMesh(r.scene).material as THREE.Material;
+    expect((material as THREE.MeshBasicMaterial).isMeshBasicMaterial).toBe(true);
+  });
+
+  it('shaded mounts a lit material carrying the same map', async () => {
+    // `set_shading_mode(p_shaded ? SHADING_MODE_PER_PIXEL : SHADING_MODE_UNSHADED)`
+    // (`material.cpp:3045`).
+    const r = await render({ shaded: 'true' });
+    const material = findMesh(r.scene).material as THREE.MeshStandardMaterial;
+    expect(material.isMeshStandardMaterial).toBe(true);
+    expect(material.map).toBeTruthy();
+  });
+
+  it('shaded uses the sprite material\'s own metallic and roughness', async () => {
+    // `material_set_param(material, "metallic", 0.0)` / `"roughness", 1.0`
+    // (`sprite_3d.cpp:721-722`).
+    const r = await render({ shaded: 'true' });
+    const material = findMesh(r.scene).material as THREE.MeshStandardMaterial;
+    expect([material.metalness, material.roughness]).toEqual([0, 1]);
+  });
+
+  it('texture_filter NEAREST samples the composed texture unfiltered', async () => {
+    // `set_texture_filter(p_filter)` (`material.cpp:3055`); row 0 of the sampler
+    // table in `resources/textures/godotTextureFilter.ts`.
+    const r = await render({ texture_filter: '0' });
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+    expect([map.generateMipmaps, map.anisotropy]).toEqual([false, 1]);
+  });
+
+  it('texture_filter LINEAR_..._ANISOTROPIC raises anisotropy', async () => {
+    // Row 5: Godot's anisotropy ceiling, `GODOT_ANISOTROPY_MAX`.
+    const r = await render({ texture_filter: '5' });
+    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([
+      THREE.LinearFilter,
+      THREE.LinearMipmapLinearFilter,
+    ]);
+    expect([map.generateMipmaps, map.anisotropy]).toEqual([true, GODOT_ANISOTROPY_MAX]);
   });
 });

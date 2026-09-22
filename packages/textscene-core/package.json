@@ -80,10 +80,10 @@
     "url": "https://github.com/Vortiago/textscene-inspector/issues"
   },
   "dependencies": {
+    "fastnoise-lite": "catalog:",
     "@react-three/drei": "catalog:",
     "@react-three/fiber": "catalog:",
     "@react-three/postprocessing": "catalog:",
-    "fastnoise-lite": "catalog:",
     "postprocessing": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

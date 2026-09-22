@@ -21,6 +21,7 @@ import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../i
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
 /** Provider that never loads anything — these materials carry no textures. */
 class NoopProvider implements ResourceProvider {
@@ -78,7 +79,7 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
 
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.transmission).toBeCloseTo(1, 5);
     expect(material.thickness).toBeCloseTo(0.2, 5);
     // ior is left unset so it stays at three's MeshPhysicalMaterial glass

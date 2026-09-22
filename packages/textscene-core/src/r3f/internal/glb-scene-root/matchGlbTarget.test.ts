@@ -77,4 +77,28 @@ describe('matchGlbTarget', () => {
     const root = buildTestGlbGraph(['Robot']);
     expect(matchGlbTarget(flattenGlbObjects(root), 'Robot')?.relPath).toBe('Robot');
   });
+
+  describe('allowAncestor: false', () => {
+    it('drops a path whose leaf has no counterpart instead of landing on an ancestor', () => {
+      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+      const root = buildTestGlbGraph(['Rig/Armature/Body']);
+      const entries = flattenGlbObjects(root);
+
+      expect(matchGlbTarget(entries, 'Rig/Armature/NoSuchMesh')?.relPath).toBe('Rig/Armature');
+      expect(matchGlbTarget(entries, 'Rig/Armature/NoSuchMesh', { allowAncestor: false })).toBeNull();
+      warnSpy.mockRestore();
+    });
+
+    it('still takes an exact and a subsequence match', () => {
+      const root = buildTestGlbGraph(['Skeleton/Robot']);
+      const entries = flattenGlbObjects(root);
+
+      expect(matchGlbTarget(entries, 'Skeleton/Robot', { allowAncestor: false })?.relPath).toBe(
+        'Skeleton/Robot'
+      );
+      expect(
+        matchGlbTarget(entries, 'Skeleton/Skeleton3D/Robot', { allowAncestor: false })?.relPath
+      ).toBe('Skeleton/Robot');
+    });
+  });
 });

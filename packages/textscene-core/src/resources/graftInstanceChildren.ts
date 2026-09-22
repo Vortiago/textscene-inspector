@@ -17,7 +17,7 @@
  * happened to render.
  */
 
-import type { TscnExternalResource, TscnNode } from '../parser/types';
+import type { SceneScope, TscnNode } from '../parser/types';
 import { layerRawOverride } from './layerRawOverride';
 import { warn } from '../logger';
 
@@ -26,14 +26,15 @@ import { warn } from '../logger';
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
- * @param outerResources the HOST scene's ExtResource table, stamped onto each
- *   grafted node so its resource references keep resolving against the table
- *   they were authored against rather than the sub-scene's
+ * @param outerScope the HOST scene's resource tables — BOTH pools, see
+ *   `SceneScope` — stamped onto each grafted node so its resource references
+ *   keep resolving against the scene they were authored against rather than the
+ *   sub-scene's
  */
 export function graftInstanceChildren(
   rootChildren: readonly TscnNode[],
   hostChildren: readonly TscnNode[],
-  outerResources?: readonly TscnExternalResource[]
+  outerScope?: SceneScope
 ): TscnNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
@@ -41,7 +42,7 @@ export function graftInstanceChildren(
   const appendedAtRoot: TscnNode[] = [];
 
   for (const child of hostChildren) {
-    const stamped = outerResources ? { ...child, authoredResources: outerResources } : child;
+    const stamped = outerScope ? { ...child, authoredScope: outerScope } : child;
     if (!child.instanceSubPath) {
       appendedAtRoot.push(stamped);
       continue;
@@ -131,7 +132,7 @@ function attach(parent: TscnNode, child: TscnNode): TscnNode {
   const children = [...parent.children];
   children[index] = {
     ...layerRawOverride(existing, child.rawProperties),
-    ...(child.authoredResources ? { authoredResources: child.authoredResources } : {}),
+    ...(child.authoredScope ? { authoredScope: child.authoredScope } : {}),
   };
   return { ...parent, children };
 }

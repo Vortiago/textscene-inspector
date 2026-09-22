@@ -1,29 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as THREE from 'three';
+/**
+ * `<Label3D>` — the thin, eagerly-registered wrapper: node transform,
+ * billboard wiring, `showLabels` gating, and the `pixel_size` scale group.
+ * The glyph-drawing pass (`LabelGlyphs`) is `React.lazy`-loaded (see
+ * `Component.tsx`'s own doc), so its content never resolves synchronously
+ * under `@react-three/test-renderer` — exercised directly, bypassing the
+ * lazy boundary, in `LabelGlyphs.test.tsx`, the same split
+ * `nodes/viewport/subviewport/ControlRasterPass.test.tsx` uses for its own
+ * lazy-loaded heavy component.
+ */
+import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
 import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { BillboardMode, HorizontalAlignment } from './types';
+import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
-
-// happy-dom provides HTMLCanvasElement but not a 2D rendering context.
-// Stub getContext so Label3D can build its texture in this environment.
-beforeEach(() => {
-  const mockContext = {
-    font: '',
-    fillStyle: '',
-    strokeStyle: '',
-    lineWidth: 0,
-    measureText: vi.fn(() => ({ width: 100 })),
-    fillText: vi.fn(),
-    strokeText: vi.fn(),
-  };
-  HTMLCanvasElement.prototype.getContext = vi.fn((type: string) => {
-    if (type === '2d') return mockContext as unknown as CanvasRenderingContext2D;
-    return null;
-  }) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-});
 
 function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   const properties: Label3DProperties = {
@@ -39,6 +31,12 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     line_spacing: 0,
     horizontal_alignment: HorizontalAlignment.CENTER,
     no_depth_test: false,
+    render_priority: 0,
+    outline_render_priority: -1,
+    alpha_cut: AlphaCutMode.DISABLED,
+    alpha_scissor_threshold: 0.5,
+    fixed_size: false,
+    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };
   return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
@@ -46,7 +44,7 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
 
 // Label3D text is gated behind the `showLabels` toggle (ON by default per the
 // ADR-0008 Label3D parity amendment). The provider defaults labels on, so a bare
-// `<Label3D>` already renders the text mesh; wrap explicitly only to assert the
+// `<Label3D>` already renders the group; wrap explicitly only to assert the
 // OFF state.
 function renderLabel(node: TscnNode) {
   return ReactThreeTestRenderer.create(
@@ -57,36 +55,27 @@ function renderLabel(node: TscnNode) {
 }
 
 describe('<Label3D>', () => {
-  it('renders an invisible group (no mesh) when labels are toggled off', async () => {
+  it('renders only an invisible, un-tagged group when labels are toggled off', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ViewportModeProvider initialShowLabels={false}>
         <Label3D node={makeNode()} />
       </ViewportModeProvider>
     );
-    expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
+    const group = renderer.scene.findByProps({ name: 'Label' });
+    expect((group.instance.userData as { isLabel3D?: boolean }).isLabel3D).toBeUndefined();
   });
 
-  it('renders a Mesh with a PlaneGeometry when labels are toggled on', async () => {
+  it('renders a named group carrying billboardMode/isLabel3D userData when labels are toggled on', async () => {
     const renderer = await renderLabel(makeNode());
-    const mesh = renderer.scene.findByType('Mesh');
-    expect((mesh.instance as THREE.Mesh).geometry.type).toBe('PlaneGeometry');
+    const group = renderer.scene.findByProps({ name: 'Label' });
+    expect(group.instance.type).toBe('Group');
+    expect((group.instance.userData as { isLabel3D?: boolean; billboardMode?: number }).isLabel3D).toBe(true);
+    expect((group.instance.userData as { billboardMode?: number }).billboardMode).toBe(
+      BillboardMode.BILLBOARD_ENABLED
+    );
   });
 
-  it('uses a transparent MeshBasicMaterial', async () => {
-    const renderer = await renderLabel(makeNode());
-    const mesh = renderer.scene.findByType('Mesh');
-    const material = (mesh.instance as THREE.Mesh).material as { transparent: boolean; type: string };
-    expect(material.transparent).toBe(true);
-    expect(material.type).toBe('MeshBasicMaterial');
-  });
-
-  it('applies modulate alpha to material opacity', async () => {
-    const renderer = await renderLabel(makeNode({ modulate: { r: 1, g: 1, b: 1, a: 0.5 } }));
-    const mesh = renderer.scene.findByType('Mesh');
-    expect(((mesh.instance as THREE.Mesh).material as { opacity: number }).opacity).toBe(0.5);
-  });
-
-  it('positions the mesh at transform origin', async () => {
+  it('positions the group at transform origin', async () => {
     const renderer = await renderLabel(
       makeNode({
         name: 'Sign',
@@ -98,19 +87,119 @@ describe('<Label3D>', () => {
         },
       })
     );
-    const mesh = renderer.scene.findByProps({ name: 'Sign' });
-    expect(mesh.instance.position.y).toBe(2);
+    const group = renderer.scene.findByProps({ name: 'Sign' });
+    expect(group.instance.position.y).toBe(2);
   });
 
-  it('scales the plane proportionally to pixel_size', async () => {
-    const a = await renderLabel(makeNode({ pixel_size: 0.01 }));
-    const b = await renderLabel(makeNode({ pixel_size: 0.02 }));
-    const ah = (
-      (a.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
-    ).parameters.height;
-    const bh = (
-      (b.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry
-    ).parameters.height;
-    expect(bh).toBeCloseTo(2 * ah, 5);
+  it('nests a pixel_size-scaled group beneath the named group', async () => {
+    const renderer = await renderLabel(makeNode({ pixel_size: 0.02 }));
+    const named = renderer.scene.findByProps({ name: 'Label' });
+    const scaled = named.children.find((c) => c.type === 'Group')!;
+    expect((scaled.instance as THREE.Group).scale.x).toBeCloseTo(0.02, 6);
+    expect((scaled.instance as THREE.Group).scale.y).toBeCloseTo(0.02, 6);
+  });
+
+  /** The proxy carries no `name`, so it's found by its own userData tag, scene-wide. */
+  function findProxyMesh(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Mesh {
+    return renderer.scene.find(
+      (n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true
+    ).instance as THREE.Mesh;
+  }
+
+  it('renders an invisible, zero-size bounds-proxy mesh at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
+    // Regression pin, in the OTHER direction from an earlier version of this
+    // test: a text/font-sized (or billboard-cube-inflated) proxy measurably
+    // made this renderer's own auto-framing WORSE, not better — Godot's own
+    // reference camera is placed (`_place_camera`, synchronous, before any
+    // frame settles) from a scene state in which Label3D has not yet shaped
+    // any text, so it contributes only its ORIGIN, never an extent. Measured
+    // on unit-torus-mesh.tscn: a bootstrap reading `_scene_bounds()` right
+    // after `add_child()` got `size [3.0, 4.0, 3.0]` (the mesh only, each
+    // Label3D contributing a bare Y position); the SAME scene's `--emit-
+    // bounds` (read later, after `_settle()`) got the much larger
+    // `[4.938, 7.445, 4.938]` the billboard-cube inflation predicts. Only the
+    // FIRST number's camera reproduces Godot's own `--frame` picture. See
+    // `Component.tsx`'s own doc for the full citation.
+    const renderer = await renderLabel(
+      makeNode({ text: 'A somewhat long caption for this test', font_size: 32, pixel_size: 0.02 })
+    );
+    const mesh = findProxyMesh(renderer);
+    expect(mesh.visible).toBe(false);
+    const geometry = mesh.geometry as unknown as { parameters: { width: number; height: number; depth: number } };
+    expect(geometry.parameters.width).toBe(0);
+    expect(geometry.parameters.height).toBe(0);
+    expect(geometry.parameters.depth).toBe(0);
+
+    // A point has no extent to be wrong about under rotation, so it needs no
+    // unrotated sibling group (unlike an earlier cube-shaped version of this
+    // proxy) — it can sit at the node's own world position directly.
+    const worldPos = new THREE.Vector3();
+    mesh.getWorldPosition(worldPos);
+    expect(worldPos.length()).toBeCloseTo(0, 6);
+  });
+
+  it('the bounds-proxy point stays at the node origin even after useBillboard rotates the label group', async () => {
+    // A point is rotation-invariant — rotating the group it sits in must
+    // never move it away from the node's own position.
+    const renderer = await renderLabel(
+      makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED, text: 'Hello' })
+    );
+    const billboardGroup = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;
+    const mesh = findProxyMesh(renderer);
+    const worldPosBefore = new THREE.Vector3();
+    mesh.getWorldPosition(worldPosBefore);
+    billboardGroup.quaternion.set(0.2, 0.3, 0.4, Math.sqrt(1 - 0.2 ** 2 - 0.3 ** 2 - 0.4 ** 2));
+    billboardGroup.updateMatrixWorld(true);
+    const worldPosAfter = new THREE.Vector3();
+    mesh.getWorldPosition(worldPosAfter);
+    expect(worldPosAfter.distanceTo(worldPosBefore)).toBeCloseTo(0, 6);
+  });
+
+  it('billboard=ENABLED copies the camera quaternion onto the named group after a frame', async () => {
+    const renderer = await renderLabel(makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED }));
+    const group = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;
+    const qBefore = group.quaternion.clone();
+    await renderer.advanceFrames(2, 16);
+    const norm =
+      group.quaternion.x ** 2 + group.quaternion.y ** 2 + group.quaternion.z ** 2 + group.quaternion.w ** 2;
+    expect(norm).toBeCloseTo(1, 4);
+    expect(qBefore.length()).toBeCloseTo(1, 4);
+  });
+
+  it('billboard=DISABLED leaves the named group rotation untouched across frames', async () => {
+    const renderer = await renderLabel(
+      makeNode({
+        billboard: BillboardMode.BILLBOARD_DISABLED,
+        transform: {
+          basis_x: { x: 1, y: 0, z: 0 },
+          basis_y: { x: 0, y: 1, z: 0 },
+          basis_z: { x: 0, y: 0, z: 1 },
+          origin: { x: 0, y: 0, z: 0 },
+        },
+      })
+    );
+    const group = renderer.scene.findByProps({ name: 'Label' }).instance as THREE.Group;
+    const qBefore = group.quaternion.clone();
+    await renderer.advanceFrames(2, 16);
+    expect(group.quaternion.x).toBeCloseTo(qBefore.x, 6);
+    expect(group.quaternion.y).toBeCloseTo(qBefore.y, 6);
+    expect(group.quaternion.z).toBeCloseTo(qBefore.z, 6);
+    expect(group.quaternion.w).toBeCloseTo(qBefore.w, 6);
+  });
+
+  it('renders children in a sibling group carrying the same transform, not inside the label group', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportModeProvider initialShowLabels>
+        <Label3D node={makeNode()}>
+          <mesh name="Child" />
+        </Label3D>
+      </ViewportModeProvider>
+    );
+    const child = renderer.scene.findByProps({ name: 'Child' });
+    const labelGroup = renderer.scene.findByProps({ name: 'Label' });
+    // The child's parent group is a SIBLING of the label group, not the label
+    // group itself — walk up from the child to find its own wrapping group,
+    // which must differ in identity from the label group.
+    expect(child.parent?.instance).not.toBe(labelGroup.instance);
   });
 });

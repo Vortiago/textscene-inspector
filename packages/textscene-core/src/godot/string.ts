@@ -198,3 +198,51 @@ export function stringToInt(text: string): number {
 export function toIntIndex(text: string): number {
   return IS_VALID_INT_RE.test(text) ? Number(text) : stringToInt(text);
 }
+
+/**
+ * `String::simplify_path()` (`core/string/ustring.cpp:4152-4210`), restricted
+ * to the `scheme://` form every resource address in a `.tscn` takes.
+ *
+ * Godot splits the drive off the front — a run of ASCII alphanumerics followed
+ * by `://` — then rebuilds the remainder from its NON-EMPTY slash-separated
+ * parts, so any run of slashes collapses to one. A real scene writes them:
+ * Maaack's menus template stores every inline `[img]` source as
+ * `res:///addons/...`, and a path left uncollapsed resolves to nothing.
+ *
+ * The `.`/`..` segments `simplify_path` also removes are deliberately left
+ * alone here: no scene in the corpus writes one into a resource address, and
+ * removing `..` without the drive's own root would change which file a path
+ * names rather than normalise it.
+ */
+export function simplifyResPath(path: string): string {
+  const separator = path.indexOf('://');
+  // `p > 0` plus the all-alphanumeric check (`:4159-4167`): `://x` has no
+  // drive at all, and neither does a scheme carrying punctuation.
+  if (separator <= 0 || !/^[A-Za-z0-9]+$/.test(path.slice(0, separator))) return path;
+  const drive = path.slice(0, separator + 3);
+  const rest = path.slice(separator + 3);
+  return drive + rest.split('/').filter((part) => part !== '').join('/');
+}
+
+/**
+ * `String::to_float()` (`core/string/ustring.cpp:2680-2685`) — an empty string
+ * is 0, and everything else goes through `built_in_strtod`, which consumes the
+ * longest numeric prefix and yields 0 when there is none.
+ *
+ * NOT {@link parseGodotFloat}. That reads a TSCN float LITERAL, which is
+ * anchored and refuses trailing text, because a value the tokenizer cannot read
+ * corrupts the assignment after it. `to_float` is the lenient runtime scan a
+ * class applies to text it already holds — a BBCode tag option, a split
+ * component — where trailing text is simply ignored and there is no next
+ * assignment to corrupt. Substituting either for the other changes what a
+ * malformed value reads as.
+ */
+export function stringToFloat(text: string): number {
+  // `built_in_strtod` skips leading whitespace, then takes the longest prefix
+  // it can read; `parseFloat` has the same prefix rule and the same 0-length
+  // miss, differing only in accepting JavaScript's `Infinity` spelling, which
+  // the digit guard below refuses.
+  const trimmed = text.trimStart();
+  const parsed = Number.parseFloat(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+}

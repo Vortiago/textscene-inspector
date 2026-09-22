@@ -15,8 +15,12 @@ import { computeWorldBoundingBox } from './bounds.js';
  * one-sided change there is invisible.
  */
 export const FRAME_MARGIN = 1.6;
-/** A near-flat (2D) scene is viewed head-on and needs far less room. */
-export const FLAT_FRAME_MARGIN = 1.15;
+
+/** Largest side of a box — 0 for a point, which a bounds proxy legitimately is. */
+function maxExtent(box: THREE.Box3): number {
+  const size = box.getSize(new THREE.Vector3());
+  return Math.max(size.x, size.y, size.z);
+}
 
 /** Minimal shape we touch on the viewport controls instance for framing. */
 export interface OrbitLike {
@@ -45,18 +49,17 @@ export function frameSceneBounds(
   let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
-    // CSG contributor bounds proxies are deliberately INCLUDED here.
-    //
-    // Excluding them looks right (a fully-subtracted brush cannot then enlarge the
-    // opening frame) and is wrong in practice: the CSG library loads asynchronously
-    // while CameraFit's last retry fires at 1100 ms, so a root whose result has not
-    // landed yet would be framed against nothing. A CSGCombiner3D has no solid of its
-    // own to stand in for it, so the scene framed on empty space. Measured: the
-    // csg-combiner golden auto-framed to a 26% different picture.
-    //
-    // Including them can only ever frame too LARGE, never too small, because a boolean
-    // result is a subset of the union of its contributions. Too large is a cosmetic
-    // margin; too small is an unusable opening view.
+    // A Label3D's own real glyph mesh (`LabelGlyphs.tsx`'s own doc has the
+    // measurement) — skipped so an incidental async-mount timing accident
+    // can never change the frame. Label3D's contribution to auto-framing is
+    // its zero-size bounds proxy (`nodes/3d/label3d/Component.tsx`'s
+    // `LABEL3D_BOUNDS_PROXY`) ALONE, matching what Godot's own reference
+    // camera is placed from.
+    if (obj.userData?.tscnFrameExcluded) return;
+    // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
+    // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
+    // subtracted solid enlarges its bounds on both sides. An invisible one the recursion
+    // never reached carries a zero-size proxy, so it lands here as the point Godot has.
     const o = obj as THREE.Mesh & { isLine?: boolean; isLineSegments?: boolean; isPoints?: boolean };
     if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
@@ -69,19 +72,26 @@ export function frameSceneBounds(
       hasGizmo = true;
     }
   });
-  const box = hasMesh ? meshBox : hasGizmo ? gizmoBox : null;
+  // A POINT union is reachable: a bounds proxy stands in for a node Godot never sized,
+  // and every mesh in the scene can be one. Such a union is not a mesh to frame FROM, so
+  // it must not win over the gizmo box and defeat the fallback above.
+  const box = hasMesh && maxExtent(meshBox) > 0 ? meshBox : hasGizmo ? gizmoBox : hasMesh ? meshBox : null;
   if (!box) return;
 
-  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (!Number.isFinite(maxDim) || maxDim <= 0) return;
-
-  // 2D-canvas scenes sit on ~one plane (z spread is only z_index draw steps);
-  // view them straight-on (down -Z, +Y up) instead of the 3D isometric angle,
-  // so sprites read flat and upright rather than tilted in perspective.
-  const maxXY = Math.max(size.x, size.y);
-  const isFlat = size.z <= Math.max(maxXY, 1) * 0.02;
+  const maxDim = maxExtent(box);
+  if (!Number.isFinite(maxDim)) return;
+  if (maxDim <= 0) {
+    // Nothing to derive a distance from, so keep the one we have and re-point, which is
+    // what Node3DEditorViewport::focus_selection does with the orbit cursor.
+    if (controls?.target) {
+      camera.position.add(center.clone().sub(controls.target));
+      controls.target.copy(center);
+      controls.update?.();
+    }
+    camera.lookAt(center);
+    return;
+  }
 
   // The only orthographic camera framing ever sees is the editor camera in its
   // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field
@@ -89,14 +99,13 @@ export function frameSceneBounds(
   // default would leave it zoomed out by half again.
   const persp = camera as THREE.PerspectiveCamera;
   const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
-  const fitDim = isFlat ? Math.max(maxXY, 0.001) : maxDim;
-  const distance =
-    ((fitDim / 2 / Math.tan(fov / 2)) || fitDim) * (isFlat ? FLAT_FRAME_MARGIN : FRAME_MARGIN);
+  const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
 
   // Godot's own editor viewing angle, so a framed scene presents the same face
-  // it does in the editor (godotEditorCamera.ts). A flat scene is still viewed
-  // head-on — an edge-on plane frames to nothing.
-  const dir = isFlat ? new THREE.Vector3(0, 0, 1) : editorCameraDirection();
+  // it does in the editor (godotEditorCamera.ts) — including a scene that is
+  // dimensionally flat (all its geometry coplanar): Godot's own reference
+  // camera still frames it obliquely, never head-on.
+  const dir = editorCameraDirection();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
     // Keep the near plane below the framing distance so microscopic scenes

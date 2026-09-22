@@ -1,0 +1,22 @@
+; The ONE variable: `top_level` in the Node2D world walk. A top-level CanvasItem
+; resolves to a null parent item and becomes a canvas root of its own, so its
+; transform is canvas space rather than its parent's (canvas_item.cpp:565-571,
+; and `_enter_canvas`'s "Resolves to nullptr if the node is top_level").
+; `unit-control-top-level.tscn` moves the same flag in the Control walk, which
+; is a different walker; no other fixture in the corpus sets it at all. The
+; sibling without the flag holds the inherited position beside it.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitnode2dtoplevel"]
+
+[node name="Root" type="Node2D"]
+position = Vector2(300, 200)
+
+[node name="TopLevel" type="Polygon2D" parent="."]
+top_level = true
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)
+
+[node name="Nested" type="Polygon2D" parent="."]
+position = Vector2(0, 120)
+color = Color(0.2, 0.5, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)

@@ -16,6 +16,12 @@ import './materials/canvasitemmaterial/index.js';
 
 // Styles
 import './styles/stylebox/index.js';
+import './styles/theme/index.js';
+import './styles/codehighlighter/index.js';
+import './styles/labelsettings/index.js';
+
+// Fonts
+import './fonts/font/index.js';
 
 // Environment + sky
 import './environment/index.js';
@@ -68,3 +74,4 @@ import './meshlibrary/index.js';
 import './formats/glb/index.js';
 import './formats/image/index.js';
 import './formats/packedscene/index.js';
+import './formats/dynamicfont/index.js';

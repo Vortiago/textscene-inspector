@@ -1,4 +1,4 @@
-; SubViewport — a canvas boundary that is NOT a world boundary (ADR-0030).
+; SubViewport — a canvas boundary that is NOT a world boundary (ADR-0033).
 ;
 ; The one variable: what a sub-viewport does to its subtree in the DEFAULT
 ; (own_world_3d unset) case. Godot's Viewport resolves World3D by walking up to

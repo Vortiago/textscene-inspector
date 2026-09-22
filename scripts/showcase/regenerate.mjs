@@ -1,15 +1,13 @@
 /**
  * One-command showcase regeneration — the visual progress-tracking step run
  * after any UI change. Starts a preview server on a free port, records EVERY
- * scenario (.webm + poster) and the 2D-overlay verification screenshots, then
- * shuts the server down. Assumes the web app is already built
- * (`pnpm --filter @textscene/web-previewer build`); the `showcase:regen` root
- * script builds first.
+ * scenario (.webm + poster), then shuts the server down. Assumes the web app
+ * is already built (`pnpm --filter @textscene/web-previewer build`); the
+ * `showcase:regen` root script builds first.
  *
  *   node scripts/showcase/regenerate.mjs
  */
 
-import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import {
   assertPortFree,
@@ -25,12 +23,6 @@ import { scenarios } from './scenarios.mjs';
 // no variable prints the shared default and sends them round the loop again.
 const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
 
-function spawnNode(args, env) {
-  return new Promise((resolve, reject) => {
-    const p = spawn('node', args, { shell: true, stdio: 'inherit', env });
-    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`${args[0]} exited ${code}`))));
-  });
-}
 
 // Before the spawn, never after: `--strictPort` plus `stdio: 'ignore'` means our
 // own server fails silently on a taken port, and `waitForServer` then gets its
@@ -69,12 +61,9 @@ try {
       failures.push(name);
     }
   }
-  // 2D-overlay verification screenshots + stats (its own browser/process).
-  console.log('[regenerate] capturing 2D overlay screenshots…');
-  await spawnNode(['scripts/showcase/verify-2d.mjs'], { ...process.env, SHOWCASE_URL: baseUrl });
 
   if (failures.length) throw new Error(`${failures.length} scenario(s) failed: ${failures.join(', ')}`);
-  console.log('[regenerate] ✅ clips + screenshots regenerated');
+  console.log('[regenerate] ✅ clips regenerated');
 } catch (err) {
   console.error('[regenerate] failed:', err.message);
   exitCode = 1;

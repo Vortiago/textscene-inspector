@@ -9,13 +9,13 @@
  * {@link TWO_D_UI_TYPES} asks what this previewer can DRAW: a literal mirror of
  * ControlComponentRegistry's registered types, held to it by
  * `has2DUIContent.driftguard.test.ts`. The registry can't be queried here
- * because it's lazy-loaded (empty until the overlay mounts, which only happens
- * in 2D mode), so the set is hand-maintained — keep it in sync when adding a
+ * because it's lazy-loaded (empty until the native Control canvas mounts, which
+ * only happens in 2D mode), so the set is hand-maintained — keep it in sync when adding a
  * Control slice that ships a component.
  *
  * Answering the first question with the second is what put 43 of Godot's 65
  * Control types on the 3D side of the workspace split: every Control slice
- * scaffolded for the linter without a DOM component fell out of the set, and a
+ * scaffolded for the linter without a painter fell out of the set, and a
  * scene rooted at one opened in the 3D canvas with no way to reach 2D.
  *
  * Light module (no component/THREE imports) — safe for the shell's
@@ -47,10 +47,51 @@ export const TWO_D_UI_TYPES = new Set<string>([
   'VSlider',
   'TextureRect',
   'RichTextLabel',
+  'AspectRatioContainer',
+  'BaseButton',
+  'BoxContainer',
+  'CheckButton',
+  'Container',
+  'FlowContainer',
+  'HFlowContainer',
+  'HScrollBar',
+  'HSeparator',
+  'LinkButton',
+  'NinePatchRect',
+  'ProgressBar',
+  'Range',
+  'ReferenceRect',
+  'SplitContainer',
+  'TextureButton',
+  'TextureProgressBar',
+  'VFlowContainer',
+  'VScrollBar',
+  'VSeparator',
+  'CodeEdit',
+  'ColorPicker',
+  'ColorPickerButton',
+  'FoldableContainer',
+  'GraphEdit',
+  'GraphElement',
+  'GraphFrame',
+  'GraphNode',
+  'ItemList',
+  'MenuBar',
+  'MenuButton',
+  'SpinBox',
+  'TabBar',
+  'TabContainer',
+  'TextEdit',
+  'Tree',
+  'VideoStreamPlayer',
   'CanvasLayer',
+  // `ParallaxBackground extends CanvasLayer` (`parallax_background.h:34`), so
+  // it is a canvas boundary in the Control walk exactly as a plain CanvasLayer
+  // is — see `parallaxbackground/index.r3f.ts`.
+  'ParallaxBackground',
   // A Control like any other for the purposes of this set, which mirrors the
   // Control COMPONENT registry. The 3D dispatcher subtracts it separately via
-  // `isViewportSurface` — see ADR-0030.
+  // `isViewportSurface` — see ADR-0033.
   'SubViewportContainer',
 ]);
 

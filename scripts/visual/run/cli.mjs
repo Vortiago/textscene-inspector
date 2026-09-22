@@ -69,7 +69,7 @@ export function summarize(results) {
   const lines = [];
   let failed = 0;
   for (const r of results) {
-    const ok = r.status === 'pass' || r.status === 'updated';
+    const ok = r.status === 'pass' || r.status === 'updated' || r.status === 'unchanged';
     if (!ok) failed++;
     const mark = ok ? '✓' : '✗';
     lines.push(`  ${mark} ${r.scene.name.padEnd(pad)}  ${r.status.toUpperCase()}  ${r.detail}`);

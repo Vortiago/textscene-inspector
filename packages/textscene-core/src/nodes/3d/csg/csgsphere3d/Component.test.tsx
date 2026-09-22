@@ -7,6 +7,7 @@ import { CSGSphere3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGSphere3DProperties } from './types';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 function makeNode(props: Partial<CSGSphere3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGSphere3DProperties = {
@@ -35,7 +36,7 @@ describe('<CSGSphere3D>', () => {
   // construction lives in sphereGeometry.test.ts.
   it('builds a sphere of the requested radius and tessellation', async () => {
     const renderer = await render(makeNode({ radius: 1.25, radialSegments: 48, rings: 24 }));
-    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const geom = findMesh(renderer.scene).geometry;
     geom.computeBoundingSphere();
     expect(geom.boundingSphere!.radius).toBeCloseTo(1.25, 5);
     // csg_shape.cpp:1329 — two triangles per segment per ring, one fewer at each pole.
@@ -49,7 +50,7 @@ describe('<CSGSphere3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_sphere")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_sphere")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

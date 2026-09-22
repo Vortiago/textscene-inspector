@@ -1,17 +1,18 @@
 ---
 type: ColorPickerButton
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-color-picker-button.tscn
 # image: unit-color-picker-button
-renders_as: invisible transform-only fallback, not drawn yet
+renders_as: a Button with a checkerboard + colour swatch over its face
 ---
 
 # ColorPickerButton
 
 ColorPickerButton is a Button that opens a ColorPicker popup and shows the chosen
-`color` on its face. The previewer parses and validates it but does not draw it, so it
-renders as a transform-only fallback and its children still show.
+`color` on its face. The previewer draws the button's own chrome, then the
+checkerboard and colour swatch on top, inset by the "normal" StyleBox's content
+margins.
 
 ## Linting
 
@@ -29,15 +30,17 @@ Strict parsing format-checks these `ColorPickerButton` properties, plus 13 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`index.ts` reuses `parseButton` unchanged, which never reads `color`, `edit_alpha` or
-`edit_intensity`. A malformed `color = Color(1, 1)` loads and renders the same as a
-well-formed one, since nothing consumes it.
+`index.ts` reads `color` (defaulting to Godot's own opaque black) alongside Button's
+own properties; it still never reads `edit_alpha`/`edit_intensity`, so a malformed
+value for either loads and renders the same as a well-formed one. A malformed
+`color = Color(1, 1)` fails `COLOR_RE` and falls back to `parseColor`'s own white.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the button with its colour swatch. The previewer draws
-  nothing for this node.
+- **Not drawn** `edit_alpha`/`edit_intensity` only affect the internal `ColorPicker`
+  popup, a `Window` this previewer never opens.

@@ -13,35 +13,22 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // -------------------------------------------------------------------------
   // Text-bearing Control leaves
   //
-  // These four share a shape: the overlay renders the text and lets the browser
-  // shape it, so wrapping, BiDi and locale are delegated rather than missing,
-  // while everything about carets, selection, context menus and virtual
-  // keyboards has no frozen-frame surface at all. What is left over after those
-  // two groups is the real render gap, and it is listed as such.
+  // These share a shape: carets, selection, context menus and virtual keyboards
+  // have no frozen-frame surface at all, while BiDi and locale DO change which
+  // glyphs land where — this renderer shapes text itself and shapes it
+  // left-to-right, so those keys are a render gap rather than a delegation.
   // -------------------------------------------------------------------------
 
   Label: {
-    linterOnly: [
-      // Shaping delegated to the browser, exactly as the Button entry above.
-      'autowrap_trim_flags', 'clip_text', 'ellipsis_char', 'justification_flags',
-      'tab_stops', 'text_overrun_behavior',
-      // BiDi and locale.
+    linterOnly: [],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
-    ],
-    renderGap: [
-      // A LabelSettings resource carries font, size, colour and outline, none of
-      // which the overlay's CSS defaults reproduce.
-      'label_settings',
-      // Each of these changes which characters are on screen: a window into the
-      // paragraph (lines_skipped, max_lines_visible), a custom split point
-      // (paragraph_separator), or a typewriter reveal frozen part-way
-      // (visible_characters and its two companions).
-      'lines_skipped', 'max_lines_visible', 'paragraph_separator',
-      'visible_characters', 'visible_characters_behavior', 'visible_ratio',
+      
     ],
     reason:
-      'The overlay renders the label as DOM text, so shaping, BiDi and locale are delegated; label_settings, the line window and the visible-character reveal all change the frozen frame and are not implemented yet.',
+      'Every key here changes the frozen frame and is not implemented yet: BiDi and locale are unread by a left-to-right shaper, and label_settings, the line window and the visible-character reveal each change what is on screen.',
   },
 
   LineEdit: {
@@ -56,32 +43,17 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'backspace_deletes_composite_character_enabled',
       // Virtual keyboard: a mobile input affordance with no rendered surface.
       'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus', 'virtual_keyboard_type',
-      // BiDi and locale, delegated as above.
+    ],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override', 'structured_text_bidi_override_options',
       'text_direction',
     ],
-    renderGap: [
-      // Draws a caret even unfocused, which is the one caret property a static
-      // frame does show.
-      'caret_force_displayed',
-      // Each of these adds or resizes something visible: the inline clear
-      // button, the trailing icon and its scaling, control characters drawn as
-      // glyphs, and the field sizing itself to its content.
-      'clear_button_enabled', 'draw_control_chars', 'expand_to_text_length',
-      'icon_expand_mode', 'right_icon', 'right_icon_scale',
-      // set_max_length re-runs set_text (line_edit.cpp:2523), which truncates,
-      // so an over-long `text` renders shortened in Godot and in full here.
-      'max_length',
-    ],
-    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface, and shaping is delegated to the browser; the trailing icon, clear button, control-character glyphs, content sizing and max_length truncation all change the frame and are not implemented yet.',
+    reason: 'Carets, selection, clipboard and virtual-keyboard behaviour have no frozen-frame surface; BiDi and locale change the frame and are not implemented yet.',
   },
 
   RichTextLabel: {
     linterOnly: [
-      // Shaping and BiDi delegated to the browser.
-      'autowrap_mode', 'autowrap_trim_flags', 'justification_flags', 'tab_size',
-      'tab_stops', 'language', 'structured_text_bidi_override',
-      'structured_text_bidi_override_options', 'text_direction',
       // Selection and context-menu interaction.
       'context_menu_enabled', 'deselect_on_focus_loss_enabled',
       'drag_and_drop_selection_enabled', 'selection_enabled', 'shortcut_keys_enabled',
@@ -90,8 +62,15 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'threaded', 'progress_bar_delay',
     ],
     renderGap: [
-      // Alignment of the whole document within the control.
-      'horizontal_alignment', 'vertical_alignment',
+      // HORIZONTAL_ALIGNMENT_FILL positions a line at its origin but never
+      // stretches it to the box — the one interaction `fitLineToWidth`
+      // (`textJustify.ts`) is not wired into here, since RichTextLabel's own
+      // per-run glyph slicing (`layoutRichTextRuns`) would need to re-derive
+      // run boundaries against a justified line rather than the shaped one.
+      'justification_flags',
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
       // Underlines actually drawn under [url] and [hint] spans.
       'hint_underlined', 'meta_underlined',
       // Custom BBCode effect resources, which change how their spans draw.
@@ -113,33 +92,27 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // three need an interaction to have any effect.
       'follow_focus', 'scroll_deadzone',
       'scroll_horizontal_custom_step', 'scroll_vertical_custom_step',
+      // Picks STRETCH_TILE over STRETCH_SCALE on the two hint TextureRects
+      // (scroll_container.cpp:751-752), and nothing else. Both hint icons are
+      // gradients UNIFORM along the axis they would tile on, while the rect
+      // matches the texture's own extent across it — so the two stretch modes
+      // are the same pixels. Confirmed byte-identical on both axes through
+      // `pnpm ref:godot`.
+      'tile_scroll_hint',
     ],
-    renderGap: [
-      // A scene saved mid-scroll renders unscrolled here.
-      'scroll_horizontal', 'scroll_vertical',
-      // Both drive set_visible() on the hint nodes (scroll_container.cpp:623),
-      // and the focus border is drawn outright.
-      'draw_focus_border', 'scroll_hint_mode', 'tile_scroll_hint',
-    ],
-    reason: 'Deadzone, wheel step and follow-focus need an interaction to matter; the scroll offsets, the scroll hints and the focus border are all drawn by Godot in a static frame and are not implemented yet.',
+    reason: 'Deadzone, wheel step and follow-focus need an interaction to matter, and tiling the scroll hint cannot change a gradient that is uniform along the tiled axis.',
   },
 
-  // The container bases have no parser.ts of their own, so one entry each
-  // covers their H/V leaves. The leaves read what they RENDER through the
-  // shared boxContainer/splitContainer helpers; the rest is editor-side drag
-  // tuning a DOM overlay has no use for.
-  BoxContainer: {
-    linterOnly: ['vertical'],
-    reason: 'Layout base with no parser of its own; `vertical` is fixed by the leaf class so nothing reads it there.',
-  },
-
+  // Both bases are scene types in their own right and carry a parser, which
+  // their H/V leaves inherit `vertical` through. What is left is the
+  // interactive splitter's own tuning, which a static frame never shows.
   SplitContainer: {
     linterOnly: [
-      'dragging_enabled', 'touch_dragger_enabled', 'split_offsets', 'vertical',
+      'dragging_enabled', 'touch_dragger_enabled',
       'drag_area_margin_begin', 'drag_area_margin_end', 'drag_area_offset',
       'drag_area_highlight_in_editor',
     ],
-    reason: 'Layout base with no parser of its own; the drag-area and dragger keys tune an interactive splitter the static DOM overlay does not implement, and `vertical` is fixed by the leaf class.',
+    reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows.',
   },
 
   // Like the container bases, BaseButton has no parser.ts, so one entry covers
@@ -156,13 +129,208 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
   },
 
-  Button: {
+  // -------------------------------------------------------------------------
+  // The editing, list and graph tiers
+  //
+  // Three shapes recur here. An indexed family (`tab_#/*`, `slot/#/*`) is read
+  // through a computed key the guard's scrape of fixed strings cannot match —
+  // the OptionButton entry above is the precedent. Carets, selection,
+  // clipboards, context menus and virtual keyboards have no frozen-frame
+  // surface. Everything else that would change the picture is a render gap.
+  // -------------------------------------------------------------------------
+
+  TextEdit: {
     linterOnly: [
-      // Text shaping and localisation left to the browser: the DOM overlay
-      // renders the label as text and lets CSS wrap and trim it.
-      'text_overrun_behavior', 'autowrap_mode', 'autowrap_trim_flags', 'clip_text',
+      // Carets: a still, unfocused frame draws none of them.
+      'caret_blink', 'caret_blink_interval', 'caret_mid_grapheme', 'caret_multiple',
+      'caret_type', 'caret_move_on_right_click',
+      // Selection, clipboard, context menu and drag: all interactions.
+      'context_menu_enabled', 'deselect_on_focus_loss_enabled',
+      'drag_and_drop_selection_enabled', 'emoji_menu_enabled',
+      'empty_selection_clipboard_enabled', 'middle_mouse_paste_enabled',
+      'selecting_enabled', 'shortcut_keys_enabled', 'tab_input_mode',
+      'backspace_deletes_composite_character_enabled',
+      // Word-boundary sets, which only a double-click selection consults.
+      'custom_word_separators', 'use_custom_word_separators', 'use_default_word_separators',
+      // Highlights every occurrence OF THE SELECTION, and a static frame has none.
+      'highlight_all_occurrences',
+      // Virtual keyboard: a mobile affordance with no rendered surface.
+      'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus',
+      // Scroll smoothing and speed describe how the view MOVES, never where it rests.
+      'scroll_smooth', 'scroll_v_scroll_speed',
+      // `adjust_viewport_to_caret` (text_edit.cpp:904-909) snaps the view back to
+      // line 0 on first draw, and no scene property can move caret 0 — so an
+      // authored scroll offset is genuinely inert rather than unimplemented.
+      'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
+    ],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
+    ],
+    reason: 'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw; BiDi changes the frame and is not implemented yet.',
+  },
+
+  CodeEdit: {
+    linterOnly: [
+      // Completion and brace-matching are typing affordances.
+      'auto_brace_completion_enabled', 'auto_brace_completion_highlight_matching',
+      'auto_brace_completion_pairs', 'code_completion_enabled', 'code_completion_prefixes',
+      // Auto-indent applies as you type; the stored text is already indented.
+      'indent_automatic', 'indent_automatic_prefixes', 'indent_use_spaces',
+      // Symbol lookup needs a pointer.
+      'symbol_lookup_on_click', 'symbol_tooltip_on_hover',
+    ],
+    reason: 'Completion, auto-indent and symbol lookup are all typing or pointer affordances. Every key it shares with TextEdit is recorded there.',
+  },
+
+  Tree: {
+    linterOnly: [
+      // A `.tscn` Tree has no rows at all — TreeItems exist only once a script
+      // creates them — so every key below describes rows that are never there.
+      'allow_reselect', 'allow_rmb_select', 'allow_search', 'auto_tooltip',
+      'drop_mode_flags', 'enable_drag_unfolding', 'enable_recursive_folding',
+      'hide_folding', 'hide_root', 'select_mode',
+      // A scroll hint needs content to scroll past.
+      'scroll_hint_mode', 'scroll_horizontal_enabled', 'scroll_vertical_enabled',
+      'tile_scroll_hint',
+    ],
+    reason: 'A Tree in a scene file declares no rows, so folding, selection, search, drag and scrolling all describe content that does not exist; the panel and its column headers are the whole of what such a scene draws.',
+  },
+
+  ItemList: {
+    linterOnly: [
+      // Read through a computed key, `properties[`item_${i}/text`]`, which the
+      // guard's scrape of fixed key strings cannot match.
+      'item_#/*',
+    ],
+    reason: 'The row family is read through a computed key the scrape cannot match.',
+  },
+
+  TabBar: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton's item family is.
+      'tab_#/*',
+    ],
+    reason: 'The tab family is read through a computed key the scrape cannot match.',
+  },
+
+  TabContainer: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton's item family is. Sparse
+      // here rather than dense: the array length is the live child count.
+      'tab_#/*',
+    ],
+    reason: 'The tab family is read through a computed key the scrape cannot match.',
+  },
+
+  GraphNode: {
+    linterOnly: [
+      // Read through a computed key, `slot/<index>/<leaf>`, which the guard's
+      // scrape of fixed key strings cannot match.
+      'slot/*',
+    ],
+    reason: 'The slot family is read through a computed key the scrape cannot match.',
+  },
+
+  GraphEdit: {
+    linterOnly: [
+      // Panning is an interaction; a scene holds the resulting scroll_offset
+      // and zoom, which the parser does read.
+      'panning_scheme', 'right_disconnects',
+      // `zoom_step` reaches nothing but the panner's own scroll factor.
+      'zoom_step',
+      // Connection type names populate a tooltip.
+      'type_names',
+    ],
+    reason: 'Panning and the zoom step reach no frozen frame, and the type names are a tooltip.',
+  },
+
+  MenuBar: {
+    linterOnly: [
+      // Opening a menu is an interaction, and the native global menu replaces
+      // the bar with the desktop\'s own — neither reaches a frozen frame.
+      'switch_on_hover', 'prefer_global_menu', 'start_index',
+    ],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'text_direction',
+    ],
+    reason: 'Hover switching, the global menu and the start index are all about opening menus a still frame never shows; BiDi is unread by a left-to-right shaper.',
+  },
+
+  MenuButton: {
+    linterOnly: [
+      // Read through a computed key, as OptionButton\'s identical family is.
+      'popup/item_#/*',
+      // The popup is a Window, so its item count changes nothing on the canvas.
+      'item_count', 'switch_on_hover',
+    ],
+    reason: 'The popup is a Window and never reaches the Control canvas; its item family is read through a computed key the scrape cannot match.',
+  },
+
+  FoldableContainer: {
+    linterOnly: [
+      // A FoldableGroup coordinates which sibling is open; the scene already
+      // holds each container\'s own resulting `folded`.
+      'foldable_group',
+    ],
+    renderGap: [
+      // BiDi and locale for the title: our shaper runs left-to-right only.
+      'language', 'title_text_direction',
+    ],
+    reason: 'The group only decides which sibling ends up folded, which each container already records; BiDi is unread by a left-to-right shaper.',
+  },
+
+  ColorPicker: {
+    linterOnly: [
+      // Deferred mode changes WHEN the colour signal fires, never the picture.
+      'deferred_mode',
+      // `btn_add_preset` is the only thing this ever disables, and it lives
+      // inside `preset_container`, which stays collapsed at load (presets
+      // only ever arrive through `add_preset()` at runtime — never a
+      // `.tscn` — so the button that shows them is never in a static frame
+      // either).
+      'can_add_swatches',
+    ],
+    reason: 'Deferred mode is signal timing alone; can_add_swatches only disables a button inside the presets grid, which is never expanded in a static frame.',
+  },
+
+  ColorPickerButton: {
+    linterOnly: [
+      // Both only affect the popup picker, which is a Window and never drawn here.
+      'edit_alpha', 'edit_intensity',
+    ],
+    reason: 'Both configure the popup picker, which is a Window and never reaches the Control canvas.',
+  },
+
+  Button: {
+    linterOnly: [],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
       'text_direction', 'language',
     ],
-    reason: "The overlay renders the label as DOM text, so wrapping, trimming and bidi are the browser's job rather than properties the parser reads.",
+    reason:
+      "BiDi changes where the label's glyphs land, and this renderer's own shaper reads none of it yet.",
+  },
+
+  LinkButton: {
+    linterOnly: [],
+    renderGap: [
+      // BiDi and locale: our shaper runs left-to-right only.
+      'language', 'structured_text_bidi_override',
+      'structured_text_bidi_override_options', 'text_direction',
+    ],
+    reason:
+      'BiDi changes where the underlined label\'s glyphs land, and the left-to-right shaper reads none of it yet.',
+  },
+
+  TextureButton: {
+    linterOnly: [
+      // A per-pixel hit mask: it decides which clicks land, never which pixels
+      // are drawn, and a static preview dispatches no clicks.
+      'texture_click_mask',
+    ],
+    reason: 'The click mask is hit-testing only; it cannot change a frozen frame.',
   },
 };

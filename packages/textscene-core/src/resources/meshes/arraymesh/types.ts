@@ -3,6 +3,12 @@
 /** One decoded mesh surface. Every surface here is a TRIANGLES primitive. */
 export interface ArrayMeshSurface {
   /**
+   * The surface's position in the mesh's `_surfaces` array. Not the position in
+   * THIS array, which is compacted by undecodable surfaces — it is the index
+   * `surface_material_override/N` names, so it has to survive the compaction.
+   */
+  surfaceIndex: number;
+  /**
    * Godot Mesh.ArrayFormat bitfield (uint64, fits in a JS number ≤ 2^53).
    * Kept because it names the byte layout a surface was read under, which is
    * what any diagnostic about a mis-sized buffer has to quote.

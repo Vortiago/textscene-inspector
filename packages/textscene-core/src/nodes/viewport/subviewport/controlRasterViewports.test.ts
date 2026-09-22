@@ -181,6 +181,64 @@ texture = ExtResource("2")
     expect(byPath['World/Multi/Deep']!.externalResources).toBe(sub.externalResources);
   });
 
+  it("keeps the HOST internalResources pool for a host-authored SubViewport under a multi-root instance, not the sub-scene's", () => {
+    // Regression guard for `liveChildGroups`' 5th (optional) `internalResources`
+    // argument: dropping it at this call site defaults to an empty pool, and
+    // every OTHER test in this file stays green — the collapsed single-root
+    // test above reads the sub-scene's own cached pool regardless of this
+    // argument, and 'keeps the OUTER scope for a host-authored child of an
+    // instance node' only checks externalResources. So a wrong or missing pool
+    // here is silent everywhere else in this file. Host and sub-scene both
+    // declare id "1" for a DIFFERENT StyleBoxFlat, so a wrong-pool resolution
+    // reads as a loud (wrong colour) mistake rather than a quiet (absent) one.
+    const authored = parse(`[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.1, 0.2, 0.3, 1)
+
+[node name="A" type="Node2D"]
+
+[node name="Deep" type="SubViewport" parent="."]
+
+[node name="Label" type="Label" parent="Deep"]
+`);
+    const sub = {
+      nodes: [{ ...authored.nodes[0]!, children: [] }, authored.nodes[0]!.children[0]!],
+      internalResources: authored.internalResources,
+      externalResources: authored.externalResources,
+    };
+    const host = parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://multi.tscn" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.9, 0.9, 0.9, 1)
+
+[node name="World" type="Node3D"]
+
+[node name="Multi" parent="." instance=ExtResource("1")]
+
+[node name="Own" type="SubViewport" parent="Multi"]
+
+[node name="Panel" type="Panel" parent="Multi/Own"]
+`);
+    const found = collectControlRasterViewports(
+      host.nodes,
+      { getCached: (path) => (path === 'res://multi.tscn' ? sub : undefined) },
+      { internalResources: host.internalResources, externalResources: host.externalResources }
+    );
+    const byPath = Object.fromEntries(found.map((v) => [v.path, v]));
+
+    const hostOwned = byPath['World/Multi/Own']!;
+    expect(hostOwned.internalResources).toBe(host.internalResources);
+    expect(hostOwned.internalResources[0]!.data.bg_color).toBe('Color(0.9, 0.9, 0.9, 1)');
+
+    // The sub-scene's own SubViewport keeps resolving against ITS pool.
+    const subOwned = byPath['World/Multi/Deep']!;
+    expect(subOwned.internalResources).toBe(sub.internalResources);
+    expect(subOwned.internalResources[0]!.data.bg_color).toBe('Color(0.1, 0.2, 0.3, 1)');
+  });
+
   it('falls back to the outer scope when the sub-scene has not loaded yet', () => {
     const host = parse(`[gd_scene format=3]
 
@@ -218,5 +276,110 @@ texture = ExtResource("2")
     // `viewportTextureRegistryKey('GUIPanel3D/Quad', 'SubViewport')` — what the
     // quad's ViewportTexture asks the registry for.
     expect(found[0]!.size).toEqual({ x: 560, y: 360 });
+  });
+});
+
+/**
+ * `viewportContentKind` classifies a PARSED subtree, where an `instance=` child
+ * is an untyped childless `Node` — its `sawUntypedInstance` arm then reads the
+ * viewport as 3D. `resolveViewportSubtree` exists to close that gap, and both
+ * owners of a viewport's registry key have to cross it or they disagree: the
+ * SubViewport component classifies the resolved subtree, so a walk classifying
+ * the raw one leaves a key nobody publishes and a consumer permanently blank.
+ */
+describe('collectControlRasterViewports — an instanced Control sub-scene', () => {
+  const PANEL_SCENE = 'res://control_panel.tscn';
+
+  it('claims a sub-viewport whose only child is an instance of a Control-only scene', () => {
+    const scene = parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="${PANEL_SCENE}" id="1_panel"]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(320, 240)
+
+[node name="Gui" parent="SubViewport" instance=ExtResource("1_panel")]
+`);
+    const panel = parse(`[gd_scene format=3]
+
+[node name="Panel" type="Panel"]
+
+[node name="Label" type="Label" parent="."]
+text = "hi"
+`);
+
+    const found = collect(scene, cache({ [PANEL_SCENE]: panel }));
+    expect(found.map((v) => v.path)).toEqual(['Root/SubViewport']);
+  });
+
+  it('still leaves an instanced 3D sub-scene to the WebGL publisher', () => {
+    const scene = parse(`[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="${PANEL_SCENE}" id="1_panel"]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+
+[node name="World" parent="SubViewport" instance=ExtResource("1_panel")]
+`);
+    const world = parse(`[gd_scene format=3]
+
+[node name="World" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+`);
+
+    expect(collect(scene, cache({ [PANEL_SCENE]: world }))).toHaveLength(0);
+  });
+
+  // `Control::is_layout_rtl()`'s climb casts each ancestor to `Control`, then
+  // to `Window`, then takes `get_parent()` (`control.cpp:3584-3598`). A
+  // `SubViewport` is a `Viewport` and neither, so the climb STEPS OVER it onto
+  // the `SubViewportContainer`, which is a Control — the sub-viewport's own
+  // Controls inherit that container's direction rather than starting fresh.
+  it('carries the direction of the nearest Control ABOVE the sub-viewport', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="SVC" type="SubViewportContainer" parent="."]
+layout_direction = 3
+
+[node name="SubViewport" type="SubViewport" parent="SVC"]
+size = Vector2i(320, 240)
+
+[node name="Panel" type="Panel" parent="SVC/SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBe(true);
+  });
+
+  it('steps over every non-Control ancestor on the way, exactly as the climb does', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_direction = 3
+
+[node name="Mid" type="Node2D" parent="."]
+
+[node name="SubViewport" type="SubViewport" parent="Mid"]
+
+[node name="Panel" type="Panel" parent="Mid/SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBe(true);
+  });
+
+  it('reports no inherited direction when the climb runs off the top of the tree', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+
+[node name="Panel" type="Panel" parent="SubViewport"]
+`);
+    expect(collect(scene)[0]!.inheritedRtl).toBeNull();
   });
 });

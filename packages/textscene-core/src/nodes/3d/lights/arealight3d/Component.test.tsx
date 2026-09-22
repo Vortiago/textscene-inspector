@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { AreaLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { instanceAs } from '../../testing/reactThreeTestInstance';
+import type * as THREE from 'three';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
@@ -29,7 +30,7 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ area_size: { x: 4, y: 1 } })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as THREE.RectAreaLight).width).toBe(4);
+    expect(instanceAs<THREE.RectAreaLight>(light).width).toBe(4);
   });
 
   it('maps area_size height to RectAreaLight height', async () => {
@@ -37,14 +38,14 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ area_size: { x: 2, y: 3 } })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as THREE.RectAreaLight).height).toBe(3);
+    expect(instanceAs<THREE.RectAreaLight>(light).height).toBe(3);
   });
 
   it('defaults to width=1, height=1 when area_size is absent', async () => {
     const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ area_size: undefined })} />);
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as THREE.RectAreaLight).width).toBe(1);
-    expect((light.instance as THREE.RectAreaLight).height).toBe(1);
+    expect(instanceAs<THREE.RectAreaLight>(light).width).toBe(1);
+    expect(instanceAs<THREE.RectAreaLight>(light).height).toBe(1);
   });
 
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {
@@ -52,7 +53,7 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ light_energy: 2.0 })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as THREE.RectAreaLight).intensity).toBe(2.0 * LIGHT_INTENSITY_SCALE);
+    expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(2.0 * LIGHT_INTENSITY_SCALE);
   });
 
   it('does not cast shadows even when shadow_enabled is true (RectAreaLight has no shadow support)', async () => {
@@ -63,7 +64,7 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ shadow_enabled: true })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as THREE.RectAreaLight).castShadow).toBe(false);
+    expect((light.instance as { castShadow: boolean }).castShadow).toBe(false);
   });
 
   it('does not leak area_range onto the RectAreaLight', async () => {
@@ -73,9 +74,7 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ area_range: 2.0 } as Partial<AreaLight3DProperties>)} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect(
-      (light.instance as THREE.Object3D & Record<string, unknown>).area_range
-    ).toBeUndefined();
+    expect((light.instance as unknown as Record<string, unknown>).area_range).toBeUndefined();
   });
 
   it('places light at the transform origin', async () => {

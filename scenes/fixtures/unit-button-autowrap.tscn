@@ -1,0 +1,64 @@
+; The ONE variable: `autowrap_mode` (and, on the third node,
+; `autowrap_trim_flags`) on a Button.
+;
+; `Button::_shape` maps the mode to break flags and ORs `autowrap_flags_trim`
+; onto them (`button.cpp:546-561`); the draw path then shapes the label at
+; `Math::ceil(MAX(1.0f, drawable_size_remained.width))` (`:428-432`), which is
+; the button's own rect less the stylebox margins. Every node below is 120px
+; wide with a label far wider than that, so the mode is the whole of what
+; decides the rows.
+;
+; `Off` overflows its box on one line — the previewer's behaviour before this,
+; and the control that proves a regression is in the wrap and not the box.
+; `Word` breaks on spaces, `Arbitrary` mid-word, and `NoTrim` is `Word` again
+; with `autowrap_trim_flags = 0`, which keeps the edge space the default
+; `BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES` removes — a
+; sub-pixel-to-one-pixel shift of every centred row, and the only thing that
+; separates the trim flags from the mode.
+;
+; No other Button-family fixture authors either key, and a Label's own autowrap
+; runs through a different `_shape`, so a regression here is invisible in all
+; of them.
+
+[gd_scene format=3 uid="uid://unit_button_autowrap"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Off" type="Button" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 136.0
+offset_bottom = 96.0
+text = "alpha bravo charlie"
+
+[node name="Word" type="Button" parent="."]
+layout_mode = 1
+offset_left = 152.0
+offset_top = 16.0
+offset_right = 272.0
+offset_bottom = 96.0
+text = "alpha bravo charlie"
+autowrap_mode = 2
+
+[node name="Arbitrary" type="Button" parent="."]
+layout_mode = 1
+offset_left = 288.0
+offset_top = 16.0
+offset_right = 408.0
+offset_bottom = 96.0
+text = "alpha bravo charlie"
+autowrap_mode = 1
+
+[node name="NoTrim" type="Button" parent="."]
+layout_mode = 1
+offset_left = 424.0
+offset_top = 16.0
+offset_right = 544.0
+offset_bottom = 96.0
+text = "alpha bravo charlie"
+autowrap_mode = 2
+autowrap_trim_flags = 0

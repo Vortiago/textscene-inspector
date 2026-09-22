@@ -1,17 +1,19 @@
 ---
 type: BoxContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-box-container.tscn
 # image: unit-box-container
-renders_as: invisible transform-only fallback
+renders_as: children laid out along its own `vertical`-chosen axis
 ---
 
 # BoxContainer
 
-BoxContainer is the abstract base that stacks children along one axis, behind
-HBoxContainer and VBoxContainer. The previewer parses and validates it but does not draw
-it, so it renders as a transform-only fallback and its children still show.
+BoxContainer is the base that stacks children along one axis, behind HBoxContainer and
+VBoxContainer. Unlike those two, `vertical` is a real, authorable property here, and the
+previewer reads it to pick the axis, spaced by `separation` and sized by each child's
+`size_flags` — the same layout HBoxContainer/VBoxContainer draw, just with the axis
+coming from the node itself instead of the type.
 
 ## Linting
 
@@ -28,14 +30,12 @@ Strict parsing format-checks these `BoxContainer` properties, plus 53 inherited 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`index.ts` reuses `parseControl` unchanged, which reads neither `alignment` nor
-`vertical`, so a bad value is never read. `vertical` is still validated here, since a
-plain BoxContainer serialises it where its fixed-axis subclasses hide it.
-
-## Known limitations
-
-- **Not drawn** Godot stacks the children along the chosen axis. The previewer applies
-  no layout, so they stay at their authored offsets.
+`index.ts` now parses `alignment` and `vertical` itself (delegating to the shared
+BoxContainer base for `alignment`, and reading `vertical` on its own — this type's one
+property the fixed-axis subclasses hide). An unparseable `alignment` becomes `undefined`
+with no warning and falls back to Godot's own BEGIN default; an unparseable `vertical`
+reads as `false` (horizontal) — a bool slot stores what it can, never unset.

@@ -1,0 +1,32 @@
+; The ONE variable: `z_index` on the Node2D a Control was PROMOTED past.
+; `p_z = CLAMP(p_z + ci->z_index, ...)` accumulates through every item the
+; cull walk descends (renderer_canvas_cull.cpp:430-434), and a skipped Node2D
+; is one of them — so the red bar, authored FIRST, draws over the blue one
+; that follows it. The other promoted-ancestor fixtures move the transform,
+; the tint and the visibility, each of which reaches the Control through a
+; different carrier, and all of them leave `z_index` at 0.
+; Without the ancestor's z, file order alone decides and the blue bar wins the
+; overlap.
+
+[gd_scene format=3 uid="uid://unitctrlpromotedz"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Lifted" type="Node2D" parent="."]
+z_index = 5
+position = Vector2(64, 48)
+
+[node name="Under" type="ColorRect" parent="Lifted"]
+offset_right = 200.0
+offset_bottom = 120.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Over" type="ColorRect" parent="."]
+offset_left = 128.0
+offset_top = 96.0
+offset_right = 328.0
+offset_bottom = 216.0
+color = Color(0.2, 0.4, 0.9, 1)

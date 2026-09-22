@@ -44,7 +44,7 @@ export const GEOMETRY_SCENES = [
   // Texture2D, but the slot only resolved ExtResource refs, so all four sprites
   // in scenes/demos/2d/lights_and_shadows/light_shadows.tscn drew the magenta
   // missing-resource placeholder. Both markers must render identically.
-  { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn' },
+  { name: 'sprite2d-canvastexture', file: 'unit-sprite2d-canvastexture.tscn', mode: '2d' },
   // 2D geometry parity in one frame: Line2D corner joints (sharp + round),
   // Polygon2D `polygons` index lists and `invert_enabled`, and the
   // NavigationRegion2D navmesh, whose vertices mirror about the region origin
@@ -53,8 +53,7 @@ export const GEOMETRY_SCENES = [
     name: '2d-geometry-parity',
     file: 'unit-2d-geometry-parity.tscn',
     navigation: true,
-    maxDiffPct: 0.5,
-  },
+    maxDiffPct: 0.5, mode: '2d' },
   // Two AreaLight3D panels of the SAME light_energy but very different
   // area_size, each lighting its own plate. Godot normalises the emitted colour
   // by the rectangle's area (area_normalize_energy, default true), so both
@@ -112,4 +111,18 @@ export const GEOMETRY_SCENES = [
   // marker, and dropping the half-cell offset visibly moves it to the origin.
   { name: 'grid-map-centering', file: 'unit-grid-map-centering.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
+  // The 3D half of that variable: Sprite3D decodes sRGB in hardware before
+  // filtering, the opposite convention to the 2D canvas, so a procedural
+  // texture can resolve correctly for Sprite2D and still be tagged wrongly here.
+  { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
+  { name: 'sprite3d-nested-modulate', file: 'unit-sprite3d-nested-modulate.tscn' },
+  // The pass a default-`alpha_cut` sprite lands in, which Godot reads off the
+  // generated shader rather than off a colour: a texture with transparent
+  // texels standing in front of an opaque wall. Every other sprite scene draws
+  // an alpha-less texture against the background alone, where blending an
+  // opaque texel and painting it produce identical pixels and a skipped depth
+  // write has nothing to lose — so an opaque-list sprite looks right in all of
+  // them and paints a black rectangle here. Content is a flat quad plus the
+  // walk sprite's antialiased edge band.
+  { name: 'sprite3d-blended-pass', file: 'unit-sprite3d-blended-pass.tscn' },
 ];

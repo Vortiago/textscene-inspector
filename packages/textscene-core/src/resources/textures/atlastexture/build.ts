@@ -1,80 +1,149 @@
 /**
- * AtlasTexture build — cutting a decoded cell out of a loaded sheet for the
- * hosts that cannot window with UVs.
+ * Compose an `AtlasTexture`'s layout into a texture of its OWN size.
  *
- * THE UV HOSTS (Sprite2D, AnimatedSprite2D, every `useTexture2D` consumer) are
- * deliberately absent from this module: they window through the shared
- * `composeFrameTexture` / `frameSizePx` pair (`r3f/spriteFrame.ts`), which takes
- * the cell as its `atlasRegion` argument. One applier, so an atlas cell and an
- * authored `region_rect` cannot drift apart.
+ * Godot presents an AtlasTexture to every consumer as a texture whose size is
+ * the region's, drawing the sheet's sub-rectangle wherever the texture is drawn
+ * (`AtlasTexture::draw`, `scene/resources/atlas_texture.cpp:158-164`, and
+ * `get_image` :245-256, which materialises exactly this crop). Producing that
+ * crop as a real texture is what lets a windowed sheet reach EVERY Texture2D
+ * slot: consumers read `image.width`/`image.height` for their sizing and set
+ * their own `repeat`/`offset` for their own cropping, so a shared sheet handed
+ * over with pre-windowed UVs would be silently re-windowed to the whole sheet.
  *
- * THE DOM HOSTS (TextureRect, Button icons) have no UVs to window: they render
- * an `<img>` from a data URL, so the cell must be cut out of the decoded bitmap.
- * That is what this module is for. It goes through the shared `withImageCanvas`
- * drawability/taint policy and adds only the crop.
+ * The copy is a whole-texel blit with smoothing off, so a 1:1 draw of the crop
+ * is byte-identical to a 1:1 draw of the same texels through the sheet.
  *
- * NOT SUPPORTED, and why each omission is safe rather than silently wrong:
- *   - `margin` — Godot pads the drawn size with transparent border
- *     (`get_width() = region.width + margin.size.width`,
- *     `scene/resources/atlas_texture.cpp:33-42`) and shifts the source by
- *     `margin.position` (`get_rect_region`, atlas_texture.cpp:203). Applying
- *     neither keeps the cell's own pixels correct; only a trimmed-atlas layout
- *     sits off by the margin.
- *   - `filter_clip` — Godot's `p_clip_uv` clamps sampling inside the cell so a
- *     filtered edge cannot bleed in from the neighbouring cell
- *     (atlas_texture.cpp:163). A cropped bitmap cannot bleed at all, so the DOM
- *     path is unaffected; the UV path can, and three has no per-draw equivalent.
- * Both are recorded in `resources/textures/comparison.md`.
+ * Two sheet shapes arrive here. A decoded image goes through a 2D canvas; a
+ * RAW-PIXEL image (`{data, width, height}` — what a `DataTexture` carries) is
+ * copied row by row instead. Not merely because `drawImage` rejects it: a
+ * canvas backing store is PREMULTIPLIED, so routing those bytes through one
+ * would zero the RGB behind alpha 0 that `applyAlphaBorderFix` exists to
+ * preserve.
  */
 
-import { withImageCanvas, type ImageSize } from '../../../r3f/controls/withImageCanvas';
-import type { AtlasRegion } from './types';
+import * as THREE from 'three';
+import { imageSize } from '../../../r3f/controls/withImageCanvas';
+import type { AtlasTextureLayout } from './types';
 
 /**
- * The crop a cell describes over a decoded image, clamped to the image bounds
- * (Godot clips a cell to the sheet: `_get_region_rect().intersection(src)`,
- * atlas_texture.cpp:204). Pure, so the geometry is testable without a canvas —
- * happy-dom has none. Null when the cell falls entirely outside the image.
+ * The crop `layout` describes, drawn from the decoded atlas `image`, or null
+ * when it cannot be produced: an image that has not decoded, a region that
+ * misses the atlas entirely, or an environment with no 2D canvas (node and
+ * happy-dom tests). Null is deliberately NOT "draw the sheet instead" — a
+ * consumer showing the whole sprite sheet reads as a pass while being the
+ * exact failure this module exists to prevent.
  */
-export function atlasCropRect(
-  image: ImageSize,
-  region: AtlasRegion
-): { sx: number; sy: number; width: number; height: number } | null {
-  const sx = Math.max(0, Math.min(region.x, image.width));
-  const sy = Math.max(0, Math.min(region.y, image.height));
-  const width = Math.min(region.x + region.width, image.width) - sx;
-  const height = Math.min(region.y + region.height, image.height) - sy;
-  if (!(width > 0) || !(height > 0)) return null;
-  return { sx, sy, width, height };
+/** The `{data, width, height}` an image-less texture (`DataTexture`) carries. */
+interface RawPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+/** `image` as raw RGBA pixels, or null when it is a drawable image source instead. */
+function rawPixels(image: unknown, atlas: { width: number; height: number }): RawPixels | null {
+  const candidate = image as Partial<RawPixels> | null;
+  const data = candidate?.data;
+  if (!ArrayBuffer.isView(data)) return null;
+  // Anything but 4 bytes per texel is a format this crop cannot index (a
+  // compressed or single-channel DataTexture); leave it to the canvas path,
+  // which will decline in turn.
+  if (data.length !== atlas.width * atlas.height * 4) return null;
+  return { data: data as Uint8Array, width: atlas.width, height: atlas.height };
+}
+
+export function rasterizeAtlasTexture(
+  image: unknown,
+  layout: AtlasTextureLayout
+): THREE.Texture | null {
+  const atlas = imageSize(image);
+  if (!atlas) return null;
+
+  // Godot intersects the sampled rect with the atlas
+  // (`get_rect_region` :208) and draws nothing when the result is empty
+  // (:209-211). Clipping the source shifts the destination by the same amount,
+  // leaving the uncovered part of the box transparent.
+  const left = Math.max(layout.source.x, 0);
+  const top = Math.max(layout.source.y, 0);
+  const right = Math.min(layout.source.x + layout.source.width, atlas.width);
+  const bottom = Math.min(layout.source.y + layout.source.height, atlas.height);
+  const sw = right - left;
+  const sh = bottom - top;
+  if (sw <= 0 || sh <= 0) return null;
+
+  const raw = rawPixels(image, atlas);
+  if (raw) return cropRawPixels(raw, layout, left, top, sw, sh);
+
+  const doc = globalThis.document;
+  if (!doc) return null;
+  try {
+    const canvas = doc.createElement('canvas');
+    canvas.width = layout.width;
+    canvas.height = layout.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      image as CanvasImageSource,
+      left,
+      top,
+      sw,
+      sh,
+      layout.dest.x + (left - layout.source.x),
+      layout.dest.y + (top - layout.source.y),
+      sw,
+      sh
+    );
+
+    const texture = new THREE.CanvasTexture(canvas);
+    // The same tag `createTextureFromBuffer` puts on a loaded image: these are
+    // the sheet's own undecoded sRGB bytes, and consumers that need another
+    // colour space retag their own clone.
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  } catch {
+    return null; // tainted canvas / unsupported image source
+  }
 }
 
 /**
- * The cell as a self-contained data URL, for the DOM controls that draw an
- * `<img>` instead of sampling a texture. Undefined when the image is not
- * drawable (no DOM, no 2D context, tainted canvas — `withImageCanvas`'s policy)
- * or the cell misses the sheet entirely, so callers fall back exactly as they
- * already do for an image that has not decoded yet.
+ * The same blit over raw RGBA bytes: the destination starts fully transparent
+ * (a fresh `Uint8Array` is zeroed), so the margin the region does not cover
+ * needs no separate clear.
  */
-export function atlasRegionDataUrl(image: unknown, region: AtlasRegion): string | undefined {
-  return withImageCanvas(image, (ctx, size) => {
-    const crop = atlasCropRect(size, region);
-    if (!crop) return undefined;
-    const cell = globalThis.document.createElement('canvas');
-    cell.width = crop.width;
-    cell.height = crop.height;
-    const cellCtx = cell.getContext('2d');
-    if (!cellCtx) return undefined;
-    cellCtx.drawImage(
-      ctx.canvas,
-      crop.sx,
-      crop.sy,
-      crop.width,
-      crop.height,
-      0,
-      0,
-      crop.width,
-      crop.height
-    );
-    return cell.toDataURL();
-  });
+function cropRawPixels(
+  raw: RawPixels,
+  layout: AtlasTextureLayout,
+  left: number,
+  top: number,
+  sw: number,
+  sh: number
+): THREE.DataTexture {
+  const out = new Uint8Array(layout.width * layout.height * 4);
+  const destX = layout.dest.x + (left - layout.source.x);
+  const destY = layout.dest.y + (top - layout.source.y);
+
+  for (let row = 0; row < sh; row += 1) {
+    const dy = destY + row;
+    if (dy < 0 || dy >= layout.height) continue;
+    for (let col = 0; col < sw; col += 1) {
+      const dx = destX + col;
+      if (dx < 0 || dx >= layout.width) continue;
+      const from = ((top + row) * raw.width + (left + col)) * 4;
+      const to = (dy * layout.width + dx) * 4;
+      out[to] = raw.data[from]!;
+      out[to + 1] = raw.data[from + 1]!;
+      out[to + 2] = raw.data[from + 2]!;
+      out[to + 3] = raw.data[from + 3]!;
+    }
+  }
+
+  const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  // Row 0 is the sheet's own row 0, copied straight across, and a DataTexture
+  // uploads unflipped — so the crop lines up with the sheet it came from.
+  texture.flipY = false;
+  texture.needsUpdate = true;
+  return texture;
 }

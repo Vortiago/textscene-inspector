@@ -1,11 +1,13 @@
 /**
- * MeshLibrary resolver — parses item/N/mesh, name, and mesh_transform out of a
- * MeshLibrary .tres into the normalized model, resolving mesh ExtResource ids
- * to res:// paths against the file's own ext_resources.
+ * MeshLibrary resolver — parses item/N/mesh, name, mesh_transform, and
+ * mesh_cast_shadow out of a MeshLibrary .tres into the normalized model,
+ * resolving mesh ExtResource ids to res:// paths against the file's own
+ * ext_resources.
  */
 import { describe, it, expect } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { meshLibraryFromTres } from './decode';
+import { ShadowCastingSetting } from './types';
 
 const TILES_TRES = `[gd_resource type="MeshLibrary" format=3 uid="uid://tiles"]
 
@@ -104,5 +106,46 @@ item/0/mesh = SubResource("ArrayMesh_floor")
     const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
 
     expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::ArrayMesh_floor');
+  });
+
+  it('decodes each mesh_cast_shadow ordinal, defaulting an item that omits it to ON', () => {
+    // Ordinals: RS::ShadowCastingSetting, servers/rendering/rendering_server.h:1494-1499.
+    // Absent = ON: MeshLibrary::Item::mesh_cast_shadow, scene/resources/3d/mesh_library.h:58.
+    const tres = `[gd_resource type="MeshLibrary" format=3]
+
+[resource]
+item/0/name = "Off"
+item/0/mesh_cast_shadow = 0
+item/1/name = "On"
+item/1/mesh_cast_shadow = 1
+item/2/name = "DoubleSided"
+item/2/mesh_cast_shadow = 2
+item/3/name = "ShadowsOnly"
+item/3/mesh_cast_shadow = 3
+item/4/name = "Unauthored"
+`;
+    const model = meshLibraryFromTres(parseTresFile(tres), 'res://stage/tiles.tres');
+
+    expect(model.get(0)!.castShadow).toBe(ShadowCastingSetting.OFF);
+    expect(model.get(1)!.castShadow).toBe(ShadowCastingSetting.ON);
+    expect(model.get(2)!.castShadow).toBe(ShadowCastingSetting.DOUBLE_SIDED);
+    expect(model.get(3)!.castShadow).toBe(ShadowCastingSetting.SHADOWS_ONLY);
+    expect(model.get(4)!.castShadow).toBe(ShadowCastingSetting.ON);
+  });
+
+  it('falls back to ON for a mesh_cast_shadow outside 0-3 or unparseable', () => {
+    // Godot's own default branch, scene/resources/3d/mesh_library.cpp:66-67.
+    const tres = `[gd_resource type="MeshLibrary" format=3]
+
+[resource]
+item/0/mesh_cast_shadow = 9
+item/1/mesh_cast_shadow = -1
+item/2/mesh_cast_shadow = "nope"
+`;
+    const model = meshLibraryFromTres(parseTresFile(tres), 'res://stage/tiles.tres');
+
+    expect(model.get(0)!.castShadow).toBe(ShadowCastingSetting.ON);
+    expect(model.get(1)!.castShadow).toBe(ShadowCastingSetting.ON);
+    expect(model.get(2)!.castShadow).toBe(ShadowCastingSetting.ON);
   });
 });

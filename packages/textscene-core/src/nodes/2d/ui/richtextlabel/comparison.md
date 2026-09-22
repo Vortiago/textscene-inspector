@@ -1,17 +1,16 @@
 ---
 type: RichTextLabel
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-rich-text-label.tscn
 image: unit-rich-text-label
-renders_as: a positioned HTML div of styled text
+renders_as: a run of shaped text with per-span styling
 ---
 
 # RichTextLabel
 
-RichTextLabel lays out a run of rich text. The previewer draws it as a positioned
-`<div>` and, with `bbcode_enabled`, renders a subset of BBCode as inline styling
-(ADR-0003).
+RichTextLabel lays out a run of rich text. With `bbcode_enabled` the previewer styles a
+subset of BBCode inline (ADR-0003).
 
 ## Linting
 
@@ -56,7 +55,8 @@ Strict parsing format-checks these `RichTextLabel` properties, plus 53 inherited
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 `bbcode_enabled` and `fit_content` have no strict counterpart. Both compare the raw
@@ -65,5 +65,22 @@ string against `true`, so an absent property or any other value silently resolve
 
 ## Known limitations
 
-- **Approximated** Only a subset of BBCode tags is styled, so a tag outside it renders
-  as plain text.
+- **Approximated** Only a subset of BBCode tags is styled; a tag outside it renders as
+  plain text.
+- **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
+  right edge instead of stretching to the box — the per-run glyph slicing a justified
+  line would need to re-derive its own run boundaries against is not yet wired to it.
+- **Not drawn** Every `_draw_line` RTL arm (rich_text_label.cpp:987-1014): the
+  line's trailing-edge origin, the LEFT/FILL-versus-RIGHT swap and the dropcap side.
+  All read the paragraph direction from `_find_direction` (:599,3507-3525), which
+  returns `is_layout_rtl()` only while `text_direction` is INHERITED; the default is
+  `TEXT_DIRECTION_AUTO` (rich_text_label.h:615), and `[p dir=]` is not modelled.
+  Engine-checked: an RTL RichTextLabel draws its lines where an LTR one does.
+- **Not drawn** `lrtl`'s scrollbar-width term (:988-996,2093-2100), the loading
+  progress bar's RTL fill (:2580-2588) and `VC_GLYPHS_AUTO`'s reveal end
+  (:944-945): no scrollbar is drawn, the bar is transient, and
+  `visible_characters` is not drawn here.
+- **Not drawn** The clip to `_get_text_rect()` (rich_text_label.cpp:158,2594): a
+  line wider than its own box hangs past the control's edge here, where Godot cuts
+  it at the edge. The horizontal placement of such a line matches
+  (`unit-rich-text-label-center-overflow.tscn`); only the cut is missing.

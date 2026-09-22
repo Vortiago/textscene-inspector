@@ -53,8 +53,10 @@ export interface CSGPolygon3DProperties extends Node3DProperties {
   flipFaces: boolean;
   /** Filled in by the scene-wide `path_node` pass, not by the parser. */
   resolvedPath?: CSGPolygon3DResolvedPath;
-  /** Material reference (SubResource/ExtResource); StandardMaterial3D in practice. */
-  material?: string;
+  /** `material` path (SubResource/ExtResource); StandardMaterial3D in practice. */
+  materialPath?: string;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
+  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  castShadow?: number;
 }

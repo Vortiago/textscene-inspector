@@ -1,0 +1,31 @@
+; A Control subtree under a MODULATED Node2D ancestor — the ONE variable no
+; other fixture moves. A non-Control ancestor contributes no node of its own and
+; its Control descendants promote up, so a promoted Control that never consults
+; the ancestor's `modulate` paints its own untinted colour. The `self_modulate`
+; on the same node must NOT reach the child; the untinted sibling holds the
+; reference colour beside it.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitctrlnode2dmod"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PlainHolder" type="Node2D" parent="."]
+position = Vector2(64, 64)
+
+[node name="Plain" type="ColorRect" parent="PlainHolder"]
+offset_right = 160.0
+offset_bottom = 80.0
+color = Color(1, 1, 1, 1)
+
+[node name="TintedHolder" type="Node2D" parent="."]
+position = Vector2(64, 200)
+modulate = Color(1, 0.5, 0.25, 1)
+self_modulate = Color(0, 1, 0, 1)
+
+[node name="Tinted" type="ColorRect" parent="TintedHolder"]
+offset_right = 160.0
+offset_bottom = 80.0
+color = Color(1, 1, 1, 1)

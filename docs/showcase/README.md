@@ -24,11 +24,9 @@ The hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and
 
 [▶ web/dcc-layout.webm](web/dcc-layout.webm)
 
-The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the Control overlay renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
+The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the native Control canvas renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
 
 ![Current toolbar with the scene chip's Ctrl/Cmd+K command palette open](../screenshots/j-integration/web-toolbar-palette.png)
-
-The 2D-overlay renders of the synthetic Control-coverage scenes (`example-ui-dialog`, `unit-control-containers`, the BBCode `RichTextLabel` demo) are captured as stills in [`verify/`](verify/) with per-scene control stats in [`verify/verify-2d.json`](verify/verify-2d.json).
 
 ### ui-hint
 
@@ -36,7 +34,7 @@ The 2D-overlay renders of the synthetic Control-coverage scenes (`example-ui-dia
 
 [▶ web/ui-hint.webm](web/ui-hint.webm)
 
-ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to the 2D overlay, which renders the dialog.
+ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to 2D mode, which renders the dialog.
 
 ## Feature clips
 
@@ -150,21 +148,26 @@ The **TextScene: Open Preview to the Side** webview fills the editor area, rende
 
 ![VS Code: the Preview webview in 2D mode rendering a Control-node "Field Journal" dialog](../screenshots/vscode/vscode-main.png)
 
-The same preview in 2D mode renders `example-ui-dialog.tscn`: a Godot `Control` UI tree (panel, body copy, Save Entry / Close buttons) drawn by the 2D overlay over the pan/zoom viewport, with the `JournalUI` node tree in the inspector.
+The same preview in 2D mode renders `example-ui-dialog.tscn`: a Godot `Control` UI tree (panel, body copy, Save Entry / Close buttons) drawn in the pan/zoom viewport, with the `JournalUI` node tree in the inspector.
 
-![VS Code: split .tscn editors beside the live Preview panel](../screenshots/vscode/both-02-a.png)
+![VS Code: the box fixture's Preview panel filling the editor area](../screenshots/vscode/both-02-a.png)
 
-Several `.tscn` files open as text alongside the Preview panel — searchable scene tree (Root → Description / Title / Box) and the node-details inspector — all inside the Extension Development Host window.
+`unit-box-mesh.tscn` with its source closed, so the webview owns the editor area: the expanded scene tree (Root → Box / Title / Description), the Inspector/Resources/Cameras tabs and the viewport toolbar, beside the Explorer.
 
-![VS Code: many .tscn fixtures tiled across the editor grid](../screenshots/vscode/both-03-a.png)
+![VS Code: a lights-only fixture, its three light nodes listed in the scene tree](../screenshots/vscode/both-03-a.png)
 
-A grid of fixture `.tscn` files (box, sphere, plane, cylinder, capsule) open at once, with the activity bar, editor tabs, and status bar visible — the extension handles the format across the whole workspace.
+`integration-lights-all-types.tscn` holds a DirectionalLight3D, an OmniLight3D and a SpotLight3D and no geometry, so the tree carries what the viewport cannot.
 
-![VS Code: explorer, raw .tscn source, and Preview panel together](../screenshots/vscode/vscode-05-a.png)
+![VS Code: the Outline view, the .tscn source and the Preview panel together](../screenshots/vscode/vscode-05-a.png)
 
-The file explorer, raw `.tscn` source, and the Preview panel with its node tree side by side, showing the preview wired into the standard VS Code layout.
+`example-hierarchy-deep.tscn` with the Outline expanded beside the source and the preview. The document symbols mirror the scene's own `[node name=…]` nesting, so an outline click jumps the editor to that declaration.
 
-The two rendered-scene captures above are regenerated by `node scripts/showcase/vscode/capture.mjs`, which drives the extension dev-host cross-platform — headless under `xvfb-run` on Linux (software GL), or against an installed/`$VSCODE_BIN` build elsewhere.
+Every VS Code screenshot in this repo, the two above and the 22 in
+[docs/user-guide-vscode.md](../user-guide-vscode.md), is regenerated by
+`node scripts/showcase/vscode/capture.mjs`. It drives the extension dev-host
+cross-platform, headless under `xvfb-run` on Linux (software GL), or against an
+installed or `$VSCODE_BIN` build elsewhere, and drives the workbench into each
+shot's state rather than shooting whatever the last one left open.
 
 ## Coming soon (re-run to capture)
 
@@ -184,6 +187,6 @@ Run the whole pipeline with **one command** — do this after any UI change, sin
 pnpm showcase:regen
 ```
 
-It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), captures the 2D-overlay screenshots into `verify/`, then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
+It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
 
 During iteration, with a preview server already running, capture a single clip: `node scripts/showcase/run.mjs <name>`.

@@ -1,5 +1,5 @@
 /**
- * SubViewport — a canvas boundary that is not a world boundary (ADR-0030), and
+ * SubViewport — a canvas boundary that is not a world boundary (ADR-0033), and
  * the publisher of its own offscreen render target.
  *
  * Godot's `Viewport` always instantiates its own `World2D` but resolves
@@ -28,8 +28,9 @@
  * pass, and a probe render confirms it leaves the parent view untouched.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { createPortal, useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useMemo } from 'react';
+import { createPortal, useThree } from '@react-three/fiber';
+import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -38,26 +39,22 @@ import {
   CanvasWorkspaceProvider,
   useCanvasWorkspace,
 } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import {
-  usePublishViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../r3f/contexts/ViewportTextureContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { Node } from '../../node/Component';
 import {
-  DEFAULT_CLEAR_COLOR,
   applyOrthoFrame,
   createOffscreenTarget,
   godotCanvasPosition,
+  renderToOffscreenTarget,
   orthoFrameForCamera2D,
   orthoFrameForSize,
-  readTargetPixels,
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
+import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 
 export function SubViewport({ node, children }: NodeComponentProps) {
@@ -70,7 +67,8 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   const kind = useViewportContentKind(node);
 
   // Only content this subsystem can rasterise gets an offscreen pass; Controls
-  // are the DOM rasterizer's, and an empty viewport has nothing to draw.
+  // are the native Control-raster pass's (`ControlRasterPass.tsx`), and an
+  // empty viewport has nothing to draw.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws in the parent view exactly when all three hold: it is 3D
@@ -107,9 +105,10 @@ interface OffscreenViewportProps extends NodeComponentProps {
  * Owns the render target, drives the offscreen pass, and publishes the result.
  *
  * Split out from `<SubViewport>` so the hooks it needs (a target, a portal
- * scene, a per-frame render) are never mounted for a sub-viewport that has no
- * WebGL source — a Control-only one publishes nothing at all rather than a
- * cleared target, leaving the key to the DOM rasterizer that owns it.
+ * scene, a registered pass) are never mounted for a sub-viewport that has no
+ * WebGL source — a Control-only one publishes nothing at all here, leaving
+ * the key to the native Control-raster pass (`ControlRasterPass.tsx`) that
+ * owns it.
  */
 /**
  * Godot floors a viewport at 2 (`viewport.cpp:1120`, `p_size.maxi(2)`) and
@@ -149,7 +148,6 @@ function OffscreenViewport({
 
   const gl = useThree((state) => state.gl);
   const mainScene = useThree((state) => state.scene);
-
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
     scene.name = `${node.name}::offscreen`;
@@ -166,34 +164,11 @@ function OffscreenViewport({
 
   useEffect(() => () => target.dispose(), [target]);
 
-  // Gates `readPixels`: a consumer must be able to tell "no frame yet" from
-  // "rendered empty", and only the pass itself knows which it is.
-  const hasRendered = useRef(false);
-  useEffect(() => {
-    hasRendered.current = false;
-  }, [target]);
-
-  // A throw here is "not ready", which is what null means: no real GL context
-  // (headless harnesses, a lost context), or a heap too small for the readback.
-  const readPixels = useCallback(
-    (): ImageData | null =>
-      hasRendered.current
-        ? readTargetPixels(
-            (buffer) => gl.readRenderTargetPixels(target, 0, 0, width, height, buffer),
-            width,
-            height
-          )
-        : null,
-    [gl, target, width, height]
-  );
-
-  const entry = useMemo<ViewportTextureEntry>(
-    () => ({ texture: target.texture, size: { x: width, y: height }, readPixels }),
-    [target, width, height, readPixels]
-  );
-
-  usePublishViewportTexture(node, path, entry);
-
+  // WebGL consumers sample this texture directly (no CPU round trip) — the
+  // ordered pass driver runs every non-cyclic pass before R3F's own automatic
+  // render each frame, so by the time anything samples it this frame's
+  // content is already there, including on the very first frame this target
+  // is published.
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its CANVAS TRANSFORM, which is the identity until a Camera2D in the
   // subtree makes itself current — so this starts at the whole target rect and
@@ -205,10 +180,12 @@ function OffscreenViewport({
     applyOrthoFrame(orthoCamera, orthoFrameForSize({ x: width, y: height }));
   }, [orthoCamera, width, height]);
 
-  // Default priority: a priority-0 subscriber runs BEFORE R3F's automatic main
-  // render, so the target the main pass samples was filled this frame. Any
-  // non-zero priority would also disable that automatic render entirely.
-  useFrame(() => {
+  // Every OTHER viewport boundary nested in this one's own subtree — this
+  // pass's `dependsOn` for the ordered driver (`passOrder.ts`), since any of
+  // them might be sampled by a `ViewportTexture` somewhere below and must
+  // therefore render first.
+
+  const renderPass = useCallback(() => {
     const source = rendersInline ? mainScene : portalScene;
 
     if (kind === '2d') {
@@ -229,16 +206,11 @@ function OffscreenViewport({
     const camera =
       kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
 
-    const previousTarget = gl.getRenderTarget();
-    const previousAlpha = gl.getClearAlpha();
-    const previousToneMapping = gl.toneMapping;
-    const previousColor = new THREE.Color();
-    gl.getClearColor(previousColor);
-
     // A perspective camera built by `<Camera3D>` carries the CANVAS aspect
     // (16:9); inside the viewport it frames the TARGET rect instead. Restored
     // straight after, because that same camera object may be the one the main
-    // canvas is rendering through.
+    // canvas is rendering through. This is the one piece of state only THIS
+    // pass touches, so it stays here rather than inside the shared helper.
     const perspective = camera as THREE.PerspectiveCamera | null;
     const restoreAspect = perspective?.isPerspectiveCamera ? perspective.aspect : null;
     if (perspective?.isPerspectiveCamera) {
@@ -247,51 +219,69 @@ function OffscreenViewport({
     }
 
     try {
-      // Godot tonemaps a viewport through ITS OWN world's environment
-      // (`_render_buffers_post_process_and_tonemap` reads the environment the
-      // viewport's `find_world_3d()` resolves). A shared world resolves to the
-      // parent's, whose curve IS the renderer's current tonemap — leave it in
-      // force. An own world is a fresh `World3D` with no Environment, and
-      // Godot's default `tonemap_mode` is LINEAR — no curve. A 2D canvas is
-      // never tonemapped at all: Godot draws canvas items into the target
-      // AFTER the 3D tonemap pass. Suspended before the bind (the test seam
-      // observes the bind), restored in `finally` for the main render.
-      if (properties.own_world_3d || kind === '2d') gl.toneMapping = THREE.NoToneMapping;
-      // The consumer side re-tags this texture: `@react-three/fiber`'s
-      // `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture
-      // assigned to a colour-map prop, and the published target lands on an
-      // albedo `map` exactly like a file texture. With `isXRRenderTarget` set,
-      // three reads THIS pass's output space from the tag per draw, so the
-      // stamp would bake an sRGB OETF into the offscreen render on top of the
-      // tonemap (measured: the whole target 1.5–6.5x too bright in linear
-      // terms). The stamp lands during React commits; re-asserting here, right
-      // before the bind, means no offscreen render ever runs under it.
-      target.texture.colorSpace = THREE.LinearSRGBColorSpace;
-      gl.setRenderTarget(target);
-      gl.setClearColor(DEFAULT_CLEAR_COLOR, transparentBg ? 0 : 1);
-      gl.clear(true, true, true);
-      // No camera is not an error — Godot renders the clear colour and nothing
-      // else, which is what an unrendered viewport looks like there too.
-      if (camera) gl.render(source, camera);
-      hasRendered.current = true;
+      renderToOffscreenTarget(gl, {
+        target,
+        transparentBg,
+        // Godot tonemaps a viewport through ITS OWN world's environment
+        // (`_render_buffers_post_process_and_tonemap` reads the environment the
+        // viewport's `find_world_3d()` resolves). A shared world resolves to the
+        // parent's, whose curve IS the renderer's current tonemap — leave it in
+        // force. An own world is a fresh `World3D` with no Environment, and
+        // Godot's default `tonemap_mode` is LINEAR — no curve. A 2D canvas is
+        // never tonemapped at all: Godot draws canvas items into the target
+        // AFTER the 3D tonemap pass.
+        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : undefined,
+        // The consumer side re-tags this texture: `@react-three/fiber`'s
+        // `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture
+        // assigned to a colour-map prop, and the published target lands on an
+        // albedo `map` exactly like a file texture. With `isXRRenderTarget` set,
+        // three reads THIS pass's output space from the tag per draw, so the
+        // stamp would bake an sRGB OETF into the offscreen render on top of the
+        // tonemap (measured: the whole target 1.5–6.5x too bright in linear
+        // terms). The stamp lands during React commits; re-asserting right
+        // before the bind means no offscreen render ever runs under it.
+        beforeBind: () => {
+          target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+        },
+        // No camera is not an error — Godot renders the clear colour and nothing
+        // else, which is what an unrendered viewport looks like there too.
+        draw: () => {
+          if (camera) gl.render(source, camera);
+        },
+      });
     } finally {
-      gl.setRenderTarget(previousTarget);
-      gl.setClearColor(previousColor, previousAlpha);
-      gl.toneMapping = previousToneMapping;
       if (perspective?.isPerspectiveCamera && restoreAspect !== null) {
         perspective.aspect = restoreAspect;
         perspective.updateProjectionMatrix();
       }
     }
-  });
+  }, [
+    rendersInline,
+    mainScene,
+    portalScene,
+    kind,
+    path,
+    orthoCamera,
+    gl,
+    target,
+    transparentBg,
+    properties.own_world_3d,
+    width,
+    height,
+  ]);
+
+  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
 
   if (rendersInline) return null;
   // Inside its own target a sub-viewport draws its own content, whatever the
   // host canvas's workspace is — so the portal declares the workspace the
   // content needs rather than inheriting the one that would drop it.
+  // The portal scene is detached, so the host canvas's accumulated CanvasItem
+  // transform reaches nothing here — and a canvas root inside this viewport
+  // must cancel nothing (`canvasRootScope.tsx`).
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      {children}
+      <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
     </CanvasWorkspaceProvider>,
     portalScene
   );

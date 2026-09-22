@@ -1,0 +1,69 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a LineEdit. Godot swaps the
+; LEFT/FILL and RIGHT arms of the draw-time `switch (alignment)`
+; (line_edit.cpp:1397-1421), moves the clear button to the LEFT margin
+; (:1455-1458), floors the text PAST that icon instead of pulling it back from
+; the right edge (:1473-1474), and stops subtracting the icon from `ofs_max`
+; (:1481-1483). Each RTL row pairs with its LTR twin, and the clear-button pair
+; is what separates the icon side from the plain alignment swap. Every LineEdit
+; spans the full viewport width so its OWN rect mirror (control.cpp:1785) is the
+; identity. No other fixture pairs a LineEdit with a direction.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LtrLeft" type="LineEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 56.0
+text = "Wave rift"
+alignment = 0
+
+[node name="LtrRight" type="LineEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 64.0
+offset_bottom = 104.0
+text = "Wave rift"
+alignment = 2
+
+[node name="LtrClear" type="LineEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 112.0
+offset_bottom = 152.0
+text = "Wave rift"
+alignment = 2
+clear_button_enabled = true
+
+[node name="RtlLeft" type="LineEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 200.0
+offset_bottom = 240.0
+text = "Wave rift"
+alignment = 0
+
+[node name="RtlRight" type="LineEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 248.0
+offset_bottom = 288.0
+text = "Wave rift"
+alignment = 2
+
+[node name="RtlClear" type="LineEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 296.0
+offset_bottom = 336.0
+text = "Wave rift"
+alignment = 2
+clear_button_enabled = true

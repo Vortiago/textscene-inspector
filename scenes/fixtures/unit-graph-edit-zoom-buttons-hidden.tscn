@@ -1,0 +1,37 @@
+; GraphEdit with its three zoom buttons hidden. `show_zoom_buttons` hides
+; zoom-out, zoom-reset and zoom-in together (graph_edit.cpp:2830-2836), which
+; narrows the toolbar panel by three button widths and shifts every widget
+; after them. A regression that hides the wrong button, or that keeps the
+; row's width, is invisible wherever all the buttons are shown.
+; Every fixture in this family shares one GraphEdit rect and one GraphNode,
+; and `scroll_offset` is deliberately ABSENT from all but
+; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
+; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
+; child has widened while a scene's properties are applied (graph_edit.cpp:407),
+; so an authored offset moves the grid, the nodes AND the minimap camera at once
+; and would mask the one variable each file exists to move.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedzoombtn"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+show_zoom_buttons = false
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"

@@ -1,17 +1,18 @@
 ---
 type: TabContainer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-tab-container.tscn
 # image: unit-tab-container
-renders_as: invisible transform-only fallback
+renders_as: a panel StyleBox behind the current page, topped by an internal TabBar strip
 ---
 
 # TabContainer
 
 TabContainer arranges its children into a tabbed view, showing only the active tab's
-child. The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+child. The previewer draws the `panel` StyleBox behind the content band, positions the
+current page below (or above) the strip, and draws the strip itself through the same
+painter TabBar uses for its own.
 
 ## Linting
 
@@ -39,14 +40,25 @@ Strict parsing format-checks these `TabContainer` properties, plus 53 inherited 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl`, which reads only Control's own properties.
-None of the twelve TabContainer keys is read, so a bad `tab_alignment` or `current_tab`
-is never looked at.
+The lenient parser reads the scalars above plus a SPARSE `tab_<idx>/title,icon,disabled,
+hidden` override map, keyed by whatever index the file names — TabContainer's own
+`array_length_getter` is its live child count, unknown at parse time, so unlike TabBar's
+`tab_count`-sized walk this one builds no dense array and applies no walk ceiling.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the tab bar and shows one child at a time. The previewer
-  draws no tab bar, and every child shows at once.
+- **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
+  StyleBox are not distinguished from the unselected ones, so the current tab
+  reads as the same colour and box as its neighbours. Its position, width and
+  the underline above it are exact; this is the whole of the residual any tab
+  fixture still measures against Godot.
+- **Approximated** A tab title's paragraph direction is not applied, so under
+  `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
+  Where the strip and each tab in it sit does follow the layout direction.
+- **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`
+  gutter when its own tabs overflow and scroll, a narrow case Godot's own
+  `_update_margins` special-cases.

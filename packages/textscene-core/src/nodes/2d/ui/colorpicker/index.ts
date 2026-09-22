@@ -1,17 +1,16 @@
 /**
  * ColorPicker registration: parser.
  *
- * Reuses the VBoxContainer parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Parses VBoxContainer's own properties plus `color`/`picker_shape`; the
+ * rest of ColorPicker's own members live in linterParser.ts only.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseVBoxContainer } from '../vboxcontainer/parser';
+import { parseColorPicker } from './parser';
 
 const colorPickerRegistration: NodeTypeRegistration = {
   typeName: 'ColorPicker',
-  parser: parseVBoxContainer,
+  parser: parseColorPicker,
 };
 
 nodeRegistry.register(colorPickerRegistration);

@@ -36,6 +36,16 @@ import { DEFAULT_MAX_ENTRIES } from './resourceProcessorTypes';
 import type { ResourceProcessor, ResourceProcessorConfig } from './resourceProcessorTypes';
 import * as logger from '../logger';
 
+/**
+ * Ceiling on waiting for a PEER processor to publish an address this one
+ * depends on — a material's texture, a font's `base_font`. Far above any real
+ * fetch: it exists so a dependency that never arrives fails the dependent
+ * instead of parking it forever, not to bound a slow load. Shared so the two
+ * waiters (`ResourceLoader.peerLoad` and the font processor's own cycle-aware
+ * loader) cannot drift to different ceilings.
+ */
+export const PEER_LOAD_TIMEOUT_MS = 30_000;
+
 export type { ResourceType };
 export type { ResourceProcessor, ResourceProcessorConfig } from './resourceProcessorTypes';
 

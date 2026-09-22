@@ -3,7 +3,6 @@
  * StandardMaterial3D scalar properties (color, metallic, roughness,
  * opacity, emission, transparency, blend_mode, cull_mode).
  *
- * Assertions: 18–31 of `docs/archive/STRICT-VERIFICATION.md`.
  *
  * Several of these test for properties Godot exposes but our R3F port may
  * not have wired up yet. Failures here are the inventory of silent
@@ -17,6 +16,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -56,7 +56,7 @@ async function renderWithMaterial(
       <MeshInstance3D node={node} />
     </SceneResourcesProvider>
   );
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('StandardMaterial3D scalars (assertions 18–31)', () => {

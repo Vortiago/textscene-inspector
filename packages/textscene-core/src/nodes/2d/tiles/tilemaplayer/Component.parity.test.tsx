@@ -13,7 +13,6 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
-import { isMesh, isBasicMaterial } from '../../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'TileMapLayer', name: 'Layer0' } };
 const TEX = 'res://tiles.png';
@@ -92,16 +91,6 @@ async function render(
   );
 }
 
-/** The basic material a drawn mesh carries. */
-function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
-  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
-  const material = instance.material;
-  if (Array.isArray(material) || !isBasicMaterial(material)) {
-    throw new Error('mesh material is not a MeshBasicMaterial');
-  }
-  return material;
-}
-
 describe('TileMapLayer render parity', () => {
   it('renders one batched mesh whose geometry and material match the builder output and sprite recipe', async () => {
     const r = await render(makeNode({ modulate: 'Color(0.5, 0.5, 0.5, 1)' }));
@@ -137,7 +126,7 @@ describe('TileMapLayer render parity', () => {
     const firstMap = (first!.material as THREE.MeshBasicMaterial).map;
     const secondMap = (second!.material as THREE.MeshBasicMaterial).map;
     expect(firstMap).not.toBe(secondMap);
-    expect(second!.position.z).toBeGreaterThan(first!.position.z);
+    expect(second!.renderOrder).toBeGreaterThan(first!.renderOrder);
   });
 
   it('keeps 100 cells of one source in a single batched mesh (400 vertices)', async () => {
@@ -386,11 +375,11 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
     const colors = meshes.map((m) =>
-      basicMaterial(m.instance).color.getHexString()
+      ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color.getHexString()
     );
     expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
     const tiled = meshes.find(
-      (m) => basicMaterial(m.instance).map !== null
+      (m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map !== null
     );
     expect(tiled).toBeDefined();
   });

@@ -64,7 +64,7 @@ export const SCENE_COMPOSITION_SCENES = [
   // and Path2D curve gizmos are selection-gated (ADR-0018) and the harness
   // drives no selection, so this scene pins the one visible, non-gated piece —
   // the follower's curve placement.
-  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', maxDiffPct: 0.3 },
+  { name: 'pathfollow2d-follow', file: 'unit-pathfollow2d.tscn', maxDiffPct: 0.3, mode: '2d' },
   // PathFollow3D follow-offset (ADR-0018): a BoxMesh follower placed at
   // progress_ratio 0.5 along the parent Path3D's Curve3D. Same as the 2D case —
   // the Path3D curve gizmo is selection-gated and hidden here, so this pins the

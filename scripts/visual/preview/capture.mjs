@@ -9,8 +9,11 @@ import {
   SETTLE_INITIAL_MS,
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
+  SETTLE_SIM_SECONDS,
 } from './appContract.mjs';
 import { findCanvas2DFrame } from './viewportProbes.mjs';
+import { writeFileSync } from 'node:fs';
+import { PNG } from 'pngjs';
 
 /**
  * Navigate to a fixture and wait for the app's OWN resource chain to go quiet.
@@ -90,7 +93,19 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
  * cannot be trusted, so it returns a reason rather than whatever frame was up —
  * flakiness is rejected here, not absorbed by tolerance downstream.
  */
-export async function settleCanvas(page, canvas, { screenshotTimeout } = {}) {
+export async function settleCanvas(
+  page,
+  canvas,
+  { screenshotTimeout, simSeconds = SETTLE_SIM_SECONDS } = {}
+) {
+  if (simSeconds !== 0) {
+    throw new Error(
+      `settle contract asks for ${simSeconds}s of simulated time, and this side cannot reach ` +
+        'it: the previewer runs no global clock (the animation transport starts stopped, ' +
+        'nothing steps physics or GDScript) and settling is a convergence test, not a seek. ' +
+        'Reaching a non-zero settle needs a driveable elapsed-time hook in the renderer first.'
+    );
+  }
   // A whole game world under SwiftShader can take longer to rasterise ONE frame
   // than Playwright's default action timeout allows, which surfaces as a
   // screenshot timeout rather than as "never settled". Raising it per scene
@@ -110,4 +125,36 @@ export async function settleCanvas(page, canvas, { screenshotTimeout } = {}) {
       SETTLE_MAX_ATTEMPTS * SETTLE_INTERVAL_MS
     }ms all differed`,
   };
+}
+
+/** Every pixel the same RGBA — a dead GL context or an unrendered scene, never a real frame. */
+export function isUniformImage(buffer) {
+  const { data } = PNG.sync.read(buffer);
+  const [r0, g0, b0, a0] = data;
+  for (let i = 4; i < data.length; i += 4) {
+    if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Write a capture, refusing a uniform one.
+ *
+ * `settleCanvas` accepts two byte-identical screenshots as settled, and two
+ * captures of a LOST context are byte-identical — so the settle gate cannot
+ * tell them apart. On a compare that is harmless (a blank frame diffs hugely
+ * and fails); on a write it is permanent, because a blank baseline makes every
+ * later compare pass.
+ */
+export function writeCaptureImage(path, buffer, what) {
+  if (isUniformImage(buffer)) {
+    throw new Error(
+      `${what}: capture is a single uniform colour throughout — refusing to write it ` +
+        `to ${path}. That is a lost WebGL context or an unrendered scene, never a real ` +
+        'capture; a node that draws nothing belongs on a `visual: false` sheet.'
+    );
+  }
+  writeFileSync(path, buffer);
 }

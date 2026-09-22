@@ -14,6 +14,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
 import type { PropertySection } from '../../core/NodeRegistry';
+import type { Node3DProperties, Transform3D } from '../../nodes/base/node3d/types';
 
 /**
  * Build a `[node ...]` ParsedHeading for the given node type. `name` defaults
@@ -53,4 +54,18 @@ export function repoRoot(): string {
 /** Absolute path to the shared `scenes/fixtures` corpus at the repo root. */
 export function fixturesDir(): string {
   return resolve(repoRoot(), 'scenes/fixtures');
+}
+
+/**
+ * Narrow a parsed `TscnNode.properties` (`Node3DProperties |
+ * Record<string, unknown>`) down to its `transform`, when present.
+ * The bare idiom `'transform' in properties && properties.transform` doesn't
+ * narrow: the `Record<string, unknown>` arm's index signature keeps
+ * `properties.transform` typed `unknown`, which then only narrows to `{}` on
+ * the truthy check. Do the runtime check once, typed.
+ */
+export function transformOf(
+  properties: Node3DProperties | Record<string, unknown>
+): Transform3D | undefined {
+  return 'transform' in properties ? (properties as Node3DProperties).transform : undefined;
 }

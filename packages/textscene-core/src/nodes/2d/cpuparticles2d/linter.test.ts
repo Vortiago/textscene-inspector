@@ -1,5 +1,5 @@
 /**
- * CPUParticles2D semantic rules: the two advisory warnings for settings the
+ * CPUParticles2D semantic rules: the advisory warning for the one setting the
  * frozen pose cannot reproduce.
  */
 
@@ -101,8 +101,8 @@ describe('CPUParticles2D preview rule', () => {
   });
 
   it('leaves other node types alone (edge case)', () => {
-    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nfract_delta = true\n`;
-    expect(namesOf(content)).not.toContain('cpuparticles2d-fract-delta-ignored');
+    const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nemission_shape = 6\n`;
+    expect(namesOf(content)).not.toContain('cpuparticles2d-nondeterministic-emission-shape');
   });
 
   it('does not fire on an emitter with no properties at all (edge case)', () => {

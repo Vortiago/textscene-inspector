@@ -3,7 +3,6 @@ type: PointLight2D
 category: 2D
 fixture: unit-pointlight2d.tscn
 image: unit-pointlight2d
-status: limitation
 group: Lighting
 renders_as: the light's cookie multiplied into every CanvasItem beneath it
 ---
@@ -101,5 +100,3 @@ white silently. `texture` is stored with no reference check.
   dropped with a warning.
 - **Approximated** A CanvasLayer takes the layer window but still follows the 2D camera,
   where Godot draws it through its own canvas transform.
-- **Approximated** A Control draws in the DOM overlay (ADR-0024), so no 2D light reaches
-  one.

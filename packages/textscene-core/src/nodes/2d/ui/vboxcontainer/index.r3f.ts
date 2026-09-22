@@ -1,8 +1,16 @@
-/** VBoxContainer registration — 2D-overlay DOM component. */
+/**
+ * VBoxContainer registration — the native (WebGL canvas) rect solve + painter.
+ * `./nativeSolver` registers the container-layout/minimum-size functions as a
+ * side effect of import.
+ */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { VBoxContainer } from './Component';
+import './nativeSolver';
 
-controlComponentRegistry.register({ typeName: 'VBoxContainer', Component: VBoxContainer });
+controlComponentRegistry.register({
+  typeName: 'VBoxContainer',
+  Component: VBoxContainer,
+});
 
 export { VBoxContainer };

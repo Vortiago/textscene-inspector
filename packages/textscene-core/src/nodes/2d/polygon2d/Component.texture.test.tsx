@@ -25,7 +25,10 @@ import { Polygon2D } from './Component';
 import { parsePolygon2D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  createFakeResourceLoader,
+  type FakeResourceLoader,
+} from '../../../resources/testing/createFakeResourceLoader';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
 
@@ -39,15 +42,24 @@ function node(rawProps: Record<string, string>): TscnNode {
   return { name: 'Poly', type: 'Polygon2D', children: [], properties: parsePolygon2D(heading, rawProps) };
 }
 
-async function render(rawProps: Record<string, string>) {
-  const fake = createFakeResourceLoader();
+function loadedTexture(): THREE.Texture {
   const tex = new THREE.Texture();
+  // The real loader hands every decoded image out with REPEAT wrapping, because
+  // that is what a 3D material inherits (`BaseMaterial3D` constructs with
+  // `FLAG_USE_TEXTURE_REPEAT`, `scene/resources/material.cpp:4005`). Seeding
+  // three's own clamp default instead would leave the canvas-side clamp below
+  // asserting a value nothing had to produce.
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
   (tex as unknown as { image: { width: number; height: number } }).image = {
     width: TEX_W,
     height: TEX_H,
   };
-  fake.textures.seed(TEX, tex);
-  const renderer = await ReactThreeTestRenderer.create(
+  return tex;
+}
+
+async function mount(rawProps: Record<string, string>, fake: FakeResourceLoader) {
+  return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[]}
@@ -57,6 +69,13 @@ async function render(rawProps: Record<string, string>) {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+async function render(rawProps: Record<string, string>) {
+  const fake = createFakeResourceLoader();
+  const tex = loadedTexture();
+  fake.textures.seed(TEX, tex);
+  const renderer = await mount(rawProps, fake);
   await new Promise<void>((r) => setTimeout(r, 10));
   return { renderer, tex };
 }
@@ -87,7 +106,16 @@ describe('<Polygon2D> textured fill', () => {
   it('binds the resolved texture as the material map', async () => {
     const { renderer, tex } = await render({ polygon: SQUARE, texture: 'ExtResource("1")' });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
-    expect(mat.map).toBe(tex);
+    // Not `toBe(tex)`: the 2D canvas gets its own `NoColorSpace`-retagged
+    // clone of the shared cached texture (`useCanvas2DTexture`,
+    // `canvas2DTextureDecode.ts`) so magnifying it blends undecoded sRGB
+    // bytes, matching Godot's own canvas — a 3D consumer of the same path
+    // must keep sampling the untouched, still-`SRGBColorSpace` original.
+    // The clone shares the decoded `Source`, which is what identifies it as
+    // "the same resolved texture" here.
+    expect(mat.map).not.toBe(tex);
+    expect(mat.map?.source).toBe(tex.source);
+    expect(mat.map?.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('maps each `uv` texel to its own vertex, divided by the texture size', async () => {
@@ -163,6 +191,32 @@ describe('<Polygon2D> textured fill', () => {
     expect(mat.map!.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
+  it('hands the fill a material three has not yet compiled, when the texture arrives after the mesh', async () => {
+    // The sequence every real load takes: the mesh is on screen with `map =
+    // null` first, and the texture lands one render later. `USE_MAP` is baked
+    // at the material's FIRST compile, so a material that was already compiled
+    // mapless samples nothing however the map is assigned afterwards — it
+    // paints the flat fill colour over the whole polygon.
+    const fake = createFakeResourceLoader();
+    const renderer = await mount({ polygon: SQUARE, texture: 'ExtResource("1")' }, fake);
+    const mapless = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(mapless.map).toBeNull();
+    const compiledVersion = mapless.version;
+
+    await ReactThreeTestRenderer.act(async () => {
+      fake.textures._resolve(TEX, loadedTexture());
+    });
+
+    const textured = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(textured.map).not.toBeNull();
+    // Either half satisfies three: a material it has never seen, or the one it
+    // has with its `version` moved past the compiled program's. Asserting the
+    // observable rather than which of the two the seam chose. (The test
+    // renderer never reaches `setProgram`, so this pins the precondition for
+    // the recompile, not the recompile itself.)
+    expect(textured !== mapless || textured.version > compiledVersion).toBe(true);
+  });
+
   it('leaves the fill untextured, and adds no uv attribute, when there is no texture', async () => {
     const { renderer } = await render({ polygon: SQUARE });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
@@ -195,5 +249,21 @@ describe('<Polygon2D> vertex_colors', () => {
     const geom = mesh(renderer).geometry;
     expect(geom.attributes.color).toBeUndefined();
     expect((mesh(renderer).material as THREE.MeshBasicMaterial).vertexColors).toBe(false);
+  });
+
+  it("does not fold the node's own color.a into opacity once vertex_colors replaces color", async () => {
+    // `polygon_2d.cpp:310-314` assigns the vertex Color OUTRIGHT when
+    // `vertex_colors.size() == points.size()` — `color` (RGB *and* alpha)
+    // never enters the mesh, and `canvas_item_add_mesh` gets a bare
+    // `Color(1, 1, 1)` for its own modulate parameter (`polygon_2d.cpp:401`).
+    // A translucent `color` alongside opaque `vertex_colors` must therefore
+    // leave the material at full opacity, not `color.a`.
+    const { renderer } = await render({
+      polygon: SQUARE,
+      color: 'Color(1, 1, 1, 0.2)',
+      vertex_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1)',
+    });
+    const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
+    expect(mat.opacity).toBeCloseTo(1, 5);
   });
 });

@@ -1,7 +1,7 @@
 ---
 type: Control
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-control-state.tscn
 image: unit-control-state
 renders_as: a full-rect layout region
@@ -9,8 +9,23 @@ renders_as: a full-rect layout region
 
 # Control
 
-Control is the base UI node. The previewer maps it to a positioned `<div>` that sets the
-containing block for its children and draws no pixels of its own.
+Control is the base UI node. It draws nothing of its own. A Control directly under it
+anchors against its rect. One separated from it by another node anchors against that
+node instead. Where that node is not a canvas item the Control is a canvas root: it
+anchors against the viewport, and draws after everything under the root it hangs in.
+`top_level` makes it one wherever it sits, and nothing above it composes onto it — no
+transform, no tint, no z, no rect to anchor against, and no container lays it out.
+Visibility is the exception: it follows the scene tree rather than the canvas parenting,
+so a hidden ancestor still hides a `top_level` Control, while a non-canvas-item ancestor
+between them releases it again.
+
+`layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
+the value alone; INHERITED climbs to the nearest ancestor Control or Window, stepping
+over every other node type — a `SubViewport` included, so the Controls inside one inherit
+the direction of the Control that encloses the viewport — and at the top of the tree falls
+back to `internationalization/rendering/root_node_layout_direction` and the project's test
+locale. A right-to-left Control is mirrored inside its parent, and an HBoxContainer also
+reverses its children.
 
 ## Linting
 
@@ -78,7 +93,8 @@ Strict parsing format-checks these `Control` properties, plus 16 inherited from 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 Most layout and theme keys go through the `parseOptional*` family. An absent or
@@ -89,7 +105,27 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 
 ## Known limitations
 
-- **Approximated** Check, radio and dropdown indicators are drawn outlines and dots
-  rather than Godot's compiled theme icons.
-- **Approximated** Rows of controls sit tighter than Godot's, since the previewer's
-  control minimum sizes are smaller than the default theme's.
+- **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE in a project
+  that states no `internationalization/locale/test`, draws left-to-right: the answer is
+  the machine's own locale, which the scene files do not contain.
+- **Approximated** A right-to-left Control inside a SubViewport starts a fresh direction
+  climb instead of continuing past the viewport to the Control above it, so it draws
+  left-to-right unless it states a direction itself.
+- **Approximated** A `Window` ends the climb in Godot and answers from its own
+  `layout_direction`. No Window type is drawn here, so a Control below one inherits from
+  whatever Control sits above the Window instead.
+- **Approximated** Text is always shaped left-to-right. Every widget places its runs on
+  the resolved direction, but the runs themselves are never reordered, so a `Label`,
+  `Button` title or `ItemList` row holding right-to-left script draws its characters in
+  code-point order. The bundled atlas carries no right-to-left script, and neither does
+  Godot's own: its default theme ships the same `OpenSans_SemiBold.woff2` this repo
+  vendors, and reaches right-to-left glyphs through the host machine's fonts
+  (`Font.allow_system_fallback`, default true, `scene/resources/font.h`). An atlas baked
+  at build time has no equivalent of that, so the gap is a platform difference rather
+  than a bundling shortcut.
+- **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO
+  rather than INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
+  `rich_text_label.h:615`), so every engine branch that consults the PARAGRAPH direction
+  rather than the layout direction is dead at the default and is deliberately not ported.
+- **Needs runtime** The direction reaches hit-testing, keyboard and drag arms in TabBar,
+  Tree, ItemList, the sliders and the text controls. A frozen frame has none of those.

@@ -252,6 +252,7 @@ function decodeSurfaces(
     }
 
     surfaces.push({
+      surfaceIndex,
       format,
       vertexCount,
       indexCount,

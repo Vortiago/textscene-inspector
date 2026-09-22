@@ -3,7 +3,6 @@
  * StandardMaterial3D UV transforms (uv1_scale, uv1_offset). The bug-catcher
  * here is that UV must apply to ALL active texture maps, not just albedo.
  *
- * Assertions: 40–47 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,6 +18,7 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -67,7 +67,7 @@ async function renderUV(opts: {
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 const A_PATH = 'res://a.png';

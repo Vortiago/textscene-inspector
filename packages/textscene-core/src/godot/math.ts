@@ -57,6 +57,16 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * `Math::round` (`core/math/math_funcs.h:625-630`): half away from ZERO, where
+ * JavaScript's `Math.round` breaks a tie toward positive infinity. The two
+ * differ on every negative half, which a glyph advance and a clip rect both
+ * reach whenever a Control hangs off the top or left of the canvas.
+ */
+export function round(value: number): number {
+  return value < 0 ? -Math.round(-value) : Math.round(value);
+}
+
+/**
  * `Math::lerp` (`core/math/math_funcs.h`): `p_from + (p_to - p_from) * p_weight`.
  *
  * Spelled this way rather than as `from * (1 - t) + to * t`: the two differ in

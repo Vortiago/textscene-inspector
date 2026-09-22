@@ -9,8 +9,6 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from './TscnParser';
 import type { TscnNode } from './types';
-import type { LabelProperties } from '../nodes/2d/ui/label/types';
-import type { ButtonProperties } from '../nodes/2d/ui/button/types';
 
 function find(nodes: readonly TscnNode[], name: string): TscnNode | undefined {
   for (const n of nodes) {
@@ -19,11 +17,6 @@ function find(nodes: readonly TscnNode[], name: string): TscnNode | undefined {
     if (hit) return hit;
   }
   return undefined;
-}
-
-/** Property bag of the named node, read as its slice's typed properties. */
-function propsOf<T>(nodes: readonly TscnNode[], name: string): T | undefined {
-  return find(nodes, name)?.properties as T | undefined;
 }
 
 describe('multi-line quoted string property values', () => {
@@ -37,23 +30,28 @@ horizontal_alignment = 1
 
   it('rejoins a multi-line Label text into one unquoted value', () => {
     const scene = new TscnParser().parse(MULTILINE);
-    const title = propsOf<LabelProperties>(scene.nodes, 'Title');
-    expect(title?.text).toBe('Field Notes\nVolume Two');
+    const title = find(scene.nodes, 'Title');
+    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe(
+      'Field Notes\nVolume Two'
+    );
   });
 
   it('keeps parsing the property that follows the multi-line string', () => {
     const scene = new TscnParser().parse(MULTILINE);
-    const title = propsOf<LabelProperties>(scene.nodes, 'Title');
+    const title = find(scene.nodes, 'Title');
     // horizontal_alignment sits AFTER the closing quote line — it must not be
     // swallowed into the string.
-    expect(title?.horizontalAlignment).toBe(1);
+    expect(
+      (title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment
+    ).toBe(1);
   });
 
   it('joins a CRLF multi-line string without leaving stray carriage returns', () => {
     // Windows-authored .tscn (CRLF line endings on checkout).
     const crlf = MULTILINE.replace(/\n/g, '\r\n');
     const scene = new TscnParser().parse(crlf);
-    expect(propsOf<LabelProperties>(scene.nodes, 'Title')?.text).toBe(
+    const title = find(scene.nodes, 'Title');
+    expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe(
       'Field Notes\nVolume Two'
     );
   });
@@ -62,14 +60,20 @@ horizontal_alignment = 1
     const scene = new TscnParser().parse(
       `[gd_scene format=3]\n\n[node name="B" type="Button"]\ntext = "OK\\nCancel"\n`
     );
-    expect(propsOf<ButtonProperties>(scene.nodes, 'B')?.text).toBe('OK\nCancel');
+    const button = find(scene.nodes, 'B');
+    expect((button?.properties as Record<string, unknown> | undefined)?.text).toBe(
+      'OK\nCancel'
+    );
   });
 
   it('leaves single-line strings untouched', () => {
     const scene = new TscnParser().parse(
       `[gd_scene format=3]\n\n[node name="L" type="Label"]\ntext = "Just one line"\n`
     );
-    expect(propsOf<LabelProperties>(scene.nodes, 'L')?.text).toBe('Just one line');
+    const label = find(scene.nodes, 'L');
+    expect((label?.properties as Record<string, unknown> | undefined)?.text).toBe(
+      'Just one line'
+    );
   });
 
   it('salvages an unclosed string that runs into the next node (no swallow)', () => {
@@ -78,7 +82,8 @@ horizontal_alignment = 1
     const scene = new TscnParser().parse(
       `[gd_scene format=3]\n\n[node name="A" type="Label"]\ntext = "oops unclosed\n[node name="B" type="Label" parent="."]\ntext = "fine"\n`
     );
-    expect(propsOf<LabelProperties>(scene.nodes, 'B')?.text).toBe('fine');
+    const b = find(scene.nodes, 'B');
+    expect((b?.properties as Record<string, unknown> | undefined)?.text).toBe('fine');
   });
 
   // A RichTextLabel's BBCode `text` puts tags like `[u]…[/u]` / `[center]` on
@@ -100,14 +105,18 @@ horizontal_alignment = 1
 
     it('keeps the full value past BBCode-tag lines and a blank line', () => {
       const scene = new TscnParser().parse(BBCODE);
-      expect(propsOf<LabelProperties>(scene.nodes, 'Title')?.text).toBe(
+      const title = find(scene.nodes, 'Title');
+      expect((title?.properties as Record<string, unknown> | undefined)?.text).toBe(
         '[center]Line A\n[b]bold[/b]\n\n[u]Section[/u]\n- item'
       );
     });
 
     it('still parses the property after the BBCode multi-line string', () => {
       const scene = new TscnParser().parse(BBCODE);
-      expect(propsOf<LabelProperties>(scene.nodes, 'Title')?.horizontalAlignment).toBe(1);
+      const title = find(scene.nodes, 'Title');
+      expect(
+        (title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment
+      ).toBe(1);
     });
   });
 });

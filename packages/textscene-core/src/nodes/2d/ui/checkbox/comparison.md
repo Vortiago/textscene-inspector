@@ -1,17 +1,16 @@
 ---
 type: CheckBox
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-checkbox.tscn
 image: unit-checkbox
-renders_as: an inline HTML row with a drawn check indicator
+renders_as: a theme icon followed by a text run
 ---
 
 # CheckBox
 
 CheckBox is a toggle button with a check indicator to the left of its label. The
-previewer draws it in the Control overlay as an inline row: a small indicator followed
-by the text.
+previewer draws the theme's own indicator icon and the label beside it.
 
 ## Linting
 
@@ -23,7 +22,8 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
@@ -34,5 +34,7 @@ string.
 
 ## Known limitations
 
-- **Approximated** The indicator is a drawn outline with a tick or dot, not Godot's
-  solid theme icon textures, so it reads thinner and lighter.
+- **Approximated** The label's paragraph direction is not applied, so under
+  `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
+  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  icon and the chrome sit on does follow the layout direction.

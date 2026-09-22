@@ -1,9 +1,9 @@
 /**
  * HSeparator registration — parser.
  *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Reuses the Control parse; property knowledge lives in linterParser.ts. The
+ * native (WebGL canvas) painter and minimum-size solver register separately,
+ * from `index.r3f.ts` (ADR-0001).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

@@ -64,6 +64,7 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
+    lightMode: { value: CanvasItemLightMode.NORMAL },
   };
 }
 
@@ -119,6 +120,10 @@ export function useCanvasItemLighting(
     canvasModulate.g,
     canvasModulate.b
   );
+  // The MODE rides the uniforms too: a re-parse changes `light_mode` under a
+  // mounted item, and three would keep the program it first compiled.
+  bound.lightMode.value = lightMode;
 
-  return useMemo(() => canvasItemLightingProps({ uniforms: bound, lightMode }), [bound, lightMode]);
+  // Mode-independent by design: these props must never change once mounted.
+  return useMemo(() => canvasItemLightingProps(bound), [bound]);
 }

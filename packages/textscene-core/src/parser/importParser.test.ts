@@ -3,7 +3,7 @@
  * the one sidecar in the corpus whose parameters change what is drawn.
  */
 import { describe, expect, it } from 'vitest';
-import { parseImportFile, importRootScale } from './importParser';
+import { importNodeLayers, parseImportFile, importRootScale, importExternalMaterials } from './importParser';
 
 const TREE_IMPORT = `[remap]
 
@@ -43,6 +43,56 @@ scale_mesh=Vector3(1, 1, 1)
 offset_mesh=Vector3(0, 0, 0)
 `;
 
+/**
+ * `scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import`, the one sidecar
+ * in the corpus that repoints a glTF material at an external `.tres`.
+ */
+const MANNEQUINY_IMPORT = `[remap]
+
+importer="scene"
+importer_version=1
+type="PackedScene"
+uid="uid://c0cfb2j48lp2b"
+
+[params]
+
+nodes/root_type=""
+materials/extract=0
+_subresources={
+"materials": {
+"Azul_COLOR_0": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://materials/blue.tres",
+"use_external/path": "uid://ctlvxueekphcu"
+},
+"Blanco_COLOR_0": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://materials/white.tres",
+"use_external/path": "uid://dw85jibvfqqnm"
+},
+"Negro_COLOR_0": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://materials/black.tres",
+"use_external/path": "uid://d33e11pbpppvj"
+}
+}
+}
+gltf/naming_version=2
+`;
+
+/** Godot writes a disabled remap the same way, minus the flag — no corpus sidecar has one. */
+const DISABLED_REMAP_IMPORT = `[params]
+
+_subresources={
+"materials": {
+"Negro_COLOR_0": {
+"use_external/enabled": false,
+"use_external/fallback_path": "res://materials/black.tres"
+}
+}
+}
+`;
+
 describe('parseImportFile', () => {
   it('reads the importer name and the [params] block', () => {
     const parsed = parseImportFile(TREE_IMPORT)!;
@@ -73,6 +123,33 @@ describe('parseImportFile', () => {
   it('returns null for content that is not a sidecar', () => {
     expect(parseImportFile('')).toBeNull();
     expect(parseImportFile('not an ini file')).toBeNull();
+  });
+});
+
+describe('parseImportFile — a value that never balances', () => {
+  // Godot writes balanced values; a truncated or hand-edited sidecar may not. The
+  // parameter this whole mechanism exists for must survive one, rather than being
+  // swallowed into it and silently reading as absent.
+  it('captures a multi-line value whole and resumes at the key after it', () => {
+    const parsed = parseImportFile(MANNEQUINY_IMPORT)!;
+    expect(parsed.params['_subresources']).toContain('"materials"');
+    expect(parsed.params['gltf/naming_version']).toBe('2');
+  });
+
+  it('recovers the next key after an unterminated value', () => {
+    const parsed = parseImportFile('[params]\n\nfoo={\nnodes/root_scale=0.01\n')!;
+    expect(importRootScale(parsed)).toEqual({ scale: 0.01, bake: true });
+  });
+
+  it('recovers the next section after an unterminated value', () => {
+    const parsed = parseImportFile('[params]\n\nfoo={\n\n[remap]\n\nimporter="scene"\n')!;
+    expect(parsed.importer).toBe('scene');
+  });
+
+  it('reads a quoted value whose brackets are string content, not nesting', () => {
+    const parsed = parseImportFile('[params]\n\nnodes/root_name="a { b"\nnodes/root_scale=0.5\n')!;
+    expect(parsed.params['nodes/root_name']).toBe('a { b');
+    expect(importRootScale(parsed)).toEqual({ scale: 0.5, bake: true });
   });
 });
 
@@ -122,5 +199,68 @@ describe('importRootScale', () => {
       scale: 0.5,
       bake: true,
     });
+  });
+
+  it('booleanizes apply_root_scale — `bool apply_root = p_options[…]` (resource_importer_scene.cpp:3154-3157)', () => {
+    // `Variant::operator bool()` is `!is_zero()` (`variant_op.cpp:1114-1122`),
+    // so a numeric spelling reads as the number's truth, not as its text.
+    const bake = (value: string) =>
+      importRootScale(parseImportFile(`[params]\n\nnodes/apply_root_scale=${value}\nnodes/root_scale=4.0\n`))!
+        .bake;
+    expect(bake('0')).toBe(false);
+    expect(bake('1')).toBe(true);
+    expect(bake('2')).toBe(true);
+  });
+});
+
+describe('importExternalMaterials', () => {
+  it('reads the glTF material name -> external .tres table', () => {
+    const remaps = importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT));
+    // resource_importer_scene.cpp:1625-1633 — the uid is tried first, the res:// fallback second.
+    expect([...remaps]).toEqual([
+      ['Azul_COLOR_0', 'res://materials/blue.tres'],
+      ['Blanco_COLOR_0', 'res://materials/white.tres'],
+      ['Negro_COLOR_0', 'res://materials/black.tres'],
+    ]);
+  });
+
+  it('skips a material whose use_external/enabled is false', () => {
+    // resource_importer_scene.cpp:1621 gates on the flag, not on the path being present.
+    expect(importExternalMaterials(parseImportFile(DISABLED_REMAP_IMPORT)).size).toBe(0);
+  });
+
+  it('is empty for a sidecar with no material remaps at all', () => {
+    expect(importExternalMaterials(parseImportFile(TREE_IMPORT)).size).toBe(0);
+    expect(importExternalMaterials(parseImportFile(OBJ_IMPORT)).size).toBe(0);
+    expect(importExternalMaterials(null).size).toBe(0);
+  });
+
+  it('is empty when _subresources is not parseable, rather than throwing', () => {
+    const parsed = parseImportFile('[params]\n\n_subresources={\n"materials": Vector3(1, 1, 1)\n}\n');
+    expect(importExternalMaterials(parsed).size).toBe(0);
+  });
+});
+
+describe('importNodeLayers', () => {
+  const sidecar = (body: string) => parseImportFile(`[params]\n\n_subresources={\n${body}\n}\n`);
+
+  it('strips the PATH: prefix Godot writes the key with', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:root/Object_4": {\n"mesh_instance/layers": 2\n}\n}');
+    expect([...importNodeLayers(parsed)]).toEqual([['root/Object_4', 2]]);
+  });
+
+  it('ignores a node entry carrying no layer mask', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:a": {\n"mesh_instance/cast_shadow": 1\n}\n}');
+    expect(importNodeLayers(parsed).size).toBe(0);
+  });
+
+  it('ignores a non-integer mask', () => {
+    const parsed = sidecar('"nodes": {\n"PATH:a": {\n"mesh_instance/layers": "2"\n}\n}');
+    expect(importNodeLayers(parsed).size).toBe(0);
+  });
+
+  it('is empty without a sidecar or a nodes block', () => {
+    expect(importNodeLayers(null).size).toBe(0);
+    expect(importNodeLayers(parseImportFile('[params]\n\nnodes/root_scale=1.0\n')).size).toBe(0);
   });
 });

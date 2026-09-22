@@ -7,6 +7,7 @@
 /* global document, window */ // the addInitScript callbacks run in the browser.
 
 import {
+  canvas2DViewportFor,
   CANVAS_2D_CAPTURE,
   CANVAS_2D_TESTIDS,
   FIT_ON_OPEN_2D_STORAGE_KEY,
@@ -31,10 +32,16 @@ import {
  * the same integer pixels every run. It is OPT-IN because the golden gate
  * captures 2D scenes WITH that chrome; turning any of it on unconditionally
  * would move those baselines.
+ *
+ * `canvas2DFrame` is the project-viewport rect the stage will lay out at 1:1,
+ * and only widens the window when that rect does not fit the default one.
  */
-export async function createCaptureContext(browser, { frameOnOpen, canvas2D = false }) {
+export async function createCaptureContext(
+  browser,
+  { frameOnOpen, canvas2D = false, canvas2DFrame = null }
+) {
   const context = await browser.newContext({
-    viewport: canvas2D ? CANVAS_2D_CAPTURE.viewport : VIEWPORT,
+    viewport: canvas2D ? canvas2DViewportFor(canvas2DFrame) : VIEWPORT,
     deviceScaleFactor: 1,
   });
   await context.addInitScript(
@@ -87,4 +94,36 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
     else document.addEventListener('DOMContentLoaded', add, { once: true });
   }, css);
   return context;
+}
+
+/**
+ * A throwaway WebGL context, created and torn down before any real scene is
+ * captured.
+ *
+ * The first WebGL context in a fresh headless Chromium+SwiftShader process
+ * can lose context under load before a screenshot lands — and `settleCanvas`
+ * cannot tell a lost context from a settled one: two captures of a dead,
+ * uniform canvas are exactly as byte-identical as two captures of a
+ * genuinely stable frame, so the settle gate is silently defeated rather than
+ * failed. Whichever scene captures first in a fresh process absorbs that
+ * risk; this burns the risk here instead, on a page nothing depends on,
+ * before the real capture pages ever open.
+ */
+export async function warmUpGLContext(browser) {
+  const context = await browser.newContext({ viewport: { width: 64, height: 64 } });
+  try {
+    const page = await context.newPage();
+    await page.setContent(
+      '<canvas id="warmup" width="64" height="64"></canvas><script>' +
+        'const gl = document.getElementById("warmup").getContext("webgl2") || ' +
+        'document.getElementById("warmup").getContext("webgl"); ' +
+        'if (gl) { for (let i = 0; i < 60; i++) { ' +
+        'gl.clearColor(Math.random(), Math.random(), Math.random(), 1); ' +
+        'gl.clear(gl.COLOR_BUFFER_BIT); gl.finish(); } }' +
+        '</script>'
+    );
+    await page.waitForTimeout(500);
+  } finally {
+    await context.close();
+  }
 }

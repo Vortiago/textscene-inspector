@@ -45,19 +45,25 @@ import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import { decalDistanceFade, type DecalGeometricFade } from './decalFade';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
-import { useTexture2D } from '../../../resources/useTexture2D';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
+
+/** Literal-only, so the key is constant and the gizmo never remounts. */
+const BOX_EDGES_MATERIAL = materialProgramInputs({
+  props: { color: BOX_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
+});
 
 /**
  * Scratch vectors for the distance-fade frame callback, so it allocates
@@ -91,16 +97,18 @@ export function Decal({ node, children }: NodeComponentProps) {
   }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
-  // `useTexture2D`, not `resolveTexture2DPath` + `useResource`: a Texture2D slot
-  // also holds a procedurally generated sub-resource, which has no path at all.
-  // Resolving to a path alone drew `scenes/demos/3d/decals/test.tscn`'s
-  // GradientTexture2D albedo as nothing, silently. The hook owns the
-  // distinction and keeps the hook count stable for an absent texture.
-  const albedo = useTexture2D(
+  // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an
+  // inline procedural texture, which is described entirely by the scene and
+  // has no file to load. The projection material below borrows this texture as
+  // its `map` and never disposes it — `Material.dispose()` releases the
+  // material only — so the shared cache entry behind it stays valid for every
+  // other consumer.
+  const { texture: albedoTexture } = useTexture2D(
     properties.texture_albedo,
     externalResources,
     internalResources
-  ).texture;
+  );
+  const albedo = albedoTexture ?? null;
 
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows. The projection maths is
@@ -152,7 +160,7 @@ export function Decal({ node, children }: NodeComponentProps) {
       // RGB is 1 so only alpha is scaled. three enables vertex ALPHA only at
       // itemSize 4; `buildDecalProjectionGeometry` always writes the attribute,
       // so this flag can never meet a geometry without one (which would sample
-      // black rather than merely skip the fade).
+      // the material default rather than merely skip the fade).
       vertexColors: true,
       depthWrite: false,
       // Sit the projection ON the surface without z-fighting the coincident
@@ -256,7 +264,7 @@ export function Decal({ node, children }: NodeComponentProps) {
         <group scale={[size.x, size.y, size.z]}>
           <lineSegments userData={{ cullMask: properties.cull_mask }}>
             <primitive object={boxEdges} attach="geometry" />
-            <lineBasicMaterial color={BOX_COLOR} transparent opacity={0.9} depthWrite={false} />
+            <lineBasicMaterial key={BOX_EDGES_MATERIAL.key} {...BOX_EDGES_MATERIAL.props} />
           </lineSegments>
         </group>
       )}

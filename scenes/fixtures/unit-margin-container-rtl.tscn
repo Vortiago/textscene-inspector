@@ -1,0 +1,58 @@
+; The ONE variable: `layout_direction = 3` on a MarginContainer. This class
+; has no RTL branch of its own — `margin_container.cpp` never calls
+; `is_layout_rtl()` — so the whole effect comes from
+; `Container::fit_child_in_rect`, which reads the CONTAINER's flag and swaps
+; the begin/end edges a child without SIZE_FILL shrinks to
+; (container.cpp:99,109). The child therefore needs `size_flags_horizontal = 0`
+; for the swap to show at all: a filling child covers the inset rect either
+; way. Every other RTL fixture pairs the flag with a container that mirrors
+; its own arrangement, so this one is what proves the flag still reaches the
+; shared fit step where the container itself does nothing.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="MarginContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 100.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="Content" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+size_flags_horizontal = 0
+custom_minimum_size = Vector2(60, 20)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Rtl" type="MarginContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 120.0
+offset_right = 280.0
+offset_bottom = 180.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="Content" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+size_flags_horizontal = 0
+custom_minimum_size = Vector2(60, 20)
+color = Color(0.2, 0.7, 0.3, 1)

@@ -1,17 +1,15 @@
 /**
- * VFlowContainer registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * VFlowContainer registration — parser. Reuses FlowContainer's parser
+ * directly: the only difference between the two is which keys `vertical`
+ * appears under in the file, not how any key is read. Render side: `./index.r3f`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseFlowContainer } from '../flowcontainer/parser';
 
 const vFlowContainerRegistration: NodeTypeRegistration = {
   typeName: 'VFlowContainer',
-  parser: parseControl,
+  parser: parseFlowContainer,
 };
 
 nodeRegistry.register(vFlowContainerRegistration);

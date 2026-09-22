@@ -59,7 +59,7 @@ describe('FileEventBus', () => {
         expect(failedHandler).toHaveBeenCalled();
       });
 
-      expect((failedHandler.mock.calls[0]![1] as Error).message).toContain('File not found');
+      expect(failedHandler.mock.calls[0]![1].message).toContain('File not found');
     });
 
     it('caches loaded files', async () => {

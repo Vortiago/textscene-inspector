@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
  * Visual-regression harness: renders each golden scene in headless chromium
- * (SwiftShader — deterministic CPU rasterizer) and compares the canvas
- * screenshot against a committed baseline with pixelmatch.
+ * (SwiftShader — deterministic CPU rasterizer) and asserts the canvas
+ * screenshot decodes to the committed baseline's pixels exactly
+ * (`imageDelta.mjs` — no perceptual tolerance, see `compareToBaseline`).
  *
  *   pnpm test:visual                 compare all scenes against baselines
  *   pnpm test:visual:update          rewrite baselines (eyeball + commit!)
  *   node scripts/visual/run.mjs --scene label3d [--update]
  *
- * Determinism contract (why this does not flake):
+ * Determinism contract (why this does not flake, and what the gate rests on):
  *   - Playwright's BUNDLED chromium (pinned by the lockfile), never the
  *     system Chrome — local and CI render the same bits.
  *   - SwiftShader software GL: no GPU/driver variance.
@@ -34,6 +35,7 @@
  * (the committed PNGs and the pixel arithmetic against them).
  */
 
+import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import {
@@ -43,9 +45,10 @@ import {
   killPreviewGroup,
   startPreview,
   waitForServer,
+  warmUpGLContext,
 } from './previewServer.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
-import { captureScene } from './run/sceneCapture.mjs';
+import { attachConsoleGate, captureScene } from './run/sceneCapture.mjs';
 import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
 
 // Dedicated uncommon port: never collides with a manually running
@@ -78,6 +81,10 @@ async function main() {
       headless: true,
       args: SWIFTSHADER_GL_ARGS,
     });
+    // Burn the first-WebGL-context-lost risk here, before either real capture
+    // page opens — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
+
     // Frame each scene on load. The APP defaults to Godot's fixed orbit
     // (ADR-0025), which would leave the larger fixtures mostly out of frame —
     // a baseline showing empty space cannot fail when the render breaks. These
@@ -86,16 +93,31 @@ async function main() {
     // opens at that same fixed orbit).
     const context = await createCaptureContext(browser, { frameOnOpen: true });
     const page = await context.newPage();
+    const pages = { default: { page, errors: attachConsoleGate(page) }, canvas2D: null };
+
+    // The 2D capture context is its own browser context (different viewport,
+    // different localStorage seeding) — create it only when a scene actually
+    // needs it, so a plain `--scene <3d-scene>` run pays nothing for it.
+    if (scenes.some((s) => s.mode === '2d')) {
+      const context2D = await createCaptureContext(browser, {
+        frameOnOpen: false,
+        canvas2D: true,
+      });
+      const page2D = await context2D.newPage();
+      pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
+    }
 
     for (const scene of scenes) {
-      const { buffer, reason } = await captureScene(page, baseUrl, scene);
+      const { buffer, reason, status } = await captureScene(pages, baseUrl, scene);
       if (!buffer) {
-        results.push({ scene, status: 'unstable', detail: reason });
+        results.push({ scene, status: status ?? 'unstable', detail: reason });
         continue;
       }
       if (opts.update) {
-        writeBaseline(scene, buffer);
-        results.push({ scene, status: 'updated', detail: `${buffer.length} bytes` });
+        // `writeBaseline` refuses a uniform capture and skips an unchanged one:
+        // two identical frames of a DEAD context settle just as cleanly as two
+        // of a real one, and a dead baseline makes every future compare pass.
+        results.push({ scene, ...writeBaseline(scene, buffer) });
         continue;
       }
       const result = compareToBaseline(scene, buffer);
@@ -117,8 +139,11 @@ async function main() {
   const { lines, failed } = summarize(results);
   for (const line of lines) console.log(line);
   if (opts.update) {
+    const written = results.filter((r) => r.status === 'updated').length;
+    const unchanged = results.filter((r) => r.status === 'unchanged').length;
     console.log(
-      `\n[visual] baselines written to scripts/visual/baselines/ — eyeball them, then commit.`
+      `\n[visual] ${written} baseline(s) written to scripts/visual/baselines/, ${unchanged} left ` +
+        'alone (pixels identical) — eyeball the written ones, then commit.'
     );
   }
   if (failed > 0) {
@@ -136,4 +161,6 @@ async function main() {
   process.exit(0);
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
+  await main();
+}

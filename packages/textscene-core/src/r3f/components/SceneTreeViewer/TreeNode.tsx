@@ -140,10 +140,13 @@ function TreeNodeImpl({
   // re-renders (selection/hover/expand) — and so the derived `effective` node
   // below reuses this one merge instead of re-parsing on every re-render.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
+    // The tree renders rows and resolves instance refs; it never reads a
+    // SubResource id, so it declares an empty pool explicitly.
+    const scope = { externalResources, internalResources: [] };
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
-      return [{ origin: 'glb' as const, children: glbChildren, externalResources }];
+      return [{ origin: 'glb' as const, children: glbChildren, scope }];
     }
-    return liveChildGroups(node, externalResources, singleSceneCache(scenePath, subScene));
+    return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);
 
   // Instance root merge (ADR-0013) — the SAME decision the viewport, inspector,
@@ -329,7 +332,7 @@ function TreeNodeImpl({
           {groups.flatMap((group) =>
             group.children
               .filter((child) => matches(joinPath(nodePath, child.name)))
-              .map((child) => renderChildRow(child, group.origin, group.externalResources))
+              .map((child) => renderChildRow(child, group.origin, group.scope.externalResources))
           )}
         </div>
       )}

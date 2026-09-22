@@ -1,19 +1,15 @@
-/**
- * HScrollBar registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
- */
+/** HScrollBar registration — parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseControl } from '../control/parser';
+import { parseHScrollBar } from './parser';
 
 const hScrollBarRegistration: NodeTypeRegistration = {
   typeName: 'HScrollBar',
-  parser: parseControl,
+  parser: parseHScrollBar,
 };
 
 nodeRegistry.register(hScrollBarRegistration);
 
 export { hScrollBarRegistration };
+export * from './parser';
+export * from './types';

@@ -12,6 +12,9 @@ import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
+import { useCanvas2DMap } from './canvas2DTextureDecode';
+import { canvasItemFacing } from './canvasItemFacing';
+import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
 
@@ -19,8 +22,13 @@ export interface TileSourceMeshProps {
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];
   grid: TileGrid;
-  /** Local +Z offset for layer/source draw order within the node. */
-  z: number;
+  /**
+   * Draw order WITHIN the enclosing tile group — a legacy TileMap's layer index
+   * or an atlas source's position among the batches. The group itself carries
+   * the item's place in the canvas (`canvasPaintOrder.ts`), and three compares
+   * that `groupOrder` before this, so these need only separate siblings.
+   */
+  renderOrder: number;
   /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
   color: THREE.Color;
   opacity: number;
@@ -32,9 +40,9 @@ export interface TileSourceMeshProps {
   lighting?: CanvasItemLightingProps;
 }
 
-export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
+export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacity, name, blend, lighting }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const tex = texResult.value;
+  const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
@@ -64,18 +72,24 @@ export function TileSourceMesh({ source, cells, grid, z, color, opacity, name, b
   // Pending: render nothing — no placeholder flash.
   if (!tex || !geometry) return null;
 
+  // The atlas is awaited above, so this holds steady for a tile layer's life —
+  // it is keyed because the material's program depends on it and nothing
+  // recompiles in place (`materialProgramInputs.ts`).
+  const program = materialProgramInputs({
+    props: {
+      map: tex,
+      color,
+      opacity,
+      transparent: true,
+      depthWrite: false,
+      defines: decodeDefines,
+    },
+    merge: [canvasItemFacing(), blend, lighting],
+  });
+
   return (
-    <mesh position={[0, 0, z]} geometry={geometry}>
-      <meshBasicMaterial
-        map={tex}
-        color={color}
-        opacity={opacity}
-        transparent
-        depthWrite={false}
-        side={THREE.DoubleSide}
-        {...blend}
-        {...lighting}
-      />
+    <mesh renderOrder={renderOrder} geometry={geometry}>
+      <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );
 }

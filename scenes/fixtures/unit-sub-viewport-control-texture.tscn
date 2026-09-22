@@ -1,12 +1,10 @@
 ; A Control-only SubViewport consumed as a ViewportTexture.
 ;
 ; The one variable: where a sub-viewport's CONTROL pixels come from and what
-; colour pipeline they go through. Its content is Controls only, so there is no
-; WebGL source at all — the target is a raster of the DOM overlay subtree
-; (ADR-0003 as amended, ADR-0030), which is a different mechanism from
-; `unit-sub-viewport-texture.tscn`'s 3D offscreen pass and shares no code with
-; it. A regression here is invisible in every other scene because no other
-; scene puts Controls behind a ViewportTexture.
+; colour pipeline they go through. Its content is Controls only, so the source
+; is the Control rect solve painting into the offscreen target, sampled back as
+; a ViewportTexture. A regression here is invisible in every other scene because
+; no other scene puts Controls behind a ViewportTexture.
 ;
 ; Backdrop is a flat, opaque, mid-grey ColorRect on purpose: it is the probe
 ; that separates ONE tonemap application from two. Godot draws a viewport's
@@ -18,14 +16,21 @@
 ; environment (FILMIC): Color(0.5, 0.5, 0.5) reaches the quad as rgb(162);
 ; tonemapping the raster as well would land it near rgb(196).
 ;
-; Panel and Label carry the default-theme chrome and a glyph run, so the raster
+; Panel and Label carry the default-theme chrome and a glyph run, so the target
 ; is also exercised on translucent StyleBox fill and shaped text rather than on
-; one flat fill. Text does not match Godot's — it bundles Open Sans SemiBold and
-; the overlay is system-fonts-only (ADR-0003).
+; one flat fill.
 ;
-; Deliberately NOT a visual golden: the raster's text is system-font-dependent,
-; and both numbers above are asserted directly instead, in `verify-raster.mjs`
-; suite C — the browser harness ADR-0024 exists for.
+; NOT currently gated, and the reason is a live divergence rather than missing
+; wiring. The backdrop measures rgb(162) against Godot 4.6.3, as above — but the
+; Panel's translucent fill reads 110 where Godot reads 84. That fill is
+; `style_normal_color`, Color(0.1, 0.1, 0.1, 0.6) (`default_theme.cpp:112,134`),
+; and the SAME colour on the main canvas — a Button's `normal` box (`:138`) over
+; the 2D clear colour — measures 45 against Godot's 46, one step of the
+; reference rasterizer's blend rounding. So the alpha blend itself is right and
+; the offscreen target is where the two part company: an sRGB-tagged attachment
+; is linearised before blending, while Godot's viewport target holds ordinary
+; sRGB canvas values and blends in them. A baseline taken today would pin that
+; gap instead of gating against it.
 
 [gd_scene format=3]
 

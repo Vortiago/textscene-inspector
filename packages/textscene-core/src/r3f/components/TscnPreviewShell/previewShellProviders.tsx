@@ -15,6 +15,7 @@ import { ViewportModeProvider, type ViewportMode } from '../../contexts/Viewport
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
+import { ViewportPassProvider } from '../../contexts/ViewportPassRegistryContext.js';
 import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
@@ -80,6 +81,9 @@ export function previewShellProviders({
     // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
     // because consumers live on both sides of that split (ADR-0030).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
+    // Inside the texture registry: a pass registers its ordering edge and
+    // publishes the target it rendered, so the two are read together.
+    (children) => <ViewportPassProvider>{children}</ViewportPassProvider>,
     // The return leg of the same seam: a stretching SubViewportContainer
     // measures its own DOM box and the publisher sizes the target from it,
     // because Godot's `recalc_force_viewport_sizes` makes the CONTAINER's rect

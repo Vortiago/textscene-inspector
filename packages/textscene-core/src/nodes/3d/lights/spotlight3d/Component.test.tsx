@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SpotLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
 import type { SpotLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { instanceAs } from '../../testing/reactThreeTestInstance';
 
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
@@ -14,14 +15,23 @@ function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,
-    spot_attenuation: 1,
-    spot_angle_attenuation: 1,
+    spot_attenuation: 1.0,
+    spot_angle_attenuation: 1.0,
     ...overrides,
   };
   return { name: props.name ?? 'Torch', type: 'SpotLight3D', children: [], properties: props };
 }
 
 describe('<SpotLight3D>', () => {
+  it('converts shadow_bias at the shadow camera’s far plane', async () => {
+    // 0.03 / 100 * soft_shadow_scale(2) / spot_range.
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ shadow_enabled: true, spot_range: 5 })} />
+    );
+    const light = renderer.scene.findByType('SpotLight');
+    expect(instanceAs<THREE.SpotLight>(light).shadow.bias).toBeCloseTo(-0.00012, 12);
+  });
+
   it('renders a SpotLight', async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
     expect(renderer.scene.findAllByType('SpotLight').length).toBe(1);
@@ -32,7 +42,7 @@ describe('<SpotLight3D>', () => {
       <SpotLight3D node={makeNode({ spot_angle: 90 })} />
     );
     const light = renderer.scene.findByType('SpotLight');
-    expect((light.instance as THREE.SpotLight).angle).toBeCloseTo(Math.PI / 2, 5);
+    expect(instanceAs<THREE.SpotLight>(light).angle).toBeCloseTo(Math.PI / 2, 5);
   });
 
   it('maps spot_range to distance', async () => {
@@ -40,14 +50,14 @@ describe('<SpotLight3D>', () => {
       <SpotLight3D node={makeNode({ spot_range: 25 })} />
     );
     const light = renderer.scene.findByType('SpotLight');
-    expect((light.instance as THREE.SpotLight).distance).toBe(25);
+    expect(instanceAs<THREE.SpotLight>(light).distance).toBe(25);
   });
 
   it('derives penumbra from spot_angle_attenuation (default 1 → 0.5)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
     const light = renderer.scene.findByType('SpotLight');
     // penumbra = 1/(spot_angle_attenuation + 1); default attenuation 1 → 0.5.
-    expect((light.instance as THREE.SpotLight).penumbra).toBeCloseTo(0.5, 5);
+    expect(instanceAs<THREE.SpotLight>(light).penumbra).toBeCloseTo(0.5, 5);
   });
 
   it('overrides default penumbra when supplied', async () => {
@@ -55,7 +65,7 @@ describe('<SpotLight3D>', () => {
       <SpotLight3D node={makeNode({ penumbra: 0.5 })} />
     );
     const light = renderer.scene.findByType('SpotLight');
-    expect((light.instance as THREE.SpotLight).penumbra).toBe(0.5);
+    expect(instanceAs<THREE.SpotLight>(light).penumbra).toBe(0.5);
   });
 
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {
@@ -63,6 +73,6 @@ describe('<SpotLight3D>', () => {
       <SpotLight3D node={makeNode({ light_energy: 2 })} />
     );
     const light = renderer.scene.findByType('SpotLight');
-    expect((light.instance as THREE.SpotLight).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
+    expect(instanceAs<THREE.SpotLight>(light).intensity).toBe(2 * LIGHT_INTENSITY_SCALE);
   });
 });

@@ -1,0 +1,80 @@
+; The ONE variable: `layout_direction = 3` on a FoldableContainer. RTL moves
+; three things at once in the SAME node, and Godot moves them together: the
+; fold arrow goes to the trailing edge and, while folded, becomes
+; `folded_arrow_mirrored` (foldable_container.cpp:293-300,428-435); the title
+; text starts at the style's leading margin with `title_alignment` LEFT and
+; RIGHT swapped (`:503-511`); and the content is inset from the panel style's
+; RIGHT margin (`:365-367`). The folded pair shows the arrow and the alignment
+; swap, the unfolded pair the content inset, each against its own LTR twin.
+; unit-foldable-container.tscn moves folded/alignment/position at direction
+; LTR, so none of this is visible there. The folded pair carries no children:
+; a folded container's children are hidden by Godot at sort time, which this
+; previewer cannot yet reproduce, and a child here would put that separate
+; divergence into this fixture's picture.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="FoldedLtr" type="FoldableContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 80.0
+folded = true
+title = "Inventory"
+title_alignment = 0
+
+
+[node name="FoldedRtl" type="FoldableContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 96.0
+offset_right = 280.0
+offset_bottom = 136.0
+folded = true
+title = "Inventory"
+title_alignment = 0
+
+
+[node name="OpenLtr" type="FoldableContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 152.0
+offset_right = 280.0
+offset_bottom = 232.0
+folded = false
+title = "Settings"
+
+[node name="Contents" type="ColorRect" parent="OpenLtr"]
+layout_mode = 2
+size_flags_horizontal = 0
+custom_minimum_size = Vector2(60, 20)
+color = Color(0.2, 0.7, 0.3, 1)
+
+[node name="OpenRtl" type="FoldableContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 248.0
+offset_right = 280.0
+offset_bottom = 328.0
+folded = false
+title = "Settings"
+
+[node name="Contents" type="ColorRect" parent="OpenRtl"]
+layout_mode = 2
+size_flags_horizontal = 0
+custom_minimum_size = Vector2(60, 20)
+color = Color(0.2, 0.7, 0.3, 1)

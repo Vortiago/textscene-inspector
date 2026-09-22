@@ -79,17 +79,40 @@ export function gltfResourceDir(path: string): string {
   return slash === -1 ? '' : path.slice(0, slash + 1);
 }
 
+/** A material slot visitor: the material, and the setter that replaces it in place. */
+type SurfaceVisitor = (
+  material: THREE.Material,
+  assign: (replacement: THREE.Material) => void
+) => void;
+
 /**
- * Dispose one mesh's material slot — the ONE place that owns the
- * array-vs-single material branch, shared by the per-consumer clone
- * disposal above and the template disposal in `createGLBProcessor`.
+ * One node's material slot(s) — the ONE place that owns the array-vs-single branch,
+ * shared by every walker and disposer below.
+ *
+ * Gated on the slot rather than on `isMesh`, because a glTF's non-triangle primitives
+ * arrive as `Points`/`Line` and carry a material of their own that the importer's
+ * per-surface rules reach just the same.
  */
-export function disposeMeshMaterials(mesh: THREE.Mesh): void {
-  if (Array.isArray(mesh.material)) {
-    mesh.material.forEach((mat) => mat.dispose());
+function visitNodeMaterials(node: THREE.Object3D, visit: SurfaceVisitor): void {
+  const holder = node as THREE.Mesh;
+  const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
+  if (!slot) return;
+  if (Array.isArray(slot)) {
+    slot.forEach((material, index) => {
+      visit(material, (replacement) => {
+        slot[index] = replacement;
+      });
+    });
   } else {
-    mesh.material?.dispose();
+    visit(slot, (replacement) => {
+      holder.material = replacement;
+    });
   }
+}
+
+/** Visit every surface material under `object`, with the setter for its own slot. */
+export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
+  object.traverse((node) => visitNodeMaterials(node, visit));
 }
 
 /**
@@ -102,13 +125,12 @@ export function disposeMeshMaterials(mesh: THREE.Mesh): void {
  * Only the cloned materials are exclusively owned by this one consumer, so
  * only they are safe (and necessary) to release when the consumer unmounts
  * or swaps to a different resource.
+ *
+ * Slot-gated like the clone it undoes: the two must reach the same slots or a
+ * clone either leaks its copy or frees one the template still draws with.
  */
 export function disposeClonedMaterials(object: THREE.Object3D): void {
-  object.traverse((node) => {
-    if (node instanceof THREE.Mesh) {
-      disposeMeshMaterials(node);
-    }
-  });
+  forEachSurfaceMaterial(object, (material) => material.dispose());
 }
 
 // ---------------------------------------------------------------------------
@@ -172,13 +194,11 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   // SkeletonUtils shares material references between source and clone; clone
   // them so per-instance material mutations don't bleed across instances.
+  // Every slot the sidecar writer can reach, so ownership stays symmetric.
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(material.clone()));
+
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {
-      if (Array.isArray(node.material)) {
-        node.material = node.material.map((mat) => mat.clone());
-      } else {
-        node.material = node.material.clone();
-      }
       // Godot's glTF import mounts every surface as a MeshInstance3D that casts
       // AND receives shadows by default (cast_shadow = SHADOW_CASTING_SETTING_ON,
       // and a MeshInstance3D always receives). three defaults both flags to false,

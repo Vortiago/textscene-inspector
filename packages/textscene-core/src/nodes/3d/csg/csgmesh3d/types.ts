@@ -12,13 +12,15 @@ export interface CSGMesh3DProperties extends Node3DProperties {
    */
   mesh?: string;
   /**
-   * Material reference. Unlike MeshInstance3D there is no per-surface override concept:
+   * `material` path. Unlike MeshInstance3D there is no per-surface override concept:
    * Godot's CSGMesh3D takes ONE material which replaces the mesh's own
    * (csg_shape.cpp:1167-1172).
    */
-  material?: string;
+  materialPath?: string;
   /** Reverse winding and negate normals (CSGPrimitive3D). Godot default false. */
   flipFaces: boolean;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
+  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  castShadow?: number;
 }

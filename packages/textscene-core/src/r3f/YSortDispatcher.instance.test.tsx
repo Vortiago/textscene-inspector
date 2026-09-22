@@ -81,15 +81,13 @@ async function render(ySort: boolean) {
 /** Accumulated world-Z of every named object, the renderer's draw-order currency. */
 function worldZByName(renderer: Awaited<ReturnType<typeof render>>): Map<string, number> {
   const map = new Map<string, number>();
-  const v = new THREE.Vector3();
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
   root?.traverse((o: THREE.Object3D) => {
     if (o.name) {
-      o.getWorldPosition(v);
-      map.set(o.name, v.z);
+      map.set(o.name, o.renderOrder);
     }
   });
   return map;

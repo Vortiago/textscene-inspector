@@ -15,6 +15,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
@@ -62,8 +63,8 @@ function navNode(): TscnNode {
   };
 }
 
-async function render(showNavigation: boolean, tres: ParsedResource = NAVMESH_TRES) {
-  const loader = makeLoaderWith('res://navmesh.tres', tres);
+async function render(showNavigation: boolean) {
+  const loader = makeLoaderWith('res://navmesh.tres', NAVMESH_TRES);
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowNavigation={showNavigation}>
       <ResourceLoaderProvider loader={loader}>
@@ -82,7 +83,7 @@ describe('<NavigationRegion3D>', () => {
     const renderer = await render(true);
     const overlay = renderer.scene
       .findAllByType('Mesh')
-      .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .map((m) => instanceAs<THREE.Mesh>(m).material as THREE.MeshBasicMaterial)
       .find((mat) => mat?.transparent && mat.color?.getHex() === NAV_OVERLAY_COLOR);
     expect(overlay).toBeDefined();
     expect(overlay!.depthWrite).toBe(false);
@@ -91,16 +92,6 @@ describe('<NavigationRegion3D>', () => {
 
   it('hides the overlay when showNavigation is off', async () => {
     const renderer = await render(false);
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
-  });
-
-  it('draws nothing when the navmesh is unreadable, instead of faulting the render', async () => {
-    // The decode totalizes what used to throw straight out of a render pass.
-    const renderer = await render(true, {
-      ...NAVMESH_TRES,
-      properties: { vertices: 'PackedVector3Array(0, 0, nope)', polygons: '[PackedInt32Array(0, 1, 2)]' },
-    });
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });

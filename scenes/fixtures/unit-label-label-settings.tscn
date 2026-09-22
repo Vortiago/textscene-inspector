@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_label_label_settings"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_1"]
+font_size = 32
+font_color = Color(1, 0, 0, 1)
+line_spacing = 10.0
+
+; A `label_settings` resource, set on a Label whose own theme_override_colors
+; and theme_override_font_sizes are ALSO authored — the ONE variable is which
+; one wins. `label_settings` beats the node-local theme override outright
+; (label.cpp:759,761), so the label draws at font_size 32 in RED, never the
+; override's own 12/blue. A regression that merges the two instead of one
+; replacing the other draws neither colour this fixture's baseline shows.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0, 0, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Settings win"
+label_settings = SubResource("LabelSettings_1")

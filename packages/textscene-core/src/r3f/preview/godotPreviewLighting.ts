@@ -123,7 +123,7 @@ function previewHorizonColor(): Color {
  * they are applied.
  *
  * The preview also enables glow (matching `_load_default_preview_settings`),
- * which the render layer turns into a bloom compositor pass (`GlowLayer`) so
+ * which the render layer turns into a bloom compositor pass (`ToneMapLayer`) so
  * emissive materials bloom as they do in Godot's editor.
  */
 export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyProperties } {

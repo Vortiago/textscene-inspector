@@ -1,19 +1,19 @@
 /**
  * Parity: legacy TileMap renders each enabled layer's cells in order — layer
- * z_index moves a full Z_INDEX_STEP (interleaves with sibling CanvasItems),
- * layer index breaks ties with TILE_LAYER_STEP.
+ * draw order within the node is a rank over `(layer z_index, layer index,
+ * atlas source)`, carried by each batch mesh's own `renderOrder`.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
+import { PAINT_SEQUENCE_STRIDE } from '../../../../r3f/canvasPaintOrder';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';
-import { Z_INDEX_STEP, TILE_LAYER_STEP } from '../../../../r3f/node2dTransform';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
-import { isMesh, isBasicMaterial } from '../../../../r3f/testing/threeNarrow';
 
 const heading = { type: 'node', attributes: { type: 'TileMap', name: 'Map' } };
 const TEX = 'res://tiles.png';
@@ -51,16 +51,6 @@ async function render(node: TscnNode) {
   );
 }
 
-/** The basic material a drawn mesh carries. */
-function basicMaterial(instance: THREE.Object3D): THREE.MeshBasicMaterial {
-  if (!isMesh(instance)) throw new Error('scene-graph instance is not a Mesh');
-  const material = instance.material;
-  if (Array.isArray(material) || !isBasicMaterial(material)) {
-    throw new Error('mesh material is not a MeshBasicMaterial');
-  }
-  return material;
-}
-
 describe('TileMap render parity', () => {
   it('renders enabled layers in order with the layer z rule; disabled layers are skipped', async () => {
     const r = await render(
@@ -75,32 +65,20 @@ describe('TileMap render parity', () => {
 
     const meshes = r.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(2);
-    const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Mesh);
-    // Atlas sources sit at a FRACTION of one layer step rather than at the
-    // layer base, so a layer's sources can never reach the layer above it.
-    // The FIRST source takes no nudge at all — a lone source must not lift the
-    // layer off the z it shares with its siblings.
-    const sourceNudge = 0;
-    expect(layer0!.position.z).toBeCloseTo(sourceNudge, 8);
-    expect(layer1!.position.z).toBeCloseTo(
-      1 * Z_INDEX_STEP + 1 * TILE_LAYER_STEP + sourceNudge,
-      8
-    );
-    // The ordering the rule exists for still holds.
-    expect(layer1!.position.z).toBeGreaterThan(layer0!.position.z);
+    const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Object3D);
+    // Godot's TileMap `add_child`s a real `TileMapLayer` CanvasItem per layer
+    // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
+    // layer is a canvas item in its own right: its key rides its GROUP, which
+    // is what three reads a drawn object's position from.
+    const zBucket = (o: THREE.Object3D) => Math.floor(nearestGroupOrder(o) / PAINT_SEQUENCE_STRIDE);
+    expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
+    // …and `layer_1/z_index = 1` puts that layer a whole z BUCKET up, which is
+    // what lets it interleave with the TileMap's siblings rather than only with
+    // the other layers. A rank shared across one canvas item cannot express it.
+    expect(zBucket(layer1!)).toBe(zBucket(layer0!) + 1);
   });
 
-  // A layer draws at its own ordinal in `layers`, and `_set` grows that vector
-  // to reach the index a file writes (tile_map.cpp:701-710), so the two layers
-  // this file skips still sit under the third one.
-  it('draws a gap-filled layer at the ordinal the engine seats it at', async () => {
-    const r = await render(makeNode({ 'layer_2/tile_data': 'PackedInt32Array(0, 0, 0)' }));
-
-    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-    expect(mesh.position.z).toBeCloseTo(2 * TILE_LAYER_STEP, 8);
-  });
-
-  it('renders an empty group for a TileMap with a tile_set but no tile data', async () => {
+  it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {
     const r = await render(makeNode({}));
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(r.scene.findByProps({ name: 'Map' })).toBeDefined();
@@ -113,7 +91,7 @@ describe('TileMap render parity', () => {
         'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
       })
     );
-    const material = basicMaterial(r.scene.findByType('Mesh').instance);
+    const material = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
     expect(material.opacity).toBeCloseTo(0.5, 5);

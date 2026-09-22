@@ -7,6 +7,7 @@ import { CSGCylinder3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGCylinder3DProperties } from './types';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 function makeNode(props: Partial<CSGCylinder3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGCylinder3DProperties = {
@@ -32,7 +33,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 
 async function geometryOf(node: TscnNode) {
   const renderer = await render(node);
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+  return findMesh(renderer.scene).geometry;
 }
 
 /**
@@ -81,7 +82,7 @@ describe('<CSGCylinder3D>', () => {
       data: { albedo_color: 'Color(0.4, 0.3, 0.25, 1)' },
     };
     const renderer = await render(
-      makeNode({ material: 'SubResource("StandardMaterial3D_pole")' }),
+      makeNode({ materialPath: 'SubResource("StandardMaterial3D_pole")' }),
       [material]
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;

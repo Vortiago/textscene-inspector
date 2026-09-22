@@ -1,14 +1,17 @@
 /**
  * AtlasTexture resource slice — registration + the slice's public surface.
  *
- * An AtlasTexture is always a sub-resource of the file that uses it (a scene or
- * a SpriteFrames `.tres`), so what the loader ever fetches for it is the ATLAS
- * image on the texture slot; the type itself decodes from the owning file's
- * already-parsed section.
+ * Usually a sub-resource inline in the file that uses it (a scene or a
+ * SpriteFrames `.tres`), decoded straight from that file's already-parsed
+ * section. It can also be its OWN standalone `.tres` — every Kenney
+ * input-prompt icon ships one cell per file — in which case the `resource`
+ * bus fetches and parses IT, the same as any other Godot-text resource;
+ * `resolveAtlasTexture.ts` decodes either form to the same shape, and only
+ * the ATLAS image the cell windows ever goes through the texture bus.
  *
  * THREE-free and React-free: no `./build`, no r3f import. Its hosts window the
  * loaded atlas image themselves (`resolveTexture2DSource` + the spriteFrame
- * compositor).
+ * compositor, and `useTexture2D` for a plain Texture2D slot).
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

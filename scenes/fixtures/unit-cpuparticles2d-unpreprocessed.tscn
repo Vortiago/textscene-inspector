@@ -1,0 +1,56 @@
+[gd_scene load_steps=3 format=3]
+
+; The SUBSTITUTED settle window, and nothing else. Every other emitter fixture
+; authors `preprocess`, so the instant they freeze at is written in the file;
+; this one authors none, and the previewer substitutes one lifetime — the point
+; a continuous emitter reaches steady state. A regression in that substitution
+; is invisible in every other scene here, because none of them ever asks for it.
+;
+; The instant is 0.95 s of settle, spent as Godot spends one: whole `fixed_fps`
+; frames with `speed_scale` held at 1, the last overshooting rather than being
+; shortened. 0.95 s at 30 fps is 28.5 steps, so it takes 29 and lands at
+; 0.9667 s — a window deliberately NOT a multiple of the step, which is the only
+; way the overshoot shows up at all. Rendered through the real engine as
+;
+;   pnpm ref:godot scenes/fixtures/unit-cpuparticles2d-unpreprocessed.tscn \
+;     --mode 2d --particles 0.95
+;
+; `--particles` hands that number to `request_particles_process`, which Godot
+; spends through the same loop it spends `preprocess` through — so both sides
+; name the same instant and the picture is arbitrable.
+;
+; use_fixed_seed + seed + fixed_fps are pinned for the usual reason: they are
+; what stop the reference from drawing a different plume every run. Nothing here
+; tests the substituted SEED; unit-cpuparticles2d-unseeded.tscn owns that.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[sub_resource type="Gradient" id="Gradient_spray"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(0.55, 0.85, 1, 1, 0.2, 0.5, 0.95, 1, 0.05, 0.15, 0.5, 0)
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Spray" type="CPUParticles2D" parent="."]
+position = Vector2(576, 300)
+amount = 40
+texture = ExtResource("1_ball")
+lifetime = 0.95
+use_fixed_seed = true
+seed = 808
+fixed_fps = 30
+local_coords = true
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 1)
+spread = 35.0
+gravity = Vector2(0, 120)
+initial_velocity_min = 60.0
+initial_velocity_max = 140.0
+scale_amount_min = 2.0
+scale_amount_max = 4.0
+color_ramp = SubResource("Gradient_spray")

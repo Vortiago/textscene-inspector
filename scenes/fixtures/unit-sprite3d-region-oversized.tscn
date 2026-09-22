@@ -7,10 +7,10 @@
 ; Neither sprite family clips the region (`base_rect = region_rect`;
 ; `Texture2D::get_rect_region` is a pass-through), so both quads keep the full
 ; region size and both sets of UVs run past 1.0. Only the sampler differs:
-; Sprite3D draws through `StandardMaterial3D::get_material_for_2d`, which never
-; clears `FLAG_USE_TEXTURE_REPEAT` (default `true`, scene/resources/material.cpp)
-; and so emits `repeat_enable`. The overrun TILES here where the 2D canvas
-; clamps. Measured against Godot 4.6.3: 0.007%, at the harness's antialiasing
+; SpriteBase3D DERIVES the `texture_repeat` it hands `get_material_for_2d` from
+; the frame's own UV corners (`sprite_3d.cpp:163`), and this window runs to 3.0,
+; so it emits `repeat_enable`. The overrun TILES here where the 2D canvas, whose
+; viewport default is repeat-DISABLED, clamps. Measured against Godot 4.6.3: 0.007%, at the harness's antialiasing
 ; floor — this side was already correct, and clamping it "for consistency" with
 ; the 2D fix would BE the regression.
 ;
@@ -19,8 +19,8 @@
 ; blue smear — the pair is the point, and asserting either alone would let the
 ; shared UV compositor be "fixed" into agreeing with the wrong one.
 ;
-; Invisible elsewhere: `unit-sprite3d.tscn` enables no region, and every other
-; region in the corpus stays inside its image where the wrap mode cannot show.
+; Invisible elsewhere: this is the only Sprite3D window that leaves `[0, 1]` at
+; all, so it is the only one the derivation can answer REPEAT for.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 

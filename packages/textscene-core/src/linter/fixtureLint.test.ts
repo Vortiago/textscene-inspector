@@ -65,6 +65,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     ],
     reason: 'named for the two advisories it carries; they are the fixture',
   },
+  'unit-label-autowrap-in-container.tscn': {
+    rules: ['label-autowrap-needs-custom-minimum-size'],
+    reason:
+      'the fixture IS that shape: an autowrapped Label sized by its container with no custom_minimum_size, held so the height it reports can be measured against Godot',
+  },
   'unit-instance-child.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
     reason: "the Area3D root is a coin pickup whose shape comes from the scene that instances it; the fixture is about the instanced child's transform",
@@ -85,6 +90,15 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['container-no-script'],
     reason:
       'demonstrates the bare Container type itself — no script attached is exactly what container.cpp:210-211 warns about, and this fixture exists to show that a plain, unscripted Container renders as nothing',
+  },
+  'unit-graph-edit.tscn': {
+    rules: ['graphedit-scroll-offset-discarded'],
+    reason:
+      "exercises every ADD_PROPERTY GraphEdit binds, scroll_offset included, and in the saver's key order scroll_offset precedes zoom, so the load clamps it against an inverted range no authored value survives",
+  },
+  'unit-graph-edit-scroll-offset-clamped.tscn': {
+    rules: ['graphedit-scroll-offset-discarded'],
+    reason: 'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
   },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],

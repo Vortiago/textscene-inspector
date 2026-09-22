@@ -8,6 +8,7 @@ import { parseCSGPolygon3D } from './parser';
 // from the registered builder, so the registration is part of what is under test.
 import { CSGPolygon3D } from './index.r3f';
 import type { CSGPolygon3DProperties, CSGPolygon3DResolvedPath } from './types';
+import { findMesh } from '../../testing/reactThreeTestInstance';
 
 function makeNode(
   overrides: Record<string, string> = {},
@@ -30,7 +31,7 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 }
 
 function geometryOf(renderer: Awaited<ReturnType<typeof render>>): THREE.BufferGeometry {
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+  return findMesh(renderer.scene).geometry;
 }
 
 const zero = { x: 0, y: 0, z: 0 };

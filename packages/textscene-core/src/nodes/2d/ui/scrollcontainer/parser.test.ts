@@ -39,4 +39,19 @@ describe('parseScrollContainer', () => {
     expect(p.horizontalScrollMode).toBeUndefined();
     expect(p.verticalScrollMode).toBeUndefined();
   });
+
+  it('parses the authored scroll_horizontal/scroll_vertical offsets', () => {
+    const p = parseScrollContainer(h({ name: 'Scroll', type: 'ScrollContainer' }), {
+      scroll_horizontal: '40',
+      scroll_vertical: '120',
+    });
+    expect(p.scrollHorizontal).toBe(40);
+    expect(p.scrollVertical).toBe(120);
+  });
+
+  it('leaves scroll offsets undefined when absent (nativeSolver floors them to 0)', () => {
+    const p = parseScrollContainer(h({ name: 'Scroll', type: 'ScrollContainer' }), {});
+    expect(p.scrollHorizontal).toBeUndefined();
+    expect(p.scrollVertical).toBeUndefined();
+  });
 });

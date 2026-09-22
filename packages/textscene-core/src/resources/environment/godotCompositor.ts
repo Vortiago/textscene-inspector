@@ -27,11 +27,15 @@ import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
  * with an exposure of 1.0: it is the curve alone, and each operand has been exposed
  * exactly once. Multiplying by exposure again would double it on the glow and, on
  * the pre-tonemap path, scale the blended sum instead of its operands.
+ *
+ * A null `params` is the same shader with `FLAG_USE_GLOW` clear.
  */
 export function compositeGlsl(
-  params: GlowParams,
+  params: GlowParams | null,
   toneMapping: { mode: number; white: number; agxContrast?: number }
 ): string {
+  if (!params) return toneMapOnlyGlsl(toneMapping);
+
   const blend = blendsAfterToneMapping(params)
     ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
   color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
@@ -51,6 +55,22 @@ ${blendGlsl(params, resolvedWhite(toneMapping.mode, toneMapping.white))}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(params.intensity)};
 ${blend}
+  outputColor = vec4(color, inputColor.a);
+}
+`;
+}
+
+/** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
+function toneMapOnlyGlsl(toneMapping: {
+  mode: number;
+  white: number;
+  agxContrast?: number;
+}): string {
+  return /* glsl */ `
+uniform float godotExposure;
+${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
   outputColor = vec4(color, inputColor.a);
 }
 `;

@@ -446,9 +446,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // HOST 'gadget_ref' even though it lives under the collapsed Wrapper.
     const sphere = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Gadget');
     expect(sphere).toBeDefined();
-    expect(((sphere!.instance as THREE.Mesh).geometry as { type: string }).type).toBe(
-      'SphereGeometry'
-    );
+    expect(((sphere!.instance as THREE.Mesh).geometry as { type: string }).type).toBe('SphereGeometry');
   });
 
   it('REGRESSION (ADR-0013): the outermost instance transform REPLACES the nested root transforms', async () => {

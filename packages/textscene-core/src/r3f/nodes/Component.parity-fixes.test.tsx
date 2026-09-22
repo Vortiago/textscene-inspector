@@ -1,23 +1,19 @@
 /**
- * Tests for Tier-1 parity-audit silent drops.
+ * Properties a node once parsed and then silently dropped before it reached
+ * THREE. Each test pins one of them to its expected value on the primitive.
+ * Co-located rather than per-node, so the whole set reads as one block:
  *
- * Each test exercises ONE of the 8 HIGH-severity feature drops surfaced
- * by `docs/PARITY-AUDIT.md` and pins the property to its expected
- * value on the THREE primitive. Co-located here (rather than per-node)
- * so the closure of the audit's Tier-1 list reads as a single block.
- *
- * Audit slot numbers from STRICT-VERIFICATION.md Section 1:
- *   14a — surface_material_override, sized by the mesh's surface count
- *   16a — cast_shadow=2 → material.shadowSide === DoubleSide
- *   16b — cast_shadow=3 → castShadow === true, colour write suppressed
- *   38a — ao_texture → material.aoMap is a THREE.Texture
- *   59a — PrismMesh apex placed by left_to_right atop the size box, extruded along Z
- *   60  — PlaneMesh flip_faces=true → mirrored geometry (negative scale on X axis)
- *   66a — Camera3D h_offset → position shifted along local X
- *   66b — Camera3D v_offset → position shifted along local Y
- *   93a — Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
+ *   surface_material_override slot N>0 → mesh.material[N]
+ *   cast_shadow=2 → the depth pass draws both faces
+ *   cast_shadow=3 → castShadow === true, colour write suppressed
+ *   ao_texture → material.aoMap is a THREE.Texture
+ *   PrismMesh rotateY(π/6) aligns the triangular face with +X
+ *   PlaneMesh flip_faces=true → mirrored geometry (negative scale on X)
+ *   Camera3D h_offset → position shifted along local X
+ *   Camera3D v_offset → position shifted along local Y
+ *   Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
@@ -38,7 +34,8 @@ import {
   KeepAspectMode,
 } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { BillboardMode, HorizontalAlignment } from '../../nodes/3d/label3d/types';
+import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from '../../nodes/3d/label3d/types';
+import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -82,7 +79,7 @@ async function renderMesh(
 }
 
 describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
-  it('audit slot 16a — cast_shadow=2 (DOUBLE_SIDED) → material.shadowSide === DoubleSide', async () => {
+  it('audit slot 16a — cast_shadow=2 (DOUBLE_SIDED) → the depth pass draws both faces', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
@@ -100,8 +97,21 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       </SceneResourcesProvider>
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
-    expect((mesh.material as { shadowSide: THREE.Side }).shadowSide).toBe(THREE.DoubleSide);
+
+    // `cast_shadow` is GeometryInstance3D state, never material state
+    // (`servers/rendering/renderer_scene_cull.cpp:732`), so it lands on the
+    // depth material three built for this mesh — `getDepthMaterial` assigns the
+    // side, then the per-object hook runs (`WebGLShadowMap.js:477,535,549`).
+    const depthMaterial = new THREE.MeshDepthMaterial();
+    depthMaterial.side = material.shadowSide ?? THREE.BackSide;
+    mesh.onBeforeShadow(
+      null as never, new THREE.Scene(), null as never, null as never,
+      mesh.geometry, depthMaterial, null as never
+    );
+    expect(depthMaterial.side).toBe(THREE.DoubleSide);
+    expect(material.shadowSide).toBeNull();
   });
 
   it('audit slot 16b — cast_shadow=3 (SHADOWS_ONLY) → still casts, draws no colour', async () => {
@@ -122,13 +132,14 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       </SceneResourcesProvider>
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
     // NOT `visible = false`: three's shadow pass bails on an invisible object
     // and stops walking its subtree, so that spelling cost both the shadow and
     // every descendant. Suppressing the colour write leaves both intact — see
     // meshinstance3d/Component.shadows-only.test.tsx.
     expect(mesh.visible).toBe(true);
-    expect((mesh.material as { colorWrite: boolean }).colorWrite).toBe(false);
+    expect(material.colorWrite).toBe(false);
   });
 
   it('audit slot 38a — ao_texture loaded → material.aoMap is a THREE.Texture', async () => {
@@ -156,8 +167,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-      .material as THREE.MeshStandardMaterial;
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.aoMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -346,7 +356,10 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
+          // A real two-surface mesh: `MeshInstance3D::_set`
+          // (`scene/3d/mesh_instance_3d.cpp:65-73`) drops any override past a
+          // PrimitiveMesh's single surface.
+          inlineTwoSurfaceMesh('Mesh_1'),
           sub('StandardMaterial3D', 'MatA', { albedo_color: 'Color(1, 0, 0, 1)' }),
           sub('StandardMaterial3D', 'MatB', { albedo_color: 'Color(0, 1, 0, 1)' }),
         ]}
@@ -365,27 +378,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     // groups. Splitting it into a length-2 array left four faces unrendered,
     // because three skips a group whose `material[materialIndex]` is undefined.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    expect(Array.isArray(mesh.material)).toBe(false);
-    const material = mesh.material as unknown as { color: { r: number; g: number } };
-    expect(material.color.r).toBe(1);
-    expect(material.color.g).toBe(0);
+    const materials = mesh.material as THREE.MeshStandardMaterial[];
+    expect(Array.isArray(materials)).toBe(true);
+    expect(materials).toHaveLength(2);
+    expect(materials[0]!.color.r).toBe(1);
+    expect(materials[0]!.color.g).toBe(0);
+    expect(materials[1]!.color.r).toBe(0);
+    expect(materials[1]!.color.g).toBe(1);
   });
 
-  it('audit slot 93a — Label3D billboard=ENABLED → mesh.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
-    // The mocked canvas context lets the rasteriser run under jsdom.
-    const mockContext = {
-      font: '',
-      fillStyle: '',
-      strokeStyle: '',
-      lineWidth: 0,
-      measureText: vi.fn(() => ({ width: 100 })),
-      fillText: vi.fn(),
-      strokeText: vi.fn(),
-    };
-    HTMLCanvasElement.prototype.getContext = vi.fn((type: string) =>
-      type === '2d' ? (mockContext as unknown as CanvasRenderingContext2D) : null
-    ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-
+  it('audit slot 93a — Label3D billboard=ENABLED → group.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
     const props: Label3DProperties = {
       name: 'L',
       text: 'Hello',
@@ -399,6 +401,12 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       line_spacing: 0,
       horizontal_alignment: HorizontalAlignment.CENTER,
       no_depth_test: false,
+      render_priority: 0,
+      outline_render_priority: -1,
+      alpha_cut: AlphaCutMode.DISABLED,
+      alpha_scissor_threshold: 0.5,
+      fixed_size: false,
+      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
@@ -407,15 +415,15 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         <Label3D node={node} />
       </ViewportModeProvider>
     );
-    const meshInstance = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
 
     // The marker is used by old-renderer-era tooling to enumerate labels.
-    expect(meshInstance.userData.isLabel3D).toBe(true);
-    expect(meshInstance.userData.billboardMode).toBe(BillboardMode.BILLBOARD_ENABLED);
+    expect(groupInstance.userData.isLabel3D).toBe(true);
+    expect(groupInstance.userData.billboardMode).toBe(BillboardMode.BILLBOARD_ENABLED);
 
     // Snapshot the quaternion before any frame ticks (initial render
     // sets it via the JSX `rotation` prop = [0, 0, 0] → identity quaternion).
-    const qBefore = meshInstance.quaternion.clone();
+    const qBefore = groupInstance.quaternion.clone();
 
     // Advance enough frames that useFrame runs at least once.
     await renderer.advanceFrames(2, 16);
@@ -425,8 +433,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     // equals the initial identity, so we can't assert it CHANGED.
     // What we CAN assert: the quaternion is a valid normalized quaternion
     // (sum of squares ≈ 1), proving useFrame ran without throwing and
-    // left the mesh in a renderable state.
-    const q = meshInstance.quaternion;
+    // left the group in a renderable state.
+    const q = groupInstance.quaternion;
     const norm = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     expect(norm).toBeCloseTo(1, 4);
     // qBefore is normalized too; just confirms we tracked the right value.
@@ -434,15 +442,6 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 93a — Label3D billboard=DISABLED → useFrame leaves rotation untouched', async () => {
-    const mockContext = {
-      font: '', fillStyle: '', strokeStyle: '', lineWidth: 0,
-      measureText: vi.fn(() => ({ width: 100 })),
-      fillText: vi.fn(), strokeText: vi.fn(),
-    };
-    HTMLCanvasElement.prototype.getContext = vi.fn((type: string) =>
-      type === '2d' ? (mockContext as unknown as CanvasRenderingContext2D) : null
-    ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
-
     const props: Label3DProperties = {
       name: 'L',
       text: 'Hello',
@@ -451,13 +450,24 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       modulate: { r: 1, g: 1, b: 1, a: 1 },
       outline_size: 0,
       outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
+      double_sided: true,
+      font_size: 32,
+      line_spacing: 0,
+      horizontal_alignment: HorizontalAlignment.CENTER,
+      no_depth_test: false,
+      render_priority: 0,
+      outline_render_priority: -1,
+      alpha_cut: AlphaCutMode.DISABLED,
+      alpha_scissor_threshold: 0.5,
+      fixed_size: false,
+      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },
         basis_z: { x: 0, y: 0, z: 1 },
         origin: { x: 0, y: 0, z: 0 },
       },
-    } as Label3DProperties;
+    };
     const node: TscnNode = { name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -465,16 +475,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         <Label3D node={node} />
       </ViewportModeProvider>
     );
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const qBefore = mesh.quaternion.clone();
+    const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
+    const qBefore = groupInstance.quaternion.clone();
 
     // Tick frames — billboard DISABLED should be a no-op.
     await renderer.advanceFrames(2, 16);
 
     // Quaternion identical to pre-frame value.
-    expect(mesh.quaternion.x).toBeCloseTo(qBefore.x, 6);
-    expect(mesh.quaternion.y).toBeCloseTo(qBefore.y, 6);
-    expect(mesh.quaternion.z).toBeCloseTo(qBefore.z, 6);
-    expect(mesh.quaternion.w).toBeCloseTo(qBefore.w, 6);
+    expect(groupInstance.quaternion.x).toBeCloseTo(qBefore.x, 6);
+    expect(groupInstance.quaternion.y).toBeCloseTo(qBefore.y, 6);
+    expect(groupInstance.quaternion.z).toBeCloseTo(qBefore.z, 6);
+    expect(groupInstance.quaternion.w).toBeCloseTo(qBefore.w, 6);
   });
 });

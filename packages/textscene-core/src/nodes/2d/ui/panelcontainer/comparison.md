@@ -1,7 +1,7 @@
 ---
 type: PanelContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-panel-container.tscn
 image: unit-panel-container
 renders_as: a StyleBox panel around its child
@@ -10,8 +10,7 @@ renders_as: a StyleBox panel around its child
 # PanelContainer
 
 PanelContainer draws its `panel` StyleBox and fits its single child inside the content
-margins. The previewer maps it to a flex-column `<div>` carrying the fill, corners and
-padding, with the child stretched to the content box.
+margins.
 
 ## Linting
 
@@ -23,7 +22,8 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 PanelContainer declares no validators of its own and delegates straight to

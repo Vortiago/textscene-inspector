@@ -57,19 +57,7 @@ export function evaluateCsgPlan(
   csg: CsgModule,
   resolveGeometry: ResolveGeometry
 ): CsgEvaluation | null {
-  // Bake each contribution's root-local matrix into its own geometry so every brush sits
-  // at identity. The library copies brush A's world transform onto the result, so mixing
-  // baked and transformed brushes would leave the output in whichever space A happened
-  // to be in.
-  const baked: Array<{ geometry: THREE.BufferGeometry; surface: number; operation: number }> = [];
-  for (const contribution of plan.contributions) {
-    const own = resolveGeometry(contribution);
-    if (!own || (own.getAttribute('position')?.count ?? 0) === 0) continue;
-    const geometry = own.clone().applyMatrix4(contribution.matrix);
-    baked.push({ geometry, surface: contribution.surface, operation: contribution.operation });
-  }
-
-  if (baked.length === 0) return { geometry: emptyGeometry(), surfaceSlots: [] };
+  if (!plan.root) return { geometry: emptyGeometry(), surfaceSlots: [] };
 
   // One sentinel per plan surface. They are never rendered; they exist so the library can
   // group faces by material and so the result's material array can be mapped back.
@@ -81,19 +69,47 @@ export function evaluateCsgPlan(
     const evaluator = new csg.Evaluator();
     evaluator.useGroups = true;
 
-    let accumulator = new csg.Brush(baked[0]!.geometry, sentinels[baked[0]!.surface]);
-    accumulator.updateMatrixWorld(true);
+    /**
+     * One node's brush: its own solid, then each child folded in by the CHILD's operation
+     * (csg_shape.cpp:472,481). A node with no own solid is seeded by its first child, whose
+     * operation has nothing to fold into — which is what makes a combiner's own operation
+     * apply to the whole fold rather than to its first child.
+     */
+    const brushOf = (contribution: CsgContribution): THREE.Mesh | null => {
+      let accumulator: THREE.Mesh | null = null;
+      if (contribution.hasGeometry) {
+        const own = resolveGeometry(contribution);
+        if (own && (own.getAttribute('position')?.count ?? 0) > 0) {
+          // Bake the root-local matrix in so every brush sits at identity: the library
+          // copies brush A's world transform onto the result, so mixing baked and
+          // transformed brushes would leave the output in whichever space A was in.
+          accumulator = new csg.Brush(
+            own.clone().applyMatrix4(contribution.matrix),
+            sentinels[contribution.surface]
+          );
+          accumulator.updateMatrixWorld(true);
+        }
+      }
 
-    for (let i = 1; i < baked.length; i++) {
-      const brush = new csg.Brush(baked[i]!.geometry, sentinels[baked[i]!.surface]);
-      brush.updateMatrixWorld(true);
-      accumulator = evaluator.evaluate(
-        accumulator,
-        brush,
-        godotToLibraryOperation(baked[i]!.operation, csg)
-      ) as THREE.Mesh;
-      accumulator.updateMatrixWorld(true);
-    }
+      for (const child of contribution.children) {
+        const brush = brushOf(child);
+        if (!brush) continue;
+        if (!accumulator) {
+          accumulator = brush;
+          continue;
+        }
+        accumulator = evaluator.evaluate(
+          accumulator,
+          brush,
+          godotToLibraryOperation(child.operation, csg)
+        ) as THREE.Mesh;
+        accumulator.updateMatrixWorld(true);
+      }
+      return accumulator;
+    };
+
+    const accumulator = brushOf(plan.root);
+    if (!accumulator) return { geometry: emptyGeometry(), surfaceSlots: [] };
 
     const surfaceSlots = slotOf(accumulator.material);
     // A slot whose sentinel is not ours means the library synthesised a material we did
@@ -104,7 +120,7 @@ export function evaluateCsgPlan(
   } catch (error) {
     warn(
       `[CSG] Boolean evaluation failed for '${plan.rootPath}' ` +
-        `(${baked.length} contributions): ${String(error)}`
+        `(${plan.geometryCount} contributions): ${String(error)}`
     );
     return null;
   }

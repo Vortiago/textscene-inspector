@@ -32,6 +32,11 @@ function makeNode(
   };
 }
 
+/** `node.properties` narrowed to this suite's node type, the same cast a real Component dispatcher applies. */
+function node2DProps(node: TscnNode): Node2DProperties {
+  return node.properties as Node2DProperties;
+}
+
 function tintedBody(tint: { color: THREE.Color; opacity: number }) {
   return (
     <mesh>
@@ -46,8 +51,8 @@ describe('modulate cascade (3-level composition)', () => {
     const parent = makeNode('Parent', { modulate: 'Color(0.5, 0.5, 0.5, 1)' });
     const child = makeNode('Child');
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={parent} props={parent.properties} body={tintedBody}>
-        <CanvasItem2D node={child} props={child.properties} body={tintedBody} />
+      <CanvasItem2D node={parent} props={node2DProps(parent)} body={tintedBody}>
+        <CanvasItem2D node={child} props={node2DProps(child)} body={tintedBody} />
       </CanvasItem2D>
     );
     const meshes = r.scene.findAllByType('Mesh');
@@ -63,9 +68,9 @@ describe('modulate cascade (3-level composition)', () => {
     const grandchild = makeNode('GC', { modulate: 'Color(0.5, 0.5, 0.5, 1)' });
 
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={grandparent} props={grandparent.properties} body={tintedBody}>
-        <CanvasItem2D node={parent} props={parent.properties} body={tintedBody}>
-          <CanvasItem2D node={grandchild} props={grandchild.properties} body={tintedBody} />
+      <CanvasItem2D node={grandparent} props={node2DProps(grandparent)} body={tintedBody}>
+        <CanvasItem2D node={parent} props={node2DProps(parent)} body={tintedBody}>
+          <CanvasItem2D node={grandchild} props={node2DProps(grandchild)} body={tintedBody} />
         </CanvasItem2D>
       </CanvasItem2D>
     );
@@ -85,8 +90,8 @@ describe('modulate cascade (3-level composition)', () => {
     });
     const child = makeNode('C');
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={parent} props={parent.properties} body={tintedBody}>
-        <CanvasItem2D node={child} props={child.properties} body={tintedBody} />
+      <CanvasItem2D node={parent} props={node2DProps(parent)} body={tintedBody}>
+        <CanvasItem2D node={child} props={node2DProps(child)} body={tintedBody} />
       </CanvasItem2D>
     );
     const meshes = r.scene.findAllByType('Mesh');
@@ -102,9 +107,9 @@ describe('modulate cascade (3-level composition)', () => {
     const grandchild = makeNode('GC', { modulate: 'Color(1, 1, 1, 0.5)' });
 
     const r = await ReactThreeTestRenderer.create(
-      <CanvasItem2D node={grandparent} props={grandparent.properties} body={tintedBody}>
-        <CanvasItem2D node={parent} props={parent.properties} body={tintedBody}>
-          <CanvasItem2D node={grandchild} props={grandchild.properties} body={tintedBody} />
+      <CanvasItem2D node={grandparent} props={node2DProps(grandparent)} body={tintedBody}>
+        <CanvasItem2D node={parent} props={node2DProps(parent)} body={tintedBody}>
+          <CanvasItem2D node={grandchild} props={node2DProps(grandchild)} body={tintedBody} />
         </CanvasItem2D>
       </CanvasItem2D>
     );

@@ -2,10 +2,9 @@
  * Guards against fixture-list drift: every file referenced in
  * src/test/integration/fixtures.ts must exist in the repo scenes/ tree.
  *
- * Resolution mirrors src/test/integration/setupWorkspace.ts, which copies
- * scenes/fixtures/*.tscn and scenes/examples/*.tscn into a flat
- * .test-workspace/fixtures/ directory — so a referenced file is loadable
- * iff it exists in either source directory.
+ * Resolution mirrors src/test/integration/setupWorkspace.ts, which mirrors
+ * scenes/fixtures/ (the corpus's res:// root) into .test-workspace/fixtures/ —
+ * so a referenced file is loadable iff it exists under that root.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -30,12 +29,9 @@ describe('integration fixture list', () => {
 
   for (const fixture of fixtures) {
     it(`"${fixture.name}" (${fixture.file}) exists in the scenes/ tree`, () => {
-      const inFixtures = existsSync(join(scenesRoot, 'fixtures', fixture.file));
-      const inExamples = existsSync(join(scenesRoot, 'examples', fixture.file));
-
       expect(
-        inFixtures || inExamples,
-        `${fixture.file} not found in scenes/fixtures/ or scenes/examples/ — ` +
+        existsSync(join(scenesRoot, 'fixtures', fixture.file)),
+        `${fixture.file} not found in scenes/fixtures/ — ` +
           'update src/test/integration/fixtures.ts or restore the scene file'
       ).toBe(true);
     });

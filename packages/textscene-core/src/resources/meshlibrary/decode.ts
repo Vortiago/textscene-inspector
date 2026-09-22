@@ -12,15 +12,16 @@
  *   item/7/mesh = ExtResource("8_v1wcb")        // → an ArrayMesh .tres
  *   item/7/mesh = SubResource("ArrayMesh_x")    // → embedded in THIS .tres
  *   item/7/mesh_transform = Transform3D(1,0,0, 0,1,0, 0,0,1, 0,0,0)
+ *   item/7/mesh_cast_shadow = 2                 // RS::ShadowCastingSetting ordinal
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, toIntIndex } from '../../godot/index.js';
+import { indexedKeyRegex, parseGodotInt, toIntIndex } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
-import type { MeshLibraryModel, MeshLibraryItem } from './types';
+import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
 
 /**
  * `MeshLibrary::_set` reads FIXED slices — `get_slicec('/', 1)` for the index
@@ -39,6 +40,27 @@ const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
  *   the library embeds as its own `[sub_resource]` can only be addressed
  *   relative to that file, so this is an input rather than a convenience.
  */
+/**
+ * `mesh_cast_shadow` is serialised as the `RS::ShadowCastingSetting` ordinal.
+ * Anything outside 0-3 lands on Godot's own default branch, which is ON
+ * (`scene/resources/3d/mesh_library.cpp:65-67`).
+ */
+function decodeCastShadow(rawValue: string): ShadowCastingSetting {
+  // `parseGodotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
+  // slot (`variant.cpp`), so `cast_shadow = 2.0` is DOUBLE_SIDED, and a raw
+  // `parseInt` would read `2` out of text the engine refuses outright.
+  switch (parseGodotInt(rawValue)) {
+    case 0:
+      return ShadowCastingSetting.OFF;
+    case 2:
+      return ShadowCastingSetting.DOUBLE_SIDED;
+    case 3:
+      return ShadowCastingSetting.SHADOWS_ONLY;
+    default:
+      return ShadowCastingSetting.ON;
+  }
+}
+
 export function meshLibraryFromTres(
   tres: ParsedResource,
   selfPath: string
@@ -49,7 +71,8 @@ export function meshLibraryFromTres(
   const ensure = (id: number): MeshLibraryItem => {
     let item = items.get(id);
     if (!item) {
-      item = { id, meshPath: null, meshTransform: null };
+      // Absent = ON (`scene/resources/3d/mesh_library.h:58`).
+      item = { id, meshPath: null, meshTransform: null, castShadow: ShadowCastingSetting.ON };
       items.set(id, item);
     }
     return item;
@@ -81,6 +104,8 @@ export function meshLibraryFromTres(
       } catch {
         warn(`[MeshLibrary] item/${id}/mesh_transform is malformed — using identity: ${rawValue}`);
       }
+    } else if (field === 'mesh_cast_shadow') {
+      item.castShadow = decodeCastShadow(rawValue);
     }
   }
 

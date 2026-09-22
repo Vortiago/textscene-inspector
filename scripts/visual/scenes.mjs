@@ -7,9 +7,16 @@
  * deterministically (the two-identical-frames gate rejects anything that
  * doesn't), e.g. `arraymesh` (.tres geometry) and `decal` (a local SVG
  * texture). `file` is the bare fixture filename exactly as it appears in
- * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link). `maxDiffPct`
- * overrides the default failure threshold for scenes with antialiasing-
- * sensitive content (thin gizmo lines).
+ * apps/textscene-web/src/fixtures.ts (the `?fixture=` deep link).
+ *
+ * No scene carries a difference budget: a capture must decode to its
+ * baseline's pixels exactly (`imageDelta.mjs`, and `compareToBaseline` in
+ * `run.mjs` for why a perceptual tolerance was the wrong instrument). The
+ * per-scene percentages this manifest used to carry were written for
+ * antialiasing-sensitive content — thin gizmo lines, soft shadow edges — none
+ * of which varies between runs of the same pinned rasterizer. Each scene's
+ * note below still says what its content is sensitive to, because that is what
+ * a reader needs when a diff DOES appear; none of them is a licence to differ.
  *
  * `collisions: true` (optional) ticks the toolbar's "Visible Collision Shapes"
  * checkbox before capturing, so CollisionShape2D/3D gizmos render — they are

@@ -1,39 +1,26 @@
 /**
- * <CenterContainer> render contract: a flex box that centres its single child
- * on both axes and provides the 'center' layout kind to its subtree.
+ * `<CenterContainer>` render contract: CenterContainer draws no chrome
+ * of its own in Godot (it only centres children, `nativeSolver.ts`), so the
+ * native painter must render nothing — no mesh, no line, no group of its own.
  */
 import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
-import { CenterContainer } from './Component';
-import { parseCenterContainer } from './parser';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { CenterContainer } from './Component';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-const heading = { type: 'node', attributes: { type: 'CenterContainer', name: 'Center' } };
-
-function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Center', type: 'CenterContainer', children: [], properties: parseCenterContainer(heading, raw) };
-}
-
-function KindProbe() {
-  return <span data-testid="kind">{useControlParent()}</span>;
+function solveNode(): SolveNode {
+  const node: TscnNode = { name: 'C', type: 'CenterContainer', children: [], properties: { name: 'C' } };
+  return { ...emptySolveNode(), path: 'C', node };
 }
 
 describe('<CenterContainer>', () => {
-  it('centres its child on both axes via flex', () => {
-    const { container } = render(<CenterContainer node={node()} />);
-    const div = container.querySelector('[data-control-type="CenterContainer"]') as HTMLElement;
-    expect(div.style.display).toBe('flex');
-    expect(div.style.alignItems).toBe('center');
-    expect(div.style.justifyContent).toBe('center');
-  });
-
-  it('provides the center layout kind to its subtree', () => {
-    const { getByTestId } = render(
-      <CenterContainer node={node()}>
-        <KindProbe />
-      </CenterContainer>
+  it('renders nothing — CenterContainer has no chrome of its own', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CenterContainer {...painterEnv()} solveNode={solveNode()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
-    expect(getByTestId('kind').textContent).toBe('center');
+    expect(renderer.scene.children).toHaveLength(0);
   });
 });

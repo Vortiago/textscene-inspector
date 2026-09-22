@@ -1,7 +1,7 @@
 ---
 type: CanvasLayer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
 renders_as: a full-rect passthrough layer hosting Control children
@@ -9,8 +9,9 @@ renders_as: a full-rect passthrough layer hosting Control children
 
 # CanvasLayer
 
-CanvasLayer is not a Control and paints nothing of its own. The previewer fills the
-overlay with it and gives its Control children a viewport to anchor against.
+CanvasLayer is not a Control and paints nothing of its own. It puts its children on
+their own draw layer, above or below the 2D world, and gives them a viewport to anchor
+against.
 
 ## Linting
 

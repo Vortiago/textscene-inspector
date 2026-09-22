@@ -51,7 +51,7 @@ import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
-import { resolveMaterialSlotSource } from '../../materials/materialSlotSource';
+import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -266,12 +266,13 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the scene that AUTHORED it, which is
       // the outer one — not the sub-scene whose provider it now renders under.
-      // Godot fills a `Ref<Material>` slot only from a Material, so a reference
-      // that is not one leaves the GLB's own material in place.
-      const source = resolveMaterialSlotSource(
+      // Both pools travel together, so a SubResource material override resolves
+      // there too rather than against whatever the ambient scope happens to
+      // hold — see `AuthoredResourceScope`.
+      const source = resolveMaterialSource(
         ref,
-        internalResources,
-        override.authoredResources ?? externalResources
+        override.authoredScope?.internalResources ?? internalResources,
+        override.authoredScope?.externalResources ?? externalResources
       );
       if (!source) continue;
 

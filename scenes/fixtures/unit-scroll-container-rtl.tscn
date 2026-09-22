@@ -1,0 +1,48 @@
+; The ONE variable: `layout_direction = 3` on a ScrollContainer. The embedded
+; scrollbars are anchored children, so `Control::_size_changed` mirrors each
+; one whole (control.cpp:1785-1787) and the vertical bar moves to the LEFT
+; edge; the content is placed through `fit_child_in_rect` instead, which does
+; NOT mirror, so `_reposition_children` shifts it past the reserved strip by
+; hand (scroll_container.cpp:357-363). The child overflows vertically only, so
+; exactly one bar shows and the strip it reserves is the whole horizontal
+; move. The LTR container above holds the unmirrored bar and content.
+; unit-scroll-container.tscn moves the overflow/offset cases at direction LTR,
+; so a regression in either half of this is invisible there.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="ScrollContainer" parent="."]
+layout_mode = 1
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 160.0
+
+[node name="Content" type="ColorRect" parent="Ltr"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 300)
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Rtl" type="ScrollContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 240.0
+offset_bottom = 300.0
+
+[node name="Content" type="ColorRect" parent="Rtl"]
+layout_mode = 2
+custom_minimum_size = Vector2(60, 300)
+color = Color(0.2, 0.7, 0.3, 1)

@@ -9,12 +9,25 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
+import { controlComponentRegistry } from '../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../r3f/controls/native/solverRegistry';
 import { ParallaxBackground } from './Component';
+import { ParallaxBackgroundCanvasScope } from './CanvasScope';
 
 nodeComponentRegistry.register({
   typeName: 'ParallaxBackground',
   Component: ParallaxBackground,
   canvasItem: true,
 });
+
+// The Control walk's half of the same fact: a `CanvasLayer` subclass is where
+// `_enter_canvas`'s climb stops (`canvas_item.cpp:246-252`), so a Control below
+// one parents at ITS canvas rather than hoisting to the viewport's.
+controlComponentRegistry.register({
+  typeName: 'ParallaxBackground',
+  Component: ParallaxBackgroundCanvasScope,
+  wrapsChildren: true,
+});
+controlSolverRegistry.registerCanvasBoundary('ParallaxBackground');
 
 export { ParallaxBackground };

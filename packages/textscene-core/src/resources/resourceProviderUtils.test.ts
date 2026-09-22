@@ -18,10 +18,14 @@ const BINARY_TYPES = [
   'AudioStreamWAV',
   'AudioStreamOggVorbis',
   'AudioStreamMP3',
-  'FontFile',
 ];
 
-/** The extensions the pre-registry list carried, dot-prefixed. */
+/**
+ * The extensions the pre-registry list carried, dot-prefixed, plus the raw font
+ * containers. `FontFile` is deliberately absent from the type list above: the
+ * type name is not a binary signal, because a `FontFile` ExtResource just as
+ * often names a text `.tres` wrapper — the extension is.
+ */
 const BINARY_EXTENSIONS = [
   '.glb',
   '.gltf',
@@ -33,6 +37,10 @@ const BINARY_EXTENSIONS = [
   '.wav',
   '.ogg',
   '.mp3',
+  '.ttf',
+  '.otf',
+  '.woff',
+  '.woff2',
 ];
 
 describe('isBinaryResourceType', () => {

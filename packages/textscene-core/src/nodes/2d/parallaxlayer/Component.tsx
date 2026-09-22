@@ -57,11 +57,15 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
   );
 
   return (
+    // paint-order-safe: outside `<Node2D>`'s own wrapper, which is nearer to
+    // every mesh below and so is the group three reads the key from.
     <group ref={groupRef}>
       <Node2D node={node}>
         {mirrors.length === 0
           ? children
           : mirrors.map((offset, index) => (
+              // paint-order-safe: wraps DISPATCHED children, each of which
+              // brings its own canvas-item wrapper nearer than this one.
               <group key={`mirror-${index}`} position={[offset.x, 0 - offset.y, 0]}>
                 {children}
               </group>

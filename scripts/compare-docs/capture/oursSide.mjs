@@ -1,6 +1,6 @@
 /** Our side: one build, one preview server, one browser, serially over every fixture. */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import {existsSync, mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {
@@ -14,6 +14,8 @@ import {
   settleCanvas,
   startPreview,
   waitForServer,
+  warmUpGLContext,
+  writeCaptureImage,
 } from '../../visual/previewServer.mjs';
 import { resolveModes } from './modes.mjs';
 import { IMAGES, imagePath } from './paths.mjs';
@@ -45,6 +47,9 @@ export async function captureOurs(fixtures, force, godotModes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    // Burn the first-WebGL-context-lost risk before any published image is
+    // captured — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
 
     // One context per workspace, not per fixture: the two need different
     // browser viewports and different seeded preferences, and a context is far
@@ -81,7 +86,7 @@ export async function captureOurs(fixtures, force, godotModes) {
                   `it as ${mode.toUpperCase()} — the two frames are not comparable`
               );
             }
-            writeFileSync(imagePath(fixture, 'ours'), buffer);
+            writeCaptureImage(imagePath(fixture, 'ours'), buffer, `${fixture} ours`);
             console.log('ok');
           } catch (error) {
             console.log(`FAILED: ${error.message}`);

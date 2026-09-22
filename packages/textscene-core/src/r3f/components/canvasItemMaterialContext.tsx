@@ -41,7 +41,7 @@ export function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties |
  * Resolve the material this node draws with:
  *
  *   `use_parent_material`  → whatever the ancestor chain supplies
- *   own `material` ref     → that resource, when it parses as a CanvasItemMaterial
+ *   own `materialPath` ref → that resource, when it parses as a CanvasItemMaterial
  *   neither                → null
  *
  * A `ShaderMaterial` (or any other material type) resolves to null: it is not
@@ -56,8 +56,8 @@ export function useCanvasItemMaterial(
 
   return useMemo(() => {
     if (props.use_parent_material) return inherited;
-    const resource = resolveSubResourceRef(props.material, internalResources);
+    const resource = resolveSubResourceRef(props.materialPath, internalResources);
     if (resource?.type !== 'CanvasItemMaterial') return null;
     return parseCanvasItemMaterial(resource.data as Record<string, string>);
-  }, [props.use_parent_material, props.material, inherited, internalResources]);
+  }, [props.use_parent_material, props.materialPath, inherited, internalResources]);
 }

@@ -15,7 +15,7 @@
  * `DetailTabs`, plus `CamerasPanel`, `SceneStats`, `DockChrome`,
  * `SceneChangeResetter`.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
@@ -171,7 +171,7 @@ export function TscnPreviewShell({
               />
               <section
                 className={styles.dock}
-                style={{ flexBasis: dockWidth }}
+                style={{ '--tsi-dock-basis': `${dockWidth}px` } as CSSProperties}
                 aria-label="Scene and Inspector"
               >
                 <SceneTreePane

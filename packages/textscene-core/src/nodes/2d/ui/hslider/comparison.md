@@ -1,17 +1,16 @@
 ---
 type: HSlider
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-hslider.tscn
-# image: unit-hslider
+image: unit-hslider
 renders_as: a horizontal track with a round grabber
 ---
 
 # HSlider
 
-HSlider is a horizontal slider over a Range. The previewer draws the same four parts
-Godot does: the track, the fill, the tick marks and the grabber. Each is placed with the
-expressions from Godot's own draw routine.
+HSlider is a horizontal slider over a Range. The previewer draws the four parts Godot
+does: the track, the fill, the tick marks and the grabber.
 
 ## Linting
 
@@ -23,9 +22,11 @@ Strict parsing format-checks the inherited set (5 inherited from Slider, 9 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-range-bounds` (type-family match) | `range-max-below-min` | error |
 |  | `range-exp-edit-negative-min` | warning |
+| `hslider-property-order` | `hslider-property-order` | warning |
 <!-- lint:end -->
 
 `value`, `min_value`, `max_value` and `step` have no strict counterpart and go through
@@ -35,5 +36,7 @@ and a malformed `tick_count` draws no ticks.
 
 ## Known limitations
 
-- **Approximated** The grabber is a CSS circle rather than Godot's rasterised SVG
-  texture, so its one-pixel rim differs. The tick icons become plain 2 px bars.
+- **Not drawn** Slider's RTL arms that need pointer or gamepad state: the drag
+  origin and motion (slider.cpp:77,116), the `ui_left`/`ui_right` step (:144,160)
+  and its joypad repeat (:216,224). The `grabber_area` fill and the grabber icon
+  (:331-339,363) both follow the layout direction.

@@ -1,8 +1,9 @@
 /**
- * 2D-UI overlay barrel. Imports each Control slice's `index.r3f` for its
- * DOM-component self-registration (side effect) — the same render-registration
- * entry-point convention as 3D slices (ADR-0001), into ControlComponentRegistry
- * — and re-exports the overlay surface the app shell mounts in 2D viewport mode.
+ * 2D-UI barrel. Imports each Control slice's `index.r3f` for its native
+ * (WebGL canvas) painter self-registration (side effect) — the same
+ * render-registration entry-point convention as 3D slices (ADR-0001), into
+ * ControlComponentRegistry — and re-exports the native mount point the app
+ * shell mounts in 2D viewport mode.
  */
 
 import '../../nodes/2d/ui/control/index.r3f';
@@ -28,8 +29,47 @@ import '../../nodes/2d/ui/vslider/index.r3f';
 import '../../nodes/2d/ui/texturerect/index.r3f';
 import '../../nodes/2d/ui/richtextlabel/index.r3f';
 import '../../nodes/2d/ui/canvaslayer/index.r3f';
+// Not a `ui/` slice, but it IS a `CanvasLayer` (`parallax_background.h:34`) and
+// so a canvas boundary the Control walk has to know about; its own `index.r3f`
+// registers both halves, and the world barrel imports the same module.
+import '../../nodes/2d/parallaxbackground/index.r3f';
+import '../../nodes/2d/ui/codeedit/index.r3f';
+import '../../nodes/2d/ui/colorpicker/index.r3f';
+import '../../nodes/2d/ui/colorpickerbutton/index.r3f';
+import '../../nodes/2d/ui/foldablecontainer/index.r3f';
+import '../../nodes/2d/ui/graphedit/index.r3f';
+import '../../nodes/2d/ui/graphelement/index.r3f';
+import '../../nodes/2d/ui/graphframe/index.r3f';
+import '../../nodes/2d/ui/graphnode/index.r3f';
+import '../../nodes/2d/ui/itemlist/index.r3f';
+import '../../nodes/2d/ui/menubar/index.r3f';
+import '../../nodes/2d/ui/menubutton/index.r3f';
+import '../../nodes/2d/ui/spinbox/index.r3f';
+import '../../nodes/2d/ui/tabbar/index.r3f';
+import '../../nodes/2d/ui/tabcontainer/index.r3f';
+import '../../nodes/2d/ui/textedit/index.r3f';
+import '../../nodes/2d/ui/tree/index.r3f';
+import '../../nodes/2d/ui/videostreamplayer/index.r3f';
+import '../../nodes/2d/ui/aspectratiocontainer/index.r3f';
+import '../../nodes/2d/ui/basebutton/index.r3f';
+import '../../nodes/2d/ui/boxcontainer/index.r3f';
+import '../../nodes/2d/ui/checkbutton/index.r3f';
+import '../../nodes/2d/ui/container/index.r3f';
+import '../../nodes/2d/ui/flowcontainer/index.r3f';
+import '../../nodes/2d/ui/hflowcontainer/index.r3f';
+import '../../nodes/2d/ui/hscrollbar/index.r3f';
+import '../../nodes/2d/ui/hseparator/index.r3f';
+import '../../nodes/2d/ui/linkbutton/index.r3f';
+import '../../nodes/2d/ui/ninepatchrect/index.r3f';
+import '../../nodes/2d/ui/progressbar/index.r3f';
+import '../../nodes/2d/ui/range/index.r3f';
+import '../../nodes/2d/ui/referencerect/index.r3f';
+import '../../nodes/2d/ui/splitcontainer/index.r3f';
+import '../../nodes/2d/ui/texturebutton/index.r3f';
+import '../../nodes/2d/ui/textureprogressbar/index.r3f';
+import '../../nodes/2d/ui/vflowcontainer/index.r3f';
+import '../../nodes/2d/ui/vscrollbar/index.r3f';
+import '../../nodes/2d/ui/vseparator/index.r3f';
 
-export { ControlOverlay } from './ControlOverlay';
-export { ControlDispatcher } from './ControlDispatcher';
+export { ControlCanvasLayer } from './native/ControlCanvasLayer';
 export { controlComponentRegistry } from './ControlComponentRegistry';
-export type { ControlComponentProps } from './ControlComponentRegistry';

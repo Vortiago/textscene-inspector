@@ -54,6 +54,7 @@ blend_shape_mode = 0`
 /** The single-triangle surface these tests vary one field of at a time. */
 function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
   return {
+    surfaceIndex: 0,
     format: 0,
     primitive: 3,
     vertexCount: 3,
@@ -84,6 +85,7 @@ describe('buildArrayMeshGeometry', () => {
     const data: ArrayMeshData = {
       surfaces: [
         {
+          surfaceIndex: 0,
           format: 0, // no NORMAL bit → surface.normals undefined
           vertexCount: 3,
           indexCount: 3,

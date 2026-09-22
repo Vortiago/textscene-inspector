@@ -6,3 +6,4 @@
  */
 
 import '../slider/linterParser.js';
+import './linter.js';

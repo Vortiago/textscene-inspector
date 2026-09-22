@@ -1,17 +1,19 @@
 ---
 type: TextureProgressBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-texture-progress-bar.tscn
 # image: unit-texture-progress-bar
-renders_as: invisible transform-only fallback
+renders_as: three composited texture layers, the middle one ratio-windowed
 ---
 
 # TextureProgressBar
 
-TextureProgressBar is a texture-based progress bar that composites up to three textures
-across nine fill modes. The previewer parses and validates it but does not draw it, so
-it renders as a transform-only fallback and its children still show.
+TextureProgressBar draws `texture_under`, `texture_progress` and `texture_over` in that
+order. `texture_progress` windows to the current ratio: a crop for a linear `fill_mode`,
+a triangle fan for a radial one, or a 9-patch grid once `nine_patch_stretch` is set (which
+also windows `texture_under`/`texture_over` at full size). Each layer multiplies its own
+`tint_*` onto the node's tint.
 
 ## Linting
 
@@ -42,16 +44,15 @@ Strict parsing format-checks these `TextureProgressBar` properties, plus 9 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 | `valid-range-bounds` (type-family match) | `range-max-below-min` | error |
 |  | `range-exp-edit-negative-min` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseControl` unchanged, which has no field for `fill_mode`,
-any `radial_*`, `stretch_margin_*`, `texture_*` or `tint_*` key, or Range's own members.
-A bad value is dropped silently, and only strict sees the raw key.
-
-## Known limitations
-
-- **Not drawn** Godot draws the three textures and the fill. The previewer draws nothing
-  for this node.
+The lenient parser reads `fill_mode`, `nine_patch_stretch`, every `radial_*`,
+`stretch_margin_*`, `texture_*` and `tint_*` key alongside its Control and Range bases.
+A `fill_mode` outside 0-8 draws as `FILL_LEFT_TO_RIGHT`: `set_fill_mode`'s
+`ERR_FAIL_INDEX` refuses the out-of-range write, so the node keeps its class-default
+mode. `radial_fill_degrees` outside [0, 360] clamps to that range. `radial_initial_angle`
+wraps into it, or falls back to `0` when non-finite. Both mirror their own setters.

@@ -107,3 +107,33 @@ describe('parseNodeWithRegistry — raw override retention', () => {
     expect(result!.overridesExistingNode).toBeUndefined();
   });
 });
+
+describe('parseNodeWithRegistry — rawPropertiesOrderReliable (ADR-0035)', () => {
+  beforeEach(() => {
+    nodeRegistry.clear();
+    nodeRegistry.register({ typeName: 'Node', parser: parseNode });
+    nodeRegistry.register({ typeName: 'Widget3D', parser: (_h, props) => ({ name: props.name ?? 'X' }) });
+  });
+
+  it('sets rawPropertiesOrderReliable true on a registered-type node — one TscnParserCore scan built its properties', () => {
+    const heading: ParsedHeading = { type: 'node', attributes: { type: 'Widget3D', name: 'X' } };
+    const result = parseNodeWithRegistry(heading, { foo: '1', bar: '2' });
+
+    expect(result!.rawPropertiesOrderReliable).toBe(true);
+  });
+
+  it('sets rawPropertiesOrderReliable true on the Node fallback path too (unregistered type)', () => {
+    const heading: ParsedHeading = { type: 'node', attributes: { type: 'TotallyUnknownType', name: 'X' } };
+    const result = parseNodeWithRegistry(heading, { foo: '1' });
+
+    expect(result!.rawPropertiesOrderReliable).toBe(true);
+  });
+
+  it('preserves Object.keys(rawProperties) as the real file order', () => {
+    const heading: ParsedHeading = { type: 'node', attributes: { type: 'Widget3D', name: 'X' } };
+    const raw = { zebra: '1', apple: '2', mango: '3' };
+    const result = parseNodeWithRegistry(heading, raw);
+
+    expect(Object.keys(result!.rawProperties!)).toEqual(['zebra', 'apple', 'mango']);
+  });
+});

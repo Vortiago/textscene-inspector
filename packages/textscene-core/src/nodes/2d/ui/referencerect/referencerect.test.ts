@@ -1,25 +1,26 @@
 /**
- * ReferenceRect registration — parsed and validated, not yet rendered.
+ * ReferenceRect registration — the parser half only.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * `nodeComponentRegistry` is the 3D-node registry (`r3f/nodes/`); a 2D-UI
+ * Control never registers there, drawn or not — see `index.r3f.test.ts` for
+ * the native (WebGL canvas) painter this type DOES register, into
+ * `ControlComponentRegistry` instead.
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseControl } from '../control/parser';
+import { parseReferenceRect } from './parser';
 import './index';
 
 describe('ReferenceRect registration', () => {
-  it('registers the parseControl parse it reuses', () => {
+  it('registers its own parser', () => {
     const registration = nodeRegistry.getRegistration('ReferenceRect');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseControl);
+    expect(registration!.parser).toBe(parseReferenceRect);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
+  it('registers nothing in the 3D-node registry — a Control renders through ControlComponentRegistry instead', () => {
     expect(nodeComponentRegistry.get('ReferenceRect')).toBeUndefined();
   });
 });

@@ -1,25 +1,26 @@
 /**
- * BoxContainer registration — parsed and validated, not yet rendered.
+ * BoxContainer registration — parsed, validated, and rendered through the
+ * native (WebGL canvas) painter registered in `index.r3f.ts`.
  *
- * Registering NO component is the point: the dispatcher falls back to
- * GenericNodeFallback, and `rendersOwnVisual` reports 'not-implemented' so the
- * tree and inspector keep saying so until someone draws it.
+ * `nodeComponentRegistry` is the DOM/3D dispatcher's own table; 2D-UI
+ * Controls never register there, so a bare Container-family type reads as
+ * not-implemented on that path whether or not the native canvas draws it.
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { parseControl } from '../../../2d/ui/control/parser';
+import { parseBoxContainer } from './parser';
 import './index';
 
 describe('BoxContainer registration', () => {
-  it('registers the Control base parser', () => {
+  it('registers its own parser (Control + alignment + vertical)', () => {
     const registration = nodeRegistry.getRegistration('BoxContainer');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseControl);
+    expect(registration!.parser).toBe(parseBoxContainer);
   });
 
-  it('registers no render component, so it still reads as not implemented', () => {
+  it('registers no DOM/3D render component (2D-UI Controls never do)', () => {
     expect(nodeComponentRegistry.get('BoxContainer')).toBeUndefined();
   });
 });

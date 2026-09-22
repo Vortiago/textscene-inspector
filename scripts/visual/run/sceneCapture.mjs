@@ -8,7 +8,7 @@
  */
 
 import {
-  findCanvas,
+  findCaptureTarget,
   gotoFixture,
   setDisplayToggle,
   settleCanvas,
@@ -20,9 +20,16 @@ import {
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
 /**
- * Navigate to a scene and capture the canvas once it is provably settled:
- * two consecutive byte-identical screenshots. Returns the PNG buffer, or
- * null with a reason when the scene never stabilizes.
+ * Navigate to a scene and capture its target once it is provably settled: two
+ * consecutive byte-identical screenshots. Returns the PNG buffer, or null with
+ * a reason when the scene never stabilizes or logs a console error.
+ *
+ * `pages` holds one page per capture context — `pages.default` (the fixed Godot
+ * editor orbit, ADR-0025) and `pages.canvas2D` (the 2D parity frame: zoom 1,
+ * chrome hidden, Godot clear colour — created only when the run includes a
+ * `mode: '2d'` scene). A scene's `mode: '2d'` field routes it through the
+ * LATTER, both for navigation and for which element is screenshotted, so a 2D
+ * scene is never measured against the 3D canvas by construction.
  *
  * When `scene.select` is set, the harness drives a real tree selection first
  * (expand the tree, click that node's row) so a selection-gated gizmo
@@ -30,12 +37,24 @@ const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
  * tree-click → SelectionContext → NodeDispatcher → useGizmoVisible path in the
  * browser, not just the component's gating logic in isolation.
  */
-export async function captureScene(page, baseUrl, scene) {
+export async function captureScene(pages, baseUrl, scene) {
+  const canvas2D = scene.mode === '2d';
+  const pageState = canvas2D ? pages.canvas2D : pages.default;
+  if (!pageState) {
+    throw new Error(
+      `scene "${scene.name}" needs the canvas2D capture context, which this run did not create`
+    );
+  }
+  const { page, errors } = pageState;
+  // Cleared here, not by the caller, so a leftover error from the PREVIOUS
+  // scene captured on this same page can never be blamed on this one.
+  errors.length = 0;
+
   // Silence here is how a stalled resource chain becomes a baseline, so say so.
   await gotoFixture(page, baseUrl, scene.file, (ms) =>
     console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
   );
-  const { canvas, reason: canvasReason } = await findCanvas(page);
+  const { target: canvas, reason: canvasReason } = await findCaptureTarget(page, { canvas2D });
   if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
@@ -92,5 +111,34 @@ export async function captureScene(page, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  return settleCanvas(page, canvas);
+  const result = await settleCanvas(page, canvas);
+  if (!result.buffer) return result;
+  if (errors.length > 0) {
+    // A console error during a settled, otherwise-plausible capture is still
+    // a broken render — pixels alone cannot see e.g. a caught-and-swallowed
+    // resource failure that leaves the previous frame on screen.
+    return {
+      buffer: null,
+      reason: `console error(s) logged during capture: ${errors.join(' | ')}`,
+      status: 'console-error',
+    };
+  }
+  return result;
+}
+
+/**
+ * Fail-on-console-error gate, attached to every capture page. A scene that
+ * logs a console error or throws is a broken render even when its pixels
+ * happen to settle and look plausible — every golden scene gets this
+ * assertion, not just a hand-picked few. Returns the mutable array
+ * `captureScene` checks and clears per scene, so errors from one scene never
+ * bleed into the next.
+ */
+export function attachConsoleGate(page) {
+  const errors = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(String(err)));
+  return errors;
 }

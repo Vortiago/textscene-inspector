@@ -14,23 +14,38 @@ import { useCanvasModulateFor } from '../../../../r3f/canvasModulate.js';
 import { useCanvasItemLighting } from '../../../../r3f/lighting2d/useCanvasItemLighting.js';
 import { canvasItemBlendState } from '../../../../resources/materials/canvasitemmaterial/renderer.js';
 import { CanvasItemBlendMode } from '../../../../resources/materials/canvasitemmaterial/types.js';
-import { drawnSources, tileSourceZ } from '../../../../r3f/tileSourceZ.js';
+import { drawnSources } from '../../../../r3f/drawnSources.js';
+import { canvasRenderOrder } from '../../../../r3f/canvasPaintOrder.js';
+import { accumulateCanvasItemZ, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement.js';
 import type { TileMapLayerProperties } from './types.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
 import { TileSourceMesh } from '../../../../r3f/TileSourceMesh.js';
 import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
 import type { YSortGroupDescription } from '../../../../r3f/NodeComponentRegistry.js';
 
-/** Render a TileMapLayer Y-group as TileSourceMeshes at draw position `z`. */
-export function TileGroupRenderer({ item, z, band, node }: {
+export function TileGroupRenderer({ item, layerRank, sequence, node }: {
   item: YSortItem;
-  /** The Y-group's full draw position (z-index bucket + y-sort rank), carried by the group. */
-  z: number;
-  /** Gap to the next rank — the room this group's atlas sources may use. */
-  band: number;
+  /** The canvas this row draws on, as a rank (`canvasPaintOrder.ts`). */
+  layerRank: number;
+  /**
+   * The Y-group's draw sequence. Composed into the full key HERE rather than by
+   * the caller, because the third term — `z_final` — is only correct inside
+   * `<LiftedAncestors>`: that is what provides the accumulated `EffectiveZ`,
+   * while `item.effectiveZ` is accumulated from `YSortContext`, which has no
+   * provider anywhere and so always starts at 0. Keying off the latter dropped
+   * every `z_index` at or above the y-sort root, splitting a node against
+   * itself — its own body in the real bucket, its tile rows in bucket 0.
+   *
+   * The key rides the GROUP so all of this row's atlas batches share it; their
+   * own `renderOrder` then orders them WITHIN it, a batching artifact rather
+   * than a draw position (Godot interleaves a layer's cells in scan order).
+   */
+  sequence: number;
   node: TscnNode;
 }): ReactNode | null {
   const tileProps = node.properties as TileMapLayerProperties;
+  const zFinal = accumulateCanvasItemZ(useEffectiveZ(), tileProps);
+  const renderOrder = canvasRenderOrder({ layerRank, zFinal, sequence });
   const { model, status } = useTileSetModel(tileProps.tile_set);
   // A y-sorted layer is decomposed into per-Y groups here instead of rendering
   // through <TileMapLayer>, so its CanvasItem tint has to be resolved here too —
@@ -44,8 +59,9 @@ export function TileGroupRenderer({ item, z, band, node }: {
   const canvasModulate = useCanvasModulateFor(material);
   const { color, opacity } = useCanvasItemTint(tileProps, canvasModulate);
   // This path bypasses CanvasItem2D, so the accumulated z the lights are culled
-  // against comes from the sort item, which already carries it.
-  const lighting = useCanvasItemLighting(material, tileProps.light_mask, item.effectiveZ);
+  // against is the one the draw-order key above already resolved — `item.effectiveZ`
+  // is accumulated from `YSortContext`, which has no provider and always starts at 0.
+  const lighting = useCanvasItemLighting(material, tileProps.light_mask, zFinal);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
@@ -75,20 +91,25 @@ export function TileGroupRenderer({ item, z, band, node }: {
     return (
       <group
         name={`TileGroup_${node.name}_${ySortItemId(item)}`}
-        position={[originX, originY, z]}
+        position={[originX, originY, 0]}
+        renderOrder={renderOrder}
       />
     );
   }
 
   return (
-    <group name={`TileGroup_${node.name}_${ySortItemId(item)}`} position={[originX, originY, z]}>
-      {cellsBySource.map(({ sourceId, sourceIndex, sourceCount, source, cells: sourceCells }) => (
+    <group
+      name={`TileGroup_${node.name}_${ySortItemId(item)}`}
+      position={[originX, originY, 0]}
+      renderOrder={renderOrder}
+    >
+      {cellsBySource.map(({ sourceId, sourceIndex, source, cells: sourceCells }) => (
         <TileSourceMesh
           key={`${sourceId}_${ySortItemId(item)}`}
           source={source}
           cells={sourceCells}
           grid={model}
-          z={tileSourceZ(sourceIndex, sourceCount, band)}
+          renderOrder={sourceIndex}
           color={color}
           opacity={opacity}
           name={node.name}
@@ -100,7 +121,7 @@ export function TileGroupRenderer({ item, z, band, node }: {
   );
 }
 
-/** What the y-sort pass needs from a layer, read once per node. */
+/** What the y-sort pass needs to know about this layer to decompose it per row. */
 export function describeYSortLayer(node: TscnNode): YSortGroupDescription {
   const props = node.properties as TileMapLayerProperties;
   return {

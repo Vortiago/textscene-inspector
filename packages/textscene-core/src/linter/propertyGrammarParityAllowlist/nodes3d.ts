@@ -37,7 +37,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Material draw ORDER. With a single label nothing moves, but two
       // overlapping transparent materials resolve in this order, so it is a
       // real render input rather than an editor-only concern.
-      'outline_render_priority', 'render_priority',
       // Everything about the label except its string and its double-sidedness.
       // Text shaping: the font itself, the locale and bidi settings the
       // TextServer shapes and substitutes glyphs by, and the case transform.
@@ -51,9 +50,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Material behaviour: lighting response, constant screen size, the alpha
       // compositing mode with its two thresholds and its antialiasing pair,
       // and the texture sampler.
-      'shaded', 'fixed_size', 'alpha_cut', 'alpha_scissor_threshold',
+      'shaded',
       'alpha_hash_scale', 'alpha_antialiasing_mode', 'alpha_antialiasing_edge',
-      'texture_filter',
     ],
     reason:
       'double_sided is the one own property both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
@@ -108,9 +106,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // survive, `shaded` switches lit vs unlit, `no_depth_test` draws on top,
       // `fixed_size` holds screen size against distance, and `texture_filter`
       // is nearest vs linear.
-      'alpha_antialiasing_edge', 'alpha_antialiasing_mode', 'alpha_hash_scale',
-      'alpha_scissor_threshold', 'fixed_size', 'no_depth_test', 'shaded',
-      'texture_filter',
     ],
     reason:
       'SpriteBase3D material properties the shared tier validates; the Sprite3D parser reads none of them yet, and each one changes what Godot draws.',

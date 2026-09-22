@@ -1,48 +1,133 @@
 /**
- * <CanvasLayer> render contract: a full-rect absolute passthrough layer that
- * hosts Control children and provides the 'free' layout kind. Not a Control
- * itself, so no anchors/offsets — it just fills the overlay.
+ * `<CanvasLayer>` render contract: the native (WebGL canvas) painter for
+ * `CanvasLayer`. Draws no chrome of its own — it only republishes fresh
+ * `CanvasLayerIndexProvider`/`CanvasModulateContext` scopes around its
+ * children, mirroring the `CanvasLayer` branch of `NodeDispatcher.tsx`'s
+ * `PlainNode` (see that module — this is the same convention, not a second
+ * one). Assertions read scene-graph structure only, never pixels, matching
+ * `nodes/2d/marker2d/Component.test.tsx`'s style for a
+ * react-three-test-renderer suite.
  */
 import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { TscnNode } from '../../../../parser/types';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import type { TscnNode } from '../../../../parser/types';
+import { EffectiveZProvider, useCanvasLayerIndex, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement';
+import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
+import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItemModulate';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-const heading = { type: 'node', attributes: { type: 'CanvasLayer', name: 'HUD' } };
+const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
-function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'HUD', type: 'CanvasLayer', children: [], properties: parseCanvasLayer(heading, raw) };
+function canvasModulateChild(color: { r: number; g: number; b: number; a: number }): TscnNode {
+  return { name: 'CanvasModulate', type: 'CanvasModulate', children: [], properties: { name: 'CanvasModulate', color } };
 }
 
-function KindProbe() {
-  return <span data-testid="kind">{useControlParent()}</span>;
+function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[] = []): SolveNode {
+  const heading = { type: 'node', attributes: { type: 'CanvasLayer', name: 'HUD' } };
+  const properties = parseCanvasLayer(heading, raw);
+  const node: TscnNode = { name: 'HUD', type: 'CanvasLayer', children: rawChildren, properties };
+  return { ...solveNode(), path: 'HUD', node };
 }
 
-function renderLayer(raw: Record<string, string> = {}) {
-  const { container } = render(<CanvasLayer node={node(raw)} />);
-  return container.querySelector('[data-control-type="CanvasLayer"]') as HTMLElement;
+function LayerProbe({ testId }: { testId: string }) {
+  const layer = useCanvasLayerIndex();
+  const modulate = useCanvasModulate();
+  return (
+    <group name={`probe:${testId}:layer=${layer}:r=${modulate.r}`} />
+  );
+}
+
+function ZProbe({ testId }: { testId: string }) {
+  const z = useEffectiveZ();
+  return <group name={`zprobe:${testId}:z=${z}`} />;
+}
+
+function ModulateProbe({ testId }: { testId: string }) {
+  const m = useParentModulate();
+  return <group name={`mprobe:${testId}:r=${m.r}:a=${m.a}`} />;
+}
+
+async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
+  return ReactThreeTestRenderer.create(
+    <CanvasLayer {...painterEnv()} solveNode={layerSolveNode(raw, rawChildren)} rect={ZERO_RECT} renderOrder={0}>
+      <LayerProbe testId={testId} />
+    </CanvasLayer>
+  );
 }
 
 describe('<CanvasLayer>', () => {
-  it('fills the overlay as an absolutely-positioned full rect', () => {
-    const div = renderLayer();
-    expect(div.style.position).toBe('absolute');
-    expect(div.style.inset).toBe('0'); // inset: 0 → full-rect overlay
+  it("publishes this layer's own `layer` property to CanvasLayerIndexProvider, reaching children", async () => {
+    const renderer = await renderLayer({ layer: '5' }, [], 'layer5');
+    const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+    expect(probe.name).toBe('probe:layer5:layer=5:r=1');
   });
 
-  it('is visible by default and hides when visible = false', () => {
-    expect(renderLayer().style.display).toBe('');
-    expect(renderLayer({ visible: 'false' }).style.display).toBe('none');
+  it("defaults to Godot's own CanvasLayer.layer default (1) when unset", async () => {
+    const renderer = await renderLayer({}, [], 'default');
+    const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+    expect(probe.name).toBe('probe:default:layer=1:r=1');
   });
 
-  it('provides the free layout kind to its Control children', () => {
-    const { getByTestId } = render(
-      <CanvasLayer node={node()}>
-        <KindProbe />
-      </CanvasLayer>
+  it("publishes a fresh CanvasModulateContext scope from this layer's OWN raw children, ignoring an inherited world tint", async () => {
+    const ownChild = canvasModulateChild({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
+    const renderer = await ReactThreeTestRenderer.create(
+      <CanvasModulateContext.Provider value={{ r: 0.9, g: 0.9, b: 0.9, a: 1 }}>
+        <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [ownChild])} rect={ZERO_RECT} renderOrder={0}>
+          <LayerProbe testId="tint" />
+        </CanvasLayer>
+      </CanvasModulateContext.Provider>
     );
-    expect(getByTestId('kind').textContent).toBe('free');
+    const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+    expect(probe.name).toBe('probe:tint:layer=1:r=0.2');
   });
+
+  it('draws no chrome of its own — no mesh or line geometry, just the wrapped children', async () => {
+    const renderer = await renderLayer({}, [], 'chrome');
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+
+  it('does not render (nor publish context to) children when visible === false', async () => {
+    const renderer = await renderLayer({ visible: 'false' }, [], 'hidden');
+    expect(renderer.scene.findAllByType('Group')).toHaveLength(0);
+  });
+
+  it(
+    "resets EffectiveZProvider to 0 for its children regardless of any ambient z outside the layer " +
+      '— a CanvasLayer starts its OWN canvas (renderer_canvas_cull.cpp culls each canvas independently), ' +
+      "mirroring NodeDispatcher.tsx's own CanvasLayer branch (`<EffectiveZProvider value={0}>`)",
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <EffectiveZProvider value={999}>
+          <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
+            <ZProbe testId="reset" />
+          </CanvasLayer>
+        </EffectiveZProvider>
+      );
+      const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+      expect(probe.name).toBe('zprobe:reset:z=0');
+    }
+  );
+
+  it(
+    "resets Modulate2DContext to opaque white — an ancestor's `modulate` does NOT reach into a CanvasLayer subtree " +
+      '(CanvasLayer derives from Node, so `CanvasItem::get_parent_item()` returns null under it, ' +
+      "`scene/main/canvas_item.cpp:565`; the child parents to the layer's own canvas RID, `canvas_item.cpp:264,269`, " +
+      'whose root items are seeded pure white, `servers/rendering/renderer_canvas_cull.cpp:82`)',
+    async () => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
+          <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
+            <ModulateProbe testId="reset" />
+          </CanvasLayer>
+        </Modulate2DContext.Provider>
+      );
+      const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
+      expect(probe.name).toBe('mprobe:reset:r=1:a=1');
+    }
+  );
 });

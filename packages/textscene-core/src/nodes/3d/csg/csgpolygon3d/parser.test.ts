@@ -45,7 +45,7 @@ describe('parseCSGPolygon3D', () => {
     });
     expect(Array.from(r.polygon)).toEqual([0, -1, 0, 0, 2, -1]);
     expect(r.depth).toBe(2);
-    expect(r.material).toBe('ExtResource("3_5yyaq")');
+    expect(r.materialPath).toBe('ExtResource("3_5yyaq")');
   });
 
   it('parses the SPIN witness (csg.tscn:163, the StaircaseSpin)', () => {

@@ -5,7 +5,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 
 const CURVE: TscnInternalResource = {
   type: 'Curve',
-  id: '4',
+  id: '1',
   data: { id: '4', _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]' },
 };
 

@@ -1,0 +1,61 @@
+; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower Button.
+;
+; Under RTL, `Button::_notification` swaps the icon and text alignment SIDES
+; before placing either (button.cpp:262-276), so the icon jumps from the left
+; content margin to the right one and the LEFT-aligned label hugs the opposite
+; end. Both buttons pin `alignment = 0` and `icon_alignment = 0` because the
+; CENTER defaults are swap-invariant and would show nothing. The inline
+; GradientTexture2D icon is asymmetric along X so a moved icon cannot be
+; mistaken for an unmoved one, and the StyleBoxFlat pins the box so the icon
+; and label are the only things that can move.
+;
+; `unit-control-layout-direction-rtl` moves a BoxContainer's child order under
+; the same property and never draws a Button; every other Button scene is LTR.
+
+[gd_scene load_steps=4 format=3 uid="uid://unitbuttonrtl"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 24
+height = 24
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="Button" parent="."]
+offset_left = 64.0
+offset_top = 48.0
+offset_right = 384.0
+offset_bottom = 96.0
+text = "Save changes"
+alignment = 0
+icon_alignment = 0
+icon = SubResource("GradientTexture2D_icon")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+
+[node name="Rtl" type="Button" parent="."]
+layout_direction = 3
+offset_left = 64.0
+offset_top = 128.0
+offset_right = 384.0
+offset_bottom = 176.0
+text = "Save changes"
+alignment = 0
+icon_alignment = 0
+icon = SubResource("GradientTexture2D_icon")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")

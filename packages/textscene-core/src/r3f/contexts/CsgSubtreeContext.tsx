@@ -29,13 +29,19 @@ export interface CsgSubtreeValue {
   status: CsgSubtreeStatus;
   /** Node paths whose solids this root has taken over. */
   absorbedPaths: ReadonlySet<string>;
+  /**
+   * Node paths this root skipped for invisibility, which contribute a POINT at their
+   * origin instead of their solid — `CsgPlan.invisiblePaths` has the Godot rule.
+   */
+  invisiblePaths: ReadonlySet<string>;
 }
 
 const CsgSubtreeContext = createContext<CsgSubtreeValue | null>(null);
 CsgSubtreeContext.displayName = 'CsgSubtreeContext';
 
 export interface CsgSubtreeProviderProps {
-  value: CsgSubtreeValue;
+  /** Null re-publishes "outside a CSG root", which is what a node with no plan passes on. */
+  value: CsgSubtreeValue | null;
   children: ReactNode;
 }
 

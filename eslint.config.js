@@ -26,6 +26,11 @@ export default [
       'docs/probes/',
       // Vendored third-party source (minified); linted upstream, not here.
       'scripts/compare-docs/vendor/',
+      // Generated MSDF font atlas: the base64 PNG and per-glyph
+      // JSON table are hundreds of KB on single lines. Produced by
+      // `scripts/fonts/bake-metrics.mjs`; drift is caught by its `--check`
+      // mode, not by lint.
+      'packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts',
     ],
   },
 

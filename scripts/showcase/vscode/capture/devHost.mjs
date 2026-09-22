@@ -9,9 +9,10 @@
  */
 
 import { spawn, execSync } from 'node:child_process';
-import { rmSync, existsSync, readdirSync } from 'node:fs';
+import { rmSync, existsSync, readdirSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { SWIFTSHADER_GL_ARGS } from '../../browser.mjs';
+import { THROWAWAY_USER_SETTINGS } from '../../../vscode/userSettings.mjs';
 import { HEADLESS, IS_LINUX, IS_WIN, sleep } from './platform.mjs';
 import { EXT, PORT, UD, VSCODE_CACHE, WS } from './paths.mjs';
 
@@ -23,16 +24,64 @@ export function killStaleHost(udMarker) {
         `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name='Code.exe'\\" | Where-Object { $_.CommandLine -like '*${udMarker}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"`,
         { stdio: 'ignore' }
       );
-    } else {
-      // SIGKILL (mirrors the Windows -Force above): the dev-host's Electron
-      // main catches SIGTERM and shuts down slowly under xvfb, so a plain
-      // signal leaks orphans. pkill -f matches the full command line; only our
-      // dev-host (and its xvfb-run wrapper) carry the showcase --user-data-dir
-      // marker, so the user's own VS Code (a different user-data-dir) is never
-      // touched — nor is this node process (its argv is just the script path).
-      execSync(`pkill -9 -f -- ${udMarker}`, { stdio: 'ignore' });
+      return;
     }
-  } catch { /* nothing matched (pkill exits 1 when no process matches) */ }
+    // List first, then signal from node. A `pkill -f <marker>` would match the
+    // shell running it, because the marker is in that shell's own command line,
+    // and kill the caller instead of the host. By the time we signal, that
+    // shell has exited and its pid simply fails with ESRCH.
+    const matched = execSync(`pgrep -f -- ${JSON.stringify(udMarker)} || true`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim().split('\n').filter(Boolean).map(Number);
+    for (const pid of matched) {
+      if (pid === process.pid || pid === process.ppid) continue;
+      // SIGKILL (mirrors the Windows -Force above): the dev-host's Electron main
+      // catches SIGTERM and shuts down slowly under xvfb, so a plain signal
+      // leaks orphans.
+      try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
+    }
+  } catch { /* nothing matched */ }
+}
+
+/**
+ * Kill an ORPHAN still holding the CDP port, so the next run is not refused.
+ *
+ * A dev-host's helper process (dconf, a GTK shim) inherits the debugging
+ * socket and can outlive the host it was forked from. It carries no
+ * user-data-dir marker, so `killStaleHost` cannot see it, and the port guard
+ * then blocks every later run until somebody frees the port by hand. Only a
+ * re-parented process (`PPid: 1`) holding this exact port is touched: nothing
+ * a user runs listens there.
+ */
+export function killPortOrphan(port) {
+  if (IS_WIN) return; // no /proc to confirm the re-parenting on
+  let holders;
+  try {
+    holders = execSync(`ss -ltnpH 'sport = :${port}' 2>/dev/null || true`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+  } catch { return; }
+  for (const [, pid] of holders.matchAll(/pid=(\d+)/g)) {
+    try {
+      const status = readFileSync(`/proc/${pid}/status`, 'utf8');
+      if (!/^PPid:\s*1$/m.test(status)) continue; // still owned by a live parent
+      const name = /^Name:\s*(.+)$/m.exec(status)?.[1] ?? '?';
+      console.log(`[vscode] freeing port ${port} from orphaned ${name} (pid ${pid})`);
+      process.kill(Number(pid), 'SIGKILL');
+    } catch { /* gone, or not ours to read */ }
+  }
+}
+
+/**
+ * Seed the throwaway user-data-dir before the dev-host reads it.
+ *
+ * The window's size is not among the things these settings decide. It comes up
+ * 1440x900 on the 1920x1080 Xvfb screen, and neither `window.newWindowDimensions`
+ * nor CDP moves it headless: Electron exposes no `Browser.setWindowBounds`, and
+ * there is no window manager to resize against. The editor-area split is the
+ * only lever on how wide the preview itself lands (`widenPreview`).
+ */
+export function seedUserData(userDataDir) {
+  const userDir = `${userDataDir}/User`;
+  mkdirSync(userDir, { recursive: true });
+  writeFileSync(`${userDir}/settings.json`, JSON.stringify(THROWAWAY_USER_SETTINGS, null, 2));
 }
 
 /** SIGKILL the launched process group — xvfb-run + Xvfb + the dev-host it wraps. */
@@ -137,9 +186,10 @@ function buildLaunchCommand(bin, viaPath) {
   let spawnArgs = vscodeArgs;
   if (HEADLESS) {
     cmd = 'xvfb-run';
-    // -a: pick a free display. 24-bit depth is required for GL; 1920x1080 also
-    // sizes the window and therefore the screenshot. The -screen string is ONE
-    // argv element (no shell) — spawn passes it verbatim to xvfb-run's getopt.
+    // -a: pick a free display. 24-bit depth is required for GL. The screen only
+    // bounds the window, which comes up 1440x900 inside it (see `seedUserData`).
+    // The -screen string is ONE argv element (no shell) — spawn passes it
+    // verbatim to xvfb-run's getopt.
     spawnArgs = ['-a', '--server-args=-screen 0 1920x1080x24', bin, ...vscodeArgs];
   }
   // On Windows a `code` resolved from PATH is code.cmd, which needs a shell to run.

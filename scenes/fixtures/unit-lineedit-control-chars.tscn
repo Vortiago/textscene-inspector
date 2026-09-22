@@ -1,0 +1,23 @@
+; draw_control_chars — the ONE variable no other LineEdit fixture sets. The
+; mid-string U+0001 is unshapeable by any font; on, it draws as a hex-code
+; box that OCCUPIES WIDTH, shifting "after" to the right of where it would
+; sit if the control character were merely invisible. A regression that
+; treats it as ordinary text (falling back to an average-glyph-width advance
+; instead of either dropping it or boxing it) is invisible in a diff that
+; only checks the surrounding glyphs' own ink.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitlineeditcontrolchars"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Field" type="LineEdit" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 300.0
+offset_bottom = 60.0
+text = "beforeafter"
+draw_control_chars = true

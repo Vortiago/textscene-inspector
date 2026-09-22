@@ -20,8 +20,14 @@ import {
 } from './vocabulary.mjs';
 
 /** One hand-authored sheet as a panel, with its images and rolled-up status resolved. */
-function sheetPanel({ meta, body }, { catalogByType, groupFor, inlineImages, missing }) {
-  const { intro, sections, trailing } = parseSections(body);
+function sheetPanel(
+  { meta, body },
+  { catalogByType, groupFor, inlineImages, missing, orphanedMarkers }
+) {
+  const { intro, sections, trailing, orphaned } = parseSections(body);
+  for (const marker of orphaned) {
+    orphanedMarkers.push(`${meta.type}: orphaned compare marker ${marker}`);
+  }
   const sectioned = sections.length > 0;
   // Section sheets resolve their images per section; a legacy sheet uses the
   // single `image:` frontmatter pair.
@@ -93,6 +99,10 @@ function sheetPanel({ meta, body }, { catalogByType, groupFor, inlineImages, mis
 
 export function build(sheets, inlineImages, fragment) {
   const missing = [];
+  // A DECLARED `<!-- compare: … -->` marker the section scan never consumed —
+  // same failure shape as a declared `image:` with no files on disk, reported
+  // through its own list so the two are never confused in the summary.
+  const orphanedMarkers = [];
   const catalog = loadCatalog();
   const lintCoverage = loadLintCoverage();
   // Nodes and resources both carry `docs`/`source`; resources are absent from
@@ -108,7 +118,7 @@ export function build(sheets, inlineImages, fragment) {
   const groupFor = (type, category, metaGroup) =>
     catalogByType.get(type)?.group ?? metaGroup ?? category;
   const sheetNodes = sheets.map((sheet) =>
-    sheetPanel(sheet, { catalogByType, groupFor, inlineImages, missing })
+    sheetPanel(sheet, { catalogByType, groupFor, inlineImages, missing, orphanedMarkers })
   );
 
   // Every Godot node the previewer does NOT support yet becomes its own
@@ -156,5 +166,9 @@ export function build(sheets, inlineImages, fragment) {
 
   // Land on a real (implemented) sheet, not the first injected "not implemented" node.
   const firstType = (nodes.find((n) => !n.unimplemented && !n.notes) ?? nodes[0])?.type;
-  return { html: page(renderNav(nodes), renderPanels(nodes), firstType, fragment), missing };
+  return {
+    html: page(renderNav(nodes), renderPanels(nodes), firstType, fragment),
+    missing,
+    orphanedMarkers,
+  };
 }

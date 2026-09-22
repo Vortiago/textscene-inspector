@@ -1,93 +1,146 @@
 /**
- * <PanelContainer> render contract: a default panel fill overridden by a
- * `theme_override_styles/panel` StyleBox, rendering as a flex column that hands
- * its child the 'margin' layout kind so the child fills (not just flows inside)
- * the box's content margins — the same single-child fit MarginContainer uses.
+ * `<PanelContainer>` — the native (WebGL canvas) painter for
+ * `PanelContainer`. Draws the SAME chrome `<PanelNative>` draws (the resolved
+ * `theme_override_styles/panel` override, or the default-theme `panel`
+ * struct, across the node's whole solved rect) — the container BEHAVIOUR
+ * (content-rect inset + minimum size) lives in `nativeSolver.ts`, wired
+ * through `controlSolverRegistry`, not in this painter.
  */
 import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import type { TscnNode } from '../../../../parser/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
+import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import type { ControlProperties } from '../control/types';
 import { PanelContainer } from './Component';
-import { parsePanelContainer } from './parser';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-// Godot's default PanelContainer `panel` stylebox fill (style_normal_color).
-const DEFAULT_BACKGROUND = 'rgba(26, 26, 26, 0.6)';
-const heading = { type: 'node', attributes: { type: 'PanelContainer', name: 'Box' } };
+const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
+const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
+const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
+const THEME = nativeTheme(1);
 
-function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Box', type: 'PanelContainer', children: [], properties: parsePanelContainer(heading, raw) };
+function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
+  return {
+    bgColor: { r: 0.2, g: 0.3, b: 0.4, a: 1 },
+    borderColor: { r: 0, g: 0, b: 0, a: 1 },
+    borderWidth: { ...ZERO_SIDES },
+    cornerRadius: { ...ZERO_CORNERS },
+    expandMargin: { ...ZERO_SIDES },
+    contentMargin: { ...ZERO_SIDES },
+    drawCenter: true,
+    borderBlend: false,
+    antiAliased: true,
+    aaSize: 1,
+    cornerDetail: 8,
+    skew: { x: 0, y: 0 },
+    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
+    shadowSize: 0,
+    shadowOffset: { x: 0, y: 0 },
+    ...overrides,
+  };
 }
 
-function KindProbe() {
-  return <span data-testid="kind">{useControlParent()}</span>;
+function solveNode(
+  properties: Partial<ControlProperties> = {},
+  styleBoxes: Record<string, StyleBoxFlatData> = {}
+): SolveNode {
+  const node: TscnNode = {
+    name: 'MyPanelContainer',
+    type: 'PanelContainer',
+    children: [],
+    properties: { name: 'MyPanelContainer', ...properties } as ControlProperties,
+  };
+  return { ...emptySolveNode(), path: 'MyPanelContainer', node, styleBoxes };
 }
 
-function renderBox(raw: Record<string, string> = {}, internalResources: TscnInternalResource[] = []) {
-  const { container } = render(
-    <SceneResourcesProvider internalResources={internalResources}>
-      <PanelContainer node={node(raw)} />
-    </SceneResourcesProvider>
-  );
-  return container.querySelector('[data-control-type="PanelContainer"]') as HTMLElement;
-}
+const RECT = { x: 0, y: 0, w: 240, h: 80 };
 
-describe('<PanelContainer>', () => {
-  it('applies the default panel fill when un-themed', () => {
-    expect(renderBox().style.backgroundColor).toBe(DEFAULT_BACKGROUND);
-  });
-
-  it('lets a resolved StyleBox override the default background', () => {
-    const styleBox: TscnInternalResource = {
-      id: 'SB',
-      type: 'StyleBoxFlat',
-      data: { bg_color: 'Color(0, 1, 0, 1)' },
-    };
-    const div = renderBox({ 'theme_override_styles/panel': 'SubResource("SB")' }, [styleBox]);
-    expect(div.style.backgroundColor).toBe('rgba(0, 255, 0, 1)');
-  });
-
-  it('keeps the default fill when the panel ref cannot resolve', () => {
-    const div = renderBox({ 'theme_override_styles/panel': 'SubResource("Missing")' });
-    expect(div.style.backgroundColor).toBe(DEFAULT_BACKGROUND);
-  });
-
-  it('paints nothing when the resolved box paints nothing', () => {
-    // A resolved StyleBoxEmpty (style_box.h:80) or a centre-less StyleBoxFlat
-    // (style_box_flat.cpp:455-460) replaces the default box with nothing — the
-    // default fill must not survive underneath it.
-    const empty: TscnInternalResource = { id: 'SB', type: 'StyleBoxEmpty', data: {} };
-    expect(
-      renderBox({ 'theme_override_styles/panel': 'SubResource("SB")' }, [empty]).style
-        .backgroundColor
-    ).toBe('transparent');
-
-    const noCentre: TscnInternalResource = {
-      id: 'SB2',
-      type: 'StyleBoxFlat',
-      data: { bg_color: 'Color(1, 0, 0, 1)', draw_center: 'false' },
-    };
-    expect(
-      renderBox({ 'theme_override_styles/panel': 'SubResource("SB2")' }, [noCentre]).style
-        .backgroundColor
-    ).toBe('transparent');
-  });
-
-  it('provides the margin layout kind to its subtree, so the child fills the box', () => {
-    const { getByTestId } = render(
-      <SceneResourcesProvider>
-        <PanelContainer node={node()}>
-          <KindProbe />
-        </PanelContainer>
-      </SceneResourcesProvider>
+describe('<PanelContainer> (isolated painter contract)', () => {
+  it('draws the resolved theme_override_styles/panel override, not the default fill, when one is present', async () => {
+    const override = styleBox({ bgColor: { r: 0.9, g: 0.1, b: 0.1, a: 1 } });
+    const renderer = await ReactThreeTestRenderer.create(
+      <PanelContainer {...painterEnv()} solveNode={solveNode({}, { panel: override })} rect={RECT} renderOrder={0} />
     );
-    expect(getByTestId('kind').textContent).toBe('margin');
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const color = geom.attributes.color as THREE.BufferAttribute;
+    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    expect(color.getX(0)).toBeCloseTo(0.9, 4);
   });
 
-  it('renders a flex column so the single child can fill the content height', () => {
-    const div = renderBox();
-    expect(div.style.display).toBe('flex');
-    expect(div.style.flexDirection).toBe('column');
+  it('falls back to the default-theme panel struct when no override resolves', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <PanelContainer {...painterEnv()} solveNode={solveNode({}, {})} rect={RECT} renderOrder={0} />
+    );
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const color = geom.attributes.color as THREE.BufferAttribute;
+    // Default-theme `panel` stylebox fill is `style_normal_color` =
+    // Color(0.1, 0.1, 0.1, 0.6) — the SAME struct Panel falls back to
+    // (default_theme.cpp:134 and :1274 call make_flat_stylebox with the
+    // identical arguments for "Panel" and "PanelContainer").
+    expect(color.getX(0)).toBeCloseTo(0.1, 5);
+    expect(color.getW(0)).toBeCloseTo(0.6, 5);
+  });
+
+  it('composes self_modulate onto the panel fill, in sRGB, with a single linear conversion', async () => {
+    const flat = styleBox({ bgColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 } });
+    const renderer = await ReactThreeTestRenderer.create(
+      <PanelContainer {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode({}, { panel: flat })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const color = geom.attributes.color as THREE.BufferAttribute;
+    // 0.8 (bgColor) * 0.5 (tint) = 0.4, composed in sRGB and left there.
+    expect(color.getX(0)).toBeCloseTo(0.4, 4);
+  });
+
+  it('applies the walker-composed tint to the panel fill exactly once', async () => {
+    const flat = styleBox({ bgColor: { r: 1, g: 1, b: 1, a: 1 } });
+    const renderer = await ReactThreeTestRenderer.create(
+      <PanelContainer {...painterEnv()}
+        // The walker's own product: ambient(0.5) x self_modulate(0.5) = 0.25.
+        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        solveNode={solveNode({}, { panel: flat })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    const color = geom.attributes.color as THREE.BufferAttribute;
+    // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
+    expect(color.getX(0)).toBeCloseTo(0.25, 4);
+  });
+});
+
+describe('<PanelContainer> registered through <ControlCanvasWalker> (end-to-end walker plumbing)', () => {
+  it('honours visible === false on the PanelContainer node itself (the WALKER hides the group, not this painter)', async () => {
+    controlComponentRegistry.register({
+      typeName: 'PanelContainer',
+      Component: PanelContainer,
+    });
+    controlSolverRegistry.clear();
+    const root = solveNode({ anchorsPreset: 15, visible: false });
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+    );
+
+    const groups = renderer.scene.findAllByType('Group').map((g) => g.instance as { visible: boolean; name: string });
+    const rootGroup = groups.find((g) => g.name === 'PanelContainer:MyPanelContainer');
+    expect(rootGroup).toBeDefined();
+    expect(rootGroup!.visible).toBe(false);
+
+    controlComponentRegistry.clear();
   });
 });

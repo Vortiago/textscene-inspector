@@ -28,6 +28,7 @@
  * status/category words, and `page`/`styles`/`client` are the document itself.
  */
 
+import { pathToFileURL } from 'node:url';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
@@ -71,7 +72,7 @@ function main() {
     }
     seen.set(type, sheetLabel(files[i]));
   }
-  const { html, missing } = build(sheets, args.inline, args.fragment);
+  const { html, missing, orphanedMarkers } = build(sheets, args.inline, args.fragment);
 
   const rel = relative(REPO_ROOT, args.out);
   const where = rel && !rel.startsWith('..') ? rel : args.out;
@@ -89,10 +90,17 @@ function main() {
     console.log(`[gallery] ${sheets.length} sheet(s) → ${args.out}`);
   }
   if (missing.length) {
-    console.error(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
-    for (const m of missing) console.error(`  ${m}`);
+    console.warn(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
+    for (const m of missing) console.warn(`  ${m}`);
+    console.warn('[gallery] run the capture for these; the corpus test fails until they exist');
+  }
+  if (orphanedMarkers.length) {
+    console.error(`[gallery] ${orphanedMarkers.length} sheet(s) carry an orphaned compare marker:`);
+    for (const m of orphanedMarkers) console.error(`  ${m}`);
     process.exitCode = 1;
   }
 }
 
-main();
+// Guarded so importing this module (e.g. from a test) never runs the CLI as an
+// import side effect — only invoking it directly does.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

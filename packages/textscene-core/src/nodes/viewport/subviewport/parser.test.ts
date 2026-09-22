@@ -15,7 +15,9 @@ describe('parseSubViewport', () => {
     );
     expect(result.name).toBe('RenderBooth');
     expect(result.parent).toBe('.');
-    // A SubViewport derives from Viewport < Node — it has no spatial transform.
+    // A SubViewport derives from Viewport < Node — it has no spatial transform,
+    // and `SubViewportProperties` omits the field entirely rather than merely
+    // leaving it unset.
     expect('transform' in result).toBe(false);
   });
 

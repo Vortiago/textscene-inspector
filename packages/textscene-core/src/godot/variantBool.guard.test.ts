@@ -1,5 +1,14 @@
 /**
- * Guard: nothing reads a `.tscn` boolean property by comparing its raw text.
+ * Guard: nothing reads a boolean Godot stores in a Variant by comparing its
+ * raw text.
+ *
+ * `.tscn` is the common case, and not the boundary. A `project.godot` or
+ * `.import` field is parsed into a Variant of whatever type the file wrote
+ * (`_GLOBAL_DEF` leaves an already-loaded value alone, `project_settings.cpp:
+ * 1320-1325`) and read into a `bool`, which is `Variant::booleanize`
+ * (`variant_op.cpp:1114-1122`) — so `=0` disables a setting exactly as `=false`
+ * does. "It is a ConfigFile field, not a node property" is therefore not an
+ * exemption; only a value Godot never puts in a BOOL context is.
  *
  * `visible = 0` is a file Godot loads, hiding the node — `can_convert_strict`
  * lists INT and FLOAT as valid sources for a BOOL target (`variant.cpp:550-558`)
@@ -24,20 +33,22 @@ import { fileURLToPath } from 'node:url';
 const src = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // .../src
 
 /**
- * Files whose comparison is not about a BOOL property slot.
+ * Files whose comparison is not about a value Godot ever booleanizes.
  *
  * Each is a different KIND of value, which is why none of them can share the
  * property reader: a DOM attribute this code wrote itself, an environment
- * variable, a `.import` ConfigFile field Godot's importer writes, and an
- * untyped Variant keyframe where `1` is the number one and booleanizing it
- * would turn every scalar track into a constant `true`.
+ * variable, an untyped Variant keyframe where `1` is the number one and
+ * booleanizing it would turn every scalar track into a constant `true`, and a
+ * BBCode option the engine itself matches as text.
  */
 const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/components/SceneTreeViewer/SceneTreeViewer.tsx': 'aria-expanded, a DOM attribute',
   'r3f/internalTextLabel.tsx': 'the VITEST environment variable',
-  'parser/importParser.ts': 'a .import ConfigFile field',
   'nodes/animation/animationplayer/keyframeValues.ts': 'an untyped Variant keyframe value',
   'godot/variantBool.ts': 'the definition itself',
+  'r3f/controls/native/text/sceneFontLoader.ts': 'the VITEST environment variable',
+  'nodes/2d/ui/richtextlabel/bbcode.ts':
+    'a BBCode tag option, which Godot itself compares against the literal text (rich_text_label.cpp:6138)',
 };
 
 function sourceFiles(dir: string = src, prefix = ''): string[] {
@@ -65,10 +76,11 @@ describe('boolean properties are read through the engine conversion', () => {
 
     expect(
       offenders,
-      `A '.tscn' boolean is not its text: Godot converts an int or float ` +
-        `spelling into the slot (variant.cpp:550-558), so '0' is false. Read it ` +
-        `with boolSlotValue from src/godot/variantBool.ts. If the value is not a ` +
-        `BOOL property slot, add it to NOT_A_BOOL_SLOT with the reason:\n` +
+      `A Godot boolean is not its text: an int or float spelling converts into ` +
+        `the slot (variant.cpp:550-558) and a ConfigFile field booleanizes on ` +
+        `the read (variant_op.cpp:1114-1122), so '0' is false either way. Read ` +
+        `it with boolSlotValue from src/godot/variantBool.ts. If the value is ` +
+        `one Godot never booleanizes, add it to NOT_A_BOOL_SLOT with the reason:\n` +
         offenders.join('\n')
     ).toEqual([]);
   });

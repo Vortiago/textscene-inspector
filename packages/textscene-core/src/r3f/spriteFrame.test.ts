@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import {
   composeFrameTexture,
   frameSizePx,
-  needsFrameComposition,
+  spriteWrapMode,
   type SpriteFrameProps,
 } from './spriteFrame';
 
@@ -27,19 +27,19 @@ function baseProps(overrides: Partial<SpriteFrameProps> = {}): SpriteFrameProps 
 
 describe('composeFrameTexture', () => {
   it('returns undefined when no texture is loaded', () => {
-    expect(composeFrameTexture(undefined, baseProps(), 'clamp')).toBeUndefined();
+    expect(composeFrameTexture(undefined, baseProps(), 'clamp', THREE.SRGBColorSpace)).toBeUndefined();
   });
 
   it('clones the texture (never mutates the shared cache entry)', () => {
     const source = makeTexture();
-    const result = composeFrameTexture(source, baseProps({ hframes: 4 }), 'clamp');
+    const result = composeFrameTexture(source, baseProps({ hframes: 4 }), 'clamp', THREE.SRGBColorSpace);
     expect(result).not.toBe(source);
     expect(source.repeat.x).toBe(1); // source untouched
     expect(result?.repeat.x).toBeCloseTo(0.25);
   });
 
   it('leaves UVs at identity for a plain full-image sprite', () => {
-    const result = composeFrameTexture(makeTexture(), baseProps(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(), baseProps(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.repeat.x).toBe(1);
     expect(result.repeat.y).toBe(1);
     expect(result.offset.x).toBe(0);
@@ -52,7 +52,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(100, 80),
       baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBeCloseTo(0.5);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -66,7 +66,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       texture,
       baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBe(1);
     expect(result.offset.x).toBe(0);
@@ -77,7 +77,7 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(),
       baseProps({ hframes: 4, vframes: 2, frame: 5 }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.repeat.x).toBeCloseTo(0.25);
     expect(result.repeat.y).toBeCloseTo(0.5);
@@ -89,10 +89,18 @@ describe('composeFrameTexture', () => {
     const result = composeFrameTexture(
       makeTexture(),
       baseProps({ hframes: 4, vframes: 2, frame: 5, frame_coords: { x: 3, y: 0 } }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     expect(result.offset.x).toBeCloseTo(0.75);
     expect(result.offset.y).toBeCloseTo(0.5); // row 0 = top half
+  });
+
+  it('retags the clone with the caller-supplied colorSpace, independent of the source', () => {
+    const source = makeTexture();
+    source.colorSpace = THREE.SRGBColorSpace;
+    const result = composeFrameTexture(source, baseProps(), 'clamp', THREE.NoColorSpace);
+    expect(result?.colorSpace).toBe(THREE.NoColorSpace);
+    expect(source.colorSpace).toBe(THREE.SRGBColorSpace); // source untouched
   });
 
   it('composes region_rect THEN frame grid (Godot base_rect-then-subdivide)', () => {
@@ -106,7 +114,7 @@ describe('composeFrameTexture', () => {
         vframes: 1,
         frame: 2,
       }),
-      'clamp'
+      'clamp', THREE.SRGBColorSpace
     )!;
     // repeat = region repeat / grid: (1.0/5, 0.5/1)
     expect(result.repeat.x).toBeCloseTo(0.2);
@@ -115,131 +123,6 @@ describe('composeFrameTexture', () => {
     expect(result.offset.x).toBeCloseTo(0.4);
     // region offset.y (0.5) + region repeat (0.5) − (row+1) × 0.5 = 0.5
     expect(result.offset.y).toBeCloseTo(0.5);
-  });
-});
-
-describe('composeFrameTexture — an AtlasTexture region as the base rect', () => {
-  // Godot's AtlasTexture remaps every draw into its region
-  // (atlas_texture.cpp `get_rect_region`), so the region IS the sprite's
-  // "full image": region_rect coordinates and the frame grid live inside it.
-  const ATLAS = { x: 20, y: 16, width: 40, height: 32 };
-
-  it('windows UVs to the atlas region when the sprite adds nothing', () => {
-    const result = composeFrameTexture(makeTexture(100, 80), baseProps(), 'clamp', ATLAS)!;
-    expect(result.repeat.x).toBeCloseTo(0.4);
-    expect(result.repeat.y).toBeCloseTo(0.4);
-    expect(result.offset.x).toBeCloseTo(0.2);
-    // image-Y 16..48 of 80 → UV-Y offset 1 - 48/80
-    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
-  });
-
-  it('translates a sprite region_rect by the atlas origin', () => {
-    const result = composeFrameTexture(
-      makeTexture(100, 80),
-      baseProps({ region_enabled: true, region_rect: { x: 10, y: 8, width: 20, height: 16 } }),
-      'clamp',
-      ATLAS
-    )!;
-    // Sheet-space rect: (20+10, 16+8, 20, 16)
-    expect(result.repeat.x).toBeCloseTo(0.2);
-    expect(result.repeat.y).toBeCloseTo(0.2);
-    expect(result.offset.x).toBeCloseTo(0.3);
-    expect(result.offset.y).toBeCloseTo(1 - 40 / 80);
-  });
-
-  it('subdivides the atlas region by the frame grid', () => {
-    const result = composeFrameTexture(
-      makeTexture(100, 80),
-      baseProps({ hframes: 2, vframes: 2, frame: 3 }),
-      'clamp',
-      ATLAS
-    )!;
-    // Quarter of the atlas window, bottom-right frame.
-    expect(result.repeat.x).toBeCloseTo(0.2);
-    expect(result.repeat.y).toBeCloseTo(0.2);
-    expect(result.offset.x).toBeCloseTo(0.2 + 0.2);
-    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
-  });
-
-  // An AtlasTexture is the ONE texture kind Godot clips an oversized source rect
-  // against: `get_rect_region` intersects it with the cell
-  // (`src_clipped = _get_region_rect().intersection(src)`, atlas_texture.cpp:204)
-  // and draws nothing when that comes back empty. A plain Texture2D is never
-  // clipped — the sibling suite below pins that opposite rule — so an unclipped
-  // atlas sprite bleeds pixels from the neighbouring cell.
-  it('CLIPS a sprite region_rect that overruns its atlas cell', () => {
-    const result = composeFrameTexture(
-      makeTexture(100, 80),
-      // Starts inside the cell, runs 20px past its right edge and 16px past the bottom.
-      baseProps({ region_enabled: true, region_rect: { x: 20, y: 16, width: 40, height: 32 } }),
-      'clamp',
-      ATLAS
-    )!;
-    // Sheet-space rect (40, 32, 40, 32) ∩ cell (20, 16, 40, 32) = (40, 32, 20, 16).
-    expect(result.repeat.x).toBeCloseTo(20 / 100);
-    expect(result.repeat.y).toBeCloseTo(16 / 80);
-    expect(result.offset.x).toBeCloseTo(40 / 100);
-    expect(result.offset.y).toBeCloseTo(1 - 48 / 80);
-  });
-
-  it('draws NOTHING when the sprite region_rect misses the cell entirely', () => {
-    // Godot's get_rect_region returns false for an empty intersection, so the
-    // draw is skipped — not "fall back to the whole cell", which would show a
-    // frame the engine does not.
-    expect(
-      composeFrameTexture(
-        makeTexture(100, 80),
-        baseProps({ region_enabled: true, region_rect: { x: 60, y: 0, width: 20, height: 16 } }),
-        'clamp',
-        ATLAS
-      )
-    ).toBeUndefined();
-  });
-
-  it('leaves a region_rect that fits inside the cell untouched', () => {
-    // The clip must not shrink a legitimate sub-rect (the common case).
-    const result = composeFrameTexture(
-      makeTexture(100, 80),
-      baseProps({ region_enabled: true, region_rect: { x: 4, y: 4, width: 8, height: 8 } }),
-      'clamp',
-      ATLAS
-    )!;
-    expect(result.repeat.x).toBeCloseTo(8 / 100);
-    expect(result.repeat.y).toBeCloseTo(8 / 80);
-    expect(result.offset.x).toBeCloseTo(24 / 100);
-    expect(result.offset.y).toBeCloseTo(1 - 28 / 80);
-  });
-});
-
-describe('frameSizePx — atlas region sizing', () => {
-  it('sizes by the atlas region, not the sheet', () => {
-    const size = frameSizePx(makeTexture(100, 80), baseProps(), {
-      x: 20,
-      y: 16,
-      width: 40,
-      height: 32,
-    });
-    expect(size).toEqual({ width: 40, height: 32 });
-  });
-
-  it('a sprite region inside an atlas keeps the sprite region dims', () => {
-    const size = frameSizePx(
-      makeTexture(100, 80),
-      baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 10, height: 6 } }),
-      { x: 20, y: 16, width: 40, height: 32 }
-    );
-    expect(size).toEqual({ width: 10, height: 6 });
-  });
-
-  it('sizes by the CLIPPED rect when the sprite region overruns the cell', () => {
-    // The quad must match the pixels that survive the clip, or the cell's
-    // content is stretched over a quad the engine never draws that big.
-    const size = frameSizePx(
-      makeTexture(100, 80),
-      baseProps({ region_enabled: true, region_rect: { x: 20, y: 16, width: 40, height: 32 } }),
-      { x: 20, y: 16, width: 40, height: 32 }
-    );
-    expect(size).toEqual({ width: 20, height: 16 });
   });
 });
 
@@ -263,7 +146,7 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
 
   it('keeps the UV window at the full region — no clipping to the image', () => {
     // 100×80 image, 200-wide region → repeat.x = 2.0, deliberately > 1.
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.repeat.x).toBeCloseTo(2);
     expect(result.repeat.y).toBeCloseTo(0.5);
     expect(result.offset.x).toBeCloseTo(0);
@@ -271,13 +154,13 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
   });
 
   it("clamps the overrun on the 2D canvas (Viewport's texture repeat is DISABLED)", () => {
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp')!;
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'clamp', THREE.SRGBColorSpace)!;
     expect(result.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(result.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it('tiles the overrun for Sprite3D (StandardMaterial3D keeps FLAG_USE_TEXTURE_REPEAT)', () => {
-    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat')!;
+  it('tiles the overrun for a sprite whose derived wrap mode is REPEAT', () => {
+    const result = composeFrameTexture(makeTexture(100, 80), oversized(), 'repeat', THREE.SRGBColorSpace)!;
     expect(result.wrapS).toBe(THREE.RepeatWrapping);
     expect(result.wrapT).toBe(THREE.RepeatWrapping);
   });
@@ -286,6 +169,70 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
     // `get_rect()` uses `s = region_rect.size` — the sprite does NOT shrink to
     // the part of the region the texture actually covers.
     expect(frameSizePx(makeTexture(100, 80), oversized())).toEqual({ width: 200, height: 40 });
+  });
+});
+
+describe('spriteWrapMode — Godot\'s own texture_repeat derivation', () => {
+  /**
+   * `sprite_3d.cpp:163` decides REPEAT from the FRAME's UV corners alone:
+   *
+   *     bool texture_repeat = (MIN(uvs[0].x, uvs[2].x) < 0.0) || ... || (MAX(uvs[0].y, uvs[2].y) > 1.0);
+   *
+   * Strict `< 0.0` / `> 1.0`, so a window that merely touches the edge clamps.
+   * flip_h/flip_v SWAP the uv pairs (`:154-161`) and hand the test the other
+   * diagonal, whose bounding box is the same — so flips cannot move the answer
+   * and this reads the unflipped window. Our v-window is Godot's mirrored about
+   * 0.5, and `min < 0 || max > 1` is symmetric under `v → 1 - v`, so the OR is
+   * identical either way round.
+   */
+  it('clamps a plain full-image sprite — the common case', () => {
+    expect(spriteWrapMode(makeTexture(), baseProps())).toBe('clamp');
+  });
+
+  it('clamps a region that stays inside the texture', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 10, y: 20, width: 50, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+  });
+
+  it('clamps a region covering the texture EXACTLY — the tests are strict', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 100, height: 80 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+  });
+
+  it('repeats a region overrunning the far edge', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 200, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+  });
+
+  it('repeats a region starting before the texture origin', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: -10, y: 0, width: 50, height: 40 },
+    });
+    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+  });
+
+  it('clamps a sprite-sheet frame, which only ever subdivides the base rect', () => {
+    const props = baseProps({ hframes: 3, vframes: 2, frame: 4 });
+    expect(spriteWrapMode(makeTexture(90, 80), props)).toBe('clamp');
+  });
+
+  it('clamps before the image has loaded, where no window can be computed', () => {
+    const props = baseProps({
+      region_enabled: true,
+      region_rect: { x: 0, y: 0, width: 200, height: 40 },
+    });
+    expect(spriteWrapMode(undefined, props)).toBe('clamp');
+    expect(spriteWrapMode(new THREE.Texture(), props)).toBe('clamp');
   });
 });
 
@@ -317,26 +264,5 @@ describe('frameSizePx', () => {
       })
     );
     expect(size).toEqual({ width: 20, height: 20 });
-  });
-});
-
-describe('needsFrameComposition', () => {
-  it('is false for a whole-image sprite (nothing to window)', () => {
-    expect(needsFrameComposition(baseProps())).toBe(false);
-  });
-
-  it('is false for region_enabled without a region_rect (nothing to apply)', () => {
-    expect(needsFrameComposition(baseProps({ region_enabled: true }))).toBe(false);
-  });
-
-  it('is true for a region, a frame grid, or an atlas cell', () => {
-    expect(
-      needsFrameComposition(
-        baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 10, height: 10 } })
-      )
-    ).toBe(true);
-    expect(needsFrameComposition(baseProps({ hframes: 2 }))).toBe(true);
-    expect(needsFrameComposition(baseProps({ vframes: 3 }))).toBe(true);
-    expect(needsFrameComposition(baseProps(), { x: 0, y: 0, width: 8, height: 8 })).toBe(true);
   });
 });

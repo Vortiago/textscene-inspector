@@ -1,50 +1,49 @@
 /**
- * Which sub-viewports are published from a **DOM raster** rather than from a
- * WebGL pass, and in which resource scope their Controls resolve.
+ * Which sub-viewports are published from the native Control-raster pass
+ * (`ControlRasterPass.tsx`) rather than from the 3D/2D offscreen pass, and in
+ * which resource scope their Controls resolve.
  *
  * `viewportContentKind` already decides the OWNERSHIP split — the offscreen
- * publisher takes `'3d'` and `'2d'`, this path takes `'dom'` — because Controls
- * are DOM (ADR-0003) and there is no WebGL source to render. What that
- * classifier cannot answer is where the sub-viewport SITS: the registry is keyed
- * by dispatcher-absolute node path, and the Controls beneath it resolve
+ * publisher takes `'3d'` and `'2d'`, this path takes `'dom'` (Controls have no
+ * WebGL SOURCE of their own to render, though the native pipeline draws them as
+ * ordinary three.js objects once handed a subtree). What that classifier
+ * cannot answer is where the sub-viewport SITS: the registry is keyed by
+ * dispatcher-absolute node path, and the Controls beneath it resolve
  * ExtResource/SubResource ids against the scene they were AUTHORED in, which is
  * not the host scene once an instance is in the way (ADR-0009, ADR-0013). The
  * committed corpus makes that concrete: `gui_in_3d.tscn` instances
  * `gui_panel_3d.tscn`, whose `TextureRect` names `ExtResource("2")` — an id the
  * host scene never defines.
  *
- * The scope rules mirror `ControlDispatcher`'s own walk exactly, because the
- * host mounts that dispatcher and must hand it the scope it would have had:
- * a collapsed single-root instance puts ALL its children in the sub-scene's
- * scope; a multi-root one keeps the instance node, its authored children in the
- * outer scope and the loaded roots in the sub-scene's.
+ * The instance-collapse and per-sub-scene scoping is `liveSceneTree.ts`'s
+ * `liveChildGroups` — the SAME primitive `useBuildSolveTree`'s own live-tree
+ * walk is built on — so this walk only decides WHICH group a Control-raster
+ * viewport sits in and pairs it with that group's already-resolved scope,
+ * rather than re-deriving instance-collapse/scope rules by hand: a collapsed
+ * single-root instance puts ALL its children in the sub-scene's scope; a
+ * multi-root one keeps the instance node, its authored children in the outer
+ * scope and the loaded roots in the sub-scene's.
  *
  * Pure (no React, no THREE, no DOM) so the path/scope rules are asserted
- * directly — the rasterisation half needs real layout and is gated in the
- * browser (ADR-0024).
+ * directly — the rasterisation half needs a real renderer and is gated by
+ * `pnpm test:visual`'s golden images.
  */
 
-import type {
-  TscnExternalResource,
-  TscnInternalResource,
-  TscnNode,
-} from '../../../parser/types.js';
-import { mergeInstanceRoot } from '../../../resources/mergeInstanceRoot.js';
-import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
+import type { TscnNode } from '../../../parser/types.js';
+import type { ControlProperties } from '../../2d/ui/control/types.js';
+import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
+import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
-import { viewportContentKind } from './viewportContent.js';
+import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-
-/** The resource scope a subtree resolves its ids against. */
-export interface SceneScope {
-  internalResources: readonly TscnInternalResource[];
-  externalResources: readonly TscnExternalResource[];
-}
 
 /**
  * Read surface for the loader's PackedScene cache. Structural rather than the
  * concrete `ResourceLoader`, so the walk stays pure and a test supplies a map.
+ * Every cached scene carries BOTH resource pools, so this satisfies
+ * `liveChildGroups`' `CachedSceneSource` surface without an adapter.
  */
 export interface SceneScopeSource {
   getCached: (path: string) => (SceneScope & { nodes: readonly TscnNode[] }) | null | undefined;
@@ -60,6 +59,19 @@ export interface ControlRasterViewport extends SceneScope {
   size: { x: number; y: number };
   /** `transparent_bg` — false means the target clears to Godot's default clear colour. */
   transparentBg: boolean;
+  /**
+   * `Control::is_layout_rtl()` for the nearest ancestor Control of this
+   * sub-viewport, or `null` where there is none.
+   *
+   * The climb casts each ancestor to `Control`, then to `Window`, then takes
+   * `get_parent()` (`control.cpp:3584-3598`). A `SubViewport` is a `Viewport`
+   * and neither, so the climb steps straight over it — every Control inside
+   * one inherits the direction of the Control that encloses the viewport,
+   * typically its own `SubViewportContainer`. The raster pass walks only the
+   * viewport's children and so cannot see that Control itself; this carries
+   * it, the way `size` carries the rect they lay out against.
+   */
+  inheritedRtl: boolean | null;
 }
 
 /** Godot's `SubViewport.size` default, `Vector2i(512, 512)`. */
@@ -79,7 +91,8 @@ const MAX_DEPTH = 100;
 export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sceneCache: SceneScopeSource,
-  scope: SceneScope
+  scope: SceneScope,
+  layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
 
@@ -87,32 +100,36 @@ export function collectControlRasterViewports(
     nodes: readonly TscnNode[],
     parentPath: string,
     current: SceneScope,
-    depth: number
+    depth: number,
+    /** What the rtl climb would find above `nodes` — see `ControlRasterViewport.inheritedRtl`. */
+    inheritedRtl: boolean | null
   ): void => {
     if (depth > MAX_DEPTH) return;
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
 
-      // The sub-scene behind an `instance=`, once loaded — the only thing that
-      // can change the scope below this node.
-      const scenePath = node.instance
-        ? resolveInstancePath(node.instance, current.externalResources)
-        : null;
-      const subScene = scenePath ? sceneCache.getCached(scenePath) : undefined;
-      const subScope: SceneScope | null = subScene
-        ? {
-            internalResources: subScene.internalResources,
-            externalResources: subScene.externalResources,
-          }
-        : null;
-      // A single-root sub-scene collapses INTO the instance node (ADR-0013), so
-      // the node itself is already the sub-scene's root and is read in that scope.
-      const merged = subScene
-        ? mergeInstanceRoot(node, subScene, current.externalResources)
-        : null;
-      const effective = merged ?? node;
+      // liveChildGroups decides instance-collapse and per-group resource scope
+      // — the SAME decision `useBuildSolveTree`'s walk makes for the on-screen
+      // native pass.
+      const groups = liveChildGroups(node, current, sceneCache);
+      // A collapsed single-root instance (ADR-0013) BECOMES its sub-scene
+      // root; every other origin leaves the node's own identity alone.
+      const mergedGroup = groups.find((group) => group.origin === 'merged');
+      const effective = mergedGroup?.mergedNode ?? node;
 
-      if (isViewportBoundary(effective.type) && viewportContentKind(effective) === 'dom') {
+      const effectiveScope: SceneScope = mergedGroup ? mergedGroup.scope : current;
+
+      // Classified on the RESOLVED subtree, the same input the SubViewport
+      // component's own `useViewportContentKind` uses: an `instance=` child is
+      // an untyped childless `Node` until its sub-scene lands, which
+      // `viewportContentKind` reads as 3D. Classifying the raw children here
+      // would let both owners of this key decline and leave the consumer blank.
+      if (
+        isViewportBoundary(effective.type) &&
+        viewportContentKind(
+          resolveViewportSubtree(effective, effectiveScope.externalResources, sceneCache)
+        ) === 'dom'
+      ) {
         const properties = effective.properties as SubViewportProperties;
         found.push({
           path,
@@ -122,23 +139,33 @@ export function collectControlRasterViewports(
             y: Math.max(1, Math.round(properties.size?.y ?? DEFAULT_SIZE)),
           },
           transparentBg: properties.transparent_bg === true,
-          ...(merged && subScope ? subScope : current),
+          inheritedRtl,
+          ...effectiveScope,
         });
       }
 
-      if (merged && subScope) {
-        // Collapsed: every child came from the sub-scene root, in its scope.
-        walk(merged.children, path, subScope, depth + 1);
-        continue;
+      // `TWO_D_UI_TYPES` is this codebase's mirror of "genuinely Control-ish"
+      // (`buildSolveTree.ts` reads the same set). `CanvasLayer` is in it
+      // without being a Control, and states no direction of its own — which
+      // costs nothing here, since an unset `layout_direction` is INHERITED and
+      // relays what it was given (`control.cpp:3555`).
+      const childRtl = TWO_D_UI_TYPES.has(effective.type)
+        ? resolveLayoutRtl(
+            (effective.properties as ControlProperties).layoutDirection,
+            inheritedRtl,
+            layoutDirectionEnv
+          )
+        : inheritedRtl;
+
+      // Every group descends in ITS OWN scope: the sub-scene's for
+      // `merged`/`subscene`, the outer one for `inline`/`glb`. A found
+      // sub-viewport is still descended into (see module doc).
+      for (const group of groups) {
+        walk(group.children, path, group.scope, depth + 1, childRtl);
       }
-      // Host-authored children keep the outer scope whether or not the instance
-      // resolved; a multi-root sub-scene's roots are injected beneath the
-      // instance node in the sub-scene's scope.
-      walk(node.children, path, current, depth + 1);
-      if (subScene && subScope) walk(subScene.nodes, path, subScope, depth + 1);
     }
   };
 
-  walk(roots, '', scope, 0);
+  walk(roots, '', scope, 0, null);
   return found;
 }

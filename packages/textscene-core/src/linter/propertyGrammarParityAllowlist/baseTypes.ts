@@ -68,12 +68,11 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // leaf and every Control instead of forty near-identical copies.
   CanvasItem: {
     linterOnly: [
-      // Editor/scene-tree concerns with no render equivalent: `top_level`
-      // detaches from the parent transform (the dispatcher does not model it),
+      // Culling, clipping and sampler settings with no render equivalent:
       // `visibility_layer` and `clip_children` gate culling and stencil
       // clipping, and the texture sampler modes are set per material rather
       // than per node in three.js.
-      'top_level', 'visibility_layer', 'clip_children',
+      'visibility_layer', 'clip_children',
       'texture_filter', 'texture_repeat',
       // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
       // whatever GLSL the attached ShaderMaterial declares. This previewer has
@@ -82,7 +81,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // uniform override onto.
       'instance_shader_parameters/*',
     ],
-    reason: 'The CanvasItem base has no parser of its own; these six are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, material…) are read by each family parser.',
+    reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, top_level, material…) are read by each family parser.',
   },
 
   Node: {
@@ -241,11 +240,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CenterContainer: {
     renderGap: [
-      // `use_top_left` moves the centring ORIGIN to the container's top-left
-      // corner (center_container.cpp:83), and the DOM overlay hard-codes centred
-      // flex alignment with no equivalent mode, so no parser reads it. Godot
-      // accepts the value, so the linter validates it.
-      'use_top_left',
     ],
     reason: 'use_top_left moves the centring origin to the container top-left corner (center_container.cpp:83); the DOM overlay has no equivalent mode yet, so no parser reads it.',
   },
@@ -256,8 +250,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // the UI overlay is DOM (ADR-0003), where 2D canvas draw-order and
       // lighting have no equivalent. The Node2D family DOES render these, which
       // is why they sit here on Control rather than on the shared tier.
-      'z_index', 'z_as_relative', 'y_sort_enabled', 'show_behind_parent',
-      'light_mask', 'material', 'use_parent_material',
+      'z_as_relative', 'y_sort_enabled',
+      'material', 'use_parent_material',
       // Theme-override wildcard keys — validated by pattern match in the
       // linter; the parser uses a loop over `theme_override_*/*` keys and
       // there is no fixed per-key scraping surface to compare against.
@@ -286,16 +280,13 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'focus_mode', 'mouse_filter',
     ],
     renderGap: [
-      // These five DO change what Godot draws, for every Control below here.
-      // `theme` and `theme_type_variation` decide which fonts, colours and
-      // styleboxes the whole subtree resolves, and no Theme resource slice
-      // exists in this repo at all. `clip_contents` sets the canvas clip rect.
-      // `layout_direction` mirrors anchors and rects under RTL. And
+      // Both DO change what Godot draws, for every Control below here.
+      // `clip_contents` sets the canvas clip rect, and
       // `localize_numeral_system` swaps the numeral glyphs ProgressBar,
       // SpinBox, CodeEdit and RichTextLabel draw.
-      'theme', 'theme_type_variation', 'clip_contents', 'layout_direction',
+      'clip_contents',
       'localize_numeral_system',
     ],
-    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the theme/clip/direction group genuinely changes the drawing and is unimplemented.',
+    reason: 'Control parser reads transform for compatibility but linter does not validate it; the theme-override keys are wildcard-matched in the linter and loop-scraped in the parser, so they have no per-key surface to compare. The accessibility, focus, mouse and tooltip keys are input and assistive-tech surfaces with no frozen-frame effect, while the clip and numeral-system keys genuinely change the drawing and are unimplemented.',
   },
 };

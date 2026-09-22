@@ -12,7 +12,8 @@ renders_as: a viewport-anchored group holding its ParallaxLayer children
 ParallaxBackground is a CanvasLayer that lays its ParallaxLayer children out against the
 viewport. The previewer draws it as a group placed by the layer's own transform and
 ordered behind the default canvas by `layer`. Where a Camera2D frames the pass, the
-group anchors to its view rect.
+group anchors to its view rect. It is a canvas boundary for Controls as well: a Control
+under it draws on its canvas, at its `layer`, rather than on the viewport's.
 
 ## Linting
 

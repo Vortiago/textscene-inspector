@@ -1,0 +1,66 @@
+[gd_scene load_steps=6 format=3]
+
+; The ONE variable: whether a themed icon (never a vendored default) reaches
+; the canvas and its own size reaches the solver — at both resolution levels
+; Control::get_theme_icon walks, a Theme's own <Type>/icons/<name> and a
+; node's local theme_override_icons/<name>, which win unconditionally over
+; the Theme even when both apply to the same node. Neither GradientTexture2D
+; is 16x16 (the vendored checked/unchecked icons' own size), so a previewer
+; that silently fell back to the vendored icon would draw the wrong pixels
+; AND float the wrong minimum size — a regression here is invisible on every
+; other CheckBox fixture, none of which authors a Theme or an override at all.
+
+[sub_resource type="Gradient" id="Gradient_theme"]
+colors = PackedColorArray(1, 0, 0, 1, 1, 1, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="ThemeIcon_checked"]
+gradient = SubResource("Gradient_theme")
+width = 32
+height = 32
+
+[sub_resource type="Theme" id="Theme_root"]
+CheckBox/icons/checked = SubResource("ThemeIcon_checked")
+
+[sub_resource type="Gradient" id="Gradient_local"]
+colors = PackedColorArray(0, 0.4, 1, 1, 0, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="LocalIcon_unchecked"]
+gradient = SubResource("Gradient_local")
+width = 24
+height = 24
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_root")
+
+[node name="ThemedViaTheme" type="CheckBox" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -40.0
+offset_right = 90.0
+offset_bottom = -12.0
+text = "Themed via Theme (checked)"
+button_pressed = true
+
+[node name="ThemedViaOverride" type="CheckBox" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = 12.0
+offset_right = 90.0
+offset_bottom = 40.0
+text = "Themed via local override (unchecked)"
+button_pressed = false
+theme_override_icons/unchecked = SubResource("LocalIcon_unchecked")

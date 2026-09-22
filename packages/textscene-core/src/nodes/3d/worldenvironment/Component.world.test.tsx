@@ -2,7 +2,6 @@
  * Strict-verification harness (group I) — 9 assertions covering
  * WorldEnvironment background, ambient lighting, and fog.
  *
- * Assertions: 81–89 of `docs/archive/STRICT-VERIFICATION.md`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,6 +11,7 @@ import { WorldEnvironment } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
@@ -40,14 +40,14 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     // SKY mode (2) should produce SOME scene.background — historically a
     // CubeTexture or a gradient sky. Our implementation today only handles
     // BG_COLOR and BG_CLEAR_COLOR, so this asserts the gap.
-    expect((renderer.scene.instance as THREE.Scene).background).not.toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).background).not.toBeNull();
   });
 
   it('#82 background_mode COLOR → scene.background is a THREE.Color', async () => {
     const renderer = await render(makeNode(), [
       envSub({ background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
     ]);
-    const bg = (renderer.scene.instance as THREE.Scene).background as THREE.Color | null;
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as { isColor?: boolean } | null;
     expect(bg).not.toBeNull();
     expect(bg!.isColor).toBe(true);
   });
@@ -58,7 +58,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     const renderer = await render(makeNode(), [
       envSub({ background_mode: '1', background_color: 'Color(0.25, 0.5, 0.75, 1)' }),
     ]);
-    const bg = (renderer.scene.instance as THREE.Scene).background as THREE.Color;
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as { getHexString(): string };
     expect(bg.getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
   });
 
@@ -73,14 +73,14 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     ]);
     const ambients = renderer.scene.findAllByType('AmbientLight');
     expect(ambients.length).toBeGreaterThan(0);
-    const c = (ambients[0]!.instance as THREE.AmbientLight).color;
+    const c = instanceAs<THREE.AmbientLight>(ambients[0]!).color;
     expect(c.getHexString()).toBe('4d99e6'); // (0.3,0.6,0.9) sRGB
   });
 
   it('#84b default ambient source (BG) → ambient comes from the BACKGROUND colour', async () => {
     // AMBIENT_SOURCE_BG (0, the default) ignores ambient_light_color entirely
     // and lights the scene from background_color — see
-    // resources/environment/build.bg-ambient.test.ts for the full table.
+    // resources/environment/renderer.bg-ambient.test.ts for the full table.
     const renderer = await render(makeNode(), [
       envSub({
         background_mode: '1',
@@ -90,7 +90,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     ]);
     const lights = renderer.scene.findAllByType('AmbientLight');
     expect(lights.length).toBe(1);
-    expect((lights[0]!.instance as THREE.AmbientLight).color.getHexString()).toBe(
+    expect(instanceAs<THREE.AmbientLight>(lights[0]!).color.getHexString()).toBe(
       '666666'
     );
   });
@@ -106,7 +106,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     ]);
     const ambients = renderer.scene.findAllByType('AmbientLight');
     expect(ambients.length).toBeGreaterThan(0);
-    const intensity = (ambients[0]!.instance as THREE.AmbientLight).intensity;
+    const intensity = instanceAs<THREE.AmbientLight>(ambients[0]!).intensity;
 
     // Godot adds a constant ambient as `ambient_light * albedo` with no 1/PI;
     // three's getAmbientLightIrradiance returns the colour unscaled and then
@@ -119,14 +119,14 @@ describe('WorldEnvironment (assertions 81–89)', () => {
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {
     const renderer = await render(makeNode(), [envSub({ background_mode: '1', fog_enabled: 'false' })]);
-    expect((renderer.scene.instance as THREE.Scene).fog).toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 
   it('#87 fog_enabled=true → scene.fog is non-null', async () => {
     const renderer = await render(makeNode(), [
       envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
     ]);
-    expect((renderer.scene.instance as THREE.Scene).fog).not.toBeNull();
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 
   it('#88 fog_light_color → scene.fog.color matches (sRGB)', async () => {
@@ -138,7 +138,9 @@ describe('WorldEnvironment (assertions 81–89)', () => {
         fog_light_color: 'Color(0.4, 0.5, 0.6, 1)',
       }),
     ]);
-    const fog = (renderer.scene.instance as THREE.Scene).fog as THREE.Fog | null;
+    const fog = instanceAs<THREE.Scene>(renderer.scene).fog as {
+      color: { getHexString(): string };
+    } | null;
     expect(fog).not.toBeNull();
     expect(fog!.color.getHexString()).toBe('668099'); // (0.4,0.5,0.6) sRGB
   });
@@ -147,7 +149,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     const renderer = await render(makeNode(), [
       envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.25' }),
     ]);
-    const fog = (renderer.scene.instance as THREE.Scene).fog as THREE.FogExp2 | null;
+    const fog = instanceAs<THREE.Scene>(renderer.scene).fog as { density: number } | null;
     expect(fog).not.toBeNull();
     expect(fog!.density).toBeCloseTo(0.25, 4);
   });

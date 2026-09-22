@@ -1,5 +1,13 @@
 [gd_scene load_steps=2 format=3]
 
+; Three tabs (an icon+tooltip tab, a bare-title tab, a disabled tab),
+; current_tab=1 so the SECOND tab draws tab_selected rather than tab_0 by
+; coincidence, tab_close_display_policy=2 (SHOW_ALWAYS) so every tab draws
+; its close icon, and max_tab_width=120 so the widest title's on-screen
+; width is capped rather than natural — a regression in any one of these
+; (state pick, close-button gating, width truncation) is invisible if the
+; others were dropped from this one fixture.
+
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_1"]
 size = Vector2(16, 16)
 

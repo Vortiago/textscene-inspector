@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseNode3D } from '../../../base/node3d/parser';
-import { parseOptionalInt } from '../../../../parser/valueParsers';
+import { finishCsgShapeParse } from '../shapeParser';
 import type { CSGCombiner3DProperties } from './types';
 
 export function parseCSGCombiner3D(
@@ -11,10 +11,9 @@ export function parseCSGCombiner3D(
 ): CSGCombiner3DProperties {
   const result: CSGCombiner3DProperties = { ...parseNode3D(heading, properties) };
 
-  // Not routed through finishCsgParse: that helper also copies `material`, which a
-  // combiner does not have (it is a CSGShape3D, not a CSGPrimitive3D).
-  const operation = parseOptionalInt(properties.operation);
-  if (operation !== undefined) result.operation = operation;
+  // The CSGShape3D half only, from its own module: `finishCsgParse` also copies
+  // the material slot, which a combiner does not have (csg_shape.h:194-202).
+  finishCsgShapeParse(result, properties);
 
   return result;
 }

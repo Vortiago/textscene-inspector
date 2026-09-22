@@ -1,7 +1,7 @@
 # Resource decoding is organized as resource slices over one parsed form
 
 - Status: Accepted (2026-07-31)
-- Related: ADR-0001 (unified slice, React-free linter), ADR-0029 (sub-resource paths),
+- Related: ADR-0001 (unified slice, React-free linter), ADR-0032 (sub-resource paths),
   ADR-0028 (import sidecars), issue #110 (binary `.scn`/`.res`).
 
 ## Context
@@ -64,9 +64,9 @@ form.**
 
 - **Naming**: a property-bag decoder is `decode<Type>`. Leaf value scanners
   (`tessellateCurve3D`, `parseCurve3DPoints`, `parseAtlasRegion`) keep `parse*`
-  names. They read one literal, not a bag.
-- **Bus tags are the cached-artefact kinds** (`texture` `material` `scene`
-  `glb` `resource` `arraymesh`). Many Godot-text types share the generic
+  names — they read one literal, not a bag.
+- **Bus tags are the cached-artifact kinds** (`texture` `material` `scene`
+  `glb` `resource` `arraymesh` `font` `theme`); many Godot-text types share the generic
   `resource` slot (a ParsedResource) and give it meaning in their own decode.
   `busType: null` marks a claimed type the loader never serves
   (`ViewportTexture` resolves by NodePath). Such a slice carries no `decode.ts`
@@ -80,6 +80,18 @@ form.**
   `provideFile`). `StyleBoxTexture` is deliberately unclaimed. No decode
   exists, and a claim is a promise of one, so it takes the null-route
   fallback instead of failing inside the image decoder.
+- **A Font is TWO slices, and that split is load-bearing.** The three type
+  names (`FontFile`, `SystemFont`, `FontVariation`) are a `godot-text` slice
+  that claims no extension and is NOT binary; the raw containers
+  (`.ttf`/`.otf`/`.woff`/`.woff2`) are a separate `foreign-format` slice that
+  claims no type name and carries `binaryBytes`. `binaryBytes` is per
+  REGISTRATION and read through both `byTypeName` and `byExtension`, so a
+  single slice declaring both would make `isBinaryResourceType('FontFile')`
+  true — and a `FontFile` ExtResource just as often names a text `.tres`
+  wrapper (one carrying `fallbacks` rather than font bytes of its own), which
+  fetched as bytes yields a string no parser can read. Merging the two
+  registrations reintroduces that; the extension is the binary signal, never
+  the type name.
 - **Premultiplied alpha**: Godot's PREMULT blend mode programs blend
   attachments only. three's `premultipliedAlpha` flag adds an in-shader
   `rgb *= a` Godot does not have, so both renderers keep it OFF and carry the

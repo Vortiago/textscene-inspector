@@ -5,8 +5,8 @@
 
 export const TILE_AND_TARGET_SCENES = [
   // --- TileMap / TileMapLayer batched-geometry coverage ---
-  { name: 'tile-map', file: 'unit-tile-map.tscn' },
-  { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn' },
+  { name: 'tile-map', file: 'unit-tile-map.tscn', mode: '2d' },
+  { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn', mode: '2d' },
   // Six cells of the SAME atlas tile at six orientations, encoded the way Godot
   // paints them: flip/transpose bits inside the alternative id. Every other
   // tile fixture and golden carries alternativeId 0 only, so the flip/transpose
@@ -18,16 +18,16 @@ export const TILE_AND_TARGET_SCENES = [
   // shading is byte-stable, and only the four TRANSPOSED cells move when the
   // composition order is wrong — 0.21% of the frame. The default 0.1% leaves
   // too little margin for a guard this specific.
-  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02 },
-  { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn' },
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02, mode: '2d' },
+  { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn', mode: '2d' },
   // Y-sort (issue 74) regression guard: the full isometric dungeon. Sibling y-sort
   // subtrees (Floor / Walls / Decorations under the non-y-sorted root) must layer in
   // disjoint tree-ordered z-bands, and each layer's tiles interleave with decorations
   // by Y — decorations must NOT hide behind the floor. maxDiffPct covers SwiftShader AA.
-  { name: 'isometric-dungeon', file: 'dungeon.tscn', maxDiffPct: 0.5 },
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', maxDiffPct: 0.5, mode: '2d' },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
   // half a tile — the half-offset placement math had no visual guard before.
-  { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn' },
+  { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },
 
   // --- RemoteTransform3D / RemoteTransform2D drive their target ---
   // The relay copies its own transform onto the node its remote_path names
@@ -37,7 +37,7 @@ export const TILE_AND_TARGET_SCENES = [
   // relay's +2; the 2D pentagon is authored at the gray ghost's spot but
   // driven to the relay's upper-right. Verified against real Godot 4.6.3.
   { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
-  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5 },
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5, mode: '2d' },
 
   // --- ViewportTexture: content sampled THROUGH a SubViewport target ---
   // The only golden that consumes a render target, so it alone pins the

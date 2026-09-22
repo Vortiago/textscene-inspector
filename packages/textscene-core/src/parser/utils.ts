@@ -143,7 +143,10 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
     // before the paren belongs to the next attribute, not to this value.
     let i = start;
     while (i < len && isIdentCode(str.charCodeAt(i))) i++;
-    if (str[i] === '(') end = scanBalanced(str, i, '(', ')');
+    if (i > pos && str[i] === '(') {
+      const close = scanBalanced(str, i, '(', ')');
+      if (close !== -1 && (close === len || isSpaceCode(str.charCodeAt(close)))) end = close;
+    }
   }
 
   if (end === -1) end = skipToSpace(str, start);
@@ -154,12 +157,8 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
  * Drop a property value's surrounding quotes: a value quoted at BOTH ends, and
  * long enough for the two quotes to be distinct. Anything else passes through.
  */
-/**
- * The body of a quoted literal, with the StringName jacket a STRING slot
- * converts from: `&"…"` and the 3.x-compatible `@"…"` are one `TK_STRING_NAME`
- * (`variant_parser.cpp:263-265`), and `variant.cpp:582-587` lists `STRING_NAME`
- * as a strict source for `STRING`. Anything else passes through unchanged.
- */
+
+/** Drop the surrounding quotes of a quoted literal; pass anything else through. */
 function stripQuotes(value: string): string {
   const bare = value.startsWith('&') || value.startsWith('@') ? value.slice(1) : value;
   return bare.length >= 2 && bare.startsWith('"') && bare.endsWith('"')
@@ -242,6 +241,16 @@ export function parseHeading(line: string): ParsedHeading | null {
       continue;
     }
     pos = equals + 1; // skip '='
+
+    // Godot writes exactly one attribute with a space after its `=`:
+    // `scene/resources/resource_format_text.cpp` stores `" binds= " + vars`,
+    // where `vars` is an Array written by `VariantWriter` and so always opens
+    // with `[`. That bracket is what tells this apart from a key with no value
+    // at all, whose next token is another `key=value` pair and has to stay one —
+    // so the whitespace is skipped only when a bracketed value follows it.
+    const afterEquals = pos;
+    while (pos < len && isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
+    if (attributesStr[pos] !== '[') pos = afterEquals;
 
     // An empty capture means `pos` sits on whitespace or the end (`key=` with
     // nothing after it), so the skip at the top of the loop still advances.
@@ -428,6 +437,17 @@ export function unquoteString(value: string): string {
       return ESCAPE_MAP[seq] ?? seq;
     },
   );
+}
+
+/**
+ * A StringName-typed property value: Godot's text saver writes it with a `&`
+ * sigil — `&"HeaderLabel"`, `&"Panel"` — where a plain String has none
+ * (`core/variant/variant_utility.cpp`'s StringName stringify path). Strips
+ * the sigil, then unquotes. A bare quoted string passes through unchanged,
+ * so a scene that omits the sigil still parses.
+ */
+export function unquoteStringName(value: string): string {
+  return unquoteString(value.startsWith('&') ? value.slice(1) : value);
 }
 
 /**

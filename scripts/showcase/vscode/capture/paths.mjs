@@ -8,11 +8,17 @@
 import { REPO_ROOT } from '../../../repoRoot.mjs';
 
 export const EXT = `${REPO_ROOT}/apps/textscene-vscode`;
-// Open the committed example scenes as the workspace: self-contained .tscn with
-// no .csproj/.cs, so the C# Dev Kit never activates and hijacks focus with its
-// welcome page. Same scenes as the web showcase.
-export const WS = `${REPO_ROOT}/scenes/examples`;
+// The fixtures res:// root — the same directory the web previewer mirrors, so
+// `res://` resolves identically on both sides. It holds self-contained .tscn
+// with no .csproj/.cs, so the C# Dev Kit never activates and hijacks focus with
+// its welcome page.
+export const FIXTURES = `${REPO_ROOT}/scenes/fixtures`;
 export const TMP = `${REPO_ROOT}/.tmp`;
+// The dev-host opens a THROWAWAY COPY, never the tracked corpus: the hot-reload
+// and camera-survival shots rewrite a scene on disk, and an aborted run must not
+// leave a repo fixture edited. The leaf is named `fixtures` so the Explorer
+// header reads the same in every shot as the directory the scenes really live in.
+export const WS = `${TMP}/vsc-shots-ws/fixtures`;
 export const UD = `${TMP}/vsc-showcase-ud`;
 export const OUT = `${REPO_ROOT}/docs/screenshots/vscode`;
 // A sibling worktree's dev-host survives `killStaleHost` by design (it carries a

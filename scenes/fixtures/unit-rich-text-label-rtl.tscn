@@ -1,0 +1,73 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a RichTextLabel.
+; `_draw_line`'s own alignment switch (rich_text_label.cpp:987-1014) branches on
+; the PARAGRAPH direction — `l.text_buf->get_direction()`, set from
+; `_find_direction` (:599,3507-3525), which returns is_layout_rtl() only while
+; `text_direction` is INHERITED. Its default is TEXT_DIRECTION_AUTO
+; (rich_text_label.h:615), so `layout_direction` alone reaches none of those
+; arms and each RTL row must land exactly where its LTR twin does. Every label
+; spans the full viewport width so its OWN rect mirror (control.cpp:1785) is
+; the identity. No other fixture pairs a RichTextLabel with a direction, so a
+; swap wired to the layout direction instead is invisible everywhere else.
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="LtrLeft" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 56.0
+bbcode_enabled = true
+text = "Wave rift"
+
+[node name="LtrCenter" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 64.0
+offset_bottom = 104.0
+bbcode_enabled = true
+text = "[center]Wave rift[/center]"
+
+[node name="LtrRight" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 112.0
+offset_bottom = 152.0
+bbcode_enabled = true
+text = "[right]Wave rift[/right]"
+
+[node name="RtlLeft" type="RichTextLabel" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 200.0
+offset_bottom = 240.0
+bbcode_enabled = true
+text = "Wave rift"
+
+[node name="RtlCenter" type="RichTextLabel" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 248.0
+offset_bottom = 288.0
+bbcode_enabled = true
+text = "[center]Wave rift[/center]"
+
+[node name="RtlRight" type="RichTextLabel" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 296.0
+offset_bottom = 336.0
+bbcode_enabled = true
+text = "[right]Wave rift[/right]"

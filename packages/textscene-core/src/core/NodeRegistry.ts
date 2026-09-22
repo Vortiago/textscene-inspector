@@ -132,6 +132,9 @@ export function parseNodeWithRegistry(
       children: [],
       properties: parsedProps,
       rawProperties: properties,
+      // One TscnParserCore scan built `properties` — its key order is this
+      // node's real file order (ADR-0035).
+      rawPropertiesOrderReliable: true,
     };
 
     if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
@@ -154,6 +157,9 @@ export function parseNodeWithRegistry(
     children: [],
     properties: parsedProps,
     rawProperties: properties,
+    // One TscnParserCore scan built `properties` — its key order is this
+    // node's real file order (ADR-0035).
+    rawPropertiesOrderReliable: true,
   };
 
   if (heading.attributes.owner) node.owner = heading.attributes.owner;

@@ -18,6 +18,7 @@ import {
   killPreviewGroup,
   startPreview,
   waitForServer,
+  warmUpGLContext,
 } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
 
@@ -31,6 +32,9 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    // Burn the first-WebGL-context-lost risk before any published image is
+    // captured — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
     const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
     const page = await context.newPage();
     await gotoFixture(page, baseUrl, fixture);

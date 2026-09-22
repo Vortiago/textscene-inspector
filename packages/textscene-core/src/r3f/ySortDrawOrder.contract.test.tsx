@@ -26,9 +26,9 @@
  *     not cost it the parent's transform; probing 350,380 returns GREEN too,
  *     so it sorts on the accumulated Y=300, ahead of the sibling.
  *
- * The renderer maps draw order to `position.z` (higher accumulated z = drawn in
- * front, per `canvasItemZ`). These tests render real `.tscn` subtrees through
- * `NodeDispatcher` and assert the resulting accumulated world-z order of each
+ * The renderer maps draw order to each canvas item's `renderOrder`
+ * (`canvasPaintOrder.ts`; higher draws later). These tests render real `.tscn`
+ * subtrees through `NodeDispatcher` and assert the resulting order of each
  * child's rendered group. This is the authored contract — do NOT weaken it.
  * Implementation guidance is in the plan + operator corrections (within-bucket
  * rank-based z sub-steps; single sort site in PlainNode's child dispatch; stable
@@ -45,7 +45,7 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Z_INDEX_STEP } from './node2dTransform';
+import { PAINT_SEQUENCE_STRIDE } from './canvasPaintOrder';
 import { NodeDispatcher } from './NodeDispatcher';
 import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
 import { SelectionProvider } from './contexts/SelectionContext';
@@ -104,23 +104,35 @@ function namedObjects(root: THREE.Object3D | null): THREE.Object3D[] {
   return found;
 }
 
-/** Render a `.tscn` subtree and map each named object to its accumulated world-Z. */
-async function worldZByName(tscn: string): Promise<Map<string, number>> {
+/**
+ * Render a `.tscn` subtree and map each named object to its place in the canvas.
+ *
+ * A canvas item's group carries that place as its `renderOrder`
+ * (`canvasPaintOrder.ts`) — higher draws later, the same direction the world-z
+ * offset this replaces ran in, so every relative assertion below reads the
+ * same way it always did.
+ */
+async function paintOrderByName(tscn: string): Promise<Map<string, number>> {
   const root = await renderTscnRoot(tscn);
   const map = new Map<string, number>();
-  const v = new THREE.Vector3();
-  for (const o of namedObjects(root)) {
-    o.getWorldPosition(v);
-    map.set(o.name, v.z);
-  }
+  for (const o of namedObjects(root)) map.set(o.name, o.renderOrder);
   return map;
+}
+
+/**
+ * The `(layer, z_final)` bucket a paint key falls in. Two items share a bucket
+ * exactly when neither's z_index can put it in front of the other, whatever
+ * the draw sequence says.
+ */
+function paintBucket(order: number): number {
+  return Math.floor(order / PAINT_SEQUENCE_STRIDE);
 }
 
 describe('Y-sort draw order (issue #74) — authored contract', () => {
   it('RED: a y_sort parent draws a high-Y child in front of a low-Y child, overriding tree order', async () => {
     // "High" (Godot Y=100) is declared FIRST (tree order → behind); Y-sort must
     // flip it to the front. Currently both get z=0 → the expect fails (0 > 0).
-    const z = await worldZByName(`[gd_scene format=3]
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -138,7 +150,7 @@ ${poly('Low', 'Floor', -100)}
 
   it('GUARDRAIL: a non-y_sort container is a single unit — its children keep tree order, not Y order', async () => {
     // `Deco` is NOT y_sort_enabled: inside it, tree order wins regardless of Y.
-    const z = await worldZByName(`[gd_scene format=3]
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -156,7 +168,7 @@ ${poly('DLow', 'Floor/Deco', -100)}
   });
 
   it('GUARDRAIL: z_index dominates y-sort — a lower-Y child at higher z_index draws in front', async () => {
-    const z = await worldZByName(`[gd_scene format=3]
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -177,7 +189,7 @@ ${poly('HighLoZ', 'Floor', 100)}
     // parent's tree order. Today each subtree's dispatcher assigns z in the SAME (0, SUBRANGE)
     // band, so SubA's high-Y item (high rank) gets z > SubB's low-Y item (low rank) → they
     // interleave → this fails. (Mirrors the dungeon: Floor's tiles drawing over Walls' decorations.)
-    const z = await worldZByName(`[gd_scene format=3]
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -208,9 +220,9 @@ ${poly('B_low', 'SubB', -100)}
     // both belong in the SAME z-index bucket. `Wrap`'s child `Inner` (z_index 0) must
     // therefore render in `Wrap`'s bucket — NOT a full extra z-index step forward.
     // Bug: Node2D ignores the y-sort rank z (only CanvasItem consumes it) AND the rank
-    // leaks through context to `Inner`, so `Inner` = Wrap.canvasItemZ + Wrap.rankZ,
-    // double-counting the z-index step (Inner lands at ~2×Z_INDEX_STEP) → RED.
-    const z = await worldZByName(`[gd_scene format=3]
+    // leaks through to `Inner`, so `Inner` counts Wrap's bucket twice,
+    // double-counting the z-index step (Inner lands two buckets forward) → RED.
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -226,12 +238,11 @@ ${poly('Inner', 'Floor/Wrap', 0)}
 `);
     expect(z.get('Ref')).toBeDefined();
     expect(z.get('Inner')).toBeDefined();
-    // Inner is in a z-index bucket (drawn in front of a z_index 0 item)…
-    expect(z.get('Inner')!).toBeGreaterThan(Z_INDEX_STEP);
-    // …but NOT beyond its own z_index=1 bucket (no doubled z-index step).
-    expect(z.get('Inner')!).toBeLessThan(2 * Z_INDEX_STEP);
-    // …and it shares Ref's bucket (both z_index=1), differing only by a rank sub-step.
-    expect(Math.abs(z.get('Inner')! - z.get('Ref')!)).toBeLessThan(Z_INDEX_STEP);
+    // Inner is EXACTLY one z-index bucket in front of the z_index 0 container
+    // it hangs under — not two, which is what double-counting would produce…
+    expect(paintBucket(z.get('Inner')!)).toBe(paintBucket(z.get('Floor')!) + 1);
+    // …and it shares Ref's bucket (both z_index = 1), differing only in sequence.
+    expect(paintBucket(z.get('Inner')!)).toBe(paintBucket(z.get('Ref')!));
   });
 
   it('RED: a leaf CanvasItem sitting directly in a tree-order slot lands between the y-sort subtrees', async () => {
@@ -240,7 +251,7 @@ ${poly('Inner', 'Floor/Wrap', 0)}
     // between `Walls` and `Decorations`. It must sit in ITS tree-order slot: behind SubB, in front
     // of SubA — even though SubA's item has a higher Y. A leaf goes through CanvasItem2D (not Node2D),
     // so it needs the slot base applied there too, else it stays at the shared layer base (z=0).
-    const z = await worldZByName(`[gd_scene format=3]
+    const z = await paintOrderByName(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -298,7 +309,7 @@ describe('Y-sort container rules (issue #356) — measured against Godot 4.6.3',
     // `SubHigh`, Y=200) wins — it sorted against `Mid` (Y=100), a node one
     // level above it. Full order: Sub (Y=0, declared first) ▸ SubLow (Y=0)
     // ▸ Mid (Y=100) ▸ SubHigh (Y=200).
-    const z = await worldZByName(probeScene('ysort-nested-merge.tscn'));
+    const z = await paintOrderByName(probeScene('ysort-nested-merge.tscn'));
     for (const n of ['Sub', 'SubLow', 'Mid', 'SubHigh']) expect(z.get(n)).toBeDefined();
     expect(z.get('Sub')!).toBeLessThan(z.get('SubLow')!);
     expect(z.get('SubLow')!).toBeLessThan(z.get('Mid')!);
@@ -319,9 +330,9 @@ describe('Y-sort container rules (issue #356) — measured against Godot 4.6.3',
     byName.get('Leaf')!.getWorldPosition(world);
     // Godot (0, 300) → three (0, −300): the whole Root→Sub→Leaf chain composed.
     expect(world.y).toBeCloseTo(-300);
-    const leafZ = world.z;
-    byName.get('Ref')!.getWorldPosition(world);
-    expect(leafZ).toBeGreaterThan(world.z);
+    // …and it sorts in FRONT of `Ref` (Y=250), which only the accumulated Y=300
+    // does. Draw order is the group's paint key, not its z (`canvasPaintOrder`).
+    expect(byName.get('Leaf')!.renderOrder).toBeGreaterThan(byName.get('Ref')!.renderOrder);
   });
 
   it('GUARDRAIL: a NON-y-sorted container stays one atomic unit at its own Y', async () => {
@@ -329,7 +340,7 @@ describe('Y-sort container rules (issue #356) — measured against Godot 4.6.3',
     // mid-Y sibling. `Deco` sorts as one unit at ITS Y (0), so its high-Y child
     // never escapes to overtake `Mid`. Inside the unit tree order rules, which
     // an atomic subtree expresses by sharing one z (see the GUARDRAIL above).
-    const z = await worldZByName(probeScene('ysort-atomic-container.tscn'));
+    const z = await paintOrderByName(probeScene('ysort-atomic-container.tscn'));
     for (const n of ['Low', 'High', 'Mid']) expect(z.get(n)).toBeDefined();
     expect(z.get('Low')!).toBeLessThanOrEqual(z.get('High')!);
     expect(z.get('High')!).toBeLessThan(z.get('Mid')!);

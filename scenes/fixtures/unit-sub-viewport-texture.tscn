@@ -11,7 +11,7 @@
 ;
 ; Godot 4.6.3 draws the sphere (rendered by the SubViewport's own Camera3D)
 ; onto the quad. The sphere ALSO draws in the main view, because own_world_3d
-; is unset and the world is shared — that is the ADR-0030 default, not a bug.
+; is unset and the world is shared — that is the ADR-0033 default, not a bug.
 ;
 ; The content is 3D on purpose: a Control-content viewport takes the DOM
 ; rasterization path instead, which is a different mechanism and gets its own

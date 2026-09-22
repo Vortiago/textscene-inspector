@@ -19,8 +19,17 @@
  * this — they swap a magenta material onto the **actual** mesh geometry
  * so the unresolved mesh's shape stays visible to the user (a different
  * affordance, not a placeholder widget).
+ *
+ * Sprite3D and the GLB scene root mount the `plane` marker too, which makes it
+ * the one place a 3D node reaches `canvasItemFacing()`. Single pass stays
+ * correct there: a lone `planeGeometry` winds one way, so exactly one of the
+ * two facing passes was ever producing a fragment for it and the pass that is
+ * dropped drew nothing.
  */
-import * as THREE from 'three';
+import { CanvasItemGroup } from './CanvasItemGroup';
+import { canvasItemFacing } from '../canvasItemFacing';
+import { materialProgramInputs } from '../materialProgramInputs';
+import { wireGizmoProgram } from './wireGizmoProgram';
 
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
@@ -38,6 +47,15 @@ interface Props {
 
 const BOX_SIZE: [number, number, number] = [0.5, 0.5, 0.5];
 
+// Both literal-only, so both keys are constant — the marker never remounts, and
+// a program input added later keys itself. Module scope because the component
+// draws ONE of them and derived both.
+const BOX_MATERIAL = wireGizmoProgram('magenta');
+const PLANE_MATERIAL = materialProgramInputs({
+  props: { color: 'magenta', transparent: true, opacity: 0.6 },
+  merge: [canvasItemFacing()],
+});
+
 export function MissingResourcePlaceholder({
   shape,
   name,
@@ -46,23 +64,18 @@ export function MissingResourcePlaceholder({
   scale,
 }: Props) {
   return (
-    <group name={name} position={position} rotation={rotation} scale={scale}>
+    <CanvasItemGroup name={name} position={position} rotation={rotation} scale={scale}>
       {shape === 'box' ? (
         <mesh>
           <boxGeometry args={BOX_SIZE} />
-          <meshBasicMaterial color="magenta" wireframe />
+          <meshBasicMaterial key={BOX_MATERIAL.key} {...BOX_MATERIAL.props} />
         </mesh>
       ) : (
         <mesh>
           <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial
-            color="magenta"
-            transparent
-            opacity={0.6}
-            side={THREE.DoubleSide}
-          />
+          <meshBasicMaterial key={PLANE_MATERIAL.key} {...PLANE_MATERIAL.props} />
         </mesh>
       )}
-    </group>
+    </CanvasItemGroup>
   );
 }

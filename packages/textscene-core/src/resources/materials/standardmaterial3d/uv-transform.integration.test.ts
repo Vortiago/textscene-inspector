@@ -18,10 +18,22 @@ function withScale(scale: number, texture: THREE.Texture): THREE.MeshStandardMat
   ) as THREE.MeshStandardMaterial;
 }
 
+/**
+ * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
+ * is known (`resources/formats/image/textureProcessing.ts`). Binding is what
+ * decides the colour space each Godot slot actually samples in, so starting
+ * from three's own default would let a raw slot pass without being bound.
+ */
+function loadedTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 describe('UV transform integration — shared textures', () => {
   it('applies different UV transforms to materials sharing one texture', () => {
     // A single shared source texture, as if resolved once from ExtResource("1").
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
 
     const twice = withScale(2, shared);
     const fourTimes = withScale(4, shared);
@@ -39,7 +51,7 @@ describe('UV transform integration — shared textures', () => {
   });
 
   it('handles six materials with different UV scales (showcase scenario)', () => {
-    const shared = new THREE.Texture();
+    const shared = loadedTexture();
     const scales = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
 
     const materials = scales.map((scale) => withScale(scale, shared));

@@ -14,7 +14,7 @@
  * `liveSceneTree.ts`, so the React hook only supplies reactivity.
  */
 
-import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
@@ -23,7 +23,12 @@ import {
   cachedUniqueNameOwnership,
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
-import { liveChildGroups, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
+import {
+  liveChildGroups,
+  rootScope,
+  type LiveChildGroup,
+  type LiveTreeContext,
+} from './liveSceneTree.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -79,7 +84,7 @@ interface Walk {
 function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): Walk {
   const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, ctx };
   let candidates: Candidate[] = [
-    { group: { origin: 'inline', children: roots, externalResources: ctx.externalResources }, owner: outer },
+    { group: { origin: 'inline', children: roots, scope: rootScope(ctx) }, owner: outer },
   ];
   let owner = outer;
   let into = outer;
@@ -107,7 +112,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     }
     // A grafted node resolves its refs against the table it was authored in,
     // as `DispatchedNode` does, not the sub-scene's it now sits in.
-    const scope = match.authoredResources ?? found.group.externalResources;
+    const scope = match.authoredScope ?? found.group.scope;
     const subRoots = cachedSubRoots(match, scope, ctx);
     candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
       group,
@@ -150,11 +155,11 @@ export function claimOwnerOf(
 
 function cachedSubRoots(
   node: TscnNode,
-  scope: readonly TscnExternalResource[],
+  scope: SceneScope,
   ctx: LiveTreeContext
 ): readonly TscnNode[] | undefined {
   if (!node.instance) return undefined;
-  const scenePath = resolveInstancePath(node.instance, scope);
+  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
   return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
 }
 

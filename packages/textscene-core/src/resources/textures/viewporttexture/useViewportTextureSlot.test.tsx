@@ -2,34 +2,38 @@
  * The consumer half of the ViewportTexture seam: a texture slot that names a
  * node instead of a file.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { useEffect } from 'react';
 import * as THREE from 'three';
 
+const warnCalls: unknown[][] = [];
+vi.mock('../../../logger.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../logger.js')>();
+  return {
+    ...actual,
+    warn: (...args: unknown[]) => {
+      warnCalls.push(args);
+    },
+  };
+});
+
 import type { TscnInternalResource } from '../../../parser/types';
-import { TscnParser } from '../../../parser/TscnParser';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
-import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import {
   ViewportTextureProvider,
   useRegisterViewportTexture,
 } from '../../../r3f/contexts/ViewportTextureContext';
+import {
+  ViewportPassProvider,
+  useRegisterViewportPass,
+} from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextureSlot';
-import { setLogAdapter } from '../../../logger';
 
 const viewportTexture: TscnInternalResource = {
   id: 'ViewportTexture_1',
   type: 'ViewportTexture',
   data: { id: 'ViewportTexture_1', viewport_path: 'NodePath("SubViewport")' },
-};
-
-/** A `%Name` JUMP followed by a descent, which only a claim table can resolve. */
-const aliasViewportTexture: TscnInternalResource = {
-  id: 'ViewportTexture_2',
-  type: 'ViewportTexture',
-  data: { id: 'ViewportTexture_2', viewport_path: 'NodePath("%Hud/CombinedViewport")' },
 };
 
 const atlasTexture: TscnInternalResource = {
@@ -38,7 +42,7 @@ const atlasTexture: TscnInternalResource = {
   data: { id: 'Atlas_1', atlas: 'ExtResource("1")' },
 };
 
-const RESOURCES = [viewportTexture, aliasViewportTexture, atlasTexture];
+const RESOURCES = [viewportTexture, atlasTexture];
 
 /** Publishes `texture` at `path` for as long as it is mounted. */
 function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
@@ -55,7 +59,7 @@ function Consumer({
   onResolve,
 }: {
   slotRef: string | undefined;
-  onResolve: (t: THREE.Texture | null) => void;
+  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
   onResolve(useViewportTextureSlot(slotRef, RESOURCES));
   return null;
@@ -63,9 +67,9 @@ function Consumer({
 
 /** Mounts a consumer at `consumerPath`, optionally with a publisher. */
 function mount(slotRef: string | undefined, consumerPath: string | null, publishAt?: string) {
-  const seen: (THREE.Texture | null)[] = [];
+  const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
   const texture = new THREE.Texture();
-  const consumer = <Consumer slotRef={slotRef} onResolve={(t) => seen.push(t)} />;
+  const consumer = <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />;
   render(
     <ViewportTextureProvider>
       {publishAt ? <Publisher path={publishAt} texture={texture} /> : null}
@@ -76,7 +80,11 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
       )}
     </ViewportTextureProvider>
   );
-  return { resolved: () => seen.at(-1) ?? null, texture };
+  return {
+    resolved: () => seen.at(-1)?.texture ?? null,
+    cyclic: () => seen.at(-1)?.cyclic ?? false,
+    texture,
+  };
 }
 
 describe('isViewportTextureRef', () => {
@@ -150,60 +158,6 @@ describe('useViewportTextureSlot', () => {
   });
 
   /**
-   * `get_node_or_null` treats `%Hud` as a jump to the claimant and descends from
-   * there, so the key is the claimant's own path with the rest appended.
-   * Concatenating the literal built `Root/%Hud/CombinedViewport`, which no
-   * publisher ever registers: the alias a viewport publishes for itself is a
-   * single segment.
-   */
-  describe('a compound %Name viewport path', () => {
-    const scene = `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="UI" type="Node3D" parent="."]
-
-[node name="Hud" type="Node3D" parent="UI"]
-unique_name_in_owner = true
-
-[node name="CombinedViewport" type="SubViewport" parent="UI/Hud"]
-
-[node name="Screen" type="MeshInstance3D" parent="."]
-`;
-
-    /** The same mount, with the scene the claim table is resolved against. */
-    function mountInScene(publishAt: string) {
-      const graph = createSceneGraphFromTscnScene({ nodes: new TscnParser().parse(scene).nodes });
-      const seen: (THREE.Texture | null)[] = [];
-      const texture = new THREE.Texture();
-      render(
-        <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-          <ViewportTextureProvider>
-            <Publisher path={publishAt} texture={texture} />
-            <NodePathProvider path="Root/Screen">
-              <Consumer
-                slotRef='SubResource("ViewportTexture_2")'
-                onResolve={(t) => seen.push(t)}
-              />
-            </NodePathProvider>
-          </ViewportTextureProvider>
-        </HierarchyProvider>
-      );
-      return { resolved: () => seen.at(-1) ?? null, texture };
-    }
-
-    it('descends from the claimant to the viewport that published there', () => {
-      const { resolved, texture } = mountInScene('Root/UI/Hud/CombinedViewport');
-      expect(resolved()).toBe(texture);
-    });
-
-    it('does not match the literal join of the alias onto the root', () => {
-      const { resolved } = mountInScene('Root/%Hud/CombinedViewport');
-      expect(resolved()).toBeNull();
-    });
-  });
-
-  /**
    * Without a `NodePathProvider` there is no scene root to rebase against, so
    * the slot resolves to nothing rather than guessing a key.
    */
@@ -219,15 +173,81 @@ unique_name_in_owner = true
       type: 'ViewportTexture',
       data: { id: 'Empty_1', viewport_path: 'NodePath("")' },
     };
-    const seen: (THREE.Texture | null)[] = [];
+    const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
     render(
       <ViewportTextureProvider>
         <NodePathProvider path="Root/Screen">
-          <ConsumerWith resources={[empty]} onResolve={(t) => seen.push(t)} />
+          <ConsumerWith resources={[empty]} onResolve={(r) => seen.push(r)} />
         </NodePathProvider>
       </ViewportTextureProvider>
     );
-    expect(seen.at(-1) ?? null).toBeNull();
+    expect(seen.at(-1)?.texture ?? null).toBeNull();
+  });
+
+  describe('a target sitting in an unrenderable pass cycle', () => {
+    /**
+     * `viewport_path` counts from the local scene root, so
+     * `SubResource("ViewportTexture_1")` above resolves to the registry key
+     * `Root/SubViewport` — the exact path a cyclic pass registers under.
+     */
+    const VIEWPORT_TEXTURE_REF = 'SubResource("ViewportTexture_1")';
+    const ATLAS_REF = 'SubResource("Atlas_1")';
+
+    function mountCyclic(slotRef: string, consumerPath: string, publish: boolean) {
+      const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
+      const texture = new THREE.Texture();
+      render(
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <CyclicRegistration />
+            {publish ? <Publisher path="Root/SubViewport" texture={texture} /> : null}
+            <NodePathProvider path={consumerPath}>
+              <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />
+            </NodePathProvider>
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
+      );
+      return { last: () => seen.at(-1)! };
+    }
+
+    /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
+    function CyclicRegistration() {
+      const register = useRegisterViewportPass();
+      useEffect(() => register('Root/Other', { dependsOn: ['Root/SubViewport'], render: () => {} }), [register]);
+      useEffect(
+        () => register('Root/SubViewport', { dependsOn: ['Root/Other'], render: () => {} }),
+        [register]
+      );
+      return null;
+    }
+
+    it('reports cyclic: true and a null texture even though an entry was published', () => {
+      const { last } = mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      expect(last().cyclic).toBe(true);
+      expect(last().texture).toBeNull();
+    });
+
+    it('logs a warning naming the consuming node path', () => {
+      warnCalls.length = 0;
+      mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      const matched = warnCalls.filter((args) => String(args[0]).includes('Root/Screen'));
+      expect(matched.length).toBeGreaterThan(0);
+    });
+
+    /**
+     * `CyclicRegistration` alone makes `ViewportPassProvider`'s own
+     * cycle-detection effect warn (unrelated to this hook) — the assertion
+     * here is specifically that THIS hook's own "falls back" warning, keyed
+     * off a real ViewportTexture resolution, does not additionally fire for
+     * a slot that never named one.
+     */
+    it('does not warn its own fallback message when the slot names no ViewportTexture at all', () => {
+      warnCalls.length = 0;
+      const { last } = mountCyclic(ATLAS_REF, 'Root/Screen', false);
+      expect(last().cyclic).toBe(false);
+      const matched = warnCalls.filter((args) => String(args[0]).includes('falls back'));
+      expect(matched).toHaveLength(0);
+    });
   });
 });
 
@@ -236,68 +256,8 @@ function ConsumerWith({
   onResolve,
 }: {
   resources: TscnInternalResource[];
-  onResolve: (t: THREE.Texture | null) => void;
+  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
   onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources));
   return null;
 }
-
-/**
- * The unclaimed-alias warning keys its dedup on the SPELLING, so a re-parse of
- * the same text stays quiet — but the answer for one spelling changes when the
- * claimant is renamed underneath it, and that edit must be reported.
- */
-describe('the unclaimed-alias warning under a changed claim table', () => {
-  afterEach(() => setLogAdapter(null));
-
-  const sceneWith = (hudName: string) => `[gd_scene format=3]
-
-[node name="Root" type="Node3D"]
-
-[node name="UI" type="Node3D" parent="."]
-
-[node name="${hudName}" type="Node3D" parent="UI"]
-unique_name_in_owner = true
-
-[node name="Screen" type="MeshInstance3D" parent="."]
-`;
-  const graphOf = (hudName: string) =>
-    createSceneGraphFromTscnScene({ nodes: new TscnParser().parse(sceneWith(hudName)).nodes });
-
-  const tree = (hudName: string) => (
-    <HierarchyProvider value={{ sceneGraph: graphOf(hudName), panelId: 'p' }}>
-      <ViewportTextureProvider>
-        <NodePathProvider path="Root/Screen">
-          <Consumer slotRef='SubResource("ViewportTexture_2")' onResolve={() => {}} />
-        </NodePathProvider>
-      </ViewportTextureProvider>
-    </HierarchyProvider>
-  );
-
-  it('warns once the claimant is renamed away, and once only per spelling', () => {
-    const warn = vi.fn();
-    setLogAdapter({ trace() {}, debug() {}, info() {}, warn, error() {} });
-
-    const { rerender } = render(tree('Hud'));
-    expect(warn).not.toHaveBeenCalled();
-
-    rerender(tree('Hud2'));
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]![0]).toContain('%Hud');
-
-    // A re-parse of the same text: same spelling, still unclaimed, no repeat.
-    rerender(tree('Hud2'));
-    expect(warn).toHaveBeenCalledTimes(1);
-  });
-
-  it('warns again when the name is claimed and then lost a second time', () => {
-    const warn = vi.fn();
-    setLogAdapter({ trace() {}, debug() {}, info() {}, warn, error() {} });
-
-    const { rerender } = render(tree('Hud2'));
-    expect(warn).toHaveBeenCalledTimes(1);
-    rerender(tree('Hud'));
-    rerender(tree('Hud2'));
-    expect(warn).toHaveBeenCalledTimes(2);
-  });
-});

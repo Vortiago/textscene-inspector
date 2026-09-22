@@ -51,4 +51,5 @@ describe('ViewportModeContext', () => {
     act(() => result.current.setMode('2D'));
     expect(result.current.mode).toBe('2D');
   });
+
 });

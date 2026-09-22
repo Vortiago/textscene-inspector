@@ -6,8 +6,9 @@
  * never picked up.
  *
  * Mirrors the path mapping used by scripts/copy-fixtures.js (and the root
- * scripts/generate-fixtures.js): scenes/fixtures/*.tscn and scenes/examples/*.tscn
- * are copied FLAT into public/fixtures/ (entry `file` is a basename), while
+ * scripts/generate-fixtures.js): scenes/fixtures/ is mirrored onto
+ * public/fixtures/ as its res:// root (a selectable entry's `file` is a
+ * basename, since every selectable scene sits at that root), while
  * scenes/isometric/** is mirrored recursively (entry `file` is a res://-relative
  * path) and scenes/demos/** is mirrored under public/fixtures/demos/ (entry
  * `file` starts with 'demos/'). A manifest entry is therefore valid iff its
@@ -27,11 +28,7 @@ import { DEMO_CATEGORY_LABELS } from '../../../scripts/generate-fixtures/demoCat
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
-const sourceRoots = [
-  join(scenesRoot, 'fixtures'),
-  join(scenesRoot, 'examples'),
-  join(scenesRoot, 'isometric'),
-];
+const sourceRoots = [join(scenesRoot, 'fixtures'), join(scenesRoot, 'isometric')];
 
 function fixtureExistsOnDisk(file: string): boolean {
   // demos/<top>/<project>/… entries mirror scenes/demos/ 1:1 (not flattened).
@@ -69,8 +66,8 @@ function scenesDeep(dir: string, prefix: string): string[] {
 /**
  * Every COMMITTED scene the generator would list, spelled as a manifest `file`.
  *
- * Mirrors generate-fixtures.js: flat basenames for scenes/fixtures and
- * scenes/examples, res://-relative paths for scenes/isometric, and
+ * Mirrors generate-fixtures.js: flat basenames for scenes/fixtures,
+ * res://-relative paths for scenes/isometric, and
  * `demos/<top>/<project>/…` for each project directory under the four demo
  * categories. The on-demand corpora (games, ld-58) are gitignored and go to
  * separate manifests, so they are out of scope here exactly as they are above.
@@ -90,7 +87,6 @@ function committedScenesOnDisk(): string[] {
   });
   return [
     ...scenesFlat(join(scenesRoot, 'fixtures')),
-    ...scenesFlat(join(scenesRoot, 'examples')),
     ...scenesDeep(join(scenesRoot, 'isometric'), ''),
     ...demos,
   ];

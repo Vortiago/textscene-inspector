@@ -2,10 +2,11 @@
  * <Sprite3D> — billboarded 2D texture rendered in 3D space.
  *
  * Architecture:
- *   - Texture source: the shared `useTexture2DSource` hook — procedural
- *     (GradientTexture2D / NoiseTexture2D), AtlasTexture cell, or loaded
- *     file. Pending → render nothing (lets the scene continue);
- *     missing/error → magenta placeholder mesh (matches MeshInstance3D UX).
+ *   - Texture state machine: `useTexture2D`, which covers an image
+ *     file, an inline procedural texture and a CanvasTexture alike.
+ *     Pending → render nothing (lets the scene continue);
+ *     missing/error → magenta placeholder mesh + drei `<Text>` label
+ *     naming the path (matches MeshInstance3D UX).
  *   - Quad geometry: `<planeGeometry>` sized by `pixel_size` × the
  *     active texture region (full image, sprite-sheet tile, or
  *     `region_rect` sub-image). Same pattern as Label3D's textured
@@ -14,19 +15,18 @@
  *   - UV math: region_rect + hframes/vframes composition lives in the
  *     shared `r3f/spriteFrame` module (one home for Sprite2D +
  *     Sprite3D). flip_h/flip_v stay here — 3D mirrors via UV negation
- *     where 2D mirrors via mesh scale — as does the wrap mode: a
- *     region overrunning its texture TILES here, where the 2D canvas
- *     clamps to the edge texel.
+ *     where 2D mirrors via mesh scale — as does the wrap mode, which
+ *     Sprite3D derives per frame (`spriteWrapMode`) where the 2D
+ *     canvas always clamps.
  *
  * Material:
- *   - `meshBasicMaterial` (sprites are unlit in Godot)
+ *   - `meshBasicMaterial`, or `meshStandardMaterial` when `shaded`
+ *     (`material.cpp:3045`: SHADING_MODE_UNSHADED vs SHADING_MODE_PER_PIXEL)
  *   - `color`     ← modulate RGB
- *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)),
- *                   `transparent` flag follows
- *   - `alphaTest` ← non-zero when alpha_cut === DISCARD (Godot
- *                   doesn't expose the threshold; 0.5 is the Godot
- *                   default for `alpha_scissor_threshold`)
- *   - `depthWrite`← false except in DISCARD mode (sharp-edge pass)
+ *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)); a uniform,
+ *                   never a term of `transparent` — see `alphaCutSurface`
+ *   - `transparent`/`alphaTest`/`alphaHash`/`depthWrite` ← the alpha_cut arm
+ *                   alone (`alphaCutSurface`)
  *   - `side`      ← DoubleSide (sprite quads should be visible from
  *                   the back too — Godot's runtime behaviour)
  *   - `renderOrder` on the mesh ← render_priority
@@ -42,17 +42,23 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { composeFrameTexture, frameSizePx, needsFrameComposition } from '../../../r3f/spriteFrame';
+import { composeFrameTexture, frameSizePx, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useTexture2DSource } from '../../../resources/useTexture2D';
+import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
+import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
+import { useTexture2D } from '../../../resources/useTexture2D';
 import {
-  AlphaCutMode,
-  type Sprite3DProperties,
-} from './types';
+  applyTextureFilterState,
+  godotTextureFilterState,
+} from '../../../resources/textures/godotTextureFilter';
+import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
+import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 
-const DEFAULT_ALPHA_TEST = 0.5;
+/** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
+const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
   // Godot's billboard is a material-side effect on the sprite quad; the shared
@@ -67,30 +73,36 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // The shared source hook resolves procedural (GradientTexture2D /
-  // NoiseTexture2D), AtlasTexture cell + region, and loaded-file forms alike.
-  const source = useTexture2DSource(properties.texture, externalResources, internalResources);
-  const sourceTexture = source.texture ?? undefined;
+  // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
+  // mode does; both are per-frame effects on the sprite quad itself.
+  useFixedSize(spriteRef, properties.fixed_size, scale);
+
+  // `texture` may be an image file, or a procedural texture described entirely
+  // inside the scene; `useTexture2D` resolves either and reports a reference it
+  // cannot resolve as `missing`.
+  const { texture: sourceTexture, missing: textureMissing } = useTexture2D(
+    properties.texture,
+    externalResources,
+    internalResources
+  );
 
   // Compose the visible texture (shared spriteFrame module clones + windows
   // the UVs to the region/frame), then mirror via UV negation: flip the
   // (already cropped) UV window by negating the repeat and shifting the
-  // offset to the opposite edge. A whole-image, unflipped sprite draws the
-  // borrowed source directly (needsFrameComposition); the flips MUTATE
-  // repeat/offset, so they always work on a clone.
+  // offset to the opposite edge.
   const displayedTexture = useMemo(() => {
-    if (
-      sourceTexture &&
-      !needsFrameComposition(properties, source.region) &&
-      !properties.flip_h &&
-      !properties.flip_v
-    ) {
-      return sourceTexture;
-    }
-    // 'repeat': Sprite3D's material keeps StandardMaterial3D's texture-repeat
-    // default, so an oversized region_rect tiles here where the 2D canvas clamps.
-    const cloned = composeFrameTexture(sourceTexture, properties, 'repeat', source.region);
+    // The wrap mode is DERIVED, not fixed: `sprite_3d.cpp:163` reads it off the
+    // frame's own UV corners, so only an overrunning window tiles.
+    // SRGBColorSpace: Sprite3D draws through Godot's 3D pipeline (always a
+    // hardware sRGB decode before filtering, `canvas2DTextureDecode.ts`), so
+    // it keeps the shared cache entry's own colour space rather than the 2D
+    // canvas's `NoColorSpace` retag.
+    const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+    const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, wrap, THREE.SRGBColorSpace);
     if (!cloned) return undefined;
+    // Sprite3D's texture is a node property, not a material slot, so the node's
+    // own `texture_filter` (`material.cpp:3055`) lands on this clone.
+    applyTextureFilterState(cloned, godotTextureFilterState(properties.texture_filter));
     if (properties.flip_h) {
       cloned.offset.x += cloned.repeat.x;
       cloned.repeat.x = -cloned.repeat.x;
@@ -100,41 +112,34 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       cloned.repeat.y = -cloned.repeat.y;
     }
     return cloned;
-  }, [sourceTexture, source.region, properties]);
-  // Dispose only clones this component made; a borrowed source is shared.
-  const ownedTexture = displayedTexture !== sourceTexture ? displayedTexture : undefined;
-  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
+  }, [sourceTexture, properties]);
+  // `composeFrameTexture` hands back a CLONE, never the loader's cached entry, so
+  // the clone is this component's to release; the shared source is left alone.
+  useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const { width, height } = useMemo(() => {
-    const px = frameSizePx(sourceTexture, properties, source.region);
+    const px = frameSizePx(sourceTexture ?? undefined, properties);
     return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
-  }, [sourceTexture, source.region, properties]);
+  }, [sourceTexture, properties]);
 
-  // Modulate RGB and effective opacity. Transparency property is
-  // additive: opacity = modulate.a * (1 - transparency). Godot stores modulate
-  // in sRGB → convert to the linear working space before the unlit material
-  // (matching Sprite2D / WorldEnvironment).
-  const color = useGodotLinearColor(properties.modulate);
-  const opacity = clamp01(properties.modulate.a * (1 - properties.transparency));
-  // `transparent=false` (Godot) ignores texture alpha entirely → opaque quad.
-  const transparent =
-    properties.transparent === false
-      ? false
-      : opacity < 1 || properties.alpha_cut !== AlphaCutMode.ALPHA_CUT_DISABLED;
+  // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's
+  // accumulation into this node's modulate, r/g/b and a. Godot multiplies the
+  // STORED colours and converts once, so the sRGB→linear step stays here, after
+  // the product (matching Sprite2D / WorldEnvironment).
+  const accum = useSpriteBase3DColorAccum(properties.modulate);
+  const color = useGodotLinearColor(accum);
+  // `transparency` is a per-instance GeometryInstance3D property, outside the
+  // accumulation — only `modulate` accumulates.
+  const opacity = clamp01(accum.a * (1 - properties.transparency));
 
-  // Alpha-cut → material configuration:
-  //   DISABLED       → standard alpha blending; depthWrite off.
-  //   DISCARD        → alphaTest threshold; depthWrite ON (sharp edges).
-  //   OPAQUE_PREPASS → same as DISCARD for now (no separate prepass).
-  const { alphaTest: alphaCutTest, depthWrite: alphaCutDepthWrite } = alphaCutBehaviour(properties.alpha_cut);
-  const alphaTest = properties.transparent === false ? 0 : alphaCutTest;
-  // An opaque sprite must write depth so it occludes and sorts correctly
-  // against other opaque geometry; only the blended (transparent) paths skip
-  // depthWrite. Without this an opaque `transparent=false` sprite kept the
-  // DISABLED alpha-cut's depthWrite=false and rendered with wrong ordering.
-  const depthWrite = transparent ? alphaCutDepthWrite : true;
+  const cut = alphaCutSurface({
+    mode: properties.alpha_cut,
+    scissorThreshold: properties.alpha_scissor_threshold,
+    // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
+    transparentFlag: properties.transparent,
+  });
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -165,11 +170,27 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       </group>
     );
 
-  // No texture requested, an unresolvable reference, or a failed load: render
-  // a stub placeholder so users see that the sprite node exists in the scene.
-  // (The linter would already flag the missing-texture case as
-  // `sprite3d-requires-texture`.)
-  if (!properties.texture || source.missing) {
+  // No texture referenced at all: render a stub placeholder so users
+  // see that the sprite node exists in the scene even without a texture.
+  // (Linter would already flag this as `sprite3d-requires-texture`.)
+  if (!properties.texture) {
+    return (
+      <>
+        <MissingResourcePlaceholder
+          shape="plane"
+          name={node.name}
+          position={position}
+          rotation={rotation}
+          scale={scale}
+        />
+        {subtree}
+      </>
+    );
+  }
+
+  // Texture failed to load: magenta-quad placeholder. The in-3D path
+  // label was moved to the DOM `<MissingResourcesPanel>`.
+  if (textureMissing) {
     return (
       <>
         <MissingResourcePlaceholder
@@ -185,7 +206,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   // Pending: render nothing visible yet. Wait for the texture to arrive
-  // (which `useResource` will pick up automatically on the next render
+  // (which `useTexture2D` will pick up automatically on the next render
   // cycle once the host provides the file).
   if (!displayedTexture) {
     return (
@@ -203,6 +224,22 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
+  const program = materialProgramInputs({
+    props: {
+      map: displayedTexture,
+      color,
+      opacity,
+      transparent: cut.blended,
+      alphaTest: cut.alphaTest,
+      alphaHash: cut.alphaHash,
+      depthWrite: cut.depthWrite,
+      // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
+      depthTest: !properties.no_depth_test,
+      side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
+    },
+    merge: [properties.shaded ? SHADED_SCALARS : undefined],
+  });
+
   return (
     <>
       <mesh
@@ -215,30 +252,15 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
       >
         <primitive object={geometry} attach="geometry" />
-        <meshBasicMaterial
-          map={displayedTexture}
-          color={color}
-          opacity={opacity}
-          transparent={transparent}
-          alphaTest={alphaTest}
-          depthWrite={depthWrite}
-          side={properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide}
-        />
+        {properties.shaded ? (
+          <meshStandardMaterial key={program.key} {...program.props} />
+        ) : (
+          <meshBasicMaterial key={program.key} {...program.props} />
+        )}
       </mesh>
       {subtree}
     </>
   );
-}
-
-function alphaCutBehaviour(mode: AlphaCutMode): { alphaTest: number; depthWrite: boolean } {
-  switch (mode) {
-    case AlphaCutMode.ALPHA_CUT_DISCARD:
-    case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS:
-      return { alphaTest: DEFAULT_ALPHA_TEST, depthWrite: true };
-    case AlphaCutMode.ALPHA_CUT_DISABLED:
-    default:
-      return { alphaTest: 0, depthWrite: false };
-  }
 }
 
 function clamp01(value: number): number {

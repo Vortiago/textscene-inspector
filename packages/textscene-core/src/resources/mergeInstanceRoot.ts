@@ -9,7 +9,7 @@
  * load-bearing for the selection-driven Animation tab (ADR-0012).
  */
 import { canonicalisePropertyBag } from '../godot/deprecated.js';
-import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import { graftInstanceChildren } from './graftInstanceChildren.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import type { ParsedHeading } from '../parser/utils.js';
@@ -70,7 +70,7 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
 export function mergeInstanceRoot(
   instanceNode: TscnNode,
   loadedScene: { nodes: readonly TscnNode[] },
-  outerResources?: readonly TscnExternalResource[]
+  outerScope?: SceneScope
 ): TscnNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
@@ -121,9 +121,18 @@ export function mergeInstanceRoot(
     instance: root.instance,
     properties: mergedProperties,
     rawProperties: mergedRaw,
+    // `mergedRaw`'s key order is neither file's real order (a shared key
+    // keeps ROOT's position but the INSTANCE's value; an instance-only key
+    // is appended after every root key) — explicit `false` here, since the
+    // `...instanceNode` spread above would otherwise carry the instance
+    // node's OWN (reliable, but not applicable to this merged node)
+    // `rawPropertiesOrderReliable` through unchanged. A file-order-sensitive
+    // resolver (ADR-0035) must fall back to the editor-save-order assumption
+    // for a node built this way.
+    rawPropertiesOrderReliable: false,
     // A host child whose parent path descended INTO this instance is grafted at
     // the sub-path it named rather than appended at the root — see
     // `graftInstanceChildren`. Direct children still append, as before.
-    children: graftInstanceChildren(root.children, instanceNode.children, outerResources),
+    children: graftInstanceChildren(root.children, instanceNode.children, outerScope),
   };
 }

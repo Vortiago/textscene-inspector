@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
+import { nearestGroupOrder } from './testing/paintOrder';
 import { parseTresFile } from '../parser/parsedResource';
 import { tileSetFromTres } from '../resources/tileset/decode';
 import { mapToLocalPx } from '../resources/tileset/tilePlacement';
@@ -62,6 +63,10 @@ y_sort_origin = 0
 [node name="Decor" type="Polygon2D" parent="Floor"]
 position = Vector2(0, ${decorY})
 polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="After" type="Polygon2D" parent="."]
+position = Vector2(0, 0)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 `;
   const scene = new TscnParser().parse(tscn);
   const ground = findByType(scene.nodes, 'TileMapLayer')[0]!;
@@ -91,33 +96,32 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   );
   await new Promise<void>((r) => setTimeout(r, 10));
 
-  const v = new THREE.Vector3();
   const tileZ: number[] = [];
   let decorZ: number | undefined;
+  let afterZ: number | undefined;
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
   root?.traverse((o: THREE.Object3D) => {
-    // Assert on the ACTUAL rendered tile MESH (the harm layer), not the `TileGroup_*`
-    // wrapper group: the group carries the y-sort rank, but each tile mesh sits at
-    // group.z + its own local z, so a bug that double-counts the rank on the mesh
-    // (group AND mesh both offset by sortZ) is invisible from the wrapper and only
-    // shows here — where the pixels actually are. The batched tile mesh is an
-    // anonymous child of its `TileGroup_<name>_<i>` group.
+    // Assert on the ACTUAL rendered tile MESH (the harm layer), not the
+    // `TileGroup_*` wrapper: read the canvas position three would sort the MESH
+    // by, which is its nearest enclosing group's. A bug that gave the mesh a
+    // canvas key of its own — rather than the local batch index it is supposed
+    // to carry — is invisible from the wrapper and only shows here, where the
+    // pixels actually are. The batched tile mesh is an anonymous child of its
+    // `TileGroup_<name>_<i>` group.
     if (o.name?.startsWith('TileGroup_')) {
       o.traverse((m: THREE.Object3D) => {
-        if ((m as THREE.Mesh).isMesh) {
-          m.getWorldPosition(v);
-          tileZ.push(v.z);
-        }
+        if ((m as THREE.Mesh).isMesh) tileZ.push(nearestGroupOrder(m));
       });
     } else if (o.name === 'Decor') {
-      o.getWorldPosition(v);
-      decorZ = v.z;
+      decorZ = o.renderOrder;
+    } else if (o.name === 'After') {
+      afterZ = o.renderOrder;
     }
   });
-  return { tileZ, decorZ };
+  return { tileZ, decorZ, afterZ };
 }
 
 describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () => {
@@ -145,5 +149,27 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     // at 1×rank) → the near tile row coincides with / overtakes the decoration.
     expect(Math.min(...tileZ)).toBeLessThan(decorZ!);
     expect(decorZ!).toBeLessThan(Math.max(...tileZ));
+  });
+
+  it('keeps every expanded tile row inside the y-sort subtree\'s own draw-sequence run', async () => {
+    // A y-sorted layer expands into one group PER ROW, and those rows are what
+    // the layer's own reserve was held back for (`canvasPaintOrder.ts`). Sizing
+    // each row by the layer node it names would claim a fresh reserve per row
+    // and run off the end of the enclosing subtree's run — where the next
+    // SIBLING lives, so the whole tilemap would climb over it. Nothing in the
+    // interleave above notices that: it only compares rows against a decoration
+    // INSIDE the same subtree, which is carried along by the same overflow.
+    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const cells: PlacedCell[] = [0, 2, 4, 6, 8].map((y) => ({
+      coords: { x: 0, y },
+      sourceId: 0,
+      atlasCoords: { x: 0, y: 0 },
+      alternativeId: 0,
+    }));
+    const { tileZ, afterZ } = await render(cells, mapToLocalPx(model, { x: 0, y: 1 }).y);
+
+    expect(tileZ.length).toBeGreaterThan(1);
+    expect(afterZ).toBeDefined();
+    expect(Math.max(...tileZ)).toBeLessThan(afterZ!);
   });
 });

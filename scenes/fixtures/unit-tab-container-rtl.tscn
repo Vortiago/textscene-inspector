@@ -1,0 +1,98 @@
+; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower TabContainer.
+;
+; `_update_margins` SWAPS the tabbar style's left and right margin under RTL
+; (tab_container.cpp:412) and `Control::_size_changed` then mirrors the strip
+; inside the container (control.cpp:1785-1787). The two together keep the
+; AUTHORED margins on their authored sides and move `side_margin` to the
+; opposite edge — which is only measurable against a `tabbar_background`
+; whose own left and right margins differ, so the override here is a
+; lopsided 4/28 pair with a visible fill marking the header band. The tabs
+; inside that strip mirror as well. The current page is placed by direct
+; offsets rather than through fit_child_in_rect, so the same mirror puts the
+; panel style's own RIGHT margin on the left (control.cpp:1785-1787) while
+; the panel StyleBox itself, a plain draw call, stays put — which the equally
+; lopsided 6/26 `panel` override and the page's own ColorRect make visible.
+; No other TabContainer scene authors either style, let alone with a
+; direction.
+
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tabbar"]
+content_margin_left = 4.0
+content_margin_top = 6.0
+content_margin_right = 28.0
+content_margin_bottom = 2.0
+bg_color = Color(0.25, 0.18, 0.3, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 6.0
+content_margin_top = 3.0
+content_margin_right = 26.0
+content_margin_bottom = 3.0
+bg_color = Color(0.45, 0.4, 0.2, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.18, 1)
+
+[node name="Ltr" type="TabContainer" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 160.0
+offset_top = 40.0
+offset_right = -160.0
+offset_bottom = 160.0
+theme_override_styles/tabbar_background = SubResource("StyleBoxFlat_tabbar")
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+tab_alignment = 0
+current_tab = 1
+tabs_position = 0
+clip_tabs = false
+
+[node name="General" type="Control" parent="Ltr"]
+visible = false
+layout_mode = 2
+
+[node name="Advanced" type="Control" parent="Ltr"]
+layout_mode = 2
+
+[node name="Page" type="ColorRect" parent="Ltr/Advanced"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.45, 0.35, 1)
+
+[node name="Rtl" type="TabContainer" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_left = 160.0
+offset_top = 200.0
+offset_right = -160.0
+offset_bottom = 320.0
+theme_override_styles/tabbar_background = SubResource("StyleBoxFlat_tabbar")
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+tab_alignment = 0
+current_tab = 1
+tabs_position = 0
+clip_tabs = false
+
+[node name="General" type="Control" parent="Rtl"]
+visible = false
+layout_mode = 2
+
+[node name="Advanced" type="Control" parent="Rtl"]
+layout_mode = 2
+
+[node name="Page" type="ColorRect" parent="Rtl/Advanced"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.45, 0.35, 1)

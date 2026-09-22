@@ -28,7 +28,9 @@ export type ResourceBusType =
   | 'scene'
   | 'glb'
   | 'resource'
-  | 'arraymesh';
+  | 'arraymesh'
+  | 'font'
+  | 'theme';
 
 export interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, e.g. 'standardmaterial3d'. */

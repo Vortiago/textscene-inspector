@@ -1,10 +1,10 @@
 /**
- * CSG `material` accepts an ExtResource `.tres`, not just a SubResource.
+ * A CSG `material` reaches the same slot whichever way it arrives — an
+ * ExtResource `.tres` or an inline `[sub_resource]` — because the node holds only
+ * a `Ref<Material>` and cannot tell them apart.
  *
- * `resolveStandardMaterial` only understands `SubResource("id")`, so every CSG
- * node in scenes/demos/3d/csg/csg.tscn — 33 `material = ExtResource(...)` lines
- * — rendered as Godot's default white. Both existing CSG fixtures declare their
- * materials inline as sub-resources, so no golden could see it.
+ * Every CSG fixture in the golden bag declares its material inline, so no golden
+ * can see the external arrival at all; this is the only thing that gates it.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -14,24 +14,30 @@ import { CsgPrimitive } from './CsgPrimitive';
 // test has to have its slice wired.
 import './csgbox3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
-import type { CSGBox3DProperties } from './csgbox3d/types';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { CSGBox3DProperties } from './csgbox3d/types';
+import { findMesh } from '../testing/reactThreeTestInstance';
+
+const ALBEDO_PATH = 'res://textures/albedo.png';
 
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_blue', path: 'res://blue_material.tres', type: 'Material' },
-  { id: '2_tex', path: 'res://albedo.png', type: 'Texture2D' },
+  { id: '2_tex', path: ALBEDO_PATH, type: 'Texture2D' },
 ];
 
 const INTERNALS: readonly TscnInternalResource[] = [
   { id: 'Mat_inline', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
+  {
+    id: 'Mat_textured',
+    type: 'StandardMaterial3D',
+    data: { albedo_texture: 'ExtResource("2_tex")' },
+  },
 ];
 
-function makeNode(material: string | undefined): TscnNode & {
-  properties: CSGBox3DProperties;
-} {
+function makeNode(material: string | undefined): TscnNode {
   const properties = parseCSGBox3D(
     { type: 'node', attributes: { type: 'CSGBox3D', name: 'Box' } },
     material ? { material } : {}
@@ -42,19 +48,21 @@ function makeNode(material: string | undefined): TscnNode & {
 async function render(material: string | undefined, seed?: THREE.Material) {
   const fake = createFakeResourceLoader();
   if (seed) fake.materials.seed('res://blue_material.tres', seed);
+  const albedo = new THREE.Texture();
+  albedo.needsUpdate = false;
+  fake.textures.seed(ALBEDO_PATH, albedo);
   const node = makeNode(material);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
-        <CsgPrimitive node={node} properties={node.properties} />
+        <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-    .material as THREE.MeshStandardMaterial;
+  return findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
 }
 
 describe('<CsgPrimitive> material resolution', () => {
@@ -64,6 +72,11 @@ describe('<CsgPrimitive> material resolution', () => {
     expect(materialOf(renderer)).toBe(loaded);
   });
 
+  it('resolves an inline material\'s texture slots, as a mesh surface does', async () => {
+    const renderer = await render('SubResource("Mat_textured")');
+    expect(materialOf(renderer).map).toBeInstanceOf(THREE.Texture);
+  });
+
   it('still parses an inline SubResource material', async () => {
     const renderer = await render('SubResource("Mat_inline")');
     expect(materialOf(renderer).color.getHex()).not.toBe(0xffffff);
@@ -71,7 +84,13 @@ describe('<CsgPrimitive> material resolution', () => {
 
   it('shows the unresolved-resource placeholder while the .tres has not loaded', async () => {
     const renderer = await render('ExtResource("1_blue")');
-    expect(materialOf(renderer).color.getHex()).toBe(0xffffff);
+    // The pending placeholder IS the default material — an unresolved path is the
+    // same case as no material at all, so it must not be a distinct colour.
+    const linear = materialOf(renderer).color.getRGB(
+      { r: 0, g: 0, b: 0 } as THREE.Color,
+      THREE.LinearSRGBColorSpace
+    );
+    expect(linear.r).toBeCloseTo(0.6, 5);
   });
 
   it('keeps the default material when the ExtResource is not a Material', async () => {

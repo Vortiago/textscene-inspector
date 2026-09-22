@@ -1,8 +1,19 @@
-/** MarginContainer registration — 2D-overlay DOM component. */
+/**
+ * MarginContainer registration — the native (WebGL canvas) painter + rect
+ * solver, self-registered on import (ADR-0001's convention, extended to
+ * `controlSolverRegistry` for the native rect solve).
+ */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { MarginContainer } from './Component';
+import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
 
-controlComponentRegistry.register({ typeName: 'MarginContainer', Component: MarginContainer });
+controlComponentRegistry.register({
+  typeName: 'MarginContainer',
+  Component: MarginContainer,
+});
+controlSolverRegistry.registerMinimumSize('MarginContainer', marginContainerMinimumSize);
+controlSolverRegistry.registerContainerLayout('MarginContainer', marginContainerLayout);
 
 export { MarginContainer };

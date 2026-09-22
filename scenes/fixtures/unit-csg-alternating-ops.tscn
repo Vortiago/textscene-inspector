@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; ONE VARIABLE: whether children whose operations ALTERNATE fold the same way
+; batched as pairwise. `_get_brush()` accumulates same-operation children and
+; flushes a `BatchBoolean` only when the operation changes
+; (`modules/csg/csg_shape.cpp:475-484`); we fold pairwise, left to right.
+;
+; The four children run union, subtract, union, subtract, so every flush
+; boundary is crossed. Each contributes on its own axis, so a fold that
+; regrouped them would move a bulge or a notch somewhere visible.
+
+[node name="AlternatingOps" type="CSGBox3D"]
+size = Vector3(2, 2, 2)
+
+[node name="BulgeX" type="CSGSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+radius = 0.8
+
+[node name="NotchY" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+operation = 2
+size = Vector3(1, 1, 1)
+
+[node name="BulgeZ" type="CSGSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+radius = 0.6
+
+[node name="NotchNegX" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+operation = 2
+size = Vector3(0.8, 0.8, 0.8)

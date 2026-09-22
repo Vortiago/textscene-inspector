@@ -1,12 +1,13 @@
 /**
  * YSortDispatcher — collects children of a y_sort_enabled node, sorts them
- * by (effectiveZ bucket → sortY → tree order), assigns rank-based z, and
- * re-renders in that order.
+ * by (effectiveZ bucket → sortY → tree order), and re-renders in that order.
  *
- * Within-bucket rank-based z sub-steps:
- *   z = effectiveZ * Z_INDEX_STEP + ((rank + 1) / (K + 1)) * slot.width
- * where slot.width (≤ Z_INDEX_STEP * 0.5) is this y-sort subtree's allotted
- * draw-order band (narrowed when sibling y-sort subtrees share a z-index step).
+ * The sort reaches the renderer as DRAW SEQUENCE: this node owns a contiguous
+ * run of sequence values covering its whole subtree (`canvasPaintOrder.ts`),
+ * and the pass re-packs that run in sorted order. Self-contained by
+ * construction — nothing outside can land inside the run — and each item keeps
+ * a sub-run as wide as its own subtree needs, so a sorted item's descendants
+ * draw between it and the next-ranked item with no budget to ration.
  *
  * A y_sort_enabled TileMapLayer is decomposed per-Y-group via `groupBySortY`:
  * each distinct sort-Y becomes a separate tileGroup item at its own rank,
@@ -20,8 +21,7 @@
 
 import { Fragment, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import { useYSortContext, useYSortSlot } from './contexts/YSortContext.js';
-import { Z_INDEX_STEP } from './node2dTransform.js';
+import { useYSortContext } from './contexts/YSortContext.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
@@ -29,14 +29,28 @@ import { collectYSortedItems, ySortItemId, type YSortItem } from './ySortItems.j
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { YSortSlotProvider, YSortZProvider } from './contexts/YSortContext.js';
+import {
+  allocatePaintRange,
+  isTopLevelItem,
+  packPaintRanges,
+  paintRangeSize,
+} from './canvasPaintOrder.js';
+import {
+  PaintRangeProvider,
+  useCanvasRootRanges,
+  useLayerRank,
+  usePaintRange,
+} from './contexts/PaintOrderContext.js';
+import { ParentIsCanvasItemProvider } from './canvasRootScope.js';
+import { joinPath } from '../utils/nodePath.js';
+import { useCanvasLayerIndex } from './lighting2d/canvasItemPlacement.js';
 // Sorted children go back through the ONE dispatcher rather than a second
 // renderer here: that is what keeps `instance=` sub-scenes, selection
 // registration, hidden-node gating and the workspace split working under
 // y-sort without a copy of each that can drift. The reverse edge
 // (Node2D → YSortDispatcher) resolves through `nodeComponentRegistry` at
 // runtime, so this import introduces no static cycle.
-import { DispatchedNode } from './DispatchedNode.js';
+import { DispatchedNode } from './NodeDispatcher.js';
 import { useNodePath } from './contexts/NodePathContext.js';
 
 /**
@@ -73,9 +87,29 @@ function SortedChildren({
   // in the tree, so their selection paths have to be rebuilt from this node's
   // own path (the dispatcher provided it when it rendered this node).
   const basePath = useNodePath() ?? node.name;
-  // Ranks are laid out within THIS subtree's tree-order slot width (so sibling
-  // y-sort subtrees don't overlap); the slot base is already in the group's z.
-  const slot = useYSortSlot();
+  // This node's own run of draw-sequence values, and the sequence it draws its
+  // own pixels at — the sorted items go after it, exactly as Godot appends the
+  // y-sorted node itself before descending (`_collect_ysort_children`).
+  const paintRange = usePaintRange();
+  const allocated = useMemo(
+    () => allocatePaintRange(paintRange, node.children, true),
+    [paintRange, node.children]
+  );
+  const ownSequence = allocated.self;
+  const layerRank = useLayerRank(useCanvasLayerIndex());
+  // A top_level child is no `child_item` of this node, so the sort never
+  // collected it (`ySortItems.ts`); it is drawn here instead. The SAME
+  // predicate the collection skipped it by — the canvas's own root index is
+  // only a preference, and it is absent for a subtree `canvasRootRanges` could
+  // not see into (an `instance=` node's).
+  const canvasRoots = useCanvasRootRanges();
+  const topLevelChildren = useMemo(
+    () =>
+      node.children
+        .map((child, index) => ({ child, index }))
+        .filter(({ child }) => isTopLevelItem(child)),
+    [node.children]
+  );
 
   // Expand tileGroup items into per-Y-group items using groupBySortY,
   // then flatten (preserving tree-order position of the original layer).
@@ -149,24 +183,51 @@ function SortedChildren({
     return result;
   }, [items]);
 
-  return (
-    <>
-      {sorted.map(({ item, rank, bucketSize: K }) => {
-        const sortZ = ((rank + 1) / (K + 1)) * slot.width;
-        const fullZ = item.effectiveZ * Z_INDEX_STEP + sortZ;
+  // Re-pack this subtree's own run of draw-sequence values in SORTED order.
+  //
+  // The run was allocated by tree position and sized to cover the whole
+  // subtree, so re-laying it out here is self-contained: nothing outside can
+  // land inside it, whatever order this pass chooses. Each item keeps a run as
+  // wide as its own subtree needs, which is what lets a sorted item's
+  // descendants draw between it and the next-ranked item without a budget to
+  // ration — the reason the fractional scheme this replaces had to narrow a
+  // shrinking float band at every level.
+  const packed = useMemo(() => {
+    // A tile-group item is ONE drawn group with no subtree — several of them
+    // come out of a single layer, and they are what that layer's own reserve
+    // was held back for. Sizing them by the layer node they name would claim
+    // a fresh reserve PER ROW and run off the end of the parent's run.
+    //
+    // Packed through `packPaintRanges` rather than a bare cursor because the
+    // ROW COUNT is only known once the tileset resolves: a layer with more
+    // distinct sort-Y rows than its reserve held would otherwise walk into the
+    // next sibling's range and reorder it.
+    const sizes = sorted.map(({ item }) =>
+      item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node)
+    );
+    const ranges = packPaintRanges(paintRange, sizes, ownSequence + 1);
+    return sorted.map(({ item }, i) => ({ item, range: ranges[i]! }));
+  }, [sorted, ownSequence, paintRange]);
 
+  return (
+    // Every item here is a descendant of this y_sort_enabled node, and every
+    // level `LiftedAncestors` restores is a CanvasItem too — so the cast each
+    // re-dispatched node runs against its parent (`canvas_item.cpp:565-571`)
+    // succeeds, which the sort's own re-parenting would otherwise hide.
+    <ParentIsCanvasItemProvider value>
+      {packed.map(({ item, range }) => {
         const Renderer = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer : undefined;
         if (item.kind === 'tileGroup' && item.node && Renderer) {
-          // The Y-group's whole draw position (z-index bucket + rank) rides the group;
-          // its meshes sit at their own per-source sub-step RELATIVE to it (see the
-          // group's `position` below), so the rank is applied ONCE.
+          // The row's whole draw position rides the group as one paint sequence;
+          // its meshes order WITHIN it by their own `renderOrder`, a batching
+          // artifact rather than a draw position.
           return (
             <Fragment key={`tg-${item.node.name}-${ySortItemId(item)}`}>
               <LiftedAncestors liftedPast={item.liftedPast}>
                 <Renderer
                   item={item}
-                  z={fullZ}
-                  band={slot.width / (K + 1)}
+                  layerRank={layerRank}
+                  sequence={range.base}
                   node={item.node}
                 />
               </LiftedAncestors>
@@ -175,25 +236,27 @@ function SortedChildren({
         }
 
         if (item.node) {
-          // The item's own descendants draw between its rank and the next one,
-          // so hand them exactly that gap. Without the narrowing a nested
-          // subtree spends the whole fine range and reaches past its sibling's
-          // rank, which reverses the pair the sort just ordered.
           return (
-            <YSortZProvider key={`n-${item.treeOrder}`} value={fullZ}>
-              <YSortSlotProvider value={{ base: 0, width: slot.width / (K + 1) }}>
-                <LiftedAncestors liftedPast={item.liftedPast}>
-                  <DispatchedNode
-                    node={item.node}
-                    path={liftedPath(basePath, item.liftedPast, item.node.name)}
-                  />
-                </LiftedAncestors>
-              </YSortSlotProvider>
-            </YSortZProvider>
+            <PaintRangeProvider key={`n-${item.treeOrder}`} value={range}>
+              <LiftedAncestors liftedPast={item.liftedPast}>
+                <DispatchedNode
+                  node={item.node}
+                  path={liftedPath(basePath, item.liftedPast, item.node.name)}
+                />
+              </LiftedAncestors>
+            </PaintRangeProvider>
           );
         }
         return null;
       })}
-    </>
+      {topLevelChildren.map(({ child, index }) => (
+        <PaintRangeProvider
+          key={`tl-${child.name}`}
+          value={canvasRoots.get(child) ?? allocated.children[index]!}
+        >
+          <DispatchedNode node={child} path={joinPath(basePath, child.name)} />
+        </PaintRangeProvider>
+      ))}
+    </ParentIsCanvasItemProvider>
   );
 }

@@ -5,6 +5,10 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Exercises GraphElement's own six members: position_offset, resizable,
+; draggable, selectable, selected, scaling_menus. GraphElement draws no chrome
+; of its own, so this fixture is a parse/linter check, never a golden image.
+
 [node name="MyGraphElement" type="GraphElement" parent="."]
 layout_mode = 1
 offset_left = 8.0

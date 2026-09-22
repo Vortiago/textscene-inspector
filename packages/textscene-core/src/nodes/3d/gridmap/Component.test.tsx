@@ -14,6 +14,7 @@ import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../index';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
@@ -41,7 +42,7 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
 function placeholderCells(renderer: Awaited<ReturnType<typeof render>>) {
   return renderer.scene
     .findAllByType('Mesh')
-    .filter((m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)?.wireframe);
+    .filter((m) => (instanceAs<THREE.Mesh>(m).material as THREE.MeshBasicMaterial)?.wireframe);
 }
 
 function render(node: TscnNode, children?: ReactNode) {

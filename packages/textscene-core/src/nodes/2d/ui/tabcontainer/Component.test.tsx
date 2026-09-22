@@ -1,0 +1,206 @@
+/**
+ * `<TabContainer>` render contract — the panel StyleBox, and the internal
+ * tab strip delegated to `<TabBar>` against a synthetic node built from this
+ * TabContainer's own children. Structure/order assertions only — pixels are
+ * a golden-image concern via `pnpm ref:godot`.
+ */
+import { describe, expect, it } from 'vitest';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import type { TscnNode } from '../../../../parser/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import type { ControlProperties } from '../control/types';
+import type { TabContainerProperties } from './types';
+import { TabContainer } from './Component';
+import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const THEME = nativeTheme(1);
+const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
+
+type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
+  const node: TscnNode = { name, type: 'Control', children: [], properties: { name, ...properties } as ControlProperties };
+  return { ...emptySolveNode(), path: name, node };
+}
+
+function solveNode(properties: Partial<TabContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
+  const node: TscnNode = {
+    name: 'Tabs',
+    type: 'TabContainer',
+    children: children.map((c) => c.node),
+    properties: { name: 'Tabs', ...properties } as TabContainerProperties,
+  };
+  return { ...emptySolveNode(), path: 'Tabs', node, children };
+}
+
+function findChromeMeshes(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
+}
+
+function findTextMeshes(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
+}
+
+describe('<TabContainer> (isolated painter contract)', () => {
+  it('draws the panel StyleBox plus one tab strip StyleBox per page', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0 }, [page('General'), page('Advanced', { visible: false })])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    // 1 panel + 2 tab StyleBoxes.
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(3);
+    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  it("derives a tab's title from its own child node name when no tab_<idx>/title override is set", async () => {
+    // Structural proxy: two differently-named, otherwise-identical pages
+    // still produce two distinct text runs (no crash, no collapse to one).
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0 }, [page('General'), page('AdvancedSettings', { visible: false })])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  it('draws no tab strip at all when tabs_visible is false, and the panel spans the whole rect', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer {...painterEnv()} solveNode={solveNode({ tabsVisible: false }, [page('Only')])} rect={RECT} theme={THEME} renderOrder={0} />
+    );
+    // Only the panel StyleBox remains; no tab title to draw either.
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
+    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+  });
+
+  it('draws no strip at all for a childless TabContainer (just the empty panel)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer {...painterEnv()} solveNode={solveNode({}, [])} rect={RECT} theme={THEME} renderOrder={0} />
+    );
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
+    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+  });
+
+  it('all_tabs_in_front flips the strip from the subtree-chrome slot to this node\'s own paint slot', async () => {
+    const behind = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0, allTabsInFront: false }, [page('A')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={5}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+    const front = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab: 0, allTabsInFront: true }, [page('A')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={5}
+        subtreeChromeRenderOrder={9}
+      />
+    );
+    const stripMesh = (scene: Rendered['scene']) => findTextMeshes(scene)[0]!;
+    // Default (false): the strip's own StyleBox/text draws at the
+    // subtree-chrome slot (9.5), AFTER the current page — Godot's own
+    // INTERNAL_MODE_BACK. true: this node's own paint slot (5) instead.
+    expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
+    expect(stripMesh(front.scene).renderOrder).toBe(5);
+  });
+});
+
+describe('<TabContainer> panel band', () => {
+  /** Lopsided overrides, so a band drawn at the wrong offset cannot hide behind a symmetric one. */
+  const STYLE_BOXES: SolveNode['styleBoxes'] = {
+    panel: { ...THEME.widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+    tabbar_background: { ...THEME.widgets.panel, contentMargin: { left: 4, top: 6, right: 28, bottom: 2 } },
+  };
+
+  // `tab_selected`/`tab_unselected` carry a 4px top and bottom content margin
+  // each (`default_theme.cpp:974,977`) and this harness shapes no text, so the
+  // strip's own minimum height is 8; `tabbar_background` adds its own 6 and 2
+  // (`tab_container.cpp:51-58`).
+  const HEADER_HEIGHT = 16;
+
+  async function chromeYs(properties: Partial<TabContainerProperties>) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={{ ...solveNode({ currentTab: 0, ...properties }, [page('Only')]), styleBoxes: STYLE_BOXES }}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    return findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+  }
+
+  it('starts the panel below the header band, never at the top of the container (tab_container.cpp:264)', async () => {
+    const [panelY, headerY] = await chromeYs({ tabsPosition: 0 });
+    expect(panelY).toBe(-HEADER_HEIGHT);
+    expect(headerY).toBe(0);
+  });
+
+  it('puts the header band at the bottom and the panel at the top for POSITION_BOTTOM (tab_container.cpp:258-264)', async () => {
+    const [panelY, headerY] = await chromeYs({ tabsPosition: 1 });
+    expect(panelY).toBe(0);
+    expect(headerY).toBe(-(RECT.h - HEADER_HEIGHT));
+  });
+});
+
+describe('<TabContainer> internal strip at a font-size override', () => {
+  // TabContainer binds its own `tab_font_size` under the item name "font_size"
+  // (tab_container.cpp:1265) and pushes it onto the internal bar as that bar's
+  // own `font_size` override (tab_container.cpp:339). `_get_tab_height`
+  // (tab_container.cpp:51-58) then turns the bar's minimum size into the
+  // header band the current page is offset by, so the shaped buffer sets the
+  // band AND the glyphs in it.
+  const measured = { measureText: () => ({ x: 0, y: 0 }) };
+
+  async function strip(properties: Partial<TabContainerProperties>) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        {...measured}
+        solveNode={solveNode({ currentTab: 0, ...properties }, [page('General')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const chrome = findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    const text = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    return { headerHeight: -chrome[0]!, tabTop: chrome[1]!, textTop: text[0]! };
+  }
+
+  it('a font_size override deepens the header band the page is offset by', async () => {
+    const plain = await strip({});
+    const overridden = await strip({ themeOverrideFontSizes: { font_size: 28 } });
+    expect(overridden.headerHeight).toBeGreaterThan(plain.headerHeight);
+  });
+
+  it('the strip the container sizes still contains the glyphs that strip draws (tab_bar.cpp:82,677)', async () => {
+    const overridden = await strip({ themeOverrideFontSizes: { font_size: 28 } });
+    expect(overridden.textTop).toBeLessThanOrEqual(overridden.tabTop);
+  });
+});

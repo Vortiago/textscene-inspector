@@ -10,10 +10,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseResourceReference,
+  resolveExtAtlasTexturePath,
   resolveInstancePath,
   resolveSubResourceRef,
-  resolveTexture2DSource,
   resolveTexture2DPath,
+  unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
@@ -111,10 +112,110 @@ describe('resolveSubResourceRef', () => {
   });
 });
 
+describe('unwrapCanvasTextureRef', () => {
+  const internals: readonly TscnInternalResource[] = [
+    {
+      id: 'CanvasTexture_outer',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_middle")' },
+    },
+    {
+      id: 'CanvasTexture_middle',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_inner")' },
+    },
+    {
+      id: 'CanvasTexture_inner',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'ExtResource("5")' },
+    },
+    { id: 'CanvasTexture_empty', type: 'CanvasTexture', data: {} },
+    {
+      id: 'CanvasTexture_self',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'SubResource("CanvasTexture_self")' },
+    },
+    { id: 'Gradient_1', type: 'GradientTexture2D', data: { width: '160', height: '96' } },
+  ];
+
+  it('passes a reference that is not a wrapper straight through', () => {
+    expect(unwrapCanvasTextureRef('res://icon.png', internals)).toBe('res://icon.png');
+    expect(unwrapCanvasTextureRef('SubResource("Gradient_1")', internals)).toBe(
+      'SubResource("Gradient_1")'
+    );
+  });
+
+  it('peels a chain of wrappers to the first reference that is not one', () => {
+    // THREE levels: two peels is what the callers used to spell out by hand, so
+    // only a third distinguishes a fixed point from a fixed count.
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals)).toBe(
+      'ExtResource("5")'
+    );
+  });
+
+  it('is idempotent, so a caller can apply it to an already-peeled reference', () => {
+    const once = unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals);
+    expect(unwrapCanvasTextureRef(once, internals)).toBe(once);
+  });
+
+  it('names nothing to draw for an empty wrapper or one that leads back to itself', () => {
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_empty")', internals)).toBeUndefined();
+    expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_self")', internals)).toBeUndefined();
+    expect(unwrapCanvasTextureRef(undefined, internals)).toBeUndefined();
+  });
+});
+
+describe('resolveExtAtlasTexturePath — the declared type is the SLOT\'s', () => {
+  /**
+   * Godot writes an `[ext_resource]`'s `type=` from the property SLOT, not from
+   * the target's own class: an AtlasTexture in a `texture` slot is written
+   * `type="Texture2D"`. Measured across a real corpus — of every `.tres`
+   * ext_resource there, the declared types were Texture2D, StyleBox,
+   * SpriteFrames, Theme and TileSet, and `AtlasTexture` appeared exactly zero
+   * times, while the files' own `[gd_resource type=]` headers said otherwise.
+   *
+   * So the declared type cannot gate this, and the file has to be read.
+   */
+  it('matches a .tres the scene declares as the slot type Texture2D', () => {
+    const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
+    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+  });
+
+  it('declines a plain image, which the texture bus decodes directly', () => {
+    const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
+    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBeNull();
+  });
+});
+
+describe('resolveExtAtlasTexturePath', () => {
+  const externals: readonly TscnExternalResource[] = [
+    { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
+    { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
+  ];
+
+  it('gives the path of an ExtResource declared AtlasTexture', () => {
+    expect(resolveExtAtlasTexturePath('ExtResource("1_atlas")', externals)).toBe(
+      'res://icons/keyboard_arrow_left.tres'
+    );
+  });
+
+  it('declines an ExtResource declared a different type', () => {
+    expect(resolveExtAtlasTexturePath('ExtResource("2_sheet")', externals)).toBeNull();
+  });
+
+  it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
+    expect(resolveExtAtlasTexturePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath('not a reference', externals)).toBeNull();
+    expect(resolveExtAtlasTexturePath(undefined, externals)).toBeNull();
+  });
+});
+
 describe('resolveTexture2DPath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '5', path: 'res://godot.png', type: 'Texture2D' },
     { id: '6', path: 'res://godot_normal.png', type: 'Texture2D' },
+    { id: '7', path: 'res://icons/keyboard_arrow_left.tres', type: 'AtlasTexture' },
   ];
   const internals: readonly TscnInternalResource[] = [
     {
@@ -128,33 +229,11 @@ describe('resolveTexture2DPath', () => {
     },
     { id: 'Plain_1', type: 'PlaceholderTexture2D', data: {} },
     {
-      id: 'AtlasTexture_coin',
-      type: 'AtlasTexture',
-      data: { atlas: 'ExtResource("5")', region: 'Rect2(20, 16, 40, 32)' },
-    },
-    {
-      id: 'AtlasTexture_empty',
-      type: 'AtlasTexture',
-      data: { atlas: 'ExtResource("5")', region: 'Rect2(0, 0, 0, 32)' },
+      id: 'CanvasTexture_atlas',
+      type: 'CanvasTexture',
+      data: { diffuse_texture: 'ExtResource("7")' },
     },
   ];
-
-  it('unwraps an AtlasTexture SubResource to its sheet plus the region', () => {
-    expect(resolveTexture2DSource('SubResource("AtlasTexture_coin")', externals, internals)).toEqual({
-      path: 'res://godot.png',
-      region: { x: 20, y: 16, width: 40, height: 32 },
-    });
-    // The path half alone keeps the old contract for path-only consumers.
-    expect(resolveTexture2DPath('SubResource("AtlasTexture_coin")', externals, internals)).toBe(
-      'res://godot.png'
-    );
-  });
-
-  it('drops an empty AtlasTexture region — Godot samples the whole sheet', () => {
-    expect(resolveTexture2DSource('SubResource("AtlasTexture_empty")', externals, internals)).toEqual({
-      path: 'res://godot.png',
-    });
-  });
 
   it('passes a raw res:// path through', () => {
     expect(resolveTexture2DPath('res://icon.png', externals, internals)).toBe('res://icon.png');
@@ -178,5 +257,10 @@ describe('resolveTexture2DPath', () => {
     expect(resolveTexture2DPath('SubResource("nope")', externals, internals)).toBeNull();
     expect(resolveTexture2DPath('not a reference', externals, internals)).toBeNull();
     expect(resolveTexture2DPath(undefined, externals, internals)).toBeNull();
+  });
+
+  it('declines an ExtResource AtlasTexture .tres, directly or through a CanvasTexture — its size is the region, never the sheet', () => {
+    expect(resolveTexture2DPath('ExtResource("7")', externals, internals)).toBeNull();
+    expect(resolveTexture2DPath('SubResource("CanvasTexture_atlas")', externals, internals)).toBeNull();
   });
 });

@@ -1,17 +1,11 @@
 /**
  * Canvas2DStage behavior: frame chrome (dimension badge), the zoom
  * HUD (in/out/fit + clamping), wheel-to-zoom, and pointer-capture
- * drag-to-pan. The lazy ControlOverlay barrel is stubbed — overlay layout
- * has its own suites; this one only covers the stage chrome around it.
+ * drag-to-pan. The native Control canvas mounts inside `<World2DCanvas>`,
+ * which has its own suites; this one only covers the stage chrome around it.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-
-vi.mock('../../controls/index.js', () => ({
-  ControlOverlay: ({ nodes }: { nodes: readonly unknown[] }) => (
-    <div data-testid="overlay-stub" data-node-count={nodes.length} />
-  ),
-}));
 
 /**
  * Renders of the stubbed world canvas — the stage re-rendering re-renders it, so
@@ -21,7 +15,8 @@ vi.mock('../../controls/index.js', () => ({
 const worldRenders = vi.hoisted(() => ({ count: 0 }));
 
 // The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
-// receives so the transform-sync contract is assertable in jsdom.
+// receives so the transform-sync and mount-seam contracts are assertable in
+// jsdom.
 vi.mock('./World2DCanvas', () => ({
   World2DCanvas: ({
     pan,
@@ -73,6 +68,8 @@ function sizeEveryElement(width: number, height: number) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // Read once at mount, so a leaked value silently changes the NEXT test's
+  // opening view.
   window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
 });
 
@@ -135,12 +132,6 @@ describe('<Canvas2DStage>', () => {
     expect(screen.getByText('1152 × 648')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Canvas zoom' })).toBeTruthy();
     expect(zoomLabel()).toBe('100%');
-  });
-
-  it('mounts the lazy ControlOverlay with the passed nodes', async () => {
-    renderStage([makeNode('A'), makeNode('B')]);
-    const overlay = await screen.findByTestId('overlay-stub');
-    expect(overlay.getAttribute('data-node-count')).toBe('2');
   });
 
   it('mounts the 2D world canvas with the stage pan/zoom kept in sync', () => {
@@ -308,11 +299,8 @@ describe('<Canvas2DStage>', () => {
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
   });
 
-  it('ignores a zero-delta two-finger move rather than committing a no-op update', async () => {
+  it('ignores a zero-delta two-finger move rather than committing a no-op update', () => {
     const { stage, frame } = renderStage();
-    // Settle the lazy overlay first: its resolution is itself a render, and it
-    // must not land between the two counter reads.
-    await screen.findByTestId('overlay-stub');
     touch(stage, 'down', 1, 100, 300);
     touch(stage, 'down', 2, 200, 300);
     touch(stage, 'move', 1, 100, 300);
@@ -330,9 +318,8 @@ describe('<Canvas2DStage>', () => {
     expect(worldRenders.count - renders).toBe(0);
   });
 
-  it('ignores a zero-delta mouse move rather than committing a no-op update', async () => {
+  it('ignores a zero-delta mouse move rather than committing a no-op update', () => {
     const { stage, frame } = renderStage();
-    await screen.findByTestId('overlay-stub');
     fireEvent.pointerDown(stage, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
     fireEvent.pointerMove(stage, { clientX: 60, clientY: 40, pointerId: 1 });
     const settled = frame.style.transform;
@@ -460,6 +447,16 @@ describe('<Canvas2DStage>', () => {
     const { frame } = renderStage();
     expect(zoomLabel()).toBe('100%');
     expect(frame.style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('renders the capture frame regardless of scene content — the parity-capture contract', () => {
+    render(
+      <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
+    );
+    // The capture frame itself is the parity-capture contract (see
+    // `scripts/godot-ref/capture-ours.mjs`) — the Control canvas draws inside
+    // `<World2DCanvas>` above it, not into this div.
+    expect(screen.getByTestId('canvas-2d-capture-frame')).toBeTruthy();
   });
 
   it('Fit recenters the frame inside the stage bounds with the margin-fitted zoom', () => {

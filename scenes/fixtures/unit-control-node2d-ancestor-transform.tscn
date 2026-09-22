@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; The ONE variable: a Control's nearest Node2D-shaped ancestor carries a
+; position, a rotation AND a non-uniform scale, all three at once. Every other
+; 2D-UI fixture either roots at a Control directly or promotes a Control past
+; an UNTRANSFORMED passthrough (unit-control-instanced-hud.tscn's Node3D), so
+; none of them exercises the ancestor's own CanvasItem transform composing
+; into a promoted Control at all — a regression here renders every other
+; fixture identically and shows up nowhere else. The Panel is a non-square
+; rect (asymmetric), and the small corner square sits at ONE specific corner
+; only, so a rotation applied the wrong DIRECTION or about the wrong ORIGIN
+; lands the whole group somewhere else on screen, not merely a few pixels off.
+
+[node name="Anchor" type="Node2D"]
+position = Vector2(200, 120)
+rotation = 0.5235988
+scale = Vector2(1.5, 0.75)
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 160.0
+offset_bottom = 100.0
+color = Color(0.15, 0.45, 0.85, 1)
+
+[node name="Corner" type="ColorRect" parent="Panel"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 24.0
+offset_bottom = 24.0
+color = Color(0.95, 0.25, 0.15, 1)

@@ -57,6 +57,29 @@ export const CANVAS_2D_CAPTURE = {
   viewport: { width: 1600, height: 900 },
 };
 
+/** What the shell's dock and top bar take out of the window before the stage. */
+export const CANVAS_2D_CHROME = { width: 325, height: 44 };
+
+/**
+ * The browser window a 2D capture of a frame this size needs.
+ *
+ * The frame is the project's `display/window/size/viewport_*` rect and the
+ * stage lays it out at 1:1, so a project larger than the default window hangs
+ * past the stage edge and the capture is rejected outright — 1280x720, the
+ * commonest rect there is, misses by five pixels.
+ *
+ * Never SHRINKS below the default: the committed 2D goldens were captured
+ * through that window, and a narrower one would relayout the stage under them.
+ */
+export function canvas2DViewportFor(frame) {
+  const { width, height } = CANVAS_2D_CAPTURE.viewport;
+  if (!frame) return { width, height };
+  return {
+    width: Math.max(width, Math.ceil(frame.width) + CANVAS_2D_CHROME.width),
+    height: Math.max(height, Math.ceil(frame.height) + CANVAS_2D_CHROME.height),
+  };
+}
+
 /** The 2D stage's chrome, painted out for a capture (see `createCaptureContext`). */
 export const CANVAS_2D_TESTIDS = {
   stage: 'canvas-2d-stage',
@@ -81,3 +104,38 @@ export const NETWORK_IDLE_MS = 20000; // ceiling for the app's own resource chai
 export const SETTLE_INITIAL_MS = 1200; // covers the last CameraFit reframe at 1100 ms
 export const SETTLE_INTERVAL_MS = 350;
 export const SETTLE_MAX_ATTEMPTS = 12;
+
+/**
+ * THE SETTLE CONTRACT — the simulated moment in the scene's own clock at which
+ * BOTH harnesses open the shutter, in seconds. Defined once, here, and read by
+ * the Godot side (`scripts/godot-ref/run.mjs`) and by our side below.
+ *
+ * Two things get called "settling" in these harnesses and they are NOT the same
+ * knob:
+ *
+ *  - CONVERGENCE — how many frames until the picture stops changing (a texture
+ *    import lands, the first draw completes, shaped text finally measures).
+ *    This is allowed to differ per side and does: Godot steps a fixed count of
+ *    process frames, we take screenshots until two are byte-identical. It is a
+ *    stopping test with no semantic content, so no shared number is meaningful.
+ *  - THIS — where the scene's simulated clock sits when the picture is taken.
+ *    It carries all the meaning. Two sides that converge cleanly but sample
+ *    different instants produce an apples-to-oranges measurement even though
+ *    each side is individually deterministic, and nothing in either harness
+ *    fails.
+ *
+ * Zero is not a placeholder, it is the contract: the previewer runs no
+ * simulated clock at all. The animation transport starts stopped (ADR-0011 /
+ * ADR-0012), there is no physics and no GDScript, and nothing in the render
+ * path reads a wall clock. So the only simulated instant our side can be
+ * asked for is its load instant, and the reference harness matches it by
+ * pausing the SceneTree before the scene is ever instantiated.
+ *
+ * Raising this needs work on BOTH sides that does not exist yet: Godot would
+ * have to advance the window under `--fixed-fps` (its delta is wall-clock
+ * otherwise), and the previewer would have to grow a driveable global
+ * elapsed-time hook. Both harnesses therefore REFUSE a non-zero value rather
+ * than each interpreting it their own way — a silent divergence here is
+ * invisible in every image it corrupts.
+ */
+export const SETTLE_SIM_SECONDS = 0;

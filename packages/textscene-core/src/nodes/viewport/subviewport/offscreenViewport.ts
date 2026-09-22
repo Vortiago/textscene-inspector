@@ -56,23 +56,83 @@ export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(
 export function createOffscreenTarget(
   width: number,
   height: number,
-  name: string
+  name: string,
+  options: { colorSpace?: THREE.ColorSpace; preTonemapped?: boolean } = {}
 ): THREE.WebGLRenderTarget {
+  const { colorSpace = THREE.LinearSRGBColorSpace, preTonemapped = true } = options;
   const target = new THREE.WebGLRenderTarget(width, height, {
     depthBuffer: true,
     stencilBuffer: false,
+    // `samples` stays at three's 0. A 2D pass shares this constructor and must
+    // not multisample — scene/main/viewport.h:309, `msaa_2d = MSAA_DISABLED`.
+    samples: 0,
   });
-  target.texture.colorSpace = THREE.LinearSRGBColorSpace;
+  target.texture.colorSpace = colorSpace;
   target.texture.name = `${name}::target`;
   // The sub-viewport's own filter enum is not reproduced; linear matches
   // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
-  // Not declared by @types/three; three itself toggles the flag on plain
-  // render targets the same way (`XRManager.js`).
-  (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  if (preTonemapped) {
+    // Not declared by @types/three; three itself toggles the flag on plain
+    // render targets the same way (`XRManager.js`).
+    (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  }
   return target;
+}
+
+/**
+ * Reused across every offscreen pass so the renderer state each one mutates is
+ * captured and restored in one place, and so no pass allocates a `THREE.Color`
+ * per frame merely to hold the previous clear colour.
+ *
+ * Safe as a module-level scratch because passes are driven SEQUENTIALLY by the
+ * one orchestrator (`ViewportPassRegistryContext`), never nested inside one
+ * another — a nested pass would clobber the outer pass's saved colour.
+ */
+const PREVIOUS_CLEAR_COLOR = new THREE.Color();
+
+/**
+ * Bind `target`, clear it, run `draw`, and restore every piece of renderer
+ * state the pass touched — render target, clear colour + alpha, tone mapping.
+ *
+ * `toneMapping` suspends the renderer's curve for the pass when given (a 2D
+ * canvas, an own-world 3D viewport, or a Control subtree is never tonemapped);
+ * omit it to render under whatever curve is in force. `beforeBind` runs inside
+ * the guarded region but BEFORE the target is bound, for state that must be
+ * asserted with no offscreen render in flight under it.
+ *
+ * State a single caller owns (the 3D pass's perspective-aspect swap) stays at
+ * that call site, wrapped around this helper rather than folded into it.
+ */
+export function renderToOffscreenTarget(
+  gl: THREE.WebGLRenderer,
+  options: {
+    target: THREE.WebGLRenderTarget;
+    transparentBg: boolean;
+    toneMapping?: THREE.ToneMapping;
+    beforeBind?: () => void;
+    draw: () => void;
+  }
+): void {
+  const previousTarget = gl.getRenderTarget();
+  const previousAlpha = gl.getClearAlpha();
+  const previousToneMapping = gl.toneMapping;
+  gl.getClearColor(PREVIOUS_CLEAR_COLOR);
+
+  try {
+    if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
+    options.beforeBind?.();
+    gl.setRenderTarget(options.target);
+    gl.setClearColor(DEFAULT_CLEAR_COLOR, options.transparentBg ? 0 : 1);
+    gl.clear(true, true, true);
+    options.draw();
+  } finally {
+    gl.setRenderTarget(previousTarget);
+    gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
+    gl.toneMapping = previousToneMapping;
+  }
 }
 
 /**
@@ -261,61 +321,4 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
   };
-}
-
-/**
- * Read a render target back through `read`, as `ImageData`.
- *
- * Deliberately takes the readback as a callback: the GL call is the only part
- * that needs a renderer, so the buffer arithmetic and the failure contract are
- * asserted here rather than through a mounted tree.
- *
- * ALLOCATION included in the guard, not just the GL call. A viewport within
- * this previewer's per-axis cap still asks for a gigabyte at 16384x16384, and
- * the row-flipped copy behind `targetPixelsToImageData` doubles it — a heap
- * that refuses either owes the caller the `null` this contract defines for
- * "not ready", never a thrown RangeError.
- */
-export function readTargetPixels(
-  read: (buffer: Uint8Array) => void,
-  width: number,
-  height: number
-): ImageData | null {
-  try {
-    const buffer = new Uint8Array(width * height * 4);
-    read(buffer);
-    return targetPixelsToImageData(buffer, width, height);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Turn a `readRenderTargetPixels` buffer into `ImageData`.
- *
- * GL hands rows back bottom-up (its framebuffer origin is bottom-left) while
- * `ImageData` is top-down, so the rows are reversed here. Nothing else in the
- * repo would catch that: the only fixture a DOM consumer is measured against is
- * vertically symmetric, so a flipped target is pixel-identical.
- *
- * Returns null — never a blank image — when the buffer does not describe the
- * stated rect or `ImageData` is unavailable (the linter bundle and any non-DOM
- * host), because callers must be able to tell "not ready" from "empty".
- */
-export function targetPixelsToImageData(
-  pixels: Uint8Array | Uint8ClampedArray,
-  width: number,
-  height: number
-): ImageData | null {
-  if (width <= 0 || height <= 0) return null;
-  const stride = width * 4;
-  if (pixels.length !== stride * height) return null;
-  if (typeof ImageData === 'undefined') return null;
-
-  const flipped = new Uint8ClampedArray(pixels.length);
-  for (let row = 0; row < height; row++) {
-    const source = (height - 1 - row) * stride;
-    flipped.set(pixels.subarray(source, source + stride), row * stride);
-  }
-  return new ImageData(flipped, width, height);
 }

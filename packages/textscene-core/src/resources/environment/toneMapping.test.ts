@@ -10,11 +10,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyToneMapping,
-  toneMappingFor,
-  type ToneMappedRenderer,
-} from './toneMapping';
+import { applyToneMapping, toneMappingFor } from './toneMapping';
+import type { ToneMappedRenderer } from './toneMapping';
 import {
   toneMappingEffectGlsl,
   toneMappingShaderChunk,

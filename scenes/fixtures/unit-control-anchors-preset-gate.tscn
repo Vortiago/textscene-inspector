@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+; ONE variable: whether `anchors_preset` is OPERATIONAL, at its three levels.
+; Godot's `Control::_set_anchors_layout_preset` applies a preset only while
+; `stored_layout_mode` is ANCHORS(1) or UNCONTROLLED(3); the field defaults to
+; POSITION(0), so a node that authors no `layout_mode` line keeps its raw
+; anchors, and a container-managed child (2) does too. Every rect below carries
+; the same explicit-anchor-free `anchors_preset` shape and differs ONLY in its
+; `layout_mode` line, so each colour reads the gate directly:
+;   red    GateOpenPoint          layout_mode = 1, point preset (KEEP_SIZE)
+;   green  GateOpenWide           layout_mode = 1, wide preset (MINSIZE)
+;   blue   GateClosedNoLayoutMode no layout_mode line at all
+;   yellow GateClosedContainer    layout_mode = 2 under a real container
+;
+; A regression in the gate is invisible in every other scene: each of the other
+; 2D fixtures carrying `anchors_preset` either states preset 0 — whose anchors
+; equal the struct default, so gating cannot move it — or authors the explicit
+; `anchor_*` floats alongside the preset, and those setters carry no gate and
+; land regardless of layout_mode.
+
+[node name="Root" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="GateOpenPoint" type="ColorRect" parent="."]
+custom_minimum_size = Vector2(160, 96)
+layout_mode = 1
+anchors_preset = 6
+color = Color(0.9, 0.25, 0.2, 1)
+
+[node name="GateOpenWide" type="ColorRect" parent="."]
+custom_minimum_size = Vector2(120, 64)
+layout_mode = 1
+anchors_preset = 12
+color = Color(0.2, 0.7, 0.35, 1)
+
+[node name="GateClosedNoLayoutMode" type="ColorRect" parent="."]
+anchors_preset = 15
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 160.0
+color = Color(0.25, 0.45, 0.95, 1)
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 40.0
+offset_top = 240.0
+offset_right = 360.0
+offset_bottom = 440.0
+
+[node name="GateClosedContainer" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+anchors_preset = 15
+color = Color(0.95, 0.8, 0.2, 1)

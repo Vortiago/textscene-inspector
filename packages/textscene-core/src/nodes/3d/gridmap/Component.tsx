@@ -18,21 +18,46 @@ import { Node3D } from '../../base/node3d/Component';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
+import {
+  GODOT_DEFAULT_ALBEDO,
+  GODOT_DEFAULT_METALLIC,
+  GODOT_DEFAULT_ROUGHNESS,
+} from '../../../r3f/materials/godotDefaultMaterial';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../base/node3d/types';
 import type { Vector3 } from '../../../parser/vectors';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
+import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
+import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+
+/** Literal-only, so the key is constant and a placeholder cell never remounts. */
+const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /**
  * Shared fallback material for tiles whose ArrayMesh declares no material (or
- * whose material is still loading). Module-level so it is never per-instance
- * allocated and never disposed — one grey material lives for the app's lifetime.
+ * whose material is still loading). A MeshLibrary item carries a mesh and no
+ * material of its own, so a material-less tile mesh is the plain no-material
+ * case and gets Godot's default 3D material. Module-level so it is never
+ * per-instance allocated and never disposed — one material lives for the app's
+ * lifetime.
  */
-const PLACEHOLDER_TILE_MATERIAL = new THREE.MeshStandardMaterial({
-  color: 0xb0b0b0,
-  metalness: 0,
-  roughness: 1,
+const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
+  color: GODOT_DEFAULT_ALBEDO,
+  metalness: GODOT_DEFAULT_METALLIC,
+  roughness: GODOT_DEFAULT_ROUGHNESS,
+});
+
+/**
+ * A SHADOWS_ONLY tile's material. `visible = false` would also stop the tile
+ * casting — three's `WebGLShadowMap.renderObject` returns on it — so writing
+ * neither colour nor depth is what separates the two passes. Shared and never
+ * disposed, exactly like the default above; it draws nothing, so no tile needs
+ * its own.
+ */
+const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
+  colorWrite: false,
+  depthWrite: false,
 });
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
@@ -129,20 +154,28 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     [cells, cellSize, cellCenter, item?.meshTransform]
   );
 
+  // GridMap has no `cast_shadow` of its own; the setting is PER TILE, read off
+  // the library (`modules/gridmap/grid_map.cpp:799-800`).
+  const shadow = shadowCastingEffects(item?.castShadow);
+
   const instanced = useMemo(() => {
     const geometry = meshResult.value?.geometry;
     if (!geometry) return null;
     // Geometry (cached ArrayMesh) and a resolved material are owned elsewhere;
-    // fall back to the shared placeholder material when none is loaded.
-    const material =
-      (materialPath && materialResult.value) || PLACEHOLDER_TILE_MATERIAL;
+    // fall back to the shared default material when none is loaded.
+    const material = shadow.shadowsOnly
+      ? SHADOWS_ONLY_TILE_MATERIAL
+      : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
     const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
+    mesh.castShadow = shadow.castShadow;
     mesh.receiveShadow = true;
+    // DOUBLE_SIDED reaches three's shared depth material here, per mesh per
+    // light (`WebGLShadowMap.js:477,535,549`).
+    mesh.onBeforeShadow = shadow.onBeforeShadow;
     return mesh;
-  }, [meshResult.value, materialPath, materialResult.value, matrices]);
+  }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
 
   // Dispose the InstancedMesh's own GPU buffers (instanceMatrix) when it is
   // replaced or unmounts. Its geometry/material are shared/cached and owned by
@@ -175,7 +208,7 @@ function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize
   return (
     <mesh position={position}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
-      <meshBasicMaterial color={0x4488cc} wireframe />
+      <meshBasicMaterial key={PLACEHOLDER_CELL_MATERIAL.key} {...PLACEHOLDER_CELL_MATERIAL.props} />
     </mesh>
   );
 }

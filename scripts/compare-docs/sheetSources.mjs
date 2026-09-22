@@ -81,10 +81,46 @@ export function parseFrontmatter(text) {
   return { meta, body: match[2] };
 }
 
+/**
+ * Frontmatter keys hidden behind a `#` comment, e.g. `# image: unit-foo`.
+ *
+ * `parseFrontmatter`'s key regex is anchored at the start of the (trimmed)
+ * line, so a `#`-prefixed line never matches — the key is absent from `meta`
+ * for every consumer (recapture, build-gallery, this module's own callers).
+ * A human skimming the raw file sees what looks like an already-known value,
+ * so the gap is easy to miss: nothing errors, the sheet just quietly never
+ * gets a capture target. Scanned only inside the `---`-delimited block; a `#`
+ * heading in the body is ordinary Markdown, not a commented-out pair.
+ */
+export function findCommentedFrontmatterKeys(text) {
+  const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
+  if (!match) return [];
+  const found = [];
+  for (const line of match[1].split('\n')) {
+    const commented = /^#\s*(\w+):/.exec(line.trim());
+    if (commented) found.push(commented[1]);
+  }
+  return found;
+}
+
+/**
+ * The compare-marker syntax, as a pattern source so every reader builds its own
+ * flags from ONE definition — `build-gallery.mjs` needs both a whole-line
+ * anchored form (is THIS line a section's marker) and this unanchored one (is
+ * there a marker here at all, junk after `-->` included). Two literals would
+ * let the section walk and the orphan detector drift apart, and the detector
+ * exists precisely to catch markers the walk misses.
+ */
+export const COMPARE_MARKER_PATTERN = String.raw`<!--\s*compare:\s*(.*?)\s*-->`;
+
+/** Parse a marker's `key=value` attributes. */
+export const compareMarkerAttrs = (attrs) =>
+  Object.fromEntries(attrs.split(/\s+/).map((kv) => kv.split('=')));
+
 /** Every `<!-- compare: image=… status=… fixture=… -->` marker in a sheet body. */
 export function parseCompareMarkers(body) {
-  return [...body.matchAll(/<!--\s*compare:\s*(.*?)\s*-->/g)].map((m) =>
-    Object.fromEntries(m[1].split(/\s+/).map((kv) => kv.split('=')))
+  return [...body.matchAll(new RegExp(COMPARE_MARKER_PATTERN, 'g'))].map((m) =>
+    compareMarkerAttrs(m[1])
   );
 }
 

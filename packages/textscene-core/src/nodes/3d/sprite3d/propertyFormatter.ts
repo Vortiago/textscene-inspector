@@ -86,6 +86,7 @@ function alphaCutName(mode: AlphaCutMode): string {
     case AlphaCutMode.ALPHA_CUT_DISABLED: return 'Disabled';
     case AlphaCutMode.ALPHA_CUT_DISCARD: return 'Discard';
     case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS: return 'Opaque Prepass';
+    case AlphaCutMode.ALPHA_CUT_HASH: return 'Alpha Hash';
     default: return 'Unknown';
   }
 }

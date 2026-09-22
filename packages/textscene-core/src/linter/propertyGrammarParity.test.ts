@@ -300,7 +300,7 @@ describe('property-grammar parity guard', () => {
   // can only ask "should the renderer be reading this?" about a key one side
   // already declares, so a key the previewer never read becomes VISIBLE the
   // moment a validator exists for it.
-  const EXPECTED_RENDER_GAP_KEYS = 143;
+  const EXPECTED_RENDER_GAP_KEYS = 130;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -339,8 +339,8 @@ describe('property-grammar parity guard', () => {
   // assertion below compare a number to itself. Moving one is a deliberate act
   // that belongs in a commit message — a slice entering the swept set, or a new
   // base-parser reuser entering the blind spot the docblock above sizes.
-  const SWEPT_SLICES = 75;
-  const PARSER_REUSING_SLICES = 176;
+  const SWEPT_SLICES = 104;
+  const PARSER_REUSING_SLICES = 147;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

@@ -3,7 +3,6 @@ type: LightOccluder2D
 category: 2D
 fixture: unit-lightoccluder2d.tscn
 image: unit-lightoccluder2d
-status: limitation
 group: Lighting
 renders_as: a selection-gated outline of its occluder polygon, it occludes 2D light
 ---

@@ -31,7 +31,7 @@ describe('parseCSGTorus3D', () => {
     expect(result.sides).toBe(32);
     expect(result.ringSides).toBe(5);
     expect(result.operation).toBe(2);
-    expect(result.material).toBe('ExtResource("4_dsi4m")');
+    expect(result.materialPath).toBe('ExtResource("4_dsi4m")');
     expect(result.transform?.origin).toEqual({ x: 0, y: 0.9, z: 0 });
   });
 

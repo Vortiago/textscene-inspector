@@ -1,0 +1,422 @@
+; A composition fixture, and the only one in the bag. Every OTHER Control scene
+; here isolates one type against a flat backdrop; this one wires 23 of them into
+; a single settings/HUD panel and therefore moves many variables at once ON
+; PURPOSE. It can never localise a regression — a shifted pixel here could be
+; the split solve, the box flow, a stylebox content margin, a font metric or the
+; canvas snap, and the frame cannot say which. That is not a defect of the
+; scene, it is its subject: the interactions BETWEEN containers have no other
+; witness, because a single-variable scene has, by construction, nothing to
+; interact with. A regression seen here is localised in the unit-* fixture that
+; owns the type, and that is still where a fix is pinned.
+;
+; What only composition can reach:
+;
+;   * a chain of containers solving one after another — MarginContainer feeds
+;     HSplitContainer feeds VBoxContainer feeds ScrollContainer feeds
+;     PanelContainer feeds MarginContainer feeds GridContainer, and each link
+;     passes down a rect the next one has to re-solve. A minimum-size that
+;     propagates the wrong way up shows only when there is something above it.
+;   * a widget sized by a container instead of by its own offsets — the sliders,
+;     the OptionButton and the LineEdit here have no rect of their own at all.
+;   * modulate multiplying down a nesting chain: Actions carries alpha, Back
+;     inside it carries a tint, and the button must show the product.
+;   * stylebox content margins nesting inside container separations, which is
+;     the pair that double-counts.
+;   * a ScrollContainer that actually overflows, so the clip edge and the
+;     scrollbar exist. Everything above the fold is deliberate; only Keybinds
+;     runs past it, and it carries no type that is not already visible.
+;   * a CanvasLayer drawing OVER the whole Control tree rather than beside it.
+;   * a SubViewportContainer sampling a Control subtree — Controls inside a
+;     render target, not world content.
+;   * wrapped text in two engines (Label autowrap, RichTextLabel BBCode spans)
+;     inside containers whose width the layout decides, so the wrap point is a
+;     layout output rather than an authored constant.
+;
+; Deterministic by construction: no animation, no particles, no timers, no
+; random seed, nothing time-dependent — the picture at settle 0 is the only
+; picture this scene has.
+;
+; Theme overrides are here because the composition needs them, not for coverage:
+; the styleboxes give the cards their plates and their content margins (the
+; thing that has to nest correctly against the separations), the separation and
+; margin constants set the rhythm the flow has to reproduce, and the font size
+; and colour overrides on the title, the subtitle and the brief are what make
+; the panel readable as a hierarchy. No Theme resource is applied, so every
+; unstyled widget resolves through the bundled default theme.
+;
+; Control itself draws no ink: the root and Actions/Spacer are pure layout.
+
+[gd_scene load_steps=6 format=3 uid="uid://complex2dgui"]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_crest"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+bg_color = Color(0.13, 0.17, 0.22, 1)
+border_width_bottom = 2
+border_color = Color(0.35, 0.66, 0.78, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.1, 0.12, 0.16, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar"]
+bg_color = Color(0.29, 0.62, 0.51, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_readout"]
+bg_color = Color(0.06, 0.09, 0.11, 0.85)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="Frame" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Shell" type="HSplitContainer" parent="Frame"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LeftColumn" type="VBoxContainer" parent="Frame/Shell"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 12
+
+[node name="HeaderCard" type="PanelContainer" parent="Frame/Shell/LeftColumn"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="HeaderRow" type="HBoxContainer" parent="Frame/Shell/LeftColumn/HeaderCard"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Crest" type="TextureRect" parent="Frame/Shell/LeftColumn/HeaderCard/HeaderRow"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("1_crest")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HeaderText" type="VBoxContainer" parent="Frame/Shell/LeftColumn/HeaderCard/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Frame/Shell/LeftColumn/HeaderCard/HeaderRow/HeaderText"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "FIELD OPERATIONS"
+
+[node name="Subtitle" type="Label" parent="Frame/Shell/LeftColumn/HeaderCard/HeaderRow/HeaderText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
+text = "Changes apply to the active deployment only, and are discarded when the corridor closes."
+autowrap_mode = 2
+
+[node name="SettingsScroll" type="ScrollContainer" parent="Frame/Shell/LeftColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SettingsColumn" type="VBoxContainer" parent="Frame/Shell/LeftColumn/SettingsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="SystemsCard" type="PanelContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="SystemsMargin" type="MarginContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="SystemsGrid" type="GridContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin"]
+layout_mode = 2
+theme_override_constants/h_separation = 18
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="MasterLabel" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+text = "Master volume"
+
+[node name="MasterVolume" type="HSlider" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+value = 72.0
+
+[node name="MusicLabel" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+text = "Music bed"
+
+[node name="MusicVolume" type="HSlider" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+value = 35.0
+tick_count = 5
+ticks_on_borders = true
+
+[node name="DifficultyLabel" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+text = "Threat level"
+
+[node name="Difficulty" type="OptionButton" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+item_count = 3
+popup/item_0/text = "Recon"
+popup/item_0/id = 0
+popup/item_1/text = "Standard"
+popup/item_1/id = 1
+popup/item_2/text = "Blackout"
+popup/item_2/id = 2
+selected = 1
+
+[node name="CallsignLabel" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+text = "Callsign"
+
+[node name="Callsign" type="LineEdit" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Vela-7"
+placeholder_text = "Unassigned"
+
+[node name="SubtitlesLabel" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+text = "Comms"
+
+[node name="Subtitles" type="CheckBox" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/SystemsCard/SystemsMargin/SystemsGrid"]
+layout_mode = 2
+button_pressed = true
+text = "Transcribe squad chatter"
+
+[node name="BriefCard" type="PanelContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="BriefText" type="RichTextLabel" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/BriefCard"]
+custom_minimum_size = Vector2(0, 104)
+layout_mode = 2
+bbcode_enabled = true
+text = "[b]MISSION BRIEF[/b] — secure the [color=#e0a030]relay array[/color] on the far side of the ridge before the storm front closes the corridor. [i]Support wings are grounded[/i], so expect [u]no resupply[/u] past the marker, and hold the [color=#7fc7dd]northern approach[/color] until the array reports clear."
+fit_content = true
+theme_override_colors/default_color = Color(0.82, 0.85, 0.88, 1)
+theme_override_font_sizes/normal_font_size = 15
+
+[node name="Actions" type="HBoxContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn"]
+modulate = Color(1, 1, 1, 0.8)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Apply" type="Button" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/Actions"]
+layout_mode = 2
+text = "Apply"
+
+[node name="Restore" type="Button" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/Actions"]
+layout_mode = 2
+disabled = true
+text = "Restore defaults"
+
+[node name="Spacer" type="Control" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Back" type="Button" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/Actions"]
+modulate = Color(1, 0.75, 0.55, 1)
+layout_mode = 2
+text = "Back to bridge"
+
+[node name="KeybindsCard" type="PanelContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="KeybindsColumn" type="VBoxContainer" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/KeybindsCard"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="KeybindsTitle" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/KeybindsCard/KeybindsColumn"]
+layout_mode = 2
+text = "Keybinds"
+
+[node name="KeybindsHint" type="Label" parent="Frame/Shell/LeftColumn/SettingsScroll/SettingsColumn/KeybindsCard/KeybindsColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
+text = "Scroll for the full binding table."
+
+[node name="RightColumn" type="VSplitContainer" parent="Frame/Shell"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="MapCard" type="PanelContainer" parent="Frame/Shell/RightColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="MapCentre" type="CenterContainer" parent="Frame/Shell/RightColumn/MapCard"]
+layout_mode = 2
+
+[node name="MapView" type="SubViewportContainer" parent="Frame/Shell/RightColumn/MapCard/MapCentre"]
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView"]
+size = Vector2i(300, 180)
+render_target_update_mode = 4
+
+[node name="MapBackdrop" type="ColorRect" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView/SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.07, 0.16, 0.15, 1)
+
+[node name="Corridor" type="ColorRect" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView/SubViewport"]
+offset_left = 24.0
+offset_top = 74.0
+offset_right = 276.0
+offset_bottom = 94.0
+color = Color(0.16, 0.34, 0.31, 1)
+
+[node name="Objective" type="ColorRect" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView/SubViewport"]
+offset_left = 238.0
+offset_top = 68.0
+offset_right = 258.0
+offset_bottom = 88.0
+color = Color(0.88, 0.64, 0.24, 1)
+
+[node name="Readout" type="Panel" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView/SubViewport"]
+offset_left = 12.0
+offset_top = 138.0
+offset_right = 156.0
+offset_bottom = 168.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_readout")
+
+[node name="ReadoutLabel" type="Label" parent="Frame/Shell/RightColumn/MapCard/MapCentre/MapView/SubViewport/Readout"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_font_sizes/font_size = 14
+text = "SECTOR 7 - CLEAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StatusCard" type="PanelContainer" parent="Frame/Shell/RightColumn"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="StatusRow" type="HBoxContainer" parent="Frame/Shell/RightColumn/StatusCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="GainColumn" type="VBoxContainer" parent="Frame/Shell/RightColumn/StatusCard/StatusRow"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="GainLabel" type="Label" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/GainColumn"]
+layout_mode = 2
+text = "GAIN"
+horizontal_alignment = 1
+
+[node name="Gain" type="VSlider" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/GainColumn"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+value = 65.0
+
+[node name="StatusColumn" type="VBoxContainer" parent="Frame/Shell/RightColumn/StatusCard/StatusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="ShieldLabel" type="Label" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+layout_mode = 2
+text = "SHIELD INTEGRITY"
+
+[node name="ShieldBar" type="Panel" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
+
+[node name="AmmoLabel" type="Label" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+layout_mode = 2
+text = "AMMUNITION"
+
+[node name="AmmoBar" type="Panel" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+modulate = Color(0.95, 0.6, 0.25, 1)
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
+
+[node name="SquadNote" type="Label" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
+text = "Two of four wing members are still reporting inside the corridor."
+autowrap_mode = 2
+
+[node name="Alert" type="CanvasLayer" parent="."]
+layer = 1
+
+[node name="AlertStrip" type="ColorRect" parent="Alert"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -36.0
+color = Color(0.55, 0.16, 0.14, 0.78)
+
+[node name="AlertLabel" type="Label" parent="Alert/AlertStrip"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "SIMULATION HALTED - STORM FRONT IN 00:42"
+horizontal_alignment = 1
+vertical_alignment = 1

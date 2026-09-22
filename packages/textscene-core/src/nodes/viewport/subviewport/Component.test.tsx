@@ -1,5 +1,5 @@
 /**
- * A sub-viewport is a canvas boundary, not a world boundary (ADR-0030).
+ * A sub-viewport is a canvas boundary, not a world boundary (ADR-0033).
  *
  * These assertions are measured Godot behaviour, not a design preference:
  * `Viewport::find_world_3d` falls through to the parent viewport unless
@@ -105,7 +105,7 @@ describe('<SubViewport> as a world boundary', () => {
     // the obvious registration puts it in TWO_D_UI_TYPES — and `PlainNode` then
     // drops its WHOLE subtree in the 3D workspace, taking the contained
     // sub-viewport's 3D content with it. Godot draws that content (shared
-    // World3D), so the drop rule subtracts viewport surfaces. ADR-0030.
+    // World3D), so the drop rule subtracts viewport surfaces. ADR-0033.
     const r = await render(`[gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="1"]

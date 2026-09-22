@@ -1,0 +1,65 @@
+[gd_scene load_steps=2 format=3 uid="uid://unittexturerectfilterinherit"]
+
+; Three 200x200 TextureRects sampling the SAME 8x8 checkerboard, 25x
+; magnified so magFilter is the dominant term (the technique
+; unit-material-texture-filter.tscn uses for the same texture on the 3D
+; side). None of the three TextureRects itself names a texture_filter — the
+; ONE variable is how that PARENT_NODE default resolves through the Control
+; ancestor chain:
+;
+;   - Nearest: its immediate parent names texture_filter=1 (NEAREST) — hard
+;     checker edges.
+;   - NearestThroughChain: its GRANDPARENT names NEAREST; the intermediate
+;     parent re-states PARENT_NODE (0) explicitly — still hard edges, proving
+;     a non-naming ancestor is transparent rather than a wall that stops the
+;     walk at the viewport default.
+;   - LinearBaseline: no ancestor anywhere names a filter — soft edges, the
+;     viewport default (CANVAS_ITEM_TEXTURE_FILTER_LINEAR).
+;
+; A regression that resolves PARENT_NODE straight to the viewport default
+; instead of walking the ancestor chain is invisible in every OTHER
+; TextureRect fixture in this corpus: none puts a naming ancestor above an
+; inheriting one, so Nearest and NearestThroughChain would silently render
+; exactly like LinearBaseline instead of matching Nearest's own hard edges.
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="NearestAncestor" type="Control" parent="."]
+offset_right = 200.0
+offset_bottom = 200.0
+texture_filter = 1
+
+[node name="Nearest" type="TextureRect" parent="NearestAncestor"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("1_tex")
+
+[node name="ChainRoot" type="Control" parent="."]
+offset_left = 250.0
+offset_right = 450.0
+offset_bottom = 200.0
+texture_filter = 1
+
+[node name="TransparentMiddle" type="Control" parent="ChainRoot"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture_filter = 0
+
+[node name="NearestThroughChain" type="TextureRect" parent="ChainRoot/TransparentMiddle"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource("1_tex")
+
+[node name="LinearBaseline" type="TextureRect" parent="."]
+offset_left = 500.0
+offset_right = 700.0
+offset_bottom = 200.0
+texture = ExtResource("1_tex")

@@ -1,6 +1,6 @@
 /**
  * The `.tres` arrival path: path detection, section selection (whole-file body
- * vs a named `[sub_resource]`), the ShaderMaterial and header-only fallbacks,
+ * vs a named `[sub_resource]`), the uncompiled-shader and header-only surfaces,
  * and texture-slot loading through the injected loader, resolved against the
  * owning file's own `[ext_resource]` headers.
  *
@@ -17,6 +17,18 @@ import {
   isMaterialPath,
   releaseProceduralTextures,
 } from './loadMaterial';
+
+/**
+ * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
+ * is known. A colour slot therefore needs nothing of it and gets the same
+ * object back, while a raw slot binds a retagged clone — which is what makes
+ * identity a meaningful assertion below.
+ */
+function loadedTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
 
 describe('isMaterialPath', () => {
   it('accepts .tres paths', () => {
@@ -82,7 +94,7 @@ describe('createMaterialFromContent', () => {
   });
 
   it('loads referenced textures through the injected loader, resolved to a res:// path', async () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const loadTexture = vi.fn().mockResolvedValue(texture);
 
     const material = (await createMaterialFromContent(
@@ -99,7 +111,7 @@ describe('createMaterialFromContent', () => {
   });
 
   it('skips loading a texture whose ExtResource id has no matching ext_resource header', async () => {
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
 
     const material = (await createMaterialFromContent(
       tres('StandardMaterial3D', 'albedo_texture = ExtResource("dangling")'),
@@ -135,7 +147,7 @@ describe('createMaterialFromContent', () => {
   });
 
   it('coerces boolean flags: emission/normal maps require their _enabled gates', async () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const loadTexture = vi.fn().mockResolvedValue(texture);
 
     const material = (await createMaterialFromContent(
@@ -157,11 +169,15 @@ describe('createMaterialFromContent', () => {
     )) as THREE.MeshStandardMaterial;
 
     expect(material.emissiveMap).toBe(texture);
-    expect(material.normalMap).toBe(texture);
+    // A normal map is sampled raw (`scene/resources/material.cpp:1092`), so the
+    // binding hands over a retagged clone of the same decoded image.
+    expect(material.normalMap).not.toBe(texture);
+    expect(material.normalMap!.source).toBe(texture.source);
+    expect(material.normalMap!.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('drops gated textures when the _enabled flag is false', async () => {
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       tres(
         'StandardMaterial3D',
@@ -174,7 +190,7 @@ describe('createMaterialFromContent', () => {
   });
 
   it('coerces uv1_scale Vector3 and applies it as a cloned-texture repeat', async () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const loadTexture = vi.fn().mockResolvedValue(texture);
 
     const material = (await createMaterialFromContent(
@@ -193,12 +209,23 @@ describe('createMaterialFromContent', () => {
     expect(texture.repeat.x).toBe(1);
   });
 
-  it('falls back to a translucent standard material for ShaderMaterial', async () => {
+  it('renders an uncompiled ShaderMaterial as Godot\u2019s default 3D surface', async () => {
+    // The same surface the sub-resource arrival of an uncompiled shader draws,
+    // and the same one an unmaterialed mesh draws. Not a default-CONSTRUCTED
+    // StandardMaterial3D (white, fully rough, non-metallic) \u2014 a ShaderMaterial
+    // is not one of those, so the honest substitute is the hardcoded default
+    // shader every backend binds when a surface has no usable material.
     const material = await createMaterialFromContent(tres('ShaderMaterial', ''));
     expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
     const std = material as THREE.MeshStandardMaterial;
-    expect(std.transparent).toBe(true);
-    expect(std.opacity).toBe(0.5);
+    expect(std.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace).r)
+      .toBeCloseTo(0.6, 5);
+    expect(std.roughness).toBeCloseTo(0.8, 5);
+    expect(std.metalness).toBeCloseTo(0.2, 5);
+    // Best-effort rendering: no invented transparency standing in for a shader
+    // nobody can see through.
+    expect(std.transparent).toBe(false);
+    expect(std.opacity).toBe(1);
   });
 
   it('rejects unsupported material types', async () => {
@@ -288,7 +315,7 @@ describe('createMaterialFromContent for a sub-resource', () => {
   });
 
   it('resolves its texture ExtResources against the owning file’s table', async () => {
-    const texture = new THREE.Texture();
+    const texture = loadedTexture();
     const loadTexture = vi.fn().mockResolvedValue(texture);
     const textured = MESH_TRES.replace(
       'roughness = 0.8',
@@ -314,7 +341,7 @@ describe('createMaterialFromContent for a sub-resource', () => {
 
 describe('createMaterialFromContent texture-slot resolution', () => {
   it('does not ask for a slot whose feature flag is off', async () => {
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     await createMaterialFromContent(
       [
         '[gd_resource type="StandardMaterial3D" format=3]',
@@ -334,7 +361,7 @@ describe('createMaterialFromContent texture-slot resolution', () => {
     // `ice.tres` / `lava.tres` point their albedo at a NoiseTexture2D declared
     // in the same file. Nothing rasterises those yet, so the slot stays empty —
     // and no file is fetched for a reference that names no file.
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       [
         '[gd_resource type="StandardMaterial3D" format=3]',
@@ -354,7 +381,7 @@ describe('createMaterialFromContent texture-slot resolution', () => {
     // Godot stores the per-pixel anisotropy strength in ALPHA and three reads it
     // from BLUE; the repack lives in the node layer, so this path applies the
     // anisotropy SCALARS and leaves the map alone rather than sampling garbage.
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       [
         '[gd_resource type="StandardMaterial3D" format=3]',
@@ -409,7 +436,7 @@ describe('createMaterialFromContent with a procedural texture in its own .tres',
   ].join('\n');
 
   it('builds with the rasterised gradient on the albedo slot', async () => {
-    const loadTexture = vi.fn().mockResolvedValue(new THREE.Texture());
+    const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       GRADIENT_MATERIAL,
       loadTexture

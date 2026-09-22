@@ -85,7 +85,78 @@ describe('Control Linter', () => {
       valid: ['Color(1, 1, 1, 1)', 'Color(0.5, 0.5, 0.5, 0.8)'],
       invalid: [{ value: 'Color(1, 1, 1)', contains: ['Color'] }],
     },
+    {
+      prop: 'z_index',
+      // `CanvasItem::set_z_index` (canvas_item.cpp:666-673) ERR_FAIL_CONDs on
+      // either side of CANVAS_ITEM_Z_MIN/MAX, so the bound is the SETTER's, not
+      // just the inspector hint's, and a value past it never reaches the item.
+      valid: [0, -10, 4096, -4096],
+      invalid: [
+        { value: 1.5, contains: ['integer'] },
+        { value: 5000, contains: ['4096'] },
+      ],
+    },
+    {
+      prop: 'show_behind_parent',
+      valid: ['true', 'false'],
+      invalid: [{ value: 'maybe', contains: ['boolean'] }],
+    },
+    {
+      prop: 'light_mask',
+      valid: [0, 1, 4294967295],
+      invalid: [{ value: 'top', contains: ['must be a number'] }],
+    },
+    {
+      prop: 'texture_filter',
+      valid: [0, 1, 6],
+      invalid: [{ value: 7, contains: ['0-6'] }],
+    },
+    {
+      prop: 'texture_repeat',
+      valid: [0, 1, 3],
+      invalid: [{ value: 4, contains: ['0-3'] }],
+    },
   ]);
+
+  describe('theme reference', () => {
+    // Both ids are DECLARED: an undeclared one is a dangling reference Godot
+    // refuses the whole scene for, which is a different rule's report.
+    it('accepts an ExtResource theme', () => {
+      expectClean(
+        scene(
+          '[ext_resource type="Theme" path="res://ui.theme" id="1_theme"]',
+          node('Control', { theme: 'ExtResource("1_theme")' })
+        )
+      );
+    });
+
+    it('accepts a SubResource theme (a scene-inline Theme)', () => {
+      expectClean(
+        scene(
+          '[sub_resource type="Theme" id="5"]',
+          node('Control', { theme: 'SubResource("5")' })
+        )
+      );
+    });
+
+    it('rejects a non-reference theme value', () => {
+      expectDiagnostic(scene(node('Control', { theme: 'res://theme.tres' })), {
+        prop: 'theme',
+      });
+    });
+  });
+
+  describe('theme_type_variation', () => {
+    it('accepts a StringName literal', () => {
+      expectClean(scene(node('Control', { theme_type_variation: '&"title_panel"' })));
+    });
+
+    it('rejects an empty value', () => {
+      expectDiagnostic(scene(node('Control', { theme_type_variation: '' })), {
+        prop: 'theme_type_variation',
+      });
+    });
+  });
 
   describe('theme_override wildcard groups', () => {
     it('accepts a well-formed theme_override_colors entry', () => {
@@ -133,6 +204,8 @@ describe('Control Linter', () => {
   // the axis variants and props the accept/reject table above only spot-checks.
   describe('every registered Control property is validated', () => {
     const MALFORMED: ReadonlyArray<readonly [string, string]> = [
+      ['theme', 'res://theme.tres'],
+      ['theme_type_variation', ''],
       ['self_modulate', 'Color(1, 1, 1)'],
       ['layout_mode', 'x'],
       ['anchor_left', 'x'],

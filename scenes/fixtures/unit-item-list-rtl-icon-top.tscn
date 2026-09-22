@@ -1,0 +1,56 @@
+; The ONE variable: `layout_direction = 3` on a TOP icon-mode ItemList. TOP
+; mode takes a DIFFERENT pair of RTL branches from LEFT mode: the icon mirror
+; centres the icon in its row first (item_list.cpp:1553) and the label
+; keeps HORIZONTAL_ALIGNMENT_CENTER while its whole box is mirrored
+; (:1639-1641), where LEFT mode instead re-derives the pen and swaps to
+; RIGHT. Both lists are the same width and hold the same two rows, and each
+; row is far narrower than the list, so a box that failed to mirror would sit
+; at the opposite edge. unit-item-list-rtl.tscn covers the LEFT-mode pair and
+; unit-item-list.tscn is TOP mode at the default direction, so a regression in
+; the TOP-mode mirror is invisible in both.
+
+[gd_scene load_steps=2 format=3 uid="uid://unit_item_list_rtl_icon_top"]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Ltr" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 240.0
+offset_bottom = 156.0
+icon_mode = 0
+max_text_lines = 2
+fixed_icon_size = Vector2i(24, 24)
+item_count = 2
+item_0/text = "Sword"
+item_0/icon = ExtResource("1_icon")
+item_1/text = "Bow"
+item_1/icon = ExtResource("1_icon")
+
+[node name="Rtl" type="ItemList" parent="."]
+layout_mode = 1
+layout_direction = 3
+offset_left = 16.0
+offset_top = 172.0
+offset_right = 240.0
+offset_bottom = 312.0
+icon_mode = 0
+max_text_lines = 2
+fixed_icon_size = Vector2i(24, 24)
+item_count = 2
+item_0/text = "Sword"
+item_0/icon = ExtResource("1_icon")
+item_1/text = "Bow"
+item_1/icon = ExtResource("1_icon")

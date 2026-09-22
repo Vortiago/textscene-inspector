@@ -33,6 +33,7 @@ import type {
   TscnNode,
 } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
 /**
  * Provider that always returns null; we never let the file pipeline
@@ -105,7 +106,8 @@ function findMaterial(
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 ): THREE.MeshStandardMaterial | undefined {
   const materials = renderer.scene.findAllByType('MeshStandardMaterial');
-  return materials[0]?.instance as THREE.Object3D & THREE.MeshStandardMaterial | undefined;
+  const first = materials[0];
+  return first ? materialInstanceAs<THREE.MeshStandardMaterial>(first) : undefined;
 }
 
 async function renderWith(
@@ -177,6 +179,10 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const loader = makeLoader();
     const albedo = new THREE.Texture();
     const normal = new THREE.Texture();
+    // As the loader hands them out: every decoded image is tagged sRGB before
+    // any slot is known, which is exactly what the normal slot must undo.
+    albedo.colorSpace = THREE.SRGBColorSpace;
+    normal.colorSpace = THREE.SRGBColorSpace;
     preloadTexture(loader, 'res://textures/albedo.png', albedo);
     preloadTexture(loader, 'res://textures/normal.png', normal);
 
@@ -188,6 +194,8 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
         data: {
           id: 'mat',
           albedo_texture: 'ExtResource("1")',
+          // Godot emits the normal sampler only inside `if (features[…])`.
+          normal_enabled: 'true',
           normal_texture: 'ExtResource("2")',
         } as Record<string, string>,
       },
@@ -213,8 +221,15 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const material = findMaterial(renderer);
     expect(material).toBeDefined();
     expect(material!.normalMap).toBeDefined();
-    // Identity UV transform — the same THREE.Texture flows through.
-    expect(material!.normalMap).toBe(normal);
+    // NOT identity, unlike the colour maps: a normal map is sampled RAW
+    // (`scene/resources/material.cpp:1092` declares `texture_normal :
+    // hint_roughness_normal`, with no `source_color` — `textureBinding.ts` has
+    // the full citation), so the binding hands the material an undecoded CLONE.
+    // The clone shares the decoded `Source`, which is what identifies it as
+    // this same texture.
+    expect(material!.normalMap).not.toBe(normal);
+    expect(material!.normalMap!.source).toBe(normal.source);
+    expect(material!.normalMap!.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('forces emissive to 0x000000 when emission_enabled is false', async () => {
@@ -323,9 +338,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     expect(materials).toHaveLength(2);
-    const [matA, matB] = materials.map(
-      (m) => m.instance as THREE.Object3D & THREE.MeshStandardMaterial
-    );
+    const [matA, matB] = materials.map((m) => materialInstanceAs<THREE.MeshStandardMaterial>(m));
 
     expect(matA!.map).toBeDefined();
     expect(matB!.map).toBeDefined();
@@ -362,7 +375,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // material with native clearcoat), carrying the parsed strength + roughness.
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.clearcoat).toBeCloseTo(0.7, 5);
     expect(material.clearcoatRoughness).toBeCloseTo(0.25, 5);
   });
@@ -411,7 +424,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // onto three.js's Fresnel sheen term (the closest native analog).
     const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = physical[0]!.instance as THREE.Object3D & THREE.MeshPhysicalMaterial;
+    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.sheen).toBeCloseTo(0.7, 5);
   });
 

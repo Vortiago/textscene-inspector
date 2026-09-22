@@ -23,7 +23,12 @@ import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
-import { node2dGroupProps, node2dGroupSpread, canvasItemZ } from '../../../r3f/node2dTransform';
+import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
+import { useCanvasItemRenderOrder } from '../../../r3f/contexts/PaintOrderContext';
+import {
+  accumulateCanvasItemZ,
+  useEffectiveZ,
+} from '../../../r3f/lighting2d/canvasItemPlacement';
 import {
   Modulate2DContext,
   multiplyModulate,
@@ -60,6 +65,7 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
   );
 
   const dot = gizmoVisible ? <FollowDot /> : null;
+  const renderOrder = useCanvasItemRenderOrder(node, accumulateCanvasItemZ(useEffectiveZ(), props));
 
   // No curve in scope → behave like a plain Node2D at the authored transform.
   if (!followTransform) {
@@ -72,7 +78,16 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
   }
 
   return (
-    <group name={node.name} {...followTransform} visible={props.visible !== false}>
+    // This branch replaces `<Node2D>`'s group with one at the sampled curve
+    // position, so it has to carry the canvas draw-order key `<CanvasItem2D>`
+    // would have put there — three reads a drawn object's place from its
+    // nearest enclosing group, and a bare one sinks the dot behind the canvas.
+    <group
+      name={node.name}
+      {...followTransform}
+      visible={props.visible !== false}
+      renderOrder={renderOrder}
+    >
       {dot}
       <Modulate2DContext.Provider value={modulate}>{children}</Modulate2DContext.Provider>
     </group>
@@ -114,8 +129,7 @@ function computeFollowTransform(
         rotation: props.rotates ? sample.angle : 0,
         scale: props.scale,
         skew: 0,
-      },
-      canvasItemZ(props)
+      }
     )
   );
 }

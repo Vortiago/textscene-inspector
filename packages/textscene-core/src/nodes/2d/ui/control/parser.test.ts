@@ -29,11 +29,60 @@ describe('parseControl', () => {
       'theme_override_font_sizes/font_size': '18',
       'theme_override_colors/font_color': 'Color(0.2, 0.18, 0.12, 1)',
       'theme_override_styles/panel': 'SubResource("StyleBoxFlat_1")',
+      'theme_override_icons/checked': 'SubResource("GradientTexture2D_1")',
     });
     expect(p.themeOverrideConstants?.separation).toBe(6);
     expect(p.themeOverrideFontSizes?.font_size).toBe(18);
     expect(p.themeOverrideColors?.font_color?.r).toBeCloseTo(0.2, 5);
     expect(p.themeOverrideStyles?.panel).toBe('SubResource("StyleBoxFlat_1")');
+    expect(p.themeOverrideIcons?.checked).toBe('SubResource("GradientTexture2D_1")');
+  });
+
+  describe('theme reference + type variation', () => {
+    it('parses a present theme ExtResource ref', () => {
+      const p = parseControl(heading('Control', { name: 'Root' }), {
+        theme: 'ExtResource("1_theme")',
+      });
+      expect(p.theme).toBe('ExtResource("1_theme")');
+    });
+
+    it('leaves theme undefined when absent', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      expect(p.theme).toBeUndefined();
+    });
+
+    it('parses a SubResource theme ref (a scene-inline Theme)', () => {
+      const p = parseControl(heading('Control', { name: 'Root' }), {
+        theme: 'SubResource("5")',
+      });
+      expect(p.theme).toBe('SubResource("5")');
+    });
+
+    it('treats a malformed theme value as an opaque raw string (resolved downstream)', () => {
+      const p = parseControl(heading('Control', { name: 'Bad' }), { theme: 'not-a-ref' });
+      expect(p.theme).toBe('not-a-ref');
+    });
+
+    it('strips the StringName sigil and quotes from theme_type_variation', () => {
+      const p = parseControl(heading('Control', { name: 'Title' }), {
+        theme_type_variation: '&"title_panel"',
+      });
+      expect(p.themeTypeVariation).toBe('title_panel');
+    });
+
+    it('leaves themeTypeVariation undefined when absent', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      expect(p.themeTypeVariation).toBeUndefined();
+    });
+  });
+
+  it('collects theme_override_fonts into a raw-ref map', () => {
+    const p = parseControl(heading('Control', { name: 'L' }), {
+      'theme_override_fonts/font': 'ExtResource("2_font")',
+      'theme_override_fonts/bold_font': 'SubResource("3")',
+    });
+    expect(p.themeOverrideFonts?.font).toBe('ExtResource("2_font")');
+    expect(p.themeOverrideFonts?.bold_font).toBe('SubResource("3")');
   });
 
   it('parses custom_minimum_size and size flags', () => {
@@ -48,5 +97,69 @@ describe('parseControl', () => {
   it('captures visibility', () => {
     const p = parseControl(heading('Control', { name: 'C' }), { visible: 'false' });
     expect(p.visible).toBe(false);
+  });
+
+  describe('CanvasItem draw-order + sampler properties', () => {
+    it('parses top_level, which makes the Control a canvas root', () => {
+      // `Control`'s own `NOTIFICATION_ENTER_CANVAS` climb stops at
+      // `!node->is_set_as_top_level()` (control.cpp:3876), so the flag decides
+      // whether the Control anchors against an ancestor or the viewport.
+      expect(parseControl(heading('Control', { name: 'C' }), { top_level: 'true' }).topLevel).toBe(true);
+      expect(parseControl(heading('Control', { name: 'C' }), {}).topLevel).toBe(false);
+    });
+
+    it('parses explicit z_index, show_behind_parent, light_mask, texture_filter, texture_repeat', () => {
+      const p = parseControl(heading('Control', { name: 'Badge' }), {
+        z_index: '3',
+        show_behind_parent: 'true',
+        light_mask: '3',
+        texture_filter: '2',
+        texture_repeat: '1',
+      });
+      expect(p.zIndex).toBe(3);
+      expect(p.showBehindParent).toBe(true);
+      expect(p.lightMask).toBe(3);
+      expect(p.textureFilter).toBe(2);
+      expect(p.textureRepeat).toBe(1);
+    });
+
+    it('defaults to Godot values when absent (scene/main/canvas_item.h:98,101,113,123-124)', () => {
+      const p = parseControl(heading('Control', { name: 'Plain' }), {});
+      // z_index (canvas_item.h:101): `int z_index = 0;`
+      expect(p.zIndex).toBe(0);
+      // show_behind_parent (canvas_item.h:113): `bool behind = false;`
+      expect(p.showBehindParent).toBe(false);
+      // light_mask (canvas_item.h:98): `int light_mask = 1;`
+      expect(p.lightMask).toBe(1);
+      // texture_filter (canvas_item.h:123): `TextureFilter texture_filter = TEXTURE_FILTER_PARENT_NODE;` (0)
+      expect(p.textureFilter).toBe(0);
+      // texture_repeat (canvas_item.h:124): `TextureRepeat texture_repeat = TEXTURE_REPEAT_PARENT_NODE;` (0)
+      expect(p.textureRepeat).toBe(0);
+    });
+  });
+});
+
+describe('parseControl — layout_direction', () => {
+  it('reads each LayoutDirection value', () => {
+    // `Control::LayoutDirection` (`scene/gui/control.h:155-160`).
+    for (const value of [0, 1, 2, 3, 4]) {
+      const p = parseControl(heading('Control', { name: 'C' }), {
+        layout_direction: String(value),
+      });
+      expect(p.layoutDirection).toBe(value);
+    }
+  });
+
+  it('defaults to INHERITED when the scene says nothing', () => {
+    // `LayoutDirection layout_dir = LAYOUT_DIRECTION_INHERITED;` (`control.h:289`).
+    expect(parseControl(heading('Control', { name: 'C' }), {}).layoutDirection).toBe(0);
+  });
+
+  it('truncates a float literal the way the INT slot does', () => {
+    // `_to_int` runs before the setter (`core/variant/variant.h:360-377`), so
+    // `set_layout_direction` never sees the fraction.
+    expect(
+      parseControl(heading('Control', { name: 'C' }), { layout_direction: '2.9' }).layoutDirection
+    ).toBe(2);
   });
 });

@@ -1,10 +1,10 @@
 ---
 type: Label3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-label3d.tscn
 image: unit-label3d
-renders_as: a canvas-textured plane
+renders_as: canvas-rasterised glyph quads, billboard-able
 ---
 
 # Label3D
@@ -65,4 +65,14 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 
 ## Known limitations
 
-- **Approximated** Glyphs come from the browser's fallback font rather than Godot's bundled one, so letterforms, weight and kerning differ.
+- **Approximated** The outline is a dilated fill rather than a stroked contour, so it
+  reads softer than Godot's.
+- **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
+  line where Godot would wrap it.
+- **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
+  where Godot's stays smooth.
+- **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the
+  colour pass too, where Godot clips only depth, so glyph edges are harder.
+- **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
+  `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha label's dither grain
+  differs and its edges are not feathered.

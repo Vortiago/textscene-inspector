@@ -1,30 +1,24 @@
 /**
- * Shared tail of every CSG primitive parser: the `material` copy plus `operation`.
+ * Shared tail of every CSG PRIMITIVE parser: the `CSGShape3D` half plus the
+ * `material` path copy, which only a `CSGPrimitive3D` has. The shape half lives
+ * in `shapeParser.ts`, which a combiner imports on its own — see the note there.
  *
- * Pure TS, so the parser closure stays React-free; the render scaffold lives separately
- * in CsgPrimitive.tsx.
+ * Pure TS, so the parser closure stays React-free; the render scaffold lives
+ * separately in CsgPrimitive.tsx.
  */
 
-import { parseOptionalInt } from '../../../parser/valueParsers';
+import { finishCsgShapeParse } from './shapeParser';
 
-/**
- * Copy `material` and `operation` onto a CSG parse result.
- *
- * A non-union `operation` used to warn here, because it was parsed and then dropped. It
- * is applied now (ADR-0027), so the warn would fire on every correctly rendered
- * subtraction, burying real problems in a scene that uses booleans at all.
- *
- */
+export { finishCsgShapeParse };
+
+/** `finishCsgShapeParse` plus `material` (a path string), which only a `CSGPrimitive3D` has. */
 export function finishCsgParse(
-  result: { material?: string; operation?: number },
+  result: { materialPath?: string; operation?: number; castShadow?: number },
   properties: Record<string, string>
 ): void {
   if (properties.material) {
-    result.material = properties.material;
+    result.materialPath = properties.material;
   }
 
-  const operation = parseOptionalInt(properties.operation);
-  if (operation !== undefined) {
-    result.operation = operation;
-  }
+  finishCsgShapeParse(result, properties);
 }

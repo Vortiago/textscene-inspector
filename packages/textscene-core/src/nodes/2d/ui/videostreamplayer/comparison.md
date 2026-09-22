@@ -1,15 +1,15 @@
 ---
 type: VideoStreamPlayer
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-video-stream-player.tscn
 # image: unit-video-stream-player
-renders_as: nothing yet, an invisible Control-sized rect
+renders_as: nothing (no decoded frame ever reaches it)
 ---
 
 # VideoStreamPlayer
 
-A Control that plays a `VideoStream` and draws the decoded frame into its rect. The previewer draws no frame, so the node is an invisible transform-only fallback and its children still show.
+A Control that plays a `VideoStream` and draws the decoded frame into its rect. Nothing in this previewer decodes a `VideoStream`, so `NOTIFICATION_DRAW`'s texture check never passes and the node draws nothing — the same thing Godot itself draws before a stream's first frame arrives. Its children still show.
 
 ## Linting
 
@@ -34,11 +34,15 @@ Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inher
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 The lenient parser reads VideoStreamPlayer through `parseControl`. It keeps the layout keys and ignores all ten playback keys, so a malformed `volume_db` is dropped with no fallback and no warning.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the video frame in the rect. Here the rect stays empty.
+- **Not drawn** There is no video decoder in this codebase, so `texture` never
+  resolves and `NOTIFICATION_DRAW` never reaches its `draw_texture_rect` call —
+  the node registers a painter that correctly draws nothing, rather than
+  falling back to the debug outline Godot never draws.

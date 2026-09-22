@@ -1,8 +1,15 @@
 # DOM-overlay regressions are gated by a second browser harness, not by the visual goldens
 
-- Status: Accepted (2026-07-19)
-- Related: ADR-0003 (2D-UI DOM overlay), ADR-0006 (viewport-mode seam), the
-  `scripts/visual/` golden harness and `scripts/showcase/verify-2d.mjs`.
+- Status: Accepted (2026-07-19). **Superseded by ADR-0037 (2026-08-04):** its premise
+  — that the visual goldens are WebGL-canvas-only and happy-dom has no layout, so
+  nothing else could see a DOM-overlay regression — no longer applies once Controls
+  are renderer pixels. Native Controls join the visual-golden set behind the existing
+  `mode: '2d'` parity capture; `verify-2d.mjs` and `pnpm verify:2d` are deleted with
+  the DOM overlay they existed to cover. Kept for the record: the split-by-what's-
+  measured reasoning under Consequences, below, is why a THIRD gate (`verify:raster`)
+  existed at all, and that one retires the same way, for the same reason.
+- Related: ADR-0003 (2D-UI DOM overlay, superseded), ADR-0006 (viewport-mode seam),
+  the `scripts/visual/` golden harness and `scripts/showcase/verify-2d.mjs`.
 
 ## Context
 

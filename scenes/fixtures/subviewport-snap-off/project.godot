@@ -1,0 +1,16 @@
+; A res:// root of its own, because `gui/common/snap_controls_to_pixels` is a
+; PROJECT setting and no .tscn can carry one. Kept in a subdirectory rather
+; than at scenes/fixtures — a project.godot there would silently apply to every
+; other fixture in the flat bag.
+
+config_version=5
+
+[application]
+
+config/name="SubViewport snap opt-out"
+run/main_scene="res://unit-subviewport-snap-off.tscn"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+common/snap_controls_to_pixels=false

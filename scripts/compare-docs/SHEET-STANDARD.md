@@ -93,9 +93,15 @@ in a docblock when the reason is not already plain from the code.
 
 A node or resource with several visually distinct features (a StandardMaterial3D
 has metallic, emission, clearcoat, rim, …) gives each its OWN fixture and
-comparison as a **section**. A section is a `##` heading immediately followed by a
-`<!-- compare: … -->` marker. The generator lays out that section's Godot-versus-ours
-pair, status badge, and prose (which runs until the next such heading).
+comparison as a **section**. A section is a `##` heading followed — immediately,
+or after a blank line — by a `<!-- compare: … -->` marker; the generator lays
+out that section's Godot-vs-ours pair, status badge, and prose (which runs
+until the next such heading).
+
+A `<!-- compare: … -->` marker that is not attached to a heading this way —
+stray prose above it, a `###` sub-heading, or no heading at all — fails the
+build rather than rendering silently as plain text. Attach every marker to its
+own `##` heading, with only blank lines (if any) between them.
 
 ```markdown
 ---
@@ -119,10 +125,25 @@ What the fixture sets and what the two images show; fold any limitation in here.
 …
 ```
 
-- Marker attributes: `image=` (required, the basename), `status=` (see below),
-  `fixture=` (optional, the live `?fixture=` deep link).
-- A sectioned sheet needs NO top-level `image:` frontmatter. Each section supplies
-  its own. A single-pair sheet (one `image:`, no markers) needs no marker.
+- Marker attributes: `image=` (required — the basename), `status=` (see below),
+  `fixture=` (optional — the live `?fixture=` deep link), `particles=` (optional
+  — seconds).
+- `particles=` is for a section whose subject is a CPUParticles emitter that
+  authors no `preprocess`. The Godot editor animates particles, so a paused
+  reference render draws frame 0 while the previewer draws its substituted
+  settle, and the pair would show two different instants. The value is handed to
+  `pnpm ref:godot --particles`, which advances the emitters through Godot's own
+  settle loop. Set it to the seconds the previewer settles to (one `lifetime`,
+  half for a `one_shot`) and say the number in the prose — an instant nobody
+  names is not a measurement.
+- A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
+  its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
+- A sectioned sheet carries NO top-level `status:` frontmatter either — forbidden,
+  not just optional. Its nav badge and header always roll up from its sections'
+  own `status=` (worst-first: `unimplemented` > `limitation` > `unreviewed` >
+  `done`); a frontmatter `status:` is never read for it, so it is dead the moment
+  it is written and only invites drifting away from what the sections actually say.
+  The sheets test enforces this.
 
 ## Optional frontmatter keys
 
@@ -152,9 +173,9 @@ which is a claim about the node and is machine-checked against the registration.
   fails the check. The hand-written lenient-parser prose goes BELOW `lint:end`.
 - **ADR links.** Write `ADR-0025` as plain text and the generator links it. A relative
   path is wrong from a slice, wrong in the gallery, and broken on the deployed site.
-- **Shared causes.** A divergence explained in `docs/comparison/README.md` (2D
-  tonemapping, RemoteTransform relay limits) is written there once. Report your own
-  measured pixels and point at it.
+- **Shared causes.** A divergence explained in `docs/comparison/README.md` (the
+  RemoteTransform relay limits) is written there once. Report your own measured
+  pixels and point at it.
 
 One sheet kind carries no `## Linting` block, and `sheets.test.mjs` asserts it has
 no markers: the `complex-*` whole-scene showcases, which name no single node type.
@@ -197,6 +218,35 @@ yet moves something you can watch. It belongs on the normal `done`/`limitation`
 scale and its sheet should compare that effect. The registry flag stays
 `transform-only` (it is a claim about the node's own geometry). Only the status
 differs. Reserve `linter-only` for a node whose runtime effect is nil.
+
+## Current state only — a sheet is not a changelog
+
+A sheet describes how the previewer renders this type **right now**, against Godot.
+It carries no history. The reader wants to know what the two images show today, not
+how they got there.
+
+Never write, in any form:
+
+- **Fix narration** — "(FIXED)", "flagged here, fixed subsequently", "closed in a
+  later pass", "not this component's to fix", "recorded as a follow-up".
+- **Discovery narration** — "two bugs found while building this", "the point-fix
+  exposed", "measured directly, it turned out that…", "my first attempt".
+- **Before/after** — what a value used to be, what a previous implementation did,
+  what a baseline encoded before it was corrected. Arbitration tables comparing an
+  old render to a new one are history by definition.
+- **Dates, commits, agent or packet names, issue or WI numbers.**
+
+If a divergence is **open**, state the divergence in present tense with its measured
+numbers. If it is **closed**, delete the row — a fixed divergence is simply not a
+divergence, and leaving it "closed with numbers" is the changelog creeping back.
+
+That history is not lost; it lives where history belongs — git, the ADRs, the issue.
+A sheet that reads as a diary is stale the moment the code moves again, and it buries
+the one thing it exists to say.
+
+Applies to prose, headings and tables alike. A heading like
+`## Auto-framing (two bugs found while building this)` is the same violation as the
+sentence would be.
 
 ## Rules
 

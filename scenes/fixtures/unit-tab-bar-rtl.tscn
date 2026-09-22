@@ -1,0 +1,81 @@
+; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower TabBar.
+;
+; Under RTL a TabBar draws every tab at `size.width - ofs_cache - size_cache`
+; (tab_bar.cpp:552,1929) and then flows that tab's own icon, title and close
+; icon BACK from `size_cache - the style's LEFT margin` (:660,668,676,721) —
+; the left margin measured off the right edge, which is why `tab_selected` is
+; overridden here with a deliberately lopsided 24/6 pair. The inline
+; GradientTexture2D on the first tab is asymmetric along X, so a mirrored icon
+; cannot be mistaken for an unmirrored one, and `tab_close_display_policy = 2`
+; keeps a close icon on every tab as the trailing element of that flow. Both
+; bars anchor to the same symmetric rect, so the node's OWN rect is
+; mirror-invariant and only the inside of the strip can move.
+;
+; `unit-tab-bar-rtl-scroll` moves the scroll arrows under the same property
+; and draws no icon or close button; every other TabBar scene is LTR.
+
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_selected"]
+content_margin_left = 24.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.15, 0.3, 0.45, 1)
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 20
+height = 20
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.18, 1)
+
+[node name="Ltr" type="TabBar" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 80.0
+offset_top = 48.0
+offset_right = -80.0
+offset_bottom = 96.0
+current_tab = 1
+tab_alignment = 0
+clip_tabs = false
+tab_close_display_policy = 2
+tab_count = 3
+tab_0/title = "Inventory"
+tab_0/icon = SubResource("GradientTexture2D_icon")
+tab_1/title = "Map"
+tab_2/title = "Journal"
+
+[node name="Rtl" type="TabBar" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_left = 80.0
+offset_top = 144.0
+offset_right = -80.0
+offset_bottom = 192.0
+current_tab = 1
+tab_alignment = 0
+clip_tabs = false
+tab_close_display_policy = 2
+tab_count = 3
+tab_0/title = "Inventory"
+tab_0/icon = SubResource("GradientTexture2D_icon")
+tab_1/title = "Map"
+tab_2/title = "Journal"

@@ -1,60 +1,90 @@
 /**
- * The DOM half of the AtlasTexture slice: cutting a cell out of a decoded sheet
- * for the controls that render an `<img>`.
+ * `rasterizeAtlasTexture` over a RAW-PIXEL sheet — the shape a `DataTexture`
+ * carries in `.image`: `{ data, width, height }`, not a `CanvasImageSource`.
  *
- * The geometry is tested directly because happy-dom has no canvas — the data-URL
- * wrapper can only be checked for its documented graceful `undefined`. Pixel
- * proof for the crop lives in `pnpm verify:2d` (ADR-0024), the only gate that
- * sees the DOM overlay.
+ * Two production paths put one there. `applyAlphaBorderFix`
+ * (`resources/formats/image/textureProcessing.ts`) substitutes a `DataTexture`
+ * for any binary-alpha image whose transparent texels all border an opaque one
+ * — the pixel-art sheets an AtlasTexture is cut from are exactly that — and
+ * every procedural texture (`GradientTexture2D`, `NoiseTexture2D`) is one from
+ * the start. `drawImage` rejects both, and a canvas could not be the answer
+ * anyway: its backing store is premultiplied, so round-tripping through one
+ * zeroes the very RGB behind alpha 0 that the alpha-border pass just wrote.
  */
-import { describe, it, expect } from 'vitest';
-import { atlasCropRect, atlasRegionDataUrl } from './build';
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { rasterizeAtlasTexture } from './build';
+import type { AtlasTextureLayout } from './types';
 
-const SHEET = { width: 64, height: 32 };
+/** A `w`x`h` RGBA sheet whose red channel is the texel index, fully opaque. */
+function sheet(w: number, h: number): { data: Uint8Array; width: number; height: number } {
+  const data = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i += 1) {
+    data[i * 4] = i;
+    data[i * 4 + 1] = 0;
+    data[i * 4 + 2] = 0;
+    data[i * 4 + 3] = 255;
+  }
+  return { data, width: w, height: h };
+}
 
-describe('atlasCropRect', () => {
-  it('maps a cell to its source rect in the sheet', () => {
-    expect(atlasCropRect(SHEET, { x: 16, y: 0, width: 16, height: 16 })).toEqual({
-      sx: 16,
-      sy: 0,
-      width: 16,
-      height: 16,
-    });
+function layout(over: Partial<AtlasTextureLayout> = {}): AtlasTextureLayout {
+  return { width: 2, height: 2, source: { x: 0, y: 0, width: 2, height: 2 }, dest: { x: 0, y: 0 }, ...over };
+}
+
+/** The crop's RGBA bytes. */
+function bytes(texture: THREE.Texture | null): number[] {
+  const image = texture?.image as { data?: Uint8Array } | undefined;
+  return [...(image?.data ?? [])];
+}
+
+describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
+  it('cuts the region out of a DataTexture-shaped image', () => {
+    // A 4x4 sheet; texel index = row*4 + col, so the bottom-right 2x2 is
+    // 10, 11 / 14, 15.
+    const texture = rasterizeAtlasTexture(
+      sheet(4, 4),
+      layout({ source: { x: 2, y: 2, width: 2, height: 2 } })
+    );
+    expect(texture).not.toBeNull();
+    expect(bytes(texture).filter((_, i) => i % 4 === 0)).toEqual([10, 11, 14, 15]);
   });
 
-  it('clips a cell that overruns the sheet (Godot intersects the region)', () => {
-    expect(atlasCropRect(SHEET, { x: 56, y: 24, width: 32, height: 32 })).toEqual({
-      sx: 56,
-      sy: 24,
-      width: 8,
-      height: 8,
-    });
+  it('leaves the margin transparent rather than sampling past the region', () => {
+    // A 1x1 region placed at (1, 1) of a 3x3 box: eight transparent texels
+    // around one opaque one.
+    const texture = rasterizeAtlasTexture(
+      sheet(2, 2),
+      layout({
+        width: 3,
+        height: 3,
+        source: { x: 1, y: 1, width: 1, height: 1 },
+        dest: { x: 1, y: 1 },
+      })
+    );
+    const alpha = bytes(texture).filter((_, i) => i % 4 === 3);
+    expect(alpha).toEqual([0, 0, 0, 0, 255, 0, 0, 0, 0]);
   });
 
-  it('clamps a negative origin into the sheet', () => {
-    expect(atlasCropRect(SHEET, { x: -8, y: -4, width: 16, height: 16 })).toEqual({
-      sx: 0,
-      sy: 0,
-      width: 8,
-      height: 12,
-    });
+  it('clips a region that overhangs the sheet, keeping the covered part', () => {
+    // Godot intersects the sampled rect with the atlas (`atlas_texture.cpp:208`)
+    // and draws nothing when the result is empty.
+    const texture = rasterizeAtlasTexture(
+      sheet(2, 2),
+      layout({ source: { x: 1, y: 1, width: 2, height: 2 } })
+    );
+    const alpha = bytes(texture).filter((_, i) => i % 4 === 3);
+    expect(alpha).toEqual([255, 0, 0, 0]);
+    expect(bytes(texture)[0]).toBe(3);
   });
 
-  it('returns null for a cell entirely outside the sheet', () => {
-    expect(atlasCropRect(SHEET, { x: 100, y: 0, width: 16, height: 16 })).toBeNull();
-    expect(atlasCropRect(SHEET, { x: 0, y: 40, width: 16, height: 16 })).toBeNull();
+  it('returns null for a region entirely off the sheet', () => {
+    expect(
+      rasterizeAtlasTexture(sheet(2, 2), layout({ source: { x: 8, y: 8, width: 2, height: 2 } }))
+    ).toBeNull();
   });
 
-  it('returns null for a degenerate cell', () => {
-    expect(atlasCropRect(SHEET, { x: 0, y: 0, width: 0, height: 16 })).toBeNull();
-  });
-});
-
-describe('atlasRegionDataUrl', () => {
-  it('degrades to undefined for an image that cannot be drawn', () => {
-    // happy-dom: no 2D context. Callers fall back to their pending/placeholder
-    // branch exactly as they already do for an undecoded image.
-    expect(atlasRegionDataUrl(undefined, { x: 0, y: 0, width: 16, height: 16 })).toBeUndefined();
-    expect(atlasRegionDataUrl({}, { x: 0, y: 0, width: 16, height: 16 })).toBeUndefined();
+  it('carries the sheet as undecoded sRGB, the tag a loaded image gets', () => {
+    expect(rasterizeAtlasTexture(sheet(2, 2), layout())?.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });

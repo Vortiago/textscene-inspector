@@ -1,0 +1,72 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a Label. `Label::_get_line_rect`
+; swaps its HORIZONTAL_ALIGNMENT_LEFT and _RIGHT arms outright under RTL
+; (label.cpp:481-497) and leaves _CENTER alone, so each RTL row below must sit at
+; the opposite edge from its LTR twin while the centred pair stays put. Every
+; Label spans the full viewport width so its OWN rect mirror (control.cpp:1785)
+; is the identity and only the per-line placement can move. No other fixture
+; pairs a Label with a direction, so a regression in that swap is invisible
+; everywhere else.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.1, 0.18, 1)
+
+[node name="LtrLeft" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 24.0
+offset_bottom = 64.0
+text = "Wave rift"
+horizontal_alignment = 0
+
+[node name="LtrCenter" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 72.0
+offset_bottom = 112.0
+text = "Wave rift"
+horizontal_alignment = 1
+
+[node name="LtrRight" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 120.0
+offset_bottom = 160.0
+text = "Wave rift"
+horizontal_alignment = 2
+
+[node name="RtlLeft" type="Label" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 200.0
+offset_bottom = 240.0
+text = "Wave rift"
+horizontal_alignment = 0
+
+[node name="RtlCenter" type="Label" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 248.0
+offset_bottom = 288.0
+text = "Wave rift"
+horizontal_alignment = 1
+
+[node name="RtlRight" type="Label" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 296.0
+offset_bottom = 336.0
+text = "Wave rift"
+horizontal_alignment = 2

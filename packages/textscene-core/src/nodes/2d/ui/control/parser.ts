@@ -1,17 +1,21 @@
 /** Base Control parser — layout + theme-override properties shared by all 2D UI nodes. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
+import { unquoteStringName } from '../../../../parser/utils';
 import type { ControlProperties, ControlColor } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
+import { intOr, parseOptionalFloat, parseOptionalVector2, parseHeadingIndex } from '../../../../parser/valueParsers';
+import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-/** Collect `theme_override_<category>/<name> = value` into the four typed maps. */
+/** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
   const constants: Record<string, number> = {};
   const colors: Record<string, ControlColor> = {};
   const fontSizes: Record<string, number> = {};
   const styles: Record<string, string> = {};
+  const icons: Record<string, string> = {};
+  const fonts: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(properties)) {
     const m = key.match(/^theme_override_(\w+)\/(.+)$/);
@@ -36,6 +40,12 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
       case 'styles':
         styles[name!] = value;
         break;
+      case 'icons':
+        icons[name!] = value;
+        break;
+      case 'fonts':
+        fonts[name!] = value;
+        break;
       default:
         break;
     }
@@ -46,7 +56,16 @@ function parseThemeOverrides(properties: Record<string, string>): Partial<Contro
   if (Object.keys(colors).length) out.themeOverrideColors = colors;
   if (Object.keys(fontSizes).length) out.themeOverrideFontSizes = fontSizes;
   if (Object.keys(styles).length) out.themeOverrideStyles = styles;
+  if (Object.keys(icons).length) out.themeOverrideIcons = icons;
+  if (Object.keys(fonts).length) out.themeOverrideFonts = fonts;
   return out;
+}
+
+/** An empty `theme_type_variation` means "no variation", not a variation named "". */
+function parseThemeTypeVariation(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const name = unquoteStringName(value);
+  return name === '' ? undefined : name;
 }
 
 export function parseControl(
@@ -72,6 +91,12 @@ export function parseControl(
   result.offsetRight = parseOptionalFloat(properties.offset_right);
   result.offsetBottom = parseOptionalFloat(properties.offset_bottom);
   result.growHorizontal = parseOptionalFloat(properties.grow_horizontal);
+  // Never left undefined: an unset Control holds INHERITED in Godot too.
+  result.layoutDirection = intOr(
+    properties.layout_direction,
+    LAYOUT_DIRECTION_INHERITED,
+    `${result.name || 'Control'}.layout_direction`
+  );
   result.growVertical = parseOptionalFloat(properties.grow_vertical);
   result.sizeFlagsHorizontal = parseOptionalFloat(properties.size_flags_horizontal);
   result.sizeFlagsVertical = parseOptionalFloat(properties.size_flags_vertical);
@@ -88,7 +113,31 @@ export function parseControl(
   result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
   result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
 
+  // CanvasItem draw-order + sampler properties (mirrors node2d/parser.ts's
+  // z_index/show_behind_parent/light_mask reads: same helpers, same Godot
+  // defaults). Never left undefined — an unset Control has these values in
+  // real Godot too, so the parsed type should not lie about it.
+  result.zIndex = intOr(properties.z_index, 0);
+  result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
+  result.topLevel = boolSlotValue(properties.top_level) === true;
+  result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
+  result.textureFilter = intOr(
+    properties.texture_filter,
+    0,
+    `${result.name || 'Control'}.texture_filter`
+  );
+  result.textureRepeat = intOr(
+    properties.texture_repeat,
+    0,
+    `${result.name || 'Control'}.texture_repeat`
+  );
+
   Object.assign(result, parseThemeOverrides(properties));
+
+  // `theme = ExtResource(...)`/`SubResource(...)` — raw, resolved downstream
+  // the same way `themeOverrideStyles`' refs are (`SubResourceResolver`).
+  if (properties.theme !== undefined) result.theme = properties.theme;
+  result.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
 
   return result;
 }

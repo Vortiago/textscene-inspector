@@ -5,8 +5,12 @@ import type { TscnNode } from '../../../parser/types';
 import { CanvasModulate } from './Component';
 import { parseCanvasModulate } from './parser';
 import { Modulate2DContext, useParentModulate, type RGBA } from '../../../r3f/canvasItemModulate';
-import { YSortZProvider } from '../../../r3f/contexts/YSortContext';
-import { Z_INDEX_STEP } from '../../../r3f/node2dTransform';
+import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
+import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
+
+/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
+  * is meaningful, and spacing them for undeclared layers moved the value. */
+const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 function cmNode(name = 'CM', props: Record<string, string> = {}): TscnNode {
   return {
@@ -42,6 +46,7 @@ function cmGroup(renderer: Awaited<ReturnType<typeof renderCM>>) {
     name: string;
     visible: boolean;
     position: { x: number; y: number; z: number };
+    renderOrder: number;
   };
 }
 
@@ -117,21 +122,24 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  // Base-Node2D parity — z / draw order participates via canvasItemZ(z_index).
-  it('z_index places the subtree at its draw-order z band, not a hardcoded 0', async () => {
+  // Base-Node2D parity — draw order participates via the shared canvas key.
+  it('z_index places the subtree in its own draw-order bucket, not a hardcoded 0', async () => {
     const renderer = await renderCM({ z_index: '5' });
-    expect(cmGroup(renderer).position.z).toBeCloseTo(5 * Z_INDEX_STEP, 5);
+    expect(cmGroup(renderer).renderOrder).toBe(
+      canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 5, sequence: 0 })
+    );
     renderer.unmount();
   });
 
-  // Base-Node2D parity — under a y-sort distributor the rank z (YSortZContext)
-  // IS the draw position, so the subtree sorts like a sprite sibling.
-  it('adopts the y-sort rank z when placed under a distributor', async () => {
-    const rankZ = 0.037;
+  // Base-Node2D parity — the draw sequence a CanvasModulate is handed is the
+  // one every canvas item takes, so it sorts like a sprite sibling would.
+  it('draws at the sequence its enclosing paint range gives it, like any sibling', async () => {
     const renderer = await renderCM({ z_index: '5' }, (kid) => (
-      <YSortZProvider value={rankZ}>{kid}</YSortZProvider>
+      <PaintRangeProvider value={{ base: 37, size: 4 }}>{kid}</PaintRangeProvider>
     ));
-    expect(cmGroup(renderer).position.z).toBeCloseTo(rankZ, 5);
+    expect(cmGroup(renderer).renderOrder).toBe(
+      canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 5, sequence: 37 })
+    );
     renderer.unmount();
   });
 });

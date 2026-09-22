@@ -4,8 +4,7 @@
  * Pins the wire from `SelectionContext.hiddenNodePaths` to the
  * `visible` flag on the per-node wrapping `<group>` in `NodeDispatcher`.
  * Without this, the tree-row eye button toggles only CSS dimming and
- * the corresponding object stays rendered. See `docs/archive/UX-REGRESSIONS.md`
- * §1 and `docs/archive/UX-FLOW-GAPS.md` Gap 1.
+ * the corresponding object stays rendered.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';

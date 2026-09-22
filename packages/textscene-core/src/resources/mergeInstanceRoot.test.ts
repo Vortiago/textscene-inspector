@@ -242,3 +242,45 @@ describe('mergeInstanceRoot', () => {
     expect(mergeInstanceRoot(instanceNode, scene)).toBeNull();
   });
 });
+
+describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
+  it('is false on the merged node even though the instance node it was built from was reliable', () => {
+    // `{ ...root.rawProperties, ...instanceNode.rawProperties }` keeps a
+    // shared key at ROOT's position but the INSTANCE's value, and appends any
+    // instance-only key after every root key — neither file's real order. A
+    // file-order-sensitive resolver must fall back for this node.
+    const instanceNode = node({
+      name: 'Cam',
+      type: 'Node',
+      instance: 'ExtResource("cam_scene")',
+      properties: {},
+      rawProperties: { fov: '42.5' },
+      rawPropertiesOrderReliable: true,
+    });
+    const root = node({
+      name: 'Camera',
+      type: 'Camera3D',
+      properties: { fov: 99, current: true },
+      rawProperties: { fov: '70.0', current: 'true' },
+      rawPropertiesOrderReliable: true,
+    });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+
+    expect(merged!.rawPropertiesOrderReliable).toBe(false);
+  });
+
+  it('is false even on the fallback (no raw props / unregistered root) merge path', () => {
+    const instanceNode = node({
+      name: 'Coin1',
+      type: 'Node',
+      instance: 'ExtResource("2_chew2")',
+      rawPropertiesOrderReliable: true,
+    });
+    const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D' });
+
+    const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
+
+    expect(merged!.rawPropertiesOrderReliable).toBe(false);
+  });
+});

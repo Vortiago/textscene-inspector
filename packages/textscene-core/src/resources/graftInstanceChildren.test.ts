@@ -15,7 +15,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren } from './graftInstanceChildren';
-import type { TscnExternalResource, TscnNode } from '../parser/types';
+import type { SceneScope, TscnNode } from '../parser/types';
 import * as logger from '../logger';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
@@ -76,16 +76,23 @@ describe('graftInstanceChildren', () => {
     expect(frozen[0]!.children[0]!.children).toEqual([]);
   });
 
-  it('stamps the outer resource table onto grafted nodes', () => {
-    // A grafted node's ExtResource ids index the OUTER scene's table, but it
-    // now renders under the sub-scene's provider — where the same id means a
-    // different resource, or nothing at all.
-    const outer: TscnExternalResource[] = [{ id: '3', type: 'Texture2D', path: 'res://a.png' }];
+  it('stamps the outer scene BOTH resource tables onto grafted nodes', () => {
+    // A grafted node's ids index the OUTER scene's tables, but it now renders
+    // under the sub-scene's provider — where the same id means a different
+    // resource, or nothing at all. Both KINDS of id: a node names
+    // `ExtResource("3")` and `SubResource("1")` in the same property block, and
+    // both mean "in the scene I was authored in". Carrying only one resolves
+    // half of them against the right scene, which is the failure `SceneScope`
+    // exists to make unrepresentable.
+    const outer: SceneScope = {
+      externalResources: [{ id: '3', type: 'Texture2D', path: 'res://a.png' }],
+      internalResources: [{ id: '1', type: 'StandardMaterial3D', data: {} }],
+    };
     const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
 
     const grafted = graftInstanceChildren(subScene(), [child], outer);
 
-    expect(grafted[0]!.children[0]!.children[0]!.authoredResources).toBe(outer);
+    expect(grafted[0]!.children[0]!.children[0]!.authoredScope).toBe(outer);
   });
 
   it('re-anchors at a nested instance rather than failing to descend into it', () => {

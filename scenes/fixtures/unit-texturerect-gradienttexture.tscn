@@ -1,0 +1,45 @@
+[gd_scene load_steps=3 format=3 uid="uid://unittexrectgradtex"]
+
+; ONE VARIABLE: a TextureRect whose `texture` is an INLINE GradientTexture2D
+; sub-resource rather than an image file.
+;
+; A TextureRect's texture feeds TWO things — the painted quad AND the node's
+; minimum size, which a VBoxContainer turns into its siblings' positions. The
+; sibling ColorRects above and below are fixed-height markers: when the inline
+; texture resolves, `Below` sits 160 px lower than when it does not, so this
+; scene reports a LAYOUT regression as well as a paint one.
+;
+; Every other TextureRect scene uses an ExtResource image, whose size arrives
+; through the loader cache; that path is untouched by a regression in the
+; inline branch, so none of them can see this.
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.2, 0.2, 1, 0.2, 0.2, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ramp"]
+gradient = SubResource("Gradient_ramp")
+width = 160
+height = 160
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Column" type="VBoxContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 420.0
+offset_bottom = 600.0
+
+[node name="Above" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.15, 0.6, 0.3, 1)
+
+[node name="InlineGradient" type="TextureRect" parent="Column"]
+texture = SubResource("GradientTexture2D_ramp")
+
+[node name="Below" type="ColorRect" parent="Column"]
+custom_minimum_size = Vector2(0, 40)
+color = Color(0.95, 0.85, 0.1, 1)

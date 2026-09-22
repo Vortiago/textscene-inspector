@@ -143,6 +143,14 @@ pixel_size = 0.01
         prop: 'render_priority',
         valid: [5, -10],
       },
+      // Variant::BOOL in Godot (scene/3d/sprite_3d.cpp:677-688, :1019).
+      ...(['centered', 'flip_h', 'flip_v', 'region_enabled', 'double_sided', 'transparent'] as const).map(
+        (prop) => ({
+          prop,
+          valid: [true, false],
+          invalid: [{ value: '"yes"', contains: [prop, 'boolean'] }],
+        })
+      ),
     ]);
   });
 

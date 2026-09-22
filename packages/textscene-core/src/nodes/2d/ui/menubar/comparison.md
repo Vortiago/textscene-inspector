@@ -1,17 +1,18 @@
 ---
 type: MenuBar
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-menu-bar.tscn
 # image: unit-menu-bar
-renders_as: invisible transform-only fallback
+renders_as: one StyleBox + text run per PopupMenu-child title
 ---
 
 # MenuBar
 
 MenuBar is a horizontal strip of menu titles, one per PopupMenu child, that opens the
-matching popup on click. The previewer parses and validates it but does not draw it, so
-it renders as a transform-only fallback and its children still show.
+matching popup on click. The previewer draws each title's `normal` StyleBox (unless
+`flat`) and its text, left to right with `h_separation` between them; the popups
+themselves never open, since a PopupMenu is a Window and this previewer draws no Windows.
 
 ## Linting
 
@@ -32,14 +33,26 @@ Strict parsing format-checks these `MenuBar` properties, plus 53 inherited from 
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all six of MenuBar's own members. `index.ts` reuses
-`parseControl` unchanged, which reads none of them, so a bad value is never read.
-`text_direction` errors outside `-1..3`, since the setter refuses anything else, while
-the inspector hint offers only `0..3`.
+`linterParser.ts` format-checks all six of MenuBar's own members. `parser.ts` reads
+`flat`: a malformed value becomes `false`, with no warning. The other five
+(`start_index`, `switch_on_hover`, `prefer_global_menu`, `text_direction`, `language`)
+are behaviour, not pixels, and stay unread by the render parser. `text_direction` errors
+outside `-1..3`, since the setter refuses anything else, while the inspector hint offers
+only `0..3`.
+
+Each title's text comes from its PopupMenu child's own `title` property when set, else
+its node name — the same fallback `MenuBar::_refresh_menu_names` applies. A title is
+always drawn in Godot's plain "normal" state: `disabled`/`hidden` per menu are runtime-only
+APIs with no serialised property, so a `.tscn` can never author them.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the menu titles. The previewer draws nothing for this node.
+- **Approximated** A menu title's paragraph direction is not applied, so under
+  `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
+  Which end of the bar the titles start from does follow the layout direction.
+- **Not drawn** Opening a menu, hovering a title and the `*_mirrored` hover and
+  pressed StyleBoxes all need a pointer, so none of them appears.

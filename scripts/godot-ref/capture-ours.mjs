@@ -86,7 +86,7 @@ function parseArgs(argv) {
   return args;
 }
 
-export async function captureOurs({ fixture, frame = false, canvas2D = false }) {
+export async function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
   ensureWebBuilt();
   await assertPortFree(PORT, 'PARITY_PORT');
   const { proc, baseUrl } = startPreview(PORT);
@@ -99,7 +99,7 @@ export async function captureOurs({ fixture, frame = false, canvas2D = false }) 
     // nothing derived. `--frame` opts into the previewer's fit-the-bounds mode
     // for a scene too large to read at distance 4, and `ref:godot --frame`
     // mirrors it.
-    const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D });
+    const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
     const page = await context.newPage();
     await gotoFixture(page, baseUrl, fixture, (ms) =>
       console.log(`[ours] no network idle within ${ms}ms`)

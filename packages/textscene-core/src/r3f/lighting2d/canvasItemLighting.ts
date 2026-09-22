@@ -48,12 +48,19 @@
  * alpha mask, not a recolouring. An unlit Light Only panel renders fully
  * transparent, and a lit one at full cookie alpha renders its authored colour.
  *
+ * LIGHT MODE IS A UNIFORM, NOT A VARIANT. Godot picks a shader version per draw;
+ * three bakes its program inputs in at a material's first compile
+ * (`materialProgramInputs.ts`) while a re-parse edits `light_mode` under a MOUNTED
+ * item. So the mode rides `uLightMode`, as "which lights exist" already rides
+ * `uLightClassWeight`.
+ *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
 import type * as THREE from 'three';
+import type { ProgramInjection } from '../materialProgramInputs.js';
 import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types.js';
 import { MAX_LIGHT_CLASSES } from './CanvasLighting2D.js';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
@@ -80,14 +87,19 @@ const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 const CLASS_SLOTS = Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => index);
 
+/**
+ * A `merge` part for `materialProgramInputs()`: the one material prop the
+ * injection forces, and the injection itself as a paired unit.
+ */
 export interface CanvasItemLightingProps {
-  onBeforeCompile?: (shader: {
-    vertexShader: string;
-    fragmentShader: string;
-    uniforms: Record<string, THREE.IUniform>;
-  }) => void;
-  customProgramCacheKey?: () => string;
-  transparent?: boolean;
+  /**
+   * Light Only is an alpha mask, so it must reach the blend. Unconditional
+   * because `transparent` is itself a program input (three's `OPAQUE`) — and
+   * spread LAST, so it overrides an item's own value and the key follows the
+   * merged result rather than the item's.
+   */
+  readonly transparent: true;
+  readonly injection: ProgramInjection;
 }
 
 /**
@@ -106,73 +118,38 @@ export interface CanvasItemLightingUniforms {
   readonly classWeights: THREE.IUniform;
   readonly resolution: THREE.IUniform;
   readonly canvasModulate: THREE.IUniform;
+  /** The item's `CanvasItemLightMode`, which is Godot's own LightMode ordinal. */
+  readonly lightMode: THREE.IUniform;
 }
 
-export interface CanvasItemLightingInput {
-  uniforms: CanvasItemLightingUniforms;
-  lightMode: CanvasItemLightMode;
-}
-
-/**
- * Material props that make an ordinary `meshBasicMaterial` sample the light
- * accumulators. Spread onto the material like the blend state; an item that
- * spreads nothing simply stays unlit, which is what every 3D consumer needs.
- *
- * Returns empty props only for an `Unshaded` item, which Godot excludes from the
- * light loop outright. Everything else compiles the light path whether or not
- * the scene currently has lights — see the note in `onBeforeCompile`.
- */
-export function canvasItemLightingProps(
-  input: CanvasItemLightingInput
-): CanvasItemLightingProps {
-  const { uniforms, lightMode } = input;
-  if (lightMode === CanvasItemLightMode.UNSHADED) return {};
-
-  const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
-  const seed = lightOnly ? 'vec3(1.0)' : 'uCanvasModulate';
-
-  return {
-    customProgramCacheKey: () => `godot-canvas-light-${lightOnly ? 'light-only' : 'normal'}`,
-    // A Light Only item is a mask, so its alpha has to survive to the blend.
-    ...(lightOnly ? { transparent: true } : {}),
-    onBeforeCompile: (shader) => {
-      // Compiled unconditionally, even with no lights in the scene: which lights
-      // exist is DATA, carried by `uLightClassWeight`, not a different program.
-      // Godot's canvas.glsl is shaped the same way: the light loop is always
-      // present and zero lights simply contribute nothing. Making it a
-      // compile-time choice is what left already-mounted items on a stock
-      // shader forever once a light appeared.
-      CLASS_SLOTS.forEach((index) => {
-        shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
-        shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
-      });
-      shader.uniforms.uLightClassWeight = uniforms.classWeights;
-      shader.uniforms.uLightResolution = uniforms.resolution;
-      shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
-
-      shader.fragmentShader = shader.fragmentShader
-        .replace(
-          'void main() {',
-          `${CLASS_SLOTS.map(
+/** Both injections depend only on module constants, so they are built once. */
+const UNIFORM_PREAMBLE = `${CLASS_SLOTS.map(
   (index) =>
     `uniform sampler2D ${lightClassSampler(index)};\nuniform sampler2D ${shadowTintSampler(index)};`
 ).join('\n')}
 uniform float uLightClassWeight[${MAX_LIGHT_CLASSES}];
 uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
+uniform float uLightMode;
 ${TRANSFER_GLSL}
-void main() {`
-        )
-        .replace(
-          '#include <colorspace_fragment>',
-          `{
-  // Every slot this item's light_mask does not select weighs 0, which covers
-  // both a canvas with no light at all and a class this item is culled from.
-  // S is then just the seed its light mode would have started from.
-  vec3 lightSeed = ${seed};
+void main() {`;
+
+/** Midpoints between adjacent LightMode ordinals, so the GLSL never tests equality. */
+const midpoint = (a: number, b: number) => ((a + b) / 2).toFixed(1);
+const ABOVE_NORMAL = midpoint(CanvasItemLightMode.NORMAL, CanvasItemLightMode.UNSHADED);
+const ABOVE_UNSHADED = midpoint(CanvasItemLightMode.UNSHADED, CanvasItemLightMode.LIGHT_ONLY);
+
+const LIGHT_INJECTION = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
+bool lightOnly = uLightMode > ${ABOVE_UNSHADED};
+// canvas.glsl:719 — MODE_UNSHADED skips the canvas tint and the light loop,
+// so the fragment leaves as it arrived.
+if (!unshaded) {
+  // canvas.glsl:713 — Light Only skips the tint; its buffers are seeded to match.
+  vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
+  // Weight 0 covers both "no light on this canvas" and "culled from this class",
+  // leaving S at the seed.
   vec4 accum = vec4(lightSeed, 0.0);
-  // shadow_color is the one light term Godot does NOT multiply by the albedo,
-  // so it accumulates apart and lands after the multiply below.
+  // shadow_color is the one light term Godot does NOT scale by the albedo.
   vec3 shadowTint = vec3(0.0);
   vec2 lightUv = gl_FragCoord.xy / uLightResolution;
 ${CLASS_SLOTS.map(
@@ -183,19 +160,46 @@ ${CLASS_SLOTS.map(
     shadowTint += texture2D(${shadowTintSampler(index)}, lightUv).rgb;
   }`
 ).join('\n')}
-  vec3 lit = godotToSrgb(gl_FragColor.rgb);
-${
-  lightOnly
-    ? `  // Light Only skipped the canvas tint on the CPU, so the fragment IS the
-  // albedo, and the buffers it reads were seeded unmodulated to match.
-  vec3 albedo = lit;
-  gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);`
-    : `  vec3 albedo = lit / max(uCanvasModulate, vec3(${CANVAS_MODULATE_FLOOR}));`
-}
+  // Dividing by the seed IS the tint divide-out: Light Only seeds at 1, where it
+  // is a no-op and the fragment already is the albedo.
+  vec3 albedo = godotToSrgb(gl_FragColor.rgb) / max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}));
+  if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);
   gl_FragColor.rgb = godotToLinear(clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0));
 }
-#include <colorspace_fragment>`
-        );
+#include <colorspace_fragment>`;
+
+/** Constant: the injected source is the same literal for every item. */
+const PROGRAM_CACHE_KEY = 'godot-canvas-light';
+
+/**
+ * Material props that make an ordinary `meshBasicMaterial` sample the light
+ * accumulators. Handed to `materialProgramInputs()` as a merge part; an item
+ * that passes nothing simply stays unlit, which is what every 3D consumer needs.
+ *
+ * The SAME props whatever the light mode, and whether or not the scene has
+ * lights: both are uniforms, not programs (see the module note).
+ */
+export function canvasItemLightingProps(
+  uniforms: CanvasItemLightingUniforms
+): CanvasItemLightingProps {
+  return {
+    transparent: true,
+    injection: {
+      cacheKey: PROGRAM_CACHE_KEY,
+      onBeforeCompile: (shader) => {
+        CLASS_SLOTS.forEach((index) => {
+          shader.uniforms[lightClassSampler(index)] = uniforms.classBuffers[index]!;
+          shader.uniforms[shadowTintSampler(index)] = uniforms.shadowTintBuffers[index]!;
+        });
+        shader.uniforms.uLightClassWeight = uniforms.classWeights;
+        shader.uniforms.uLightResolution = uniforms.resolution;
+        shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
+        shader.uniforms.uLightMode = uniforms.lightMode;
+
+        shader.fragmentShader = shader.fragmentShader
+          .replace('void main() {', UNIFORM_PREAMBLE)
+          .replace('#include <colorspace_fragment>', LIGHT_INJECTION);
+      },
     },
   };
 }

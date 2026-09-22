@@ -17,6 +17,7 @@
  */
 
 import * as THREE from 'three';
+import { pinNoColorSpace } from './canvas2DTextureDecode';
 
 /**
  * What shows where a frame's UVs fall outside the texture.
@@ -36,11 +37,11 @@ import * as THREE from 'three';
  *              the edge texel column stretched — transparent when that column
  *              is transparent, which is why an oversized background region
  *              reads as "the texture, then nothing".
- *   'repeat' — Sprite3D. `SpriteBase3D` draws through
- *              `StandardMaterial3D::get_material_for_2d`, which never clears
- *              `FLAG_USE_TEXTURE_REPEAT`; its default is `true`
- *              (scene/resources/material.cpp), emitting `repeat_enable`. The
- *              overrun tiles.
+ *   'repeat' — Sprite3D, and only where it must. `SpriteBase3D` DERIVES the
+ *              `texture_repeat` it passes to `get_material_for_2d` from the
+ *              frame's own UV corners (`sprite_3d.cpp:163`), so a window inside
+ *              `[0, 1]` clamps and only an overrun tiles. `spriteWrapMode()` is
+ *              that derivation.
  *
  * Required rather than defaulted on purpose: a default is exactly the silent
  * hand-syncing this module exists to prevent.
@@ -51,13 +52,6 @@ const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
   clamp: THREE.ClampToEdgeWrapping,
   repeat: THREE.RepeatWrapping,
 };
-
-export interface SpriteRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 export interface SpriteFrameProps {
   region_enabled: boolean;
@@ -70,35 +64,19 @@ export interface SpriteFrameProps {
 }
 
 /**
- * Whether {@link composeFrameTexture} would window anything for these props —
- * false when the frame is the whole image (no region, no atlas cell, no
- * sprite-sheet grid).
- *
- * Callers use this to skip composition and draw the source texture directly:
- * cloning is not free even though it shares the pixel `Source`, because
- * `Texture.copy` marks `needsUpdate`, which bumps the shared Source's version
- * and forces the GPU to re-upload the pixel buffer — per mount, and per
- * keyframe when an animation drives the frame. For a cached procedural texture
- * that re-upload is exactly what `proceduralTextureCache` exists to prevent.
- * A borrowed texture keeps its own wrap mode where composition would set the
- * sampler's; with the whole image mapped, UVs stay inside [0, 1] and wrap
- * never applies, so nothing observable differs. Callers that mutate the
- * result (Sprite3D's UV flips) must still clone.
- */
-export function needsFrameComposition(props: SpriteFrameProps, atlasRegion?: SpriteRect): boolean {
-  return (
-    atlasRegion !== undefined ||
-    Boolean(props.region_enabled && props.region_rect) ||
-    props.hframes > 1 ||
-    props.vframes > 1
-  );
-}
-
-/**
  * Clone the loaded texture and window its UVs to the current frame
  * (region_rect and/or sprite-sheet grid). The clone is essential: `useResource`
  * returns the same THREE.Texture reference to every consumer of a given path,
  * so mutating in place would clobber other sprites' repeat/offset state.
+ *
+ * `colorSpace` is required rather than inherited from the source texture for
+ * the same reason `wrap` is (see `SpriteWrapMode`'s own comment): Sprite2D's
+ * 2D canvas and Sprite3D's 3D billboard sample through Godot's two different
+ * filtering rules (`r3f/canvas2DTextureDecode.ts`) — Sprite2D passes
+ * `THREE.NoColorSpace` (paired with `useCanvasDecodeDefines` at its own
+ * material), Sprite3D passes `THREE.SRGBColorSpace` to keep its current,
+ * already-correct hardware decode. A default here is exactly the silent
+ * hand-syncing this module exists to prevent.
  *
  * Returns undefined when no texture is loaded yet.
  */
@@ -106,26 +84,24 @@ export function composeFrameTexture(
   texture: THREE.Texture | undefined,
   props: SpriteFrameProps,
   wrap: SpriteWrapMode,
-  atlasRegion?: SpriteRect
+  colorSpace: THREE.ColorSpace
 ): THREE.Texture | undefined {
   if (!texture) return undefined;
 
-  const baseRect = baseRectFor(props, atlasRegion);
-  // An empty intersection is Godot's "draw nothing": `get_rect_region` returns
-  // false and the draw is skipped. Decided before the clone so the discarded
-  // frame costs no GPU texture.
-  if (baseRect === null) return undefined;
-
   const cloned = texture.clone();
+  // `pinNoColorSpace` when the caller wants NoColorSpace: a plain assignment
+  // loses to `@react-three/fiber`'s own auto sRGB-tagging the moment this
+  // clone reaches a `map` JSX prop (see that function's doc comment).
+  // SRGBColorSpace needs no pin — it's what that auto-tagging already forces.
+  if (colorSpace === THREE.NoColorSpace) {
+    pinNoColorSpace(cloned);
+  } else {
+    cloned.colorSpace = colorSpace;
+  }
   cloned.wrapS = WRAP[wrap];
   cloned.wrapT = WRAP[wrap];
 
-  if (baseRect) {
-    applyRegionRect(cloned, baseRect);
-  }
-  if (props.hframes > 1 || props.vframes > 1) {
-    applySpritesheetUV(cloned, props);
-  }
+  windowFrameUv(cloned, props);
 
   cloned.needsUpdate = true;
   return cloned;
@@ -138,66 +114,69 @@ export function composeFrameTexture(
  */
 export function frameSizePx(
   texture: THREE.Texture | undefined,
-  props: SpriteFrameProps,
-  atlasRegion?: SpriteRect
+  props: SpriteFrameProps
 ): { width: number; height: number } {
   const image = texture?.image as { width?: number; height?: number } | undefined;
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
-  let pxW = atlasRegion?.width ?? image?.width ?? 1;
-  let pxH = atlasRegion?.height ?? image?.height ?? 1;
+  let pxW = image?.width ?? 1;
+  let pxH = image?.height ?? 1;
   if (props.region_enabled && props.region_rect && image?.width && image.height) {
-    // The CLIPPED rect, so the quad matches the pixels that survive the atlas
-    // clip — otherwise the cell's content stretches over a quad Godot never
-    // draws that big. Null (no overlap) draws nothing, so any size will do.
-    const clipped = baseRectFor(props, atlasRegion) ?? props.region_rect;
-    pxW = clipped.width;
-    pxH = clipped.height;
+    pxW = props.region_rect.width;
+    pxH = props.region_rect.height;
   }
   return { width: pxW / H, height: pxH / V };
 }
 
 /**
- * The rect UVs window to, in SHEET pixels: the sprite's own region (translated
- * into the atlas cell and clipped to it when there is one), else the cell, else
- * undefined for a full-image sprite. Null means the sprite's region misses the
- * cell entirely — Godot draws nothing.
- *
- * The clip is the one place an AtlasTexture differs from a plain Texture2D:
- * `get_rect_region` intersects the source rect with the cell
- * (`src_clipped = _get_region_rect().intersection(src)`,
- * `scene/resources/atlas_texture.cpp:204`) and bails when that is empty, while a
- * plain texture's oversized region is passed through untouched and simply runs
- * its UVs past 1.0 (see `SpriteWrapMode`). Without it a sprite would sample its
- * neighbours' cells.
+ * The offset/repeat pair the frame math writes, and the image it needs to do
+ * it. `THREE.Texture` satisfies it structurally, so `spriteWrapMode()` can run
+ * the SAME two helpers over a throwaway window rather than a second
+ * implementation that could drift from the one that draws.
  */
-function baseRectFor(
-  props: SpriteFrameProps,
-  atlasRegion: SpriteRect | undefined
-): SpriteRect | undefined | null {
-  if (!props.region_enabled || !props.region_rect) return atlasRegion;
-  if (!atlasRegion) return props.region_rect;
-  const translated = {
-    x: atlasRegion.x + props.region_rect.x,
-    y: atlasRegion.y + props.region_rect.y,
-    width: props.region_rect.width,
-    height: props.region_rect.height,
+interface UvWindow {
+  offset: THREE.Vector2;
+  repeat: THREE.Vector2;
+  /** `unknown`, as three types it — narrowed where the dimensions are read. */
+  image: unknown;
+}
+
+/**
+ * Godot's `texture_repeat` (`sprite_3d.cpp:163`): REPEAT only where the frame's
+ * UV window leaves `[0, 1]`, on strict `< 0` / `> 1` tests. flip_h/flip_v swap
+ * the uv pairs and hand the test the other diagonal of the same bounding box,
+ * so they cannot change the answer; and our v-window is Godot's mirrored about
+ * 0.5, which the `min < 0 || max > 1` pair is symmetric under.
+ */
+export function spriteWrapMode(
+  texture: THREE.Texture | undefined,
+  props: SpriteFrameProps
+): SpriteWrapMode {
+  if (!texture) return 'clamp';
+  const window: UvWindow = {
+    offset: new THREE.Vector2(0, 0),
+    repeat: new THREE.Vector2(1, 1),
+    image: texture.image,
   };
-  return intersectRects(atlasRegion, translated);
+  windowFrameUv(window, props);
+  const outside = (min: number, size: number): boolean => min < 0 || min + size > 1;
+  return outside(window.offset.x, window.repeat.x) || outside(window.offset.y, window.repeat.y)
+    ? 'repeat'
+    : 'clamp';
 }
 
-/** Rect intersection; null when empty (Godot's `Rect2::intersection` + its zero-size test). */
-function intersectRects(a: SpriteRect, b: SpriteRect): SpriteRect | null {
-  const x = Math.max(a.x, b.x);
-  const y = Math.max(a.y, b.y);
-  const right = Math.min(a.x + a.width, b.x + b.width);
-  const bottom = Math.min(a.y + a.height, b.y + b.height);
-  if (!(right > x) || !(bottom > y)) return null;
-  return { x, y, width: right - x, height: bottom - y };
+/** The region-then-frame-grid composition, on anything carrying a UV window. */
+function windowFrameUv(target: UvWindow, props: SpriteFrameProps): void {
+  if (props.region_enabled && props.region_rect) {
+    applyRegionRect(target, props.region_rect);
+  }
+  if (props.hframes > 1 || props.vframes > 1) {
+    applySpritesheetUV(target, props);
+  }
 }
 
-function applySpritesheetUV(texture: THREE.Texture, props: SpriteFrameProps): void {
+function applySpritesheetUV(texture: UvWindow, props: SpriteFrameProps): void {
   const H = Math.max(1, props.hframes);
   const V = Math.max(1, props.vframes);
 
@@ -227,7 +206,7 @@ function applySpritesheetUV(texture: THREE.Texture, props: SpriteFrameProps): vo
 }
 
 function applyRegionRect(
-  texture: THREE.Texture,
+  texture: UvWindow,
   rect: { x: number; y: number; width: number; height: number }
 ): void {
   const image = texture.image as { width?: number; height?: number } | undefined;

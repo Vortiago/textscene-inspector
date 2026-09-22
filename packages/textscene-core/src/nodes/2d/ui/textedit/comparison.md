@@ -1,17 +1,20 @@
 ---
 type: TextEdit
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-text-edit.tscn
 # image: unit-text-edit
-renders_as: invisible transform-only fallback
+renders_as: a multi-line text box
 ---
 
 # TextEdit
 
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
-parses and validates it but does not draw it, so it renders as a transform-only fallback
-and its children still show.
+draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
+`wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
+and the `draw_tabs`/`draw_spaces` control-character glyphs — a still frame with no
+selection or IME. The one caret a still frame can carry is the
+`caret_draw_when_editable_disabled` one, which draws without focus.
 
 ## Linting
 
@@ -73,14 +76,53 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered base
-parser reuses `parseControl` unchanged and reads none of them, so strict and lenient
-agree on every key.
+`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered lenient
+parser reads 13 of them — `text`, `placeholder_text`, `editable`, `wrap_mode`,
+`autowrap_mode`, `draw_tabs`, `draw_spaces`, `highlight_current_line`,
+`scroll_fit_content_width`, `scroll_fit_content_height`, `minimap_draw`,
+`minimap_width`, `syntax_highlighter` — the subset a static frame's picture
+depends on. A malformed `wrap_mode`/`autowrap_mode`/`minimap_width` reads as
+unset (NONE/WORD_SMART/80); a malformed boolean reads as `false`.
+`scroll_horizontal`/`scroll_vertical` are parsed by the strict linter but never
+read here: both are forced back to `(0, 0)` on the very first draw, since caret
+0 always sits at (line 0, column 0) and nothing in a `.tscn` can move it
+(`nativeSolver.ts`'s own doc has the full trace).
+
+`syntax_highlighter` resolves in this node's own scope
+(`resources/useSubOrExtResource.ts`, `solveNode.resources` — never
+`useSceneResources()`): a `CodeHighlighter` sub-resource or `.tres` decodes
+through `resources/styles/codehighlighter/`, and its `_get_line_syntax_highlighting_impl`
+line scanner (`highlight.ts`) colours every buffer line, one `<TextRun>` per
+colour run. Anything else the property could name — absent, unresolved, or a
+custom `SyntaxHighlighter` script — paints at the plain `font_color`.
+
+`indent_size` (`CodeEdit` only, `set_tab_size`) re-aligns every tab glyph to a
+repeating stop `indent_size` space-widths wide (`nativeSolver.ts`'s
+`textEditTabStopsPx`); a bare `TextEdit` has no `.tscn` property for it and
+always shapes at the class default of 4.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the editor and its text. The previewer draws nothing for
-  this node.
+- **Not drawn** No selection, IME composition, brace-match underline,
+  word-highlight box, search-result box, minimap or scrollbars — every one needs
+  interaction state a static `.tscn` cannot carry, or (scrollbars) a Control type
+  that cannot itself appear in a `.tscn`. The caret draws only under
+  `caret_draw_when_editable_disabled`, which is the one path that survives an
+  unfocused frame.
+- **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
+  at an unscaled size and a row-centred vertical offset, not Godot's own
+  ascent-relative one (`Component.tsx`'s own doc).
+- **Not drawn** The RTL branches that need pointer, caret or selection state: the
+  mouse mirror (text_edit.cpp:2241,2516,4956), the hit tests (:5024,8213-8215), the
+  empty-line caret (:1781) and the end-of-line selection rect (:1517). Each row's
+  own trailing-edge origin (:1490-1494) and the current-line highlight's side
+  (:1404-1409) draw.
+- **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
+  per-line background rect's (:1396-1400): neither feature is drawn at all.
+- **Not drawn** `shaped_text_set_direction` at :3340,3396,3732,3761: it takes
+  `is_layout_rtl()` only while `text_direction` is INHERITED, and the default is
+  `TEXT_DIRECTION_AUTO` (text_edit.h:327).

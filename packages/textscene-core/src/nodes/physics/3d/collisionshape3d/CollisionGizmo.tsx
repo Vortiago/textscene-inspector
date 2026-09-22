@@ -19,6 +19,7 @@ import { decodeCapsuleShape3D } from '../../../../resources/shapes/capsuleshape3
 import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d';
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
 import { warn } from '../../../../logger';
+import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
 
 interface CollisionGizmoProps {
   shape: TscnInternalResource;
@@ -28,13 +29,14 @@ interface CollisionGizmoProps {
 
 export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   const data = shape.data as Record<string, string>;
+  const wire = wireGizmoProgram(color);
   switch (shape.type) {
     case 'BoxShape3D': {
       const { size } = decodeBoxShape3D(data);
       return (
         <mesh>
           <boxGeometry args={[size.x, size.y, size.z]} />
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
     }
@@ -45,7 +47,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
           {/* Godot's `height` spans the whole capsule; three's `length` is only
               the cylindrical section between the two hemispheres. */}
           <capsuleGeometry args={[radius, height - radius * 2, 4, 16]} />
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
     }
@@ -53,7 +55,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       return (
         <mesh>
           <sphereGeometry args={[decodeSphereShape3D(data).radius, 16, 12]} />
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
     case 'CylinderShape3D': {
@@ -61,7 +63,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       return (
         <mesh>
           <cylinderGeometry args={[radius, radius, height, 16]} />
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
     }
@@ -74,7 +76,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       return (
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial key={wire.key} {...wire.props} />
         </mesh>
       );
   }
@@ -88,10 +90,11 @@ function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Co
     geom.computeVertexNormals();
     return geom;
   }, [data]);
+  const wire = wireGizmoProgram(color);
   if (data.length < 9) return null;
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color={color} wireframe />
+      <meshBasicMaterial key={wire.key} {...wire.props} />
     </mesh>
   );
 }
@@ -122,10 +125,11 @@ function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.
     };
   }, [points]);
 
+  const wire = wireGizmoProgram(color);
   if (!geometry) return null;
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color={color} wireframe />
+      <meshBasicMaterial key={wire.key} {...wire.props} />
     </mesh>
   );
 }

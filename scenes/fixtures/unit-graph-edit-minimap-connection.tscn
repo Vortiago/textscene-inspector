@@ -1,0 +1,61 @@
+; GraphEdit whose minimap draws a connection polyline at the DEFAULT
+; antialiasing. `GraphEditMinimap` redraws every connection inside its own
+; panel with `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`
+; (graph_edit.cpp:1611) — the only reader of `connection_lines_antialiased`
+; anywhere in the engine (graph_edit.h:254, default true). At width 0.5 the
+; antialiased branch adds a feather of FEATHER_SIZE * width = 0.625px on each
+; side plus a cap at each end (renderer_canvas_cull.cpp:1030-1163), which is
+; most of the line's drawn area at that width.
+; unit-graph-edit.tscn is the only other scene carrying a `connections` entry
+; and it sets `connection_lines_antialiased = false`, so the feathered branch
+; is drawn in no other fixture — and a previewer that ignored the property
+; would score identically on both files while drawing one of them wrong.
+; Two GraphNodes, one right port and one left port, are the minimum a
+; resolvable connection needs; the rest of the file is this family's shared
+; GraphEdit rect.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode,
+; and `scroll_offset` is deliberately ABSENT from all but
+; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
+; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
+; child has widened while a scene's properties are applied (graph_edit.cpp:407),
+; so an authored offset moves the grid, the nodes AND the minimap camera at once
+; and would mask the one variable each file exists to move.
+[gd_scene load_steps=1 format=3 uid="uid://unitgraphedminiconn"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+connections = [{ "from_node": &"Source", "from_port": 0, "to_node": &"Sink", "to_port": 0, "keep_alive": true }]
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+slot/0/right_enabled = true
+slot/0/right_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"
+
+[node name="Sink" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(220, 56)
+title = "Print"
+slot/0/left_enabled = true
+slot/0/left_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Result" type="Label" parent="Graph/Sink"]
+layout_mode = 2
+text = "Result"

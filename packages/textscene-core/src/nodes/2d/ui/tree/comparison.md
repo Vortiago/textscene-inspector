@@ -1,17 +1,20 @@
 ---
 type: Tree
 category: 2D
-status: unimplemented
+status: unreviewed
 fixture: unit-tree.tscn
 # image: unit-tree
-renders_as: invisible transform-only fallback
+renders_as: an empty panel, with a blank header row when column_titles_visible
 ---
 
 # Tree
 
 Tree is the hierarchical multi-column list Control, built from TreeItem objects at
-runtime. The previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+runtime. A `.tscn` Tree never carries any `TreeItem` — they, and every column's title
+text, exist only when a script creates them — so the previewer draws exactly the `panel`
+StyleBox plus, when `column_titles_visible`, one blank-titled header cell per column.
+That empty panel IS the whole truth of such a scene, not a limitation short of one. A
+right-to-left Tree mirrors each header cell inside its own width (`tree.cpp:5158-5160`).
 
 ## Linting
 
@@ -42,14 +45,26 @@ Strict parsing format-checks these `Tree` properties, plus 53 inherited from Con
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 16 of Tree's own members. There is no `parser.ts`,
-and `parseControl` reads none of these keys, so strict and lenient agree on every
-property. Rows and cells are created by script and never reach the `.tscn`.
+`linterParser.ts` format-checks all 16 of Tree's own members. The registered lenient
+parser reads 2 — `columns` and `column_titles_visible`, the only two this previewer's
+picture depends on. A malformed `columns` reads as unset (1); every other property is
+format-checked by the strict linter but never read here, since none of them changes what
+an item-less Tree draws. Rows and cells are created by script and never reach the
+`.tscn`.
 
 ## Known limitations
 
 - **Not drawn** Godot draws the rows, columns and fold arrows. The previewer draws
   nothing for this node.
+- **Approximated** Right-to-left SHAPING. Each column title's paragraph direction follows
+  `is_layout_rtl()` (`tree.cpp:2155`), and this previewer has no bidi pass. No title is
+  ever serialised, so the header cells are blank either way and nothing of it shows.
+- **Needs runtime** Godot's right-to-left arms of `get_column_at_position`
+  (`tree.cpp:6426`), `get_drop_section_at_position` (`:6458`), `get_item_at_position`
+  (`:6508`) and `get_tooltip` (`:6568`) answer mouse hits, and `gui_input` swaps the
+  `ui_left`/`ui_right` actions (`:3794,3812`). All of them need a live cursor or
+  keyboard, which a static preview has none of.

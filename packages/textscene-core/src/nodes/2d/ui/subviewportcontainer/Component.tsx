@@ -1,264 +1,340 @@
 /**
- * `<SubViewportContainer>` — the **viewport surface** (ADR-0030): the one place
- * a sub-viewport's canvas subtree is drawn.
+ * `<SubViewportContainer>` — the native (WebGL canvas) painter for
+ * `SubViewportContainer` (ADR-0033).
  *
- * Godot draws EVERY `SubViewport` child, stacked in tree order, and sizes each
- * drawn rect from `stretch` (`subviewport_container.cpp`):
+ * Godot draws EVERY `SubViewport` child, stacked in tree order, sized from
+ * `stretch` (see `ViewportSurfaceNative` below for the exact rule). Every
+ * sub-viewport kind (3D, 2D-world, and the native Control-raster pass,
+ * `../../viewport/subviewport/ControlRasterPass.tsx`) publishes a
+ * `ViewportTextureEntry` whose `texture` this painter samples DIRECTLY on a
+ * `<ControlQuad>`, with no CPU round trip.
  *
- *   stretch  → draw_texture_rect(tex, Rect2(Vector2(), get_size()))
- *   !stretch → draw_texture_rect(tex, Rect2(Vector2(), c->get_size()))
+ * CYCLE FALLBACK. This painter samples its nested viewport's target through
+ * `useViewportTargetSlot` — the SAME choke point every other ViewportTexture
+ * consumer shares (`resources/textures/viewporttexture/useViewportTextureSlot.ts`),
+ * called with its target's PATH directly rather than through a SubResource ref
+ * (a nested `<SubViewport>` names no ref; this painter already knows the path).
+ * A cyclic target (the ordered pass driver, `ViewportPassRegistryContext.tsx`,
+ * found this viewport's own dependency chain unsatisfiable — two viewports
+ * each depending, directly or transitively, on the other's target) reports
+ * `texture: null, cyclic: true` rather than the published entry's raw,
+ * never-written texture: this painter renders the SAME outline
+ * `<ControlFallback>` draws for an unregistered type, since "this viewport's
+ * content is not available" is the same visible fact a missing painter
+ * reports. Passed `warnAs: null` — the driver's own cycle-detection effect
+ * already logs the offending path once, so this painter does not warn a
+ * second time.
  *
- * so with `stretch` off the surface is the SUB-VIEWPORT's size, not the
- * container's — the container rect does not size the content. With it on, the
- * viewport is first resized to `get_size() / stretch_shrink`, so content lays
- * out against the smaller rect and is scaled back up to fill the container.
+ * Also republishes the STRETCHING container's forced rect
+ * (`ViewportRectContext`), the return leg of ADR-0033's seam: with `stretch`
+ * on, Godot resizes the sub-viewport to `get_size() / stretch_shrink`
+ * (`recalc_force_viewport_sizes`), and the solved `rect` this painter already
+ * receives from the Control layout solver IS that container rect — no extra
+ * measurement round trip needed.
  *
- * Clipping is a CONSEQUENCE, not an operation: the container issues no clip,
- * but the render target is only `size` pixels, so anything outside it was never
- * rendered. That is why `overflow: hidden` belongs on the surface and never on
- * the container — a surface may legitimately overflow the container's own box,
- * since Godot Controls clip only with `clip_contents`.
- *
- * Content arrives on two arms, because a viewport target has two kinds of
- * source and the previewer draws them in different technologies:
- *
- *  - **Controls** render straight into the surface as DOM, which is both
- *    cheaper and sharper than going through pixels.
- *  - **2D-world and 3D** content has no DOM form at all. `<SubViewport>`
- *    renders it into an offscreen target and publishes
- *    `ViewportTextureEntry.readPixels`; the surface snapshots that into a
- *    `<canvas>` stacked underneath the Control arm. A viewport with neither
- *    (or one whose target has not rendered yet) keeps the correctly sized,
- *    cleared, empty surface rather than showing something wrong.
+ * TINT. `NOTIFICATION_DRAW` composites each child viewport with a plain
+ * `draw_texture_rect(c->get_texture(), rect)` — no explicit colour argument —
+ * but every `CanvasItem` draw call is tinted by the item's own
+ * `modulate`/`self_modulate` at the rendering-server level
+ * (`RenderingServer::canvas_item_set_modulate`/`_self_modulate`), the same
+ * mechanism a `ColorRect` or `TextureRect`'s draw calls go through. Measured
+ * on a scratch fixture through Godot 4.6.3 (see `comparison.md`'s Item 2
+ * row): a `ColorRect(0.8, 0.8, 0.8)` filling the sub-viewport reads rgb(204)
+ * with no tint, rgb(102) with `self_modulate = Color(0.5, 0.5, 0.5, 1)`
+ * (204 × 0.5 exactly), and rgb(51) with an ANCESTOR `modulate = Color(0.5,
+ * 0.5, 0.5, 1)` on top of that same `self_modulate` (204 × 0.5 × 0.5 exactly)
+ * — a plain multiply in the same sRGB-authored space the content colour
+ * lives in, confirming this painter should fold tint exactly the way every
+ * other native painter does: the walker's `tint` prop. One value for the whole
+ * container (Godot's `self_modulate` is one CanvasItem property, shared by
+ * every child viewport's `draw_texture_rect` call in the same
+ * `NOTIFICATION_DRAW`), handed on to every `ViewportSurfaceNative`.
  */
+import { useEffect, useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
+import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
+import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
+import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
+import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';
+import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
+import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
+import { joinPath } from '../../../../utils/nodePath.js';
+import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
+import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
+import { useViewportContentKind } from '../../../viewport/subviewport/useViewportContentKind.js';
+import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
+import type { SubViewportContainerProperties } from './types.js';
+import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { ControlParentProvider, useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlLayoutStyle } from '../../../../r3f/controls/controlLayout';
-import { ControlDispatcher } from '../../../../r3f/controls/ControlDispatcher';
-import { useViewportTexture } from '../../../../r3f/contexts/ViewportTextureContext';
-import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext';
-import { joinPath } from '../../../../utils/nodePath';
-import type { TscnNode } from '../../../../parser/types';
-import type { SubViewportProperties } from '../../../viewport/subviewport/types';
-import { BLIT_ATTEMPTS, BLIT_INTERVAL_MS, encodeTargetPixels } from './viewportBlit';
-import type { SubViewportContainerProperties } from './types';
+const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
-/**
- * Godot's `rendering/environment/defaults/default_clear_color` — what an
- * opaque render target clears to. Measured off a Godot 4.6.3 render of a
- * stretching container whose content did not cover the whole target.
- */
-const DEFAULT_CLEAR_COLOR = 'rgb(77, 77, 77)';
-
-/**
- * Stretched to the surface's own box, which IS the drawn rect: Godot's
- * `draw_texture_rect(c->get_texture(), Rect2(Vector2(), …))` scales the target
- * to whichever rect `stretch` selected, so the surface's sizing rules apply to
- * the pixels without this element repeating any of them. Absolute so it takes
- * no part in the layout of the Control arm above it.
- */
-const PIXELS_STYLE: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  width: '100%',
-  height: '100%',
-};
-
-/**
- * The pixel arm of a surface: the sub-viewport's offscreen target, snapshotted
- * into a `<canvas>`.
- *
- * Nothing is painted until a snapshot actually arrives. `readPixels` returns
- * null while the target has not rendered — which is the state at mount, since
- * the offscreen pass runs on the R3F frame loop and the DOM overlay commits
- * first — and painting anything at all before then is what tearing would look
- * like here. An unpainted canvas is fully transparent, so the surface's clear
- * colour shows through and the first real frame replaces it in one go.
- *
- * `readPixels()` is a synchronous GPU stall, so the schedule is bounded and
- * one-shot rather than per-frame (`viewportBlit.ts`). It re-arms on a new
- * target (a resized sub-viewport, a remounted publisher) and on a fresh parse
- * handing this surface a new node object — a hot-reload edit inside the
- * sub-viewport keeps the same target, so the entry alone would not notice it.
- */
-function ViewportPixels({ viewport, path }: { viewport: TscnNode; path: string }) {
-  const entry = useViewportTexture(path);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const readPixels = entry?.readPixels;
-  const width = entry?.size.x ?? 0;
-  const height = entry?.size.y ?? 0;
-
-  useEffect(() => {
-    if (!readPixels || width <= 0 || height <= 0) return undefined;
-    let attempts = 0;
-
-    const paint = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      // Null is "no frame yet", never "rendered empty" — leave the previous
-      // paint (or the bare clear colour) standing and try again.
-      const image = readPixels();
-      if (!image) return;
-      const context = canvas.getContext('2d');
-      // No 2D context at all (happy-dom, a lost context): the surface stays on
-      // its DOM arm, which is the same outcome as an unpublished target.
-      if (!context) return;
-      context.putImageData(encodeTargetPixels(image), 0, 0);
-    };
-
-    // The earliest moment the target can hold a frame is after the first
-    // animation frame, which is also the R3F loop's own tick.
-    const frame = requestAnimationFrame(paint);
-    const timer = setInterval(() => {
-      paint();
-      if (++attempts >= BLIT_ATTEMPTS) clearInterval(timer);
-    }, BLIT_INTERVAL_MS);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      clearInterval(timer);
-    };
-  }, [readPixels, width, height, viewport]);
-
-  if (!entry) return null;
-  return (
-    <canvas
-      ref={canvasRef}
-      data-viewport-pixels="true"
-      width={width}
-      height={height}
-      style={PIXELS_STYLE}
-    />
-  );
-}
-
-/**
- * Publish the rect a STRETCHING container forces onto its sub-viewport, so the
- * offscreen pass lays content out against the same number Godot does.
- *
- * `recalc_force_viewport_sizes` runs `set_size_force(get_size() / stretch_shrink)`
- * and returns early when `stretch` is off — so this measures only while it is
- * on, and publishes nothing otherwise. That asymmetry is also what keeps the
- * measurement from feeding back on itself: with `stretch` off the surface is
- * sized FROM the authored `size`, and measuring it to set the size would be a
- * loop; with it on the surface is sized by the container's own layout, which
- * the target has no influence over.
- *
- * The surface element already IS `get_size() / stretch_shrink`: the shrink
- * divides its percentage width and a `scale()` puts it back, and `offsetWidth`
- * reports the pre-transform box. `Math.round` because a render target is an
- * integer number of pixels and Godot's `Size2i` is too.
- */
-function useForcedViewportRect(path: string, stretch: boolean) {
-  const registerViewportRect = useRegisterViewportRect();
-  const [element, setElement] = useState<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!element || !stretch) return undefined;
-    let release: (() => void) | undefined;
-    const publish = () => {
-      const x = Math.max(1, Math.round(element.offsetWidth));
-      const y = Math.max(1, Math.round(element.offsetHeight));
-      // Register without releasing, so an unchanged measurement keeps the
-      // registry's map identity (the transfer contract is on RegisterViewportRect).
-      release = registerViewportRect(path, { x, y });
-    };
-    publish();
-    // happy-dom and any non-layout host have no ResizeObserver; the one-shot
-    // measurement above still stands, which is all a test can observe anyway.
-    if (typeof ResizeObserver === 'undefined') return () => release?.();
-    const observer = new ResizeObserver(publish);
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-      release?.();
-    };
-  }, [element, stretch, path, registerViewportRect]);
-
-  return setElement;
-}
-
-/** One sub-viewport's drawn rect, as an absolutely-clipped surface. */
-function ViewportSurface({
-  viewport,
-  path,
-  stretch,
-  shrink,
-}: {
+interface ViewportSurfaceNativeProps {
   viewport: TscnNode;
   path: string;
+  containerRect: Rect2;
   stretch: boolean;
   shrink: number;
-}) {
-  const props = viewport.properties as SubViewportProperties;
-  const size = props.size ?? { x: 512, y: 512 };
-  const surfaceRef = useForcedViewportRect(path, stretch);
+  renderOrder: number;
+  /** Forwarded to `<ControlFallback>` on the cycle branch — see `NativeControlComponentProps.effectiveZ`. */
+  effectiveZ: number;
+  theme: NativeControlComponentProps['theme'];
+  measureText: NativeControlComponentProps['measureText'];
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
+  /** The container's own painter tint, shared by every nested viewport's composited quad. */
+  tint: NativeControlComponentProps['tint'];
+  /**
+   * The CONTAINER's own `is_layout_rtl()`. The climb casts each ancestor to
+   * `Control`, then to `Window`, then takes `get_parent()`
+   * (`control.cpp:3584-3598`); a `SubViewport` is a `Viewport` and neither, so
+   * it is stepped over and this container is what the viewport's own Controls
+   * inherit from.
+   */
+  rtl: boolean;
+}
 
-  const style: CSSProperties = {
-    position: 'relative',
-    // The render target is only `size` pixels — content beyond it was never
-    // rendered, so the clip belongs here rather than on the container.
-    overflow: 'hidden',
-    ...(props.transparent_bg ? {} : { backgroundColor: DEFAULT_CLEAR_COLOR }),
-    ...(stretch
-      ? {
-          // Fills the container's rect. With a shrink the content lays out
-          // against rect/shrink and is scaled back up, mirroring
-          // `set_size_force(get_size() / shrink)`.
-          width: shrink > 1 ? `${100 / shrink}%` : '100%',
-          height: shrink > 1 ? `${100 / shrink}%` : '100%',
-          ...(shrink > 1 ? { transform: `scale(${shrink})`, transformOrigin: 'top left' } : {}),
-        }
-      : { width: `${size.x}px`, height: `${size.y}px` }),
-  };
+/**
+ * One nested `SubViewport`'s surface: the pixel arm (a quad sampling its
+ * published texture, or the cycle/unpublished fallback) plus the Controls
+ * arm (its own direct Control children, drawn live to composite a MIXED
+ * 3D/2D-plus-Controls viewport's Controls on top, since the offscreen pass only
+ * ever renders one non-Control content kind — a Control-ONLY viewport is
+ * already whole in the texture, and drawing it live too would composite it
+ * twice).
+ */
+function ViewportSurfaceNative({
+  viewport,
+  path,
+  containerRect,
+  stretch,
+  shrink,
+  renderOrder,
+  effectiveZ,
+  theme,
+  measureText,
+  externalResources,
+  internalResources,
+  tint,
+  rtl,
+}: ViewportSurfaceNativeProps) {
+  const props = viewport.properties as SubViewportProperties;
+  const authoredSize = props.size ?? { x: 512, y: 512 };
+
+  // With `stretch` off each viewport draws at its OWN size, anchored at the
+  // container's top-left (Godot never offsets successive children); with it
+  // on every viewport fills the container's rect instead — the container
+  // rect does not size the content otherwise.
+  // `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) is
+  // `set_size_force(get_size() / shrink)`, and `set_size_force` takes a
+  // `Size2i` — the `Vector2::operator Vector2i` conversion (`vector2.cpp:213`)
+  // TRUNCATES, so a fractional container rect loses the remainder rather than
+  // rounding up. Divided from the raw rect, not from a pre-rounded width, or
+  // the truncation happens one step too late.
+  const forcedSize = useMemo(
+    () => ({
+      // A zero-pixel render target is not allocatable, so the floor is ours;
+      // Godot has no such content to draw either way.
+      x: Math.max(1, Math.trunc(containerRect.w / shrink)),
+      y: Math.max(1, Math.trunc(containerRect.h / shrink)),
+    }),
+    [containerRect.w, containerRect.h, shrink]
+  );
+
+  // With `stretch` off each viewport draws at its OWN size, anchored at the
+  // container's top-left; with it on the forced size above is the target.
+  const width = stretch ? forcedSize.x * shrink : Math.max(1, Math.round(authoredSize.x));
+  const height = stretch ? forcedSize.y * shrink : Math.max(1, Math.round(authoredSize.y));
+
+  const registerViewportRect = useRegisterViewportRect();
+  useEffect(() => {
+    if (!stretch) return undefined;
+    return registerViewportRect(path, forcedSize);
+  }, [registerViewportRect, path, stretch, forcedSize]);
+
+  const { texture, cyclic } = useViewportTargetSlot(path, null);
+
+  // Controls anchor against the RENDERED rect (post-shrink when stretching):
+  // Godot lays a viewport's own Controls out against the target it actually
+  // renders at, then the WHOLE target (pixels + composited Controls) is what
+  // gets scaled back up to fill the container.
+  // `shrink` only bites while stretching, and only above 1 — the same predicate
+  // decides the rendered size and the scale it is blown back up by, so the two
+  // can never disagree.
+  const shrinking = stretch && shrink > 1;
+  const renderedWidth = shrinking ? forcedSize.x : width;
+  const renderedHeight = shrinking ? forcedSize.y : height;
+
+  const contentKind = useViewportContentKind(viewport);
+  const { tree, generation } = useBuildSolveTree(viewport.children, externalResources, internalResources, rtl);
+  const controlsViewport: Rect2 = useMemo(
+    () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
+    [renderedWidth, renderedHeight]
+  );
+
+  const fallbackSolveNode = useMemo<SolveNode>(
+    () => ({
+      path,
+      node: viewport,
+      children: [],
+      // A SubViewport draws into its own render target — no ancestor canvas
+      // item reaches into it.
+      skippedAncestors: null,
+      // A SubViewport draws into its own target, so this root orders nothing
+      // against the enclosing canvas — it starts a fresh range of its own.
+      paintRange: WHOLE_CANVAS_RANGE,
+      paintSequence: WHOLE_CANVAS_RANGE.base,
+      // The SubViewport itself, not a scene node the outliner can hide.
+      hidden: false,
+      // A Viewport is neither a CanvasItem nor a CanvasLayer, so the climb
+      // that reads `parent_visible_in_tree` runs past it to the enclosing
+      // viewport and answers `true` (`canvas_item.cpp:330-350`) — an ancestor
+      // Control's `visible = false` never reaches inside one.
+      parentVisibleInTree: true,
+      // A Viewport is neither a Control nor a Window, so it states no layout
+      // direction of its own — which means the climb passes straight through
+      // it to this container (`control.cpp:3584-3598`), never that it answers
+      // left-to-right.
+      rtl,
+      styleBoxes: {},
+      textureSize: null,
+      textureSlots: {},
+      // This synthetic root stands in for the SubViewport itself (never a
+      // real Control `buildSolveTree.ts` walked), so it carries no theme of
+      // its own to inherit — matching what that walker would produce for a
+      // themeless root.
+      fontOverrides: {},
+      themeChain: [],
+      projectTheme: null,
+      colors: {},
+      constants: {},
+      icons: {},
+      // The scope this container itself was resolved in: the SubViewport is a
+      // child of this node, so its refs name the same pools.
+      resources: { externalResources, internalResources },
+    }),
+    [path, viewport, rtl, externalResources, internalResources]
+  );
+
+  const scale = shrinking ? shrink : 1;
+
+  // The render target is only `renderedWidth`x`renderedHeight` pixels — Godot
+  // clips a viewport's content to exactly that, as a CONSEQUENCE of nothing
+  // past its edge ever having been rendered, never as an explicit operation.
+  // The Controls arm draws as ordinary three.js objects with no such boundary
+  // of its own, so it needs an explicit clip (`ScrollContainer`'s own
+  // mechanism) to match; the pixel arm's own geometry is already exactly this
+  // size, so it needs none.
+  const clipRect = useMemo(() => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }), [renderedWidth, renderedHeight]);
+  const { anchorRef, clip } = useWorldClipPlanes(clipRect);
 
   return (
-    <div
-      ref={surfaceRef}
-      data-viewport-surface="true"
-      data-node-name={viewport.name}
-      style={style}
-    >
-      {/* Under the Control arm: a mixed sub-viewport's Controls are the LAST
-          canvas items Godot composites into the same target. */}
-      <ViewportPixels viewport={viewport} path={path} />
-      {/* Controls inside a sub-viewport anchor against the TARGET rect, which
-          this element is — so they get the 'free' (anchors/offsets) kind. */}
-      <ControlParentProvider kind="free">
-        <ControlDispatcher nodes={viewport.children} parentPath={path} />
-      </ControlParentProvider>
-    </div>
+    <CanvasItemGroup ref={anchorRef} scale={[scale, scale, 1]}>
+      <ControlClipProvider value={clip}>
+        {cyclic ? (
+          <ControlFallback
+            solveNode={fallbackSolveNode}
+            rect={clipRect}
+            renderOrder={renderOrder}
+            effectiveZ={effectiveZ}
+            // The cycle branch renders no subtree at all — nothing draws below
+            // this surface — so the fallback's own slot IS its subtree's last.
+            subtreeChromeRenderOrder={renderOrder}
+            theme={theme}
+            // Threaded for the contract; the outline is a diagnostic and
+            // deliberately draws in its own colour, untinted.
+            tint={tint}
+            // A SubViewport is never the root window, so it keeps
+            // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
+            // (`scene/main/viewport.h`) whatever the project setting says.
+            snapToPixels
+            measureText={measureText}
+            childRects={NO_CHILD_RECTS}
+            meta={undefined}
+          />
+        ) : texture ? (
+          <ControlQuad
+            width={renderedWidth}
+            height={renderedHeight}
+            color={tint.color}
+            opacity={tint.opacity}
+            map={texture}
+            renderOrder={renderOrder}
+          />
+        ) : null}
+        {/* A `'dom'` viewport is drawn by `ControlRasterPass` into the very
+            texture the quad above samples; drawing it live as well composites
+            it twice, and only the quad carries the container's tint. This arm
+            is for a MIXED viewport, whose offscreen pass renders the
+            non-Control half alone (`viewportContent.ts`). */}
+        {contentKind === 'dom' ? null : (
+        <ControlCanvasWalker
+          tree={tree}
+          generation={generation}
+          viewport={controlsViewport}
+          theme={theme}
+          measurer={measureText}
+          // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
+          // every Viewport, and only the root window is ever handed
+          // `gui/common/snap_controls_to_pixels` (`main/main.cpp`). These are
+          // the sub-viewport's OWN Controls, so the project's opt-out — which
+          // is the root window's alone — never reaches them.
+          snapToPixels
+        />
+        )}
+      </ControlClipProvider>
+    </CanvasItemGroup>
   );
 }
 
-export function SubViewportContainer({ node, path, children }: ControlComponentProps) {
-  const props = node.properties as SubViewportContainerProperties;
-  const parentKind = useControlParent();
+export function SubViewportContainer({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  effectiveZ,
+  theme,
+  measureText,
+}: NativeControlComponentProps) {
+  const props = painterView<SubViewportContainerProperties>(solveNode);
   const stretch = props.stretch ?? false;
   const shrink = Math.max(1, props.stretch_shrink ?? 1);
+  // The node's OWN scope, not the ambient provider's: a SubViewportContainer
+  // that arrived through an instanced sub-scene names ids from that scene.
+  const { externalResources, internalResources } = solveNode.resources;
 
-  const style: CSSProperties = controlLayoutStyle(props, parentKind);
-  const basePath = path ?? node.name;
-
-  // `ControlDispatcher` stops at a viewport boundary, so the SubViewport
-  // children never reach `children` — this component reaches for them directly,
-  // which is exactly the "dispatched by its surface, not its parent" rule.
-  const viewports = node.children.filter((child) => child.type === 'SubViewport');
+  // Raw live children (unlike `solveNode.children`, the Control-only solve
+  // forest — `buildSolveTree` skips a viewport boundary entirely), so a
+  // nested `SubViewport` is found here rather than via the walker.
+  const viewports = solveNode.node.children.filter((child) => isViewportBoundary(child.type));
 
   return (
-    <div data-control-type="SubViewportContainer" data-node-name={node.name} style={style}>
-      {viewports.map((viewport) => (
-        <ViewportSurface
+    <>
+      {viewports.map((viewport, index) => (
+        <ViewportSurfaceNative
           key={viewport.name}
           viewport={viewport}
-          path={joinPath(basePath, viewport.name)}
+          path={joinPath(solveNode.path, viewport.name)}
+          containerRect={rect}
           stretch={stretch}
           shrink={shrink}
+          effectiveZ={effectiveZ}
+          tint={tint}
+          // Each successive viewport draws ON TOP of the last (Godot's own
+          // tree-order stacking) — a fraction below the next paint index's
+          // integer slot, matching the small-offset convention
+          // the painter contract documents (e.g. a scrollbar grabber's `+0.5`).
+          renderOrder={renderOrder + (index + 1) / 100}
+          theme={theme}
+          measureText={measureText}
+          externalResources={externalResources}
+          internalResources={internalResources}
+          rtl={solveNode.rtl}
         />
       ))}
-      {children}
-    </div>
+    </>
   );
 }

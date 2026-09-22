@@ -27,9 +27,30 @@ import {
   unpinProceduralTexture,
 } from '../../textures/proceduralTextureCache';
 import { BUILDABLE_MATERIAL_TYPES } from '../buildableMaterialTypes';
-import { APPLIED_TEXTURE_SLOTS, buildStandardMaterial, type ResolvedTextureSlots } from './build';
+import { buildStandardMaterial } from './build';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { TextureSlot } from './types';
+import type { ResolvedTextureSlots, TextureSlot } from './types';
+
+/**
+ * The slots this path FETCHES.
+ *
+ * `anisotropy_flowmap` is absent on purpose: Godot stores the per-pixel
+ * anisotropy STRENGTH in the alpha channel and three reads it from blue, so the
+ * image needs a channel repack before it means anything. That repack is a canvas
+ * readback living in the shared applier layer (`resources/textures/repackFlowmap.ts`),
+ * which this layer must not import — so an external material's flowmap is not
+ * fetched at all rather than sampled wrongly. Its anisotropy SCALARS still
+ * apply, which is already the whole effect for a flowmap-less material.
+ */
+const APPLIED_TEXTURE_SLOTS: readonly TextureSlot[] = [
+  'albedo_texture',
+  'normal_texture',
+  'roughness_texture',
+  'metallic_texture',
+  'emission_texture',
+  'ao_texture',
+  'heightmap_texture',
+];
 
 /**
  * Where a built material records the procedural-cache keys it borrowed, so its
@@ -78,7 +99,7 @@ export async function createMaterialFromContent(
     throw new Error(`Unsupported material type: ${body.type}`);
   }
 
-  if (body.type === 'ShaderMaterial') return shaderMaterialFallback();
+  if (body.type === 'ShaderMaterial') return uncompiledShaderMaterial();
 
   const scalars = parseStandardMaterial3DScalars(body.properties);
   const { textures, proceduralKeys } = await resolveTextureSlots(
@@ -223,22 +244,15 @@ function defaultStandardMaterial(): THREE.Material {
 }
 
 /**
- * ADR-0004: we do not compile GLSL. Approximate a ShaderMaterial as a
- * translucent, slightly-emissive standard material so the lenient render path
- * keeps going instead of throwing (e.g. a window-glass shader).
+ * A ShaderMaterial we did not render draws the surface Godot itself binds when a
+ * mesh has no usable material (ADR-0041) — the same one its `[sub_resource]`
+ * arrival draws, because the engine cannot tell the two apart. The warning below
+ * carries the diagnosis instead of the pixels. We compile no GLSL yet, so today
+ * that is every ShaderMaterial.
  */
-function shaderMaterialFallback(): THREE.Material {
+function uncompiledShaderMaterial(): THREE.Material {
   warn(
-    '[material] ShaderMaterial is not compiled — rendering a translucent ' +
-      'standard-material fallback.'
+    "[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface."
   );
-  return new THREE.MeshStandardMaterial({
-    color: 0xaaccdd,
-    transparent: true,
-    opacity: 0.5,
-    metalness: 0.2,
-    roughness: 0.1,
-    emissive: 0x223344,
-    emissiveIntensity: 0.3,
-  });
+  return buildStandardMaterial(null);
 }

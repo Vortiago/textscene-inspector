@@ -1,223 +1,146 @@
 /**
- * <TextureRect> — displays a Texture2D image from an ExtResource. The image is
- * loaded host-agnostically via `useResource` (web fetch / VS Code file provider)
- * into a THREE.Texture. For the DOM <img> we can't reuse the texture's
- * `image.src`: the loader typically backs it with a blob URL that is revoked
- * once decoded, so a fresh <img> pointed at it renders broken. Instead we draw
- * the already-decoded image element to a canvas and use a self-contained data
- * URL — the decoded bitmap survives blob revocation. Outside a
- * ResourceLoaderProvider (or before decode) the hook degrades to a placeholder.
+ * `<TextureRect>` — the native (WebGL canvas) painter for TextureRect:
+ * one `<ControlQuad>` (`native/controlQuad.tsx`) sized/positioned per the
+ * `stretch_mode` draw-rect math in `nativeSolver.ts`, textured through
+ * `useTexture2D` — so an image file and an inline procedural texture reach it
+ * the same way.
+ * `expand_mode`'s minimum-size contribution is a SEPARATE concern, registered
+ * from `index.r3f.ts` via `controlSolverRegistry.registerMinimumSize`; this
+ * component only draws.
  *
- * `stretch_mode` → CSS object-fit: 0 fill, 2/3 none (intrinsic px), 6 cover,
- * else contain (fit + keep aspect); object-position anchors top-left (2/4) or
- * center (3/5). Mode 1 (tile) renders a background-repeat <div> instead.
- * `flip_h`/`flip_v` add a CSS mirror transform. The image layer is absolutely
- * positioned in a layout-sized wrapper so the texture's intrinsic size can't
- * drive (and overflow) the flex layout — see `textureRectFit`.
+ * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
+ * inherited `modulate`. Used as-is: unlike ColorRect, TextureRect has no
+ * `color` property of its own to fold in before the one sRGB→linear conversion.
+ *
+ * Sampler: `texture_filter`/`texture_repeat` resolve through
+ * `useInheritedTextureSampler` (`r3f/canvasItemTextureSampler.ts`) — PARENT_NODE
+ * walks the ancestor chain to the nearest one naming a concrete value.
+ *
+ * The free-Control rotate/scale-about-`pivot_offset` transform is the
+ * walker's job (`ControlCanvasWalker.tsx`, gated on
+ * `controlSolverRegistry.containerLayout(type) === undefined`), applied
+ * around every registered painter generically — this component implements no
+ * transform of its own.
  */
-
-import { useMemo, type CSSProperties } from 'react';
-import type { ControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { useControlParent } from '../../../../r3f/controls/ControlParentContext';
-import { controlStyle } from '../../../../r3f/controls/controlLayout';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { atlasRegionDataUrl } from '../../../../resources/textures/atlastexture/build';
-import { imageToDataUrl } from '../../../../r3f/controls/imageToDataUrl';
+import { useEffect, useMemo } from 'react';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import * as THREE from 'three';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
+import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useTexture2D } from '../../../../resources/useTexture2D';
+import { textureRectDraw, resolveTextureRectFilter, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
-import { useTexture2DSource } from '../../../../resources/useTexture2D';
 
-export function TextureRect({ node, children }: ControlComponentProps) {
-  const props = node.properties as TextureRectProperties;
-  const parentKind = useControlParent();
-  const { externalResources, internalResources } = useSceneResources();
+const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
+  nearest: THREE.NearestFilter,
+  linear: THREE.LinearFilter,
+};
 
-  // An AtlasTexture resolves to the SHEET plus the cell to show. A control draws
-  // an <img>, not a textured quad, so the cell is cut out of the decoded bitmap
-  // rather than windowed with UVs — and the control's intrinsic size is the
-  // cell's, since Godot sizes it from `texture->get_size()`, which for an
-  // AtlasTexture is its region (atlas_texture.cpp:33-42).
-  // `useTexture2DSource`, not the bare resolver: a Texture2D slot also holds a
-  // procedurally generated sub-resource, which resolves to no path at all and
-  // drew nothing here. The hook owns that walk and still reports the region.
-  const source = useTexture2DSource(props.texture, externalResources, internalResources);
-  const region = source.region;
-  const tex = { value: source.texture ?? undefined };
-  const src = useMemo(
-    () =>
-      region ? atlasRegionDataUrl(tex.value?.image, region) : imageToDataUrl(tex.value?.image),
-    [tex.value, region]
-  );
+const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
+  clamp: THREE.ClampToEdgeWrapping,
+  repeat: THREE.RepeatWrapping,
+  mirror: THREE.MirroredRepeatWrapping,
+};
 
-  const layout = controlStyle(
-    props,
-    parentKind,
-    textureRectMinSize(props.expandMode, region ?? (tex.value?.image as ImageLike | undefined))
-  );
-
-  if (src) {
-    // The image layer is absolutely positioned inside this layout-sized wrapper
-    // so the texture's intrinsic size never floors the flex layout — a tall
-    // portrait fits its box instead of overflowing it (the DialogSystem bug).
-    // STRETCH_TILE (1) can't tile via <img>, so it renders a background-repeat
-    // <div> instead.
-    return (
-      <div
-        data-control-type="TextureRect"
-        data-node-name={node.name}
-        style={{ ...layout, overflow: 'hidden' }}
-      >
-        {props.stretchMode === 1 ? (
-          <div data-texture-tile="true" style={textureRectTileStyle(src, props)} />
-        ) : (
-          <img src={src} alt={node.name} style={textureRectFit(props)} />
-        )}
-        {children}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      data-control-type="TextureRect"
-      data-control-fallback="true"
-      style={{
-        ...layout,
-        minWidth: 32,
-        minHeight: 32,
-        outline: '1px dashed #c792ea',
-      }}
-      title={source.path ?? 'no texture'}
-    >
-      {children}
-    </div>
-  );
-}
-
-
-
-/**
- * CSS for the <img> inside a TextureRect's layout-sized wrapper. The image is
- * taken OUT OF FLOW (`position: absolute; inset: 0`) and sized to the wrapper
- * (`width/height: 100%`), so the texture's intrinsic size never floors the
- * flex layout — a tall portrait fits its box instead of overflowing it (the
- * DialogSystem LeftPortrait bug). `object-fit` follows Godot's stretch_mode
- * (default `contain` — fit + keep aspect, not the intrinsic-size `none`).
- */
-interface TextureRectFitProps {
-  stretchMode?: number;
-  expandMode?: number;
-  flipH?: boolean;
-  flipV?: boolean;
-}
-
-export function textureRectFit(props: TextureRectFitProps): CSSProperties {
-  const style: CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: stretchObjectFit(props.stretchMode),
-  };
-  const objectPosition = stretchObjectPosition(props.stretchMode);
-  if (objectPosition) style.objectPosition = objectPosition;
-  const transform = flipTransform(props);
-  if (transform) style.transform = transform;
-  return style;
-}
-
-/**
- * CSS for STRETCH_TILE (mode 1): a background-repeat layer that tiles the
- * texture at its natural size across the control's box (an <img> can't tile).
- */
-export function textureRectTileStyle(src: string, props: TextureRectFitProps): CSSProperties {
-  const style: CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    backgroundImage: `url(${src})`,
-    backgroundRepeat: 'repeat',
-    backgroundSize: 'auto',
-  };
-  const transform = flipTransform(props);
-  if (transform) style.transform = transform;
-  return style;
-}
-
-/** Godot StretchMode → CSS object-fit; default `contain` so images fit, not overflow. */
-function stretchObjectFit(mode: number | undefined): CSSProperties['objectFit'] {
-  switch (mode) {
-    case 0:
-      return 'fill';
-    case 2: // STRETCH_KEEP
-    case 3: // STRETCH_KEEP_CENTERED — intrinsic pixel size, not scaled
-      return 'none';
-    case 6:
-      return 'cover';
-    default: // 1 tile (handled by background div), 4/5 keep aspect
-      return 'contain';
-  }
-}
-
-/** Godot StretchMode → CSS object-position (alignment of the drawn texture). */
-function stretchObjectPosition(mode: number | undefined): string | undefined {
-  switch (mode) {
-    case 2: // STRETCH_KEEP → top-left
-    case 4: // STRETCH_KEEP_ASPECT → top-left
-      return 'top left';
-    case 3: // STRETCH_KEEP_CENTERED
-    case 5: // STRETCH_KEEP_ASPECT_CENTERED
-      return 'center';
-    default:
-      return undefined;
-  }
-}
-
-/** `flip_h`/`flip_v` → a CSS mirror transform; undefined when neither is set. */
-function flipTransform(props: { flipH?: boolean; flipV?: boolean }): string | undefined {
-  if (!props.flipH && !props.flipV) return undefined;
-  return `scale(${props.flipH ? -1 : 1}, ${props.flipV ? -1 : 1})`;
-}
-
-/** Just enough of a decoded image to read its pixel dimensions. */
 interface ImageLike {
   width?: number;
   height?: number;
-  naturalWidth?: number;
-  naturalHeight?: number;
 }
 
-/**
- * The minimum size a TextureRect contributes to its parent's layout, from
- * `expand_mode` (`texture_rect.cpp::get_minimum_size()`).
- *
- * The default EXPAND_KEEP_SIZE floors the control at the texture's own size —
- * without it, a TextureRect inside a container collapses to nothing, because
- * the `<img>` is positioned out of flow so it cannot floor anything itself.
- *
- * The four FIT_* modes derive their minimum from the control's CURRENT size, a
- * self-referential rule with no direct CSS equivalent — but `aspect-ratio`
- * states the same relationship from the other direction. FIT_WIDTH/FIT_HEIGHT
- * tie the two axes 1:1 ("the height of the texture will be ignored"), and the
- * PROPORTIONAL pair ties them at the texture's aspect. What CSS resolves for us
- * rather than being told is WHICH axis is authoritative.
- */
-export function textureRectMinSize(
-  expandMode: number | undefined,
-  image: ImageLike | undefined
-): CSSProperties {
-  const width = image?.naturalWidth || image?.width || 0;
-  const height = image?.naturalHeight || image?.height || 0;
-  if (width <= 0 || height <= 0) return {};
+export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
+  const props = painterView<TextureRectProperties>(solveNode);
+  // Own-or-ambient. The walker folds the same way before providing the context,
+  // but the fold is idempotent (unlike modulate's), so repeating it costs
+  // nothing and keeps this painter correct mounted on its own.
+  const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  switch (expandMode ?? 0) {
-    case 0: // EXPAND_KEEP_SIZE
-      return { minWidth: width, minHeight: height };
-    case 2: // EXPAND_FIT_WIDTH — one axis follows the other, texture aspect ignored
-    case 4: // EXPAND_FIT_HEIGHT
-      return { aspectRatio: '1 / 1' };
-    case 3: // EXPAND_FIT_WIDTH_PROPORTIONAL
-    case 5: // EXPAND_FIT_HEIGHT_PROPORTIONAL
-      return { aspectRatio: `${width} / ${height}` };
-    default: // EXPAND_IGNORE_SIZE
-      return {};
-  }
+  // The node's OWN scope, not the ambient provider's: a TextureRect that
+  // arrived through an instanced sub-scene names ids from that scene.
+  const { externalResources, internalResources } = solveNode.resources;
+  // `useTexture2D`, not the path-only resolver: `texture` may be an inline
+  // procedural texture, which has no path and rasterises out of the scene.
+  const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
+
+  const draw = useMemo(() => {
+    const image = rawTexture?.image as ImageLike | undefined;
+    const textureSize = { x: image?.width ?? 0, y: image?.height ?? 0 };
+    if (!rawTexture || textureSize.x <= 0 || textureSize.y <= 0) return null;
+    return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
+  }, [rawTexture, rect.w, rect.h, props.stretchMode]);
+
+  // Clone: the resolved texture is a SHARED cache entry — the loader's for an
+  // image, the procedural cache's for a rasterised one — handed to every
+  // consumer of it, and every mutation below (filter, wrap, UV
+  // repeat/offset for a crop, tile, or flip) is per-CONSUMER sampler state —
+  // the identical reason `composeFrameTexture` clones (`r3f/spriteFrame.ts`).
+  const preparedTexture = useMemo(() => {
+    if (!rawTexture || !draw) return null;
+    const cloned = rawTexture.clone();
+    // NoColorSpace, pinned: the 2D canvas's hardware filter blends undecoded
+    // sRGB bytes (`canvas2DTextureDecode.ts`); `ControlQuad` decodes the
+    // already-filtered sample once it sees this tag. `pinNoColorSpace` (not a
+    // plain assignment) because this clone reaches `ControlQuad`'s `map` JSX
+    // prop, which `@react-three/fiber`'s own auto sRGB-tagging would
+    // otherwise silently overwrite on commit — see that function's doc.
+    pinNoColorSpace(cloned);
+
+    const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
+    cloned.magFilter = filter;
+    cloned.minFilter = filter;
+
+    let repeat = { x: 1, y: 1 };
+    let offset = { x: 0, y: 0 };
+    if (draw.tile) {
+      // STRETCH_TILE forces repeat wrapping for THIS draw regardless of the
+      // node's own texture_repeat (`draw_texture_rect(texture, rect, tile=true)`
+      // is a per-call sampler override in Godot, not a texture_repeat read).
+      cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
+      repeat = { x: draw.size.x / draw.textureSize.x, y: draw.size.y / draw.textureSize.y };
+      // Godot tiles from the rect's TOP-left; three's `v` runs bottom-up, so a
+      // zero offset would anchor the pattern at the BOTTOM and leave the
+      // partial tile at the top showing the texture's bottom rows instead of
+      // its top ones. `1 - repeat.y` puts `v = 1` (the quad's top edge) exactly
+      // on the image's own top row — the same UV-Y flip the region branch below
+      // applies for a crop. `u` needs no equivalent: it is not flipped.
+      offset = { x: 0, y: 1 - repeat.y };
+    } else {
+      cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];
+      if (draw.region) {
+        // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
+        // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left —
+        // the same flip `r3f/spriteFrame.ts`'s `applyRegionRect` documents.
+        repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
+        offset = {
+          x: draw.region.x / draw.textureSize.x,
+          y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
+        };
+      }
+    }
+
+    const flipped = applyFlip(repeat, offset, props.flipH === true, props.flipV === true);
+    cloned.repeat.set(flipped.repeat.x, flipped.repeat.y);
+    cloned.offset.set(flipped.offset.x, flipped.offset.y);
+    cloned.needsUpdate = true;
+    return cloned;
+  }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
+
+  useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
+
+  if (!draw || !preparedTexture) return null;
+
+  return (
+    <CanvasItemGroup position={[draw.offset.x, -draw.offset.y, 0]}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={draw.size.x}
+        height={draw.size.y}
+        color={tint.color}
+        opacity={tint.opacity}
+        map={preparedTexture}
+      />
+    </CanvasItemGroup>
+  );
 }

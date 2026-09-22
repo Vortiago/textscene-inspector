@@ -6,7 +6,7 @@
  * Concentrates the assembly that every resource-consuming test used to
  * hand-roll: a real `ResourceEventBus` + `MetadataStore` plus Map-backed
  * processors for every slot the real loader carries (texture / material /
- * glb / scene / resource / arraymesh) implementing the public
+ * glb / scene / resource / arraymesh / font) implementing the public
  * `ResourceProcessor` surface, wired with `register()`, `clear()` and
  * `provideFile()`. Each processor handle adds a small driving API:
  *
@@ -30,6 +30,8 @@ import { MetadataStore } from '../MetadataStore';
 import { busTypeFor, type ResourceLoader } from '../ResourceLoader';
 import { runClearCachesSequence } from '../clearCachesSequence';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
+import type { FontResource } from '../fonts/font/types';
+import type { ThemeResource } from '../styles/theme/types';
 
 export interface FakeProcessor<T> {
   /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
@@ -74,6 +76,8 @@ export interface FakeResourceLoader {
   readonly scenes: FakeProcessor<TscnScene>;
   readonly resources: FakeProcessor<ParsedResource>;
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
+  readonly fonts: FakeProcessor<FontResource>;
+  readonly themes: FakeProcessor<ThemeResource>;
   /** Every ExtResource passed to `loader.register`, in call order — for assertions. */
   readonly registerCalls: ExtResource[];
 }
@@ -146,6 +150,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
+  const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
+  const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
@@ -155,6 +161,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     scene: scenes,
     resource: resources,
     arraymesh: arrayMeshes,
+    font: fonts,
+    theme: themes,
   };
   const all = Object.values(byType);
 
@@ -169,6 +177,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     scenes,
     resources,
     arrayMeshes,
+    fonts,
+    themes,
     // Mirror ResourceLoader.register (metadata bookkeeping) and record the
     // call so tests can assert registration without a vitest spy.
     register(resource: ExtResource): void {
@@ -187,6 +197,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       } else if (path.endsWith('.tres')) {
         materials.request(path);
         resources.request(path);
+        fonts.request(path);
+        themes.request(path);
       } else {
         textures.request(path);
         materials.request(path);
@@ -242,6 +254,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     scenes,
     resources,
     arrayMeshes,
+    fonts,
+    themes,
     registerCalls,
   };
 }

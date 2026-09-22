@@ -1,7 +1,6 @@
 ---
 type: Environment
 category: Resources
-status: unreviewed
 renders_as: THREE scene.environment / background / tone mapping / fog
 ---
 

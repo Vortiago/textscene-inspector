@@ -1,0 +1,34 @@
+; The ONE variable: `layout_direction = 3` (RTL) on a CodeEdit with the
+; line-number gutter drawn. That gutter is a CUSTOM one, so its region mirrors
+; about the control before the callback ever sees it (text_edit.cpp:1471-1476)
+; and `_line_number_draw_callback` then right-aligns the number INSIDE the
+; mirrored region rather than left-aligning it (code_edit.cpp:1583-1587) — two
+; opposed shifts that cancel wrongly if either is missed. `min_digits` is 3 so
+; the numbers are narrower than their cell and that inner alignment is visible
+; at all. unit-text-edit-rtl.tscn carries no gutter, so this is invisible there.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Ltr" type="CodeEdit" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 120.0
+text = "func f():\n\tpass\nDone"
+gutters_draw_line_numbers = true
+gutters_line_numbers_min_digits = 3
+
+[node name="Rtl" type="CodeEdit" parent="."]
+layout_mode = 1
+layout_direction = 3
+anchor_right = 1.0
+offset_top = 152.0
+offset_bottom = 256.0
+text = "func f():\n\tpass\nDone"
+gutters_draw_line_numbers = true
+gutters_line_numbers_min_digits = 3

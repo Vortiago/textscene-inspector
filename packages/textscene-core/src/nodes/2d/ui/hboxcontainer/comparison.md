@@ -1,17 +1,17 @@
 ---
 type: HBoxContainer
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-hbox-container.tscn
 image: unit-hbox-container
-renders_as: a CSS flex-row `<div>`
+renders_as: children laid out along a row
 ---
 
 # HBoxContainer
 
-HBoxContainer stacks its children in a horizontal row. The previewer renders it as a CSS
-flex-row `<div>`: `separation` becomes the gap, `alignment` the `justify-content`, and
-each child's `size_flags` its grow and cross-axis alignment.
+HBoxContainer stacks its children in a horizontal row, spaced by `separation` and
+sized by each child's `size_flags`. A right-to-left `layout_direction` reverses that
+row and packs it against the opposite edge.
 
 ## Linting
 
@@ -27,7 +27,8 @@ Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 5
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-control-tooltip-mouse-filter` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+| `valid-control-properties` (type-family match) | `control-tooltip-ignored-by-mouse-filter` | warning |
+|  | `control-property-order` | warning |
 <!-- lint:end -->
 
 `alignment` goes through `parseOptionalInt`, so an absent or unparseable value becomes

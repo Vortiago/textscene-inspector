@@ -142,6 +142,15 @@ describe('Label3D Parser', () => {
       expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
     });
 
+    it('reads alpha_scissor_threshold, defaulting to Godot 0.5 (label_3d.h:62)', () => {
+      const authored = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        alpha_scissor_threshold: '0.25',
+      });
+      const absent = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(authored.alpha_scissor_threshold).toBe(0.25);
+      expect(absent.alpha_scissor_threshold).toBe(0.5);
+    });
+
     it('falls back to the Godot default on garbage (never NaN) and warns', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         pixel_size: 'garbage',

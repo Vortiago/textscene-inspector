@@ -148,12 +148,12 @@ export const fixtures: Fixture[] = [
   {
     name: 'Child_cube',
     file: 'child_cube.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Other',
   },
   {
     name: 'Child_sphere',
     file: 'child_sphere.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Other',
   },
   {
     name: 'Hallway Mockup',
@@ -173,51 +173,51 @@ export const fixtures: Fixture[] = [
   {
     name: 'All Meshes',
     file: 'integration-all-meshes.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'All Primitives',
     file: 'integration-all-primitives.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'External Only',
     file: 'integration-external-only.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - External Scenes',
   },
   {
     name: 'External Separation',
     file: 'integration-external-separation.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - External Scenes',
   },
   {
     name: 'Lights All Types',
     file: 'integration-lights-all-types.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'Mixed Nodes',
     file: 'integration-mixed-nodes.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'Multiple Externals',
     file: 'integration-multiple-externals.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'Parent Child Scene',
     file: 'integration-parent-child-scene.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'Material Reuse',
     file: 'integration-material-reuse.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
   {
     name: 'Three Cubes',
     file: 'integration-three-cubes.tscn',
-    category: 'Examples - Complex Scenes',
+    category: 'Integration - Multi-Node',
   },
 ];

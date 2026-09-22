@@ -6,11 +6,12 @@
  *   higher = sharper edge → smaller three.js penumbra (monotonic).
  */
 import { describe, it, expect } from 'vitest';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SpotLight3D } from './Component';
 import { parseSpotLight3D } from './parser';
 import type { TscnNode } from '../../../../parser/types';
+import { instanceAs } from '../../testing/reactThreeTestInstance';
 
 function makeNode(raw: Record<string, string> = {}): TscnNode {
   const heading = { type: 'node', attributes: { type: 'SpotLight3D', name: 'Spot' } };
@@ -22,9 +23,9 @@ function makeNode(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-async function spot(raw: Record<string, string> = {}): Promise<{ decay: number; penumbra: number }> {
+async function spot(raw: Record<string, string> = {}): Promise<THREE.SpotLight> {
   const r = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode(raw)} />);
-  return r.scene.findByType('SpotLight').instance as THREE.SpotLight;
+  return instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight'));
 }
 
 describe('SpotLight3D attenuation parity', () => {

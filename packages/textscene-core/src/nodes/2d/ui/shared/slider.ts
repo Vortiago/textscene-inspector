@@ -3,7 +3,7 @@
  * abstract base (Range → Slider → H/VSlider), so its own properties and their
  * parsing live ONCE here; the two slices keep only their wiring and their axis.
  * Pure `.ts` (no React/THREE) so both parsers can import it inside the linter
- * graph — the CSS mapping lives in `r3f/controls/sliderChrome.ts`.
+ * graph — the native painter's geometry lives in `shared/sliderSolver.ts`.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
@@ -37,7 +37,10 @@ export function parseSlider(
 ): SliderProperties {
   return {
     ...parseControl(heading, properties),
-    ...parseRange(properties),
+    // HSlider and VSlider both set `step = 1.0` in their constructors — measured from the engine
+    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is NOT "no snap".
+    ...parseRange(properties, { step: 1 }),
     tickCount: parseOptionalInt(properties.tick_count),
     ticksOnBorders: parseOptionalBool(properties.ticks_on_borders),
     editable: parseOptionalBool(properties.editable),

@@ -41,12 +41,16 @@ import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
+import { createFontProcessor } from './processors/createFontProcessor';
+import { createThemeProcessor } from './processors/createThemeProcessor';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { resourceFilePath } from './subResourcePath';
+import type { FontResource } from './fonts/font/types';
+import type { ThemeResource } from './styles/theme/types';
 import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
-import type { ResourceProcessor } from './createResourceProcessor';
+import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
 import * as logger from '../logger';
 
 /**
@@ -72,6 +76,10 @@ export class ResourceLoader {
   readonly resources: ResourceProcessor<ParsedResource>;
   /** ArrayMesh .tres decoded into geometry + per-surface material paths. */
   readonly arrayMeshes: ResourceProcessor<ArrayMeshResource>;
+  /** FontFile/SystemFont/FontVariation, recursively resolved (base_font, fallbacks). */
+  readonly fonts: ResourceProcessor<FontResource>;
+  /** Theme .tres, font-relevant fields resolved (default_font, <Type>/fonts/<name>); everything else raw. */
+  readonly themes: ResourceProcessor<ThemeResource>;
 
   /**
    * Type → processor table. The four named accessors above are stable
@@ -125,6 +133,32 @@ export class ResourceLoader {
     for (const listener of this.pendingListeners) listener();
   }
 
+  /**
+   * Await a peer processor's resource — the one shape every cross-processor dependency
+   * uses: answer from cache, else request it and wait on that processor's bus slot.
+   *
+   * BOUNDED on purpose. A processor whose `shouldProcess` refuses bytes it was asked for
+   * settles nothing at all — by design, since the byte layer broadcasts one file to every
+   * processor and expects a sibling to claim it — so an unbounded await would wedge the
+   * caller for the session. One caller is the GLB template's own load, where that means
+   * the asset never appears and never reports missing. The ceiling is far above any real
+   * fetch, so it only ever fires on that silence.
+   */
+  private async peerLoad<T>(
+    processor: ResourceProcessor<T>,
+    busType: ResourceType,
+    path: string
+  ): Promise<T | null> {
+    const cached = processor.getCached(path);
+    if (cached !== undefined) return cached;
+    processor.request(path);
+    try {
+      return await this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
+    } catch {
+      return null;
+    }
+  }
+
   constructor(fileEventBus?: FileEventBus) {
     this._fileEventBus = fileEventBus || null;
     this.eventBus = new ResourceEventBus();
@@ -133,19 +167,16 @@ export class ResourceLoader {
     // Texture processor first — materials need it for inline texture refs.
     this.textures = createTextureProcessor(fileEventBus, this.eventBus);
 
-    const loadTexture = async (path: string): Promise<THREE.Texture | null> => {
-      const cached = this.textures.getCached(path);
-      if (cached !== undefined) return cached;
-      this.textures.request(path);
-      try {
-        return await this.eventBus.once<THREE.Texture>('texture', 'loaded', path);
-      } catch {
-        return null;
-      }
-    };
+    const loadTexture = (path: string): Promise<THREE.Texture | null> =>
+      this.peerLoad(this.textures, 'texture', path);
 
     this.materials = createMaterialProcessor(fileEventBus, this.eventBus, loadTexture);
-    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus);
+
+    // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`,
+    // which resolves through the MATERIAL processor.
+    this.glbMeshes = createGLBProcessor(fileEventBus, this.eventBus, (path) =>
+      this.peerLoad(this.materials, 'material', path)
+    );
 
     // PackedScene processor — the former standalone SceneLoader collapsed
     // into the same machinery via direct-load mode (`createResourceProcessor`'s
@@ -155,13 +186,23 @@ export class ResourceLoader {
       eventBus: this.eventBus,
       resolveMetadata: (idOrPath) => {
         const meta = this.metadata.get(idOrPath);
-        return meta ? { path: meta.path, type: meta.type } : null;
+        if (meta) return { path: meta.path, type: meta.type };
+        // A raw `res://` `instance` names no ExtResource, so nothing registers
+        // it: the address is its own path, and its type is genuinely unknown.
+        return idOrPath.startsWith('res://') ? { path: idOrPath, type: null } : null;
       },
       getProvider: () => this.provider,
     });
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
     this.arrayMeshes = createArrayMeshProcessor(fileEventBus, this.eventBus);
+    this.fonts = createFontProcessor(fileEventBus, this.eventBus);
+
+    // A Theme's font refs resolve through the FONT processor (a different peer, unlike a
+    // Font's own self-recursion).
+    this.themes = createThemeProcessor(fileEventBus, this.eventBus, (address) =>
+      this.peerLoad(this.fonts, 'font', address)
+    );
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
@@ -170,6 +211,8 @@ export class ResourceLoader {
       ['scene', this.scenes as ResourceProcessor<unknown>],
       ['resource', this.resources as ResourceProcessor<unknown>],
       ['arraymesh', this.arrayMeshes as ResourceProcessor<unknown>],
+      ['font', this.fonts as ResourceProcessor<unknown>],
+      ['theme', this.themes as ResourceProcessor<unknown>],
     ]);
 
     this.setupFailureCallbacks();
@@ -193,6 +236,8 @@ export class ResourceLoader {
       glb: 'Node using GLB mesh',
       resource: 'Resource',
       arraymesh: 'Node using ArrayMesh',
+      font: 'Node using font',
+      theme: 'Node using theme',
     };
 
     for (const type of this.processors.keys()) {
@@ -379,11 +424,13 @@ export class ResourceLoader {
       logger.info(`[ResourceLoader] provideFile: ${metadata?.type} is not loader-served; skipping`);
     } else if (path.endsWith('.tres')) {
       // Unregistered .tres — a raw `res://…tres` reference (e.g. a
-      // `tile_set` path with no ExtResource declaration). Both .tres
-      // processors get the re-request; subscribers listen on their own
+      // `tile_set` path with no ExtResource declaration). Every .tres
+      // processor gets the re-request; subscribers listen on their own
       // bus slot, so only the relevant one is observed.
       this.materials.request(path);
       this.resources.request(path);
+      this.fonts.request(path);
+      this.themes.request(path);
     } else {
       // Unknown type — try the two MVS processors. Only the one that
       // can process the file's content will produce a non-null result;

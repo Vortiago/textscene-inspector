@@ -75,6 +75,13 @@ export function projectConfig(sourceIni, { width, height }) {
     /^window\/size\/viewport_height\s*=/,
     /^run\/main_scene\s*=/,
     /^config_version\s*=/,
+    // Redraws only when something changes, so a settled scene stops producing
+    // frames and the bootstrap's `frame_post_draw` await never resumes: the
+    // render walks off the end of `--quit-after` having written nothing, and
+    // reports "produced no image (exit 0)" with an empty stderr. Godot
+    // recommends it for non-game UI projects, which is where this harness is
+    // pointed whenever a Control scene is the subject.
+    /^run\/low_processor_mode\s*=/,
   ];
 
   const kept = (sourceIni ?? '')

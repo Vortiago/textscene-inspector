@@ -1,0 +1,174 @@
+; Label's VERTICAL alignment offset — the one number `vertical_alignment`
+; decides, and the only thing that varies across these five panes.
+;
+; Every pane sets the SAME text in the SAME font size (16) at the SAME
+; `horizontal_alignment` (left, the default, whose offset is a constant 0 for
+; Label's empty style box) inside a box of the SAME width. Only
+; `vertical_alignment` and the box HEIGHT change, so any row a glyph lands on
+; that the engine does not agree with is attributable to the vertical offset
+; alone.
+;
+; Why a regression here is invisible in every other scene: every other Label,
+; Button, CheckBox and RichTextLabel fixture in the set leaves
+; `vertical_alignment` at its default VERTICAL_ALIGNMENT_TOP, where the offset
+; is identically zero and the three other branches are dead code. `label-wrap`
+; is the only other scene with multi-line text, and it is TOP as well, so its
+; per-line pitch never carries the FILL branch's extra separation either.
+;
+; The panes, and what each one pins:
+;
+;   TopRef       100 px box, TOP    — the zero-offset reference row. Every
+;                                     other pane's offset is read as its own
+;                                     ink row minus this one's, which cancels
+;                                     the rasteriser's own glyph shape.
+;   CenterWhole   99 px box, CENTER — box minus content is even, so halving it
+;                                     lands on a whole pixel by itself.
+;   CenterHalf   100 px box, CENTER — box minus content is odd, so halving it
+;                                     lands on exactly x.5. Godot keeps the
+;                                     offset in an `int` (`label.cpp`,
+;                                     `Label::get_layout_data`, `int vbegin =
+;                                     0, vsep = 0`), so this pane's glyphs must
+;                                     land on the SAME row as CenterWhole's
+;                                     despite the 1 px taller box. A renderer
+;                                     that keeps the half pixel splits the two
+;                                     panes by a row.
+;   BottomRef    100 px box, BOTTOM — its offset is box minus content with no
+;                                     division at all, so its measured row
+;                                     states the engine's own content height
+;                                     directly, which is what makes the two
+;                                     CENTER panes' halving readable as a
+;                                     halving rather than as a disagreement
+;                                     about how tall the text is.
+;   FillFour     205 px box, FILL   — four lines, so the offset is a per-gap
+;                                     separation applied three times. 104/3
+;                                     has a fractional part of two thirds,
+;                                     which accumulates to a full 2 px by the
+;                                     last line: this branch's error is a
+;                                     whole-row displacement, not a
+;                                     half-pixel argument.
+;
+; Each pane's grey plate is exactly its Label's own rect, so an offset reads
+; against the plate's top and bottom edges rather than against a guess.
+;
+; ENGINE rows, measured against Godot 4.6.3 at `--mode 2d` — first inked row
+; per pane, and the offset each one implies:
+;
+;   TopRef        30      offset 0 — the reference row
+;   CenterWhole   68      offset 38
+;   CenterHalf    68      offset 38, the same row from a 1 px taller box
+;   BottomRef    107      offset 77, i.e. a content height of 23
+;   FillFour     186, 246, 306, 366 — a flat 60 px pitch, i.e. a separation of
+;                         34 on top of the 26 px line pitch
+;
+; What this scene pins is the OFFSET column, which is identical on both sides.
+; The absolute rows above are the engine's own and are not the golden's: the
+; previewer draws these glyphs from an MSDF atlas rather than through Godot's
+; rasteriser, and its ink box for a line of this slice's text runs one row
+; taller at the top (Label's comparison sheet carries that measurement for the
+; other two Label scenes). So a golden whose ink starts a row above every
+; number here is that same standing atlas difference; a golden whose
+; pane-to-pane DIFFERENCES are not 0 / 38 / 38 / 77 and 60 / 60 / 60 is a
+; vertical-alignment regression.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.09, 0.12, 1)
+
+[node name="TopRefPlate" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 264.0
+offset_bottom = 124.0
+color = Color(0.18, 0.2, 0.26, 1)
+
+[node name="CenterWholePlate" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 288.0
+offset_top = 24.0
+offset_right = 528.0
+offset_bottom = 123.0
+color = Color(0.18, 0.2, 0.26, 1)
+
+[node name="CenterHalfPlate" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 552.0
+offset_top = 24.0
+offset_right = 792.0
+offset_bottom = 124.0
+color = Color(0.18, 0.2, 0.26, 1)
+
+[node name="BottomRefPlate" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 816.0
+offset_top = 24.0
+offset_right = 1056.0
+offset_bottom = 124.0
+color = Color(0.18, 0.2, 0.26, 1)
+
+[node name="FillFourPlate" type="ColorRect" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 180.0
+offset_right = 264.0
+offset_bottom = 385.0
+color = Color(0.18, 0.2, 0.26, 1)
+
+[node name="TopRef" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 264.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 16
+text = "HHHH"
+vertical_alignment = 0
+
+[node name="CenterWhole" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 288.0
+offset_top = 24.0
+offset_right = 528.0
+offset_bottom = 123.0
+theme_override_font_sizes/font_size = 16
+text = "HHHH"
+vertical_alignment = 1
+
+[node name="CenterHalf" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 552.0
+offset_top = 24.0
+offset_right = 792.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 16
+text = "HHHH"
+vertical_alignment = 1
+
+[node name="BottomRef" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 816.0
+offset_top = 24.0
+offset_right = 1056.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 16
+text = "HHHH"
+vertical_alignment = 2
+
+[node name="FillFour" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 180.0
+offset_right = 264.0
+offset_bottom = 385.0
+theme_override_font_sizes/font_size = 16
+text = "HHHH\nHHHH\nHHHH\nHHHH"
+vertical_alignment = 3

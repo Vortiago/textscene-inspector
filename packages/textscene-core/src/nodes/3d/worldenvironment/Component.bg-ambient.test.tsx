@@ -19,6 +19,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { TscnParser } from '../../../parser/TscnParser';
+import { instanceAs } from '../testing/reactThreeTestInstance';
 
 async function ambientLights(environmentBody: string) {
   const scene = new TscnParser().parse(
@@ -38,7 +39,7 @@ async function ambientLights(environmentBody: string) {
   );
   return renderer.scene
     .findAllByType('AmbientLight')
-    .map((l) => l.instance as THREE.AmbientLight);
+    .map((l) => instanceAs<THREE.AmbientLight>(l));
 }
 
 describe('<WorldEnvironment> ambient from the background', () => {

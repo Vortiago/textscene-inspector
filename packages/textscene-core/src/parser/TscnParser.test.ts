@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { TscnParser } from './TscnParser';
-import type { Node3DProperties } from '../nodes/base/node3d/types';
+import { transformOf } from './testing/parserKit';
 
 describe('TscnParser', () => {
   it('should create a parser instance', () => {
@@ -51,7 +51,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       expect(result.nodes).toHaveLength(1);
       const node = result.nodes[0]!;
       expect(node.properties).toHaveProperty('transform');
-      expect((node.properties as Node3DProperties).transform?.origin.x).toBe(2);
+
+      const transform = transformOf(node.properties);
+      if (transform) {
+        expect(transform.origin.x).toBe(2);
+      }
     });
 
     it('should skip comments', () => {
@@ -202,7 +206,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       // Check Child1
       const child1 = root.children.find(c => c.name === 'Child1');
       expect(child1).toBeDefined();
-      expect((child1!.properties as Node3DProperties).transform?.origin.x).toBe(2);
+      const child1Transform = transformOf(child1!.properties);
+      if (child1Transform) {
+        expect(child1Transform.origin.x).toBe(2);
+      }
 
       // Child1 should have GrandChild
       expect(child1!.children).toHaveLength(1);
@@ -211,9 +218,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)`;
       // Check Child2
       const child2 = root.children.find(c => c.name === 'Child2');
       expect(child2).toBeDefined();
-      const child2Transform = (child2!.properties as Node3DProperties).transform;
-      expect(child2Transform?.origin.x).toBe(-2);
-      expect(child2Transform?.origin.y).toBe(1);
+      const child2Transform = transformOf(child2!.properties);
+      if (child2Transform) {
+        expect(child2Transform.origin.x).toBe(-2);
+        expect(child2Transform.origin.y).toBe(1);
+      }
     });
   });
 

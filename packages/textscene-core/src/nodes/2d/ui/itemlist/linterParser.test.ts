@@ -52,6 +52,8 @@ const KEYS: string[] = [
   'fixed_icon_size',
   // Not an ADD_PROPERTY: the PropertyListHelper family at item_list.cpp:2461-2466.
   'item_#/*',
+  // Not an ADD_PROPERTY either: `_set`'s deprecated fallback (item_list.cpp:2242-2259).
+  'items',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
@@ -295,5 +297,16 @@ describe('ItemList per-item family', () => {
     // match must win before any wildcard sees it.
     expect(check('item_count', '3')).toBeNull();
     expect(check('item_count', '-1')?.code).toBe('INVALID_ITEM_COUNT_VALUE');
+  });
+});
+
+describe('ItemList deprecated items compat array', () => {
+  it('accepts an Array literal, whatever it holds (shape only)', () => {
+    expect(check('items', '["Sword", null, false]')).toBeNull();
+    expect(check('items', '[]')).toBeNull();
+  });
+
+  it('rejects a non-Array value', () => {
+    expect(check('items', '"Sword"')).not.toBeNull();
   });
 });

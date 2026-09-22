@@ -17,7 +17,7 @@
  * is painted out exactly as in capture.mjs.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -33,6 +33,8 @@ import {
   settleCanvas,
   startPreview,
   waitForServer,
+  warmUpGLContext,
+  writeCaptureImage,
 } from '../visual/previewServer.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -56,6 +58,12 @@ export const COMPLEX_SCENES = [
   {
     slug: 'complex-2d-platformer',
     mode: '2d',
+    // This project sets a viewport property Godot hands to SceneTree's root
+    // Window and to nothing else (`default_texture_filter` — pixel art wants
+    // Nearest), so the default 2D arm nests the scene in a SubViewport that
+    // cannot observe it and REFUSES rather than answer from the class default.
+    // The root-window arm draws the same rectangle and does observe it.
+    godotMode: '2d-root',
     godot: 'scenes/demos/2d/platformer/level/level.tscn',
     ours: 'demos/2d/platformer/level/level.tscn',
   },
@@ -144,7 +152,9 @@ async function captureGodot(scenes) {
     await renderReference({
       scene: scenePath,
       out: join(IMAGES, `${c.slug}-godot.png`),
-      mode: c.mode,
+      // 2D scenes normally render nested; one whose project sets a root-only
+      // viewport property opts into the root-window arm (see `godotMode`).
+      mode: c.godotMode ?? c.mode,
       frame: c.frame ?? false,
       sceneCamera: c.sceneCamera ?? false,
       // The same node the previewer looks through, so both sides are pointed at
@@ -165,6 +175,9 @@ async function captureOurs(scenes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    // Burn the first-WebGL-context-lost risk before any published image is
+    // captured — see warmUpGLContext's own doc comment.
+    await warmUpGLContext(browser);
     for (const c of scenes) {
       process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
       // Match the Godot framing. A 3D scene is fit to bounds on both sides only
@@ -190,7 +203,7 @@ async function captureOurs(scenes) {
           screenshotTimeout: c.settleTimeout,
         });
         if (!buffer) throw new Error(settleReason);
-        writeFileSync(join(IMAGES, `${c.slug}-ours.png`), buffer);
+        writeCaptureImage(join(IMAGES, `${c.slug}-ours.png`), buffer, `${c.slug} ours`);
         console.log('ok');
       } catch (error) {
         console.log(`FAILED: ${error.message}`);

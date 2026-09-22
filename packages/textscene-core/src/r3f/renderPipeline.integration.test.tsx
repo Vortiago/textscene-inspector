@@ -20,17 +20,15 @@ import { SelectionProvider } from './contexts/SelectionContext';
 // Pull in all self-registering node components
 import './nodes/index';
 
+type ReactThreeTestInstance = ReactThreeTest.ReactThreeTestInstance;
+
 // Use the test renderer tree API to find meshes/lights — avoids the dual-THREE
 // instanceof problem that occurs when traverse() is called on scene.instance.
-function findMeshes(scene: {
-  findAllByType(t: string): ReactThreeTest.ReactThreeTestInstance[];
-}) {
+function findMeshes(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
   return scene.findAllByType('Mesh');
 }
 
-function findLights(scene: {
-  findAllByType(t: string): ReactThreeTest.ReactThreeTestInstance[];
-}) {
+function findLights(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
   return [
     ...scene.findAllByType('DirectionalLight'),
     ...scene.findAllByType('AmbientLight'),
@@ -99,9 +97,8 @@ mesh = SubResource("BoxMesh_abc123")
       const meshes = findMeshes(renderer.scene);
       expect(meshes.length).toBeGreaterThan(0);
       // Material type string check avoids dual-THREE instanceof issue
-      expect(((meshes[0]!.instance as THREE.Mesh).material as THREE.Material).type).toBe(
-        'MeshStandardMaterial'
-      );
+      const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      expect(material.type).toBe('MeshStandardMaterial');
     });
   });
 
@@ -201,6 +198,8 @@ surface_material_override/0 = SubResource("mat_blue")
       // (render_forward_clustered.cpp:4206, :4267).
       const meshes = findMeshes(renderer.scene);
       const mat = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
+      // `material_override` (red) outranks both, per
+      // `render_forward_clustered.cpp:4206` applying it inside the per-surface add.
       expect(mat.color.getHex()).toBe(0xff0000);
     });
   });
