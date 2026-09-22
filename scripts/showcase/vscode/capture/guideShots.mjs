@@ -7,28 +7,26 @@
  * the previous shot is what put an extra .tscn pane in every guide image.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { sleep } from './platform.mjs';
 import { FIXTURES, WS } from './paths.mjs';
 import {
-  closeAllEditors,
-  closeTab,
   expandAllTrees,
   frameShowing,
-  openFile,
-  openPreview,
   openScenePreview,
   palette,
   selectNode,
-  setSideBar,
   settle,
-  waitForCanvas,
+  twoPreviews,
 } from './workbench.mjs';
+
+const BOX_SCENE = 'unit-box-mesh.tscn';
+const BOX_IDENTITY = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
 
 /** Restore a scene in the throwaway workspace to the tracked fixture's bytes. */
 function restore(file) {
-  writeFileSync(`${WS}/${file}`, readFileSync(`${FIXTURES}/${file}`));
+  copyFileSync(`${FIXTURES}/${file}`, `${WS}/${file}`);
 }
 
 /**
@@ -81,66 +79,52 @@ async function gotoLine(page, line) {
   await sleep(600);
 }
 
-/**
- * Two previews side by side, one per scene, with no .tscn source left over.
- *
- * Built by opening each scene's preview in turn and closing only its own
- * source: "Close Editors in Other Groups" would take the first preview with it.
- */
-async function twoPreviews(page, leftFile, rightFile) {
-  restore(leftFile);
-  restore(rightFile);
-  // Two webviews plus the Explorer would put each below the shell's 768px
-  // stacking width, and neither panel would show the tree the flow is about.
-  await setSideBar(page, false);
-  await closeAllEditors(page);
-  for (const file of [leftFile, rightFile]) {
-    await openFile(page, file);
-    await openPreview(page);
-    await sleep(1500);
-    // Close the source by NAME, not by "the active editor": the preview it just
-    // opened is what the workbench considers active, and closing that would
-    // leave the .tscn text in the shot instead of the panel.
-    await closeTab(page, file);
-  }
-  const painted = await waitForCanvas(page);
-  await expandAllTrees(page);
-  return painted;
-}
+/** Translate the Box fixture along X, the edit both hot-reload flows save. */
+const moveBoxX = (x) =>
+  editScene(BOX_SCENE, BOX_IDENTITY, `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 0)`);
 
-/** A scene whose preview fills the editor area, nothing selected. */
-const preview = (file) => async (page) => {
+/**
+ * A scene's preview, settled, with its tree expanded.
+ *
+ * The tree is the panel a reader is looking for, and a collapsed root shows one
+ * row whatever the scene holds.
+ */
+const scene = (file, opts) => async (page) => {
   restore(file); // an earlier shot may have edited it
-  const painted = await openScenePreview(page, file);
+  const painted = await openScenePreview(page, file, opts);
   await settle();
-  // The tree is the panel a reader is looking for, and a collapsed root shows
-  // one row whatever the scene holds.
   await expandAllTrees(page);
   return painted;
 };
 
-/** A scene's preview beside its own .tscn source. */
-const split = (file, { sideBar = true, previewShare = 0 } = {}) => async (page) => {
-  restore(file);
-  const painted = await openScenePreview(page, file, { split: true, sideBar, previewShare });
-  await settle();
-  await expandAllTrees(page);
-  return painted;
+/** The Box beside its own .tscn source, wide enough for the desktop shell. */
+const boxBesideSource = scene(BOX_SCENE, { split: true, sideBar: false, previewShare: 0.62 });
+
+/** `both-*`: one fixture per shot, the filename its own caption. */
+const SOLO_SHOTS = {
+  'both-01-a': 'integration-all-primitives.tscn',
+  'both-02-a': BOX_SCENE,
+  'both-02-b': 'unit-sphere-mesh.tscn',
+  'both-02-c': 'unit-plane-mesh.tscn',
+  'both-02-d': 'unit-cylinder-mesh.tscn',
+  'both-02-e': 'unit-capsule-mesh.tscn',
+  'both-03-a': 'integration-lights-all-types.tscn',
+  'both-03-b': 'integration-mixed-nodes.tscn',
+  'both-04-a': 'unit-world-environment-basic.tscn',
+  'both-04-b': 'unit-world-environment-no-fog.tscn',
 };
 
 export const GUIDE_SHOTS = {
   // VSCODE-01 — the preview opens beside the source, nothing selected yet.
-  'vscode-01-a': { desc: 'preview opens beside the source file', run: split('unit-box-mesh.tscn', { sideBar: false, previewShare: 0.62 }) },
+  'vscode-01-a': { desc: 'preview opens beside the source file', run: boxBesideSource },
 
   // VSCODE-02 — hot reload. The pair must differ ONLY by the saved edit.
-  'vscode-02-a': {
-    desc: 'before edit — Box at origin',
-    run: split('unit-box-mesh.tscn', { sideBar: false, previewShare: 0.62 }),
-  },
+  'vscode-02-a': { desc: 'before edit — Box at origin', run: boxBesideSource },
   'vscode-02-b': {
     desc: 'after edit — Box translated, details panel shows Position X: 3.000',
+    continues: true,
     run: async (page) => {
-      await editScene('unit-box-mesh.tscn', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)');
+      await moveBoxX(3);
       await selectNode(await frameShowing(page, 'Box'), 'Root/Box');
       await settle(4000);
       return true;
@@ -151,13 +135,16 @@ export const GUIDE_SHOTS = {
   'vscode-03-a': {
     desc: 'two preview panels side-by-side, each showing a different fixture',
     run: async (page) => {
-      const painted = await twoPreviews(page, 'unit-box-mesh.tscn', 'unit-sphere-mesh.tscn');
+      restore(BOX_SCENE);
+      restore('unit-sphere-mesh.tscn');
+      const painted = await twoPreviews(page, BOX_SCENE, 'unit-sphere-mesh.tscn');
       await settle();
       return painted;
     },
   },
   'vscode-03-b': {
     desc: 'independent selection: Box in one panel, Sphere in the other',
+    continues: true,
     run: async (page) => {
       await selectNode(await frameShowing(page, 'Box'), 'Root/Box');
       await selectNode(await frameShowing(page, 'Sphere'), 'Root/Sphere');
@@ -179,6 +166,7 @@ export const GUIDE_SHOTS = {
   },
   'vscode-04-b': {
     desc: 'after Ctrl+click — materials/metal.tres opens',
+    continues: true,
     run: async (page) => {
       await followResourceLink(page);
       await settle(3000);
@@ -230,60 +218,24 @@ export const GUIDE_SHOTS = {
   // VSCODE-07 — the magenta placeholder for an unresolvable texture.
   'vscode-07-a': {
     desc: 'TestMesh renders as a magenta placeholder cube',
-    run: preview('test-missing-texture.tscn'),
+    run: scene('test-missing-texture.tscn'),
   },
 
   // VSCODE-08 — the panel survives a content-only save. Preview alone, so the
   // camera the flow is about is what fills the frame.
-  'vscode-08-a': {
-    desc: 'preview before a content edit',
-    run: preview('unit-box-mesh.tscn'),
-  },
+  'vscode-08-a': { desc: 'preview before a content edit', run: scene(BOX_SCENE) },
   'vscode-08-b': {
     desc: 'after edit (transform X 0 → 1.5) — same panel instance, scene re-rendered',
+    continues: true,
     run: async () => {
-      await editScene('unit-box-mesh.tscn', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)');
+      await moveBoxX(1.5);
       await settle(4000);
       return true;
     },
   },
 
-  // BOTH-01 — the integration fixture's full child list.
-  'both-01-a': {
-    desc: 'integration-all-primitives scene tree expanded',
-    run: preview('integration-all-primitives.tscn'),
-  },
-
-  // BOTH-02 — every MVS primitive in its own preview.
-  'both-02-a': { desc: 'unit-box-mesh.tscn', run: preview('unit-box-mesh.tscn') },
-  'both-02-b': { desc: 'unit-sphere-mesh.tscn', run: preview('unit-sphere-mesh.tscn') },
-  'both-02-c': { desc: 'unit-plane-mesh.tscn', run: preview('unit-plane-mesh.tscn') },
-  'both-02-d': { desc: 'unit-cylinder-mesh.tscn', run: preview('unit-cylinder-mesh.tscn') },
-  'both-02-e': { desc: 'unit-capsule-mesh.tscn', run: preview('unit-capsule-mesh.tscn') },
-
-  // BOTH-03 — lights, alone and mixed with geometry.
-  'both-03-a': { desc: 'integration-lights-all-types.tscn', run: preview('integration-lights-all-types.tscn') },
-  'both-03-b': { desc: 'integration-mixed-nodes.tscn', run: preview('integration-mixed-nodes.tscn') },
-
-  // BOTH-04 — two WorldEnvironment configurations.
-  'both-04-a': { desc: 'unit-world-environment-basic.tscn', run: preview('unit-world-environment-basic.tscn') },
-  'both-04-b': { desc: 'unit-world-environment-no-fog.tscn', run: preview('unit-world-environment-no-fog.tscn') },
+  // BOTH-01..04 — one fixture per shot: primitives, lights, environments.
+  ...Object.fromEntries(
+    Object.entries(SOLO_SHOTS).map(([key, file]) => [key, { desc: file, run: scene(file) }])
+  ),
 };
-
-/**
- * Shots that continue the state the previous key left behind.
- *
- * A scene an edit shot rewrote is restored by the next recipe that OPENS it,
- * never by the shot that edited it: restoring first would let the watcher
- * revert the preview before the caller shoots. Keep that ordering in mind when
- * moving a key.
- *
- * A caller shooting a subset has to take the whole chain, or the follow-up
- * lands on whatever the last shot happened to leave open.
- */
-export const SHOT_CHAINS = [
-  ['vscode-02-a', 'vscode-02-b'],
-  ['vscode-03-a', 'vscode-03-b'],
-  ['vscode-04-a', 'vscode-04-b'],
-  ['vscode-08-a', 'vscode-08-b'],
-];

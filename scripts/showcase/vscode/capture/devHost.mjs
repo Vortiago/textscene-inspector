@@ -12,6 +12,7 @@ import { spawn, execSync } from 'node:child_process';
 import { rmSync, existsSync, readdirSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { SWIFTSHADER_GL_ARGS } from '../../browser.mjs';
+import { THROWAWAY_USER_SETTINGS } from '../../../vscode/userSettings.mjs';
 import { HEADLESS, IS_LINUX, IS_WIN, sleep } from './platform.mjs';
 import { EXT, PORT, UD, VSCODE_CACHE, WS } from './paths.mjs';
 
@@ -71,29 +72,16 @@ export function killPortOrphan(port) {
 /**
  * Seed the throwaway user-data-dir before the dev-host reads it.
  *
- * `window.newWindowDimensions: maximized` is how the window comes up filling
- * the Xvfb screen: Electron exposes no `Browser.setWindowBounds`, and headless
- * there is no window manager to resize against. Width is not cosmetic here.
- * Below 768px the previewer's shell stacks its dock under the viewport, so a
- * preview sharing a narrow window with a source editor shows no scene tree.
- * The rest keeps a first-run window from opening the Welcome tab over the
- * editor or reaching for the update and telemetry endpoints.
+ * The window's size is not among the things these settings decide. It comes up
+ * 1440x900 on the 1920x1080 Xvfb screen, and neither `window.newWindowDimensions`
+ * nor CDP moves it headless: Electron exposes no `Browser.setWindowBounds`, and
+ * there is no window manager to resize against. The editor-area split is the
+ * only lever on how wide the preview itself lands (`widenPreview`).
  */
 export function seedUserData(userDataDir) {
   const userDir = `${userDataDir}/User`;
   mkdirSync(userDir, { recursive: true });
-  writeFileSync(`${userDir}/settings.json`, JSON.stringify({
-    'window.newWindowDimensions': 'maximized',
-    'window.restoreWindows': 'none',
-    'workbench.startupEditor': 'none',
-    'workbench.tips.enabled': false,
-    'workbench.enableExperiments': false,
-    'update.mode': 'none',
-    'extensions.autoUpdate': false,
-    'extensions.autoCheckUpdates': false,
-    'telemetry.telemetryLevel': 'off',
-    'editor.minimap.enabled': false,
-  }, null, 2));
+  writeFileSync(`${userDir}/settings.json`, JSON.stringify(THROWAWAY_USER_SETTINGS, null, 2));
 }
 
 /** SIGKILL the launched process group — xvfb-run + Xvfb + the dev-host it wraps. */
@@ -198,9 +186,10 @@ function buildLaunchCommand(bin, viaPath) {
   let spawnArgs = vscodeArgs;
   if (HEADLESS) {
     cmd = 'xvfb-run';
-    // -a: pick a free display. 24-bit depth is required for GL; 1920x1080 also
-    // sizes the window and therefore the screenshot. The -screen string is ONE
-    // argv element (no shell) — spawn passes it verbatim to xvfb-run's getopt.
+    // -a: pick a free display. 24-bit depth is required for GL. The screen only
+    // bounds the window, which comes up 1440x900 inside it (see `seedUserData`).
+    // The -screen string is ONE argv element (no shell) — spawn passes it
+    // verbatim to xvfb-run's getopt.
     spawnArgs = ['-a', '--server-args=-screen 0 1920x1080x24', bin, ...vscodeArgs];
   }
   // On Windows a `code` resolved from PATH is code.cmd, which needs a shell to run.

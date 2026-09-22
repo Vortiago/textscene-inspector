@@ -1,23 +1,13 @@
 /**
- * Regression test for narrow-viewport responsive layout.
+ * The shell's narrow-viewport layout, pinned at the CSS source.
  *
- * Before this fix, `TscnPreviewShell.module.css` had zero `@media`
- * blocks; the canvas + 320px sidebar always rendered side-by-side, so
- * at phone/tablet widths the sidebar squeezed the canvas to an unusable
- * sliver. The shell stacks them vertically at ≤768px instead.
+ * happy-dom computes no styles inside `@media` and `matchMedia` answers a
+ * static `false`, so the declarations are asserted in the stylesheet the host
+ * ships verbatim: at ≤768px `.columns` stacks and `.dock` keeps a full-width,
+ * definite share of that stack.
  *
- * jsdom / happy-dom does not compute styles inside `@media` queries
- * reliably (and `matchMedia` returns a static `false` by default), so
- * asserting computed `flex-direction` would be flaky. Instead we
- * assert the CSS source itself contains the expected media block and
- * declarations — that is the load-bearing property: as long as the
- * `@media (max-width: 768px)` block exists with `flex-direction:
- * column` on `.columns` and a full-width dock holding a definite share
- * of the stack, real browsers will apply it. The CSS module file is
- * shipped to the host (Vite / esbuild) verbatim.
- *
- * Sister test: a render-time smoke check that the shell still mounts
- * its body element so the responsive container exists.
+ * Sister test: a render-time smoke check that the shell still mounts its body
+ * element, so the responsive container exists at all.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -59,13 +49,9 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     // The dock stays visible (NOT display:none) — it stacks under the viewport.
     expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*display:\s*none/);
     expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*width:\s*100%/);
-    // A DEFINITE basis, which a `max-height` cap over `flex-basis: auto` is
-    // not: measured in a real browser at 700px the dock resolved to 8px,
-    // because `auto` measures its `flex-basis: 0` panes while the viewport's
-    // flex-grow took the whole column. The cap can only ever shrink a height
-    // the dock never had. (ADR-0007: a single right Split Dock, not two
-    // columns.)
-    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*flex-basis:\s*45%/);
+    // Definite, not content-measured: `auto` resolves to 8px here, whatever
+    // `max-height` sits beside it. The percentage itself is free to be retuned.
+    expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*flex-basis:\s*\d+(\.\d+)?%/);
     expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*flex-basis:\s*auto/);
   });
 
@@ -76,6 +62,15 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     const desktopBlock = stripMediaBlocks(CSS_SOURCE);
     expect(desktopBlock).toMatch(/\.columns\s*\{[^}]*display:\s*flex/);
     expect(desktopBlock).toMatch(/\.dock[^{]*\{[^}]*flex-direction:\s*column/);
+  });
+
+  it('owns the dock basis in the stylesheet, reading the resizer as a custom property', () => {
+    // An inline `flex-basis` from the resizer would outrank every selector, so
+    // the narrow block could only ever win it back with `!important`.
+    expect(stripMediaBlocks(CSS_SOURCE)).toMatch(
+      /\.dock[^{]*\{[^}]*flex-basis:\s*var\(--tsi-dock-basis/
+    );
+    expect(CSS_SOURCE).not.toMatch(/flex-basis:[^;]*!important/);
   });
 
   it('still renders the shell body element so the responsive container exists at runtime', () => {
@@ -89,6 +84,18 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     const shellRoot = container.querySelector('[data-panel-id="p-mobile"]');
     expect(shellRoot).toBeTruthy();
     expect(shellRoot!.children.length).toBeGreaterThan(0);
+  });
+
+  it('hands the resizer width to the stylesheet as a custom property', () => {
+    const { container } = render(
+      <TscnPreviewShell panelId="p-basis" content={MINIMAL_TSCN} />
+    );
+    // The other half of the pin above: an inline `flex-basis` here would outrank
+    // the narrow block's percentage whatever the stylesheet says.
+    const dock = container.querySelector<HTMLElement>('section[aria-label="Scene and Inspector"]');
+    expect(dock).toBeTruthy();
+    expect(dock!.style.getPropertyValue('--tsi-dock-basis')).toBe('320px');
+    expect(dock!.style.flexBasis).toBe('');
   });
 });
 

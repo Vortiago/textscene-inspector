@@ -63,7 +63,7 @@ export async function palette(page, label) {
 }
 
 /** Open a workspace file via Quick Open. */
-export async function openFile(page, relPath) {
+async function openFile(page, relPath) {
   await focusWorkbench(page);
   await page.keyboard.press('Escape');
   await sleep(150);
@@ -75,22 +75,21 @@ export async function openFile(page, relPath) {
   await sleep(900);
 }
 
-export const closeAllEditors = (page) => palette(page, 'View: Close All Editors');
-export const openPreview = (page) => palette(page, 'TextScene: Open Preview to the Side');
+const closeAllEditors = (page) => palette(page, 'View: Close All Editors');
+const openPreview = (page) => palette(page, 'TextScene: Open Preview to the Side');
 /** Drop the raw .tscn source so the webview fills the editor area. */
-export const soloPreview = (page) => palette(page, 'View: Close Editors in Other Groups');
+const soloPreview = (page) => palette(page, 'View: Close Editors in Other Groups');
 
 /**
  * Give the preview group `fraction` of the editor area by dragging the sash.
  *
- * Below 768px the shell stacks its dock under the viewport
- * (`TscnPreviewShell.module.css`), and the stacked dock falls outside the
- * visible area — so an evenly split 1440px window shows a preview with no
- * scene tree at all. Electron exposes no `Browser.setWindowBounds`, and under
- * xvfb there is no window manager to resize against, so the split itself is the
- * only lever. Dragging the sash is also what a reader would do.
+ * The shots that keep the .tscn source beside the preview want the DESKTOP
+ * shell — viewport and dock side by side — and an even split of a 1440px window
+ * leaves each group under the shell's 768px stacking width. The window itself
+ * cannot be resized (see `seedUserData`), so the split is the only lever.
+ * Dragging the sash is also what a reader would do.
  */
-export async function widenPreview(page, fraction = 0.62) {
+async function widenPreview(page, fraction) {
   const editor = await page.locator(EDITOR_PART).first().boundingBox();
   const sash = page.locator(`${EDITOR_PART} .monaco-sash.vertical`).first();
   const box = await sash.boundingBox().catch(() => null);
@@ -110,7 +109,7 @@ export async function widenPreview(page, fraction = 0.62) {
  * which is not reliably the one a recipe just opened. Naming the tab is exact,
  * so `unit-box-mesh.tscn` never takes `Preview: unit-box-mesh.tscn` with it.
  */
-export async function closeTab(page, label) {
+async function closeTab(page, label) {
   const tab = page.locator(`.tab:has(.label-name:text-is("${label}"))`).first();
   await tab.waitFor({ state: 'visible', timeout: 10000 });
   await tab.hover();
@@ -119,16 +118,17 @@ export async function closeTab(page, label) {
 }
 
 /** Show or hide the Explorer side bar, whichever the shot needs. */
-export async function setSideBar(page, visible) {
+async function setSideBar(page, visible) {
   // Width, not `isVisible`: a hidden part stays in the DOM with a zero-width box.
   const box = await page.locator(SIDE_BAR).first().boundingBox().catch(() => null);
   const shown = Boolean(box && box.width > 0);
-  if (shown !== visible) await palette(page, 'View: Toggle Primary Side Bar Visibility');
-  await sleep(700);
+  if (shown === visible) return;
+  await palette(page, 'View: Toggle Primary Side Bar Visibility');
+  await sleep(700); // part relayout
 }
 
 /** Every frame currently carrying the previewer's React root. */
-export async function previewFrames(page) {
+async function previewFrames(page) {
   const found = [];
   for (const frame of page.frames()) {
     const has = await frame
@@ -163,7 +163,7 @@ export async function expandAllTrees(page) {
 }
 
 /** Expand every scene-tree row, so a deep node is reachable and the shot shows the hierarchy. */
-export async function expandTree(frame) {
+async function expandTree(frame) {
   await frame.evaluate(() => document.querySelector('[aria-label="Expand all"]')?.click());
   await sleep(600);
 }
@@ -181,19 +181,18 @@ export async function selectNode(frame, nodePath) {
   await sleep(900); // details panel repaint
 }
 
-/** Poll every frame for the previewer's #r3f-root canvas being painted. */
-export async function waitForCanvas(page, timeoutMs = 30000) {
+/** Poll the preview frames until one of them has a painted canvas. */
+async function waitForCanvas(page, timeoutMs = 30000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    for (const f of page.frames()) {
-      try {
-        const ok = await f.evaluate(() => {
-          const root = document.getElementById('r3f-root');
+    for (const frame of await previewFrames(page)) {
+      const painted = await frame
+        .evaluate(() => {
           const c = document.querySelector('canvas');
-          return !!root && !!c && c.width > 50 && c.height > 50;
-        });
-        if (ok) return true;
-      } catch { /* cross-origin / detached frame — skip */ }
+          return Boolean(c) && c.width > 50 && c.height > 50;
+        })
+        .catch(() => false);
+      if (painted) return true;
     }
     await sleep(500);
   }
@@ -230,13 +229,38 @@ export async function openScenePreview(page, file, { split = false, sideBar = tr
   return painted;
 }
 
+/**
+ * Two previews side by side, one per scene, with no .tscn source left over.
+ *
+ * Built by opening each scene's preview in turn and closing only its own
+ * source: "Close Editors in Other Groups" would take the first preview with it.
+ * The files must already hold the bytes the shot wants.
+ */
+export async function twoPreviews(page, leftFile, rightFile) {
+  // Two webviews split a 1440px window into panels narrow enough that the
+  // Explorer's width is the difference between a readable tree and a cramped one.
+  await setSideBar(page, false);
+  await closeAllEditors(page);
+  for (const file of [leftFile, rightFile]) {
+    await openFile(page, file);
+    await openPreview(page);
+    await sleep(1500);
+    // Close the source by NAME, not by "the active editor": the preview it just
+    // opened is what the workbench considers active, and closing that would
+    // leave the .tscn text in the shot instead of the panel.
+    await closeTab(page, file);
+  }
+  const painted = await waitForCanvas(page);
+  await expandAllTrees(page);
+  return painted;
+}
+
 /** Settle: GLBs + textures stream over the webview base64 bridge after first paint. */
 export const settle = (ms = 9000) => sleep(ms);
 
 /** Write the window to `<key>.png`, reporting whether a canvas ever painted. */
-export async function shoot(page, key, painted = true) {
+export async function shoot(page, key, painted) {
   const path = `${OUT}/${key}.png`;
   await page.screenshot({ path });
   console.log(`[vscode]   ${painted ? 'canvas painted' : 'TIMEOUT (no canvas)'} → ${path}`);
-  return painted;
 }

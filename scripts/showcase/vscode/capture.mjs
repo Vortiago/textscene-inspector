@@ -35,7 +35,7 @@ import { sleep } from './capture/platform.mjs';
 import { FIXTURES, OUT, PORT, TMP, UD, WS } from './capture/paths.mjs';
 import { killPortOrphan, killProcessTree, killStaleHost, launchDevHost, rmRetry, seedUserData, waitCDP } from './capture/devHost.mjs';
 import { openScenePreview, palette, settle, shoot, workbenchPage } from './capture/workbench.mjs';
-import { GUIDE_SHOTS, SHOT_CHAINS } from './capture/guideShots.mjs';
+import { GUIDE_SHOTS } from './capture/guideShots.mjs';
 
 const SHOWCASE_SHOTS = {
   'vscode-main': { desc: 'a 2D-UI field-journal dialog rendered by the Control painters', run: shotOfScene('example-ui-dialog.tscn') },
@@ -52,15 +52,22 @@ function shotOfScene(file) {
 
 const SHOTS = { ...SHOWCASE_SHOTS, ...GUIDE_SHOTS };
 
-/** Extend the requested keys with any shot they continue, keeping shot order. */
+const ORDER = Object.keys(SHOTS);
+if (SHOTS[ORDER[0]].continues) throw new Error(`the first shot "${ORDER[0]}" cannot continue another`);
+
+/**
+ * Extend the requested keys with the shots they continue, keeping shot order.
+ *
+ * A `continues` shot starts from the window the key before it left behind, so a
+ * caller shooting a subset has to take the whole chain or the follow-up lands on
+ * whatever happened to be open. Walking backwards picks up a chain of any depth.
+ */
 function withChains(requested) {
   const needed = new Set(requested);
-  for (const chain of SHOT_CHAINS) {
-    for (let i = 1; i < chain.length; i++) {
-      if (needed.has(chain[i])) for (let j = 0; j < i; j++) needed.add(chain[j]);
-    }
+  for (let i = ORDER.length - 1; i > 0; i--) {
+    if (needed.has(ORDER[i]) && SHOTS[ORDER[i]].continues) needed.add(ORDER[i - 1]);
   }
-  return Object.keys(SHOTS).filter((key) => needed.has(key));
+  return ORDER.filter((key) => needed.has(key));
 }
 
 const wanted = process.argv.slice(2);
@@ -70,7 +77,7 @@ if (unknown.length) {
   console.error(`[vscode] known: ${Object.keys(SHOTS).join(', ')}`);
   process.exit(1);
 }
-const keys = wanted.length ? withChains(wanted) : Object.keys(SHOTS);
+const keys = wanted.length ? withChains(wanted) : ORDER;
 
 mkdirSync(OUT, { recursive: true });
 mkdirSync(TMP, { recursive: true });
@@ -121,7 +128,7 @@ try {
       await SHOTS[key].after?.(page);
       if (!painted) failed.push(key);
     } catch (e) {
-      // One broken recipe must not cost the other twenty-three shots.
+      // One broken recipe must not cost the rest of the run.
       console.error(`[vscode]   FAILED: ${e.message}`);
       failed.push(key);
     }

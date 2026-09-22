@@ -29,6 +29,7 @@ import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { inkStats } from './pixels.mjs';
+import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const EXTENSION_DIR = path.join(REPO_ROOT, 'apps/textscene-vscode');
@@ -93,35 +94,14 @@ export function assertExtensionBuilt() {
 // Launch
 // ============================================================================
 
-/**
- * Seeds a throwaway user-data dir. Without these settings a first-run VS Code
- * opens the Welcome tab over the editor and starts talking to the update and
- * telemetry endpoints, which pollutes the offline check.
- */
+/** Seeds a throwaway user-data dir with the shared first-run settings. */
 function seedUserDataDir(extraSettings) {
   const dir = mkdtempSync(path.join(tmpdir(), 'textscene-vscode-drive-'));
   const userDir = path.join(dir, 'User');
   mkdirSync(userDir, { recursive: true });
   writeFileSync(
     path.join(userDir, 'settings.json'),
-    JSON.stringify(
-      {
-        'workbench.startupEditor': 'none',
-        'workbench.tips.enabled': false,
-        'workbench.enableExperiments': false,
-        'update.mode': 'none',
-        'update.showReleaseNotes': false,
-        'extensions.autoUpdate': false,
-        'extensions.autoCheckUpdates': false,
-        'telemetry.telemetryLevel': 'off',
-        'window.restoreWindows': 'none',
-        'window.newWindowDimensions': 'default',
-        'editor.minimap.enabled': false,
-        ...extraSettings,
-      },
-      null,
-      2
-    )
+    JSON.stringify({ ...THROWAWAY_USER_SETTINGS, ...extraSettings }, null, 2)
   );
   return dir;
 }
