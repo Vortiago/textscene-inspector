@@ -139,8 +139,10 @@ run (`resumeFromRunId` works in the same session only).
    `pnpm docs:index` and `pnpm docs:gallery` and commit `docs/comparison/`:
    the index rows and the gallery's shared notes are generated from them.
 6. Fixture wave: `pnpm build:linter && pnpm lint:tscn <files>`, `pnpm lint:scenes`.
-7. Commit each batch: `docs: …` / `refactor: …`, conventional, with the
-   `Sweep-Batch: <id>` trailer. Then push the branch in the background.
+7. Commit each batch with `node .sweep/commit.mjs <ids>`. It adds the
+   `Sweep-Batch: <id>` trailer and skips the pre-commit hook (`HUSKY=0`), because
+   this gate already ran the full suite on the tree (Atle's decision, 2026-09-23).
+   Then push the branch in the background: the pre-push `validate` always runs.
 
 ## Shipping
 
