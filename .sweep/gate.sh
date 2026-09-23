@@ -13,7 +13,7 @@ step() {
   echo "$name $?" >> "$out/gate.exit"
 }
 
-git diff --name-only HEAD > "$out/changed.txt"
+git diff --name-only --diff-filter=d HEAD > "$out/changed.txt"
 grep -E '\.(ts|tsx|js|mjs)$' "$out/changed.txt" > "$out/changed-code.txt" || true
 
 step check xargs -a "$out/changed.txt" node .sweep/check.mjs
