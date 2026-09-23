@@ -1,16 +1,8 @@
 /**
- * Theme decode — one Theme resource body's property bag in, its font-relevant
- * data out.
- *
- * Two decode paths, one shared scan (`scanTheme`): a FILE-BACKED `.tres`
- * decodes to `ThemeAddresses` (font refs left as loader addresses,
- * `loadTheme.ts`'s `resolveThemeResource` awaits them), a scene's own inline
- * `[sub_resource type="Theme"]` decodes straight to a `ThemeResource`
- * (`resolveInlineThemeResource`, synchronous — the solve walk that calls it
- * cannot `await` mid-walk).
- *
- * Font references are resolved recursively through the Font slice's own decode
- * (`fonts/font/decode.ts`), never re-implemented here: one decoder per type.
+ * Theme decode: one Theme resource body's property bag into typed data. A
+ * file-backed `.tres` decodes to `ThemeAddresses`, and an inline Theme straight
+ * to a `ThemeResource`, through one shared `scanTheme`. Fonts resolve through the
+ * Font slice's own decode (`fonts/font/decode.ts`): one decoder per type.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
@@ -23,11 +15,9 @@ import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResource
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/index.js';
 
-// A theme key is `/`-separated and Godot reads it with `split("/", true, 2)`
-// (`theme.cpp`), so its segments go through the shared segment grammar rather
-// than a spelling of their own — `indexedKeyGrammar.guard.test.ts` holds the
-// whole package to that. `to_int` names the SEGMENT class; a theme's segments
-// are names rather than indices, and nothing here reads one as a number.
+// Godot splits a theme key with `split("/", true, 2)` (`theme.cpp`), so its
+// segments use the shared segment grammar (`indexedKeyGrammar.guard.test.ts`).
+// `to_int` names the segment class. Nothing here reads a segment as a number.
 /** `<Type>/fonts/<name>`. */
 const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)$`, 'to_int');
 /** `<Type>/font_sizes/<name>`. */
@@ -44,33 +34,21 @@ const CONSTANT_ENTRY = indexedKeyRegex(String.raw`^(#)/constants/(#)$`, 'to_int'
 const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
 
 /**
- * Walk one Theme resource body's properties, resolving every Font-valued one
- * (`default_font`, `<Type>/fonts/<name>`) through `resolveRef` — the ONE
- * `<Type>/<data_type>/<name>` scanning loop (`Theme::_set`/`_get`,
- * `scene/resources/theme.cpp:36-104`) shared by the file-backed path
- * (`resolveRef` synthesises an ADDRESS, awaited later by `resolveThemeResource`)
- * and the scene-inline path (`resolveRef` resolves against scope immediately,
- * via `resolveInlineFontResource`) — so the regex/property-walking logic
- * exists exactly once. `resolveRef` returning `null` (an absent/malformed ref,
- * OR — for the inline path — one that failed to resolve) omits the entry,
- * matching `Theme::has_font`'s `Ref<Font>::is_valid()` gate
- * (`scene/resources/theme.cpp:549-552`): a Theme can never distinguish
- * "explicitly nothing" from "never set" at this level. This collapse is
- * specific to fonts/font-sizes.
+ * The one `<Type>/<data_type>/<name>` scan (`Theme::_set`/`_get`,
+ * `scene/resources/theme.cpp:36-104`). Styles and icons stay raw refs, and
+ * colors and constants decode to literals.
  *
- * `styles`/`icons`/`colors`/`constants` split out by the same
- * `<Type>/<data_type>/<name>` regex, but styles/icons stay a raw ref string
- * (a StyleBox or icon Texture2D is a sub-resource of THIS theme, resolved by
- * the reader against `resources` — see `types.ts`) while colors/constants
- * are literal values decoded on the spot.
+ * @param resolveRef Resolves each Font ref: an address for the file-backed path,
+ *   a `FontResource` for the inline one. `null` omits the entry, as
+ *   `Theme::has_font`'s `Ref<Font>::is_valid()` gate does (`scene/resources/theme.cpp:549-552`),
+ *   so "explicitly nothing" equals "never set" for fonts and font sizes.
  */
 function scanTheme<T>(
   properties: Record<string, string>,
   resolveRef: (ref: string) => T | null
 ): Omit<ScannedTheme<T>, 'resources'> {
-  // Prototype-free: the theme-item TYPE and NAME halves are parsed straight out
-  // of a `.tres` key, so `__proto__/fonts/toString = …` would otherwise resolve
-  // truthy through the chain, skip the `??=` and land the write on
+  // Prototype-free, since type and name come from a `.tres` key: otherwise
+  // `__proto__/fonts/toString = …` skips the `??=` and writes to
   // `Object.prototype`. `in` on the read side (`lookup.ts`) walks the chain too.
   const fonts: Record<string, Record<string, T>> = Object.create(null);
   const fontSizes: Record<string, Record<string, number>> = Object.create(null);
@@ -137,7 +115,7 @@ function scanTheme<T>(
     if (constantMatch) {
       const [, type, name] = constantMatch;
       const n = parseOptionalFloat(value);
-      // `int constant_map` (`theme.h`) — `_to_int` truncates a fractional literal.
+      // `int constant_map` (`theme.h`): `_to_int` truncates a fractional literal.
       if (n !== undefined) (constants[type!] ??= Object.create(null))[name!] = Math.trunc(n);
       continue;
     }
@@ -157,10 +135,9 @@ function scanTheme<T>(
 }
 
 /**
- * Decode one file-backed Theme resource body into `ThemeAddresses`. Pure and
- * synchronous — no I/O. `selfPath` is the address a `SubResource`-valued font
- * ref resolves against (`resolveRefToResourcePath`'s `res://file.tres::SubId`
- * form) — always the OWNING `.tres`, never the Theme's own address.
+ * One file-backed Theme resource body into `ThemeAddresses`, with no I/O.
+ * `selfPath` is what a `SubResource` font ref resolves against
+ * (`res://file.tres::SubId`): always the owning `.tres`, never the Theme's address.
  */
 export function decodeThemeAddresses(
   selfPath: string,
@@ -175,15 +152,10 @@ export function decodeThemeAddresses(
 }
 
 /**
- * Resolve a scene's own inline `[sub_resource type="Theme"]` straight to a
- * `ThemeResource`, in one synchronous pass — the solve walk cannot `await`
- * mid-walk, and (unlike a file-backed `.tres`) there is no address-then-load
- * split to make: a `SubResource`-valued font ref inside an inline Theme
- * addresses a SIBLING sub-resource of the SAME scene, which
- * `resolveInlineFontResource` reads directly rather than routing through the
- * font processor — a `res://scene.tscn::SubId` address could never resolve
- * there anyway (`parseTresFile` requires a `[gd_resource]` header; a scene's
- * own `[gd_scene]` header throws).
+ * A scene's inline `[sub_resource type="Theme"]` to a `ThemeResource`,
+ * synchronously, since the solve walk cannot `await`. A font ref names a sibling
+ * sub-resource, read directly: the font processor's `parseTresFile` throws on a
+ * `[gd_scene]` header.
  */
 export function resolveInlineThemeResource(
   properties: Record<string, string>,

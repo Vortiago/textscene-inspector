@@ -1,12 +1,8 @@
 /**
- * The image layer around the noise generator — the part that is Godot's own
- * (`Noise::_get_image`, `_generate_seamless_image`,
- * `Image::bump_map_to_normal_map`) rather than the vendored library's.
- *
- * The generator is not re-tested here: it is the official JS port of the same
- * upstream library Godot vendors, so what needs pinning is the wrapping — the
- * normalization rule, the seam blend's edge match, the height-field channel the
- * bump conversion reads, and the row order the DataTexture is written in.
+ * The image layer Godot owns around the vendored noise generator
+ * (`Noise::_get_image`, `_generate_seamless_image`, `Image::bump_map_to_normal_map`):
+ * normalization, the seam blend, the bump conversion's channel and the row order.
+ * The generator is the official JS port, so it is not re-tested here.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -34,8 +30,8 @@ const RAMP: Gradient = {
 
 describe('noiseImage', () => {
   it('normalizes to the field\'s own min/max (Godot\'s default)', () => {
-    // noise.cpp:87-136 — the whole image is sampled first, then rescaled, so the
-    // darkest pixel is 0 and the brightest 255 whatever the raw range was.
+    // noise.cpp:87-136: the whole image is sampled, then rescaled, so the darkest
+    // pixel is 0 and the brightest 255 whatever the raw range.
     const image = noiseImage((x) => x / 100, 4, 1, false, true);
     expect(image[0]).toBe(0);
     expect(image[3]).toBe(255);
@@ -62,7 +58,7 @@ describe('noiseImage', () => {
 
   it('samples through the generator offset', () => {
     // fastnoise_lite.cpp:318-325 adds `offset` before generating, so an offset
-    // field equals the unoffset field read further along.
+    // field equals the plain field read further along.
     const data = decodeFastNoiseLite({ offset: 'Vector3(5, 0, 0)' });
     const shifted = noiseSampler(data);
     const plain = noiseSampler(decodeFastNoiseLite({}));
@@ -71,26 +67,20 @@ describe('noiseImage', () => {
 });
 
 describe('seamlessNoiseImage with a skirt wider than half the image', () => {
-  // `wr`/`rd_dest` are `img_buff`s over the OUTPUT, so both wrap on the output
-  // size: `img[(x + offset_x) % width + ((y + offset_y) % height) * width]`
-  // (noise.h:66-67). Past a 0.5 skirt the blend loops run x to
-  // half_width + skirt_width, beyond the image, and that modulo carries the
-  // writes onto the opposite edge. `seamless_blend_skirt` is
-  // PROPERTY_HINT_RANGE "0,1,0.001" (noise_texture_2d.cpp:97), so 1 is an
-  // ordinary authored value, and the decoder does not clamp it.
+  // `wr` and `rd_dest` wrap on the output size (noise.h:66-67), so past a 0.5
+  // skirt the modulo carries writes onto the opposite edge. `seamless_blend_skirt`
+  // is PROPERTY_HINT_RANGE "0,1,0.001" (noise_texture_2d.cpp:97), so 1 is legal
+  // and the decoder does not clamp it.
   const sample = (x: number, y: number) => ((x * 7 + y * 13) % 251) / 251;
 
   it('blends the columns the skirt wraps onto, which raw indexing dropped', () => {
-    // Indexing `dest[x + y * width]` raw put those writes past the end of the
-    // Uint8Array, where a store is a silent no-op — so the left half kept its
-    // bare quadrant-swap value and 768 of these 1024 pixels were wrong.
+    // A raw `dest[x + y * width]` index writes past the Uint8Array's end, a silent no-op.
     const out = seamlessNoiseImage(sample, 16, 16, false, false, 1);
     expect([out[0], out[3], out[16 * 3 + 2], out[16 * 7 + 5]]).toEqual([194, 207, 212, 147]);
   });
 
   it('leaves a skirt of half the image or less untouched', () => {
-    // The wrap only ever engages past 0.5; at or below it every index is
-    // already inside the image, so this pins that the change is confined.
+    // At or below 0.5 every index is inside the image, so the wrap never engages.
     for (const skirt of [0.1, 0.5]) {
       const out = seamlessNoiseImage(sample, 16, 16, false, false, skirt);
       expect(out).toHaveLength(256);
@@ -101,8 +91,8 @@ describe('seamlessNoiseImage with a skirt wider than half the image', () => {
 
 describe('seamlessNoiseImage', () => {
   it('produces edges that match across the wrap', () => {
-    // The whole point of the blend skirt: column 0 and column width-1 are
-    // neighbours once the texture tiles, so they must be close.
+    // Column 0 and column width-1 are neighbours once the texture tiles, so the
+    // blend skirt keeps them close.
     const sample = noiseSampler(decodeFastNoiseLite({ frequency: '0.05' }));
     const width = 64;
     const height = 64;
@@ -145,7 +135,7 @@ describe('modulateWithGradient', () => {
 
 describe('bumpMapToNormalMap', () => {
   it('emits a flat +Z normal for a flat height field', () => {
-    // image.cpp:4083-4128 — every neighbour difference is zero, so the normal is
+    // image.cpp:4083-4128: every neighbour difference is zero, so the normal is
     // (0, 0, 1), packed as 127.5 + n * 127.5.
     const flat = grayToRgba(new Uint8Array([128, 128, 128, 128]));
     const normals = bumpMapToNormalMap(flat, 4, 2, 2, 8);
@@ -165,7 +155,7 @@ describe('bumpMapToNormalMap', () => {
 
   it('reads the RED channel, so a colour_ramp feeds it red rather than luminance', () => {
     // Godot converts to FORMAT_RF first (image.cpp:4086), which keeps only red.
-    // Two images that differ ONLY in green/blue must produce the same normals.
+    // Two images that differ only in green and blue give the same normals.
     const redOnly = new Uint8Array([10, 200, 200, 255, 250, 200, 200, 255]);
     const redSameOtherChannelsDifferent = new Uint8Array([10, 0, 0, 255, 250, 90, 90, 255]);
     expect([...bumpMapToNormalMap(redOnly, 4, 2, 1, 4)]).toEqual([
@@ -175,8 +165,8 @@ describe('bumpMapToNormalMap', () => {
 
 
   it('reads a raw grayscale field at stride 1 identically to its RGBA expansion', () => {
-    // The no-ramp path skips grayToRgba entirely; the stride keeps the two
-    // representations of the same height field byte-identical as normals.
+    // The no-ramp path skips grayToRgba. The stride keeps both forms of one height
+    // field byte-identical as normals.
     const gray = new Uint8Array([0, 60, 200, 255, 128, 90]);
     expect([...bumpMapToNormalMap(gray, 1, 3, 2, 8)]).toEqual([
       ...bumpMapToNormalMap(grayToRgba(gray), 4, 3, 2, 8),
@@ -184,13 +174,12 @@ describe('bumpMapToNormalMap', () => {
   });
 
   it('wraps at the edges rather than clamping', () => {
-    // `px = tx + 1; if (px >= width) px -= width` — the right neighbour of the
-    // last column is the first column, which is what keeps a seamless height
-    // field seamless as a normal map.
+    // `px = tx + 1; if (px >= width) px -= width`: the last column's right neighbour
+    // is the first column, so a seamless height field stays seamless.
     const row = grayToRgba(new Uint8Array([0, 128, 255]));
     const normals = bumpMapToNormalMap(row, 4, 3, 1, 2);
-    // Last texel's slope is (first - last), i.e. strongly negative → packed X
-    // above the midpoint, the mirror of the interior's downhill slope.
+    // The last texel's slope is (first - last), strongly negative, so packed X is
+    // above the midpoint.
     expect(normals[(2 << 2) + 0]!).toBeGreaterThan(127);
   });
 });
@@ -211,20 +200,19 @@ describe('rasterizeNoiseTexture2D', () => {
   });
 
   it('writes rows bottom-up so it matches a file-backed texture\'s orientation', () => {
-    // flipY does not apply to a typed-array source, so Godot's TOP row has to
-    // land last in the buffer — the same rule the gradient rasteriser follows.
+    // flipY does not apply to a typed-array source, so Godot's top row lands last
+    // in the buffer.
     const tex = decodeNoiseTexture2D({ width: '1', height: '2' });
     const texture = rasterizeNoiseTexture2D(tex, noise, null);
     const data = texture.image.data as Uint8Array;
     const topRowValue = noiseImage(noiseSampler(noise), 1, 2, false, true)[0]!;
-    // The first row of the buffer is Godot's LAST row, so the top row's value
-    // appears at the end.
+    // The buffer's first row is Godot's last row, so the top row's value is at the end.
     expect(data[4]).toBe(topRowValue);
   });
 
   it('runs colour ramp then bump conversion, in Godot\'s order', () => {
     // noise_texture_2d.cpp:170-175: modulate first, then bump_map_to_normal_map,
-    // so the normal map is derived from the RAMPED red channel.
+    // so the normal map comes from the ramped red channel.
     const texture = rasterizeNoiseTexture2D(
       decodeNoiseTexture2D({ width: '8', height: '8', as_normal_map: 'true' }),
       noise,

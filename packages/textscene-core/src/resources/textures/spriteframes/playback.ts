@@ -1,11 +1,8 @@
 /**
- * SpriteFrames playback lookup — decoded animation + playhead → displayed frame.
- *
- * Godot's AnimatedSprite2D shows frame `i` for `durations[i] / speed` seconds
- * (`_get_frame_duration` feeds `frame_speed_scale = 1.0 / duration`,
- * `scene/2d/animated_sprite_2d.cpp:542-551`). Pure and THREE-free: the preview's
- * transport drivers are the only actuators, so time → frame stays a lookup with
- * no mixer and no state.
+ * SpriteFrames playback: a decoded animation and a playhead to the displayed
+ * frame. Frame `i` shows for `durations[i] / speed` seconds (`_get_frame_duration`,
+ * `scene/2d/animated_sprite_2d.cpp:542-551`). A stateless lookup: the transport
+ * drivers are the only actuators.
  */
 
 import type { SpriteFramesAnimation } from './types';
@@ -20,7 +17,7 @@ export function frameAtTime(animation: SpriteFramesAnimation, elapsed: number): 
   if (n <= 1 || animation.fps <= 0 || elapsed <= 0) return 0;
 
   const total = clipDuration(animation);
-  if (!(total > 0)) return 0; // also catches NaN (a malformed duration)
+  if (!(total > 0)) return 0; // Also catches NaN from a malformed duration.
   const frameTimes = animation.durations.map((d) => d / animation.fps);
 
   let t = elapsed;
@@ -35,7 +32,7 @@ export function frameAtTime(animation: SpriteFramesAnimation, elapsed: number): 
   return n - 1;
 }
 
-/** One loop's total play time in seconds (sum of per-frame display times). */
+/** One loop's total play time in seconds: the sum of per-frame display times. */
 export function clipDuration(animation: SpriteFramesAnimation): number {
   if (animation.fps <= 0) return 0;
   return animation.durations.reduce((sum, d) => sum + d, 0) / animation.fps;

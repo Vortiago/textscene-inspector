@@ -1,13 +1,7 @@
 /**
- * Godot's `BaseMaterial3D.texture_filter` → three sampler state.
- *
- * `godotTextureFilter.ts` carries the citations; this file owns the expected
- * values, every one read off Godot 4.6.3's `MaterialStorage::samplers_rd_allocate`
- * rather than off our own output.
- *
- * The load-bearing case is row 3. It is Godot's default AND three's default
- * state, which is what makes an unauthored `texture_filter` a byte-identical
- * no-op — and therefore why wiring this property moves no existing baseline.
+ * Godot's `BaseMaterial3D.texture_filter` to three sampler state. Every expected
+ * value is read off Godot 4.6.3's `MaterialStorage::samplers_rd_allocate`. Row 3
+ * is Godot's default and three's, so an unauthored filter is a byte-identical no-op.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,9 +15,9 @@ import {
 } from './godotTextureFilter';
 
 /**
- * Godot's six sampler states. `min_filter` there is the WITHIN-level filter and
- * `mip_filter` the BETWEEN-level one; three fuses both into `minFilter`. Rows 0
- * and 1 set `max_lod = 0`, i.e. no mipmapping at all.
+ * Godot's six sampler states. `min_filter` there is the within-level filter and
+ * `mip_filter` the between-level one, and three fuses both into `minFilter`.
+ * Rows 0 and 1 set `max_lod = 0`, so no mipmapping.
  */
 const TABLE = [
   [0, 'NEAREST', THREE.NearestFilter, THREE.NearestFilter, false, 1],
@@ -71,8 +65,7 @@ describe('godotTextureFilterState', () => {
   });
 
   it("matches a fresh THREE.Texture's own defaults, so an unauthored filter is a no-op", () => {
-    // This is what makes wiring texture_filter move zero existing baselines: a
-    // material that does not author it must produce a byte-identical render.
+    // A material that does not author texture_filter renders byte-identically.
     expect(textureFilterMatches(new THREE.Texture(), godotTextureFilterState(undefined))).toBe(
       true
     );
@@ -116,7 +109,7 @@ describe('applyTextureFilterState', () => {
 describe('a texture with no mipmaps', () => {
   // Godot's procedural textures never call `generate_mipmaps`
   // (`scene/resources/gradient_texture.cpp`), so a `*_WITH_MIPMAPS` filter
-  // samples base level only — it does not manufacture a mip chain.
+  // samples the base level only.
   it('keeps a mipless texture mipless and degrades the min filter', () => {
     const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     texture.magFilter = THREE.LinearFilter;

@@ -1,13 +1,7 @@
 /**
- * Sky slice DECODE (ADR-0031). Every default below is the value Godot's own
- * constructor installs (`scene/resources/3d/sky_material.cpp`) — a sky that
- * omits a property is the common case, not the exception, so getting these
- * wrong is indistinguishable from getting the shader wrong.
- *
- * The slice claims `Sky` alongside the three materials because `Sky` is the
- * INDIRECTION, not a fourth material: it carries nothing but a `sky_material`
- * reference, and a consumer that did not know that would have to special-case
- * the type name itself to reach the material.
+ * Sky slice decode (ADR-0031). Every default is the value Godot's constructor
+ * installs (`scene/resources/3d/sky_material.cpp`): a sky usually omits most
+ * properties, so a wrong default looks like a wrong shader.
  */
 
 import type { Color } from '../../utils/colorParser';
@@ -18,13 +12,9 @@ import { colorOr } from '../../utils/colorParser';
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
 
 /**
- * The `sky_material` a `Sky` points at — `SubResource("…")` or
- * `ExtResource("…")` verbatim, for the caller to resolve through whichever
- * of the two forms the scene used.
- *
- * `undefined` for any other type, so a caller can hand it whatever the level
- * above resolved to: an `Environment.sky` that turns out not to be a `Sky` has
- * no material to follow, which is the same answer as a `Sky` that sets none.
+ * The `sky_material` a `Sky` points at, `SubResource("…")` or `ExtResource("…")`
+ * verbatim. `Sky` is an indirection, not a fourth material. `undefined` for any
+ * other type, so a caller can pass whatever `Environment.sky` resolved to.
  */
 export function skyMaterialRef(
   type: string | undefined,

@@ -1,19 +1,8 @@
 /**
- * Sky slice BUILD (ADR-0031): decoded sky Data plus its resolved dependencies
- * — the scene's directional lights and, for a panorama sky, its texture —
- * rendered into a cubemap and prefiltered into an IBL.
- *
- * `skyUniforms.ts` (the Godot-space → shader-uniform conversions) and
- * `skyShaders.ts` (the ported GLSL) are this module's internals; nothing
- * outside the slice reaches past `build.ts`.
- *
- * Godot's sky ambient is not a directionless constant — it is the sky's own
- * radiance, so it both lights surfaces and is what they reflect
- * (`Environment.reflection_source` defaults to the background). The equivalent
- * in three.js is a PMREM-prefiltered environment map, which is why the sky is
- * rendered rather than approximated: one cube render feeds BOTH
- * `scene.background` (sharp, camera-locked, drawn by three for free) and
- * `scene.environment` (prefiltered).
+ * Sky slice build (ADR-0031): renders decoded sky Data, the scene's directional
+ * lights and a panorama texture into a cubemap, prefiltered into an IBL.
+ * `skyUniforms.ts` and `skyShaders.ts` are internals: nothing outside the slice
+ * reaches past `build.ts`.
  */
 
 import * as THREE from 'three';
@@ -27,6 +16,12 @@ export type { SkyLight } from './skyUniforms';
 /** Cube face resolution. 256 is ample for a gradient and cheap to prefilter. */
 const CUBE_SIZE = 256;
 
+/**
+ * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
+ * they reflect (`Environment.reflection_source` defaults to the background).
+ * So one cube render feeds both `scene.background` and the PMREM-prefiltered
+ * `scene.environment`.
+ */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`. */
   background: THREE.Texture;
@@ -42,10 +37,9 @@ export interface SkyEnvironmentInput {
 }
 
 /**
- * Returns null when the sky could not be rendered — a headless test renderer,
- * a lost context, a driver that refuses the float render target. A null sky is
- * a visible absence rather than a wrong picture, and the caller simply leaves
- * the background and environment alone.
+ * Null when the sky cannot render: a headless test renderer, a lost context, or
+ * a driver that refuses the float render target. The caller then leaves the
+ * background and environment alone, a visible absence rather than a wrong picture.
  */
 export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,

@@ -1,17 +1,8 @@
 /**
- * Evaluate a decoded `Gradient` / `GradientTexture2D` — the fill projection and
- * the stop interpolation, ported from Godot's
- * `GradientTexture2D::_get_gradient_offset_at` and
- * `Gradient::get_color_at_offset`.
- *
- * Pure `.ts`, no THREE: the rasteriser in `build.ts` is one consumer, and the
- * CPUParticles2D simulation is the other — a colour ramp is sampled per particle
- * and never becomes a texture, so the sampler must not drag a renderer into
- * that path's import closure.
- *
- * PARITY LIMITATION — `Gradient.interpolation_color_space`: only the default
- * sRGB space (an identity transform) is implemented; OKLab / linear-sRGB
- * blending would differ mid-stop. No shipped scene sets a non-default space.
+ * Evaluates a decoded `Gradient` or `GradientTexture2D`, ported from
+ * `GradientTexture2D::_get_gradient_offset_at` and `Gradient::get_color_at_offset`.
+ * No THREE: CPUParticles2D samples a colour ramp per particle. Parity limitation:
+ * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
 import type { Color } from '../../../utils/colorParser';
@@ -36,7 +27,7 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
 
   let ofs: number;
   if (fill === GradientFill.Linear) {
-    // Godot projects onto the UNCAPPED segment: ofs is the signed projection
+    // Godot projects onto the uncapped segment: ofs is the signed projection
     // parameter along (fill_to - fill_from).
     const lenSq = dx * dx + dy * dy;
     ofs = ((posX - fillFrom.x) * dx + (posY - fillFrom.y) * dy) / lenSq;
@@ -64,8 +55,7 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
 /**
  * The gradient colour at normalised `offset`, mirroring Godot's
  * `Gradient::get_color_at_offset`: binary search for the bracketing stops,
- * clamp to the endpoints, then blend by the interpolation mode. Colours are
- * blended in the default (sRGB) interpolation space — an identity transform.
+ * clamp to the endpoints, then blend by the interpolation mode in sRGB space.
  */
 export function sampleGradientColor(gradient: Gradient, offset: number): Color {
   const stops = gradient.stops;
@@ -125,8 +115,7 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
 }
 
 
-/** Godot's `Math::cubic_interpolate` (Catmull-Rom): blend `from`→`to` with
- *  pre/post neighbours controlling the tangents. */
+/** Godot's `Math::cubic_interpolate` (Catmull-Rom): `from` to `to`, with the neighbours as tangents. */
 function cubicInterpolate(
   from: number,
   to: number,

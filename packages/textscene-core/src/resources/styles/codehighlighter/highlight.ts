@@ -1,24 +1,13 @@
 /**
  * `CodeHighlighter::_get_line_syntax_highlighting_impl`
- * (`scene/resources/syntax_highlighter.cpp:118-411`) — a line SCANNER, not a
- * language parser: keywords/member-keywords are dictionary lookups against
- * whatever word boundary it finds, a "number" is digit/hex/scientific-suffix
- * shape only, and a color region is a literal start/end delimiter match. It
- * has no grammar and no AST; porting a real lexer here would draw a DIFFERENT
- * picture than Godot's own CodeHighlighter does.
+ * (`scene/resources/syntax_highlighter.cpp:118-411`): a line scanner with no
+ * grammar. Keywords are lookups at word boundaries, a number is a shape, and a
+ * color region is a literal delimiter match. A real lexer would draw a different picture.
  *
- * `resolveLineColors` is the seam this module exposes: it returns CONTIGUOUS
- * colour spans for a whole line (forward-filled from the sparse delta map
- * Godot's own function returns), because a caller painting glyphs wants "what
- * colour is character j", not the change-point encoding.
- *
- * MULTI-LINE STATE. `color_region_cache` (`:131-152`) lets an open, non-line-only
- * region (an unterminated string, a block comment) carry into the next line;
- * Godot re-derives it lazily, walking backward through prior lines it has not
- * cached yet (`:133-144`). A caller here already visits every line in order
- * top to bottom, so that walk is unnecessary: `resolveLineColors` takes the
- * region index open AT THE START of this line and returns the one open at its
- * END, threaded by the caller line to line.
+ * `color_region_cache` (`:131-152`) carries an open region into the next line.
+ * Godot walks back through uncached lines (`:133-144`). Callers here visit lines
+ * in order, so `resolveLineColors` takes the region open at the line start and
+ * returns the one open at its end.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -71,10 +60,9 @@ interface DeltaEntry {
 }
 
 /**
- * `syntax_highlighter.cpp:118-411`, transcribed 1:1: same variable roles, same
- * control flow, same index jumps (`j = line_length`, `j = from + …`). Returns
- * the sparse delta map exactly as Godot's own `color_map` Dictionary would —
- * `resolveLineColors` below is what forward-fills it for a painter.
+ * `syntax_highlighter.cpp:118-411`, transcribed 1:1: same variable roles, control
+ * flow and index jumps (`j = line_length`, `j = from + …`). Returns the sparse
+ * delta map, as Godot's `color_map` Dictionary.
  */
 function scanLine(
   line: string,
@@ -99,8 +87,7 @@ function scanLine(
   let isHexNotation = false;
   let keywordColor: Color = DEFAULT_COLOR;
   // `Color prev_color;` (`:149`) default-constructs to opaque black
-  // (`core/math/color.h:251-252`) — NOT `font_color` — see this module's own
-  // doc for why that never changes what a forward-filled span reads.
+  // (`core/math/color.h:251-252`), not `font_color`.
   let prevColor: Color = DEFAULT_COLOR;
   let inRegion = regionAtLineStart;
 
@@ -299,11 +286,10 @@ function scanLine(
 }
 
 /**
- * `text_edit.cpp:1349-1351,1664-1668`: the DRAWING side's own fold —
- * `current_color` starts at the editable/read-only font colour (`fontColor`
- * here) and walks `color_map` forward, taking the LAST entry at or before
- * each glyph's start index. Forward-filling the sparse delta map once, here,
- * reproduces that per-glyph lookup as contiguous spans.
+ * Contiguous colour spans for a line. `text_edit.cpp:1349-1351,1664-1668`: the
+ * drawing side starts at the font colour (`fontColor`) and takes the last
+ * `color_map` entry at or before each glyph. Forward-filling the delta map once
+ * reproduces that lookup.
  */
 export function resolveLineColors(
   line: string,

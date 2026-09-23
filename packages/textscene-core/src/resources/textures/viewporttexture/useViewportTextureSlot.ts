@@ -1,36 +1,8 @@
 /**
- * `[sub_resource type="ViewportTexture"] viewport_path = NodePath("…")` — a
- * texture slot filled by whatever a `<SubViewport>` rendered offscreen.
- *
- * Unlike every other texture sub-resource this one resolves to no file and to
- * no rasterisable data: it names a NODE, and the pixels only exist once that
- * node has rendered. That is why it comes through a hook reading the reactive
- * `ViewportTextureRegistry` rather than through `resolveTexture2DPath`, whose
- * `string | null` return type (a `res://` path) structurally cannot carry it.
- *
- * Godot resolves `viewport_path` against the **local scene root**, not against
- * the node holding the texture — `ViewportTexture::_setup_local_to_scene` calls
- * `p_loc_scene->get_node_or_null(path)` where `p_loc_scene` is
- * `get_local_scene()`, and the property is registered with
- * `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`. That is exactly why such a
- * resource is always local to its scene (`ViewportTexture::ViewportTexture()`
- * calls `set_local_to_scene(true)` unconditionally, so a `.tscn` need not even
- * write `resource_local_to_scene`).
- *
- * CYCLE FALLBACK — the choke point. `useViewportTargetSlot` is the ONE place
- * that turns a registry path into a texture, and every current and future
- * ViewportTexture consumer reaches it (`useViewportTextureSlot` is a thin,
- * ref-resolving wrapper over it; `SubViewportContainer` — which already knows
- * its nested viewport's path directly, with no SubResource ref to resolve —
- * calls it too). `ViewportPassRegistryContext` can find a target's dependency
- * chain unsatisfiable (a cycle): the orchestrator itself never drives that
- * pass, so the registry's entry (if published at all) sits on GPU storage that
- * was never written into — sampling it directly would be a live, uninitialised
- * texture with no visible signal that anything is wrong. `useViewportPassCycle`
- * is this hook's own seam onto that: a cyclic target reports `texture: null`
- * unconditionally (never the raw unwritten one), `cyclic: true`, so every
- * caller can route to ITS OWN missing/placeholder branch instead of silently
- * sampling garbage.
+ * `[sub_resource type="ViewportTexture"] viewport_path = NodePath("…")`: a texture
+ * slot filled by a `<SubViewport>`'s offscreen render. It names a node, not a
+ * file, so it comes through the reactive `ViewportTextureRegistry`, not
+ * `resolveTexture2DPath`, whose `string | null` cannot carry it.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -55,9 +27,8 @@ import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
 /**
- * Whether a texture reference names a ViewportTexture — the guard a slot uses
- * to skip the file-loading path, which would otherwise resolve it to null and
- * render a missing-resource placeholder over a viewport that is working fine.
+ * Whether a texture reference names a ViewportTexture: the guard that skips the
+ * file-loading path, which would draw a missing-resource placeholder instead.
  */
 export function isViewportTextureRef(
   ref: string | undefined,
@@ -69,36 +40,27 @@ export function isViewportTextureRef(
 /** What a ViewportTexture slot resolves to, once cycles are accounted for. */
 export interface ViewportTextureSlotResult {
   /**
-   * The live target's texture. Null when the reference names no
-   * ViewportTexture, names one that has not published yet, OR names one
-   * whose pass sits in an unrenderable dependency cycle — `cyclic`
-   * distinguishes the three; a caller that only checks `texture` treats a
-   * cycle exactly like "not published yet" (draws nothing), which is safe
-   * but mutes the visible signal a cycle is supposed to give.
+   * The live target's texture. Null for no ViewportTexture, an unpublished one,
+   * or one in an unrenderable pass cycle, which `cyclic` tells apart. A caller
+   * that checks only `texture` draws nothing for a cycle: safe, but silent.
    */
   texture: THREE.Texture | null;
   /**
-   * True when this slot names a real ViewportTexture whose target's pass is
-   * cyclic (`useViewportPassCycle`). The registry may still hold a published
-   * entry, but its GPU storage was never written into, which is exactly why
-   * `texture` is forced null rather than handing back that entry's raw
-   * texture. Callers MUST route a cyclic slot to their own visible
-   * missing/placeholder branch, not their "still loading" one.
+   * True when the named target's pass is cyclic (`useViewportPassCycle`). Its GPU
+   * storage was never written, so `texture` is null. A caller routes a cyclic slot
+   * to its own visible placeholder branch, not its "still loading" one.
    */
   cyclic: boolean;
 }
 
 /**
- * The choke point every ViewportTexture consumer shares: resolve a registry
- * PATH (not yet a SubResource ref — see `useViewportTextureSlot` for that) to
- * its published texture, folding in the cycle fallback described in this
- * module's doc comment.
+ * The choke point every ViewportTexture consumer shares, `SubViewportContainer`
+ * included: a registry path to its published texture. The orchestrator never
+ * drives a pass that `ViewportPassRegistryContext` finds cyclic, so its target is
+ * uninitialised and this reports `texture: null` with `cyclic: true`.
  *
- * `warnAs` identifies the caller in the cycle warning (typically its own
- * dispatcher-absolute node path) — pass null to suppress the warning
- * entirely, for a caller that already gets the same fact some other way
- * (`SubViewportContainer` relies on `ViewportPassRegistryContext`'s own
- * cycle-detection warning, which already names this exact path once).
+ * @param warnAs The caller in the cycle warning, usually its node path. Null
+ *   suppresses it, as for `SubViewportContainer`, which the context already names.
  */
 export function useViewportTargetSlot(
   path: string | null,
@@ -126,16 +88,10 @@ export function useViewportTargetSlot(
 }
 
 /**
- * The live target a `ViewportTexture` slot names, resolved from the
- * SubResource `ref` and rebased onto the registry's dispatcher-absolute key
- * (`viewportTextureRegistryKey`) before delegating to the shared choke point,
- * `useViewportTargetSlot`.
- *
- * `texture: null` with `cyclic: false` is not an error: targets arrive after
- * first paint (the publisher's effect runs after mount), so a consumer
- * re-renders into the texture when the reactive registry map updates. Calling
- * this unconditionally keeps the hook count static for slots that may or may
- * not hold a ViewportTexture.
+ * The live target a `ViewportTexture` slot's `ref` names, rebased onto the
+ * registry key (`viewportTextureRegistryKey`). `texture: null` with `cyclic: false`
+ * is not an error: a target arrives after first paint. Call it unconditionally,
+ * so the hook count stays static.
  */
 export function useViewportTextureSlot(
   ref: string | undefined,
@@ -147,36 +103,26 @@ export function useViewportTextureSlot(
     resource?.type === VIEWPORT_TEXTURE_TYPE
       ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
       : null;
-  // The consumer's OWNER's table: a `%Name` authored inside an instanced
-  // sub-scene is claimed on that sub-scene's root, which is what this node
-  // resolves through when it sits there (node.cpp:1930-1938). Only for a slot
-  // that holds a ViewportTexture — every texture slot calls this, and the
-  // owner walk is per node.
+  // The owner's table: a `%Name` inside an instanced sub-scene is claimed on its
+  // root (node.cpp:1930-1938). Only for a ViewportTexture slot, since every
+  // texture slot calls this and the owner walk is per node.
   const claims = useUniqueNameClaims(viewportPath === null ? null : consumerPath);
-  // Live paths, not authored ones: the registry is keyed the way the composed
-  // render tree spells a path, which is what a claim's `livePath` carries. Only
-  // for a slot that holds a ViewportTexture — every texture slot calls this.
+  // Live paths, not authored ones: the registry is keyed as the composed render
+  // tree spells a path, a claim's `livePath`.
   const uniquePaths = useMemo(
     () => (viewportPath !== null && claims ? uniqueNameLivePaths(claims) : undefined),
     [claims, viewportPath]
   );
+  // `viewport_path` counts from the local scene root: `_setup_local_to_scene` calls
+  // `p_loc_scene->get_node_or_null(path)`, `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`.
+  // The constructor calls `set_local_to_scene(true)`, so a `.tscn` need not write
+  // `resource_local_to_scene`.
   const key =
     viewportPath === null
       ? null
       : viewportTextureRegistryKey(consumerPath, viewportPath, uniquePaths);
-  // In an effect, not in the render body: a module-level "already reported" set
-  // written during render is impure, survives every scene switch — so a literal
-  // fixed and re-broken warned once for the life of the session — and grows
-  // without bound.
-  //
-  // The dedup keys on the SPELLING last warned for, held in a ref, not on the
-  // effect's dependencies: `uniquePaths` descends from the SceneGraph, which is
-  // a fresh object per re-parse, so dependency comparison alone re-fires on
-  // every debounced keystroke. The table is re-checked on every run and the
-  // marker cleared once the name is claimed, so the same spelling warns again
-  // when its claimant is renamed away — the table changed, not the text. Same
-  // hazard and same answer as the publisher, which keys on
-  // `viewportTextureUniqueNameKey` rather than the node.
+  // In an effect, not the render body: a module-level set written during render
+  // is impure, survives every scene switch and grows without bound.
   const reported = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!consumerPath || viewportPath === null || !uniquePaths) return;
@@ -185,6 +131,9 @@ export function useViewportTextureSlot(
       reported.current = undefined;
       return;
     }
+    // Dedup on the spelling in a ref, not on effect deps: `uniquePaths` is a fresh
+    // object per re-parse. The marker clears once the name is claimed, so a renamed
+    // claimant warns again, as the publisher's `viewportTextureUniqueNameKey` does.
     const spelling = `${consumerPath}\u0000${viewportPath}`;
     if (reported.current === spelling) return;
     reported.current = spelling;
@@ -192,8 +141,7 @@ export function useViewportTextureSlot(
       `[ViewportTexture] ${consumerPath}: viewport_path "${viewportPath}" names ${unclaimed.join(', ')}, which no node in this scene claims.`
     );
   }, [consumerPath, viewportPath, uniquePaths]);
-  // Called unconditionally (rules of hooks) — only `key` varies; a null key
-  // resolves to the same `{ texture: null, cyclic: false }` shape a slot
-  // naming no ViewportTexture always returned.
+  // Called unconditionally for the rules of hooks. A null key resolves to
+  // `{ texture: null, cyclic: false }`.
   return useViewportTargetSlot(key, consumerPath);
 }

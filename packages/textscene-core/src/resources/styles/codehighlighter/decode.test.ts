@@ -62,8 +62,8 @@ describe('decodeCodeHighlighter', () => {
   });
 
   it('refuses a color region whose start key is not symbol-only', () => {
-    // add_color_region's ERR_FAIL_COND_MSG (syntax_highlighter.cpp:492) — the
-    // whole entry is silently dropped.
+    // add_color_region's ERR_FAIL_COND_MSG (syntax_highlighter.cpp:492) drops
+    // the whole entry.
     const data = decodeCodeHighlighter({
       color_regions: '{\n"a": Color(1, 0, 0, 1)\n}',
     });

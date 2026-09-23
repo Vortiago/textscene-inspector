@@ -1,14 +1,8 @@
 /**
- * The channel repack (Godot ALPHA strength → three.js BLUE) and the pixel read
- * that feeds it.
- *
- * WHAT THIS FILE CANNOT PROVE: happy-dom has no rasterizer — `getContext('2d')`
- * returns null — so the canvas readback that real, image-backed textures take is
- * unreachable here. Every test below either injects a reader or asserts the
- * no-canvas degradation, and the canvas path itself is covered by the
- * `material-anisotropy-flowmap` golden, which renders a real PNG flowmap through
- * a real browser (scripts/visual/scenes.mjs). A test that "passed" against a
- * happy-dom canvas stub would prove nothing about either.
+ * The channel repack (Godot alpha strength to three.js blue) and its pixel read.
+ * happy-dom's `getContext('2d')` returns null, so each test injects a reader or
+ * asserts the no-canvas case. The `material-anisotropy-flowmap` golden
+ * (scripts/visual/scenes.mjs) covers the canvas path.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -24,8 +18,8 @@ function imageLike(width = 2, height = 1): HTMLImageElement {
 }
 
 /**
- * Stand in for the 2D canvas happy-dom does not have. Only the CALL SHAPE can be
- * pinned this way — real pixels need a real rasterizer, which is the golden's job.
+ * Stands in for the 2D canvas happy-dom lacks. It pins only the call shape: real
+ * pixels are the golden's job.
  */
 function stubCanvas(ctx: object): { width: number; height: number } {
   const canvas = { width: 0, height: 0, getContext: () => ctx };
@@ -42,7 +36,7 @@ describe('readFlowmapPixels', () => {
     const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
     const pixels = readFlowmapPixels({ data, width: 2, height: 1 });
     expect(pixels).toEqual({ data, width: 2, height: 1 });
-    expect(pixels!.data).toBe(data); // no copy at read time
+    expect(pixels!.data).toBe(data); // No copy at read time.
   });
 
   it('reads a decoded image through a 2D canvas when one is available', () => {
@@ -113,9 +107,8 @@ describe('repackAnisotropyFlowmap', () => {
     const out = repackAnisotropyFlowmap(texture, read)!;
 
     expect(read).toHaveBeenCalledWith(texture.image);
-    // `repackAnisotropyFlowmap` is declared `THREE.Texture | undefined` — accurate
-    // for callers, but it always constructs a `DataTexture` internally, whose
-    // `.image` carries `data`/`width`/`height` the plain `Texture` type can't see.
+    // `repackAnisotropyFlowmap` returns `THREE.Texture | undefined`, but always a
+    // `DataTexture`, whose `.image` carries `data`, `width` and `height`.
     const image = out.image as { data: Uint8Array; width: number; height: number };
     expect(image.data).toBeInstanceOf(Uint8Array);
     expect(Array.from(image.data)).toEqual([128, 128, 200, 200, 10, 20, 30, 30]);
@@ -141,9 +134,8 @@ describe('repackAnisotropyFlowmap', () => {
   });
 
   it('takes mipmapping from the source rather than the DataTexture default', () => {
-    // A loaded image texture asks for mipmaps and a mipmapped minFilter; a
-    // DataTexture defaults to generateMipmaps=false, so without carrying this
-    // over the map would sample level 0 at every distance.
+    // A loaded image asks for mipmaps, and a DataTexture defaults to
+    // generateMipmaps=false, which samples level 0 at every distance.
     const loaded = new THREE.Texture(imageLike());
     loaded.minFilter = THREE.LinearMipmapLinearFilter;
     expect(loaded.generateMipmaps).toBe(true);

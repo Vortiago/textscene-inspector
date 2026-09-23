@@ -1,13 +1,7 @@
 /**
- * Godot's sky shaders, ported to GLSL ES for three.js.
- *
- * The bodies below are transcribed from `scene/resources/3d/sky_material.cpp`
- * (Godot 4.6). Only the plumbing differs: Godot's `shader_type sky` supplies
- * `EYEDIR` and the `LIGHTn_*` built-ins from the engine, so here they are a
- * varying and plain uniforms, and `COLOR` becomes `gl_FragColor`. The maths —
- * the gradient mixes, the four-slot sun loop, the Preetham scattering — is
- * unchanged, which is the point: an approximation would have been a second
- * source of divergence to chase.
+ * Godot's sky shaders from `scene/resources/3d/sky_material.cpp` (Godot 4.6),
+ * ported to GLSL ES. `EYEDIR` and `LIGHTn_*` become a varying and uniforms,
+ * `COLOR` becomes `gl_FragColor`. The maths is unchanged, not approximated.
  *
  * ---------------------------------------------------------------------------
  * Portions of this file are derived from Godot Engine, used under the MIT
@@ -42,9 +36,8 @@
 import type { SkyProperties } from './types';
 
 /**
- * Shared vertex stage. The sky is drawn on the inside of a unit cube, so the
- * object-space position IS the eye direction — the same quantity Godot's
- * `shader_type sky` hands the fragment stage as `EYEDIR`.
+ * The sky draws on the inside of a unit cube, so the object-space position is
+ * the eye direction, Godot's `EYEDIR`.
  */
 export const SKY_VERTEX_SHADER = /* glsl */ `
 varying vec3 vEyeDirection;
@@ -67,9 +60,8 @@ uniform float LIGHT${i}_SIZE;`
   .join('\n');
 
 /**
- * The procedural sky's per-light sun disk. Godot writes this block out four
- * times rather than looping (its sky shader has no arrays); the maths is
- * identical in each copy, so it is generated here instead of repeated.
+ * The procedural sky's per-light sun disk. Godot writes it out four times
+ * because its sky shader has no arrays, so it is generated here.
  */
 const sunDisk = (i: number) => `
   if (LIGHT${i}_ENABLED) {

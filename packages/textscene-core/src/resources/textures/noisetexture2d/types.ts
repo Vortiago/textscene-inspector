@@ -1,10 +1,7 @@
 /**
- * NoiseTexture2D slice types.
- *
- * Defaults are Godot's (`modules/noise/noise_texture_2d.h:47-62` for the flags,
- * `size = Size2i(512, 512)` at line 54). `noise` and `color_ramp` stay as RAW
- * REFS: resolving them needs the owning file's sub-resource table, which the
- * decode deliberately does not take.
+ * NoiseTexture2D slice types. Defaults are Godot's (`modules/noise/noise_texture_2d.h:47-62`,
+ * `size = Size2i(512, 512)` at line 54). `noise` and `color_ramp` stay raw refs:
+ * the decode does not take the owning file's sub-resource table.
  */
 
 export interface NoiseTexture2DData {
@@ -18,8 +15,8 @@ export interface NoiseTexture2DData {
   seamlessBlendSkirt: number;
   asNormalMap: boolean;
   bumpStrength: number;
-  /** Raw `noise` ref — a `SubResource` naming a Noise resource, or null. */
+  /** Raw `noise` ref: a `SubResource` naming a Noise resource, or null. */
   noise: string | null;
-  /** Raw `color_ramp` ref — a `SubResource` naming a Gradient, or null. */
+  /** Raw `color_ramp` ref: a `SubResource` naming a Gradient, or null. */
   colorRamp: string | null;
 }

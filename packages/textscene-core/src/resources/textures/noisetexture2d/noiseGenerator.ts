@@ -1,17 +1,7 @@
 /**
- * The generator half of NoiseTexture2D: a decoded `FastNoiseLite` turned into a
- * 2D sampler over the vendored library.
- *
- * The generator is NOT hand-ported — `fastnoise-lite` is the official JS port of
- * the same upstream library Godot vendors as `thirdparty/misc/FastNoiseLite.h`,
- * so the same settings and seed produce the same field. These maps are the only
- * translation: our decoded enums into the port's string constants.
- *
- * Every parameter is set explicitly, defaults included. The port's own defaults
- * are not Godot's (3 fractal octaves against Godot's 5, EuclideanSq cellular
- * distance against Godot's Euclidean), and leaving one to the port moves a
- * sample from 0.61 to 0.25. With all of them set, the field agrees with Godot
- * 4.6.3 to about 1e-7 across simplex, cellular and weighted-fBm Perlin.
+ * A decoded `FastNoiseLite` as a 2D sampler over `fastnoise-lite`, the official
+ * JS port of `thirdparty/misc/FastNoiseLite.h`. Not hand-ported: these maps only
+ * translate decoded enums into the port's string constants.
  */
 
 import FastNoiseLite from 'fastnoise-lite';
@@ -60,9 +50,10 @@ const RETURN_TYPE: Record<CellularReturnType, string> = {
 export type NoiseSampler = (x: number, y: number) => number;
 
 /**
- * The generator a decoded `FastNoiseLite` describes, as a 2D sampler.
- * `offset` is added to the position before generating, exactly as
- * `FastNoiseLite::get_noise_2d` does (fastnoise_lite.cpp:318-325).
+ * The generator a decoded `FastNoiseLite` describes, as a 2D sampler. `offset` is
+ * added before generating, as `FastNoiseLite::get_noise_2d` does (fastnoise_lite.cpp:318-325).
+ * Every parameter is set, since the port's defaults are not Godot's (3 octaves
+ * against 5, EuclideanSq against Euclidean). Set, it agrees with 4.6.3 to about 1e-7.
  */
 export function noiseSampler(data: FastNoiseLiteData): NoiseSampler {
   const noise = new FastNoiseLite();

@@ -1,14 +1,8 @@
 /**
- * Sky slice BUILD (ADR-0031): Godot-space sky properties plus the resolved
- * dependencies (the scene's directional lights, a panorama texture) → the THREE
- * uniform set the sky shader takes.
- *
- * The engine does not upload what the inspector shows. `ProceduralSkyMaterial`
- * turns its two easing curves into reciprocals with an "ad hoc adjustment"
- * (Godot's own word) left over from when they were angles rather than cosines,
- * turns `sun_angle_max` into its cosine, and pre-multiplies each colour by its
- * energy. Doing that conversion here — the same boundary the engine does it at
- * — keeps every other layer in Godot's own units.
+ * Sky slice build (ADR-0031): Godot-space sky properties, directional lights and
+ * a panorama texture to the sky shader's THREE uniforms. Like the engine, this
+ * converts on upload: easing curves to "ad hoc" reciprocals, `sun_angle_max` to
+ * its cosine, each colour pre-multiplied by its energy.
  */
 
 import * as THREE from 'three';
@@ -18,7 +12,7 @@ import { godotColorToLinear } from '../../r3f/godotColor';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {
-  /** Direction TOWARDS the light, i.e. where the sun appears in the sky. */
+  /** Direction towards the light, that is, where the sun appears in the sky. */
   direction: THREE.Vector3;
   color: THREE.Color;
   energy: number;
@@ -26,7 +20,7 @@ export interface SkyLight {
   angularRadius: number;
 }
 
-/** Godot's sky shader has exactly four light slots, written out longhand. */
+/** Godot's sky shader has four light slots, written out longhand. */
 const LIGHT_SLOTS = 4;
 
 export type SkyUniforms = Record<string, { value: unknown }>;

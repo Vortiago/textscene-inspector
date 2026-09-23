@@ -1,11 +1,7 @@
 /**
- * Sky resource types — the three materials a Godot `Sky` can carry.
- *
- * Property names and units mirror Godot exactly (`sun_angle_max` is degrees,
- * `sky_curve` is the authored easing value): the shader-uniform conversions
- * the engine performs on upload happen at the same boundary here, in
- * `build.ts`, so nothing downstream has to know which space a number is
- * in.
+ * Sky resource types: the three materials a Godot `Sky` can carry. Names and
+ * units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
+ * shader-uniform conversions happen on upload, in `build.ts`.
  */
 
 import type { Color } from '../../utils/colorParser';

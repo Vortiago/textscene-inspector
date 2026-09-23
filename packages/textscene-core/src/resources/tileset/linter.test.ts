@@ -1,10 +1,7 @@
 /**
- * TileSet's own scalar properties, through the full Linter.
- *
- * The four grid keys are `ADD_PROPERTY` with a `PROPERTY_HINT_ENUM`
- * (tile_set.cpp:4266-4269) over setters that assign straight through
- * (`set_tile_shape` :352, `set_tile_layout` :368, `set_tile_offset_axis` :376),
- * so an out-of-enum value WARNS. `set_tile_size` is the one that refuses:
+ * TileSet's own scalar properties, through the full Linter. The grid enums
+ * (tile_set.cpp:4266-4269) assign straight through (:352, :368, :376), so an
+ * out-of-enum value warns. `set_tile_size` refuses:
  * `ERR_FAIL_COND(p_size.x < 1 || p_size.y < 1)` (:392).
  */
 

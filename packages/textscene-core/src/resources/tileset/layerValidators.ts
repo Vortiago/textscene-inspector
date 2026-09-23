@@ -1,15 +1,8 @@
 /**
- * TileSet's four FLAT indexed layer families — occlusion, physics, navigation
- * and custom data.
- *
- * One shape between them: `_set` tests
- * `components[0].trim_prefix(<prefix>).is_valid_int()` before reading the index,
- * so text the gate rejects resolves to no layer and the write is dropped, and
- * each branch then refuses a negative index outright. Every leaf's own guard is
- * the `ERR_FAIL_COND_V(p_value.get_type() != …)` beside it; the setters
- * themselves assign straight through past an `ERR_FAIL_INDEX` on the layer
- * index, which is a bound against a sibling count no per-property validator can
- * see (ADR-0032).
+ * TileSet's four flat indexed layer families: occlusion, physics, navigation and
+ * custom data. Each leaf's guard is its `ERR_FAIL_COND_V(p_value.get_type() != …)`.
+ * The setters' `ERR_FAIL_INDEX` bounds a sibling count no per-property validator
+ * sees (ADR-0032).
  */
 
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
@@ -23,12 +16,9 @@ const droppedNegative = (noun: string, cite: string) => (index: number) =>
   'write never lands';
 
 /**
- * A flat `<prefix><i>/<leaf>` family, with the two facts that differ per family
- * spelled at the call site.
- *
- * `indexParse` is `is_valid_int` for all four: `_set` gates on
- * `trim_prefix(...).is_valid_int()` (tile_set.cpp:3839, :3859, :3928, :3942),
- * so `occlusion_layer_x/light_mask` resolves to nothing rather than to layer 0.
+ * A flat `<prefix><i>/<leaf>` family. `_set` gates on `trim_prefix(...).is_valid_int()`
+ * (tile_set.cpp:3839, :3859, :3928, :3942), so `occlusion_layer_x/light_mask` names
+ * no layer and the write drops. Each branch then refuses a negative index.
  */
 function layerFamily(opts: {
   prefix: string;
@@ -110,9 +100,9 @@ const customDataLayer = layerFamily({
   negativeCite: 'tile_set.cpp:3945',
   code: 'CUSTOM_DATA_LAYER',
   leaves: {
-    // tile_set.cpp:4211, Variant::STRING; :3947 refuses a non-string. Whether
-    // the name COLLIDES with another layer's is `set_custom_data_layer_name`'s
-    // own ERR_FAIL_MSG (:1117) — a question about sibling keys, not this value.
+    // tile_set.cpp:4211, Variant::STRING; :3947 refuses a non-string. A name that
+    // collides with another layer's is `set_custom_data_layer_name`'s ERR_FAIL_MSG
+    // (:1117), a question about sibling keys, not this value.
     name: v.quotedString('name'),
     // tile_set.cpp:4212's hint string is built at :4205-4208 as "Any" plus every
     // `Variant::get_type_name(i)` for `i < VARIANT_MAX`, so it names 0..38

@@ -1,21 +1,8 @@
 /**
- * Resolve a `GradientTexture2D` reference — a Texture2D-valued property naming
- * an inline `[sub_resource]` — to a rasterised `THREE.DataTexture`.
- *
- * Unlike an `ExtResource` image (a file loaded asynchronously through the
- * resource pipeline), a `GradientTexture2D` is fully described by the file it
- * lives in: the texture block plus the `Gradient` block it references. So it
- * resolves synchronously, right where the material's texture slots are read —
- * no `useResource`/host-file round trip once the file itself is in hand. The
- * walk, the cache contract, and the pin-key story live in the shared
- * `resolveProceduralSubResource`; this file owns only what is
- * gradient-specific — the rasterisation.
- *
- * The result is SHARED and owned by `proceduralTextureCache` — many nodes point
- * at one gradient, so it is rasterised once per (scene, sub-resource). Callers
- * borrow it: they must not dispose it, and must pin the key it comes with for
- * as long as they hold it. React consumers get both from `useProceduralTexture`
- * rather than calling this directly.
+ * Resolves a `GradientTexture2D` sub-resource to a rasterised `THREE.DataTexture`,
+ * synchronously: its own file describes it fully. `resolveProceduralSubResource`
+ * owns the walk, the cache and the pin key. This owns the rasterisation, once per
+ * scene and sub-resource. React consumers use `useProceduralTexture`.
  */
 
 import type * as THREE from 'three';
@@ -34,10 +21,7 @@ export function resolveGradientTexture2D(
   return resolveProceduralSubResource(ref, internalResources, 'GradientTexture2D', rasterize);
 }
 
-/**
- * Texture properties plus the table their `gradient` reference resolves in →
- * pixels.
- */
+/** Texture properties and the table their `gradient` reference resolves in, to pixels. */
 function rasterize(
   properties: Record<string, string>,
   resources: readonly TscnInternalResource[]

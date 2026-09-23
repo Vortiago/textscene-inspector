@@ -1,16 +1,8 @@
 /**
- * Sky resource parsing — `[sub_resource type="Sky"]` and the three sky
- * materials behind it.
- *
- * Every default asserted here is the value Godot's own constructor installs
- * (`scene/resources/3d/sky_material.cpp`), not a value read back out of this
- * parser. A sky that omits a property must render exactly as Godot's does,
- * and the omitted case is the common one: the editor's preview sky sets only
- * the four colours.
- *
- * Values stay in GODOT space here — `sky_curve` is the authored 0.15, not the
- * shader's `0.6 / 0.15`. The engine does that conversion when it uploads
- * uniforms, so we do it at the same boundary (`build.ts`).
+ * Sky resource decode: `Sky` and the three sky materials. Every default is the
+ * value Godot's constructor installs (`scene/resources/3d/sky_material.cpp`).
+ * Values stay in Godot space: `sky_curve` is the authored 0.15, and `build.ts`
+ * converts it on upload.
  */
 import { describe, expect, it } from 'vitest';
 import { decodeSkyMaterial, skyMaterialRef } from './decode';
@@ -106,8 +98,7 @@ describe('decodeSkyMaterial — PhysicalSkyMaterial', () => {
 
 describe('decodeSkyMaterial — unsupported', () => {
   it('returns null for a sky material type we do not implement', () => {
-    // Godot ships exactly three; a null here means "render no sky", never a
-    // silently mis-parsed one.
+    // Godot ships three. Null means "render no sky", never a mis-parsed one.
     expect(decodeSkyMaterial('SomeAddonSkyMaterial', {})).toBeNull();
   });
 });
@@ -130,8 +121,7 @@ describe('skyMaterialRef — the Sky indirection', () => {
   });
 
   it('is undefined for anything that is not a Sky (error path)', () => {
-    // The level above may resolve to something else entirely; "no material to
-    // follow" is the same answer as a Sky with none.
+    // A non-Sky has no material to follow, the same answer as a Sky with none.
     expect(skyMaterialRef('ProceduralSkyMaterial', { sky_material: 'SubResource("x")' })).toBeUndefined();
     expect(skyMaterialRef(undefined, undefined)).toBeUndefined();
   });

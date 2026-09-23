@@ -1,27 +1,8 @@
 /**
- * NoiseTexture2D build — decoded settings plus a resolved gradient into the
- * pixels Godot's `NoiseTexture2D::_generate_texture` produces
- * (`modules/noise/noise_texture_2d.cpp:155-181`), in its order:
- *
- *   noise image (seamless or plain) → color_ramp modulation → bump-to-normal
- *
- * The generator itself is NOT hand-ported: `fastnoise-lite` is the official JS
- * port of the same upstream library Godot vendors as
- * `thirdparty/misc/FastNoiseLite.h`, so the same settings and seed produce the
- * same field. Only the IMAGE layer around it is ported here, because that layer
- * is Godot's own (normalization, the seamless blend skirt, the bump-map
- * conversion), and each piece cites the line it comes from. Those pieces live
- * beside this file — `noiseGenerator`, `noiseImage`, `gradientModulation`,
- * `normalMap` — and this one composes them into the texture.
- *
- * DOMAIN WARP IS NOT APPLIED. Godot warps the sample position through a second
- * generator (`fastnoise_lite.cpp:318-325`), but the JS port's entry point —
- * spelled `DomainWrap` — dispatches on `arguments[0] instanceof Vector2` against
- * a class it does not export, so a caller outside the module cannot drive it
- * (verified against 1.1.1: a plain `{x, y}` comes back unchanged). Eleven corpus
- * resources set `domain_warp_enabled`; they render their unwarped field, which
- * is the same generator with straight coordinates. Recorded in
- * `resources/textures/comparison.md`.
+ * NoiseTexture2D build: the pixels `NoiseTexture2D::_generate_texture` produces
+ * (`modules/noise/noise_texture_2d.cpp:155-181`), in its order: noise image, then
+ * color_ramp modulation, then bump-to-normal. It composes the ported image layer
+ * over `noiseGenerator`, the JS port of `thirdparty/misc/FastNoiseLite.h`.
  */
 
 import * as THREE from 'three';
@@ -40,12 +21,8 @@ export { noiseImage, seamlessNoiseImage } from './noiseImage';
 export { bumpMapToNormalMap } from './normalMap';
 
 /**
- * The whole pipeline as a `THREE.DataTexture`.
- *
- * Rows are written BOTTOM-UP for the same reason the GradientTexture2D
- * rasteriser does it: `flipY` does not apply to a typed-array source, and every
- * UV path in the repo is written for the flipY convention a file-backed texture
- * gets, so Godot's top row has to land last in the buffer.
+ * The whole pipeline as a `THREE.DataTexture`, written bottom-up: `flipY` skips a
+ * typed-array source, and every UV path assumes a file texture's flipY layout.
  */
 export function rasterizeNoiseTexture2D(
   tex: NoiseTexture2DData,
@@ -54,6 +31,9 @@ export function rasterizeNoiseTexture2D(
 ): THREE.DataTexture {
   const width = Math.max(1, Math.trunc(tex.width));
   const height = Math.max(1, Math.trunc(tex.height));
+  // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
+  // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
+  // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.
   const sample = noiseSampler(noise);
 
   const gray = tex.seamless
@@ -78,14 +58,12 @@ export function rasterizeNoiseTexture2D(
   }
 
   const texture = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
-  // A normal map carries directions, not colour: sampling it through sRGB would
-  // bend every normal. Godot marks the same distinction with its `srgb` import
-  // flag; here the two arrival paths differ only in this one field.
+  // A normal map carries directions, not colour, and sRGB would bend every normal.
+  // Godot marks the same distinction with its `srgb` import flag.
   texture.colorSpace = tex.asNormalMap ? THREE.NoColorSpace : THREE.SRGBColorSpace;
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;
-  // Godot's seamless image exists to be tiled; a non-seamless one is clamped
-  // like every other procedural texture here.
+  // A seamless image tiles. A non-seamless one clamps like every other procedural texture.
   const wrap = tex.seamless ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
   texture.wrapS = wrap;
   texture.wrapT = wrap;

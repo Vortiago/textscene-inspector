@@ -1,32 +1,26 @@
 /**
- * Typed representation of Godot's `Gradient` and `GradientTexture2D` resources.
- *
- * A `GradientTexture2D` rasterises a 1D `Gradient` across a width×height image
- * using one of three fill modes (linear / radial / square). The coin sprite in
- * the 3D platformer uses one as its additive-glow albedo: a radial white→
- * transparent falloff that produces the halo around each coin.
- *
- * Pure data — no THREE. The rasteriser (`build.ts`) is the only THREE consumer,
- * so these types stay importable by pure `.ts` (parser/linter) paths.
+ * Godot's `Gradient` and `GradientTexture2D`, which rasterises a 1D `Gradient`
+ * across a width×height image in one of three fill modes. No THREE, so parser
+ * and linter paths can import it.
  */
 
 import type { Color } from '../../../utils/colorParser';
 
-/** `Gradient.interpolation_mode` — how colour is blended between stops. */
+/** `Gradient.interpolation_mode`: how colour blends between stops. */
 export enum GradientInterpolationMode {
   Linear = 0,
   Constant = 1,
   Cubic = 2,
 }
 
-/** `GradientTexture2D.fill` — how the 1D gradient is projected across the image. */
+/** `GradientTexture2D.fill`: how the 1D gradient projects across the image. */
 export enum GradientFill {
   Linear = 0,
   Radial = 1,
   Square = 2,
 }
 
-/** `GradientTexture2D.repeat` — how offsets outside 0..1 wrap. */
+/** `GradientTexture2D.repeat`: how offsets outside 0..1 wrap. */
 export enum GradientRepeat {
   None = 0,
   Repeat = 1,
@@ -54,7 +48,6 @@ export interface GradientTexture2D {
   /** Fill end in 0..1 UV space (offset 1 of the gradient). */
   fillTo: { x: number; y: number };
   repeat: GradientRepeat;
-  /** `use_hdr` — an RGBAF float image instead of RGBA8. We always rasterise
-   *  RGBA8 (see build.ts); this flag is parsed for completeness. */
+  /** `use_hdr`: an RGBAF float image instead of RGBA8. `build.ts` ignores it. */
   useHdr: boolean;
 }

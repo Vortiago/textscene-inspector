@@ -1,7 +1,6 @@
 /**
- * The shared procedural dispatch: one walk that every consumer — the React hook
- * and both React-free material paths — uses, so a slice cannot reach some
- * consumers and not others.
+ * The shared procedural dispatch: the React hook and both React-free material
+ * paths use one walk, so a slice reaches every consumer.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../parser/types';

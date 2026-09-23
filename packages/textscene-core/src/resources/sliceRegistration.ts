@@ -1,19 +1,8 @@
 /**
- * Resource-slice registration — the routing claim table (ADR-0031).
- *
- * Every resource slice declares here which TSCN type names and file
- * extensions it claims, which processor slot (bus tag) serves it, and how a
- * failed load is labelled. Routing derives from these claims; nothing may
- * guess a bus tag from a type-name substring (the `busTypeFor` pattern this
- * replaces).
- *
- * Deliberately THREE-free and React-free: linter entry points and other claim
- * consumers must be able to read the table without pulling a renderer into
- * their import closure (the `buildableMaterialTypes` precedent).
- *
- * Population follows the NodeRegistry pattern: each slice's `index.ts` calls
- * `registerResourceSlice` as a side effect, and the aggregation barrel
- * (`sliceRegistrations.ts`) imports every slice index.
+ * The resource-slice routing claim table (ADR-0031): each slice's type names,
+ * file extensions, processor slot and failure label. Routing derives from these
+ * claims, never from a type-name substring. THREE-free and React-free, so a
+ * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
 
 /**
@@ -33,10 +22,10 @@ export type ResourceBusType =
   | 'theme';
 
 export interface ResourceSliceRegistration {
-  /** Slice folder name under `resources/<category>/`, e.g. 'standardmaterial3d'. */
+  /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
   slice: string;
   /**
-   * `godot-text`: decodes a ParsedResource section via pure decode/build.
+   * `godot-text`: decodes a ParsedResource section with pure decode and build.
    * `foreign-format`: declares its real parser (glTF, image decoder, …).
    */
   kind: 'godot-text' | 'foreign-format';
@@ -93,7 +82,7 @@ export const resourceSliceRegistry = {
     byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null =>
     byExtension.get(extension) ?? null,
-  /** The routing answer `busTypeFor` used to guess: null means unroutable. */
+  /** The processor slot for a type name. Null means unroutable. */
   busTypeFor: (typeName: string): ResourceBusType | null =>
     byTypeName.get(typeName)?.busType ?? null,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */

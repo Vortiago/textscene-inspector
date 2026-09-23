@@ -26,8 +26,7 @@ describe('tileset slice registration', () => {
   });
 
   it('does not claim the source types that only ever arrive nested', () => {
-    // TileSetAtlasSource appears solely as a `[sub_resource]` inside a TileSet
-    // (no `ext_resource type="TileSetAtlasSource"` exists in the corpus), so a
+    // TileSetAtlasSource appears only as a `[sub_resource]` inside a TileSet, so a
     // claim would advertise routing for a file that is never fetched.
     expect(resourceSliceRegistry.byTypeName('TileSetAtlasSource')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('TileSetScenesCollectionSource')).toBeNull();

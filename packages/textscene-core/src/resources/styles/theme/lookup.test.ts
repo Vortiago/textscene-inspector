@@ -12,7 +12,7 @@ import type { FontResource } from '../../fonts/font/types';
 const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };
 const FONT_B: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/otf', fallbacks: [], properties: {} };
 
-/** An empty `ThemeResource`, overridden per test — keeps every literal short. */
+/** An empty `ThemeResource`, overridden per test. */
 function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
   return {
     defaultFont: null,
@@ -108,19 +108,16 @@ describe('resolveThemeFontIn', () => {
   });
 
   it("a theme's own default_font SHORT-CIRCUITS the type chain for a NEARER type before a farther type's own explicit entry is ever tried (theme_owner.cpp:236-245's types-inner loop)", () => {
-    // `Control/fonts/font` is explicit on this SAME theme, but `Label` (the
-    // nearer type in the chain) already satisfies `has_font` via this
-    // theme's own `default_font` — so `Control/fonts/font` is shadowed.
+    // `Label`, the nearer type, satisfies `has_font` through this theme's
+    // `default_font`, so the same theme's `Control/fonts/font` is shadowed.
     const shadowing = theme({ defaultFont: FONT_A, fonts: { Control: { font: FONT_B } } });
     expect(resolveThemeFontIn(themeResolutionScope('Label', undefined, [shadowing], null), 'font', undefined)).toBe(FONT_A);
   });
 
   it("a type registered as a variation IN THIS THEME skips ONLY that type's default_font fallback — the walk continues within the SAME theme's turn (has_font_no_default, theme.cpp:1009-1017) and still finds ITS OWN default_font one type later, never reaching a farther ancestor's explicit entry", () => {
-    // "title_panel" is a registered variation in `nearest`, so `nearest`
-    // contributes nothing AT THAT TYPE — but the very next type in the chain
-    // ("Panel", a real class, never itself a variation) is not gated, and
-    // `nearest`'s own `default_font` fires there. `farther`'s explicit
-    // `title_panel/fonts/font` is never reached at all.
+    // "title_panel" is a variation in `nearest`, which gives nothing at that type.
+    // The next type, "Panel", is not gated, so `nearest`'s `default_font` fires
+    // there and `farther`'s `title_panel/fonts/font` is never reached.
     const nearest = theme({ defaultFont: FONT_A, typeVariations: { title_panel: 'Panel' } });
     const farther = theme({ fonts: { title_panel: { font: FONT_B } } });
     expect(
@@ -175,8 +172,8 @@ describe('mergeThemedRecord', () => {
   });
 
   it('a nearer owner matching only a BASE type beats a farther owner matching the EXACT type (owners outer, types inner)', () => {
-    // `nearest` has nothing under `PanelContainer`, but does under `Control` —
-    // a base type in its own chain, tried BEFORE `farther` is ever visited.
+    // `nearest` has nothing under `PanelContainer` but has `Control`, a base type
+    // tried before `farther` is visited.
     const nearest = theme({ colors: { Control: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } });
     const farther = theme({ colors: { PanelContainer: { font_color: { r: 0, g: 1, b: 0, a: 1 } } } });
     const scope = themeResolutionScope('PanelContainer', undefined, [nearest, farther], null);

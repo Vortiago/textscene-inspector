@@ -1,15 +1,8 @@
 /**
- * CodeHighlighter resource slice — Godot-text kind (ADR-0031).
- *
- * `decode.ts` turns a CodeHighlighter **ParsedResource** section into typed
- * colour data; `highlight.ts` is the line scanner that data drives. Both are
- * plain data/logic that a painter (TextEdit's `Component.tsx`) reads — no
- * `build.ts`, same split `styles/theme` uses.
- *
- * No `extensions` claim: a CodeHighlighter arrives as `.tres`, the shared
- * Godot-text container every text slice would otherwise re-claim. Routing is
- * by type name, through the shared `resource` bus every non-specialised
- * Godot-text type shares (a plain `ParsedResource`, per-type decode).
+ * CodeHighlighter resource slice, Godot-text kind (ADR-0031). `decode.ts` makes
+ * colour data and `highlight.ts` scans lines with it, for TextEdit's
+ * `Component.tsx`. No `build.ts`. No `extensions` claim: `.tres` is shared, so
+ * routing is by type name through the `resource` bus.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
